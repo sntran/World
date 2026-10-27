@@ -1,0 +1,14 @@
+{
+  "name": "xuong",
+  "private": true,
+  "description": "The checks of the files of Xuong: the Khronos glTF validator on each GLB.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "test": "node scripts/validate.mjs priv/models"
+  },
+  "devDependencies": {
+    "gltf-validator": "2.0.0-dev.3.10"
+  }
+}

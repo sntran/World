@@ -1,0 +1,29 @@
+{
+  "note": "The default color of each material role: [r, g, b] in sRGB from 0 to 255, the roughness and the metalness. An app can give its own palette.",
+  "roles": {
+    "aluminum": {"color": [196, 200, 204], "roughness": 0.35, "metalness": 1.0},
+    "black": {"color": [31, 35, 40], "roughness": 0.6, "metalness": 0.0},
+    "chrome": {"color": [228, 230, 232], "roughness": 0.08, "metalness": 1.0},
+    "cloth": {"color": [129, 140, 248], "roughness": 0.95, "metalness": 0.0},
+    "copper": {"color": [201, 123, 67], "roughness": 0.35, "metalness": 1.0},
+    "dark": {"color": [58, 63, 71], "roughness": 0.6, "metalness": 0.0},
+    "fabric": {"color": [96, 100, 108], "roughness": 0.95, "metalness": 0.0},
+    "glass": {"color": [165, 216, 243], "roughness": 0.05, "metalness": 0.0},
+    "glass_dark": {"color": [39, 49, 61], "roughness": 0.05, "metalness": 0.0},
+    "hair": {"color": [28, 24, 22], "roughness": 0.7, "metalness": 0.0},
+    "light_back": {"color": [214, 40, 40], "roughness": 0.2, "metalness": 0.0},
+    "light_front": {"color": [250, 248, 235], "roughness": 0.1, "metalness": 0.0},
+    "metal": {"color": [123, 130, 140], "roughness": 0.45, "metalness": 1.0},
+    "paint": {"color": [185, 28, 28], "roughness": 0.3, "metalness": 0.2},
+    "plastic": {"color": [210, 212, 215], "roughness": 0.5, "metalness": 0.0},
+    "rim": {"color": [58, 61, 66], "roughness": 0.35, "metalness": 0.8},
+    "rubber": {"color": [36, 37, 39], "roughness": 0.9, "metalness": 0.0},
+    "seat": {"color": [40, 36, 34], "roughness": 0.8, "metalness": 0.0},
+    "skin": {"color": [198, 150, 118], "roughness": 0.6, "metalness": 0.0},
+    "steel": {"color": [168, 172, 178], "roughness": 0.4, "metalness": 1.0},
+    "tire": {"color": [30, 31, 33], "roughness": 0.92, "metalness": 0.0},
+    "trim": {"color": [44, 46, 50], "roughness": 0.7, "metalness": 0.0},
+    "white": {"color": [233, 236, 240], "roughness": 0.4, "metalness": 0.0},
+    "wood": {"color": [192, 143, 92], "roughness": 0.8, "metalness": 0.0}
+  }
+}

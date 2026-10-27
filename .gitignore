@@ -1,0 +1,6 @@
+/_build/
+/deps/
+/cover/
+/node_modules/
+erl_crash.dump
+/out/

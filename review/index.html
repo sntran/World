@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xưởng: review</title>
+<style>
+  :root { --paper: #f4f1e6; --ink: #222; --line: #c9c2ad; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #1d1f22; --ink: #e8e6df; --line: #45484d; } }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: var(--paper); color: var(--ink); display: grid; grid-template-columns: 300px 1fr; height: 100vh; }
+  aside { padding: 12px 16px; overflow: auto; border-right: 1px solid var(--line); }
+  main { position: relative; }
+  canvas { display: block; width: 100%; height: 100%; }
+  label { display: block; margin: 8px 0 2px; }
+  select, input[type=range] { width: 100%; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { border-top: 1px solid var(--line); padding: 2px 4px; vertical-align: top; }
+  td.n { text-align: right; }
+  @media (max-width: 700px) { body { grid-template-columns: 1fr; grid-template-rows: 60vh auto; } aside { order: 2; border: 0; } }
+</style>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+</head>
+<body>
+<aside>
+  <h1>Xưởng</h1>
+  <label for="model">Model</label>
+  <select id="model"></select>
+  <label for="level">Level of detail</label>
+  <select id="level"><option value="">near</option><option value=".mid">mid</option><option value=".far">far</option></select>
+  <p id="info"></p>
+  <div id="joints"></div>
+  <h2>Parts</h2>
+  <table id="parts"></table>
+</aside>
+<main><canvas id="view"></canvas></main>
+<script type="module">
+// The review page: each model of priv/models, at each level, with a slider
+// for each joint. The URL keeps the choice: ?model=NAME&level=.far&yaw=35.
+// Serve the root of the repository: python3 -m http.server, then /review/.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const params = new URLSearchParams(location.search);
+const canvas = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(devicePixelRatio);
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8070, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+sun.position.set(3, 6, 4);
+scene.add(sun);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 200);
+const controls = new OrbitControls(camera, canvas);
+const grid = new THREE.GridHelper(10, 20, 0x9a927c, 0xc9c2ad);
+scene.add(grid);
+const loader = new GLTFLoader();
+let current = null;
+
+const base = '../priv/models/';
+const list = await (await fetch(base + 'list.json')).json();
+const modelSelect = document.getElementById('model');
+const levelSelect = document.getElementById('level');
+for (const name of list) modelSelect.add(new Option(name, name));
+modelSelect.value = params.get('model') ?? list[0];
+levelSelect.value = params.get('level') ?? '';
+modelSelect.onchange = levelSelect.onchange = () => load(true);
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = canvas.parentElement;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+
+async function load(remember) {
+  const name = modelSelect.value;
+  if (remember) history.replaceState(null, '', `?model=${name}&level=${levelSelect.value}`);
+  const gltf = await loader.loadAsync(`${base}${name}${levelSelect.value}.glb`);
+  if (current) scene.remove(current);
+  current = gltf.scene;
+  scene.add(current);
+  const extras = gltf.scene.userData;
+  let tris = 0;
+  current.traverse((o) => { if (o.isMesh) tris += o.geometry.index.count / 3; });
+  document.getElementById('info').textContent = `Size: ${(extras.size ?? []).map((v) => v.toFixed(3)).join(' × ')} m. Triangles: ${tris}.`;
+  joints(current);
+  parts(name);
+  frame(params.get('yaw'));
+  window.READY = true;
+}
+
+// A slider for each node with a role: a turn around its y axis, or a move
+// along it (the axis of the joint in glTF).
+function joints(root) {
+  const box = document.getElementById('joints');
+  box.replaceChildren();
+  root.traverse((node) => {
+    const role = node.userData.role;
+    if (!role) return;
+    const rest = { q: node.quaternion.clone(), p: node.position.clone() };
+    const slides = node.userData.kind === 'slides';
+    const [min, max] = node.userData.limits ?? (slides ? [0, 0.1] : [-180, 180]);
+    const label = document.createElement('label');
+    label.textContent = `${node.name} (${role})`;
+    const input = Object.assign(document.createElement('input'), { type: 'range', min, max, step: slides ? 0.001 : 1, value: Math.min(Math.max(0, min), max) });
+    input.oninput = () => {
+      const v = Number(input.value);
+      const axis = new THREE.Vector3(0, 1, 0);
+      if (slides) node.position.copy(rest.p).add(axis.applyQuaternion(rest.q).multiplyScalar(v));
+      else node.quaternion.copy(rest.q).multiply(new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(v)));
+    };
+    box.append(label, input);
+  });
+}
+
+async function parts(name) {
+  const res = await fetch(`${base}${name}.parts.json`);
+  const table = document.getElementById('parts');
+  table.replaceChildren();
+  for (const p of (await res.json()).parts) {
+    const row = table.insertRow();
+    row.insertCell().textContent = p.name;
+    Object.assign(row.insertCell(), { className: 'n', textContent: p.count });
+  }
+}
+
+function frame(yaw) {
+  const box = new THREE.Box3().setFromObject(current);
+  const center = box.getCenter(new THREE.Vector3());
+  const r = box.getSize(new THREE.Vector3()).length() / 2 || 1;
+  const a = THREE.MathUtils.degToRad(Number(yaw ?? 35));
+  camera.position.set(center.x + 3.2 * r * Math.sin(a), center.y + 1.4 * r, center.z + 3.2 * r * Math.cos(a));
+  controls.target.copy(center);
+  grid.scale.setScalar(Math.max(r, 0.2));
+  controls.update();
+}
+
+resize();
+await load(false);
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

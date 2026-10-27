@@ -1,0 +1,80 @@
+# The checks of each push to main and of each pull request:
+#
+# - mix precommit: the compile with no warnings, the format, and the
+#   tests with 100% coverage.
+# - mix xuong.build --check: the files of priv/models are the build of
+#   the code.
+# - npm test: the Khronos glTF validator on each GLB of priv/models.
+# - scripts/wings.sh: wings/ is the copy of the core of Wings 3D at the
+#   commit of wings/VERSION.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LANG: C.UTF-8
+  BEAM_COM_VERSION: 0.1.0-rc.6
+  BEAM_COM_SHA256: ac841b72180467773d95d0eec1c7a757b67e003e576a6ba34d8debb40fe6b903
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      # beam.com is an Actually Portable Executable: its first lines are a
+      # shell script. The runner can give a program that starts with MZ to
+      # WINE. This rule gives it to /bin/sh.
+      - name: Run APE programs with /bin/sh
+        run: sudo sh -c 'echo ":APE:M::MZqFpD::/bin/sh:" > /proc/sys/fs/binfmt_misc/register' || true
+
+      - name: Install beam.com
+        run: |
+          mkdir -p "$HOME/bin"
+          cd "$HOME/bin"
+          curl -fsSLO "https://github.com/sntran/BEAM.com/releases/download/v$BEAM_COM_VERSION/beam.com"
+          echo "$BEAM_COM_SHA256  beam.com" | sha256sum -c -
+          chmod +x beam.com
+          for tool in mix.com iex.com; do ln -s beam.com "$tool"; done
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+            ~/.mix
+            ~/.hex
+          key: mix-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-
+
+      - name: Hex and rebar
+        run: |
+          mix.com local.hex --force
+          mix.com local.rebar --force
+
+      - run: mix.com deps.get
+      - run: mix.com precommit
+      - name: The format did not change a file
+        run: git diff --exit-code
+      - run: MIX_ENV=test mix.com xuong.build --check
+      - run: npm ci
+      - run: npm test
+      - name: wings/ is the copy of the core of Wings 3D
+        run: sh scripts/wings.sh && git diff --exit-code wings
