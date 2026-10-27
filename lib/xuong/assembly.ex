@@ -12,7 +12,7 @@ defmodule Xuong.Assembly do
   """
   alias Xuong.{Frame, Part, Port}
 
-  defstruct name: "assembly", kind: :item, sources: [], extras: %{}, nodes: [], ports: %{}
+  defstruct name: "assembly", kind: :item, sources: [], extras: %{}, nodes: [], ports: %{}, place: %Frame{}
 
   defmodule Connection do
     @moduledoc """
@@ -26,7 +26,9 @@ defmodule Xuong.Assembly do
 
   @doc """
   An assembly with its root. The options: `root` (the name of the root
-  node, `"body"` by default), `kind`, `sources`, `extras`.
+  node, `"body"` by default), `kind`, `sources`, `extras`, and `place`: a
+  frame that moves the whole assembly (for example, a model made with its
+  back at y = 0 moves to its center).
   """
   def new(name, root_item, opts \\ []) do
     %__MODULE__{
@@ -34,6 +36,7 @@ defmodule Xuong.Assembly do
       kind: Keyword.get(opts, :kind, :item),
       sources: Keyword.get(opts, :sources, []),
       extras: Keyword.get(opts, :extras, %{}),
+      place: Keyword.get(opts, :place, Frame.identity()),
       nodes: [{Keyword.get(opts, :root, "body"), root_item, nil}]
     }
   end
@@ -85,10 +88,12 @@ defmodule Xuong.Assembly do
   def item_port_frame(_item, %Port{} = port), do: Port.frame(port)
   def item_port_frame(%Part{} = p, path), do: Port.frame(Part.port!(p, path))
 
-  def item_port_frame(%__MODULE__{ports: ports} = a, path) do
+  def item_port_frame(%__MODULE__{place: place} = a, path), do: Frame.compose(place, inner_port_frame(a, path))
+
+  defp inner_port_frame(%__MODULE__{ports: ports} = a, path) do
     case Map.fetch(ports, path) do
       {:ok, inner} ->
-        item_port_frame(a, inner)
+        inner_port_frame(a, inner)
 
       :error ->
         case String.split(path, "/", parts: 2) do

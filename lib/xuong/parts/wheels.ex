@@ -199,7 +199,7 @@ defmodule Xuong.Parts.Wheels do
   @doc """
   A wheel with wire spokes (a bicycle, a classic motorcycle): a rim, a hub
   with two flanges, `spokes` spokes (36 by default) laced three-cross,
-  and the tire.
+  the tire, and with `disc: diameter` a brake disc on the +z side.
   """
   def spoked_wheel(code, opts \\ []) do
     %{width: w, rim: d} = tire_size(code)
@@ -257,15 +257,28 @@ defmodule Xuong.Parts.Wheels do
         )
       end
 
-    Assembly.new("wheel_spoked_#{String.replace(code, ~r{[^0-9A-Za-z]+}, "_")}", rim, root: "rim", kind: :wheel)
-    |> Assembly.add("tire", tire(code, Keyword.merge([rim_width: rim_w], opts)), at: "hub", port: "hub")
-    |> Assembly.add("hub", hub, at: "hub", port: "hub")
-    |> add_all("spoke", spokes)
+    asm =
+      Assembly.new("wheel_spoked_#{String.replace(code, ~r{[^0-9A-Za-z]+}, "_")}", rim, root: "rim", kind: :wheel)
+      |> Assembly.add("tire", tire(code, Keyword.merge([rim_width: rim_w], opts)), at: "hub", port: "hub")
+      |> Assembly.add("hub", hub, at: "hub", port: "hub")
+      |> add_all("spoke", spokes)
+
+    case Keyword.get(opts, :disc) do
+      nil ->
+        asm
+
+      d ->
+        Assembly.add(asm, "disc", brake_disc(d),
+          at: Xuong.Port.new("disc", {0, 0, flange_z + 0.014}, {0, 0, 1}, {0, 1, 0}),
+          port: "hub"
+        )
+    end
   end
 
   @doc """
   A car wheel: a rim with a face of `spokes` spokes (5), the center cap,
-  and the tire (`car_wheel("215/50R17")`). The face is on the +z side.
+  `lugs` lug nuts (5) on the circle `pcd` (0.1143 m), and the tire
+  (`car_wheel("215/50R17")`). The face is on the +z side.
   """
   def car_wheel(code, opts \\ []) do
     %{width: w, rim: d} = tire_size(code)
@@ -305,10 +318,27 @@ defmodule Xuong.Parts.Wheels do
         )
       end
 
-    Assembly.new("wheel_car_#{String.replace(code, ~r{[^0-9A-Za-z]+}, "_")}", rim, root: "rim", kind: :wheel)
-    |> Assembly.add("tire", tire(code, Keyword.merge([rim_width: rim_w, profile: :flat], opts)), at: "hub", port: "hub")
-    |> Assembly.add("center", center, at: "hub", port: "hub")
-    |> add_all("spoke", spokes)
+    # The lug nuts on the face, on their circle (PCD).
+    pcd = Keyword.get(opts, :pcd, 0.1143)
+    lugs = Keyword.get(opts, :lugs, 5)
+
+    asm =
+      Assembly.new("wheel_car_#{String.replace(code, ~r{[^0-9A-Za-z]+}, "_")}", rim, root: "rim", kind: :wheel)
+      |> Assembly.add("tire", tire(code, Keyword.merge([rim_width: rim_w, profile: :flat], opts)),
+        at: "hub",
+        port: "hub"
+      )
+      |> Assembly.add("center", center, at: "hub", port: "hub")
+      |> add_all("spoke", spokes)
+
+    Enum.reduce(1..lugs//1, asm, fn k, a ->
+      at = polar(pcd / 2, 360 * k / lugs + 36, face_z + 0.002)
+
+      Assembly.add(a, "lug_#{k}", Xuong.Parts.Fasteners.nut("M12", material: :chrome),
+        at: Xuong.Port.new("lug_#{k}", at, {0, 0, 1}, {0, 1, 0}),
+        port: "face"
+      )
+    end)
   end
 
   defp polar(r, deg, z) do

@@ -1,5 +1,5 @@
 {
-  "note": "The default color of each material role: [r, g, b] in sRGB from 0 to 255, the roughness and the metalness. An app can give its own palette.",
+  "note": "The default color of each material role: [r, g, b] in sRGB from 0 to 255, the roughness, the metalness, and for glass the alpha (1 is opaque). An app can give its own palette.",
   "roles": {
     "aluminum": {"color": [196, 200, 204], "roughness": 0.35, "metalness": 1.0},
     "black": {"color": [31, 35, 40], "roughness": 0.6, "metalness": 0.0},
@@ -8,8 +8,8 @@
     "copper": {"color": [201, 123, 67], "roughness": 0.35, "metalness": 1.0},
     "dark": {"color": [58, 63, 71], "roughness": 0.6, "metalness": 0.0},
     "fabric": {"color": [96, 100, 108], "roughness": 0.95, "metalness": 0.0},
-    "glass": {"color": [165, 216, 243], "roughness": 0.05, "metalness": 0.0},
-    "glass_dark": {"color": [39, 49, 61], "roughness": 0.05, "metalness": 0.0},
+    "glass": {"color": [165, 216, 243], "roughness": 0.05, "metalness": 0.0, "alpha": 0.35},
+    "glass_dark": {"color": [39, 49, 61], "roughness": 0.05, "metalness": 0.0, "alpha": 0.85},
     "hair": {"color": [28, 24, 22], "roughness": 0.7, "metalness": 0.0},
     "light_back": {"color": [214, 40, 40], "roughness": 0.2, "metalness": 0.0},
     "light_front": {"color": [250, 248, 235], "roughness": 0.1, "metalness": 0.0},

@@ -35,7 +35,8 @@
 <main><canvas id="view"></canvas></main>
 <script type="module">
 // The review page: each model of priv/models, at each level, with a slider
-// for each joint. The URL keeps the choice: ?model=NAME&level=.far&yaw=35.
+// for each joint. The URL keeps the choice: ?model=NAME&level=.far&yaw=35,
+// and a pose: &pose=fork:20,seat:60.
 // Serve the root of the repository: python3 -m http.server, then /review/.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -47,6 +48,7 @@ const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(devicePixelRatio);
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(getComputedStyle(document.body).backgroundColor);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8070, 0.6));
 const sun = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -63,7 +65,8 @@ const base = '../priv/models/';
 const list = await (await fetch(base + 'list.json')).json();
 const modelSelect = document.getElementById('model');
 const levelSelect = document.getElementById('level');
-for (const name of list) modelSelect.add(new Option(name, name));
+const wanted = params.get('model');
+for (const name of wanted && !list.includes(wanted) ? [...list, wanted] : list) modelSelect.add(new Option(name, name));
 modelSelect.value = params.get('model') ?? list[0];
 levelSelect.value = params.get('level') ?? '';
 modelSelect.onchange = levelSelect.onchange = () => load(true);
@@ -96,6 +99,7 @@ async function load(remember) {
 // A slider for each node with a role: a turn around its y axis, or a move
 // along it (the axis of the joint in glTF).
 function joints(root) {
+  const pose = Object.fromEntries((params.get('pose') ?? '').split(',').filter(Boolean).map((kv) => kv.split(':')));
   const box = document.getElementById('joints');
   box.replaceChildren();
   root.traverse((node) => {
@@ -114,6 +118,7 @@ function joints(root) {
       else node.quaternion.copy(rest.q).multiply(new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(v)));
     };
     box.append(label, input);
+    if (node.name in pose) { input.value = pose[node.name]; input.oninput(); }
   });
 }
 

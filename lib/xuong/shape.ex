@@ -8,7 +8,7 @@ defmodule Xuong.Shape do
   function also takes the options of `Xuong.Mesh.new/4` (`smooth`,
   `angle`).
   """
-  alias Xuong.{Frame, Mesh, Vec}
+  alias Xuong.{Detail, Frame, Mesh, Vec}
 
   @doc """
   A box from its two corners. With `round: e` (0 < e < 0.5), the box has
@@ -89,7 +89,7 @@ defmodule Xuong.Shape do
 
   @doc "A cylinder of radius `r` from z = 0 to z = `length` (option `sides`, 24 by default)."
   def cylinder(r, length, material, opts \\ []) do
-    prism(polygon(r, Keyword.get(opts, :sides, 24)), length, material, opts)
+    prism(polygon(r, Detail.sides(Keyword.get(opts, :sides, 24))), length, material, opts)
   end
 
   @doc """
@@ -100,7 +100,7 @@ defmodule Xuong.Shape do
   - `kind: :ring`: the profile is a closed loop (a tire, a washer).
   """
   def lathe(profile, material, opts \\ []) do
-    n = Keyword.get(opts, :sides, 24)
+    n = Detail.sides(Keyword.get(opts, :sides, 24))
 
     ring = fn {r, z} ->
       for k <- 0..(n - 1), do: {r * :math.cos(2 * :math.pi() * k / n), r * :math.sin(2 * :math.pi() * k / n), z / 1}
@@ -156,7 +156,7 @@ defmodule Xuong.Shape do
 
   @doc "A sphere of radius `r` (options `sides` and `rings`)."
   def sphere(r, material, opts \\ []) do
-    rings = Keyword.get(opts, :rings, 12)
+    rings = Detail.sides(Keyword.get(opts, :rings, 12))
     profile = for i <- 0..rings, do: {r * :math.sin(:math.pi() * i / rings), -r * :math.cos(:math.pi() * i / rings)}
     lathe(profile, material, opts)
   end
@@ -168,7 +168,7 @@ defmodule Xuong.Shape do
   round corners). Option `sides`: the points of each ring (16).
   """
   def loft(sections, material, opts \\ []) do
-    n = Keyword.get(opts, :sides, 16)
+    n = Detail.sides(Keyword.get(opts, :sides, 16))
 
     rings =
       for {c, u, v, hu, hv, p} <- sections do
@@ -189,6 +189,39 @@ defmodule Xuong.Shape do
     place(Mesh.new(points, Mesh.outside(points, caps ++ sides), material, opts), opts)
   end
 
+  @doc """
+  Loft sections along y (the side and the top of a body): each row is
+  `{y, z_low, z_high, half_width, power}`, centered at x = `x0`.
+  """
+  def rows_y(rows, x0 \\ 0.0),
+    do:
+      for(
+        {y, z0, z1, hw, p} <- rows,
+        do: {{x0, y, (z0 + z1) / 2}, {1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, hw, (z1 - z0) / 2, p}
+      )
+
+  @doc "Loft sections along z (a shield that stands): each row is `{z, y_back, y_front, half_width, power}`."
+  def rows_z(rows, x0 \\ 0.0),
+    do:
+      for(
+        {z, y0, y1, hw, p} <- rows,
+        do: {{x0, (y0 + y1) / 2, z}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hw, (y1 - y0) / 2, p}
+      )
+
+  @doc """
+  Loft sections on an arc around an axis along x (a fender over a wheel):
+  from the angle `a0` to `a1` (degrees from up, to the front), at a
+  radius around the point `{y, z}`, each section `half_width` by
+  `half_thickness`.
+  """
+  def arc({cy, cz}, radius, a0, a1, steps, hw, ht, p \\ 4) do
+    for i <- 0..steps do
+      a = (a0 + (a1 - a0) * i / steps) * :math.pi() / 180
+      out = {0.0, :math.sin(a), :math.cos(a)}
+      {Vec.add({0.0, cy / 1, cz / 1}, Vec.scale(out, radius)), {1.0, 0.0, 0.0}, out, hw, ht, p}
+    end
+  end
+
   defp curve(t, p), do: if(t < 0, do: -1, else: 1) * :math.pow(abs(t), 2 / p)
 
   @doc """
@@ -197,7 +230,7 @@ defmodule Xuong.Shape do
   ring at a bend lies on the plane between the two segments.
   """
   def sweep([_, _ | _] = line, r, material, opts \\ []) do
-    n = Keyword.get(opts, :sides, 8)
+    n = Detail.sides(Keyword.get(opts, :sides, 8))
     line = Enum.map(line, &Vec.float/1)
     dirs = line |> Enum.chunk_every(2, 1, :discard) |> Enum.map(fn [a, b] -> Vec.norm(Vec.sub(b, a)) end)
     # The direction in and out of each point.

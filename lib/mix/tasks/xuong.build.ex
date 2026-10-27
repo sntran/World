@@ -28,12 +28,14 @@ defmodule Mix.Tasks.Xuong.Build do
 
     files =
       Enum.flat_map(chosen, fn {name, fun} ->
-        item = fun.()
-
+        # The model is made again at each level (Xuong.Detail).
         glbs =
-          for {level, ext} <- @levels, do: {Path.join(dir, name <> ext <> ".glb"), Xuong.Build.glb(item, level: level)}
+          for {level, ext} <- @levels do
+            item = Xuong.Detail.with(level, fun)
+            {Path.join(dir, name <> ext <> ".glb"), Xuong.Build.glb(item, level: level)}
+          end
 
-        parts = %{"name" => name, "parts" => Xuong.Build.parts(item)}
+        parts = %{"name" => name, "parts" => Xuong.Build.parts(fun.())}
         [{Path.join(dir, name <> ".parts.json"), JSON.encode!(parts)} | glbs]
       end)
 

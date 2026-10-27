@@ -30,9 +30,9 @@ about it.
   format of [Conventional Commits](https://www.conventionalcommits.org/):
   `type(scope): description`. The types are `feat`, `fix`, `docs`,
   `test`, `refactor`, `perf`, `build`, `ci` and `chore`.
-- Do the work on a branch with the type as a prefix, for example
-  `feat/bolts` or `docs/plan`. Do not push to `main`. Open a pull
-  request only when the owner asks.
+- Do the work on `main`, and push to `main` (the owner chose this for
+  the start of the project). Open a pull request only when the owner
+  asks.
 - Commit with the identity of the owner, with no trailer:
 
   ```sh
@@ -40,8 +40,9 @@ about it.
     -c commit.gpgsign=false commit
   ```
 
-- Add a picture of each new or changed model to its pull request: the
-  review page from the front, the side and three quarters.
+- Look at each new or changed model on the review page
+  (`scripts/shot.mjs`) before a commit, from the front, the side and
+  three quarters.
 
 ## The tools
 

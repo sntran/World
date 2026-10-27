@@ -21,7 +21,7 @@ defmodule Xuong.Mesh do
 
   @doc """
   A mesh. The options: `smooth` (the number of smooth steps, 0 by
-  default) and `angle` (in degrees: two faces with a larger angle between
+  default; less at the levels `:mid` and `:far`, `Xuong.Detail`) and `angle` (in degrees: two faces with a larger angle between
   them have a hard edge; 40 by default).
   """
   def new(points, faces, material, opts \\ []) do
@@ -29,7 +29,7 @@ defmodule Xuong.Mesh do
       points: Enum.map(points, &Vec.float/1),
       faces: faces,
       material: material,
-      smooth: Keyword.get(opts, :smooth, 0),
+      smooth: Xuong.Detail.smooth(Keyword.get(opts, :smooth, 0)),
       angle: Keyword.get(opts, :angle, 40.0)
     }
   end

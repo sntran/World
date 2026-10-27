@@ -138,9 +138,13 @@ The build writes three levels of each model:
   only in the near level.
 - `detail` can move a part up or down a level: a light of a vehicle
   stays in the far level, because the eye looks for it.
-- The triangles of a vehicle are about 50,000 or fewer in the near
-  level, 10,000 or fewer in the mid level, and 2,000 or fewer in the far
-  level. A test of each model checks it.
+- A model is made again for each level (`Xuong.Detail`): at the mid
+  level a round shape has half of its sides and one smooth step less,
+  and the sections of a body are two times farther apart; at the far
+  level, a quarter of the sides, no smooth step, and four times farther.
+- The triangles of a vehicle are 50,000 or fewer in the near level,
+  12,000 or fewer in the mid level, and 5,000 or fewer in the far level.
+  A test of each model checks it.
 
 ## The materials
 
@@ -152,7 +156,8 @@ strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `wood`, `fabric`, `skin`, `hair`, `cloth`, `white`, `dark`.
 
 `priv/palette.json` gives each role a color, a roughness and a
-metalness. An app can give its own palette (the woodblock tones of Tre),
+metalness. Glass also has an alpha (0.35 for `glass`, 0.85 for
+`glass_dark`): its glTF material has the alpha mode `BLEND`. An app can give its own palette (the woodblock tones of Tre),
 and it can change the `paint` of a model (the color of the car of a
 person). In a `.wings` file, the name of a material is its role.
 

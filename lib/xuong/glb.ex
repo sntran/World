@@ -162,8 +162,10 @@ defmodule Xuong.GLB do
     [r, g, b] = spec["color"]
     color = for c <- [r, g, b], do: Float.round(srgb_to_linear(c / 255), 5)
 
+    alpha = Map.get(spec, "alpha", 1.0) / 1
+
     pbr = %{
-      "baseColorFactor" => color ++ [1.0],
+      "baseColorFactor" => color ++ [alpha],
       "roughnessFactor" => spec["roughness"] / 1,
       "metallicFactor" => spec["metalness"] / 1
     }
@@ -182,11 +184,14 @@ defmodule Xuong.GLB do
            %{buf | images: [%{"bufferView" => view, "mimeType" => mime} | buf.images]}}
       end
 
-    {%{
-       "name" => Atom.to_string(role),
-       "pbrMetallicRoughness" => pbr,
-       "doubleSided" => Map.get(spec, "double_sided", false)
-     }, buf}
+    material = %{
+      "name" => Atom.to_string(role),
+      "pbrMetallicRoughness" => pbr,
+      "doubleSided" => Map.get(spec, "double_sided", false)
+    }
+
+    # Glass shows what is behind it.
+    {if(alpha < 1.0, do: Map.put(material, "alphaMode", "BLEND"), else: material), buf}
   end
 
   defp srgb_to_linear(c) when c <= 0.04045, do: c / 12.92

@@ -81,10 +81,10 @@ models").
 
 | Step | Result | State |
 |---|---|---|
-| 0. The plan | This file, `AGENTS.md`, `CONTRIBUTING.md`, `TODO.md`, `docs/format.md`. | In review |
-| 1. The project and the core of Wings | A Mix project on [BEAM.com](https://github.com/sntran/BEAM.com). The core of Wings 3D in `wings/`. `Xuong.Mesh`, `Xuong.GLB`, the check of the Khronos validator, the review page. CI. | To do |
-| 2. Standard parts | Bolts, nuts, washers, bearings, tubes, sheets, lumber, extrusions, wheels and tires, each from its standard, with its ports. | To do |
-| 3. Assemblies and joints | Connections, joints, the list of the parts, three levels of detail, GLB with a node for each joint. The first model: the Honda Vision 110. | To do |
+| 0. The plan | This file, `AGENTS.md`, `CONTRIBUTING.md`, `TODO.md`, `docs/format.md`. | Done |
+| 1. The project and the core of Wings | A Mix project on [BEAM.com](https://github.com/sntran/BEAM.com). The core of Wings 3D in `wings/`. `Xuong.Mesh`, `Xuong.GLB`, the check of the Khronos validator, the review page. CI. | Done |
+| 2. Standard parts | Bolts, nuts, washers, bearings, tubes, sheets, lumber, extrusions, wheels and tires, each from its standard, with its ports. | Done |
+| 3. Assemblies and joints | Connections, joints, the list of the parts, three levels of detail, GLB with a node for each joint. The vehicles of Phượt: the Honda Vision 110, the Chevrolet Bolt EV, the Ford Transit 148 camper, the Royal Enfield Himalayan, a touring bicycle. | Done |
 | 4. Phượt uses Xưởng | The vehicle next to the avatar of Phượt is the model of Xưởng, and it moves with the trip. | To do |
 | 5. Wings files | A strict reader and a writer of `.wings`. Shaped parts from `.wings` files. The clean-up of a mesh before Wings takes it. | To do |
 | 6. The Wings plugin | `wpc_xuong` for Wings 3D: ports and joints in the file, a pose to try, the axes in the view. | To do |

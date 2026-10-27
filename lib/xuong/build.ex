@@ -26,7 +26,7 @@ defmodule Xuong.Build do
     pose = Keyword.get(opts, :pose, %{})
     name = item.name
     root = %Scene.Node{name: name}
-    {nodes, _} = walk(item, Frame.identity(), 0, "", %{nodes: [root], parts: %{0 => []}}, level, pose) |> finish()
+    {nodes, _} = walk(item, Frame.identity(), 0, %{nodes: [root], parts: %{0 => []}}, level, pose) |> finish()
 
     scene = %Scene{name: name, nodes: nodes}
     {lo, hi} = if Scene.triangles(scene) > 0, do: Scene.bounds(scene), else: {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}
@@ -50,29 +50,32 @@ defmodule Xuong.Build do
   # Walk the tree of a model. A part goes into the list of its node; a
   # node of an assembly goes into the node of its parent, or into a new
   # node for a joint.
-  defp walk(%Part{} = p, frame, node, _prefix, acc, level, _pose) do
+  defp walk(%Part{} = p, frame, node, acc, level, _pose) do
     if keep?(p, level), do: update_in(acc.parts[node], &[{frame, p} | &1]), else: acc
   end
 
-  defp walk(%Assembly{nodes: [{root, root_item, nil} | rest]}, frame, node, prefix, acc, level, pose) do
-    acc = walk(root_item, frame, node, prefix <> root <> "/", acc, level, pose)
+  defp walk(%Assembly{nodes: [{root, root_item, nil} | rest], place: place}, frame, node, acc, level, pose) do
+    frame = Frame.compose(frame, place)
+    acc = walk(root_item, frame, node, acc, level, pose)
     places = %{root => {node, frame}}
 
     {acc, _} =
       Enum.reduce(rest, {acc, places}, fn {name, item, %Connection{} = c}, {acc, places} ->
         {parent_node, parent_frame} = Map.fetch!(places, c.to)
-        a = %Assembly{nodes: [{root, root_item, nil} | rest]}
+        a = %Assembly{nodes: [{root, root_item, nil} | rest], place: Frame.identity()}
         port = Frame.compose(parent_frame, port_in_node(a, c))
-        full = prefix <> name
 
         if c.kind == :fixed do
           f = Frame.compose(port, Assembly.placement(c, item, 0.0))
-          {walk(item, f, parent_node, full <> "/", acc, level, pose), Map.put(places, name, {parent_node, f})}
+          {walk(item, f, parent_node, acc, level, pose), Map.put(places, name, {parent_node, f})}
         else
-          value = Map.get(pose, full, 0.0) / 1
+          # The name of a joint is its own name: three.js removes "/" from
+          # the names of nodes. Two joints of a model cannot have one name.
+          if Enum.any?(acc.nodes, &(&1.name == name)), do: raise(ArgumentError, "two joints have the name #{name}")
+          value = Map.get(pose, name, 0.0) / 1
 
           joint = %Scene.Node{
-            name: full,
+            name: name,
             parent: parent_node,
             frame: Frame.compose(port, motion(c.kind, value)),
             extras: %{
@@ -86,7 +89,7 @@ defmodule Xuong.Build do
           id = length(acc.nodes)
           acc = %{acc | nodes: acc.nodes ++ [joint], parts: Map.put(acc.parts, id, [])}
           f = Assembly.placement(c, item, 0.0)
-          {walk(item, f, id, full <> "/", acc, level, pose), Map.put(places, name, {id, f})}
+          {walk(item, f, id, acc, level, pose), Map.put(places, name, {id, f})}
         end
       end)
 
