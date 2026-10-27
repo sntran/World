@@ -77,7 +77,9 @@ defmodule Xuong.Models.TouringBicycle do
       Shape.sweep(
         [Vec.sub(seat_top, {0.0, -0.01, 0.05}), Vec.add(seat_top, Vec.scale({0.0, -0.284, 0.959}, 0.2))],
         0.0136,
-        :aluminum, sides: 10)
+        :aluminum,
+        sides: 10
+      )
 
     saddle_at = Vec.add(seat_top, Vec.scale({0.0, -0.284, 0.959}, 0.2))
     {_, sy, sz} = saddle_at
@@ -90,7 +92,9 @@ defmodule Xuong.Models.TouringBicycle do
           {sy + 0.1, sz + 0.01, sz + 0.05, 0.025, 3},
           {sy + 0.17, sz + 0.015, sz + 0.045, 0.018, 2.5}
         ]),
-        :seat, smooth: 2)
+        :seat,
+        smooth: 2
+      )
 
     cage =
       Shape.sweep(
@@ -99,7 +103,9 @@ defmodule Xuong.Models.TouringBicycle do
           Vec.lerp(@bb, head_bottom(), 0.6) |> Vec.add({0.0, 0.0, 0.025})
         ],
         0.036,
-        :black, sides: 12)
+        :black,
+        sides: 12
+      )
 
     Part.new(
       "frame_touring_54",
@@ -111,7 +117,9 @@ defmodule Xuong.Models.TouringBicycle do
         port("rear_axle", @rear, {1, 0, 0}, {0, 0, 1}),
         port("bb", @bb, {1, 0, 0}, {0, 0, 1}),
         port("stand", Vec.add(@bb, {-0.05, -0.08, 0.0}), {1, 0, 0}, {0, 0, 1})
-      ], sources: ["Steel tubes: 28.6 mm top and seat tube, 35 mm down tube."])
+      ],
+      sources: ["Steel tubes: 28.6 mm top and seat tube, 35 mm down tube."]
+    )
   end
 
   defp fork(wheel) do
@@ -186,7 +194,10 @@ defmodule Xuong.Models.TouringBicycle do
           port("axle", {0, 0, 0}, {0, 0, 1}, {1, 0, 0}),
           port("pedal_right", {0.17, 0.0, 0.085}, {0, 0, 1}, {1, 0, 0}),
           port("pedal_left", {-0.17, 0.0, -0.085}, {0, 0, -1}, {1, 0, 0})
-        ], params: %{"crank" => 0.17, "teeth" => 44}, sources: ["Crank arms of 170 mm; a chainring of 44 teeth."])
+        ],
+        params: %{"crank" => 0.17, "teeth" => 44},
+        sources: ["Crank arms of 170 mm; a chainring of 44 teeth."]
+      )
 
     pedal =
       Part.new(
@@ -211,7 +222,9 @@ defmodule Xuong.Models.TouringBicycle do
             Shape.sweep(
               [{x, ry - 0.02, rz + 0.02}, {x, ry, top}, {x, ry + 0.32, top}, {x * 0.5, ry + 0.38, top + 0.05}],
               0.005,
-              :black, sides: 6)
+              :black,
+              sides: 6
+            )
 
     bags =
       for x <- [-0.15, 0.15],

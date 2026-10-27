@@ -65,13 +65,33 @@ defmodule Xuong.Scene do
     end)
   end
 
-  @doc "The box of all points of the scene, in its axes: `{min, max}`."
-  def bounds(%__MODULE__{nodes: nodes} = scene) do
+  @doc """
+  The box of all points of the scene, in its axes: `{min, max}`. The
+  points of a skinned mesh move with their bones.
+  """
+  def bounds(%__MODULE__{nodes: nodes, skins: skins} = scene) do
     frames = world_frames(scene)
 
     nodes
     |> Enum.with_index()
-    |> Enum.flat_map(fn {n, i} -> for p <- n.primitives, pt <- p.positions, do: Frame.point(frames[i], pt) end)
+    |> Enum.flat_map(fn
+      {%{skin: nil} = n, i} -> for p <- n.primitives, pt <- p.positions, do: Frame.point(frames[i], pt)
+      {n, _} -> skinned(n, Enum.at(skins, n.skin), frames)
+    end)
     |> Vec.bounds()
+  end
+
+  defp skinned(node, skin, frames) do
+    bones =
+      skin.joints
+      |> Enum.zip(skin.inverse_bind)
+      |> Enum.map(fn {j, ib} -> Frame.compose(frames[j], ib) end)
+      |> List.to_tuple()
+
+    for p <- node.primitives, {pt, js, ws} <- Enum.zip([p.positions, p.joints, p.weights]) do
+      Enum.zip(Tuple.to_list(js), Tuple.to_list(ws))
+      |> Enum.map(fn {j, w} -> Vec.scale(Frame.point(elem(bones, j), pt), w) end)
+      |> Enum.reduce(&Vec.add/2)
+    end
   end
 end

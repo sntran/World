@@ -190,8 +190,15 @@ defmodule Xuong.GLB do
       "doubleSided" => Map.get(spec, "double_sided", false)
     }
 
-    # Glass shows what is behind it.
-    {if(alpha < 1.0, do: Map.put(material, "alphaMode", "BLEND"), else: material), buf}
+    # Glass shows what is behind it; hair and eyelashes have holes (MASK).
+    material =
+      cond do
+        spec["alpha_mode"] == "MASK" -> Map.merge(material, %{"alphaMode" => "MASK", "alphaCutoff" => 0.5})
+        alpha < 1.0 -> Map.put(material, "alphaMode", "BLEND")
+        true -> material
+      end
+
+    {material, buf}
   end
 
   defp srgb_to_linear(c) when c <= 0.04045, do: c / 12.92

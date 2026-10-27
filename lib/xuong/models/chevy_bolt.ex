@@ -118,13 +118,19 @@ defmodule Xuong.Models.ChevyBolt do
     head = fn x ->
       Shape.loft(
         Shape.rows_y([{3.88, 0.80, 0.86, 0.15, 3}, {3.99, 0.78, 0.84, 0.13, 3}, {4.07, 0.76, 0.81, 0.09, 3}], x),
-        :light_front, smooth: 1, sides: 12)
+        :light_front,
+        smooth: 1,
+        sides: 12
+      )
     end
 
     tail = fn x ->
       Shape.loft(
         Shape.rows_z([{0.90, 0.0, 0.14, 0.07, 3}, {1.04, 0.02, 0.14, 0.08, 3}, {1.14, 0.06, 0.14, 0.06, 3}], x),
-        :light_back, smooth: 1, sides: 12)
+        :light_back,
+        smooth: 1,
+        sides: 12
+      )
     end
 
     Part.new("lights_bolt_ev", :light, [head.(0.6), head.(-0.6), tail.(0.74), tail.(-0.74)], [origin()],

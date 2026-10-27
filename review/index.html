@@ -28,6 +28,8 @@
   <label for="level">Level of detail</label>
   <select id="level"><option value="">near</option><option value=".mid">mid</option><option value=".far">far</option></select>
   <p id="info"></p>
+  <label for="animation">Animation</label>
+  <select id="animation"><option value="">none</option></select>
   <div id="joints"></div>
   <h2>Parts</h2>
   <table id="parts"></table>
@@ -36,7 +38,8 @@
 <script type="module">
 // The review page: each model of priv/models, at each level, with a slider
 // for each joint. The URL keeps the choice: ?model=NAME&level=.far&yaw=35,
-// and a pose: &pose=fork:20,seat:60.
+// a pose: &pose=fork:20,seat:60, and an animation at a time (seconds):
+// &animation=walk&t=0.3 (no t: the animation plays).
 // Serve the root of the repository: python3 -m http.server, then /review/.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -60,6 +63,9 @@ const grid = new THREE.GridHelper(10, 20, 0x9a927c, 0xc9c2ad);
 scene.add(grid);
 const loader = new GLTFLoader();
 let current = null;
+let mixer = null;
+const clock = new THREE.Clock();
+const animationSelect = document.getElementById('animation');
 
 const base = '../priv/models/';
 const list = await (await fetch(base + 'list.json')).json();
@@ -91,6 +97,7 @@ async function load(remember) {
   current.traverse((o) => { if (o.isMesh) tris += o.geometry.index.count / 3; });
   document.getElementById('info').textContent = `Size: ${(extras.size ?? []).map((v) => v.toFixed(3)).join(' × ')} m. Triangles: ${tris}.`;
   joints(current);
+  animations(gltf);
   parts(name);
   frame(params.get('yaw'));
   window.READY = true;
@@ -122,6 +129,23 @@ function joints(root) {
   });
 }
 
+// The animations of the model: one plays, or stops at the time t.
+function animations(gltf) {
+  mixer = new THREE.AnimationMixer(gltf.scene);
+  animationSelect.replaceChildren(new Option('none', ''));
+  for (const clip of gltf.animations) animationSelect.add(new Option(clip.name, clip.name));
+  animationSelect.value = params.get('animation') ?? '';
+  animationSelect.onchange = () => {
+    mixer.stopAllAction();
+    const clip = gltf.animations.find((c) => c.name === animationSelect.value);
+    if (!clip) return;
+    mixer.clipAction(clip).play();
+    const t = params.get('t');
+    if (t !== null) { mixer.setTime(Number(t)); mixer.timeScale = 0; }
+  };
+  animationSelect.onchange();
+}
+
 async function parts(name) {
   const res = await fetch(`${base}${name}.parts.json`);
   const table = document.getElementById('parts');
@@ -146,7 +170,7 @@ function frame(yaw) {
 
 resize();
 await load(false);
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+renderer.setAnimationLoop(() => { mixer?.update(clock.getDelta()); controls.update(); renderer.render(scene, camera); });
 </script>
 </body>
 </html>

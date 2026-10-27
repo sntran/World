@@ -99,7 +99,9 @@ defmodule Xuong.Models.FordTransit do
     windshield =
       Shape.loft(
         Shape.rows_z([{1.76, 5.08, 5.12, 0.86, 7}, {2.10, 4.90, 4.95, 0.86, 7}, {2.40, 4.72, 4.77, 0.82, 7}]),
-        :glass_dark, sides: 16)
+        :glass_dark,
+        sides: 16
+      )
 
     cab_windows =
       for x <- [-1, 1],
@@ -214,7 +216,9 @@ defmodule Xuong.Models.FordTransit do
               {x, y} <- [{-0.5, -0.75}, {0.5, -0.75}, {-0.5, 0.75}, {0.5, 0.75}],
               do: port("foot_#{x}_#{y}", {x, y, 0.05}, {0, 0, -1}, {0, 1, 0})
             )
-        ], sources: ["A 400 W panel: 1722 x 1134 x 35 mm, as common panels of the trade."])
+        ],
+        sources: ["A 400 W panel: 1722 x 1134 x 35 mm, as common panels of the trade."]
+      )
 
     Enum.reduce(
       [{-0.5, -0.75}, {0.5, -0.75}, {-0.5, 0.75}, {0.5, 0.75}],
@@ -229,7 +233,10 @@ defmodule Xuong.Models.FordTransit do
     head = fn x ->
       Shape.loft(
         Shape.rows_y([{5.78, 1.0, 1.16, 0.14, 3}, {5.86, 0.99, 1.14, 0.12, 3}, {5.93, 0.98, 1.1, 0.08, 3}], x),
-        :light_front, smooth: 1, sides: 12)
+        :light_front,
+        smooth: 1,
+        sides: 12
+      )
     end
 
     tail = fn x -> Shape.box({x - 0.04, -0.02, 0.85}, {x + 0.04, 0.02, 1.45}, :light_back, round: 0.3, smooth: 1) end

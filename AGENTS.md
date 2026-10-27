@@ -82,7 +82,8 @@ new commit. The copy changes only these things:
 | The language | Elixir, on BEAM.com. | DIY and Phượt are Elixir. The core of Wings is Erlang, and runs in the same VM with no window. |
 | The source of a shape | Code for a standard part. A `.wings` file for a shaped part. | Wings 3D is free, small, and in Erlang. A person can open each part, change it, and save it. |
 | The one format | GLB (glTF 2.0) for the screens. STL only for a printer. | Godot, three.js, Android and MapLibre read GLB. GLB has nodes for the joints, materials, and levels of detail. STL has none of them. |
-| The joints | From the connections of an assembly. Rigid joints first (each part follows one joint). | They cover vehicles, furniture, machines and the figures of Tre. A skin (a mesh that bends) waits for the people (`TODO.md`). |
+| The joints | From the connections of an assembly. Rigid joints first (each part follows one joint). | They cover vehicles, furniture, machines and the figures of Tre. A person has a skin (a mesh that bends) from the skeleton of MakeHuman. |
+| The people | The data of MakeHuman (CC0) in `assets/makehuman/`: a body from its numbers, the skeleton `game_engine`, skins, hair and clothes. A low-poly body of MakeHuman at mid and far. | Real shapes and real weights, free to use. A person is a `Xuong.Figure`, and an assembly holds it at its port `hips` or `ground`. |
 | The animation | Data in the format (poses), not a timeline in Wings. | The apps move the models in code: the wheels turn with the speed, the legs of Tre swing in a walk. |
 | Voxels | A separate kind of model in `.vox`, and a voxel maker from any model. | The mesh of Wings cannot hold blocks that touch at an edge or a corner. Tre needs blocks at its own sizes. |
 | The axes | Right hand: x to the right side, y to the front, z up, in meters. The origin of a model on the ground at the center of its box. | One rule for each model. The GLB writer turns the axes with no mirror. |

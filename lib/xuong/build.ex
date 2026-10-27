@@ -12,7 +12,7 @@ defmodule Xuong.Build do
     3 mm, and the parts `inside`; `:far` drops the parts shorter than
     10 cm or thinner than 1 cm. Each level smooths one step less.
   """
-  alias Xuong.{Assembly, Frame, GLB, Mesh, Part, Scene, Vec}
+  alias Xuong.{Assembly, Figure, Frame, GLB, Mesh, Part, Scene, Vec}
   alias Xuong.Assembly.Connection
 
   @limits %{near: {0.0, 0.0}, mid: {0.02, 0.003}, far: {0.10, 0.01}}
@@ -26,9 +26,20 @@ defmodule Xuong.Build do
     pose = Keyword.get(opts, :pose, %{})
     name = item.name
     root = %Scene.Node{name: name}
-    {nodes, _} = walk(item, Frame.identity(), 0, %{nodes: [root], parts: %{0 => []}}, level, pose) |> finish()
 
-    scene = %Scene{name: name, nodes: nodes}
+    acc =
+      walk(
+        item,
+        Frame.identity(),
+        0,
+        %{nodes: [root], parts: %{0 => []}, skins: [], animations: [], materials: %{}},
+        level,
+        pose
+      )
+
+    {nodes, _} = finish(acc)
+
+    scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: acc.animations, materials: acc.materials}
     {lo, hi} = if Scene.triangles(scene) > 0, do: Scene.bounds(scene), else: {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}
     size = Vec.sub(hi, lo)
 
@@ -47,9 +58,45 @@ defmodule Xuong.Build do
   @doc "Write the GLB of a model at a level, in a pose."
   def glb(item, opts \\ []), do: GLB.encode(scene(item, opts))
 
+  # The root of the figure goes under the node; a skinned mesh stays a
+  # root node (its bones place it).
+  defp figure_parent(0, _, node, _), do: node
+  defp figure_parent(_, %{parent: nil}, _, _), do: nil
+  defp figure_parent(_, %{parent: p}, _, offset), do: p + offset
+
   # Walk the tree of a model. A part goes into the list of its node; a
   # node of an assembly goes into the node of its parent, or into a new
   # node for a joint.
+  # A figure (a person) brings its own nodes, skin, animations and
+  # materials: its root goes at the frame, under the node.
+  defp walk(%Figure{} = f, frame, node, acc, _level, _pose) do
+    offset = length(acc.nodes)
+    skins = length(acc.skins)
+
+    nodes =
+      for {n, i} <- Enum.with_index(f.nodes) do
+        %{
+          n
+          | parent: figure_parent(i, n, node, offset),
+            frame: if(i == 0, do: Frame.compose(frame, n.frame), else: n.frame),
+            skin: n.skin && n.skin + skins
+        }
+      end
+
+    %{
+      acc
+      | nodes: acc.nodes ++ nodes,
+        parts: Map.merge(acc.parts, Map.new(offset..(offset + length(nodes) - 1), &{&1, []})),
+        skins:
+          acc.skins ++
+            for(s <- f.skins, do: %{s | joints: Enum.map(s.joints, &(&1 + offset)), skeleton: s.skeleton + offset}),
+        animations:
+          acc.animations ++
+            for(a <- f.animations, do: %{a | channels: Enum.map(a.channels, &%{&1 | node: &1.node + offset})}),
+        materials: Map.merge(acc.materials, f.materials)
+    }
+  end
+
   defp walk(%Part{} = p, frame, node, acc, level, _pose) do
     if keep?(p, level), do: update_in(acc.parts[node], &[{frame, p} | &1]), else: acc
   end
@@ -116,7 +163,7 @@ defmodule Xuong.Build do
           |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
         prims = for {mat, lists} <- Enum.sort_by(corners, &elem(&1, 0)), do: Scene.primitive(mat, Enum.concat(lists))
-        %{n | primitives: prims}
+        %{n | primitives: n.primitives ++ prims}
       end
 
     {nodes, parts}
@@ -158,5 +205,6 @@ defmodule Xuong.Build do
   end
 
   defp all_parts(%Part{} = p), do: [p]
+  defp all_parts(%Figure{} = f), do: [%Part{name: f.name, kind: f.kind, params: f.params, sources: f.sources}]
   defp all_parts(%Assembly{nodes: nodes}), do: Enum.flat_map(nodes, fn {_, item, _} -> all_parts(item) end)
 end

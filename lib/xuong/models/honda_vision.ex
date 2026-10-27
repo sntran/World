@@ -73,7 +73,10 @@ defmodule Xuong.Models.HondaVision do
         same("steer", @steer_at, @steer_axis, {0.0, 0.894, 0.447}),
         same("pivot", @pivot, {1, 0, 0}, {0, 0, 1}),
         same("stand", {0.0, 0.70, 0.17}, {1, 0, 0}, {0, 0, 1})
-      ], inside: true, sources: ["An underbone frame of steel tube, 48 mm."])
+      ],
+      inside: true,
+      sources: ["An underbone frame of steel tube, 48 mm."]
+    )
   end
 
   defp body do
@@ -99,7 +102,9 @@ defmodule Xuong.Models.HondaVision do
           {1.18, 0.19, 0.31, 0.17, 6},
           {1.3, 0.2, 0.34, 0.15, 6}
         ]),
-        :trim, smooth: 1)
+        :trim,
+        smooth: 1
+      )
 
     shield =
       Shape.loft(
@@ -117,12 +122,18 @@ defmodule Xuong.Models.HondaVision do
     front_light =
       Shape.loft(
         Shape.rows_z([{0.62, 1.395, 1.43, 0.09, 3}, {0.7, 1.37, 1.415, 0.11, 3}, {0.78, 1.345, 1.39, 0.07, 3}]),
-        :light_front, smooth: 1, sides: 12)
+        :light_front,
+        smooth: 1,
+        sides: 12
+      )
 
     rear_light =
       Shape.loft(
         Shape.rows_y([{-0.045, 0.74, 0.785, 0.035, 2.5}, {0.0, 0.73, 0.79, 0.09, 3}, {0.05, 0.725, 0.79, 0.1, 3}]),
-        :light_back, smooth: 1, sides: 12)
+        :light_back,
+        smooth: 1,
+        sides: 12
+      )
 
     plate = Shape.box({-0.08, 0.01, 0.48}, {0.08, 0.025, 0.6}, :white)
     holder = Shape.box({-0.035, 0.03, 0.58}, {0.035, 0.08, 0.72}, :trim)
@@ -176,7 +187,9 @@ defmodule Xuong.Models.HondaVision do
       Shape.sweep(
         [{-0.34, 1.12, 1.05}, {-0.18, 1.14, 1.04}, {0.0, 1.16, 1.0}, {0.18, 1.14, 1.04}, {0.34, 1.12, 1.05}],
         0.011,
-        :chrome, sides: 10)
+        :chrome,
+        sides: 10
+      )
 
     stem = Shape.sweep([{0.0, 1.33, 0.70}, {0.0, 1.20, 0.98}, {0.0, 1.16, 1.0}], 0.014, :steel, sides: 10)
 
@@ -188,7 +201,9 @@ defmodule Xuong.Models.HondaVision do
           {1.24, 0.955, 1.08, 0.165, 4},
           {1.34, 0.97, 1.055, 0.1, 3}
         ]),
-        :paint, smooth: 2)
+        :paint,
+        smooth: 2
+      )
 
     fork =
       Part.new(
@@ -201,7 +216,9 @@ defmodule Xuong.Models.HondaVision do
           same("axle", {0.0, fy, fz}, {1, 0, 0}, {0, 0, 1}),
           same("axle_nut", {0.088, fy, fz}, {1, 0, 0}, {0, 0, 1}),
           origin("bars")
-        ], sources: ["A telescopic fork, 26.6 degrees from up."])
+        ],
+        sources: ["A telescopic fork, 26.6 degrees from up."]
+      )
 
     bars =
       Part.new("handlebar_vision", :handlebar, [bar, stem, head], [origin("bars")],
@@ -264,7 +281,9 @@ defmodule Xuong.Models.HondaVision do
           ],
           -0.115
         ),
-        :aluminum, smooth: 2)
+        :aluminum,
+        smooth: 2
+      )
 
     cylinder =
       Shape.loft(Shape.rows_y([{0.7, 0.22, 0.34, 0.07, 4}, {0.86, 0.22, 0.36, 0.09, 4}], 0.0), :metal, smooth: 1)
@@ -289,7 +308,9 @@ defmodule Xuong.Models.HondaVision do
           same("axle", {0.0, ry, rz}, {1, 0, 0}, {0, 0, 1}),
           same("axle_nut", {0.07, ry, rz}, {1, 0, 0}, {0, 0, 1}),
           same("shock", {0.12, 0.28, 0.33}, {0.0, 0.25, 0.97}, {0, 1, 0})
-        ], sources: ["A 110 cc engine, air cooled, with its belt case at the left."])
+        ],
+        sources: ["A 110 cc engine, air cooled, with its belt case at the left."]
+      )
 
     shock = Stock.spring(0.045, 0.006, 0.26, 7, :paint, name: "shock_spring_vision")
 

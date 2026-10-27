@@ -1,0 +1,460 @@
+defmodule Xuong.Human do
+  @moduledoc """
+  People from the data of MakeHuman (CC0, `Xuong.Human.Data`): a body of
+  real shape from its numbers (sex, age, muscle, weight, height, origin),
+  a skeleton of 53 bones ("game_engine"), skin weights, eyes, eyebrows,
+  eyelashes, hair and clothes fitted to the body, and the textures of a
+  skin.
+
+  The levels of detail (`Xuong.Detail`):
+  - `:near`: the full base mesh, and the clothes and the hair;
+  - `:mid`: a body of about 1,600 faces, with the colors of the clothes on
+    it, and the hair;
+  - `:far`: a body of 730 faces, with the colors of the clothes on it.
+  """
+  alias Xuong.{Detail, Figure, Frame, Part, Scene, Vec}
+  alias Xuong.Human.{Data, Pose}
+
+  @defaults [
+    gender: 1.0,
+    age: 30,
+    muscle: 0.5,
+    weight: 0.5,
+    height: 0.5,
+    race: %{"asian" => 1.0},
+    skin: "young_asian_male",
+    eyes: "brown",
+    eyebrows: "eyebrow001",
+    hair: "short02",
+    clothes: ["male_casualsuit01", "shoes01"],
+    pose: %{}
+  ]
+
+  @doc """
+  A person. The options (with their defaults in `@defaults`): `gender`
+  (0 is a woman, 1 a man), `age` (years, 25 to 90), `muscle`, `weight`
+  and `height` (0 to 1, 0.5 is the mean), `race` (a map of
+  "african", "asian", "caucasian" to a weight), `skin`, `eyes`,
+  `eyebrows`, `hair` (or nil), `clothes` (a list), `pose` (a map of a
+  bone to `{axis, degrees}`, or a name of `Xuong.Human.Pose`), and
+  `animations` (a list of names of `Xuong.Human.Pose`).
+  """
+  def person(name, opts \\ []) do
+    o = Map.new(Keyword.merge(@defaults, opts))
+    base = Data.base()
+    points = morph(base.points, o)
+    clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
+    o = Map.put(o, :ground, ground(base, points, clothes))
+    bones = skeleton(points, o.ground)
+    weights = vertex_weights(Enum.map(bones, & &1.name))
+    level = Detail.level()
+
+    {prims, materials} =
+      case level do
+        :near -> near(base, points, weights, o, clothes)
+        _ -> proxy(points, weights, o, clothes, level)
+      end
+
+    pose = Pose.resolve(o.pose)
+    {nodes, skin} = nodes(name, bones, prims, pose)
+
+    %Figure{
+      name: name,
+      kind: :person,
+      params:
+        Map.take(o, [:gender, :age, :muscle, :weight, :height, :race, :skin, :hair, :clothes])
+        |> Map.new(fn {k, v} -> {Atom.to_string(k), v} end),
+      sources: [
+        "MakeHuman (CC0): the base mesh, the targets, the skeleton game_engine, and the assets #{Enum.join([o.skin | o.clothes], ", ")}."
+      ],
+      nodes: nodes,
+      skins: [skin],
+      animations: for(a <- Map.get(o, :animations, []), do: Pose.animation(a, bones)),
+      materials: materials,
+      ports: ports(bones)
+    }
+  end
+
+  # --- The shape of the body ----------------------------------------------------
+
+  @doc """
+  The weight of each target for the numbers of a person: a list of
+  `{target name, weight}` (MakeHuman, "macrodetails").
+  """
+  def target_weights(o) do
+    g = [{"female", 1 - o.gender}, {"male", o.gender}]
+    a = (min(max(o.age, 25), 90) - 25) / 65
+    age = [{"young", 1 - a}, {"old", a}]
+    muscle = three(o.muscle, "minmuscle", "averagemuscle", "maxmuscle")
+    weight = three(o.weight, "minweight", "averageweight", "maxweight")
+    h = o.height
+    height = if h < 0.5, do: [{"minheight", 1 - 2 * h}], else: [{"maxheight", 2 * h - 1}]
+    total = o.race |> Map.values() |> Enum.sum()
+    race = for {r, w} <- o.race, do: {r, w / total}
+
+    racegenderage = for {r, wr} <- race, {gn, wg} <- g, {an, wa} <- age, do: {"#{r}-#{gn}-#{an}", wr * wg * wa}
+
+    universal =
+      for {gn, wg} <- g, {an, wa} <- age, {mn, wm} <- muscle, {wn, ww} <- weight do
+        {"universal-#{gn}-#{an}-#{mn}-#{wn}", wg * wa * wm * ww}
+      end
+
+    heights =
+      for {gn, wg} <- g, {an, wa} <- age, {mn, wm} <- muscle, {wn, ww} <- weight, {hn, wh} <- height do
+        {"height/#{gn}-#{an}-#{mn}-#{wn}-#{hn}", wg * wa * wm * ww * wh}
+      end
+
+    Enum.filter(racegenderage ++ universal ++ heights, fn {_, w} -> w > 1.0e-4 end)
+  end
+
+  defp three(v, low, mid, _high) when v < 0.5, do: [{low, 1 - 2 * v}, {mid, 2 * v}]
+  defp three(v, _low, mid, high), do: [{mid, 2 - 2 * v}, {high, 2 * v - 1}]
+
+  # The points of the base mesh with the targets, in the axes of MakeHuman.
+  defp morph(points, o) do
+    arr = :array.from_list(Tuple.to_list(points))
+
+    target_weights(o)
+    |> Enum.reduce(arr, fn {name, w}, arr ->
+      Enum.reduce(Data.target(name), arr, fn {i, {dx, dy, dz}}, arr ->
+        {x, y, z} = :array.get(i, arr)
+        :array.set(i, {x + w * dx, y + w * dy, z + w * dz}, arr)
+      end)
+    end)
+    |> :array.to_list()
+    |> List.to_tuple()
+  end
+
+  @doc "A point of MakeHuman (decimeters, +Y up, front +Z) in the axes of Xưởng (meters)."
+  def to_xuong({x, y, z}), do: {-x * 0.1, z * 0.1, y * 0.1}
+
+  # --- The skeleton ------------------------------------------------------------
+
+  # The bones, parents first: name, parent, head and tail (in the axes of
+  # Xưởng, with the feet on z = 0 later), and the frame of the bone.
+  defp skeleton(points, ground) do
+    base = Data.base()
+    rig = Data.rig()
+
+    center = fn cube ->
+      faces = Map.fetch!(base.groups, cube)
+      idx = faces |> List.flatten() |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+      idx |> Enum.map(&elem(points, &1)) |> Vec.mean() |> to_xuong() |> Vec.sub({0.0, 0.0, ground})
+    end
+
+    at = fn spec ->
+      case spec do
+        %{"strategy" => "CUBE", "cube_name" => cube} ->
+          center.(cube)
+
+        %{"strategy" => "MEAN", "vertex_indices" => idx} ->
+          idx |> Enum.map(&elem(points, &1)) |> Vec.mean() |> to_xuong() |> Vec.sub({0.0, 0.0, ground})
+      end
+    end
+
+    rig
+    |> order_bones()
+    |> Enum.map(fn name ->
+      spec = Map.fetch!(rig, name)
+      head = at.(spec["head"])
+      tail = at.(spec["tail"])
+
+      %{
+        name: name,
+        parent: if(spec["parent"] == "", do: nil, else: spec["parent"]),
+        head: head,
+        tail: tail,
+        frame: bone_frame(head, tail, spec["roll"])
+      }
+    end)
+  end
+
+  defp order_bones(rig) do
+    Stream.iterate({[], MapSet.new()}, fn {done, seen} ->
+      ready =
+        for {name, spec} <- rig,
+            not MapSet.member?(seen, name),
+            spec["parent"] == "" or MapSet.member?(seen, spec["parent"]),
+            do: name
+
+      ready = Enum.sort(ready)
+      {done ++ ready, MapSet.union(seen, MapSet.new(ready))}
+    end)
+    |> Enum.find(fn {done, _} -> length(done) == map_size(rig) end)
+    |> elem(0)
+  end
+
+  # The frame of a bone as in Blender (MPFB makes the skeleton there): its
+  # y axis from the head to the tail, turned by the roll. Blender has the
+  # axes of Xưởng turned 180 degrees around z.
+  defp bone_frame(head, tail, roll) do
+    flip = fn {x, y, z} -> {-x, -y, z} end
+    nor = Vec.norm(flip.(Vec.sub(tail, head)))
+    y = {0.0, 1.0, 0.0}
+    axis = Vec.cross(y, nor)
+
+    b =
+      if Vec.len(axis) > 1.0e-9,
+        do: Frame.turn(axis, :math.acos(max(min(Vec.dot(y, nor), 1.0), -1.0)) * 180 / :math.pi()),
+        else: if(Vec.dot(y, nor) > 0, do: Frame.identity(), else: Frame.turn({0.0, 0.0, 1.0}, 180.0))
+
+    m = Frame.compose(Frame.turn(nor, roll * 180 / :math.pi()), b)
+    %Frame{x: flip.(m.x), y: flip.(m.y), z: flip.(m.z), at: head}
+  end
+
+  # The height of the ground (meters): under the lowest point of the body
+  # or of the clothes (the soles of the shoes).
+  defp ground(base, points, clothes) do
+    body = for f <- Map.fetch!(base.groups, "body"), {v, _} <- f, do: elem(points, v)
+    worn = Enum.flat_map(clothes, &Tuple.to_list(fit_positions(&1, points)))
+    (body ++ worn) |> Enum.map(&elem(&1, 1)) |> Enum.min() |> Kernel.*(0.1)
+  end
+
+  # --- Weights -----------------------------------------------------------------
+
+  # The 4 largest weights of each point of the base mesh: a map of a point
+  # to `[{bone index, weight}]`, the sum 1.
+  defp vertex_weights(bone_names) do
+    index = bone_names |> Enum.with_index() |> Map.new()
+
+    Data.weights()
+    |> Enum.flat_map(fn {bone, list} -> for [v, w] <- list, Map.has_key?(index, bone), do: {v, {index[bone], w}} end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {v, ws} -> {v, top4(ws)} end)
+  end
+
+  @doc """
+  The 4 largest weights of a list of `{bone, weight}`, with the sum 1.
+  The weights of a blend can be less than zero: they go. A point with no
+  weight follows the root bone.
+  """
+  def top4(ws) do
+    ws = ws |> Enum.filter(&(elem(&1, 1) > 1.0e-4)) |> Enum.sort_by(fn {b, w} -> {-w, b} end) |> Enum.take(4)
+    total = ws |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+    if ws == [], do: [{0, 1.0}], else: for({b, w} <- ws, do: {b, w / total})
+  end
+
+  defp blend(weights, refs) do
+    refs
+    |> Enum.flat_map(fn {v, k} -> for {b, w} <- Map.get(weights, v, [{0, 1.0}]), do: {b, w * k} end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.map(fn {b, ws} -> {b, Enum.sum(ws)} end)
+    |> top4()
+  end
+
+  # --- The meshes --------------------------------------------------------------
+
+  # The near level: the base mesh with no hidden faces, and the assets.
+  defp near(base, points, weights, o, clothes) do
+    hidden = clothes |> Enum.map(& &1.fit.delete) |> Enum.reduce(MapSet.new(), &MapSet.union/2)
+
+    faces =
+      for f <- Map.fetch!(base.groups, "body"), not Enum.any?(f, fn {v, _} -> MapSet.member?(hidden, v) end), do: f
+
+    body = mesh(:skin, faces, &elem(points, &1), &elem(base.uvs, &1), &Map.get(weights, &1, [{0, 1.0}]), o.ground)
+
+    assets =
+      [
+        {:eyes, Data.asset("eyes", "high-poly"), Data.asset("eye_materials", o.eyes)},
+        {:eyebrows, Data.asset("eyebrows", o.eyebrows), nil},
+        {:eyelashes, Data.asset("eyelashes", "eyelashes01"), nil}
+      ] ++
+        if(o.hair, do: [{:hair, Data.asset("hair", o.hair), nil}], else: []) ++
+        for(c <- clothes, do: {String.to_atom("clothes_" <> c.name), c, nil})
+
+    prims = [body | for({role, a, _} <- assets, do: fitted(role, a, points, weights, o.ground))]
+
+    materials =
+      Map.new(
+        [{:skin, textured(Data.asset("skins", o.skin).texture, false)}] ++
+          for(
+            {role, a, mat} <- assets,
+            do: {role, textured((mat || a).texture, a.transparent or role in [:eyebrows, :eyelashes, :hair])}
+          )
+      )
+
+    {prims, materials}
+  end
+
+  # The levels mid and far: a low-poly body. Each face under clothes has
+  # the mean color of those clothes; the hair stays at mid.
+  defp proxy(points, weights, o, clothes, level) do
+    name = if level == :far, do: "proxy741", else: if(o.gender >= 0.5, do: "male1591", else: "female1605")
+    p = Data.asset("proxies", name)
+    {pts, wts} = fit_points(p, points, weights)
+    ring = neighbors(Data.base())
+    covers = Enum.map(clothes, &{&1, grow(cover(&1), ring)})
+    # At far there is no hair: the scalp has the color of the hair.
+    covers =
+      if level == :far and o.hair,
+        do: [{Data.asset("hair", o.hair), cover(Data.asset("hair", o.hair))} | covers],
+        else: covers
+
+    # The clothes that cover the most of the points of the body under a face.
+    owner = fn face ->
+      body = Enum.flat_map(face, fn {v, _} -> elem(elem(p.fit.refs, v), 0) end)
+
+      covers
+      |> Enum.map(fn {c, set} -> {c, Enum.count(body, &MapSet.member?(set, &1))} end)
+      |> Enum.filter(fn {_, n} -> n * 2 > length(body) end)
+      |> Enum.max_by(&elem(&1, 1), &>=/2, fn -> {nil, 0} end)
+      |> elem(0)
+    end
+
+    uv = fn i -> if i, do: elem(p.mesh.uvs, i), else: {0.0, 0.0} end
+    groups = p.mesh.groups |> Map.values() |> Enum.concat() |> Enum.group_by(owner)
+    role = fn c -> if c, do: String.to_atom("color_" <> c.name), else: :skin end
+
+    prims =
+      for {c, faces} <- groups,
+          do: mesh(role.(c), faces, &elem(pts, &1), if(c, do: nil, else: uv), &elem(wts, &1), o.ground)
+
+    hair =
+      if level == :mid and o.hair, do: [fitted(:hair, Data.asset("hair", o.hair), points, weights, o.ground)], else: []
+
+    colors = for {c, _} <- covers, do: {role.(c), %{"color" => c.color, "roughness" => 0.9, "metalness" => 0.0}}
+    materials = Map.new([{:skin, textured(Data.asset("skins", o.skin).texture, false)} | colors])
+
+    materials =
+      if hair == [], do: materials, else: Map.put(materials, :hair, textured(Data.asset("hair", o.hair).texture, true))
+
+    {Enum.sort_by(prims, & &1.material) ++ hair, materials}
+  end
+
+  # The points of the body next to each point (in the faces of the body).
+  defp neighbors(base) do
+    for f <- Map.fetch!(base.groups, "body"), {a, _} <- f, {b, _} <- f, a != b, reduce: %{} do
+      acc -> Map.update(acc, a, [b], &[b | &1])
+    end
+  end
+
+  defp grow(set, ring), do: set |> Enum.flat_map(&Map.get(ring, &1, [])) |> MapSet.new() |> MapSet.union(set)
+
+  # The points of the body under clothes: the points that the clothes
+  # hide, and the points that hold the clothes.
+  defp cover(%{fit: fit}) do
+    fit.refs |> Tuple.to_list() |> Enum.flat_map(&elem(&1, 0)) |> MapSet.new() |> MapSet.union(fit.delete)
+  end
+
+  # An asset on the body: its points from the points of the body, its
+  # weights from theirs.
+  defp fitted(role, a, points, weights, ground) do
+    {pts, wts} = fit_points(a, points, weights)
+    faces = a.mesh.groups |> Map.values() |> Enum.concat()
+    uv = fn i -> if i, do: elem(a.mesh.uvs, i), else: {0.0, 0.0} end
+    mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground)
+  end
+
+  defp fit_points(%{fit: fit} = a, points, weights) do
+    weights = for {vs, ws, _} <- Tuple.to_list(fit.refs), do: blend(weights, Enum.zip(vs, ws))
+    {fit_positions(a, points), List.to_tuple(weights)}
+  end
+
+  # The points of an asset on the body (MakeHuman, "mhclo"): the sum of
+  # three points of the body with their weights, and an offset in the
+  # scale of the body.
+  defp fit_positions(%{fit: fit}, points) do
+    # A scale is the distance of two points of the body over their
+    # distance in the base mesh; with no scale, 1.
+    scale = fn axis, k ->
+      with {a, b, d} <- Map.get(fit.scales, axis, 1.0), do: abs(elem(elem(points, a), k) - elem(elem(points, b), k)) / d
+    end
+
+    s = {scale.("x_scale", 0), scale.("y_scale", 1), scale.("z_scale", 2)}
+
+    fit.refs
+    |> Tuple.to_list()
+    |> Enum.map(fn {vs, ws, {dx, dy, dz}} ->
+      p = Enum.zip(vs, ws) |> Enum.map(fn {v, w} -> Vec.scale(elem(points, v), w) end) |> Enum.reduce(&Vec.add/2)
+      Vec.add(p, {dx * elem(s, 0), dy * elem(s, 1), dz * elem(s, 2)})
+    end)
+    |> List.to_tuple()
+  end
+
+  # A primitive from faces of `{point, uv}`: one vertex for each pair, the
+  # normal of each point from its faces, and the 4 weights.
+  defp mesh(role, faces, pos, uv, wts, ground) do
+    tris = Enum.flat_map(faces, fn [a, b, c | rest] -> fan(a, [b, c | rest]) end)
+    p = fn v -> Vec.sub(to_xuong(pos.(v)), {0.0, 0.0, ground}) end
+
+    normals =
+      tris
+      |> Enum.flat_map(fn [{a, _}, {b, _}, {c, _}] ->
+        n = Vec.cross(Vec.sub(p.(b), p.(a)), Vec.sub(p.(c), p.(a)))
+        [{a, n}, {b, n}, {c, n}]
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Map.new(fn {v, ns} -> {v, Vec.norm(Enum.reduce(ns, &Vec.add/2))} end)
+
+    {indices, {_, verts}} =
+      tris
+      |> List.flatten()
+      |> Enum.map_reduce({%{}, []}, fn key, {seen, verts} ->
+        case seen do
+          %{^key => i} -> {i, {seen, verts}}
+          _ -> {map_size(seen), {Map.put(seen, key, map_size(seen)), [key | verts]}}
+        end
+      end)
+
+    verts = Enum.reverse(verts)
+    joints = for {v, _} <- verts, do: pad4(wts.(v))
+
+    %Scene.Primitive{
+      material: role,
+      positions: for({v, _} <- verts, do: p.(v)),
+      normals: for({v, _} <- verts, do: normals[v]),
+      uvs: if(uv, do: for({_, t} <- verts, do: flip_v(uv.(t)))),
+      joints: for(js <- joints, do: List.to_tuple(Enum.map(js, &elem(&1, 0)))),
+      weights: for(js <- joints, do: List.to_tuple(Enum.map(js, &(elem(&1, 1) / 1)))),
+      indices: indices
+    }
+  end
+
+  defp fan(a, [b, c | rest]), do: [[a, b, c] | fan(a, [c | rest])]
+  defp fan(_, [_]), do: []
+
+  defp pad4(ws), do: Enum.take(ws ++ List.duplicate({0, 0.0}, 4), 4)
+  defp flip_v({u, v}), do: {u, 1.0 - v}
+
+  defp textured(path, alpha) do
+    mime = if String.ends_with?(path, ".png"), do: "image/png", else: "image/jpeg"
+    spec = %{"color" => [255, 255, 255], "roughness" => 0.75, "metalness" => 0.0, "image" => {mime, File.read!(path)}}
+    if alpha, do: Map.merge(spec, %{"alpha_mode" => "MASK", "double_sided" => true}), else: spec
+  end
+
+  # --- The nodes of the figure ---------------------------------------------------
+
+  defp nodes(name, bones, prims, pose) do
+    index = bones |> Enum.with_index(1) |> Map.new(fn {b, i} -> {b.name, i} end)
+    world = Map.new(bones, &{&1.name, &1.frame})
+
+    bone_nodes =
+      for b <- bones do
+        parent_world = if b.parent, do: world[b.parent], else: Frame.identity()
+        local = Frame.compose(Frame.invert(parent_world), b.frame)
+        %Scene.Node{name: b.name, parent: if(b.parent, do: index[b.parent], else: 0), frame: Pose.turn(local, b, pose)}
+      end
+
+    # glTF ignores the frame of a skinned mesh: the mesh is a root node.
+    mesh = %Scene.Node{name: name <> "_mesh", skin: 0, primitives: prims}
+    root = %Scene.Node{name: name}
+
+    skin = %{
+      name: name,
+      joints: Enum.map(bones, &index[&1.name]),
+      inverse_bind: Enum.map(bones, &Frame.invert(&1.frame)),
+      skeleton: 1
+    }
+
+    {[root | bone_nodes] ++ [mesh], skin}
+  end
+
+  defp ports(bones) do
+    pelvis = Enum.find(bones, &(&1.name == "pelvis"))
+
+    %{
+      "ground" => Part.port("ground", {0.0, 0.0, 0.0}, {0, 0, 1}, {0, 1, 0}),
+      "hips" => Part.port("hips", pelvis.head, {0, 0, 1}, {0, 1, 0})
+    }
+  end
+end

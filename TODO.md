@@ -8,15 +8,21 @@ into the steps of `AGENTS.md`.
 - A service on the web (LiveView) that makes a new model from numbers:
   from a model of the library, or from a `.wings` file that a person
   sends.
-- People for Vung_Tau, with a skeleton.
 
 ## From the development
 
-- **A skin.** A mesh that bends with its joints (an elbow, a knee):
-  weights for each vertex, a tool to paint them in the Wings plugin, and
-  a glTF skin. First for the people.
-- **Clips of animation.** Key poses in time, kept in the format, and a
-  glTF animation. A timeline in the Wings plugin comes after the data.
+- **Paint the weights of a skin in the Wings plugin.** The people have
+  the weights of MakeHuman. A shaped part that bends (a seat cushion, a
+  cable) needs a tool for its own weights.
+- **More animations of people.** "walk" is the only clip: a run, a sit
+  down, the hands that turn the bars of a scooter. Each clip is a
+  function of the turns of the bones in time (`Xuong.Human.Pose`).
+- **Clothes in their own colors at mid and far.** A low-poly body has
+  the mean color of each piece of clothes: a suit of a shirt and jeans
+  is all one color. The color of each face can come from the texture
+  of the clothes.
+- **More people.** Children (the targets of a child are not in the
+  folder yet), more hair and clothes from the packs of MakeHuman.
 - **Loops of connections.** A frame with two struts to one part: the
   tree takes one strut, and a fixed connection closes the loop.
 - **Vertex colors and textures.** The core of Wings keeps UV and vertex

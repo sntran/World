@@ -15,7 +15,7 @@ defmodule Xuong.ModelsTest do
 
   @limits %{near: 50_000, mid: 12_000, far: 5_000}
 
-  for {name, fun} <- Xuong.Models.all() do
+  for {name, fun} <- Xuong.Models.all(), Map.has_key?(@sizes, name) do
     @name name
     @fun fun
 

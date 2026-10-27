@@ -95,7 +95,9 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
         steer_port(),
         port("pivot", @pivot, {1, 0, 0}, {0, 0, 1}),
         port("stand", {-0.12, 1.0, 0.30}, {1, 0, 0}, {0, 0, 1})
-      ], sources: ["A half duplex split cradle frame of steel tube."])
+      ],
+      sources: ["A half duplex split cradle frame of steel tube."]
+    )
   end
 
   defp engine do
@@ -107,12 +109,16 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
           {1.25, 0.28, 0.56, 0.13, 4},
           {1.32, 0.34, 0.5, 0.09, 3}
         ]),
-        :black, smooth: 2)
+        :black,
+        smooth: 2
+      )
 
     cylinder =
       Shape.loft(
         Shape.rows_z([{0.52, 1.1, 1.3, 0.07, 4}, {0.68, 1.13, 1.32, 0.075, 4}, {0.78, 1.15, 1.3, 0.07, 4}]),
-        :aluminum, smooth: 1)
+        :aluminum,
+        smooth: 1
+      )
 
     fins =
       for z <- [0.56, 0.6, 0.64, 0.68, 0.72],
@@ -122,7 +128,9 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
       Shape.sweep(
         [{0.04, 1.32, 0.66}, {0.07, 1.38, 0.5}, {0.09, 1.3, 0.28}, {0.12, 1.0, 0.27}, {0.15, 0.75, 0.38}],
         0.022,
-        :chrome, sides: 10)
+        :chrome,
+        sides: 10
+      )
 
     muffler =
       Shape.lathe([{0.0, 0.0}, {0.05, 0.02}, {0.055, 0.32}, {0.045, 0.34}, {0.0, 0.34}], :black,
@@ -145,7 +153,9 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
           {1.3, 0.85, 1.12, 0.17, 4},
           {1.42, 0.92, 1.08, 0.11, 3}
         ]),
-        :paint, smooth: 2)
+        :paint,
+        smooth: 2
+      )
 
     seat =
       Shape.loft(
@@ -155,12 +165,16 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
           {0.75, 0.80, 0.86, 0.13, 4},
           {1.0, 0.82, 0.9, 0.12, 3}
         ]),
-        :seat, smooth: 2)
+        :seat,
+        smooth: 2
+      )
 
     fender =
       Shape.loft(
         Shape.rows_y([{0.05, 0.86, 0.88, 0.07, 4}, {0.3, 0.84, 0.87, 0.1, 4}, {0.5, 0.80, 0.84, 0.1, 4}]),
-        :black, smooth: 1)
+        :black,
+        smooth: 1
+      )
 
     rack =
       Shape.sweep([{-0.12, 0.45, 0.92}, {-0.12, 0.12, 0.93}, {0.12, 0.12, 0.93}, {0.12, 0.45, 0.92}], 0.009, :black,
@@ -209,7 +223,9 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
           Vec.add(bar_c, {0.42, -0.12, 0.08})
         ],
         0.0127,
-        :black, sides: 10)
+        :black,
+        sides: 10
+      )
 
     grips =
       for s <- [-1, 1],
@@ -239,11 +255,16 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
             Shape.sweep(
               [Vec.add(bar_c, {s * 0.24, -0.06, 0.06}), Vec.add(bar_c, {s * 0.3, -0.04, 0.26})],
               0.006,
-              :black, sides: 6),
+              :black,
+              sides: 6
+            ),
             Shape.box(
               Vec.add(bar_c, {s * 0.3 - 0.05, -0.05, 0.25}),
               Vec.add(bar_c, {s * 0.3 + 0.05, -0.03, 0.32}),
-              :black, round: 0.3, smooth: 2)
+              :black,
+              round: 0.3,
+              smooth: 2
+            )
           ]
 
     fork =
@@ -257,7 +278,9 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
           port("axle_bolt", {-0.12, fy, fz}, {1, 0, 0}, {0, 0, 1}),
           port("axle_nut", {0.115, fy, fz}, {1, 0, 0}, {0, 0, 1}),
           origin()
-        ], sources: ["A telescopic fork of 41 mm, 200 mm of travel."])
+        ],
+        sources: ["A telescopic fork of 41 mm, 200 mm of travel."]
+      )
 
     cockpit = Part.new("cockpit_himalayan", :handlebar, [bar, screen | grips] ++ List.flatten(mirrors), [origin()])
     head_light = Part.new("head_light_himalayan", :light, [light, lens], [origin()], detail: :always)
@@ -292,7 +315,9 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
           {0.115, 1.13, 0.36}
         ],
         0.006,
-        :metal, sides: 6)
+        :metal,
+        sides: 6
+      )
 
     arm =
       Part.new(
@@ -303,7 +328,9 @@ defmodule Xuong.Models.RoyalEnfieldHimalayan do
           port("pivot", @pivot, {1, 0, 0}, {0, 0, 1}),
           port("axle", {0.0, ry, rz}, {1, 0, 0}, {0, 0, 1}),
           port("shock", {0.0, 0.78, 0.46}, Vec.norm({0.0, 0.3, 1.0}), {0, 1, 0})
-        ], sources: ["A box section swing arm with a monoshock (linkage)."])
+        ],
+        sources: ["A box section swing arm with a monoshock (linkage)."]
+      )
 
     Assembly.new("swingarm_himalayan", arm, root: "arm")
     |> Assembly.add(

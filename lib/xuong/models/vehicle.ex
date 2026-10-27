@@ -61,6 +61,8 @@ defmodule Xuong.Models.Vehicle do
       [
         Part.port("steer", {x, y, z}, {0, 0, 1}, {0, 1, 0}),
         Part.port("axle", {x, y, z}, {side, 0.0, 0.0}, {0, 0, 1})
-      ], inside: true)
+      ],
+      inside: true
+    )
   end
 end

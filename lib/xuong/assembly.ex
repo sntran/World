@@ -87,6 +87,7 @@ defmodule Xuong.Assembly do
   """
   def item_port_frame(_item, %Port{} = port), do: Port.frame(port)
   def item_port_frame(%Part{} = p, path), do: Port.frame(Part.port!(p, path))
+  def item_port_frame(%Xuong.Figure{} = f, path), do: Port.frame(Xuong.Figure.port!(f, path))
 
   def item_port_frame(%__MODULE__{place: place} = a, path), do: Frame.compose(place, inner_port_frame(a, path))
 

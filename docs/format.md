@@ -153,13 +153,46 @@ A material is a role, not a color:
 `paint` (the color of the thing), `trim` (black plastic and rubber
 strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `steel`, `aluminum`, `light_front`, `light_back`, `seat`, `plastic`,
-`wood`, `fabric`, `skin`, `hair`, `cloth`, `white`, `dark`.
+`wood`, `fabric`, `skin`, `hair`, `cloth`, `white`, `dark`. A person
+has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
+`clothes_NAME`, and `color_NAME` (the mean color of an asset at mid and
+far).
 
 `priv/palette.json` gives each role a color, a roughness and a
 metalness. Glass also has an alpha (0.35 for `glass`, 0.85 for
 `glass_dark`): its glTF material has the alpha mode `BLEND`. An app can give its own palette (the woodblock tones of Tre),
 and it can change the `paint` of a model (the color of the car of a
 person). In a `.wings` file, the name of a material is its role.
+
+## A person
+
+A person (`Xuong.Human.person/2`) is a `Xuong.Figure`: a set of nodes
+that is ready, from the data of MakeHuman (`assets/makehuman/`). An
+assembly holds a figure as a part, at one of its two ports:
+
+- `ground`: on the ground, between the feet, with z up;
+- `hips`: at the head of the bone `pelvis`, with z up (the seat of a
+  rider).
+
+The GLB of a person has:
+
+- a root node, then a node for each of the 53 bones of the skeleton
+  `game_engine` (parents first), with the frames of the pose;
+- one mesh node with a skin. It is a root node of the scene: glTF does
+  not use the frame of a skinned mesh, and the bones place it;
+- 4 joints and 4 weights for each point, with the sum 1;
+- textures in the GLB (the skin, the eyes, the hair, the clothes). Hair,
+  eyebrows and eyelashes have the alpha mode `MASK`;
+- the animations by name (`walk`: a loop of 1.1 s).
+
+The levels: near is the full body with the clothes and the hair; mid is
+a body of about 1,600 faces with the hair; far is a body of 730 faces.
+At mid and far, the faces under clothes have the mean color of the
+clothes, and at far the scalp has the color of the hair.
+
+A pose turns bones around their heads: a map of a bone to a list of
+`{axis, degrees}`, with the axes of Xưởng when the person stands at
+rest (`Xuong.Human.Pose`).
 
 ## The files of a model
 

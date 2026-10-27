@@ -85,6 +85,7 @@ models").
 | 1. The project and the core of Wings | A Mix project on [BEAM.com](https://github.com/sntran/BEAM.com). The core of Wings 3D in `wings/`. `Xuong.Mesh`, `Xuong.GLB`, the check of the Khronos validator, the review page. CI. | Done |
 | 2. Standard parts | Bolts, nuts, washers, bearings, tubes, sheets, lumber, extrusions, wheels and tires, each from its standard, with its ports. | Done |
 | 3. Assemblies and joints | Connections, joints, the list of the parts, three levels of detail, GLB with a node for each joint. The vehicles of Phượt: the Honda Vision 110, the Chevrolet Bolt EV, the Ford Transit 148 camper, the Royal Enfield Himalayan, a touring bicycle. | Done |
+| 3b. People | People from the data of MakeHuman (CC0): the shape of the body from its numbers, a skeleton of 53 bones with a skin, skins, hair and clothes, poses ("stand", "sit", "ride"), the animation "walk", and the three levels. A traveler, a man and a woman of Việt Nam, and a rider on the Honda Vision 110. | Done |
 | 4. Phượt uses Xưởng | The vehicle next to the avatar of Phượt is the model of Xưởng, and it moves with the trip. | To do |
 | 5. Wings files | A strict reader and a writer of `.wings`. Shaped parts from `.wings` files. The clean-up of a mesh before Wings takes it. | To do |
 | 6. The Wings plugin | `wpc_xuong` for Wings 3D: ports and joints in the file, a pose to try, the axes in the view. | To do |
