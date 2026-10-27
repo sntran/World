@@ -1,0 +1,1 @@
+{"name":"power_station_anker_solix_f3800","parts":[{"count":1,"kind":"station","name":"anker_solix_f3800","params":{"kwh":3.84,"output_w":6000,"solar_w":2400},"sources":[]},{"count":1,"kind":"handle","name":"solix_handle","params":{},"sources":[]},{"count":2,"kind":"wheel","name":"station_wheel_120","params":{"diameter":0.12},"sources":[]}]}

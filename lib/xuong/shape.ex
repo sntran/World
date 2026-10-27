@@ -64,7 +64,7 @@ defmodule Xuong.Shape do
         if flip, do: Enum.reverse(quad), else: quad
       end
 
-    Mesh.new(points, Mesh.outside(points, faces), material, opts)
+    place(Mesh.new(points, Mesh.outside(points, faces), material, opts), opts)
   end
 
   @doc """

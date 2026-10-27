@@ -32,6 +32,8 @@ defmodule Mix.Tasks.Xuong.BuildTest do
     assert_raise Mix.Error, ~r/No model nope/, fn -> Mix.Tasks.Xuong.Build.run(["--dir", @dir, "nope"]) end
   end
 
+  # The build of all the models takes some minutes in the interpreter.
+  @tag timeout: :infinity
   test "all the models, with the list" do
     Mix.Tasks.Xuong.Build.run(["--dir", @dir])
     list = File.read!(Path.join(@dir, "list.json")) |> JSON.decode!()

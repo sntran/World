@@ -1,0 +1,1 @@
+{"name":"power_station_ecoflow_delta_pro","parts":[{"count":1,"kind":"handle","name":"delta_handle_pro","params":{},"sources":[]},{"count":1,"kind":"station","name":"ecoflow_delta_pro","params":{"kwh":3.6,"output_w":3600},"sources":[]},{"count":2,"kind":"wheel","name":"station_wheel_110","params":{"diameter":0.11},"sources":[]}]}

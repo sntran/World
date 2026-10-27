@@ -1,0 +1,1 @@
+{"name":"battery_switch_blue_sea_6006","parts":[{"count":1,"kind":"switch","name":"blue_sea_6006","params":{"amps":300},"sources":[]},{"count":2,"kind":"bolt","name":"bolt_m10x22","params":{"length":0.022,"thread":"M10"},"sources":["ISO 4017: s 16.0 mm, k 6.4 mm."]},{"count":1,"kind":"knob","name":"switch_knob","params":{},"sources":[]}]}

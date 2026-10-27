@@ -1,0 +1,1 @@
+{"name":"roof_fan_maxxair_7500k","parts":[{"count":1,"kind":"base","name":"maxxfan_7500k_base","params":{"cutout_in":14},"sources":[]},{"count":1,"kind":"lid","name":"maxxfan_lid","params":{},"sources":[]},{"count":1,"kind":"fan","name":"maxxfan_rotor","params":{},"sources":[]}]}

@@ -89,7 +89,8 @@ models").
 | 4. Phượt uses Xưởng | The vehicle next to the avatar of Phượt is the model of Xưởng, and it moves with the trip. | To do |
 | 5. Wings files | A strict reader and a writer of `.wings`. Shaped parts from `.wings` files. The clean-up of a mesh before Wings takes it. | To do |
 | 6. The Wings plugin | `wpc_xuong` for Wings 3D: ports and joints in the file, a pose to try, the axes in the view. | To do |
-| 7. DIY uses Xưởng | The models of DIY as assemblies. DIY draws its SVG from them, and keeps its pictures. | To do |
+| 7a. The items of DIY | The appliances (a fridge, a washer and a dryer, a dishwasher, a range, a microwave, a freezer, a water heater, the AC, a mini split, a ceiling fan, a TV), the seven power stations, the gear of a van (a LiFePO4 battery, the Victron MultiPlus-II, SmartShunt, Lynx Distributor and Orion XS, a battery switch, a 12 V fridge, a roof fan, a diesel heater, a water tank, a solar panel), and builds of wood (a bed platform, a galley) with their lumber and screws. Doors, lids, drawers, fans and knobs are joints. | Done |
+| 7. DIY uses Xưởng | DIY draws its SVG from the models, and keeps its pictures. | To do |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |
 

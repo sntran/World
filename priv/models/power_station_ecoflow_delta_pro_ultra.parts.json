@@ -1,0 +1,1 @@
+{"name":"power_station_ecoflow_delta_pro_ultra","parts":[{"count":1,"kind":"battery","name":"delta_pro_ultra_battery","params":{"kwh":6.144},"sources":[]},{"count":1,"kind":"inverter","name":"delta_pro_ultra_inverter","params":{"output_w":7200},"sources":[]}]}

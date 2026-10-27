@@ -1,7 +1,7 @@
 defmodule Xuong.Parts.Fasteners do
   @moduledoc """
   Bolts, screws, nuts and washers with metric threads, at the sizes of
-  their ISO standards. The thread itself is not in the mesh.
+  their ISO standards, and wood screws. The thread itself is not in the mesh.
 
   The axis of a fastener is its z axis. A hole of another part has a
   port with its axis into the hole: the bolt goes in along it.
@@ -9,6 +9,8 @@ defmodule Xuong.Parts.Fasteners do
   - A bolt or a screw: the head is from z = 0 up; the shank goes down to
     z = -length. Ports: `head` (under the head) and `tip`, each with the
     axis down the shank (-z).
+  - A wood screw (flat head, in gauges of ASME B18.6.1): the head goes
+    into the wood, with its top at z = 0. The ports are as for a bolt.
   - A nut or a washer: from z = 0 up. Ports: `face` (z = 0) and `top`,
     with the axis +z. A nut on a bolt has its `face` on the far side of
     the parts, with the same axis as the bolt.
@@ -76,6 +78,15 @@ defmodule Xuong.Parts.Fasteners do
     "M20" => {30.0, 20.0}
   }
 
+  # Flat head wood screw (ASME B18.6.1), by its gauge: the diameter of the
+  # thread D, the diameter of the head A and its height H, in inches.
+  @wood_screw %{
+    "#6" => {0.138, 0.279, 0.083},
+    "#8" => {0.164, 0.332, 0.100},
+    "#10" => {0.190, 0.385, 0.116},
+    "#12" => {0.216, 0.438, 0.132}
+  }
+
   @doc "The threads in the tables, from small to large."
   def threads, do: @hex_head |> Map.keys() |> Enum.sort_by(&diameter/1)
 
@@ -122,6 +133,32 @@ defmodule Xuong.Parts.Fasteners do
       thread,
       length,
       ["ISO 4762: dk #{dk * 1000} mm, k #{k * 1000} mm."],
+      opts
+    )
+  end
+
+  @doc """
+  A flat head wood screw (ASME B18.6.1): `wood_screw("#8", inch(2.5))`.
+  The head goes into the wood: its top is at z = 0 (on the face of the
+  wood), and the length (with the head) goes down to z = -length, with a
+  point.
+  """
+  def wood_screw(gauge, length, opts \\ []) do
+    {d, a, h} = @wood_screw |> Map.fetch!(gauge) |> Tuple.to_list() |> Enum.map(&(&1 * 0.0254)) |> List.to_tuple()
+    tip = min(d * 2, length / 3)
+
+    shape =
+      Shape.lathe([{0.0, 0.0}, {a / 2, 0.0}, {d / 2, -h}, {d / 2, -length + tip}, {0.0, -length}], :steel, sides: 10)
+
+    fastener(
+      "wood_screw_#{String.trim_leading(gauge, "#")}x#{mm_name(length)}",
+      :wood_screw,
+      [shape],
+      gauge,
+      length,
+      [
+        "ASME B18.6.1: gauge #{gauge}, D #{Float.round(d * 1000, 2)} mm, A #{Float.round(a * 1000, 2)} mm, H #{Float.round(h * 1000, 2)} mm."
+      ],
       opts
     )
   end

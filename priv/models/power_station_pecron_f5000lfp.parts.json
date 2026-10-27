@@ -1,0 +1,1 @@
+{"name":"power_station_pecron_f5000lfp","parts":[{"count":1,"kind":"station","name":"pecron_f5000lfp","params":{"kwh":5.12,"output_w":7200},"sources":[]},{"count":2,"kind":"wheel","name":"station_wheel_150","params":{"diameter":0.15},"sources":[]},{"count":1,"kind":"handle","name":"trolley_handle","params":{},"sources":[]}]}

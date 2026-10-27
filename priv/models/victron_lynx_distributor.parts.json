@@ -1,0 +1,1 @@
+{"name":"victron_lynx_distributor","parts":[{"count":1,"kind":"cover","name":"lynx_cover","params":{},"sources":[]},{"count":1,"kind":"busbar","name":"lynx_distributor_m10","params":{"fuses":4},"sources":[]}]}

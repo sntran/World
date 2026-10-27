@@ -1,0 +1,1 @@
+{"name":"victron_smartshunt_500a","parts":[{"count":2,"kind":"bolt","name":"bolt_m10x20","params":{"length":0.02,"thread":"M10"},"sources":["ISO 4017: s 16.0 mm, k 6.4 mm."]},{"count":1,"kind":"shunt","name":"smartshunt_500a","params":{"amps":500},"sources":[]}]}

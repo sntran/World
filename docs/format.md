@@ -111,6 +111,11 @@ Each connection that is not `:fixed` is a **joint**. A joint has a
 - `steer`: the bars and the front wheel, around the steering axis.
 - `suspension`: a fork or a shock, a small move along its axis.
 - `door`, `lid`, `drawer`: a part that opens.
+- `handle`: a handle that slides out (the trolley of a power station).
+- `spin`: a part that turns when the item runs (a fan, the drum of a
+  washer, a turntable).
+- `knob`: a knob or a dial, and a faucet that swivels.
+- `vane`: a vane that turns the flow of air (a mini split).
 - `limb`: a part of a person or of an animal.
 
 A model has no joint for the lean of a vehicle with two wheels. An app
@@ -153,7 +158,9 @@ A material is a role, not a color:
 `paint` (the color of the thing), `trim` (black plastic and rubber
 strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `steel`, `aluminum`, `light_front`, `light_back`, `seat`, `plastic`,
-`wood`, `fabric`, `skin`, `hair`, `cloth`, `white`, `dark`. A person
+`wood`, `fabric`, `skin`, `hair`, `cloth`, `white`, `dark`, `black`,
+`gray`, `rubber`, `copper`, `stainless`, `screen`, `blue`, `orange`,
+`red`, `plywood`, `solar_cell`. A person
 has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
 `clothes_NAME`, and `color_NAME` (the mean color of an asset at mid and
 far).

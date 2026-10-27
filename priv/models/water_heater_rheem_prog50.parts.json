@@ -1,0 +1,1 @@
+{"name":"water_heater_rheem_prog50","parts":[{"count":1,"kind":"knob","name":"gas_knob","params":{},"sources":[]},{"count":1,"kind":"tank","name":"water_heater_rheem_prog50","params":{"fuel":"gas","gallons":50},"sources":[]}]}

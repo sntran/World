@@ -1,0 +1,1 @@
+{"name":"battery_battle_born_bb10012","parts":[{"count":1,"kind":"battery","name":"battery_bb10012","params":{"amp_hours":100,"chemistry":"LiFePO4","volts":12},"sources":[]},{"count":2,"kind":"bolt","name":"bolt_m8x25","params":{"length":0.025,"thread":"M8"},"sources":["ISO 4017: s 13.0 mm, k 5.3 mm."]}]}
