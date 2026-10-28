@@ -99,7 +99,8 @@ defmodule World.People.Pose do
     "open" => %{fingers: {0, 0, 0}, thumb: {0, 0}},
     "fist" => %{fingers: {85, 100, 70}, thumb: {60, 45}},
     "point" => %{fingers: {85, 100, 70}, index: {0, 0, 0}, thumb: {60, 45}},
-    "thumbs_up" => %{fingers: {85, 100, 70}, thumb: {-10, 0}}
+    "thumbs_up" => %{fingers: {85, 100, 70}, thumb: {-10, 0}},
+    "grip" => %{fingers: {70, 80, 45}, thumb: {40, 30}}
   }
 
   # The routines of a morning of exercise (`routine/1`).
@@ -196,34 +197,38 @@ defmodule World.People.Pose do
   node i + 1).
   """
   def animation(name, bones, opts \\ [])
-  def animation("walk", bones, _opts), do: clip("walk", bones, 1.1, 12, &{walk_turns(&1 / 1.1), 1.0})
-  def animation("wave", bones, _opts), do: clip("wave", bones, 2.6, 39, &wave/1)
-  def animation("point", bones, _opts), do: clip("point", bones, 2.6, 39, &point/1)
+  def animation("walk", bones, opts), do: clip("walk", bones, 1.1, 12, &{walk_turns(&1 / 1.1), 1.0}, hands(opts))
+  def animation("wave", bones, opts), do: clip("wave", bones, 2.6, 39, &wave/1, hands(opts))
+  def animation("point", bones, opts), do: clip("point", bones, 2.6, 39, &point/1, hands(opts))
 
   def animation(name, bones, opts) when name in @routines, do: animation({name, routine(name)}, bones, opts)
 
   # A routine of the caller: `{name, {length, fps, keys}}` as `routine/1`.
   def animation({name, {length, fps, keys}}, bones, opts) do
     keys = if Keyword.get(opts, :mirror, false), do: for({t, pose} <- keys, do: {t, mirror(pose)}), else: keys
-    loop(name, bones, length, fps, keys, Keyword.get(opts, :delay, 0.0))
+    loop(name, bones, length, fps, keys, Keyword.get(opts, :delay, 0.0), hands(opts))
   end
 
   def animation(name, _bones, _opts), do: raise(ArgumentError, "unknown animation #{inspect(name)}")
+
+  # The hands that hold a prop keep their shape in all the animation:
+  # the option `hands` is a map of a side to a shape.
+  defp hands(opts), do: Map.new(Keyword.get(opts, :hands, %{}), fn {side, shape} -> {{:hand, side}, shape} end)
 
   # A clip of `steps` frames in `length` seconds. At each time, `at` gives
   # a pose (on top of the pose "stand") and how far the person is in it,
   # from 0 (the pose "stand") to 1: each bone turns on the shortest arc.
   # The channels are the bones that move.
-  defp clip(name, bones, length, steps, at) do
+  defp clip(name, bones, length, steps, at, hands) do
     skeleton = Skeleton.new(bones)
-    stand = @poses["stand"]
-    base = Skeleton.locals(skeleton, stand)
+    stand = Map.merge(@poses["stand"], hands)
+    base = Skeleton.locals(skeleton, expand(stand))
     times = for k <- 0..steps, do: k * length / steps
 
     frames =
       for t <- times do
         {pose, k} = at.(t)
-        target = Skeleton.locals(skeleton, expand(Map.merge(stand, pose)))
+        target = Skeleton.locals(skeleton, expand(stand |> Map.merge(pose) |> Map.merge(hands)))
         Map.new(target, fn {bone, f} -> {bone, Frame.blend(base[bone], f, k)} end)
       end
 
@@ -252,20 +257,20 @@ defmodule World.People.Pose do
   # last to the first. The feet stay on their targets during each move,
   # and a foot that goes to a new place lifts on the way. A person late
   # by `delay` seconds is at the time `t - delay` of the routine.
-  defp loop(name, bones, length, fps, keys, delay) do
+  defp loop(name, bones, length, fps, keys, delay, hands) do
     skeleton = Skeleton.new(bones)
-    stand = @poses["stand"]
+    stand = Map.merge(@poses["stand"], hands)
 
     solved =
       for {t, pose} <- keys ++ [{length, elem(hd(keys), 1)}] do
-        pose = expand(Map.merge(stand, pose))
+        pose = expand(stand |> Map.merge(pose) |> Map.merge(hands))
         {t, Skeleton.locals(skeleton, pose), Skeleton.feet(skeleton, pose)}
       end
 
     steps = round(length * fps)
     times = for k <- 0..steps, do: k * length / steps
     frames = for t <- times, do: sample(skeleton, solved, fmod(t - delay, length))
-    %{name: name, channels: channels(bones, Skeleton.locals(skeleton, stand), frames, times)}
+    %{name: name, channels: channels(bones, Skeleton.locals(skeleton, expand(stand)), frames, times)}
   end
 
   defp fmod(t, length), do: t - Float.floor(t / length) * length

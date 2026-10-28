@@ -235,7 +235,9 @@ defmodule World.FactoryTest do
         },
         %{"blueprint" => "traveler", "options" => %{"vehicle" => "car", "scene" => "parked"}},
         %{"blueprint" => "exercise", "options" => %{"routine" => "yoga", "count" => 1, "seed" => 3}},
-        %{"blueprint" => "person", "options" => %{"animations" => ["tai_chi"]}}
+        %{"blueprint" => "person", "options" => %{"animations" => ["tai_chi"]}},
+        %{"blueprint" => "person", "options" => %{"right_hand" => "fan", "left_hand" => "bottle", "hat" => "non_la"}},
+        %{"blueprint" => "exercise", "options" => %{"count" => 1, "fans" => true}}
       ]
 
       for order <- orders do

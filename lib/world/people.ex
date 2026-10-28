@@ -13,7 +13,7 @@ defmodule World.People do
   yoga or aerobics), as on the beach of Vũng Tàu.
   """
   alias World.{Assembly, Frame, GLB, Part}
-  alias World.People.Human
+  alias World.People.{Human, Props}
   alias World.Vehicles.{ChevyBolt, FordTransit, HondaVision, RoyalEnfieldHimalayan, TouringBicycle}
 
   @doc "A traveler on foot: a t-shirt, cargo pants and shoes."
@@ -175,11 +175,14 @@ defmodule World.People do
   routine, the body, the hair, the clothes), from `seed`, and starts the
   routine a little late (at most 0.35 s), as a real group. The routine
   (`World.People.Pose.routines/0`) is one animation of the model, in a
-  loop. The options: `count` and `seed` (1 by default).
+  loop. The options: `count`, `seed` (1 by default), and `fans` (true:
+  each person holds an open tai chi fan in the right hand, and the leader
+  in the left hand, as in a mirror).
   """
   def exercise(routine, opts) do
     count = Keyword.get(opts, :count, 6)
     seed = Keyword.get(opts, :seed, 1)
+    fan = fn side -> if Keyword.get(opts, :fans, false), do: [hold: [{"grip_#{side}", Props.prop("fan")}]], else: [] end
     if count not in 1..12, do: raise(ArgumentError, "a group has 1 to 12 people, not #{inspect(count)}")
     {leader, _} = somebody(routine, seed, 0)
 
@@ -196,7 +199,7 @@ defmodule World.People do
         person =
           Human.person(
             "person_#{i}",
-            opts ++ [pose: "stand", animations: [{routine, delay: Float.round(delay * 0.35, 2)}]]
+            opts ++ fan.("r") ++ [pose: "stand", animations: [{routine, delay: Float.round(delay * 0.35, 2)}]]
           )
 
         {"person_#{i}", person, at: Part.port("place_#{i}", at, {0, 0, 1}, {0, -1, 0}), port: "ground"}
@@ -204,7 +207,7 @@ defmodule World.People do
 
     Assembly.new(
       "exercise_" <> routine,
-      Human.person("leader", leader ++ [pose: "stand", animations: [{routine, mirror: true}]]),
+      Human.person("leader", leader ++ fan.("l") ++ [pose: "stand", animations: [{routine, mirror: true}]]),
       root: "leader",
       kind: :person,
       sources: ["People of World from the data of MakeHuman (CC0), with the routine #{routine} of World.People.Pose."]

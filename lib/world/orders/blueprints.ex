@@ -13,7 +13,7 @@ defmodule World.Orders.Blueprints do
   alias World.{Buildings, Framing}
   alias World.Materials.{Construction, Stock}
   alias World.Orders.Blueprint
-  alias World.People.{Data, Pose}
+  alias World.People.{Data, Pose, Props}
   alias World.Vehicles.Van
   import Blueprint, only: [option: 3]
 
@@ -68,10 +68,25 @@ defmodule World.Orders.Blueprints do
               default: [],
               item: option("item", :choice, values: ["walk" | Pose.routines()]),
               max: 1
-            )
+            ),
+            option("right_hand", :choice,
+              default: "none",
+              values: ["none" | Props.hand()],
+              doc: "A prop in the right hand: the hand closes on it."
+            ),
+            option("left_hand", :choice, default: "none", values: ["none" | Props.hand()]),
+            option("hat", :choice, default: "none", values: ["none" | Props.head()])
           ],
       build: fn o ->
-        World.People.Human.person("person", person_opts(o) ++ [pose: o["pose"], animations: o["animations"]])
+        hold =
+          for {key, port} <- [{"right_hand", "grip_r"}, {"left_hand", "grip_l"}, {"hat", "crown"}],
+              o[key] != "none",
+              do: {port, Props.prop(o[key])}
+
+        World.People.Human.person(
+          "person",
+          person_opts(o) ++ [pose: o["pose"], animations: o["animations"], hold: hold]
+        )
       end,
       check: &origin_check/1,
       sources: ["MakeHuman 1.x, the data of the base mesh, the targets and the assets (CC0)."]
@@ -88,9 +103,15 @@ defmodule World.Orders.Blueprints do
       options: [
         option("routine", :choice, default: "tai_chi", values: Pose.routines()),
         option("count", :number, default: 6.0, min: 1.0, max: 12.0, doc: "The people in front of the leader."),
-        option("seed", :number, default: 1.0, min: 1.0, max: 1_000_000.0, doc: "Another seed gives other people.")
+        option("seed", :number, default: 1.0, min: 1.0, max: 1_000_000.0, doc: "Another seed gives other people."),
+        option("fans", :boolean,
+          default: false,
+          doc: "Each person holds an open tai chi fan in the right hand (the leader, in the mirror, in the left hand)."
+        )
       ],
-      build: fn o -> World.People.exercise(o["routine"], count: round(o["count"]), seed: round(o["seed"])) end,
+      build: fn o ->
+        World.People.exercise(o["routine"], count: round(o["count"]), seed: round(o["seed"]), fans: o["fans"])
+      end,
       sources: ["People of World from the data of MakeHuman (CC0), and the routines of World.People.Pose."]
     }
   end

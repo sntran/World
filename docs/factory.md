@@ -107,7 +107,14 @@ color of the shirt), from the seed, and starts the routine up to 0.35 s
 late. The routine is one animation of the model, in a loop (16 s, 24 s
 and 8 s). A person (`person`) can also have a routine as its animation:
 an app can place each person and start the loop at its own time. A group
-of 7 people is about 1.5 MB at the far level and 4.8 MB at the mid level.
+of 7 people is about 1.5 MB at the far level and 4.8 MB at the mid level. With
+`fans` (true), each person holds an open tai chi fan in the right hand,
+and the leader in the left hand.
+
+A `person` can hold a prop in each hand (`right_hand`, `left_hand`:
+`fan` or `bottle`) and wear a hat (`hat`: `non_la`). The props follow
+the hands in the pose and in the animations, and they are in the list of
+the parts.
 At the edge, a group of more than 3 people needs more memory than the
 builder has (`AGENTS.md`, "Known problems"): order each person, or build
 the group with `mix world.order`.

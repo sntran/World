@@ -5,9 +5,13 @@ defmodule World.Port do
   direction at a right angle (`up`). When two ports connect, the two
   points are at the same place, and the two axes and the two `up`
   directions are the same.
+
+  A port of a figure can be on a bone (`bone`): its point and its
+  directions are in the axes of the bone, and a thing on it follows the
+  bone in each pose and animation (a fan in a hand).
   """
   alias World.{Frame, Vec}
-  defstruct name: "port", at: {0.0, 0.0, 0.0}, axis: {0.0, 0.0, 1.0}, up: {0.0, 1.0, 0.0}
+  defstruct name: "port", at: {0.0, 0.0, 0.0}, axis: {0.0, 0.0, 1.0}, up: {0.0, 1.0, 0.0}, bone: nil
 
   def new(name, at, axis, up \\ nil) do
     up = up || Vec.cross(axis, Vec.perpendicular(axis))

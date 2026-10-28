@@ -116,7 +116,7 @@ defmodule World.Assembly do
   """
   def item_port_frame(_item, %Port{} = port), do: Port.frame(port)
   def item_port_frame(%Part{} = p, path), do: Port.frame(Part.port!(p, path))
-  def item_port_frame(%World.Figure{} = f, path), do: Port.frame(World.Figure.port!(f, path))
+  def item_port_frame(%World.Figure{} = f, path), do: World.Figure.port_frame(f, path)
 
   def item_port_frame(%__MODULE__{place: place} = a, path), do: Frame.compose(place, inner_port_frame(a, path))
 

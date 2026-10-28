@@ -74,6 +74,11 @@ Examples: a bolt has the ports `head` (under the head) and `tip` (the
 end of the thread). A wheel has `hub`. A fork has `axle_left` and
 `axle_right`. A hinge has `leaf_a` and `leaf_b` on one axis.
 
+A port of a figure can be on a bone (`bone`): its point and its
+directions are in the axes of the bone. A thing on such a port goes in
+the node of the bone in the GLB, so it follows the bone in each pose
+and each animation.
+
 ## An assembly
 
 An assembly is a tree. The root is a part or an assembly. Each child
@@ -292,6 +297,34 @@ straight, in the plane of the hinge, in its limits:
 | Finger, last joint | 0 to 80 | about 8 |
 | Thumb, second joint | -20 to 60 | 21 |
 | Thumb, last joint | -10 to 80 | 5 |
+
+### The ports and the props of a person
+
+A person has these ports:
+
+| Port | On | Where | `axis` | `up` |
+|---|---|---|---|---|
+| `ground` | (at rest) | On the ground, between the feet. | Up | To the front |
+| `hips` | (at rest) | At the head of the bone `pelvis`. | Up | To the front |
+| `grip_l`, `grip_r` | `hand_l`, `hand_r` | In the palm, where a closed hand holds a handle. | Along the handle, to the side of the thumb | Out of the palm |
+| `crown` | `head` | On the top of the head. | Up | To the front |
+| `back` | `spine_03` | On the back, between the shoulder blades. | To the back | Up |
+| `sole_l`, `sole_r` | `foot_l`, `foot_r` | On the ground under the middle of the foot. | Down | To the toes |
+
+A prop (`World.People.Props`) is a part with a port of the same name
+with no side (`grip` for `grip_r`): `World.Figure.hold/4` puts it on a
+port of the figure, and the option `hold` of `Human.person/2` gives a
+list of them. A hand that holds a prop closes on it (the shape `grip`),
+in the pose and in each animation. The props now:
+
+| Prop | Port | The thing |
+|---|---|---|
+| `fan` | `grip` | An open tai chi fan: ribs of bamboo of about 33 cm, a leaf of red silk, open to 160 degrees. |
+| `bottle` | `grip` | A bottle of water of 500 ml (65 by 205 mm), held at its side. |
+| `non_la` | `crown` | A nón lá: a cone of palm leaves of about 41 cm across and 19 cm high. |
+
+A node of an assembly can also connect to a port on a bone (`at:
+"grip_r"`): it goes in the node of the bone too.
 
 ### The joints of a person in an order
 

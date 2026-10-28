@@ -12,7 +12,7 @@ defmodule World.People.Human do
     it, and the hair;
   - `:far`: a body of 730 faces, with the colors of the clothes on it.
   """
-  alias World.{Detail, Figure, Frame, Part, Scene, Vec}
+  alias World.{Detail, Figure, Frame, Part, Port, Scene, Vec}
   alias World.People.{Data, Joints, Pose, Skeleton}
 
   @defaults [
@@ -31,7 +31,8 @@ defmodule World.People.Human do
     clothes_colors: [],
     head: 1.0,
     helmet: nil,
-    pose: %{}
+    pose: %{},
+    hold: []
   ]
 
   @doc """
@@ -47,7 +48,11 @@ defmodule World.People.Human do
   (`[r, g, b]`: a helmet of a rider of that color, or nil), `pose` (a map
   of a bone to `{axis, degrees}`, or a name of `World.People.Pose`), and
   `animations` (a list of names of `World.People.Pose`, or of `{name,
-  opts}`: `delay` in seconds and `mirror` for a routine).
+  opts}`: `delay` in seconds and `mirror` for a routine), and `hold` (a
+  list of `{port, item}`: a prop on a port of a bone, as
+  `World.Figure.hold/4`, by the port of the prop with the name of the
+  port of the person with no side (`grip` for `grip_r`); a hand that
+  holds a prop closes on it, in the pose and in each animation).
   """
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
@@ -69,7 +74,8 @@ defmodule World.People.Human do
     {prims, materials} = helmet({prims, materials}, points, weights, bones, o)
 
     skeleton = Skeleton.new(bones)
-    pose = Pose.expand(Pose.resolve(o.pose))
+    hands = for {"grip_" <> side, _} <- o.hold, into: %{}, do: {String.to_existing_atom(side), "grip"}
+    pose = Pose.expand(Map.merge(Pose.resolve(o.pose), Map.new(hands, fn {side, shape} -> {{:hand, side}, shape} end)))
     {nodes, skin} = nodes(name, skeleton, prims, pose, o.head)
 
     %Figure{
@@ -99,14 +105,21 @@ defmodule World.People.Human do
       animations:
         for(
           a <- Map.get(o, :animations, []),
-          do: if(is_tuple(a), do: Pose.animation(elem(a, 0), bones, elem(a, 1)), else: Pose.animation(a, bones))
+          do:
+            if(is_tuple(a),
+              do: Pose.animation(elem(a, 0), bones, [hands: hands] ++ elem(a, 1)),
+              else: Pose.animation(a, bones, hands: hands)
+            )
         ),
       materials: materials,
-      ports: ports(bones),
+      ports: ports(bones, points, weights, o.ground),
       skeleton: skeleton,
       pose: pose,
       joints: Joints.all()
     }
+    |> then(fn f ->
+      Enum.reduce(o.hold, f, fn {port, item}, f -> Figure.hold(f, port, item, String.replace(port, ~r/_[lr]$/, "")) end)
+    end)
   end
 
   @doc """
@@ -602,12 +615,67 @@ defmodule World.People.Human do
     {[root | bone_nodes] ++ [mesh], skin}
   end
 
-  defp ports(bones) do
-    pelvis = Enum.find(bones, &(&1.name == "pelvis"))
+  # The ports of a person: the ground and the hips (at rest), and the
+  # ports on the bones for the props (`World.Figure.hold/4`).
+  defp ports(bones, points, weights, ground) do
+    by = Map.new(bones, &{&1.name, &1})
+    index = bones |> Enum.with_index() |> Map.new(fn {b, i} -> {b.name, i} end)
+    at = fn v -> Vec.sub(to_world(elem(points, v)), {0.0, 0.0, ground}) end
+    # The points of the skin that follow a bone (half or more).
+    skin = fn bone ->
+      for {v, ws} <- weights, Enum.any?(ws, fn {b, w} -> b == index[bone] and w >= 0.5 end), do: at.(v)
+    end
 
-    %{
-      "ground" => Part.port("ground", {0.0, 0.0, 0.0}, {0, 0, 1}, {0, 1, 0}),
-      "hips" => Part.port("hips", pelvis.head, {0, 0, 1}, {0, 1, 0})
-    }
+    {{x0, y0, _}, {x1, y1, top}} = Vec.bounds(skin.("head"))
+    back = skin.("spine_03")
+    {_, ymin, _} = Vec.bounds(back) |> elem(0)
+    spine = by["spine_03"]
+
+    on_bones =
+      [
+        {"crown", "head", Part.port("crown", {(x0 + x1) / 2, (y0 + y1) / 2, top}, {0, 0, 1}, {0, 1, 0})},
+        {"back", "spine_03",
+         Part.port("back", {0.0, ymin - 0.01, (elem(spine.head, 2) + elem(spine.tail, 2)) / 2}, {0, -1, 0}, {0, 0, 1})}
+      ] ++
+        for side <- ~w(l r), {name, bone, port} <- [grip(by, side), sole(by, side)], do: {name, bone, port}
+
+    pelvis = by["pelvis"]
+
+    Map.merge(
+      %{
+        "ground" => Part.port("ground", {0.0, 0.0, 0.0}, {0, 0, 1}, {0, 1, 0}),
+        "hips" => Part.port("hips", pelvis.head, {0, 0, 1}, {0, 1, 0})
+      },
+      Map.new(on_bones, fn {name, bone, port} -> {name, on_bone(port, by[bone])} end)
+    )
+  end
+
+  # The grip of a hand: in the palm, where a closed hand holds a handle.
+  # The axis is the line of the handle, to the side of the thumb; `up`
+  # goes out of the palm.
+  defp grip(by, side) do
+    [hand, middle, index, pinky] = Enum.map(~w(hand middle_01 index_01 pinky_01), &by["#{&1}_#{side}"])
+    along = Vec.norm(Vec.sub(middle.head, hand.head))
+    across = Vec.norm(Vec.sub(index.head, pinky.head))
+    palm = Vec.scale(Vec.norm(Vec.cross(along, across)), if(side == "l", do: 1.0, else: -1.0))
+    at = Vec.add(Vec.lerp(hand.head, middle.head, 0.55), Vec.scale(palm, 0.03))
+    axis = Vec.norm(Vec.sub(across, Vec.scale(palm, Vec.dot(across, palm))))
+    {"grip_#{side}", "hand_#{side}", Part.port("grip_#{side}", at, axis, palm)}
+  end
+
+  # The sole of a foot: on the ground under the middle of the foot, its
+  # axis down, `up` to the toes.
+  defp sole(by, side) do
+    {foot, ball} = {by["foot_#{side}"], by["ball_#{side}"]}
+    {x, y, _} = Vec.lerp(foot.head, ball.head, 0.5)
+    {dx, dy, _} = Vec.sub(ball.head, foot.head)
+    {"sole_#{side}", "foot_#{side}", Part.port("sole_#{side}", {x, y, 0.0}, {0, 0, -1}, {dx, dy, 0.0})}
+  end
+
+  # A port in the axes of World of the person at rest, as a port on a
+  # bone: in the axes of the bone.
+  defp on_bone(port, bone) do
+    f = Frame.compose(Frame.invert(bone.frame), Port.frame(port))
+    %{Port.new(port.name, f.at, f.z, f.y) | bone: bone.name}
   end
 end

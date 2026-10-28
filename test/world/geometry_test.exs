@@ -62,7 +62,10 @@ defmodule World.GeometryTest do
     end
 
     property "the quaternion turns as the frame" do
-      check all axis <- vec(), deg <- float(min: -179.0, max: 179.0), Vec.len(axis) > 0.01 do
+      check all axis <- vec(), deg <- float(min: -179.0, max: 179.0) do
+        # A small generation size gives many axes of zero: no filter, a
+        # fixed axis in their place.
+        axis = if Vec.len(axis) > 0.01, do: axis, else: {0.0, 0.0, 1.0}
         {x, y, z, w} = Frame.quaternion(Frame.turn(axis, deg))
         assert abs(x * x + y * y + z * z + w * w - 1) < 1.0e-9
         half = deg / 2 * :math.pi() / 180

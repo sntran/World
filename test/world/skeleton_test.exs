@@ -156,7 +156,7 @@ defmodule World.SkeletonTest do
   end
 
   test "the shapes of a hand" do
-    assert Pose.hands() == ["fist", "open", "point", "relaxed", "thumbs_up"]
+    assert Pose.hands() == ["fist", "grip", "open", "point", "relaxed", "thumbs_up"]
     near = fn pos, tip -> Vec.len(Vec.sub(pos.(tip), pos.("hand_r"))) end
 
     open = at(%{{:hand, :r} => "open"})

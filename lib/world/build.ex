@@ -15,7 +15,7 @@ defmodule World.Build do
     is only in mid and far: it stands in for many small parts (one wall
     in place of its bricks).
   """
-  alias World.{Assembly, Figure, Frame, GLB, Joint, Mesh, Part, Scene, Vec}
+  alias World.{Assembly, Figure, Frame, GLB, Joint, Mesh, Part, Port, Scene, Vec}
   alias World.Assembly.Connection
 
   @limits %{near: {0.0, 0.0}, mid: {0.02, 0.003}, far: {0.10, 0.01}}
@@ -99,7 +99,7 @@ defmodule World.Build do
   # materials: its root goes at the frame, under the node. The values of
   # its joints have the path of its node in front ("rider/elbow_l"), but
   # not for a figure that is the model.
-  defp walk(%Figure{} = f, frame, node, acc, _level, pose) do
+  defp walk(%Figure{} = f, frame, node, acc, level, pose) do
     values =
       for {k, v} <- pose,
           String.starts_with?(k, acc.prefix),
@@ -133,6 +133,7 @@ defmodule World.Build do
         materials: Map.merge(acc.materials, f.materials),
         joints: acc.joints ++ Enum.map(Figure.values(f), &(acc.prefix <> &1))
     }
+    |> props(f, offset, level, pose)
   end
 
   defp walk(%Part{} = p, frame, node, acc, level, _pose) do
@@ -145,20 +146,19 @@ defmodule World.Build do
     # nodes of the smaller assemblies, with "/" between them.
     prefix = acc.prefix
     at = fn acc, name -> %{acc | path: prefix <> name, prefix: prefix <> name <> "/"} end
+    places = %{root => {node, frame, length(acc.nodes)}}
     acc = acc |> at.(root) |> then(&walk(root_item, frame, node, &1, level, pose))
-    places = %{root => {node, frame}}
 
     {acc, _} =
       Enum.reduce(rest, {acc, places}, fn {name, item, %Connection{} = c}, {acc, places} ->
-        {parent_node, parent_frame} = Map.fetch!(places, c.to)
         a = %Assembly{nodes: [{root, root_item, nil} | rest], place: Frame.identity()}
-        port = Frame.compose(parent_frame, port_in_node(a, c))
+        {parent_node, port} = attach(a, c, places)
 
         acc = at.(acc, name)
 
         if c.kind == :fixed do
           f = Frame.compose(port, Assembly.placement(c, item, 0.0))
-          {walk(item, f, parent_node, acc, level, pose), Map.put(places, name, {parent_node, f})}
+          {walk(item, f, parent_node, acc, level, pose), Map.put(places, name, {parent_node, f, length(acc.nodes)})}
         else
           # The name of a joint is its own name: three.js removes "/" from
           # the names of nodes. Two joints of a model cannot have one name.
@@ -176,11 +176,45 @@ defmodule World.Build do
           id = length(acc.nodes)
           acc = %{acc | nodes: acc.nodes ++ [joint], parts: Map.put(acc.parts, id, [])}
           f = Assembly.placement(c, item, 0.0)
-          {walk(item, f, id, acc, level, pose), Map.put(places, name, {id, f})}
+          {walk(item, f, id, acc, level, pose), Map.put(places, name, {id, f, length(acc.nodes)})}
         end
       end)
 
     %{acc | prefix: prefix}
+  end
+
+  # The props of a figure: each in the node of the bone of its port (or
+  # of the root of the figure).
+  defp props(acc, %Figure{props: props} = f, offset, level, pose) do
+    Enum.reduce(props, acc, fn {port, item, item_port}, acc ->
+      {node, frame} = on_figure(f, offset, port)
+      walk(item, Frame.compose(frame, Frame.invert(Assembly.item_port_frame(item, item_port))), node, acc, level, pose)
+    end)
+  end
+
+  # The node and the frame in it of a port of a figure whose first node
+  # is `offset`: a port on a bone is in the node of the bone.
+  defp on_figure(f, offset, port) do
+    case Figure.port!(f, port) do
+      %Port{bone: nil} = p -> {offset, Port.frame(p)}
+      %Port{bone: bone} = p -> {offset + Figure.bone_node(f, bone), Port.frame(p)}
+    end
+  end
+
+  # The node of the parent of a connection, and the frame of its port in
+  # that node. A port on a bone of a figure is in the node of the bone.
+  defp attach(%Assembly{nodes: nodes} = a, %Connection{to: to, at: at} = c, places) do
+    {parent_node, parent_frame, first} = Map.fetch!(places, to)
+
+    case List.keyfind(nodes, to, 0) do
+      {_, %Figure{} = f, _} when is_binary(at) ->
+        if Figure.port!(f, at).bone,
+          do: on_figure(f, first, at),
+          else: {parent_node, Frame.compose(parent_frame, port_in_node(a, c))}
+
+      _ ->
+        {parent_node, Frame.compose(parent_frame, port_in_node(a, c))}
+    end
   end
 
   # The frame of the port `at` of the node `to`, in the axes of that node.
@@ -272,6 +306,12 @@ defmodule World.Build do
   defp all_parts(%Part{shapes: []}), do: []
   defp all_parts(%Part{detail: :low}), do: []
   defp all_parts(%Part{} = p), do: [p]
-  defp all_parts(%Figure{} = f), do: [%Part{name: f.name, kind: f.kind, params: f.params, sources: f.sources}]
+
+  defp all_parts(%Figure{} = f),
+    do: [
+      %Part{name: f.name, kind: f.kind, params: f.params, sources: f.sources}
+      | Enum.flat_map(f.props, fn {_, item, _} -> all_parts(item) end)
+    ]
+
   defp all_parts(%Assembly{nodes: nodes}), do: Enum.flat_map(nodes, fn {_, item, _} -> all_parts(item) end)
 end
