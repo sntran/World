@@ -47,5 +47,16 @@ into the steps of `AGENTS.md`.
 - **A belt for the second alternator.** The second alternator of the van
   has no belt and no bracket on the engine. The kit of Ford for the
   Transit has its own bracket: its shape needs a source.
+- **A flood fill for voxels and for hidden parts.** The voxel maker (step
+  8) fills a shell of voxels: a flood fill from a corner of the grid
+  marks the outside, and each voxel that it does not reach is inside, so
+  the model is solid. The same fill on a coarse grid of a model finds the
+  parts that nobody can see from outside (an engine under a closed hood),
+  in place of `inside: true` by hand, and a hole in a shell before a
+  print (step 9). The fill of Nils M. Holm, "A stackless floodfill
+  automaton" (2023, <https://t3x.org/files/floodfill.pdf>), keeps its
+  state in the cells (16 states in 2D; 36 for voxels) and needs no stack
+  or queue: in the 128 MB of the edge, a grid in `:atomics` or in one
+  binary is the only memory.
 - **Godot import.** A script for Vung_Tau that reads the joint nodes and
   the levels of detail of a GLB of Xưởng.
