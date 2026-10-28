@@ -1,0 +1,50 @@
+defmodule World.Places do
+  @moduledoc """
+  The places of the world (`docs/world.md`, "The places"): buildings at a
+  position on the yard, in meters, in one flat frame.
+
+  - A **warehouse** keeps stock (`World.Stock`). Its limit is the size of
+    its store: one R2 bucket for each warehouse.
+  - A **factory** makes one family of things: `:materials`, `:frames`,
+    `:houses`, `:wheels`, `:seats`, `:vehicles`, `:appliances`,
+    `:clothes`, `:people`.
+  - A **supplier** gives a part that the world cannot make.
+  - A **site** is where a delivery ends: a project of the owner.
+  """
+  alias World.Stock
+
+  @kinds [:warehouse, :factory, :supplier, :site]
+  @families [:materials, :frames, :houses, :wheels, :seats, :vehicles, :appliances, :clothes, :people]
+
+  defmodule Place do
+    @moduledoc "A place: its name, its kind, its position `{x, y}` on the yard, its family (a factory) and its stock (a warehouse)."
+    defstruct name: nil, kind: nil, at: {0.0, 0.0}, family: nil, stock: nil
+  end
+
+  @doc "The kinds of a place."
+  def kinds, do: @kinds
+
+  @doc "The families of things, one for each factory."
+  def families, do: @families
+
+  @doc "A warehouse with the limit of its store, in bytes."
+  def warehouse(name, at, limit), do: place(name, :warehouse, at, stock: Stock.new(limit))
+
+  @doc "A factory of a family of things."
+  def factory(name, at, family) do
+    unless family in @families, do: raise(ArgumentError, "no family of things #{inspect(family)}")
+    place(name, :factory, at, family: family)
+  end
+
+  @doc "A supplier."
+  def supplier(name, at), do: place(name, :supplier, at)
+
+  @doc "The site of a customer."
+  def site(name, at), do: place(name, :site, at)
+
+  defp place(name, kind, {x, y}, fields \\ []) when is_binary(name) and is_number(x) and is_number(y),
+    do: struct!(Place, [name: name, kind: kind, at: {x / 1, y / 1}] ++ fields)
+
+  @doc "The straight distance between two places, in meters."
+  def distance(%Place{at: {x0, y0}}, %Place{at: {x1, y1}}), do: :math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
+end
