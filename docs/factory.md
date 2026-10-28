@@ -85,6 +85,25 @@ Each file has `Access-Control-Allow-Origin: *`, an `ETag`, and
 project gets a correction at most 5 minutes after the deploy of Xưởng,
 and it can use a copy in its cache while it gets the new file.
 
+## The line of a van
+
+A van of the blueprint `van` is built as the maker builds it, station
+after station (`Xuong.Models.Van`):
+
+| Station | What it adds |
+|---|---|
+| The body shop | The body of sheets on the hull, 3 cm thick, with the openings cut: the windshield, the front doors, the sliding door, the rear doors, the windows of the body, the arches of the wheels. Inside: the floors, the wells of the wheels, the pillar behind the front door. |
+| The closures | The hood, the front doors with their windows and mirrors, the sliding door, the rear doors: each in its opening, on its hinges or its rail. |
+| The paint | The role `paint` of the body and the doors. |
+| The trim | The glass in the openings, the black plastic, the lamps, the grille, the small parts, the dash and the seats. |
+| The chassis | The engine bay and the wheels. |
+| The upfit | The items of DIY on the roof and in the engine bay. |
+
+Each part has its station in its `params` (the list of the parts is
+the build sheet). The near level is the van of the line: the doors open
+on the inside of the van. The mid level has a closed body with the doors
+on it, and the far level the closed body only.
+
 ## The contract
 
 The other projects use the names of the options, the slots, the joints,

@@ -231,6 +231,12 @@ defmodule Xuong.Blueprints do
 
   # --- A van -------------------------------------------------------------------------------
 
+  # The values of the options of a van, as the atoms of `Xuong.Models.Van`.
+  @van_atoms Map.new(
+               ~w(cargo crew passenger dc_charger second_alternator fan solar)a,
+               &{Atom.to_string(&1), &1}
+             )
+
   defp van do
     %Blueprint{
       name: "van",
@@ -270,9 +276,9 @@ defmodule Xuong.Blueprints do
       build: fn o ->
         Van.build(o["model"],
           name: "van",
-          windows: String.to_existing_atom(o["windows"]),
-          engine_bay: Enum.map(o["engine_bay"], &String.to_existing_atom/1),
-          roof: for(%{"kind" => k, "at" => d} <- o["roof"], do: {String.to_existing_atom(k), d})
+          windows: Map.fetch!(@van_atoms, o["windows"]),
+          engine_bay: Enum.map(o["engine_bay"], &Map.fetch!(@van_atoms, &1)),
+          roof: for(%{"kind" => k, "at" => d} <- o["roof"], do: {Map.fetch!(@van_atoms, k), d})
         )
       end,
       check: &van_check/1,
@@ -288,7 +294,7 @@ defmodule Xuong.Blueprints do
 
     spans =
       for {%{"kind" => k, "at" => d}, i} <- Enum.with_index(o["roof"]) do
-        half = Van.roof_item(String.to_existing_atom(k))
+        half = Van.roof_item(Map.fetch!(@van_atoms, k))
         {i, d - half, d + half}
       end
 

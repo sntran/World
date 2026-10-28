@@ -105,13 +105,16 @@ defmodule Xuong.Models.Hull do
   end
 
   @doc "The bottom of the hull at `d`: the bumpers, the sill and the arches."
-  def z_low(%__MODULE__{} = h, d) do
+  def z_low(%__MODULE__{} = h, d, arches \\ true) do
     base = at(h.front_lower, d, :min) || at(h.back_lower, h.length - d, :min) || h.sill
+    arch = if arches, do: arch(h, d), else: nil
+    if arch, do: max(base, arch), else: base
+  end
 
-    Enum.reduce(h.arches, base, fn {ad, az, r}, acc ->
-      dd = abs(d - ad)
-      if dd < r, do: max(acc, az + :math.sqrt(r * r - dd * dd)), else: acc
-    end)
+  @doc "The top of the arch of a wheel at `d`, or nil away from the wheels."
+  def arch(%__MODULE__{} = h, d) do
+    zs = for {ad, az, r} <- h.arches, abs(d - ad) < r, do: az + :math.sqrt(r * r - (d - ad) * (d - ad))
+    if zs == [], do: nil, else: Enum.max(zs)
   end
 
   @doc """
@@ -138,7 +141,18 @@ defmodule Xuong.Models.Hull do
   join with no twist.
   """
   def section(%__MODULE__{} = h, d, delta \\ 0.0) do
-    {zl, zh, hw} = grown(h, d, delta)
+    right = half(h, d, delta)
+    left = for {x, z} <- right |> Enum.reverse() |> Enum.drop(1) |> Enum.drop(-1), do: {-x, z}
+    right ++ left
+  end
+
+  @doc """
+  The right half of the section at `d`: from the middle of the bottom,
+  around the right side, to the middle of the top. A `delta` under 0
+  gives the inner face of a sheet of that thickness.
+  """
+  def half(%__MODULE__{} = h, d, delta \\ 0.0, arches \\ true, arc \\ %{near: 8, mid: 2, far: 1}) do
+    {zl, zh, hw} = grown(h, d, delta, arches)
     {cr, cl} = h.crown
     height = zh - zl
     rb = max(min(h.bottom, height * 0.2), 0.004)
@@ -147,29 +161,37 @@ defmodule Xuong.Models.Hull do
     span = h.top - h.edge - h.belt
     lean = if zh > h.belt and span > 0, do: h.lean * min(1.0, (zh - h.belt) / span), else: 0.0
     zb = min(max(zl + rb + 0.002, min(h.belt, zh - rt - 0.002)), zh - rt - 0.001)
-    n = %{near: 8, mid: 2, far: 1}[Detail.level()]
+    n = arc[Detail.level()]
 
-    right =
-      [{0.0, zl}] ++
-        arc({hw - rb, zl + rb}, rb, -90, 0, n) ++
-        [{hw, zb}] ++ arc({hw - lean - rt, zh - rt}, rt, 0, 90, n) ++ [{0.0, zh}]
-
-    left = for {x, z} <- right |> Enum.reverse() |> Enum.drop(1) |> Enum.drop(-1), do: {-x, z}
-    right ++ left
+    [{0.0, zl}] ++
+      arc({hw - rb, zl + rb}, rb, -90, 0, n) ++
+      [{hw, zb}] ++ arc({hw - lean - rt, zh - rt}, rt, 0, 90, n) ++ [{0.0, zh}]
   end
 
   # The bottom, the top and the half width at `d` of the hull grown by
   # `delta` in each direction: the most of each within `delta` along the
   # length, and `delta` more. So a skin covers a face of the body that
   # looks to the front or to the back, as a face that looks to a side.
-  defp grown(h, d, delta) when delta == 0, do: {z_low(h, d), z_high(h, d), half_width(h, d)}
+  defp grown(h, d, delta, arches) when delta == 0, do: {z_low(h, d, arches), z_high(h, d), half_width(h, d)}
 
-  defp grown(h, d, delta) do
+  # The inner face of a sheet: the least of each within `-delta` along
+  # the length, and `-delta` less. So the back, which stands almost
+  # upright, has the thickness of the sheet too.
+  defp grown(h, d, delta, arches) when delta < 0 do
+    {d0, d1} = span(h)
+    ds = for i <- -2..2, e = d - delta * i / 2, e >= d0 and e <= d1, do: e
+    ds = if ds == [], do: [min(max(d, d0), d1)], else: ds
+
+    {Enum.max(Enum.map(ds, &z_low(h, &1, arches))) - delta, Enum.min(Enum.map(ds, &z_high(h, &1))) + delta,
+     Enum.min(Enum.map(ds, &half_width(h, &1))) + delta}
+  end
+
+  defp grown(h, d, delta, arches) do
     {d0, d1} = span(h)
     ds = for i <- -2..2, e = d + delta * i / 2, e >= d0 and e <= d1, do: e
     ds = if ds == [], do: [min(max(d, d0), d1)], else: ds
 
-    {Enum.min(Enum.map(ds, &z_low(h, &1))) - delta, Enum.max(Enum.map(ds, &z_high(h, &1))) + delta,
+    {Enum.min(Enum.map(ds, &z_low(h, &1, arches))) - delta, Enum.max(Enum.map(ds, &z_high(h, &1))) + delta,
      Enum.max(Enum.map(ds, &half_width(h, &1))) + delta}
   end
 
@@ -186,21 +208,33 @@ defmodule Xuong.Models.Hull do
   def clip([], _), do: []
   def clip(loop, [plane | rest]), do: clip(cut(loop, plane), rest)
 
+  # A point is `{x, z}`, or `{x, z, s}` with its place `s` along the
+  # loop of a sheet; a new point on a line gets its place between the two
+  # places.
   defp cut(loop, plane) do
     f =
       case plane do
-        {:x_min, v} -> fn {x, _} -> v - x end
-        {:x_max, v} -> fn {x, _} -> x - v end
-        {:z_min, v} -> fn {_, z} -> v - z end
-        {:z_max, v} -> fn {_, z} -> z - v end
-        {:le, a, b, c} -> fn {x, z} -> a * x + b * z - c end
+        {:x_min, v} -> fn p -> v - elem(p, 0) end
+        {:x_max, v} -> fn p -> elem(p, 0) - v end
+        {:z_min, v} -> fn p -> v - elem(p, 1) end
+        {:z_max, v} -> fn p -> elem(p, 1) - v end
+        {:le, a, b, c} -> fn p -> a * elem(p, 0) + b * elem(p, 1) - c end
       end
 
     loop
     |> Enum.zip(tl(loop) ++ [hd(loop)])
-    |> Enum.flat_map(fn {{x1, z1} = a, {x2, z2} = b} ->
+    |> Enum.flat_map(fn {a, b} ->
       {fa, fb} = {f.(a), f.(b)}
-      cross = fn -> {x1 + (x2 - x1) * fa / (fa - fb), z1 + (z2 - z1) * fa / (fa - fb)} end
+
+      cross = fn ->
+        t = fa / (fa - fb)
+
+        a
+        |> Tuple.to_list()
+        |> Enum.zip(Tuple.to_list(b))
+        |> Enum.map(fn {u, v} -> u + (v - u) * t end)
+        |> List.to_tuple()
+      end
 
       cond do
         fa <= 0 and fb <= 0 -> [b]
@@ -218,6 +252,17 @@ defmodule Xuong.Models.Hull do
   points at equal steps along it.
   """
   def resample(loop, k) do
+    loop = from_lowest(loop)
+    sides = Enum.zip(loop, tl(loop) ++ [hd(loop)])
+    lens = for {{x1, z1}, {x2, z2}} <- sides, do: :math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2)
+    total = Enum.sum(lens)
+
+    if length(loop) <= k,
+      do: split(sides, lens, k - length(loop), total),
+      else: walk(Enum.zip(sides, lens), for(i <- 0..(k - 1), do: total * i / k), 0.0, [])
+  end
+
+  defp from_lowest(loop) do
     zmin = loop |> Enum.map(&elem(&1, 1)) |> Enum.min()
 
     start =
@@ -227,14 +272,7 @@ defmodule Xuong.Models.Hull do
       |> Enum.max_by(fn {{x, _}, _} -> x end)
       |> elem(1)
 
-    loop = Enum.drop(loop, start) ++ Enum.take(loop, start)
-    sides = Enum.zip(loop, tl(loop) ++ [hd(loop)])
-    lens = for {{x1, z1}, {x2, z2}} <- sides, do: :math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2)
-    total = Enum.sum(lens)
-
-    if length(loop) <= k,
-      do: split(sides, lens, k - length(loop), total),
-      else: walk(Enum.zip(sides, lens), for(i <- 0..(k - 1), do: total * i / k), 0.0, [])
+    Enum.drop(loop, start) ++ Enum.take(loop, start)
   end
 
   defp walk(_, [], _, acc), do: Enum.reverse(acc)
@@ -278,7 +316,7 @@ defmodule Xuong.Models.Hull do
   at least `Xuong.Detail.step(0.02)` apart. Between them the section
   changes in a straight line, so a long flat side needs few sections.
   """
-  def stations(%__MODULE__{} = h, d0, d1, step) do
+  def stations(%__MODULE__{} = h, d0, d1, step, arch \\ 1) do
     n = max(round((d1 - d0) / Detail.step(step)), 1)
     even = for i <- 0..n, do: d0 + (d1 - d0) * i / n
 
@@ -287,7 +325,7 @@ defmodule Xuong.Models.Hull do
         Enum.map(h.back_upper ++ h.back_lower, &(h.length - elem(&1, 0)))
 
     coarse = %{near: 1, mid: 2, far: 4}[Detail.level()]
-    arches = for {ad, _, r} <- h.arches, k <- -12..12//coarse, do: ad + r * :math.sin(k * :math.pi() / 24)
+    arches = for {ad, _, r} <- h.arches, k <- -12..12//(coarse * arch), do: ad + r * :math.sin(k * :math.pi() / 24)
     {{nd, _}, {td, _}, {_, cl}} = {h.nose, h.tail, h.crown}
     n = div(8, coarse)
     plan = for(i <- 0..n, do: nd * i / n) ++ for(i <- 0..n, do: h.length - td * i / n) ++ [cl]
@@ -338,6 +376,122 @@ defmodule Xuong.Models.Hull do
     Shape.rings(rings, material, Keyword.drop(opts, [:offset, :clip, :sides, :step]))
   end
 
+  @doc """
+  A sheet of the hull from `d0` to `d1`, at its right side (`side: 1`)
+  or its left side (`side: -1`): the outer face of the hull, and an inner
+  face `thickness` (0.03 m) in; with `offset`, the sheet is that far out
+  from the hull (a door over a closed body). The `clip` lines (`clip/2`, for the right
+  side; the left side takes them in the mirror) cut each section, so a
+  sheet is a panel of the body: a side, the roof, a pillar. A door or a
+  window is a hole between panels: `holes` is a function of `d` to the
+  holes there, each a list of lines; `edges` are the `d` where a hole
+  starts or ends. The arches of the wheels are holes at each side,
+  `well` (0.3 m) wide. The other options are those of `skin/5`.
+  """
+  def shell(%__MODULE__{} = h, d0, d1, material, opts \\ []) do
+    t = Keyword.get(opts, :thickness, 0.03)
+    o = Keyword.get(opts, :offset, 0.0)
+    s = Keyword.get(opts, :side, 1)
+    planes = Keyword.get(opts, :clip, fn _ -> [] end)
+    holes = Keyword.get(opts, :holes, fn _ -> [] end)
+    well = Keyword.get(opts, :well, 0.3)
+    edges = Keyword.get(opts, :edges, []) ++ for({ad, _, r} <- h.arches, e <- [ad - r, ad + r], do: e)
+
+    # Each piece of a section has a key (which side of which hole it is
+    # on), so the same piece joins the same piece at the next section.
+    # A piece that is not at a section ends there, with a cap.
+    sections =
+      for d <- with_edges(stations(h, d0, d1, Keyword.get(opts, :step, 0.25), 2), edges, d0, d1) do
+        loop = sheet(h, d, o, t) |> Enum.with_index(fn {x, z}, i -> {x, z, i / 1} end) |> clip(planes.(d))
+        a = arch(h, d)
+        wheel = if a, do: [[{:x_min, half_width(h, d) - well}, {:z_max, a}]], else: []
+
+        for {key, piece} <- cut_holes([{[], loop}], wheel ++ holes.(d)),
+            piece != [],
+            piece = from_first(piece),
+            area(piece) > 1.0e-7,
+            into: %{},
+            do: {key, {d, piece}}
+      end
+
+    # The sections of a run of one piece join by the places of their
+    # points along the sheet (`Xuong.Shape.stitch/3`), so each keeps its
+    # corners, and a piece with more points at one section has no twist.
+    sections
+    |> Enum.flat_map(&Map.keys/1)
+    |> Enum.uniq()
+    |> Enum.flat_map(fn key ->
+      sections
+      |> Enum.chunk_by(&Map.has_key?(&1, key))
+      |> Enum.filter(&Map.has_key?(hd(&1), key))
+      |> Enum.map(fn run -> Enum.map(run, & &1[key]) end)
+    end)
+    |> Enum.filter(&(length(&1) > 1))
+    |> Enum.map(fn run ->
+      rings = for {d, piece} <- run, do: for({x, z, p} <- piece, do: {{s * x, h.length - d, z}, p})
+
+      Shape.stitch(
+        rings,
+        material,
+        Keyword.drop(opts, [:thickness, :offset, :side, :clip, :holes, :well, :edges, :step])
+      )
+    end)
+  end
+
+  # The points of each round edge of a sheet, at each level.
+  @sheet_arc %{near: 4, mid: 2, far: 1}
+
+  # A piece of a sheet from its point with the least place along the
+  # loop of the sheet: so the sections of a piece start at the same place
+  # and join with no twist.
+  defp from_first(piece) do
+    i = piece |> Enum.with_index() |> Enum.min_by(fn {{_, _, s}, _} -> s end) |> elem(1)
+    Enum.drop(piece, i) ++ Enum.take(piece, i)
+  end
+
+  # The section of a sheet at `d`: the right half of the outer face and
+  # of the inner face. Where the hull is thinner than the sheet (at its
+  # ends), the sheet is the whole right half.
+  defp sheet(h, d, o, t) do
+    inner = half(h, d, o - t, false, @sheet_arc)
+    {_, zl} = hd(inner)
+    {_, zh} = List.last(inner)
+    {hw, _} = Enum.max_by(inner, &elem(&1, 0))
+    outer = half(h, d, o, false, @sheet_arc)
+    if zh - zl > 0.002 and hw > 0.002, do: outer ++ Enum.reverse(inner), else: outer
+  end
+
+  # The pieces of a section out of each hole. A hole is a list of lines
+  # (`clip/2`); out of it is out of its first line, or in its first line
+  # and out of the next, and so on.
+  defp cut_holes(pieces, []), do: pieces
+
+  defp cut_holes(pieces, [hole | rest]) do
+    pieces
+    |> Enum.flat_map(fn {key, loop} ->
+      for {line, i} <- Enum.with_index(hole),
+          piece = clip(loop, Enum.take(hole, i) ++ [flip(line)]),
+          piece != [],
+          do: {key ++ [i], piece}
+    end)
+    |> cut_holes(rest)
+  end
+
+  defp flip({:x_min, v}), do: {:x_max, v}
+  defp flip({:x_max, v}), do: {:x_min, v}
+  defp flip({:z_min, v}), do: {:z_max, v}
+  defp flip({:z_max, v}), do: {:z_min, v}
+  defp flip({:le, a, b, c}), do: {:le, -a, -b, -c}
+
+  # The sections just before and just after the ends of the holes, so a
+  # piece ends where its hole starts.
+  defp with_edges(ds, edges, d0, d1) do
+    (ds ++ Enum.flat_map(edges, &[&1 - 1.0e-4, &1 + 1.0e-4]))
+    |> Enum.filter(&(&1 >= d0 and &1 <= d1))
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
   defp resample_if(loop, k), do: if(area(loop) > 1.0e-7, do: resample(loop, k), else: loop)
 
   @doc "The area of a loop."
@@ -346,7 +500,7 @@ defmodule Xuong.Models.Hull do
   def area(loop) do
     loop
     |> Enum.zip(tl(loop) ++ [hd(loop)])
-    |> Enum.reduce(0.0, fn {{x1, z1}, {x2, z2}}, acc -> acc + x1 * z2 - x2 * z1 end)
+    |> Enum.reduce(0.0, fn {a, b}, acc -> acc + elem(a, 0) * elem(b, 1) - elem(b, 0) * elem(a, 1) end)
     |> Kernel./(2)
     |> abs()
   end

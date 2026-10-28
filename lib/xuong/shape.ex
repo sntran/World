@@ -204,6 +204,62 @@ defmodule Xuong.Shape do
   end
 
   @doc """
+  A skin over rings that can have other counts of points: each point is
+  `{point, place}`, in order of its place around the ring, from the least
+  place. Triangles join each ring to the next in the order of the places,
+  so a point joins the points of the next ring at the same place, and a
+  flat cap closes each end.
+  """
+  def stitch([[_, _, _ | _] | _] = rings, material, opts \\ []) do
+    {points, firsts} =
+      Enum.reduce(rings, {[], []}, fn ring, {pts, firsts} ->
+        {pts ++ Enum.map(ring, &Vec.float(elem(&1, 0))), firsts ++ [length(pts)]}
+      end)
+
+    sides =
+      rings
+      |> Enum.zip(firsts)
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.flat_map(fn [{a, i0}, {b, j0}] -> join(Enum.map(a, &elem(&1, 1)), Enum.map(b, &elem(&1, 1)), i0, j0) end)
+
+    {last, l0} = {List.last(rings), List.last(firsts)}
+    caps = [Enum.to_list((length(hd(rings)) - 1)..0//-1), Enum.to_list(l0..(l0 + length(last) - 1))]
+    place(Mesh.new(points, Mesh.outside(points, caps ++ sides), material, opts), opts)
+  end
+
+  # The triangles from a ring (places `a`, first point `i0`) to the next
+  # (places `b`, first point `j0`): each step goes to the next point of
+  # the ring with the less place, around each ring to its first point
+  # again, so the band closes. So that no line between the rings comes
+  # twice, the first step is on the first ring, the second ring moves
+  # before the first ring ends, and the last step is on the second ring.
+  defp join(a, b, i0, j0) do
+    {na, nb} = {length(a), length(b)}
+    {at, bt} = {List.to_tuple(a ++ [:end]), List.to_tuple(b ++ [:end])}
+    ai = fn i -> i0 + rem(i, na) end
+    bj = fn j -> j0 + rem(j, nb) end
+
+    first? = fn
+      i, _ when i == na -> false
+      0, 0 -> true
+      i, 0 when i == na - 1 -> false
+      _, j when j == nb - 1 -> true
+      i, j -> elem(at, i + 1) <= elem(bt, j + 1)
+    end
+
+    Stream.unfold({0, 0}, fn
+      {^na, ^nb} ->
+        nil
+
+      {i, j} ->
+        if first?.(i, j),
+          do: {[ai.(i), ai.(i + 1), bj.(j)], {i + 1, j}},
+          else: {[ai.(i), bj.(j + 1), bj.(j)], {i, j + 1}}
+    end)
+    |> Enum.to_list()
+  end
+
+  @doc """
   Loft sections along y (the side and the top of a body): each row is
   `{y, z_low, z_high, half_width, power}`, centered at x = `x0`.
   """

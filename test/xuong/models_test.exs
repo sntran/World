@@ -85,10 +85,41 @@ defmodule Xuong.ModelsTest do
     assert Hull.back(h, 0.7) < Hull.back(h, 1.6)
     assert Hull.back(h, h.top + 1.0) == nil
 
+    # The arch of a wheel raises the bottom of the hull over it.
+    {f, _, _} = hd(h.arches)
+    assert Hull.z_low(h, f) > Hull.z_low(h, f, false)
+
+    # A sheet of the side of the hull, cut by the arch of the wheel.
+    sheet = Hull.shell(h, f - 0.8, f + 0.8, :paint)
+    assert length(sheet) > 1 and Enum.all?(sheet, &(Xuong.Mesh.volume(&1.points, &1.faces) > 0))
+
     # A section is a closed loop, and a wider skin is bigger.
     section = Hull.section(h, 3.0)
     assert length(section) > 8
     assert Hull.area(Hull.section(h, 3.0, 0.01)) > Hull.area(section)
+  end
+
+  test "the cab of a van has the seats of its body: the front seats, a row more in the crew van" do
+    seats = fn windows ->
+      van = Detail.with(:near, fn -> Xuong.Models.Van.build("transit_148", windows: windows) end)
+      {_, cab, _} = List.keyfind(van.nodes, "cab", 0)
+      length(cab.shapes)
+    end
+
+    assert seats.(:cargo) < seats.(:crew) and seats.(:crew) < seats.(:passenger)
+  end
+
+  test "a skin over rings of other counts of points joins them by their places" do
+    rings = [
+      [{{0, 0, 0}, 0}, {{1, 0, 0}, 1}, {{1, 1, 0}, 2}, {{0, 1, 0}, 3}],
+      [{{0, 0, 1}, 0}, {{1, 0, 1}, 1}, {{1, 0.5, 1}, 1.5}, {{1, 1, 1}, 2}, {{0, 1, 1}, 3}]
+    ]
+
+    mesh = Xuong.Shape.stitch(rings, :paint)
+    # Each line between two points is in two faces: the skin is closed.
+    edges = for f <- mesh.faces, [u, v] <- Enum.chunk_every(f ++ [hd(f)], 2, 1, :discard), do: {u, v}
+    assert Enum.all?(edges, &({elem(&1, 1), elem(&1, 0)} in edges))
+    assert_in_delta Xuong.Mesh.volume(mesh.points, mesh.faces) / 6, 1.0, 1.0e-9
   end
 
   test "the hood of the van opens on the engine bay, with the items of DIY in it" do
