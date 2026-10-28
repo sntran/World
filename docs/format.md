@@ -465,6 +465,87 @@ The dog:
   front right; each foot is on the ground for 0.6 of the step) and `wag`
   (the tail wags twice in 0.8 s).
 
+## A drawing
+
+A drawing is a model in the data of an order (the blueprint `drawing`,
+`World.Drawing`): for a thing that has no blueprint of its own. It has
+the same parts as a model in code: parts with shapes and ports, an
+assembly of nodes with their joints, items of other blueprints, and the
+clips of its joints. `priv/drawings/banh_mi_cart.json` is an example (in
+the catalog: `banh_mi_cart`).
+
+| Key | What it is |
+|---|---|
+| `name`, `kind`, `sources` | The name of the model (a to z, 0 to 9 and _), its kind (`appliance`, `building`, `electrical`, `furniture`, `item`, `prop`, `vehicle`; `item` by default), and where its data comes from. |
+| `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model. A drawing makes no new role. |
+| `parts` | A name to a part: its `shapes`, its `ports` (a name to `at`, `axis`, `up`), its `sources`. |
+| `nodes` | The tree of the model, the root first. |
+| `clips` | The animations of the joints. |
+
+A shape has one of these keys, with its `material` (a role of the
+palette, `gray` by default) and its frame: `at` (its origin), `axis`
+(its z), `up` (its y).
+
+| Shape | Its data |
+|---|---|
+| `box` | `from` and `to`: two corners. |
+| `cylinder` | `radius`, and `length` along z from 0. |
+| `sphere` | `radius`. |
+| `prism` | `loop` (points `[x, y]`) and `length` along z from 0. |
+| `lathe` | `profile` (points `[r, z]`): it turns around z. |
+| `tube` | `line` (points `[x, y, z]`) and `radius`. |
+
+A node has a `name` and holds a part (`part`) or an item of another
+blueprint (`item`: an order with only `blueprint` and `options`: a model
+of the catalog, a person, an animal, a drawing). Each node but the root
+connects its port `port` to the port `at` of the node `to`, which comes
+before it. A port is the name of a port of the part or of the item (a
+person has `grip_r` and the others: a node can be in a hand), or a port
+in the data (`at`, `axis`, `up`); the origin by default. A node can have
+a `turn` (degrees) and an `offset` (meters), and be a `joint`: `kind`
+(`hinge` or `slide`), `role` (`crank`, `door`, `drawer`, `handle`,
+`knob`, `lid`, `pedal`, `recline`, `slide`, `spin`, `stand`, `steer`,
+`suspension`, `vane`, `wheel`) and `limits`.
+
+A clip has a `name`, a `length` in seconds and `keys`: each a time `t`
+and the values of some `joints` of the drawing. Between two keys a value
+goes in a line; a hinge turns at most 179 degrees between two keys (the
+shortest turn). The times of the keys go up.
+
+```json
+{
+  "blueprint": "drawing",
+  "options": {
+    "drawing": {
+      "name": "lamp",
+      "parts": {
+        "base": {
+          "shapes": [{"cylinder": {"radius": 0.08, "length": 0.02}, "material": "metal"},
+                     {"tube": {"line": [[0, 0, 0], [0, 0, 0.4]], "radius": 0.008}, "material": "metal"}],
+          "ports": {"top": {"at": [0, 0, 0.4], "axis": [1, 0, 0]}}
+        },
+        "shade": {
+          "shapes": [{"lathe": {"profile": [[0.03, 0], [0.1, -0.12], [0.098, -0.12], [0.028, 0]]}, "material": "white"}],
+          "ports": {"pin": {"at": [0, 0, 0], "axis": [1, 0, 0]}}
+        }
+      },
+      "nodes": [
+        {"name": "base", "part": "base"},
+        {"name": "shade", "part": "shade", "to": "base", "at": "top", "port": "pin",
+         "joint": {"kind": "hinge", "role": "knob", "limits": [-45, 45]}}
+      ],
+      "clips": [{"name": "nod", "length": 2, "keys": [{"t": 0, "joints": {"shade": -30}}, {"t": 1, "joints": {"shade": 30}}, {"t": 2, "joints": {"shade": -30}}]}]
+    }
+  }
+}
+```
+
+The check gives each error with its path
+(`options.drawing.nodes.2.at`: "is not a port of the part"). The limits
+keep a drawing small for the builder at the edge: 64 parts, 256 shapes
+in all, 128 nodes, 64 points in a list, 8 clips of 64 keys, points
+within 50 m, and 3 drawings one in the other.
+
 ## The files of a model
 
 The build (`mix world.build`) writes:

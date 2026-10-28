@@ -21,7 +21,9 @@ defmodule World.Orders.Blueprint do
     An option of a blueprint.
 
     - `type`: `:number`, `:integer`, `:choice`, `:boolean`, `:color`,
-      `:list` or `:object`.
+      `:list`, `:object`, or `:data` (any data of JSON that the function
+      `check` checks: of the value and its path, to `{:ok, value}` or
+      `{:error, errors}`).
     - `default`: the value when the order does not give one; `:required`
       when the order must give it.
     - `unit`: for a number (`"m"`, `"years"`).
@@ -40,6 +42,7 @@ defmodule World.Orders.Blueprint do
               values: nil,
               item: nil,
               fields: nil,
+              check: nil,
               doc: ""
   end
 
@@ -137,6 +140,7 @@ defmodule World.Orders.Blueprint do
 
   def value(%Option{type: :list}, _raw, path), do: {:error, [{path, "must be a list"}]}
   def value(%Option{type: :object, fields: fields}, raw, path), do: check_options(fields, raw, path)
+  def value(%Option{type: :data, check: check}, raw, path), do: check.(raw, path)
 
   defp number(x) when is_number(x), do: {:ok, x}
 

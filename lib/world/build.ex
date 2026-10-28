@@ -49,6 +49,8 @@ defmodule World.Build do
           materials: %{},
           joints: [],
           limbs: [],
+          moves: %{},
+          clips: [],
           targets: targets,
           path: name,
           prefix: ""
@@ -60,7 +62,8 @@ defmodule World.Build do
     {nodes, _} = finish(acc, Keyword.get(opts, :split, false))
 
     materials = Map.merge(Map.get(item, :materials, %{}), acc.materials)
-    scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: join(acc.animations), materials: materials}
+    animations = join(acc.animations ++ Enum.map(acc.clips, &clip(&1, acc.moves)))
+    scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: animations, materials: materials}
     {lo, hi} = if Scene.triangles(scene) > 0, do: Scene.bounds(scene), else: {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}
     size = Vec.sub(hi, lo)
 
@@ -153,8 +156,16 @@ defmodule World.Build do
     if keep?(p, level), do: update_in(acc.parts[node], &[{frame, p, acc.path} | &1]), else: acc
   end
 
-  defp walk(%Assembly{nodes: [{root, root_item, nil} | rest], place: place}, frame, node, acc, level, pose) do
+  defp walk(
+         %Assembly{nodes: [{root, root_item, nil} | rest], place: place, clips: clips},
+         frame,
+         node,
+         acc,
+         level,
+         pose
+       ) do
     frame = Frame.compose(frame, place)
+    acc = %{acc | clips: acc.clips ++ clips}
     # The path of a node is its id in World.Plan.flat/1: the names of the
     # nodes of the smaller assemblies, with "/" between them.
     prefix = acc.prefix
@@ -187,7 +198,14 @@ defmodule World.Build do
           }
 
           id = length(acc.nodes)
-          acc = %{acc | nodes: acc.nodes ++ [joint], parts: Map.put(acc.parts, id, [])}
+
+          acc = %{
+            acc
+            | nodes: acc.nodes ++ [joint],
+              parts: Map.put(acc.parts, id, []),
+              moves: Map.put(acc.moves, name, {id, port, j})
+          }
+
           f = Assembly.placement(c, item, 0.0)
           {walk(item, f, id, acc, level, pose), Map.put(places, name, {id, f, length(acc.nodes)})}
         end
@@ -234,6 +252,36 @@ defmodule World.Build do
   defp port_in_node(%Assembly{nodes: nodes}, %Connection{to: to, at: at}) do
     {_, item, _} = List.keyfind(nodes, to, 0)
     Assembly.item_port_frame(item, at)
+  end
+
+  # A clip of the joints of an assembly: at each time of a key, the value
+  # of each joint of the clip (from its keys, in a line between two keys,
+  # and the first or the last value out of them). A hinge gives a turn of
+  # its node, a slide a move.
+  defp clip(%{name: name, keys: keys}, moves) do
+    times = Enum.map(keys, &elem(&1, 0))
+    names = keys |> Enum.flat_map(fn {_, joints} -> Map.keys(joints) end) |> Enum.uniq() |> Enum.sort()
+
+    channels =
+      for joint <- names do
+        {id, port, j} = moves[joint]
+        points = for {t, joints} <- keys, Map.has_key?(joints, joint), do: {t, joints[joint]}
+        frames = for t <- times, do: Frame.compose(port, motion(j.kind, Joint.clamp(j, nil, between(points, t))))
+
+        if j.kind == :slide,
+          do: %{node: id, path: :translation, times: times, values: Enum.map(frames, & &1.at)},
+          else: %{node: id, path: :rotation, times: times, values: frames}
+      end
+
+    %{name: name, channels: channels}
+  end
+
+  defp between(points, t) do
+    case Enum.split_while(points, fn {pt, _} -> pt <= t end) do
+      {[], [{_, v} | _]} -> v
+      {before, []} -> elem(List.last(before), 1)
+      {before, [{t1, v1} | _]} -> then(List.last(before), fn {t0, v0} -> v0 + (v1 - v0) * (t - t0) / (t1 - t0) end)
+    end
   end
 
   # The motion of a joint: a turn around its z axis, or a move along it.

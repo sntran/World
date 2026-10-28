@@ -7,6 +7,7 @@ defmodule World.Orders.Blueprints do
   - `traveler`: a person on a vehicle of Phượt (`World.People.traveler/2`);
   - `exercise`: a group at a morning of exercise (`World.People.exercise/2`);
   - `animal`: an animal of a species (`World.Animals.animal/2`);
+  - `drawing`: a model in the data of the order (`World.Drawing`);
   - `house`: a house of `World.Buildings`;
   - `van`: a van of `World.Vehicles.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `World.Framing`.
@@ -22,7 +23,19 @@ defmodule World.Orders.Blueprints do
   def all,
     do:
       Enum.sort_by(
-        [catalog(), person(), traveler(), exercise(), animal(), house(), van(), extrusion(), strut(), l_track()],
+        [
+          catalog(),
+          drawing(),
+          person(),
+          traveler(),
+          exercise(),
+          animal(),
+          house(),
+          van(),
+          extrusion(),
+          strut(),
+          l_track()
+        ],
         & &1.name
       )
 
@@ -51,6 +64,24 @@ defmodule World.Orders.Blueprints do
         fun.()
       end,
       sources: ["The sources of each model are in its receipt."]
+    }
+  end
+
+  # --- A drawing: a model in the data of the order -----------------------------------------------
+
+  defp drawing do
+    %Blueprint{
+      name: "drawing",
+      doc:
+        "A model in the data of the order (docs/format.md, \"A drawing\"): its parts from shapes and ports, its nodes with their joints, the items of other blueprints (a model of the catalog, a person, an animal), and the clips of its joints.",
+      options: [
+        option("drawing", :data,
+          check: &World.Drawing.check/2,
+          doc: "The drawing: name, kind, materials, parts, nodes, clips, sources."
+        )
+      ],
+      build: fn o -> World.Drawing.build(o["drawing"]) end,
+      sources: ["The data of the order: its sources are in the drawing."]
     }
   end
 

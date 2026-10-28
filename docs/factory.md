@@ -63,7 +63,7 @@ An error tells the path of the wrong value and the rule:
 `{"errors": [{"path": "options.length", "message": "must be from 0.05 to 6.1 m"}]}`.
 
 The blueprints now: `catalog` (each model of the catalog, with colors
-and joints), `person`, `traveler`, `exercise`, `animal`, `house`, `van`,
+and joints), `drawing`, `person`, `traveler`, `exercise`, `animal`, `house`, `van`,
 `extrusion`, `strut` and `l_track`.
 
 The joints of a person are in the order too: `"joints": {"elbow_r":
@@ -101,6 +101,14 @@ A person on a moving vehicle is always in a safe pose: the eyes on the
 road, the hands on the bars or on the wheel. The vehicle goes to the
 front: seen from its right side, it goes to the right of the screen. At
 the far level the file is about 300 KB.
+
+A `drawing` is a model in the data of the order: its parts from
+shapes, its nodes with their joints, the items of other blueprints (a
+person, an animal, a model of the catalog), and the clips of its joints
+(`docs/format.md`, "A drawing"). An app or another project can order a
+thing that World has no blueprint for, and get the same files: the GLB
+with its joints and clips, the list of the parts, the log. Each error
+has its path.
 
 An `animal` is an animal of a species, from its bones: `species` (now
 `street_dog`, a street dog of Việt Nam), `coat` (a color), `size` (0.6

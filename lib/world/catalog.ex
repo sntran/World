@@ -39,6 +39,7 @@ defmodule World.Catalog do
       {"man", &World.People.man/0},
       {"woman", &World.People.woman/0},
       {"street_dog", fn -> World.Animals.dog(animations: ["walk", "wag"]) end},
+      {"banh_mi_cart", fn -> World.Drawing.file("banh_mi_cart") end},
       {"honda_vision_110_rider", &World.People.rider/0},
       {"fridge_lg_lrfxs2503s", &World.Appliances.fridge/0},
       {"washer_lg_wm4000hwa", &World.Appliances.washer/0},

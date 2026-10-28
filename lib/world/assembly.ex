@@ -19,7 +19,8 @@ defmodule World.Assembly do
             materials: %{},
             nodes: [],
             ports: %{},
-            place: %Frame{}
+            place: %Frame{},
+            clips: []
 
   defmodule Connection do
     @moduledoc """
@@ -35,9 +36,11 @@ defmodule World.Assembly do
   An assembly with its root. The options: `root` (the name of the root
   node, `"body"` by default), `kind`, `sources`, `extras`, `materials` (the
   default of a material role for this model: the white paint of a van),
-  and `place`: a
+  `place`: a
   frame that moves the whole assembly (for example, a model made with its
-  back at y = 0 moves to its center).
+  back at y = 0 moves to its center), and `clips`: animations of its
+  joints, each `%{name, length, keys}` with `keys` a list of `{time,
+  %{joint => value}}` (`World.Build`).
   """
   def new(name, root_item, opts \\ []) do
     %__MODULE__{
@@ -47,6 +50,7 @@ defmodule World.Assembly do
       extras: Keyword.get(opts, :extras, %{}),
       materials: Keyword.get(opts, :materials, %{}),
       place: Keyword.get(opts, :place, Frame.identity()),
+      clips: Keyword.get(opts, :clips, []),
       nodes: [{Keyword.get(opts, :root, "body"), root_item, nil}]
     }
   end

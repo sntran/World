@@ -13,8 +13,15 @@ defmodule World.GLB do
   @external_resource palette_path = Path.join([__DIR__, "..", "..", "priv", "palette.json"])
   @palette palette_path |> File.read!() |> JSON.decode!() |> Map.fetch!("roles")
 
+  # The atom of each role, made here from the palette (a role in an
+  # order must be one of them: an order makes no new atom).
+  @roles Map.new(Map.keys(@palette), &{&1, String.to_atom(&1)})
+
   @doc "The palette: a map of each role to its color, roughness and metalness."
   def palette, do: @palette
+
+  @doc "The atom of a role of the palette (by its name), or nil."
+  def role(name), do: Map.get(@roles, name)
 
   @doc "The GLB of a scene, as a binary."
   def encode(%Scene{} = scene) do
