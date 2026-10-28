@@ -40,9 +40,28 @@ An order is data, never code. Xưởng runs no code from an order.
 | `/models/NAME.parts.json` | The list of its parts. |
 | `/palette.json` | The default color of each material role. |
 | `/version.json` | The commit of Xưởng that the site has. |
-| `/m/BLUEPRINT.glb?OPTION=VALUE&level=near` | A blueprint with options (step F2). |
-| `POST /orders` | An order in JSON. The answer gives `/o/HASH.glb` (step F2). |
-| `/v/VERSION/...` | A copy that never changes, for a release of a game (step F2). |
+| `/blueprints` | Each blueprint with its options: the type, the default, the unit, the range or the values. |
+| `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), and the URLs of its files; or 422 with the errors. |
+| `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. |
+| `/m/BLUEPRINT.glb?OPTION=VALUE` (and the other files) | An order in the URL: `color.ROLE=%23rrggbb` gives a color, `joint.NAME=50` a joint, and `A,B` a list. |
+| `/v/VERSION/...` | A copy that never changes, for a release of a game (later). |
+
+An order:
+
+```json
+{
+  "blueprint": "catalog",
+  "options": {"name": "ford_transit_148_camper"},
+  "colors": {"paint": "#1d3b5a"},
+  "joints": {"hood": 50}
+}
+```
+
+An error tells the path of the wrong value and the rule:
+`{"errors": [{"path": "options.length", "message": "must be from 0.05 to 6.1 m"}]}`.
+
+The blueprints now: `catalog` (each model of the catalog, with colors
+and joints), `person`, `house`, `extrusion`, `strut` and `l_track`.
 
 Each file has `Access-Control-Allow-Origin: *`, an `ETag`, and
 `Cache-Control: public, max-age=300, stale-while-revalidate=86400`. So a
@@ -62,7 +81,7 @@ version of the blueprint (`van@2`): the old version stays.
 | Order | Where |
 |---|---|
 | A model of the catalog | CI builds it natively (`mix xuong.build --check`), and the files are in the repository. The Worker serves them as static files: no build at a request. |
-| An order at a request | The VM of Xưởng (beam.com, WebAssembly) in the Worker builds it. The result goes into R2, with a key of the version of Xưởng and the hash of the order. |
+| An order at a request | The VM of Xưởng (beam.com, WebAssembly) in a Durable Object of the Worker builds it (`worker.js`, `handler.js`, `Xuong.Service`). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 The VM at the edge, measured with Node.js 25 and the runtime of
 beam.com 0.1.0-rc.6 (the time of one build, and the peak of the memory
@@ -79,7 +98,8 @@ of the VM):
 
 The time is not a problem. The memory is: a Worker has 128 MB. The mid
 and far levels and the small items fit; the near level of a large model
-does not. Step F4 makes the build use less memory. If that is not
+does not. In `wrangler dev`, the near level of a person (3 MB) took
+0.9 s and 124 MB, and a small house took 0.2 s. Step F4 makes the build use less memory. If that is not
 sufficient, a builder with more memory (a Cloudflare Container with
 the native beam.com) builds the large orders.
 
@@ -101,8 +121,8 @@ repository keeps the URLs, not the photos.
 
 | Step | What |
 |---|---|
-| F1 | This file. The Worker at `3d.mkfifo.com` serves the catalog and the review page. |
-| F2 | Blueprints, orders and the receipt (`Xuong.Factory`), `mix xuong.order`, the builder in the VM, the cache in R2. People, houses and framing are the first blueprints: they have options already. |
+| F1 | This file. The Worker at `3d.mkfifo.com` serves the catalog and the review page. Done. |
+| F2 | Blueprints, orders and the receipt (`Xuong.Factory`), `mix xuong.order`, the builder in the VM, the cache in R2. People, houses and framing are the first blueprints: they have options already. Done. |
 | F3 | The van blueprint, from the traces of DIY and from photos: the Ford Transit, the Mercedes-Benz Sprinter and the Ram ProMaster, with their slots. |
 | F4 | People in the release (the data of MakeHuman in `priv/`), and less memory for the near level. |
 | F5 | Drawings. |
@@ -117,5 +137,12 @@ The owner does this one time:
    `npm run build`, the deploy command is `npx wrangler deploy`.
 2. `wrangler.jsonc` has the custom domain `3d.mkfifo.com`: the deploy
    makes its DNS record and its certificate in the zone `mkfifo.com`.
-3. Step F2 adds an R2 bucket, `xuong-orders`: make it before that
-   deploy (`npx wrangler r2 bucket create xuong-orders`).
+3. Make the R2 bucket of the orders before the first deploy:
+   `npx wrangler r2 bucket create xuong-orders`. It needs no public
+   access: the Worker reads it.
+4. The Worker needs the Workers Paid plan: `edge.com` is about 45 MB, and
+   a build takes more CPU time than the Free plan gives.
+
+To try it on this computer: `npm install && npm run build && npx
+wrangler dev` (Wrangler makes a local R2). `BEAM_COM=PATH` uses a
+`beam.com` of the computer in place of `npx beam.com`.

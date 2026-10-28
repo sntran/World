@@ -96,9 +96,9 @@ models").
 | 7c. Framing systems | T-slot extrusions (80/20 10 and 15 series, metric 20, 30 and 40 mm) with T-nuts, corner brackets and button head screws; strut channel (Unistrut P1000 and P1000T) with spring nuts, fittings and threaded rod; L-track with fittings that slide. Inch threads for the fasteners. Builds: a shelf of 80/20, a rack and a trapeze of strut channel, a floor with L-track. | Done |
 | 7d. The engine bay | The hood of the Ford Transit opens on its engine bay: the 3.5 L V6 with its belt and pulleys, the radiator and its fan, the air box, the reservoirs and the fuse box. In the bay, the two items of DIY for the engine bay: the REDARC BCDC1250D (a DC-DC charger of 50 A) and a second alternator of 250 A with a pulley that turns. The parts in the bay are only in the near level. | Done |
 | F1. The factory: the site | `docs/factory.md`. The Worker at <https://3d.mkfifo.com>: the review page, and each file of the catalog at `/models/NAME.glb`, with CORS, an ETag and a cache of 5 minutes. | Done |
-| F2. The factory: orders | Blueprints with options, orders in JSON, the receipt, `mix xuong.order`, the builder in the Worker, the cache in R2. | To do |
+| F2. The factory: orders | Blueprints with options (`catalog`, `person`, `house`, `extrusion`, `strut`, `l_track`), orders in JSON with colors and joints, the receipt, `mix xuong.order`, the VM of Xưởng in the Worker (`Xuong.Service`), and the files of each order in R2. | Done |
 | F3. The factory: vans | The van blueprint from traces and photos: the Ford Transit, the Mercedes-Benz Sprinter, the Ram ProMaster, with their slots. | To do |
-| F4. The factory: memory | People in the release; less memory for the near level at the edge. | To do |
+| F4. The factory: memory | Less memory for the near level at the edge. (The data of people is in `priv/` now, so the release has it.) | To do |
 | 7. DIY uses Xưởng | DIY draws its SVG from the models, and keeps its pictures. | To do |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |
@@ -121,8 +121,11 @@ const gltf = await new GLTFLoader().loadAsync('https://3d.mkfifo.com/models/ford
 | `/models/NAME.parts.json` | The list of its parts. |
 | `/palette.json` | The default color of each material role. |
 | `/version.json` | The commit of Xưởng that the site has. |
+| `/blueprints` | The blueprints and their options. |
+| `POST /orders`, `/o/HASH.glb` | An order in JSON, and the files of the order. |
+| `/m/BLUEPRINT.glb?OPTION=VALUE` | An order in the URL, for example `/m/strut.glb?length=0.6&kind=solid`. |
 
-An Elixir app can also add the package and call its functions:
+`docs/factory.md` tells the details. An Elixir app can also add the package and call its functions:
 
 ```elixir
 {:xuong, github: "sntran/Xuong", ref: "COMMIT"}

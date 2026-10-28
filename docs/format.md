@@ -209,7 +209,7 @@ person). In a `.wings` file, the name of a material is its role.
 ## A person
 
 A person (`Xuong.Human.person/2`) is a `Xuong.Figure`: a set of nodes
-that is ready, from the data of MakeHuman (`assets/makehuman/`). An
+that is ready, from the data of MakeHuman (`priv/makehuman/`). An
 assembly holds a figure as a part, at one of its two ports:
 
 - `ground`: on the ground, between the feet, with z up;

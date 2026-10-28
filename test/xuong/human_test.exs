@@ -157,7 +157,7 @@ defmodule Xuong.HumanTest do
       assert Data.asset("eye_materials", "brown").mesh == nil
       assert Data.asset("skins", "young_asian_male").texture =~ ".jpg"
       assert_raise ArgumentError, ~r/no asset/, fn -> Data.asset("hair", "none") end
-      assert Data.dir() =~ "assets/makehuman"
+      assert Data.dir() =~ "priv/makehuman"
     end
   end
 end

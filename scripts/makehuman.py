@@ -1,9 +1,9 @@
-"""Make assets/makehuman/ from the CC0 data of MakeHuman.
+"""Make priv/makehuman/ from the CC0 data of MakeHuman.
 
     python3 scripts/makehuman.py MPFB_DATA PACKS_DIR
 
 MPFB_DATA is src/mpfb/data of makehumancommunity/mpfb2 at the commit in
-assets/makehuman/README.md. PACKS_DIR has the asset packs of the release
+priv/makehuman/README.md. PACKS_DIR has the asset packs of the release
 people-packs-1 of sntran/Vung_Tau, each unzipped in a folder with the name
 of the pack (makehuman_system_assets/, shirts01/, pants01/). The script
 needs Pillow.
@@ -27,7 +27,7 @@ import sys
 from PIL import Image
 
 MPFB, PACKS = sys.argv[1], sys.argv[2]
-OUT = os.path.join(os.path.dirname(__file__), "..", "assets", "makehuman")
+OUT = os.path.join(os.path.dirname(__file__), "..", "priv", "makehuman")
 
 # The skeleton and the targets of an adult (young to old), with no
 # proportions targets.

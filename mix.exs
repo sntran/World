@@ -14,6 +14,9 @@ defmodule Xuong.MixProject do
       erlc_include_path: "wings/src",
       erlc_options: [{:i, ~c"wings/src"}, {:i, ~c"wings/e3d"}, {:i, ~c"wings/intl_tools"}, :nowarn_export_all],
       deps: deps(),
+      # The release for the Worker (scripts/edge.sh): the WebAssembly
+      # runtime of beam.com has its own ERTS.
+      releases: [xuong: [include_erts: System.get_env("RELEASE_ERTS") != "false"]],
       aliases: aliases(),
       test_coverage: [
         summary: [threshold: 100],
@@ -25,10 +28,14 @@ defmodule Xuong.MixProject do
 
   def cli, do: [preferred_envs: [precommit: :test]]
 
-  def application, do: [extra_applications: [:logger]]
+  def application, do: [mod: {Xuong.Application, []}, extra_applications: [:logger, :crypto]]
 
   defp deps do
-    [{:stream_data, "~> 1.1", only: [:dev, :test]}]
+    [
+      {:bandit, "~> 1.6"},
+      {:plug, "~> 1.16"},
+      {:stream_data, "~> 1.1", only: [:dev, :test]}
+    ]
   end
 
   defp aliases do

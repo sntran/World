@@ -8,12 +8,13 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "sh scripts/site.sh",
+    "build": "sh scripts/site.sh && sh scripts/edge.sh",
     "deploy": "wrangler deploy",
-    "test": "node scripts/validate.mjs priv/models"
+    "test": "node --test test/js/*.test.js && node scripts/validate.mjs priv/models"
   },
   "devDependencies": {
     "gltf-validator": "2.0.0-dev.3.10",
-    "wrangler": "4.142.0"
+    "wrangler": "4.142.0",
+    "beam.com": "0.1.0-rc.6"
   }
 }

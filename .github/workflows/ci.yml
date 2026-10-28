@@ -6,7 +6,8 @@
 #   the code.
 # - npm test: the Khronos glTF validator on each GLB of priv/models.
 # - npm run build and wrangler deploy --dry-run: the site of
-#   https://3d.mkfifo.com (docs/factory.md) builds, and Wrangler takes it.
+#   https://3d.mkfifo.com (docs/factory.md) and edge.com (the VM of the
+#   Worker) build, and Wrangler takes them.
 # - scripts/wings.sh: wings/ is the copy of the core of Wings 3D at the
 #   commit of wings/VERSION.
 name: CI
@@ -78,7 +79,7 @@ jobs:
       - run: MIX_ENV=test mix.com xuong.build --check
       - run: npm ci
       - run: npm test
-      - run: npm run build
+      - run: BEAM_COM="$HOME/bin/beam.com" npm run build
       - run: npx wrangler deploy --dry-run
       - name: wings/ is the copy of the core of Wings 3D
         run: sh scripts/wings.sh && git diff --exit-code wings

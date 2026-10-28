@@ -1,6 +1,6 @@
 defmodule Xuong.Human.Data do
   @moduledoc """
-  The data of MakeHuman (CC0) in `assets/makehuman`: the base mesh, the
+  The data of MakeHuman (CC0) in `priv/makehuman`: the base mesh, the
   targets of the body, the skeleton "game_engine" with its weights, and
   the assets (skins, eyes, eyebrows, eyelashes, hair, clothes, low-poly
   bodies). `scripts/makehuman.py` makes the folder.
@@ -10,10 +10,8 @@ defmodule Xuong.Human.Data do
   `:persistent_term`.
   """
 
-  @dir Path.join([__DIR__, "..", "..", "..", "assets", "makehuman"]) |> Path.expand()
-
-  @doc "The folder of the data."
-  def dir, do: @dir
+  @doc "The folder of the data (in `priv/`, so that a release has it)."
+  def dir, do: Path.join(:code.priv_dir(:xuong), "makehuman")
 
   @doc """
   The base mesh: `%{points: tuple of {x, y, z}, uvs: tuple of {u, v},
@@ -31,7 +29,7 @@ defmodule Xuong.Human.Data do
   def targets, do: cached(:targets, fn -> parse_targets(read_gz("targets.bin.gz")) end)
 
   @doc "The list of the assets (`assets.json`)."
-  def assets, do: cached(:assets, fn -> File.read!(Path.join(@dir, "assets.json")) |> JSON.decode!() end)
+  def assets, do: cached(:assets, fn -> File.read!(Path.join(dir(), "assets.json")) |> JSON.decode!() end)
 
   @doc """
   An asset by its kind and name: its mesh (as `base/0`), its fit to the
@@ -40,7 +38,7 @@ defmodule Xuong.Human.Data do
   def asset(kind, name) do
     cached({:asset, kind, name}, fn ->
       entry = get_in(assets(), [kind, name]) || raise ArgumentError, "no asset #{kind}/#{name}"
-      folder = Path.join(@dir, kind)
+      folder = Path.join(dir(), kind)
 
       %{
         name: name,
@@ -62,7 +60,7 @@ defmodule Xuong.Human.Data do
     end
   end
 
-  defp read_gz(path), do: :zlib.gunzip(File.read!(Path.join(@dir, path)))
+  defp read_gz(path), do: :zlib.gunzip(File.read!(Path.join(dir(), path)))
 
   @doc "Parse the text of an OBJ file: points, UV and faces by group."
   def parse_obj(text) do
