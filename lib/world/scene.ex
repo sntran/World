@@ -11,8 +11,12 @@ defmodule World.Scene do
   defstruct name: "model", extras: %{}, nodes: [], skins: [], animations: [], materials: %{}
 
   defmodule Node do
-    @moduledoc "A node: its name, the index of its parent (or nil), its frame relative to the parent."
-    defstruct name: "node", parent: nil, frame: %World.Frame{}, primitives: [], extras: %{}, skin: nil
+    @moduledoc """
+    A node: its name, the index of its parent (or nil), its frame relative
+    to the parent, and its scale (the same on each axis, after the frame:
+    the size of the head of a person).
+    """
+    defstruct name: "node", parent: nil, frame: %World.Frame{}, scale: 1.0, primitives: [], extras: %{}, skin: nil
   end
 
   defmodule Primitive do
@@ -55,14 +59,21 @@ defmodule World.Scene do
     nodes |> Enum.flat_map(& &1.primitives) |> Enum.map(&div(length(&1.indices), 3)) |> Enum.sum()
   end
 
-  @doc "The frame of each node in the axes of the scene, by index."
+  @doc """
+  The frame of each node in the axes of the scene, by index. The frame of
+  a node with a scale has the scale in its axes.
+  """
   def world_frames(%__MODULE__{nodes: nodes}) do
     nodes
     |> Enum.with_index()
     |> Enum.reduce(%{}, fn {n, i}, acc ->
-      Map.put(acc, i, if(n.parent == nil, do: n.frame, else: Frame.compose(acc[n.parent], n.frame)))
+      local = scaled(n.frame, n.scale)
+      Map.put(acc, i, if(n.parent == nil, do: local, else: Frame.compose(acc[n.parent], local)))
     end)
   end
+
+  defp scaled(frame, 1.0), do: frame
+  defp scaled(%Frame{x: x, y: y, z: z} = f, s), do: %{f | x: Vec.scale(x, s), y: Vec.scale(y, s), z: Vec.scale(z, s)}
 
   @doc """
   The box of all points of the scene, in its axes: `{min, max}`. The

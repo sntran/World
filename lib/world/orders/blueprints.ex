@@ -75,9 +75,24 @@ defmodule World.Orders.Blueprints do
     %Blueprint{
       name: "traveler",
       doc:
-        "A person (the options of the blueprint person) on a vehicle of Phượt, in the pose of the vehicle: in the seat of the driver of a car or a van, on a motorcycle, a motorbike or a bicycle, or on foot with the animation walk. The vehicle goes to the front (+y).",
-      options: [option("vehicle", :choice, default: "motorbike", values: World.People.vehicles()) | person_options()],
-      build: fn o -> World.People.traveler(o["vehicle"], person_opts(o)) end,
+        "A person (the options of the blueprint person) and a vehicle of Phượt. The scene ride: the person in the pose of the vehicle, in the seat of the driver of a car or a van, on a motorcycle, a motorbike or a bicycle with a helmet, or on foot with the animation walk. The scene parked: the person stands next to the parked vehicle, on its right side, and looks to the right (+x). The vehicle goes to the front (+y).",
+      options:
+        [
+          option("vehicle", :choice, default: "motorbike", values: World.People.vehicles()),
+          option("scene", :choice,
+            default: "ride",
+            values: ["parked", "ride"],
+            doc: "ride: on the vehicle (the position on a map); parked: next to it (an avatar)."
+          ),
+          option("helmet_color", :color,
+            default: nil,
+            doc: "The color of the helmet of a rider on two wheels. None: a light gray."
+          )
+        ] ++ person_options(),
+      build: fn o ->
+        opts = person_opts(o) ++ [helmet: o["helmet_color"] && rgb(o["helmet_color"])]
+        World.People.traveler(o["vehicle"], opts, o["scene"])
+      end,
       check: &origin_check/1,
       sources: ["The vehicles of World, and a person from the data of MakeHuman (CC0)."]
     }
@@ -95,6 +110,12 @@ defmodule World.Orders.Blueprints do
       share.("muscle", 0.5),
       share.("weight", 0.5),
       share.("height", 0.5),
+      option("head", :number,
+        default: 1.0,
+        min: 1.0,
+        max: 2.0,
+        doc: "The size of the head: 1 is the size of the body, more is the bigger head of a game."
+      ),
       option("origin", :object,
         default: %{"african" => 0.0, "asian" => 1.0, "caucasian" => 0.0},
         fields: [share.("african", 0.0), share.("asian", 1.0), share.("caucasian", 0.0)],
@@ -128,6 +149,7 @@ defmodule World.Orders.Blueprints do
       muscle: o["muscle"],
       weight: o["weight"],
       height: o["height"],
+      head: o["head"],
       race: Map.reject(o["origin"], fn {_, w} -> w == 0 end),
       skin: o["skin"],
       eyes: o["eyes"],

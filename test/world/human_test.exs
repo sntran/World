@@ -106,6 +106,62 @@ defmodule World.HumanTest do
     end
   end
 
+  test "a rider on two wheels has a helmet on the head; a driver and a person on foot have none" do
+    for v <- World.People.vehicles() do
+      scene = Build.scene(Detail.with(:far, fn -> World.People.traveler(v, helmet: [200, 30, 30]) end), level: :far)
+      helmet = for n <- scene.nodes, p <- n.primitives, p.material == :helmet, do: p
+
+      if v in ~w(bicycle motorbike motorcycle) do
+        [p] = helmet
+        assert scene.materials[:helmet]["color"] == [200, 30, 30]
+        # Each point of the helmet follows the bone "head" only.
+        [skin] = scene.skins
+        head = Enum.find_index(skin.joints, &(Enum.at(scene.nodes, &1).name == "head"))
+        assert Enum.uniq(p.joints) == [{head, 0, 0, 0}] and Enum.uniq(p.weights) == [{1.0, 0.0, 0.0, 0.0}]
+      else
+        assert helmet == [] and not Map.has_key?(scene.materials, :helmet)
+      end
+    end
+
+    # The color of a helmet when the order gives none.
+    scene = Build.scene(Detail.with(:far, fn -> World.People.traveler("bicycle") end), level: :far)
+    assert scene.materials[:helmet]["color"] == [236, 232, 222]
+    # A person with no hair has a helmet too.
+    bald = Build.scene(Detail.with(:far, fn -> World.People.traveler("motorbike", hair: nil) end), level: :far)
+    assert Map.has_key?(bald.materials, :helmet)
+  end
+
+  test "a bigger head: a scale on the bone head, in the box and in the file" do
+    big = Build.scene(Detail.with(:far, fn -> Human.person("p", head: 1.6) end), level: :far)
+    normal = Build.scene(Detail.with(:far, fn -> Human.person("p") end), level: :far)
+    assert %{scale: 1.6} = Enum.find(big.nodes, &(&1.name == "head"))
+    assert Enum.all?(normal.nodes, &(&1.scale == 1.0))
+    [_, _, h] = big.extras["size"]
+    [_, _, h0] = normal.extras["size"]
+    assert h > h0 + 0.05
+
+    json = World.GLBHelper.json(World.GLB.encode(big))
+    assert [%{"scale" => [1.6, 1.6, 1.6]}] = Enum.filter(json["nodes"], &Map.has_key?(&1, "scale"))
+  end
+
+  test "a traveler parked: the person stands next to the vehicle, and looks to the right" do
+    for v <- World.People.vehicles() do
+      scene = Build.scene(Detail.with(:far, fn -> World.People.traveler(v, [], "parked") end), level: :far)
+      refute Map.has_key?(scene.materials, :helmet)
+      frames = Scene.world_frames(scene)
+      # The root of the person: the parent of its first bone.
+      i = Enum.find(scene.nodes, &(&1.name == "Root")).parent
+      # The front of the person (+y in its axes) is +x.
+      {x, _, _} = World.Frame.dir(frames[i], {0.0, 1.0, 0.0})
+      assert_in_delta x, 1.0, 1.0e-9
+      [w, _, h] = scene.extras["size"]
+      assert h > 1.5
+
+      # The person stands out of the vehicle, at its right side.
+      if v != "foot", do: assert(w > 0.9), else: assert(scene.extras["kind"] == "person")
+    end
+  end
+
   test "the numbers of a person give the weights of the targets" do
     o = %{gender: 0.25, age: 90, muscle: 0.25, weight: 0.75, height: 0.25, race: %{"asian" => 2.0, "african" => 2.0}}
     weights = Map.new(Human.target_weights(o))

@@ -74,6 +74,7 @@ defmodule World.GLB do
         |> put_some("mesh", node_mesh[i])
         |> put_some("children", children[i])
         |> put_some("skin", n.skin)
+        |> put_some("scale", if(n.scale == 1.0, do: nil, else: [n.scale, n.scale, n.scale]))
         |> put_some("extras", if(n.extras == %{}, do: nil, else: n.extras))
       end
 

@@ -228,7 +228,12 @@ defmodule World.FactoryTest do
           "blueprint" => "person",
           "options" => %{"hair" => "none", "pose" => "sit", "origin" => %{"african" => 0.5, "asian" => 0.5}}
         },
-        %{"blueprint" => "traveler", "options" => %{"vehicle" => "car", "hair_color" => "#3b2a20"}}
+        %{"blueprint" => "traveler", "options" => %{"vehicle" => "car", "hair_color" => "#3b2a20"}},
+        %{
+          "blueprint" => "traveler",
+          "options" => %{"vehicle" => "motorbike", "helmet_color" => "#c0392b", "head" => 1.5}
+        },
+        %{"blueprint" => "traveler", "options" => %{"vehicle" => "car", "scene" => "parked"}}
       ]
 
       for order <- orders do

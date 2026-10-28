@@ -66,15 +66,26 @@ The blueprints now: `catalog` (each model of the catalog, with colors
 and joints), `person`, `traveler`, `house`, `van`, `extrusion`, `strut`
 and `l_track`.
 
-A `traveler` is the avatar of a traveler of Phượt: a person (the options
-of `person`, with the colors of the hair and of the clothes) on a vehicle
-of Phượt (`vehicle`: `car`, `camper`, `motorcycle`, `motorbike`,
-`bicycle`, `foot`), in the pose of the vehicle. In the car and the van,
-the person sits in the seat of the driver (the left side), and the glass
-is clear. The vehicle goes to the front: seen from its left side, it goes
-to the right of the screen. At the far level the file is about 300 KB.
-The driver of the van shows in the window of the door at the near level
-only: at mid and far, the window is a panel on the body.
+A `traveler` is a traveler of Phượt: a person (the options of `person`,
+with the colors of the hair and of the clothes, and `head`, the size of
+the head: 1 is the size of the body, up to 2 for the bigger head of a
+game) and a vehicle of Phượt (`vehicle`: `car`, `camper`, `motorcycle`,
+`motorbike`, `bicycle`, `foot`), in a `scene`:
+
+- `ride` (the position of the traveler on a map): the person on the
+  vehicle, in the pose of the vehicle. On two wheels the rider has a
+  helmet (`helmet_color`, else a light gray). In the car and the van, the
+  person sits in the seat of the driver (the left side), and the glass is
+  clear. The driver of the van shows in the window of the door at the near
+  level only: at mid and far, the window is a panel on the body.
+- `parked` (the avatar of the traveler): the person stands next to the
+  parked vehicle, on its right side, and looks to the right (+x). The
+  person has no helmet.
+
+A person on a moving vehicle is always in a safe pose: the eyes on the
+road, the hands on the bars or on the wheel. The vehicle goes to the
+front: seen from its right side, it goes to the right of the screen. At
+the far level the file is about 300 KB.
 
 An order of a van:
 

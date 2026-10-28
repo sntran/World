@@ -7,10 +7,11 @@ defmodule World.People do
   - `honda_vision_110_rider`: a rider on the Honda Vision 110, in the pose
     "ride", with the hips on the seat.
 
-  `traveler/2` puts a person on each vehicle of Phượt: the avatar of a
-  traveler on the map.
+  `traveler/3` puts a person on each vehicle of Phượt (the position of a
+  traveler on the map), or next to it, parked (the avatar of the
+  traveler).
   """
-  alias World.{Assembly, GLB, Part}
+  alias World.{Assembly, Frame, GLB, Part}
   alias World.People.Human
   alias World.Vehicles.{ChevyBolt, FordTransit, HondaVision, RoyalEnfieldHimalayan, TouringBicycle}
 
@@ -67,36 +68,56 @@ defmodule World.People do
   end
 
   # The vehicles of Phượt: the model, the hips of the person in the axes of
-  # the model (the middle of the model at y = 0, the ground at z = 0), and
-  # the pose. The car and the van go on the left: the seat of the driver in
-  # Việt Nam and in the United States.
+  # the model (the middle of the model at y = 0, the ground at z = 0), the
+  # pose, and the place of the person next to the parked vehicle (on its
+  # right side, +x, a little to the back). The car and the van go on the
+  # left: the seat of the driver in Việt Nam and in the United States.
   @vehicles %{
-    "car" => {&ChevyBolt.model/0, {-0.37, -0.15, 0.65}, "drive"},
+    "car" => {&ChevyBolt.model/0, {-0.37, -0.15, 0.65}, "drive", {1.3, -0.6}},
     # The seat of the van at the front of its track, so the head of the
     # driver is in the window of the door (an opening at the near level).
-    "camper" => {&FordTransit.model/0, {-0.45, 1.1, 1.15}, "drive"},
-    "motorcycle" => {&RoyalEnfieldHimalayan.model/0, {0.0, -0.3, 0.88}, "ride"},
-    "motorbike" => {&HondaVision.model/0, @seat, "ride"},
-    "bicycle" => {&TouringBicycle.model/0, {0.0, -0.3, 1.03}, "ride_bicycle"}
+    "camper" => {&FordTransit.model/0, {-0.45, 1.1, 1.15}, "drive", {1.55, -1.0}},
+    "motorcycle" => {&RoyalEnfieldHimalayan.model/0, {0.0, -0.3, 0.88}, "ride", {0.75, -0.25}},
+    "motorbike" => {&HondaVision.model/0, @seat, "ride", {0.65, -0.2}},
+    "bicycle" => {&TouringBicycle.model/0, {0.0, -0.3, 1.03}, "ride_bicycle", {0.55, -0.15}}
   }
+
+  # The vehicles on two wheels: the rider has a helmet.
+  @two_wheels ["motorcycle", "motorbike", "bicycle"]
+
+  # The color of a helmet when the order gives none.
+  @helmet [236, 232, 222]
 
   @doc "The vehicles of a traveler (the names of Phượt), and \"foot\"."
   def vehicles, do: Enum.sort(["foot" | Map.keys(@vehicles)])
 
   @doc """
   A traveler: a person (the options of `World.People.Human.person/2`, with
-  no pose) on a vehicle of Phượt (`vehicles/0`), in the pose of the
-  vehicle. On foot, the person stands, with the animation "walk". In a car
-  or a van, the glass is clear, so the driver shows.
+  no pose) and a vehicle of Phượt (`vehicles/0`), in a scene:
+
+  - `"ride"` (the position on the map): the person on the vehicle, in the
+    pose of the vehicle, with a helmet on two wheels (`helmet`: its color,
+    else a light gray). On foot, the person walks (the animation "walk").
+    In a car or a van, the glass is clear, so the driver shows.
+  - `"parked"` (the avatar): the person stands next to the parked vehicle,
+    on its right side, and looks to the right (+x), to the viewer of the
+    side of the vehicle. On foot, the person stands.
+
+  A moving vehicle has its driver in a safe pose: the eyes on the road,
+  the hands on the bars or on the wheel.
   """
-  def traveler(vehicle, opts \\ [])
+  def traveler(vehicle, opts \\ [], scene \\ "ride")
 
-  def traveler("foot", opts),
-    do: Human.person("traveler", Keyword.merge(opts, pose: "stand", animations: ["walk"]))
+  def traveler("foot", opts, "ride"),
+    do: Human.person("traveler", Keyword.merge(opts, pose: "stand", animations: ["walk"], helmet: nil))
 
-  def traveler(vehicle, opts) do
-    {model, hips, pose} = Map.fetch!(@vehicles, vehicle)
-    person = Human.person("traveler", Keyword.merge(opts, pose: pose))
+  def traveler("foot", opts, "parked"),
+    do: facing(Human.person("traveler", Keyword.merge(opts, pose: "stand", helmet: nil)))
+
+  def traveler(vehicle, opts, "ride") do
+    {model, hips, pose, _} = Map.fetch!(@vehicles, vehicle)
+    helmet = if vehicle in @two_wheels, do: Keyword.get(opts, :helmet) || @helmet
+    person = Human.person("traveler", Keyword.merge(opts, pose: pose, helmet: helmet))
     m = model.()
     glass = if vehicle in ["car", "camper"], do: %{glass_dark: GLB.palette()["glass"]}, else: %{}
 
@@ -108,4 +129,21 @@ defmodule World.People do
     )
     |> Assembly.add("traveler", person, at: Part.port("seat", hips, {0, 0, 1}, {0, 1, 0}), port: "hips")
   end
+
+  def traveler(vehicle, opts, "parked") do
+    {model, _, _, {x, y}} = Map.fetch!(@vehicles, vehicle)
+    person = Human.person("traveler", Keyword.merge(opts, pose: "stand", helmet: nil))
+    m = model.()
+
+    Assembly.new("traveler_" <> vehicle <> "_parked", m,
+      root: "vehicle",
+      kind: :vehicle,
+      sources: ["The #{m.name} of World, parked, and a person of World next to it."]
+    )
+    |> Assembly.add("traveler", person, at: Part.port("stand", {x, y, 0.0}, {0, 0, 1}, {1, 0, 0}), port: "ground")
+  end
+
+  # A person that looks to the right (+x): the root turns.
+  defp facing(%{nodes: [root | rest]} = person),
+    do: %{person | nodes: [%{root | frame: Frame.turn({0.0, 0.0, 1.0}, -90)} | rest]}
 end

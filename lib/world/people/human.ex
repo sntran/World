@@ -29,6 +29,8 @@ defmodule World.People.Human do
     clothes: ["male_casualsuit01", "shoes01"],
     hair_color: nil,
     clothes_colors: [],
+    head: 1.0,
+    helmet: nil,
     pose: %{}
   ]
 
@@ -40,8 +42,10 @@ defmodule World.People.Human do
   `eyebrows`, `hair` (or nil), `clothes` (a list), `hair_color` (`[r, g,
   b]`, or nil for the color of the hair), `clothes_colors` (a list of
   `[r, g, b]` in the order of the clothes: at mid and far the color of
-  the item, at near a tint of its texture), `pose` (a map of a
-  bone to `{axis, degrees}`, or a name of `World.People.Pose`), and
+  the item, at near a tint of its texture), `head` (the size of the head:
+  1 is the size of the body, more is the bigger head of a game), `helmet`
+  (`[r, g, b]`: a helmet of a rider of that color, or nil), `pose` (a map
+  of a bone to `{axis, degrees}`, or a name of `World.People.Pose`), and
   `animations` (a list of names of `World.People.Pose`).
   """
   def person(name, opts \\ []) do
@@ -61,8 +65,10 @@ defmodule World.People.Human do
         _ -> proxy(points, weights, o, clothes, level)
       end
 
+    {prims, materials} = helmet({prims, materials}, points, weights, bones, o)
+
     pose = Pose.resolve(o.pose)
-    {nodes, skin} = nodes(name, bones, prims, pose)
+    {nodes, skin} = nodes(name, bones, prims, pose, o.head)
 
     %Figure{
       name: name,
@@ -79,7 +85,8 @@ defmodule World.People.Human do
           :hair,
           :clothes,
           :hair_color,
-          :clothes_colors
+          :clothes_colors,
+          :head
         ])
         |> Map.new(fn {k, v} -> {Atom.to_string(k), v} end),
       sources: [
@@ -350,6 +357,79 @@ defmodule World.People.Human do
     {Enum.sort_by(prims, & &1.material) ++ hair, materials}
   end
 
+  # --- The helmet ----------------------------------------------------------------
+
+  # A half helmet of a rider (the helmet of Việt Nam): a dome over the top
+  # of the head from the line of the brows, a little larger than the head
+  # and the hair over that line (at most 4 cm more). It is a part of the
+  # skinned mesh on the bone "head", so it follows the head, its pose and
+  # its size.
+  defp helmet(prims_materials, _points, _weights, _bones, %{helmet: nil}), do: prims_materials
+
+  defp helmet({prims, materials}, points, weights, bones, o) do
+    head = Enum.find_index(bones, &(&1.name == "head"))
+    at = fn p -> Vec.sub(to_world(p), {0.0, 0.0, o.ground}) end
+
+    skull =
+      for {v, ws} <- weights, Enum.any?(ws, fn {b, w} -> b == head and w >= 0.5 end), do: at.(elem(points, v))
+
+    {{x0, y0, z0}, {x1, y1, z1}} = Vec.bounds(skull)
+    brow = z0 + 0.62 * (z1 - z0)
+    c = {(x0 + x1) / 2, (y0 + y1) / 2 - 0.08 * (y1 - y0), brow}
+
+    hair =
+      if o.hair,
+        do:
+          for(
+            p <- Tuple.to_list(fit_positions(Data.asset("hair", o.hair), points)),
+            q = at.(p),
+            elem(q, 2) > brow,
+            do: q
+          ),
+        else: []
+
+    reach = fn axis, half ->
+      out = Enum.map(hair, &abs(elem(Vec.sub(&1, c), axis)))
+      min(max(half, Enum.max(out, fn -> 0.0 end)), half + 0.04) + 0.012
+    end
+
+    r = {reach.(0, (x1 - x0) / 2), reach.(1, (y1 - y0) / 2 + 0.08 * (y1 - y0)), reach.(2, z1 - brow)}
+    prim = dome(c, r, head)
+    paint = %{"color" => o.helmet, "roughness" => 0.35, "metalness" => 0.0, "double_sided" => true}
+    {prims ++ [prim], Map.put(materials, :helmet, paint)}
+  end
+
+  # The upper half of an ellipsoid (center `c`, radii `r`), a little under
+  # the middle at its rim, on one bone.
+  defp dome({cx, cy, cz}, {rx, ry, rz}, bone) do
+    {rings, steps} = {8, 24}
+
+    verts =
+      for i <- 0..rings, j <- 0..(steps - 1) do
+        lat = :math.pi() / 2 * (1.08 * i / rings)
+        lon = 2 * :math.pi() * j / steps
+        {u, v, w} = {:math.sin(lat) * :math.cos(lon), :math.sin(lat) * :math.sin(lon), :math.cos(lat)}
+        {{cx + rx * u, cy + ry * v, cz + rz * w}, Vec.norm({u / rx, v / ry, w / rz})}
+      end
+
+    k = fn i, j -> i * steps + rem(j, steps) end
+
+    indices =
+      for i <- 0..(rings - 1),
+          j <- 0..(steps - 1),
+          tri <- [[k.(i, j), k.(i + 1, j), k.(i + 1, j + 1)], [k.(i, j), k.(i + 1, j + 1), k.(i, j + 1)]],
+          do: tri
+
+    %Scene.Primitive{
+      material: :helmet,
+      positions: Enum.map(verts, &elem(&1, 0)),
+      normals: Enum.map(verts, &elem(&1, 1)),
+      indices: List.flatten(indices),
+      joints: List.duplicate({bone, 0, 0, 0}, length(verts)),
+      weights: List.duplicate({1.0, 0.0, 0.0, 0.0}, length(verts))
+    }
+  end
+
   # The points of the body next to each point (in the faces of the body).
   defp neighbors(base) do
     for f <- Map.fetch!(base.groups, "body"), {a, _} <- f, {b, _} <- f, a != b, reduce: %{} do
@@ -473,7 +553,7 @@ defmodule World.People.Human do
 
   # --- The nodes of the figure ---------------------------------------------------
 
-  defp nodes(name, bones, prims, pose) do
+  defp nodes(name, bones, prims, pose, head) do
     index = bones |> Enum.with_index(1) |> Map.new(fn {b, i} -> {b.name, i} end)
     world = Map.new(bones, &{&1.name, &1.frame})
 
@@ -481,7 +561,13 @@ defmodule World.People.Human do
       for b <- bones do
         parent_world = if b.parent, do: world[b.parent], else: Frame.identity()
         local = Frame.compose(Frame.invert(parent_world), b.frame)
-        %Scene.Node{name: b.name, parent: if(b.parent, do: index[b.parent], else: 0), frame: Pose.turn(local, b, pose)}
+
+        %Scene.Node{
+          name: b.name,
+          parent: if(b.parent, do: index[b.parent], else: 0),
+          frame: Pose.turn(local, b, pose),
+          scale: if(b.name == "head", do: head / 1, else: 1.0)
+        }
       end
 
     # glTF ignores the frame of a skinned mesh: the mesh is a root node.
