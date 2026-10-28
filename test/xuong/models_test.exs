@@ -43,6 +43,24 @@ defmodule Xuong.ModelsTest do
     end
   end
 
+  test "the hood of the van opens on the engine bay, with the items of DIY in it" do
+    van = Xuong.Models.FordTransit.model()
+    assert {_, _, %{kind: :turns, role: :lid, limits: [0, 60]}} = List.keyfind(van.nodes, "hood", 0)
+
+    parts = Map.new(Build.parts(van), &{&1["name"], &1["count"]})
+    assert parts["redarc_bcdc1250d"] == 1 and parts["second_alternator_250a"] == 1
+    assert parts["engine_ford_3_5_v6"] == 1 and parts["radiator_fan_transit"] == 1
+
+    # The parts in the bay are only in the near level: at mid, the joint of
+    # the fan stays, with no mesh.
+    fan = fn level ->
+      scene = Build.scene(Detail.with(level, &Xuong.Models.FordTransit.model/0), level: level)
+      Enum.find(scene.nodes, &(&1.name == "radiator_fan")).primitives
+    end
+
+    assert fan.(:near) != [] and fan.(:mid) == []
+  end
+
   test "the level of detail" do
     assert Detail.level() == :near
 

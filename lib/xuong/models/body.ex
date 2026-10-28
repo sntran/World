@@ -10,8 +10,12 @@ defmodule Xuong.Models.Body do
   """
   alias Xuong.Shape
 
-  @doc "A loft of the key rows, with arches, in `steps` of y (0.1 m)."
+  @doc """
+  A loft of the key rows, with arches, in `steps` of y (0.1 m). Option
+  `x0`: the center of the rows (0 by default), for a fender at one side.
+  """
   def loft(keys, arches, material, opts \\ []) do
+    {x0, opts} = Keyword.pop(opts, :x0, 0.0)
     step = Xuong.Detail.step(Keyword.get(opts, :step, 0.1))
     {y0, y1} = {elem(hd(keys), 0), elem(List.last(keys), 0)}
     n = max(round((y1 - y0) / step), 1)
@@ -36,7 +40,7 @@ defmodule Xuong.Models.Body do
         {y, max(z0, arch_bottom(arches, y)), z1, hw, p}
       end
 
-    Shape.loft(Shape.rows_y(rows), material, Keyword.merge([smooth: 1, sides: 20], opts))
+    Shape.loft(Shape.rows_y(rows, x0), material, Keyword.merge([smooth: 1, sides: 20], opts))
   end
 
   defp arch_step, do: if(Xuong.Detail.level() == :near, do: 1, else: 2)

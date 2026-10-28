@@ -39,7 +39,8 @@
 // The review page: each model of priv/models, at each level, with a slider
 // for each joint. The URL keeps the choice: ?model=NAME&level=.far&yaw=35,
 // a pose: &pose=fork:20,seat:60, and an animation at a time (seconds):
-// &animation=walk&t=0.3 (no t: the animation plays).
+// &animation=walk&t=0.3 (no t: the animation plays). A close view: &focus=0,2.4,0.9
+// (a point in the axes of Xuong: x right, y front, z up) and &zoom=4.
 // Serve the root of the repository: python3 -m http.server, then /review/.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -159,8 +160,9 @@ async function parts(name) {
 
 function frame(yaw) {
   const box = new THREE.Box3().setFromObject(current);
-  const center = box.getCenter(new THREE.Vector3());
-  const r = box.getSize(new THREE.Vector3()).length() / 2 || 1;
+  const focus = params.get('focus')?.split(',').map(Number);
+  const center = focus ? new THREE.Vector3(-focus[0], focus[2], focus[1]) : box.getCenter(new THREE.Vector3());
+  const r = (box.getSize(new THREE.Vector3()).length() / 2 || 1) / Number(params.get('zoom') ?? 1);
   const a = THREE.MathUtils.degToRad(Number(yaw ?? 35));
   camera.position.set(center.x + 3.2 * r * Math.sin(a), center.y + 1.4 * r, center.z + 3.2 * r * Math.cos(a));
   controls.target.copy(center);

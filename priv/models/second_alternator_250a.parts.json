@@ -1,0 +1,1 @@
+{"name":"second_alternator_250a","parts":[{"count":1,"kind":"pulley","name":"alternator_pulley_6_groove","params":{},"sources":[]},{"count":1,"kind":"bolt","name":"bolt_m10x140","params":{"length":0.14,"thread":"M10"},"sources":["ISO 4017: s 16.0 mm, k 6.4 mm."]},{"count":1,"kind":"alternator","name":"second_alternator_250a","params":{"label_amps":250},"sources":[]}]}

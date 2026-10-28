@@ -31,7 +31,9 @@ defmodule Xuong.Models.VanGear do
       {"roof_fan_maxxair_7500k", &__MODULE__.maxxfan/0},
       {"heater_webasto_air_top_2000_stc", &__MODULE__.air_top/0},
       {"water_tank_20gal", &__MODULE__.water_tank/0},
-      {"solar_panel_rich_solar_mega_400", &__MODULE__.solar_panel/0}
+      {"solar_panel_rich_solar_mega_400", &__MODULE__.solar_panel/0},
+      {"redarc_bcdc1250d", &__MODULE__.redarc_bcdc1250d/0},
+      {"second_alternator_250a", &__MODULE__.second_alternator/0}
     ]
   end
 
@@ -482,6 +484,130 @@ defmodule Xuong.Models.VanGear do
       sources: [
         "No source: a common size of a tank of 20 gallons. The item sheet of DIY asks for the size of the real tank."
       ]
+    )
+  end
+
+  # --- The engine bay -------------------------------------------------------------------
+
+  @doc """
+  A DC-DC charger for the engine bay: the REDARC BCDC1250D, 50 A, 165 by
+  120 by 37 mm, about 1 kg. Its case of aluminum has fins on the top, and
+  its cables go out of one end.
+  """
+  def redarc_bcdc1250d do
+    {l, w, h} = {mm(165), mm(120), mm(37)}
+    {x0, x1, y0, y1} = {-l / 2, l / 2, -w / 2, w / 2}
+    zb = 0.012
+
+    fins =
+      for i <- 0..10 do
+        y = y0 + 0.008 + i * (w - 0.02) / 10
+        Shape.box({x0 + 0.012, y, zb}, {x1 - 0.012, y + 0.004, h}, :aluminum)
+      end
+
+    ends =
+      for {a, b} <- [{x0, x0 + 0.012}, {x1 - 0.012, x1}],
+          do: Shape.box({a, y0, 0.003}, {b, y1, h - 0.004}, :black, round: 0.15, smooth: 1)
+
+    tabs =
+      for {a, b} <- [{x0 - 0.012, x0 + 0.004}, {x1 - 0.004, x1 + 0.012}],
+          do: Shape.box({a, y0 + 0.02, 0.0}, {b, y1 - 0.02, 0.003}, :black)
+
+    cables = [
+      Kit.rod({x0, -0.025, 0.018}, {-1, 0, 0}, 0.009, 0.05, :black),
+      Kit.rod({x0, 0.0, 0.018}, {-1, 0, 0}, 0.006, 0.05, :black),
+      Kit.rod({x0, 0.022, 0.018}, {-1, 0, 0}, 0.006, 0.05, :red)
+    ]
+
+    shapes =
+      [
+        Shape.box({x0 + 0.012, y0, 0.003}, {x1 - 0.012, y1, zb}, :aluminum),
+        Shape.box({x0 + 0.04, y1, 0.004}, {x1 - 0.04, y1 + 0.001, zb - 0.002}, :red)
+      ] ++ fins ++ ends ++ tabs ++ cables
+
+    Assembly.new(
+      "redarc_bcdc1250d",
+      Part.new("redarc_bcdc1250d", :charger, shapes, [origin()], params: %{"amps" => 50, "engine_bay" => true}),
+      root: "charger",
+      kind: :electrical,
+      sources: [
+        "REDARC BCDC1250D: 165 by 120 by 37 mm, about 1 kg, made for the engine bay (retailer listings). The fins and the cables are approximate."
+      ]
+    )
+  end
+
+  @doc """
+  A second alternator on its bracket: a case of about 6 in (150 mm) across,
+  250 A on its label. Its pulley turns. The shape is approximate: kits of
+  the makers differ. For example, Ford gives a second alternator for the
+  Transit with the 3.5 L V6.
+  """
+  def second_alternator do
+    {r, zc} = {0.075, 0.11}
+    {yr, yf} = {-0.07, 0.06}
+
+    # The rear housing, the stator (a dark band), the front housing.
+    case_ = [
+      Kit.rod({0.0, yr, zc}, {0, 1, 0}, r, 0.058, :aluminum, 24),
+      Kit.rod({0.0, yr + 0.058, zc}, {0, 1, 0}, r + 0.002, 0.014, :dark, 24),
+      Kit.rod({0.0, yr + 0.072, zc}, {0, 1, 0}, r, yf - yr - 0.072, :aluminum, 24),
+      Kit.rod({0.0, yr - 0.015, zc}, {0, 1, 0}, 0.06, 0.015, :dark, 16),
+      Kit.rod({0.0, yr - 0.015, zc + 0.03}, {0, -1, 0}, 0.006, 0.02, :copper, 8),
+      Shape.box({0.025, yr - 0.03, zc - 0.02}, {0.05, yr - 0.015, zc + 0.01}, :black),
+      Shape.box({-0.025, yr, zc - r - 0.01}, {0.025, yr + 0.02, zc - r + 0.02}, :aluminum),
+      Shape.box({-0.025, yf - 0.02, zc - r - 0.01}, {0.025, yf, zc - r + 0.02}, :aluminum)
+    ]
+
+    bracket = [
+      Shape.box({-0.07, yr - 0.005, 0.0}, {0.07, yf + 0.005, 0.008}, :steel),
+      Shape.box({-0.02, yr - 0.005, 0.008}, {0.02, yr + 0.01, zc - r + 0.01}, :steel),
+      Shape.box({-0.02, yf - 0.01, 0.008}, {0.02, yf + 0.005, zc - r + 0.01}, :steel)
+    ]
+
+    ribs = for i <- 0..12, do: {if(rem(i, 2) == 0, do: 0.031, else: 0.026), 0.006 + i * 0.0025}
+    pulley_profile = [{0.0, 0.0}, {0.022, 0.0}, {0.022, 0.006} | ribs] ++ [{0.0, 0.036}]
+
+    blades =
+      for k <- 0..15 do
+        a = 2 * :math.pi() * k / 16
+
+        Shape.box({0.03, -0.002, 0.001}, {0.066, 0.002, 0.009}, :dark,
+          frame:
+            Frame.compose(
+              Frame.new({0.0, yf, zc}, {0, 1, 0}, {-:math.sin(a), 0.0, :math.cos(a)}),
+              Frame.turn({1, 0, 0}, 30)
+            )
+        )
+      end
+
+    rotor =
+      Part.new(
+        "alternator_pulley_6_groove",
+        :pulley,
+        [
+          Shape.lathe(pulley_profile, :steel, sides: 24, frame: Frame.new({0.0, yf, zc}, {0, 1, 0}, {0, 0, 1})) | blades
+        ],
+        [same("axle", {0.0, yf, zc}, {0, 1, 0}, {0, 0, 1})]
+      )
+
+    Assembly.new(
+      "second_alternator_250a",
+      Part.new("second_alternator_250a", :alternator, case_ ++ bracket, [origin()], params: %{"label_amps" => 250}),
+      root: "alternator",
+      kind: :electrical,
+      sources: [
+        "A second alternator of 250 A: a case of about 6 in across, on a bracket (approximate). Ford gives a second alternator for the Transit with the 3.5 L V6 (Ford Pro upfitter documents)."
+      ]
+    )
+    |> Assembly.add("pulley", rotor,
+      at: Kit.same("axle", {0.0, yf, zc}, {0, 1, 0}, {0, 0, 1}),
+      port: "axle",
+      kind: :turns,
+      role: :spin
+    )
+    |> Assembly.add("pivot", Fasteners.bolt("M10", 0.14),
+      at: Part.port("pivot", {0.0, yr - 0.005, zc - r}, {0, 1, 0}, {0, 0, 1}),
+      port: "head"
     )
   end
 

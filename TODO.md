@@ -41,5 +41,11 @@ into the steps of `AGENTS.md`.
 - **A catalog of makes and models.** Real vehicles with their real
   sizes and sources: the Chevy Bolt, the Honda Wave, the Honda Vision. A
   person chooses a vehicle in Phượt.
+- **The other vans of DIY.** The Ram ProMaster (136, 159, 159 extended),
+  the Mercedes-Benz Sprinter (144, 170, 170 extended) and the other
+  Transits (148 medium roof, 148 extended), each with its engine bay.
+- **A belt for the second alternator.** The second alternator of the van
+  has no belt and no bracket on the engine. The kit of Ford for the
+  Transit has its own bracket: its shape needs a source.
 - **Godot import.** A script for Vung_Tau that reads the joint nodes and
   the levels of detail of a GLB of Xưởng.

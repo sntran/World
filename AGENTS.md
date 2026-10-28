@@ -42,7 +42,8 @@ about it.
 
 - Look at each new or changed model on the review page
   (`scripts/shot.mjs`) before a commit, from the front, the side and
-  three quarters.
+  three quarters. `FOCUS=x,y,z ZOOM=4` gives a close view of a point
+  (an engine bay, the inside of a cabinet).
 
 ## The tools
 

@@ -40,6 +40,8 @@ defmodule Xuong.ItemsTest do
     "heater_webasto_air_top_2000_stc" => {{0.35, 0.122, 0.168}, 0.01, []},
     "water_tank_20gal" => {{0.64, 0.356, 0.386}, 0.01, []},
     "solar_panel_rich_solar_mega_400" => {{1.135, 1.722, 0.03}, 0.01, []},
+    "redarc_bcdc1250d" => {{0.227, 0.121, 0.037}, 0.01, []},
+    "second_alternator_250a" => {{0.154, 0.201, 0.187}, 0.01, ~w(spin)},
     "van_bed_platform" => {{1.778, 1.524, 0.965}, 0.01, []},
     "van_galley" => {{1.245, 0.557, 1.229}, 0.01, ~w(knob drawer drawer drawer door)}
   }
