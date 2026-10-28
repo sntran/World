@@ -3,7 +3,7 @@ defmodule Xuong.PartsTest do
   use ExUnitProperties
 
   alias Xuong.{Build, Part, Scene}
-  alias Xuong.Parts.{Fasteners, Stock, Wheels}
+  alias Xuong.Parts.{Fasteners, Seats, Stock, Wheels}
 
   defp size(part) do
     {{x0, y0, z0}, {x1, y1, z1}} = Part.bounds(part)
@@ -116,5 +116,38 @@ defmodule Xuong.PartsTest do
     assert Wheels.brake_disc(0.2).params == %{"diameter" => 0.2}
     assert Wheels.tire("80/90-14").kind == :tire
     assert Wheels.rim(0.3556, 0.05).kind == :rim
+  end
+
+  test "a seat is a base, a cushion on its track and a back on its hinge, with a headrest" do
+    seat = Seats.seat("s", track: 0.2, recline: [0, 40])
+    assert Enum.map(seat.nodes, &elem(&1, 0)) == ["s_base", "s_seat", "s_back", "s_head_1"]
+    assert Xuong.Assembly.item_port_frame(seat, "floor").z == {0.0, 0.0, 1.0}
+
+    rest = Build.scene(seat)
+    assert rest.extras["joints"] == ["s_seat", "s_back"]
+    {{_, y0, z0}, {_, _, z1}} = Scene.bounds(rest)
+    assert_in_delta z0, 0.0, 1.0e-9
+    assert z1 > 1.2 and z1 < 1.3
+
+    # The back turns to the rear and down; the cushion moves to the front.
+    {{_, back, _}, {_, _, top}} = Scene.bounds(Build.scene(seat, pose: %{"s_back" => 40}))
+    assert back < y0 and top < z1
+    {_, {_, front, _}} = Scene.bounds(Build.scene(seat, pose: %{"s_seat" => 0.1}))
+    {_, {_, front0, _}} = Scene.bounds(rest)
+    assert_in_delta front - front0, 0.1, 1.0e-6
+  end
+
+  test "a bench has a headrest for each place, on its legs, and its backs do not move" do
+    bench = Seats.bench("b", 3, place_width: 0.45)
+    assert length(bench.nodes) == 6
+    scene = Build.scene(bench)
+    assert scene.extras["joints"] == []
+    [w, _, _] = scene.extras["size"]
+    assert_in_delta w, 1.35, 1.0e-6
+    assert bench.extras["params"]["places"] == 3
+
+    plain = Seats.bench("b", 2, headrest: false)
+    assert length(plain.nodes) == 3
+    assert length(Seats.bench("b", 2).nodes) == 5
   end
 end

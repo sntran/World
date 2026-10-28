@@ -80,8 +80,10 @@ defmodule Xuong.Models.Van.BodyShop do
 
   @doc """
   The parts inside the body, only at the near level: the floor of the
-  cab and of the cargo area, the wells of the wheels, and the pillar
-  behind the front door at the right side.
+  cab and of the cargo area (plywood, or a rubber mat in the passenger
+  van), the wells of the wheels, and the pillar behind the front door at
+  the right side. Its ports are the mounting points of the seats
+  (`mounts/1`).
   """
   def inside(van) do
     %{h: h, m: m, l: l} = van
@@ -95,7 +97,7 @@ defmodule Xuong.Models.Van.BodyShop do
         clip: fn _ -> [{:z_min, @cab_floor - 0.02}, {:z_max, @cab_floor}] end,
         sides: 8
       ),
-      Hull.skin(h, f1, l - 0.01, :plywood,
+      Hull.skin(h, f1, l - 0.01, if(van.windows == :passenger, do: :dark, else: :plywood),
         sides: 8,
         clip: fn d ->
           # Between the wells of the wheels, the floor is narrower.
@@ -125,11 +127,27 @@ defmodule Xuong.Models.Van.BodyShop do
     pillar =
       Xuong.Shape.box({hw - 0.14, l - (s0 + 0.06), 0.42}, {hw - 0.06, l - (f1 - 0.04), 2.36}, :paint)
 
-    Kit.part(@station, "inside_" <> m["make"], :body, [pillar | floors ++ wells], [Kit.origin()],
+    Kit.part(@station, "inside_" <> m["make"], :body, [pillar | floors ++ wells], [Kit.origin() | mounts(van)],
       detail: :near,
       sources: [
         "The floor of the cargo area at #{floor} m (the model); the floor of the cab, the wells of the wheels and the pillar behind the front door: by eye from the photos of the van with the doors open."
       ]
     )
+  end
+
+  @doc """
+  The mounting points of the seats on the floors, from the seats of the
+  make: `seat_driver` and `seat_passenger` on the floor of the cab, and
+  `row_2` to `row_N` on the floor of the cargo area. Each port is under
+  the center of the cushion, with the axis up and `up` to the front.
+  """
+  def mounts(van) do
+    %{m: m, l: l, f: f} = van
+    seats = van.make["seats"]
+    at = fn name, x, d, z -> Kit.port(name, {x / 1, l - (f + d), z / 1}, {0, 0, 1}, {0, 1, 0}) end
+    %{"x" => x, "d" => d} = seats["front"]
+
+    [at.("seat_driver", -x, d, @cab_floor), at.("seat_passenger", x, d, @cab_floor)] ++
+      for {row, i} <- Enum.with_index(seats["rows"], 2), do: at.("row_#{i}", row["x"], row["d"], m["floor"])
   end
 end

@@ -111,6 +111,7 @@ Each connection that is not `:fixed` is a **joint**. A joint has a
 - `steer`: the bars and the front wheel, around the steering axis.
 - `suspension`: a fork or a shock, a small move along its axis.
 - `door`, `lid`, `drawer`: a part that opens.
+- `recline`: the back of a seat that turns to the rear.
 - `handle`: a handle that slides out (the trolley of a power station).
 - `spin`: a part that turns when the item runs (a fan, the drum of a
   washer, a turntable).

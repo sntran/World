@@ -12,6 +12,7 @@ defmodule Xuong.Models.Van.Trim do
   alias Xuong.{Assembly, Detail, Frame, Shape}
   alias Xuong.Models.Hull
   alias Xuong.Models.Van.{Kit, Openings}
+  alias Xuong.Parts.Seats
 
   @station "trim"
 
@@ -30,6 +31,7 @@ defmodule Xuong.Models.Van.Trim do
       asm
       |> Assembly.add("details", small_parts(van), at: "origin", port: "origin")
       |> Assembly.add("cab", cab(van), at: "origin", port: "origin")
+      |> seats(van)
     else
       asm
     end
@@ -444,10 +446,9 @@ defmodule Xuong.Models.Van.Trim do
 
   # --- The cab ----------------------------------------------------------------------------
 
-  # The dash, the steering wheel at the left, the two front seats, and
-  # the rows of seats of the crew van (one row) and of the passenger van
-  # (three rows: 12 seats in all). Their sizes are by eye from the photos
-  # of the inside of the passenger van.
+  # The dash and the steering wheel at the left. The seats are
+  # `Xuong.Parts.Seats` on the mounting points of the floors
+  # (`Xuong.Models.Van.BodyShop.mounts/1`).
   defp cab(van) do
     %{h: h, l: l, f: f} = van
     y = fn d -> l - d end
@@ -468,33 +469,45 @@ defmodule Xuong.Models.Van.Trim do
         frame: Frame.new({-0.45, y.(f + 0.2), 1.2}, {0, -0.6, 0.35}, {0, 0, 1})
       )
 
-    seat = fn x, d, w, floor ->
-      [
-        Shape.box({x - w / 2, y.(d + 0.25), floor + 0.38}, {x + w / 2, y.(d - 0.25), floor + 0.5}, :seat),
-        Shape.box({x - w / 2, y.(d + 0.36), floor + 0.5}, {x + w / 2, y.(d + 0.25), floor + 1.1}, :seat)
+    Kit.part(@station, "cab_transit", :dash, [dash, wheel, column], [Kit.origin()],
+      detail: :near,
+      sources: [
+        "The dash and the steering wheel: by eye from the photos of the inside of a 2026 Transit passenger van (https://www.comvoy.com/work-van/fenton-mi/new-2026-ford-transit-350-xl-passenger-van-25226733)."
       ]
-    end
+    )
+  end
 
-    floor = van.m["floor"]
-    front = seat.(-0.45, f + 1.05, 0.52, 0.6) ++ seat.(0.45, f + 1.05, 0.52, 0.6)
+  # The two front seats on their tracks, and the rows of the crew van (the
+  # first row) and of the passenger van (all the rows of the make).
+  defp seats(asm, van) do
+    %{"front" => front, "rows" => rows, "sources" => sources} = van.make["seats"]
 
     rows =
       case van.windows do
-        :cargo ->
-          []
-
-        :crew ->
-          seat.(-0.25, f + 1.95, 1.3, floor)
-
-        :passenger ->
-          seat.(-0.25, f + 1.95, 1.3, floor) ++ seat.(-0.25, f + 2.85, 1.3, floor) ++ seat.(0.0, f + 3.75, 1.85, floor)
+        :cargo -> []
+        :crew -> Enum.take(rows, 1)
+        :passenger -> rows
       end
 
-    Kit.part(@station, "cab_transit", :seat, [dash, wheel, column | front ++ rows], [Kit.origin()],
-      detail: :near,
-      sources: [
-        "The dash, the seats and their rows: by eye from the photos of the inside of a 2026 Transit passenger van (https://www.comvoy.com/work-van/fenton-mi/new-2026-ford-transit-350-xl-passenger-van-25226733); Ford gives 12 seats in four rows (2, 3, 3, 4)."
-      ]
-    )
+    opts = fn data -> [place_width: data["place_width"], sources: sources] end
+
+    fronts =
+      for name <- ["driver", "passenger"] do
+        seat =
+          Seats.seat(
+            name,
+            opts.(front) ++ [height: front["height"], track: front["track"], recline: front["recline"]]
+          )
+
+        {name, seat, "seat_" <> name}
+      end
+
+    benches =
+      for {row, i} <- Enum.with_index(rows, 2),
+          do: {"row_#{i}", Seats.bench("row_#{i}", row["places"], opts.(row)), "row_#{i}"}
+
+    Enum.reduce(fronts ++ benches, asm, fn {name, seat, mount}, asm ->
+      Assembly.add(asm, name, Kit.station(seat, @station), to: "inside", at: mount, port: "floor")
+    end)
   end
 end

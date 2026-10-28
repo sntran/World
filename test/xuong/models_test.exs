@@ -115,11 +115,18 @@ defmodule Xuong.ModelsTest do
   test "the cab of a van has the seats of its body: the front seats, a row more in the crew van" do
     seats = fn windows ->
       van = Detail.with(:near, fn -> Xuong.Models.Van.build("transit_148", windows: windows) end)
-      {_, cab, _} = List.keyfind(van.nodes, "cab", 0)
-      length(cab.shapes)
+      for {name, %Xuong.Assembly{kind: :furniture}, c} <- van.nodes, do: {name, c.to, c.at}
     end
 
-    assert seats.(:cargo) < seats.(:crew) and seats.(:crew) < seats.(:passenger)
+    front = [{"driver", "inside", "seat_driver"}, {"passenger", "inside", "seat_passenger"}]
+    assert seats.(:cargo) == front
+    assert seats.(:crew) == front ++ [{"row_2", "inside", "row_2"}]
+    assert length(seats.(:passenger)) == 5
+
+    # The front seats move on their tracks, and their backs recline.
+    van = Detail.with(:near, fn -> Xuong.Models.Van.build("transit_148") end)
+    joints = Build.scene(van).extras["joints"]
+    assert "driver_seat" in joints and "passenger_back" in joints
   end
 
   test "a skin over rings of other counts of points joins them by their places" do

@@ -1,0 +1,1 @@
+{"name":"seat_van","parts":[{"count":1,"kind":"headrest","name":"headrest","params":{},"sources":[]},{"count":1,"kind":"seat_back","name":"seat_van_back","params":{},"sources":[]},{"count":1,"kind":"seat_base","name":"seat_van_base","params":{},"sources":[]},{"count":1,"kind":"cushion","name":"seat_van_cushion","params":{},"sources":[]}]}

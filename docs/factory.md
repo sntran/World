@@ -92,10 +92,10 @@ after station (`Xuong.Models.Van`):
 
 | Station | What it adds |
 |---|---|
-| The body shop | The body of sheets on the hull, 3 cm thick, with the openings cut: the windshield, the front doors, the sliding door, the rear doors, the windows of the body, the arches of the wheels. Inside: the floors, the wells of the wheels, the pillar behind the front door. |
+| The body shop | The body of sheets on the hull, 3 cm thick, with the openings cut: the windshield, the front doors, the sliding door, the rear doors, the windows of the body, the arches of the wheels. Inside: the floors, the wells of the wheels, the pillar behind the front door, and the mounting points of the seats (the ports `seat_driver`, `seat_passenger`, `row_2` and more, from the seats of the make in `priv/data/vans.json`). |
 | The closures | The hood, the front doors with their windows and mirrors, the sliding door, the rear doors: each in its opening, on its hinges or its rail. |
 | The paint | The role `paint` of the body and the doors. |
-| The trim | The glass in the openings, the black plastic, the lamps, the grille, the small parts, the dash and the seats. |
+| The trim | The glass in the openings, the black plastic, the lamps, the grille, the small parts, the dash, and the seats (`Xuong.Parts.Seats`) on their mounting points: the two front seats on their tracks, with backs that recline, and the benches of the rows of the crew van and the passenger van. |
 | The chassis | The engine bay and the wheels. |
 | The upfit | The items of DIY on the roof and in the engine bay. |
 
