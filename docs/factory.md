@@ -117,6 +117,46 @@ part, shape and model has two kinds of source, never a memory:
 The sources of a part give both, with the URL of each photo. The
 repository keeps the URLs, not the photos.
 
+## Other work: Cube of Roblox
+
+"Cube: A Roblox View of 3D Intelligence" (arXiv 2503.15475, 2025; code
+and weights at github.com/Roblox/cube) makes shapes with a neural
+network:
+
+- A shape tokenizer: points on the surface of a mesh become 512 to 1,024
+  tokens; a decoder gives an occupancy field, and marching cubes gives
+  the mesh. Text-to-shape writes the tokens from a text; shape-to-text
+  writes a caption of a shape.
+- Text-to-scene: a language model writes a scene as JSON (each object
+  with its category, its caption, its place, its turn about the up axis
+  and its box), then text-to-shape makes each object.
+- For later, the paper names what Xưởng has now: shapes from parts,
+  people with a skeleton and layers of clothes, and joints (a steering
+  wheel that turns the wheels, a door that slides).
+
+What it means for Xưởng:
+
+| Topic | Cube | Xưởng |
+|---|---|---|
+| The source of a shape | Learned from about 1.5 million assets (Objaverse and Roblox). | Standards, data sheets, drawings and photos. |
+| Sizes | A box from the scene; the shape inside it is learned. | The real sizes of each part. |
+| Parts, joints, the list of the parts | Not yet ("future work"). | Yes. |
+| Shapes that are not made from parts (a rock, a tree, a statue, a dog) | Yes. | No. |
+| Where it runs | A GPU. | The VM at the edge. |
+
+So the two agree in two ways:
+
+1. **The order is the scene graph.** The JSON scene of Cube and an order
+   of Xưởng have the same idea: a language model writes the layout, and
+   a builder makes each object. An order of Xưởng gives more (options
+   with ranges, slots, joints), and the check gives each error back to
+   the model (step F7).
+2. **Cube can supply parts.** A shape that the warehouse cannot make can
+   come from Cube, made one time on a GPU, cleaned
+   (`Xuong.Mesh.clean/1`), and kept as a supplied part (step F6) with its
+   text as its source. It is not a measured shape: the receipt says so.
+   Read the license of the weights before a use.
+
 ## The steps
 
 | Step | What |
@@ -127,6 +167,8 @@ repository keeps the URLs, not the photos.
 | F4 | People in the release (the data of MakeHuman in `priv/`), and less memory for the near level. |
 | F5 | Drawings. |
 | F6 | Supplied parts (with the reader of `.wings` of step 5 of `README.md`). |
+| F7 | Orders from text: a language model writes an order or a scene from `/blueprints`, and the errors of the check go back to it until the order is correct. |
+| F8 | Scenes: a list of orders, each with its place and its turn, and joins at slots. |
 
 ## The setup on Cloudflare
 
