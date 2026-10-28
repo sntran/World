@@ -114,7 +114,7 @@ function joints(root) {
     const role = node.userData.role;
     if (!role) return;
     const rest = { q: node.quaternion.clone(), p: node.position.clone() };
-    const slides = node.userData.kind === 'slides';
+    const slides = node.userData.kind === 'slide';
     const [min, max] = node.userData.limits ?? (slides ? [0, 0.1] : [-180, 180]);
     const label = document.createElement('label');
     label.textContent = `${node.name} (${role})`;

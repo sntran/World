@@ -84,7 +84,7 @@ connects to its parent with one connection:
   child: "rear_wheel",
   child_port: "hub",
   parent_port: "rear_axle",
-  kind: :turns,
+  kind: :hinge,
   offset: 0.0,
   turn: 0.0,
   limits: nil
@@ -101,8 +101,8 @@ The kinds of a connection:
 | Kind | The child can | `limits` |
 |---|---|---|
 | `:fixed` | not move (a bolt in a hole, a panel on a frame) | `nil` |
-| `:turns` | turn around the axis (a wheel, a door, the bars, a knee) | `nil` for a wheel, else `[min, max]` in degrees |
-| `:slides` | move along the axis (a drawer, a fork tube in a shock) | `[min, max]` in meters |
+| `:hinge` | turn around the axis (a wheel, a door, the bars, a knee) | `nil` for a wheel, else `[min, max]` in degrees |
+| `:slide` | move along the axis (a drawer, a fork tube in a shock) | `[min, max]` in meters |
 
 Each connection that is not `:fixed` is a **joint**. A joint has a
 `role` that tells an app what to do with it:
@@ -125,7 +125,14 @@ A model has no joint for the lean of a vehicle with two wheels. An app
 turns the whole model around the line on the ground under its wheels.
 
 A **pose** is the value of each joint, by its name:
-`%{"rear_wheel" => 45, "steer" => -10}`.
+`%{"rear_wheel" => 45, "steer" => -10}`. A value out of the limits
+stops at the nearest limit, as a real joint stops.
+
+`World.Joint` is the one model of a joint, for a door on a van and for
+an elbow of a person: its `name`, its `kind` (`:hinge`, `:slide`, or
+`:ball` with the three values `flex`, `spread` and `twist`), its
+`limits`, its `role`, and for a person the `bone` that turns. The
+extras of a joint node come from it.
 
 A loop of connections (a frame with two struts to one part) is not a
 tree. The build refuses it in step 3. `TODO.md` has the idea of a loop
@@ -285,6 +292,44 @@ straight, in the plane of the hinge, in its limits:
 | Finger, last joint | 0 to 80 | about 8 |
 | Thumb, second joint | -20 to 60 | 21 |
 | Thumb, last joint | -10 to 80 | 5 |
+
+### The joints of a person in an order
+
+An order gives the values of the joints of a person in `"joints"`
+(`World.People.Joints`). Each joint of a limb has a side: `_l` or `_r`.
+The two sides are mirrors: a value has the same meaning on the two
+sides. A ball has three values, `NAME.flex`, `NAME.spread` and
+`NAME.twist`. A person in a scene (a traveler, a group) has the path of
+its node in front: `traveler/elbow_r`, `p3/knee_l`. The receipt lists
+the names of all the joints of the model.
+
+| Joint | Kind | Value | Limits (degrees) |
+|---|---|---|---|
+| `elbow_l`, `elbow_r` | hinge | The angle from straight. | 0 to 150 |
+| `wrist_l`, `wrist_r` | hinge | The angle from straight; more bends the palm in. | -70 to 80 |
+| `knee_l`, `knee_r` | hinge | The angle from straight. | 0 to 150 |
+| `ankle_l`, `ankle_r` | hinge | From the rest; more points the toes down. | -20 to 50 |
+| `thumb_l`, `index_l`, `middle_l`, `ring_l`, `pinky_l` (and `_r`) | hinge | The curl: the three joints of the finger together (1, 1.1 and 0.8 of the value; 0.6 and 0.8 on the two last joints of the thumb). | 0 to 90 |
+| `shoulder_l`, `shoulder_r` | ball | `flex` to the front, `spread` out to the side, `twist` around the arm. | flex -60 to 180, spread -45 to 135, twist -90 to 90 |
+| `hip_l`, `hip_r` | ball | `flex` to the front, `spread` out to the side, `twist` around the leg. | flex -30 to 120, spread -20 to 45, twist -45 to 45 |
+| `neck` | ball | `flex` to the front, `spread` to the right side, `twist` to the left side. | flex -50 to 60, spread -45 to 45, twist -70 to 70 |
+| `spine` | ball | The same as the neck, a third on each bone of the spine. | flex -30 to 80, spread -35 to 35, twist -40 to 40 |
+
+The value of a hinge replaces the flex of the pose. The values of a
+ball turn the joint in the axes of the body, before the turns of the
+pose. An arm with `aim` or `reach`, and a leg with a foot on a point,
+ignore the joints that the inverse kinematics sets. The limits of the
+balls are the normal ranges of motion of the AAOS tables (American
+Academy of Orthopaedic Surgeons, "Joint Motion: Method of Measuring and
+Recording", 1965), from the A pose of the skeleton at rest.
+
+```json
+{
+  "blueprint": "person",
+  "options": {"pose": "stand"},
+  "joints": {"elbow_r": 120, "shoulder_r.spread": 80, "index_r": 0, "middle_r": 90}
+}
+```
 
 A straight elbow keeps its small angle out of the plane of the hinge
 (about 4 degrees), as a real arm. `spread` and `twist` have the same

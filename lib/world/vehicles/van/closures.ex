@@ -58,7 +58,7 @@ defmodule World.Vehicles.Van.Closures do
     Assembly.add(asm, "hood", Kit.part(@station, "hood_transit", :lid, [shell], [hinge]),
       at: hinge,
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :lid,
       limits: [0, 60]
     )
@@ -123,7 +123,7 @@ defmodule World.Vehicles.Van.Closures do
           sources: van.make["openings"]["sources"] |> Enum.take(1)
         )
 
-      Assembly.add(asm, name, door, at: hinge, port: "hinge", kind: :turns, role: :door, limits: [0, 70])
+      Assembly.add(asm, name, door, at: hinge, port: "hinge", kind: :hinge, role: :door, limits: [0, 70])
     end)
   end
 
@@ -213,7 +213,7 @@ defmodule World.Vehicles.Van.Closures do
     Assembly.add(asm, "sliding_door", door,
       at: Kit.port("slide", at, axis, {0, 0, 1}),
       port: "slide",
-      kind: :slides,
+      kind: :slide,
       role: :door,
       limits: [0, 1.25]
     )
@@ -269,7 +269,7 @@ defmodule World.Vehicles.Van.Closures do
           sources: van.make["openings"]["sources"] |> Enum.slice(2, 1)
         )
 
-      Assembly.add(asm, name, door, at: hinge, port: "hinge", kind: :turns, role: :door, limits: [0, 180])
+      Assembly.add(asm, name, door, at: hinge, port: "hinge", kind: :hinge, role: :door, limits: [0, 180])
     end)
   end
 end

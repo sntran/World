@@ -58,7 +58,7 @@ each release.
 3. **Assemblies.** A tree of parts and smaller assemblies. Each child
    connects to its parent at two ports: for example, the axle bolt goes
    through the hub of the wheel and through the fork. The kind of the
-   connection (fixed, turns, slides) gives the joints of the model.
+   connection (fixed, hinge, slide) gives the joints of the model.
 
 Tre also needs **voxel models** (models of blocks). They are a separate
 kind, in the MagicaVoxel format (`.vox`). A tool of World makes the voxel

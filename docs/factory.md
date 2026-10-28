@@ -66,6 +66,11 @@ The blueprints now: `catalog` (each model of the catalog, with colors
 and joints), `person`, `traveler`, `exercise`, `house`, `van`,
 `extrusion`, `strut` and `l_track`.
 
+The joints of a person are in the order too: `"joints": {"elbow_r":
+120, "shoulder_r.spread": 80}` for a person, `"traveler/elbow_r"` for
+the person of a traveler. `docs/format.md`, "The joints of a person in
+an order", has the names and the limits.
+
 A `traveler` is a traveler of Phượt: a person (the options of `person`,
 with the colors of the hair and of the clothes, and `head`, the size of
 the head: 1 is the size of the body, up to 2 for the bigger head of a

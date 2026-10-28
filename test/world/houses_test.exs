@@ -130,7 +130,7 @@ defmodule World.HousesTest do
     end
 
     test "a casement window and a fixed window" do
-      assert [_, {"sash_window_casement_36x48", _, %{kind: :turns}}] = Buildings.window_sample().nodes
+      assert [_, {"sash_window_casement_36x48", _, %{kind: :hinge}}] = Buildings.window_sample().nodes
       assert [_, {"sash_f", _, %{kind: :fixed}}] = Buildings.window("f", 0.6, 0.9, 0.11, :fixed).nodes
     end
   end

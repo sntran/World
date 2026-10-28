@@ -29,12 +29,12 @@ defmodule World.Vehicles.Corners do
 
     joint =
       if Keyword.get(opts, :steer, false),
-        do: [kind: :turns, role: :steer, limits: Keyword.get(opts, :limits, [-35, 35])],
+        do: [kind: :hinge, role: :steer, limits: Keyword.get(opts, :limits, [-35, 35])],
         else: []
 
     asm
     |> Assembly.add(knuckle_name, knuckle, [at: "corner_#{name}", port: "steer"] ++ joint)
-    |> Assembly.add("#{name}_wheel", wheel, to: knuckle_name, at: "axle", port: "hub", kind: :turns, role: :wheel)
+    |> Assembly.add("#{name}_wheel", wheel, to: knuckle_name, at: "axle", port: "hub", kind: :hinge, role: :wheel)
   end
 
   # A knuckle: a small block inside the wheel, with its brake disc, and

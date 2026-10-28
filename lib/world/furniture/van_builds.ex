@@ -202,7 +202,7 @@ defmodule World.Furniture.VanBuilds do
       |> Assembly.add("faucet", faucet,
         at: Kit.same("swivel", {sx, y0 + 0.04, h}, {0, 0, 1}, {0, 1, 0}),
         port: "swivel",
-        kind: :turns,
+        kind: :hinge,
         role: :knob,
         limits: [-90, 90]
       )
@@ -218,7 +218,7 @@ defmodule World.Furniture.VanBuilds do
         Assembly.add(asm, "drawer_#{i}", drawer("drawer_#{i}", x0 + p, xm, y0 + inch(1), y1, za, zb),
           at: Kit.same("slide_drawer_#{i}", {(x0 + p + xm) / 2, y1, za}, {0, 1, 0}, {0, 0, 1}),
           port: "slide_drawer_#{i}",
-          kind: :slides,
+          kind: :slide,
           role: :drawer,
           limits: [0, inch(16)]
         )
@@ -246,7 +246,7 @@ defmodule World.Furniture.VanBuilds do
       Assembly.add(asm, "door", door,
         at: Kit.same("hinge", {x1 - p, y1, kick}, {0, 0, -1}, {0, 1, 0}),
         port: "hinge",
-        kind: :turns,
+        kind: :hinge,
         role: :door,
         limits: [0, 110]
       )

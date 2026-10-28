@@ -58,7 +58,7 @@ defmodule World.Vehicles.Van.Chassis do
       |> Assembly.add("radiator_fan", hidden.(radiator_fan(l)),
         at: Kit.port("fan", {0.0, l - 0.32, 0.8}, {0, 1, 0}, {0, 0, 1}),
         port: "axle",
-        kind: :turns,
+        kind: :hinge,
         role: :spin
       )
       |> Assembly.add("bay_parts", hidden.(bay_parts(l)), at: "origin", port: "origin")

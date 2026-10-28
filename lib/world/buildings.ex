@@ -525,7 +525,7 @@ defmodule World.Buildings do
     |> Assembly.add("slab_" <> name, slab,
       at: Kit.same("hinge", hinge_at, {0, 0, 1}, {0, 1, 0}),
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :door,
       limits: [0, 100]
     )
@@ -534,7 +534,7 @@ defmodule World.Buildings do
       to: "slab_" <> name,
       at: Kit.same("knob_#{name}", knob_at, {0, 1, 0}, {0, 0, 1}),
       port: "knob_#{name}",
-      kind: :turns,
+      kind: :hinge,
       role: :knob,
       limits: [0, 60]
     )
@@ -592,7 +592,7 @@ defmodule World.Buildings do
         Assembly.add(base, "sash_" <> name, sash,
           at: Kit.same("hinge", hinge_at, {0, 0, -1}, {0, 1, 0}),
           port: "hinge",
-          kind: :turns,
+          kind: :hinge,
           role: :door,
           limits: [0, 90]
         ),

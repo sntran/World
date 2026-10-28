@@ -34,15 +34,15 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
     )
     |> Assembly.add("engine", engine(), at: "origin", port: "origin")
     |> Assembly.add("tank", tank_and_seat(), at: "origin", port: "origin")
-    |> Assembly.add("steer", fork(), at: "steer", port: "steer", kind: :turns, role: :steer, limits: [-35, 35])
+    |> Assembly.add("steer", fork(), at: "steer", port: "steer", kind: :hinge, role: :steer, limits: [-35, 35])
     |> Assembly.add("swingarm", swingarm(),
       at: "pivot",
       port: "pivot",
-      kind: :turns,
+      kind: :hinge,
       role: :suspension,
       limits: [-6, 10]
     )
-    |> Assembly.add("side_stand", side_stand(), at: "stand", port: "pivot", kind: :turns, role: :stand, limits: [0, 80])
+    |> Assembly.add("side_stand", side_stand(), at: "stand", port: "pivot", kind: :hinge, role: :stand, limits: [0, 80])
   end
 
   defp port(name, at, axis, up), do: Part.port(name, at, axis, up)
@@ -293,7 +293,7 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
       Wheels.spoked_wheel("90/90-21", spokes: 36, rim_depth: 0.018, hub_width: 0.11, rim_material: :black, disc: 0.3),
       at: "axle",
       port: "hub",
-      kind: :turns,
+      kind: :hinge,
       role: :wheel
     )
     |> Assembly.add("axle_bolt", Fasteners.bolt("M16", 0.26), at: "axle_bolt", port: "head")
@@ -344,7 +344,7 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
       Wheels.spoked_wheel("120/90-17", spokes: 36, rim_depth: 0.018, hub_width: 0.13, rim_material: :black, disc: 0.24),
       at: "axle",
       port: "hub",
-      kind: :turns,
+      kind: :hinge,
       role: :wheel
     )
   end

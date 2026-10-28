@@ -4,7 +4,7 @@ defmodule World.Build do
   level of detail and in a pose, and the list of its parts.
 
   - The parts that connect with `:fixed` go into the node of their
-    parent. Each joint (`:turns`, `:slides`) is a node: its frame is the
+    parent. Each joint (`:hinge`, `:slide`) is a node: its frame is the
     port of its parent, and it turns or moves along its own z axis (the
     y axis in glTF).
   - The levels (`docs/format.md`, "The levels of detail"): `:near` has
@@ -15,7 +15,7 @@ defmodule World.Build do
     is only in mid and far: it stands in for many small parts (one wall
     in place of its bricks).
   """
-  alias World.{Assembly, Figure, Frame, GLB, Mesh, Part, Scene, Vec}
+  alias World.{Assembly, Figure, Frame, GLB, Joint, Mesh, Part, Scene, Vec}
   alias World.Assembly.Connection
 
   @limits %{near: {0.0, 0.0}, mid: {0.02, 0.003}, far: {0.10, 0.01}}
@@ -38,7 +38,16 @@ defmodule World.Build do
         keep_root(item),
         Frame.identity(),
         0,
-        %{nodes: [root], parts: %{0 => []}, skins: [], animations: [], materials: %{}, path: name, prefix: ""},
+        %{
+          nodes: [root],
+          parts: %{0 => []},
+          skins: [],
+          animations: [],
+          materials: %{},
+          joints: [],
+          path: name,
+          prefix: ""
+        },
         level,
         pose
       )
@@ -56,7 +65,7 @@ defmodule World.Build do
       "level" => Atom.to_string(level),
       "size" => for(v <- Tuple.to_list(size), do: Float.round(v / 1, 4)),
       "sources" => Map.get(item, :sources, []),
-      "joints" => for(n <- nodes, n.extras["role"], do: n.name)
+      "joints" => for(n <- nodes, n.extras["role"], do: n.name) ++ acc.joints
     }
 
     %{scene | extras: Map.merge(extras, Map.get(item, :extras, %{}))}
@@ -87,8 +96,17 @@ defmodule World.Build do
   # node of an assembly goes into the node of its parent, or into a new
   # node for a joint.
   # A figure (a person) brings its own nodes, skin, animations and
-  # materials: its root goes at the frame, under the node.
-  defp walk(%Figure{} = f, frame, node, acc, _level, _pose) do
+  # materials: its root goes at the frame, under the node. The values of
+  # its joints have the path of its node in front ("rider/elbow_l"), but
+  # not for a figure that is the model.
+  defp walk(%Figure{} = f, frame, node, acc, _level, pose) do
+    values =
+      for {k, v} <- pose,
+          String.starts_with?(k, acc.prefix),
+          into: %{},
+          do: {String.replace_prefix(k, acc.prefix, ""), v}
+
+    f = Figure.pose(f, Map.take(values, Figure.values(f)))
     offset = length(acc.nodes)
     skins = length(acc.skins)
 
@@ -112,7 +130,8 @@ defmodule World.Build do
         animations:
           acc.animations ++
             for(a <- f.animations, do: %{a | channels: Enum.map(a.channels, &%{&1 | node: &1.node + offset})}),
-        materials: Map.merge(acc.materials, f.materials)
+        materials: Map.merge(acc.materials, f.materials),
+        joints: acc.joints ++ Enum.map(Figure.values(f), &(acc.prefix <> &1))
     }
   end
 
@@ -144,18 +163,14 @@ defmodule World.Build do
           # The name of a joint is its own name: three.js removes "/" from
           # the names of nodes. Two joints of a model cannot have one name.
           if Enum.any?(acc.nodes, &(&1.name == name)), do: raise(ArgumentError, "two joints have the name #{name}")
-          value = Map.get(pose, name, 0.0) / 1
+          j = Joint.new(name, c.kind, role: c.role, limits: c.limits)
+          value = Joint.clamp(j, nil, Map.get(pose, name, 0.0) / 1)
 
           joint = %Scene.Node{
             name: name,
             parent: parent_node,
             frame: Frame.compose(port, motion(c.kind, value)),
-            extras: %{
-              "role" => Atom.to_string(c.role),
-              "kind" => Atom.to_string(c.kind),
-              "axis" => [0.0, 1.0, 0.0],
-              "limits" => c.limits
-            }
+            extras: Map.put(Joint.extras(j), "axis", [0.0, 1.0, 0.0])
           }
 
           id = length(acc.nodes)
@@ -175,8 +190,8 @@ defmodule World.Build do
   end
 
   # The motion of a joint: a turn around its z axis, or a move along it.
-  defp motion(:turns, deg), do: Frame.turn({0.0, 0.0, 1.0}, deg)
-  defp motion(:slides, d), do: Frame.move({0.0, 0.0, d})
+  defp motion(:hinge, deg), do: Frame.turn({0.0, 0.0, 1.0}, deg)
+  defp motion(:slide, d), do: Frame.move({0.0, 0.0, d})
 
   defp finish(%{nodes: nodes, parts: parts}, false) do
     nodes =

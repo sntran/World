@@ -72,7 +72,7 @@ defmodule World.ModelsTest do
 
       van = fun.()
       joints = for {name, _, %{kind: kind}} <- van.nodes, into: %{}, do: {name, kind}
-      assert %{"sliding_door" => :slides, "rear_door_right" => :turns, "rear_door_left" => :turns} = joints
+      assert %{"sliding_door" => :slide, "rear_door_right" => :hinge, "rear_door_left" => :hinge} = joints
     end
   end
 
@@ -154,7 +154,7 @@ defmodule World.ModelsTest do
 
   test "the hood of the van opens on the engine bay, with the items of DIY in it" do
     van = World.Vehicles.FordTransit.model()
-    assert {_, _, %{kind: :turns, role: :lid, limits: [0, 60]}} = List.keyfind(van.nodes, "hood", 0)
+    assert {_, _, %{kind: :hinge, role: :lid, limits: [0, 60]}} = List.keyfind(van.nodes, "hood", 0)
 
     parts = Map.new(Build.parts(van), &{&1["name"], &1["count"]})
     assert parts["redarc_bcdc1250d"] == 1 and parts["second_alternator_250a"] == 1

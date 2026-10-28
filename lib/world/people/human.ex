@@ -13,7 +13,7 @@ defmodule World.People.Human do
   - `:far`: a body of 730 faces, with the colors of the clothes on it.
   """
   alias World.{Detail, Figure, Frame, Part, Scene, Vec}
-  alias World.People.{Data, Pose, Skeleton}
+  alias World.People.{Data, Joints, Pose, Skeleton}
 
   @defaults [
     gender: 1.0,
@@ -68,8 +68,9 @@ defmodule World.People.Human do
 
     {prims, materials} = helmet({prims, materials}, points, weights, bones, o)
 
-    pose = Pose.resolve(o.pose)
-    {nodes, skin} = nodes(name, bones, prims, pose, o.head)
+    skeleton = Skeleton.new(bones)
+    pose = Pose.expand(Pose.resolve(o.pose))
+    {nodes, skin} = nodes(name, skeleton, prims, pose, o.head)
 
     %Figure{
       name: name,
@@ -101,7 +102,10 @@ defmodule World.People.Human do
           do: if(is_tuple(a), do: Pose.animation(elem(a, 0), bones, elem(a, 1)), else: Pose.animation(a, bones))
         ),
       materials: materials,
-      ports: ports(bones)
+      ports: ports(bones),
+      skeleton: skeleton,
+      pose: pose,
+      joints: Joints.all()
     }
   end
 
@@ -570,9 +574,9 @@ defmodule World.People.Human do
 
   # --- The nodes of the figure ---------------------------------------------------
 
-  defp nodes(name, bones, prims, pose, head) do
+  defp nodes(name, %Skeleton{bones: bones} = skeleton, prims, pose, head) do
     index = bones |> Enum.with_index(1) |> Map.new(fn {b, i} -> {b.name, i} end)
-    locals = Skeleton.locals(Skeleton.new(bones), Pose.expand(pose))
+    locals = Skeleton.locals(skeleton, pose)
 
     bone_nodes =
       for b <- bones do

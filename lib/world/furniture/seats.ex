@@ -15,10 +15,10 @@ defmodule World.Furniture.Seats do
   - `driver_base`: the root. A pedestal (`base: :pedestal`) or the
     legs of a bench (`base: :legs`).
   - `driver_seat`: the cushion. With `track: travel`, it is a joint
-    (`:slides`, role `slide`) that moves along y from `-travel / 2` to
+    (`:slide`, role `slide`) that moves along y from `-travel / 2` to
     `travel / 2` (meters).
   - `driver_back`: the back. With `recline: [min, max]`, it is a joint
-    (`:turns`, role `recline`): a value more than 0 turns the back to
+    (`:hinge`, role `recline`): a value more than 0 turns the back to
     the rear (degrees).
   - `driver_head_1` (to `driver_head_N`): the headrests on the back.
   """
@@ -113,10 +113,10 @@ defmodule World.Furniture.Seats do
   end
 
   defp track(nil), do: []
-  defp track(travel), do: [kind: :slides, role: :slide, limits: [-travel / 2, travel / 2]]
+  defp track(travel), do: [kind: :slide, role: :slide, limits: [-travel / 2, travel / 2]]
 
   defp recline(nil), do: []
-  defp recline(limits), do: [kind: :turns, role: :recline, limits: limits]
+  defp recline(limits), do: [kind: :hinge, role: :recline, limits: limits]
 
   # A pedestal: a box under the cushion with the two rails of the track.
   defp base(:pedestal, w, d, zb) do

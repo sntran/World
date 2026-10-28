@@ -357,7 +357,7 @@ defmodule World.Framing.Builds do
       Assembly.add(asm, "fitting_#{n}", Framing.l_track_fitting(kind),
         at: Part.port(n, p, {1, 0, 0}, {0, 0, 1}),
         port: "slide",
-        kind: :slides,
+        kind: :slide,
         role: :slide,
         limits: [-elem(p, 0) - len / 2 + 0.02, len / 2 - elem(p, 0) - 0.02]
       )

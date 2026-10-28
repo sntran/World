@@ -33,21 +33,21 @@ defmodule World.AssemblyTest do
     wheel = Wheels.spoked_wheel("37-622", spokes: 8)
 
     Assembly.new("cart", frame_part(), kind: :vehicle, sources: ["A test."])
-    |> Assembly.add("wheel_right", wheel, at: "axle_right", port: "hub", kind: :turns, role: :wheel)
-    |> Assembly.add("wheel_left", wheel, at: "axle_left", port: "hub", kind: :turns, role: :wheel)
+    |> Assembly.add("wheel_right", wheel, at: "axle_right", port: "hub", kind: :hinge, role: :wheel)
+    |> Assembly.add("wheel_left", wheel, at: "axle_left", port: "hub", kind: :hinge, role: :wheel)
     |> Assembly.add("bolt", Fasteners.bolt("M8", 0.05), at: "hole", port: "head")
     |> Assembly.add("nut", Fasteners.nut("M8", inside: true), to: "bolt", at: "tip", port: "face", turn: 30)
     |> Assembly.add("lid", Stock.sheet(0.2, 0.2, 0.01, :plastic),
       at: Port.new("lid", {0, -0.4, 0.25}, {0, 0, 1}, {0, 1, 0}),
       port: "bottom",
-      kind: :turns,
+      kind: :hinge,
       role: :lid,
       limits: [0, 90]
     )
     |> Assembly.add("shock", Stock.rod(0.01, 0.1, :steel),
       at: Port.new("s", {0, 0.4, 0.25}, {0, 0, 1}, {0, 1, 0}),
       port: "end_a",
-      kind: :slides,
+      kind: :slide,
       role: :suspension,
       limits: [0, 0.02]
     )
@@ -78,7 +78,7 @@ defmodule World.AssemblyTest do
     names = Enum.map(scene.nodes, & &1.name)
     assert names == ["cart", "wheel_right", "wheel_left", "lid", "shock"]
     assert Enum.at(scene.nodes, 3).extras["limits"] == [0, 90]
-    assert Enum.at(scene.nodes, 4).extras["kind"] == "slides"
+    assert Enum.at(scene.nodes, 4).extras["kind"] == "slide"
     assert scene.extras["joints"] == ["wheel_right", "wheel_left", "lid", "shock"]
     assert scene.extras["kind"] == "vehicle"
     [w, l, h] = scene.extras["size"]
@@ -91,6 +91,9 @@ defmodule World.AssemblyTest do
     lid = fn s -> Enum.at(s.nodes, 3).frame end
     refute lid.(open) == lid.(closed)
     assert_in_delta elem(Enum.at(open.nodes, 4).frame.at, 2), 0.25 + 0.02, 1.0e-9
+    # A value out of the limits stops at the nearest limit, as a real joint.
+    assert lid.(Build.scene(cart(), pose: %{"lid" => 500})) == lid.(open)
+    assert lid.(Build.scene(cart(), pose: %{"lid" => -20})) == lid.(closed)
   end
 
   test "the levels drop small, thin and hidden parts" do
@@ -143,7 +146,7 @@ defmodule World.AssemblyTest do
     end
 
     assert_raise ArgumentError, ~r/has no role/, fn ->
-      Assembly.add(a, "b", frame_part(), at: "hole", port: "hole", kind: :turns)
+      Assembly.add(a, "b", frame_part(), at: "hole", port: "hole", kind: :hinge)
     end
 
     assert_raise ArgumentError, ~r/has no node nope/, fn -> Assembly.node_frame(a, "nope") end

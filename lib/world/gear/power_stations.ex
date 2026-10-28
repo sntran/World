@@ -83,7 +83,7 @@ defmodule World.Gear.PowerStations do
         Assembly.add(asm, "wheel_#{side}", station_wheel("station_wheel_#{round(2000 * r)}", r, w),
           at: at,
           port: "hub",
-          kind: :turns,
+          kind: :hinge,
           role: :wheel
         )
     end
@@ -158,7 +158,7 @@ defmodule World.Gear.PowerStations do
     |> Assembly.add("handle", handle,
       at: Kit.same("slide", {0.0, y0 - 0.02, z0}, {0, 0, 1}, {0, 1, 0}),
       port: "slide",
-      kind: :slides,
+      kind: :slide,
       role: :handle,
       limits: [0, 0.4]
     )
@@ -315,7 +315,7 @@ defmodule World.Gear.PowerStations do
     |> Assembly.add("handle", handle,
       at: Kit.same("slide", {0.0, y1, zb}, {0, 1, 0}, {0, 0, 1}),
       port: "slide",
-      kind: :slides,
+      kind: :slide,
       role: :handle,
       limits: [0, 0.3]
     )
@@ -456,7 +456,7 @@ defmodule World.Gear.PowerStations do
     |> Assembly.add("handle", handle,
       at: Kit.same("slide", {0.0, y1 - 0.05, h}, {0, 0, 1}, {0, 1, 0}),
       port: "slide",
-      kind: :slides,
+      kind: :slide,
       role: :handle,
       limits: [0, 0.35]
     )

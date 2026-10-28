@@ -36,11 +36,11 @@ defmodule World.Vehicles.TouringBicycle do
       sources: @sources,
       place: Frame.move({0.0, -length / 2, 0.0})
     )
-    |> Assembly.add("rear_wheel", wheel, at: "rear_axle", port: "hub", kind: :turns, role: :wheel)
-    |> Assembly.add("steer", fork(wheel), at: "steer", port: "steer", kind: :turns, role: :steer, limits: [-60, 60])
-    |> Assembly.add("crank", crank(), at: "bb", port: "axle", kind: :turns, role: :crank)
+    |> Assembly.add("rear_wheel", wheel, at: "rear_axle", port: "hub", kind: :hinge, role: :wheel)
+    |> Assembly.add("steer", fork(wheel), at: "steer", port: "steer", kind: :hinge, role: :steer, limits: [-60, 60])
+    |> Assembly.add("crank", crank(), at: "bb", port: "axle", kind: :hinge, role: :crank)
     |> Assembly.add("rack", rack(ry, rz), at: "origin", port: "origin")
-    |> Assembly.add("kickstand", kickstand(), at: "stand", port: "pivot", kind: :turns, role: :stand, limits: [0, 75])
+    |> Assembly.add("kickstand", kickstand(), at: "stand", port: "pivot", kind: :hinge, role: :stand, limits: [0, 75])
   end
 
   defp port(name, at, axis, up), do: Part.port(name, at, axis, up)
@@ -167,7 +167,7 @@ defmodule World.Vehicles.TouringBicycle do
       )
 
     Assembly.new("fork_touring", fork, root: "fork")
-    |> Assembly.add("front_wheel", wheel, at: "axle", port: "hub", kind: :turns, role: :wheel)
+    |> Assembly.add("front_wheel", wheel, at: "axle", port: "hub", kind: :hinge, role: :wheel)
   end
 
   # The crank: the chainring, two arms of 170 mm, and a pedal on each arm
@@ -208,8 +208,8 @@ defmodule World.Vehicles.TouringBicycle do
       )
 
     Assembly.new("crankset_touring", crank, root: "crank")
-    |> Assembly.add("pedal_right", pedal, at: "pedal_right", port: "axle", kind: :turns, role: :pedal)
-    |> Assembly.add("pedal_left", pedal, at: "pedal_left", port: "axle", kind: :turns, role: :pedal)
+    |> Assembly.add("pedal_right", pedal, at: "pedal_right", port: "axle", kind: :hinge, role: :pedal)
+    |> Assembly.add("pedal_left", pedal, at: "pedal_left", port: "axle", kind: :hinge, role: :pedal)
   end
 
   # The rear rack with two bags.

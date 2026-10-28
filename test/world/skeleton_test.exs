@@ -3,7 +3,7 @@ defmodule World.SkeletonTest do
   use ExUnitProperties
 
   alias World.{Frame, Vec}
-  alias World.People.{Human, Pose, Skeleton}
+  alias World.People.{Human, Joints, Pose, Skeleton}
 
   @skeleton Human.skeleton()
 
@@ -412,4 +412,86 @@ defmodule World.SkeletonTest do
   end
 
   defp flat({x, y, _}), do: {x, y, 0.0}
+
+  defp joints(values), do: Joints.pose(%{}, values)
+
+  describe "the joints of a person (World.People.Joints)" do
+    test "a hinge: the angle from straight, in its limits; a finger curls its three joints" do
+      assert_in_delta flex(joints(%{"elbow_l" => 90}), "lowerarm_l"), 90, 0.5
+      assert_in_delta flex(joints(%{"elbow_r" => 200}), "lowerarm_r"), 150, 0.5
+      assert_in_delta flex(joints(%{"knee_l" => 60}), "calf_l"), 60, 0.5
+      assert_in_delta flex(joints(%{"wrist_r" => -40}), "hand_r"), -40, 0.5
+      curl = joints(%{"index_l" => 60})
+      assert_in_delta flex(curl, "index_01_l"), 60, 0.5
+      assert_in_delta flex(curl, "index_02_l"), 66, 0.5
+      assert_in_delta flex(curl, "index_03_l"), 48, 0.5
+      thumb = joints(%{"thumb_r" => 50})
+      assert_in_delta flex(thumb, "thumb_02_r"), 30, 0.5
+      assert_in_delta flex(thumb, "thumb_03_r"), 40, 0.5
+    end
+
+    test "a hinge replaces the flex of the pose, and keeps its other turns" do
+      pose = Joints.pose(%{"lowerarm_l" => [{:flex, 30}, {:twist, -60}]}, %{"elbow_l" => 100})
+      assert pose["lowerarm_l"] == [{:flex, 100.0}, {:twist, -60}]
+      assert Joints.pose(%{"foot_l" => [{:twist, 5}]}, %{"ankle_l" => 70})["foot_l"] == [{:flex, 50.0}, {:twist, 5}]
+    end
+
+    test "the ankle points the toes down, on the two sides" do
+      for side <- ~w(l r) do
+        {_, _, z0} = dir(at(%{}), "foot_#{side}", "ball_#{side}")
+        {_, _, z} = dir(at(joints(%{"ankle_#{side}" => 30})), "foot_#{side}", "ball_#{side}")
+        assert z < z0 - 0.2
+      end
+    end
+
+    test "a ball: flex to the front, spread out to the side of the limb, mirrors on the two sides" do
+      {x, y, z} = dir(at(joints(%{"shoulder_l.flex" => 90})), "upperarm_l", "lowerarm_l")
+      assert y > 0.7 and abs(z) < 0.05 and x < 0
+
+      assert_in_delta deg(dir(at(joints(%{"shoulder_r.flex" => 90})), "upperarm_r", "lowerarm_r"), mirror({x, y, z})),
+                      0,
+                      1
+
+      {x, _, z} = dir(at(joints(%{"shoulder_l.spread" => 45})), "upperarm_l", "lowerarm_l")
+      assert x < -0.99 and abs(z) < 0.1
+      {x, _, _} = dir(at(joints(%{"shoulder_r.spread" => 45})), "upperarm_r", "lowerarm_r")
+      assert x > 0.99
+
+      {_, y, _} = dir(at(joints(%{"hip_l.flex" => 90})), "thigh_l", "calf_l")
+      assert y > 0.95
+      {x, _, _} = dir(at(joints(%{"hip_r.spread" => 30})), "thigh_r", "calf_r")
+      assert x > 0.5
+
+      a = at(joints(%{"shoulder_l.twist" => 60, "elbow_l" => 90}))
+      b = at(joints(%{"elbow_l" => 90}))
+      assert deg(dir(a, "lowerarm_l", "hand_l"), dir(b, "lowerarm_l", "hand_l")) > 50
+    end
+
+    test "the neck and the spine: flex to the front, spread to the right side, twist to the left side" do
+      rest = dir(at(%{}), "neck_01", "head")
+      {_, y, _} = dir(at(joints(%{"neck.flex" => 40})), "neck_01", "head")
+      assert y > elem(rest, 1) + 0.3
+      {x, _, _} = dir(at(joints(%{"neck.spread" => 30})), "neck_01", "head")
+      # The twist to the left side: the face turns to the left (-x), so the
+      # right side of the head turns to the front.
+      side = fn pose ->
+        Frame.dir(Skeleton.world(@skeleton, Skeleton.locals(@skeleton, pose))["head"], {1.0, 0.0, 0.0})
+      end
+
+      assert deg(side.(joints(%{"neck.twist" => 45})), side.(%{})) > 40
+      assert x > 0.3
+
+      {_, y, _} = dir(at(joints(%{"spine.flex" => 45})), "pelvis", "neck_01")
+      assert y > 0.4
+      {_, y, _} = dir(at(joints(%{"spine.twist" => 30})), "clavicle_l", "clavicle_r")
+      assert y > 0.4
+      assert Joints.pose(%{spine: [{:flex, 10}]}, %{"spine.spread" => 99})[:spine] == [{:spread, 35.0}, {:flex, 10}]
+    end
+
+    test "the names of the values, and a name that is not a joint" do
+      assert length(Joints.values()) == 2 * (9 + 6) + 6
+      assert "shoulder_r.twist" in Joints.values() and "pinky_l" in Joints.values()
+      assert Joints.pose(%{}, %{"tail" => 30}) == %{}
+    end
+  end
 end

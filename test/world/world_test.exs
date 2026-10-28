@@ -167,7 +167,7 @@ defmodule World.WorldTest do
       van =
         Assembly.new("van", mark, root: "origin")
         |> Assembly.add("body", box.("body", "body_shop"), at: "p", port: "p")
-        |> Assembly.add("door", box.("door", "closures"), to: "body", at: "p", port: "p", kind: :turns, role: :door)
+        |> Assembly.add("door", box.("door", "closures"), to: "body", at: "p", port: "p", kind: :hinge, role: :door)
         |> Assembly.add("wheel", wheel, to: "body", at: World.Port.new("axle", {0, 0, 0}, {1, 0, 0}), port: "p")
 
       plan = Plan.of(van)

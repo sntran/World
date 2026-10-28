@@ -98,7 +98,7 @@ defmodule World.Appliances.Systems do
     |> Assembly.add("gas_knob", Kit.knob("gas_knob", knob_at, {0, 1, 0}, {0, 0, 1}, 0.025, 0.02, :dark),
       at: Kit.same("gas_knob", knob_at, {0, 1, 0}, {0, 0, 1}),
       port: "gas_knob",
-      kind: :turns,
+      kind: :hinge,
       role: :knob,
       limits: [0, 90]
     )
@@ -195,7 +195,7 @@ defmodule World.Appliances.Systems do
     |> Assembly.add("fan", fan,
       at: Kit.same("axle", {0.0, 0.0, zt - 0.05}, {0, 0, 1}, {0, 1, 0}),
       port: "axle",
-      kind: :turns,
+      kind: :hinge,
       role: :spin
     )
   end
@@ -266,14 +266,14 @@ defmodule World.Appliances.Systems do
     |> Assembly.add("panel", panel,
       at: Kit.same("hinge", {0.0, yf - 0.01, h - 0.01}, {1, 0, 0}, {0, 0, -1}),
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :lid,
       limits: [0, 60]
     )
     |> Assembly.add("vane", vane,
       at: Kit.same("vane", {0.0, yf - 0.02, 0.025}, {1, 0, 0}, {0, 1, 0}),
       port: "vane",
-      kind: :turns,
+      kind: :hinge,
       role: :vane,
       limits: [0, 80]
     )
@@ -332,7 +332,7 @@ defmodule World.Appliances.Systems do
     |> Assembly.add("rotor", rotor,
       at: Kit.same("axle", {0.0, 0.0, zb}, {0, 0, 1}, {0, 1, 0}),
       port: "axle",
-      kind: :turns,
+      kind: :hinge,
       role: :spin
     )
   end

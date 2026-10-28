@@ -34,10 +34,10 @@ defmodule World.Vehicles.HondaVision do
       place: Frame.move({0.0, -@length / 2, 0.0})
     )
     |> Assembly.add("body", body(), at: "body", port: "body")
-    |> Assembly.add("seat", seat(), at: "seat", port: "hinge", kind: :turns, role: :lid, limits: [0, 75])
-    |> Assembly.add("fork", fork(), at: "steer", port: "steer", kind: :turns, role: :steer, limits: [-38, 38])
-    |> Assembly.add("engine", engine(), at: "pivot", port: "pivot", kind: :turns, role: :suspension, limits: [-4, 8])
-    |> Assembly.add("stand", stand(), at: "stand", port: "pivot", kind: :turns, role: :stand, limits: [0, 92])
+    |> Assembly.add("seat", seat(), at: "seat", port: "hinge", kind: :hinge, role: :lid, limits: [0, 75])
+    |> Assembly.add("fork", fork(), at: "steer", port: "steer", kind: :hinge, role: :steer, limits: [-38, 38])
+    |> Assembly.add("engine", engine(), at: "pivot", port: "pivot", kind: :hinge, role: :suspension, limits: [-4, 8])
+    |> Assembly.add("stand", stand(), at: "stand", port: "pivot", kind: :hinge, role: :stand, limits: [0, 92])
   end
 
   # The same port on two parts: the child stays where its shapes are.
@@ -258,7 +258,7 @@ defmodule World.Vehicles.HondaVision do
     |> Assembly.add("front_wheel", Wheels.cast_wheel("80/90-14", disc: true),
       at: "axle",
       port: "hub",
-      kind: :turns,
+      kind: :hinge,
       role: :wheel
     )
     |> Assembly.add("axle_bolt", Fasteners.bolt("M12", 0.2), at: "axle_bolt", port: "head")
@@ -316,7 +316,7 @@ defmodule World.Vehicles.HondaVision do
 
     Assembly.new("engine_vision", unit, root: "unit")
     |> Assembly.add("shock", shock, at: "shock", port: "end_a")
-    |> Assembly.add("rear_wheel", Wheels.cast_wheel("90/90-14"), at: "axle", port: "hub", kind: :turns, role: :wheel)
+    |> Assembly.add("rear_wheel", Wheels.cast_wheel("90/90-14"), at: "axle", port: "hub", kind: :hinge, role: :wheel)
     |> Assembly.add("axle_nut", Fasteners.nut("M14"), at: "axle_nut", port: "face")
   end
 

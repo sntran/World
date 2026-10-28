@@ -232,7 +232,7 @@ defmodule World.Gear.Camper do
     |> Assembly.add("cover", cover,
       at: Kit.same("hinge", {0.0, y0 + 0.03, h}, {1, 0, 0}, {0, 1, 0}),
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :lid,
       limits: [0, 100]
     )
@@ -296,7 +296,7 @@ defmodule World.Gear.Camper do
     |> Assembly.add("knob", knob,
       at: Kit.same("knob", {0.0, 0.0, 0.035}, {0, 0, 1}, {0, 1, 0}),
       port: "knob",
-      kind: :turns,
+      kind: :hinge,
       role: :knob,
       limits: [0, 90]
     )
@@ -349,7 +349,7 @@ defmodule World.Gear.Camper do
     |> Assembly.add("lid", lid,
       at: Kit.same("hinge", {0.0, y0 + 0.17, zl}, {1, 0, 0}, {0, 1, 0}),
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :lid,
       limits: [0, 95]
     )
@@ -423,13 +423,13 @@ defmodule World.Gear.Camper do
     |> Assembly.add("fan", fan,
       at: Kit.same("axle", {0.0, 0.0, -0.02}, {0, 0, 1}, {0, 1, 0}),
       port: "axle",
-      kind: :turns,
+      kind: :hinge,
       role: :spin
     )
     |> Assembly.add("lid", lid,
       at: Kit.same("hinge", {0.0, y0, 0.03}, {1, 0, 0}, {0, 1, 0}),
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :lid,
       limits: [0, 50]
     )
@@ -603,7 +603,7 @@ defmodule World.Gear.Camper do
     |> Assembly.add("pulley", rotor,
       at: Kit.same("axle", {0.0, yf, zc}, {0, 1, 0}, {0, 0, 1}),
       port: "axle",
-      kind: :turns,
+      kind: :hinge,
       role: :spin
     )
     |> Assembly.add("pivot", Fasteners.bolt("M10", 0.14),

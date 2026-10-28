@@ -24,7 +24,7 @@ defmodule World.Assembly do
   defmodule Connection do
     @moduledoc """
     How a node connects: the node and its port (`to`, `at`), the port of
-    the child (`port`), the kind (`:fixed`, `:turns`, `:slides`), the turn
+    the child (`port`), the kind (`:fixed`, `:hinge`, `:slide`), the turn
     around the axis (degrees) and the move along it (meters) at rest, and
     for a joint its `role` and `limits`.
     """
@@ -157,7 +157,7 @@ defmodule World.Assembly do
   of the child.
   """
   def placement(%Connection{} = c, item, value) do
-    {turn, offset} = if c.kind == :slides, do: {c.turn, c.offset + value}, else: {c.turn + value, c.offset}
+    {turn, offset} = if c.kind == :slide, do: {c.turn, c.offset + value}, else: {c.turn + value, c.offset}
     motion = Frame.compose(Frame.move({0.0, 0.0, offset}), Frame.turn({0.0, 0.0, 1.0}, turn))
     Frame.compose(motion, Frame.invert(item_port_frame(item, c.port)))
   end

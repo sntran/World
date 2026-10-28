@@ -285,6 +285,32 @@ defmodule World.FactoryTest do
       assert factor.(near, "clothes_shoes03") == [1.0, 1.0, 1.0, 1.0]
     end
 
+    test "the joints of a person in an order: by itself, and as a node of a traveler" do
+      node = fn glb, name -> Enum.find(World.GLBHelper.json(glb)["nodes"], &(&1["name"] == name)) end
+      person = %{"blueprint" => "person", "options" => %{"hair" => "none", "clothes" => []}}
+      {:ok, rest} = Orders.build(person, "far", "glb")
+
+      {:ok, bent} =
+        Orders.build(Map.put(person, "joints", %{"elbow_l" => 120, "shoulder_r.spread" => 60}), "far", "glb")
+
+      assert node.(bent, "lowerarm_l")["rotation"] != node.(rest, "lowerarm_l")["rotation"]
+      assert node.(bent, "upperarm_r")["rotation"] != node.(rest, "upperarm_r")["rotation"]
+      assert node.(bent, "lowerarm_r")["rotation"] == node.(rest, "lowerarm_r")["rotation"]
+
+      {:ok, receipt} = Orders.build(person, "far", "receipt")
+      joints = JSON.decode!(receipt)["joints"]
+      assert "elbow_l" in joints and "neck.twist" in joints and length(joints) == 36
+      assert paths(Orders.build(Map.put(person, "joints", %{"tail" => 1}), "far", "glb")) == ["joints.tail"]
+
+      traveler = %{"blueprint" => "traveler", "options" => %{"vehicle" => "bicycle", "hair" => "none", "clothes" => []}}
+      {:ok, receipt} = Orders.build(traveler, "far", "receipt")
+      assert "traveler/knee_r" in JSON.decode!(receipt)["joints"]
+      {:ok, ride} = Orders.build(traveler, "far", "glb")
+      {:ok, wave} = Orders.build(Map.put(traveler, "joints", %{"traveler/elbow_r" => 140}), "far", "glb")
+      assert node.(wave, "lowerarm_r")["rotation"] != node.(ride, "lowerarm_r")["rotation"]
+      assert paths(Orders.build(Map.put(traveler, "joints", %{"elbow_r" => 1}), "far", "glb")) == ["joints.elbow_r"]
+    end
+
     test "a wrong level, a wrong file, a joint that the model does not have, a wrong order" do
       order = %{"blueprint" => "strut", "options" => %{"length" => 0.3}}
       assert paths(Orders.build(order, "huge", "glb")) == ["level"]

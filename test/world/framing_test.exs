@@ -143,7 +143,7 @@ defmodule World.FramingTest do
 
     test "the fittings slide along the L-track" do
       floor = World.Framing.Builds.l_track_floor()
-      slides = for {_, _, %{kind: :slides, role: :slide, limits: [lo, hi]}} <- floor.nodes, do: {lo, hi}
+      slides = for {_, _, %{kind: :slide, role: :slide, limits: [lo, hi]}} <- floor.nodes, do: {lo, hi}
       assert length(slides) == 3
       assert Enum.all?(slides, fn {lo, hi} -> lo < 0 and hi > 0 end)
       assert counts(floor)["wood_screw_12x16"] == 20

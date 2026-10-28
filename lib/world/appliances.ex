@@ -72,21 +72,21 @@ defmodule World.Appliances do
     |> Assembly.add("door_left", fridge_door(:left, x0, 0.0, yb, yd, zm + 0.045, zt, d),
       at: "door_left",
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :door,
       limits: [0, 120]
     )
     |> Assembly.add("door_right", fridge_door(:right, 0.0, x1, yb, yd, zm + 0.045, zt, d),
       at: "door_right",
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :door,
       limits: [0, 120]
     )
     |> Assembly.add("freezer_drawer", freezer_drawer(x0, x1, y0, yb, yd, zb, zm, d),
       at: "drawer",
       port: "slide",
-      kind: :slides,
+      kind: :slide,
       role: :drawer,
       limits: [0, 0.45]
     )
@@ -229,20 +229,20 @@ defmodule World.Appliances do
       |> Assembly.add("drum", drum,
         at: Kit.same("axle", {0.0, yf, cz}, {0, 1, 0}, {0, 0, 1}),
         port: "axle",
-        kind: :turns,
+        kind: :hinge,
         role: :spin
       )
       |> Assembly.add("door", door,
         at: Kit.same("hinge", {-ring - 0.03, yf, cz}, {0, 0, 1}, {0, 1, 0}),
         port: "hinge",
-        kind: :turns,
+        kind: :hinge,
         role: :door,
         limits: [0, 170]
       )
       |> Assembly.add("dial", dial,
         at: Kit.same("dial_#{kind}", knob_at, {0, 1, 0}, {0, 0, 1}),
         port: "dial_#{kind}",
-        kind: :turns,
+        kind: :hinge,
         role: :knob,
         limits: [0, 330]
       )
@@ -263,7 +263,7 @@ defmodule World.Appliances do
       Assembly.add(asm, "detergent_drawer", tray,
         at: Kit.same("slide", {x0, yf, zp}, {0, 1, 0}, {0, 0, 1}),
         port: "slide",
-        kind: :slides,
+        kind: :slide,
         role: :drawer,
         limits: [0, 0.25]
       )
@@ -367,27 +367,27 @@ defmodule World.Appliances do
     |> Assembly.add("spray_arm", spray,
       at: Kit.same("arm", {0.0, (y0 + yf) / 2, zh + 0.04}, {0, 0, 1}, {0, 1, 0}),
       port: "arm",
-      kind: :turns,
+      kind: :hinge,
       role: :spin
     )
     |> Assembly.add("door", door,
       at: Kit.same("hinge", {0.0, yf, zh}, {-1, 0, 0}, {0, 1, 0}),
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :door,
       limits: [0, 90]
     )
     |> Assembly.add("rack_lower", rack("rack_lower", x0, x1, y0, yf, zh + 0.07, 0.17),
       at: Kit.same("slide_rack_lower", {0.0, yf, zh + 0.07}, {0, 1, 0}, {0, 0, 1}),
       port: "slide_rack_lower",
-      kind: :slides,
+      kind: :slide,
       role: :drawer,
       limits: [0, 0.45]
     )
     |> Assembly.add("rack_upper", rack("rack_upper", x0, x1, y0, yf, zh + 0.38, 0.15),
       at: Kit.same("slide_rack_upper", {0.0, yf, zh + 0.38}, {0, 1, 0}, {0, 0, 1}),
       port: "slide_rack_upper",
-      kind: :slides,
+      kind: :slide,
       role: :drawer,
       limits: [0, 0.4]
     )
@@ -522,14 +522,14 @@ defmodule World.Appliances do
       |> Assembly.add("oven_door", door,
         at: Kit.same("hinge", {0.0, yf, zo0}, {-1, 0, 0}, {0, 1, 0}),
         port: "hinge",
-        kind: :turns,
+        kind: :hinge,
         role: :door,
         limits: [0, 90]
       )
       |> Assembly.add("drawer", drawer,
         at: Kit.same("slide", {0.0, yf, 0.035}, {0, 1, 0}, {0, 0, 1}),
         port: "slide",
-        kind: :slides,
+        kind: :slide,
         role: :drawer,
         limits: [0, 0.4]
       )
@@ -541,7 +541,7 @@ defmodule World.Appliances do
       Assembly.add(asm, name, Kit.knob(name, at, {0, 1, 0}, {0, 0, 1}, 0.022, 0.03),
         at: Kit.same(name, at, {0, 1, 0}, {0, 0, 1}),
         port: name,
-        kind: :turns,
+        kind: :hinge,
         role: :knob,
         limits: [0, 270]
       )
@@ -631,13 +631,13 @@ defmodule World.Appliances do
     |> Assembly.add("turntable", plate,
       at: Kit.same("t", {cx, (y0 + yf) / 2, 0.036}, {0, 0, 1}, {0, 1, 0}),
       port: "axle",
-      kind: :turns,
+      kind: :hinge,
       role: :spin
     )
     |> Assembly.add("door", door,
       at: Kit.same("hinge", {x0, yf, 0.03}, {0, 0, 1}, {0, 1, 0}),
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :door,
       limits: [0, 110]
     )
@@ -706,7 +706,7 @@ defmodule World.Appliances do
     |> Assembly.add("lid", lid,
       at: Kit.same("hinge", {0.0, y0, zl}, {1, 0, 0}, {0, 1, 0}),
       port: "hinge",
-      kind: :turns,
+      kind: :hinge,
       role: :lid,
       limits: [0, 80]
     )
