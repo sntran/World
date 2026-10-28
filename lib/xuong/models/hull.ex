@@ -402,11 +402,14 @@ defmodule Xuong.Models.Hull do
     # A piece that is not at a section ends there, with a cap.
     sections =
       for d <- with_edges(stations(h, d0, d1, Keyword.get(opts, :step, 0.25), 2), edges, d0, d1) do
-        loop = sheet(h, d, o, t) |> Enum.with_index(fn {x, z}, i -> {x, z, i / 1} end) |> clip(planes.(d))
+        {loop, n} = sheet(h, d, o, t)
+        loop = loop |> Enum.with_index(fn {x, z}, i -> {x, z, i / 1} end) |> clip(planes.(d))
         a = arch(h, d)
         wheel = if a, do: [[{:x_min, half_width(h, d) - well}, {:z_max, a}]], else: []
+        mid = h.top / 2
+        pieces = for {j, piece} <- split(loop, n, mid), do: {[j], piece}
 
-        for {key, piece} <- cut_holes([{[], loop}], wheel ++ holes.(d)),
+        for {key, piece} <- cut_holes(pieces, {n, mid}, wheel ++ holes.(d)),
             piece != [],
             piece = from_first(piece),
             area(piece) > 1.0e-7,
@@ -450,31 +453,109 @@ defmodule Xuong.Models.Hull do
   end
 
   # The section of a sheet at `d`: the right half of the outer face and
-  # of the inner face. Where the hull is thinner than the sheet (at its
-  # ends), the sheet is the whole right half.
+  # of the inner face, with the count of the points of the outer face.
+  # Where the hull is thinner than the sheet (at its ends), the sheet is
+  # the whole right half, with no inner face (`nil`).
   defp sheet(h, d, o, t) do
     inner = half(h, d, o - t, false, @sheet_arc)
     {_, zl} = hd(inner)
     {_, zh} = List.last(inner)
     {hw, _} = Enum.max_by(inner, &elem(&1, 0))
     outer = half(h, d, o, false, @sheet_arc)
-    if zh - zl > 0.002 and hw > 0.002, do: outer ++ Enum.reverse(inner), else: outer
+    if zh - zl > 0.002 and hw > 0.002, do: {outer ++ Enum.reverse(inner), length(outer)}, else: {outer, nil}
   end
 
   # The pieces of a section out of each hole. A hole is a list of lines
   # (`clip/2`); out of it is out of its first line, or in its first line
   # and out of the next, and so on.
-  defp cut_holes(pieces, []), do: pieces
+  defp cut_holes(pieces, _, []), do: pieces
 
-  defp cut_holes(pieces, [hole | rest]) do
+  defp cut_holes(pieces, {n, mid}, [hole | rest]) do
     pieces
     |> Enum.flat_map(fn {key, loop} ->
       for {line, i} <- Enum.with_index(hole),
-          piece = clip(loop, Enum.take(hole, i) ++ [flip(line)]),
-          piece != [],
-          do: {key ++ [i], piece}
+          {j, piece} <- split(clip(loop, Enum.take(hole, i) ++ [flip(line)]), n, mid),
+          do: {key ++ [i, j], piece}
     end)
-    |> cut_holes(rest)
+    |> cut_holes({n, mid}, rest)
+  end
+
+  # A clip of the loop of a sheet keeps the parts of the sheet in the
+  # lines, but it joins two parts that a line separates with an edge
+  # along that line, from a new point of one face to a new point of the
+  # same face (the edge from the sill to the roof across the opening of
+  # a door). Here each part is a piece of its own: those edges go, and an
+  # end of a part joins the nearest new point of the other face, as the
+  # end of a cut sheet does. The key of a piece is its band (`:low` when
+  # its lowest point is under `mid`, else `:high`) and its index in the
+  # band, so a piece has the same key at the next section also when a
+  # piece of the other band is not there.
+  defp split(loop, n, mid), do: loop |> split(n) |> Enum.group_by(&band(&1, mid)) |> Enum.flat_map(&keys/1)
+
+  defp band(piece, mid), do: if(piece |> Enum.map(&elem(&1, 1)) |> Enum.min() < mid, do: :low, else: :high)
+
+  defp keys({band, pieces}), do: for({piece, k} <- Enum.with_index(pieces), do: {{band, k}, piece})
+
+  defp split([], _), do: []
+  defp split(loop, nil), do: [loop]
+
+  defp split(loop, n) do
+    outer? = fn {_, _, p} -> p < n - 0.5 end
+    new? = fn {_, _, p} -> p != Float.floor(p) end
+
+    false_edge? = fn {a, b} ->
+      new?.(a) and new?.(b) and outer?.(a) == outer?.(b) and
+        Float.floor(elem(a, 2)) != Float.floor(elem(b, 2))
+    end
+
+    edges = Enum.zip(loop, tl(loop) ++ [hd(loop)])
+
+    case Enum.find_index(edges, false_edge?) do
+      nil ->
+        [loop]
+
+      i ->
+        # The chains between the false edges, from the point after one.
+        {before, rest} = Enum.split(edges, i + 1)
+
+        chains =
+          (rest ++ before)
+          |> Enum.chunk_while(
+            [],
+            fn {a, _} = e, chain ->
+              if false_edge?.(e), do: {:cont, Enum.reverse([a | chain]), []}, else: {:cont, [a | chain]}
+            end,
+            fn chain -> {:cont, Enum.reverse(chain), []} end
+          )
+          |> Enum.reject(&(&1 == []))
+
+        chains
+        |> join_chains(outer?, [])
+        |> Enum.sort_by(fn piece -> piece |> Enum.map(&elem(&1, 2)) |> Enum.min() end)
+    end
+  end
+
+  # Join each chain to the chain that starts nearest to its end on the
+  # other face, until a piece closes.
+  defp join_chains([], _, pieces), do: pieces
+
+  defp join_chains([first | _] = chains, outer?, pieces) do
+    {piece, left} = close(first, chains -- [first], first, outer?)
+    join_chains(left, outer?, [piece | pieces])
+  end
+
+  defp close(piece, chains, first, outer?) do
+    {x, z, _} = last = List.last(piece)
+    far = fn {u, w, _} -> (u - x) ** 2 + (w - z) ** 2 end
+    other = Enum.filter(chains, &(outer?.(hd(&1)) != outer?.(last)))
+
+    next =
+      case other ++ [first] do
+        [_] -> first
+        list -> Enum.min_by(list, &far.(hd(&1)))
+      end
+
+    if next == first, do: {piece, chains}, else: close(piece ++ next, chains -- [next], first, outer?)
   end
 
   defp flip({:x_min, v}), do: {:x_max, v}

@@ -93,6 +93,19 @@ defmodule Xuong.ModelsTest do
     sheet = Hull.shell(h, f - 0.8, f + 0.8, :paint)
     assert length(sheet) > 1 and Enum.all?(sheet, &(Xuong.Mesh.volume(&1.points, &1.faces) > 0))
 
+    # A door between the sill and the roof: the parts of the sheet over and
+    # under it are pieces of their own, with no face across the door.
+    door = fn _ -> [[{:x_min, 0.5}, {:z_min, 0.42}, {:z_max, 2.36}]] end
+    sheet = Hull.shell(h, 2.0, 3.5, :paint, holes: door, edges: [2.0, 3.5])
+
+    across =
+      for mesh <- sheet, pts = List.to_tuple(mesh.points), f <- mesh.faces, ps = Enum.map(f, &elem(pts, &1)) do
+        {zs, xs} = {Enum.map(ps, &elem(&1, 2)), Enum.map(ps, &elem(&1, 0))}
+        Enum.max(zs) - Enum.min(zs) > 1.5 and Enum.max(xs) - Enum.min(xs) < 1.0e-6
+      end
+
+    refute Enum.any?(across)
+
     # A section is a closed loop, and a wider skin is bigger.
     section = Hull.section(h, 3.0)
     assert length(section) > 8
@@ -120,6 +133,13 @@ defmodule Xuong.ModelsTest do
     edges = for f <- mesh.faces, [u, v] <- Enum.chunk_every(f ++ [hd(f)], 2, 1, :discard), do: {u, v}
     assert Enum.all?(edges, &({elem(&1, 1), elem(&1, 0)} in edges))
     assert_in_delta Xuong.Mesh.volume(mesh.points, mesh.faces) / 6, 1.0, 1.0e-9
+
+    # A ring with its places far along the sheet: the other ring moves
+    # before the first ring finishes, and the skin stays closed.
+    late = for {{p, _}, s} <- Enum.zip(hd(rings), [0, 3, 3.3, 3.6]), do: {Xuong.Vec.add(p, {0, 0, 1}), s}
+    mesh = Xuong.Shape.stitch([hd(rings), late], :paint)
+    edges = for f <- mesh.faces, [u, v] <- Enum.chunk_every(f ++ [hd(f)], 2, 1, :discard), do: {u, v}
+    assert Enum.all?(edges, &({elem(&1, 1), elem(&1, 0)} in edges))
   end
 
   test "the hood of the van opens on the engine bay, with the items of DIY in it" do
