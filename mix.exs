@@ -34,7 +34,12 @@ defmodule World.MixProject do
     [
       {:bandit, "~> 1.14"},
       {:plug, "~> 1.20"},
-      {:stream_data, "~> 1.4", only: [:dev, :test]}
+      {:stream_data, "~> 1.4", only: [:dev, :test]},
+      # The order flow of the world in TLA+ (specs/): its model check with
+      # the native checker of Accord (no Java), and the replay of the log
+      # of a run (the branch feat/native-tla-checker).
+      {:accord,
+       github: "sntran/accord", ref: "8de06a28c098800ccb57e203b8e199c9dec106d6", only: [:dev, :test], runtime: false}
     ]
   end
 
