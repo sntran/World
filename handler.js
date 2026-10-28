@@ -22,7 +22,7 @@
 //   people of the world build the model (World.Run): the log tells what
 //   each one did, and the replay GLB has a node for each part.
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
-//   %23rrggbb&joint.NAME=DEGREES: an order in the URL. A list is
+//   %23rrggbb&joint.NAME=DEGREES&target.LIMB=X,Y,Z: an order in the URL. A list is
 //   VALUE,VALUE, and OPTION.FIELD=VALUE is a field of an object.
 //
 // When the VM stops (an order that needs more memory than the edge has),
@@ -64,7 +64,8 @@ export function split(name) {
   return null;
 }
 
-// The order of a URL /m/BLUEPRINT.EXT?...: color.ROLE and joint.NAME, and
+// The order of a URL /m/BLUEPRINT.EXT?...: color.ROLE, joint.NAME and
+// target.LIMB (a point X,Y,Z: the order has targets only with one), and
 // the options. OPTION.FIELD is a field of an option that is an object
 // (origin.asian=1).
 export function orderOf(blueprint, params) {
@@ -72,6 +73,7 @@ export function orderOf(blueprint, params) {
   for (const [key, value] of params) {
     if (key.startsWith('color.')) order.colors[key.slice(6)] = value;
     else if (key.startsWith('joint.')) order.joints[key.slice(6)] = Number(value);
+    else if (key.startsWith('target.')) (order.targets ??= {})[key.slice(7)] = value.split(',').map(Number);
     else if (key.includes('.')) {
       const [option, field] = key.split('.', 2);
       const object = typeof order.options[option] === 'object' ? order.options[option] : {};

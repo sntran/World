@@ -22,7 +22,7 @@ defmodule World.People.Joints do
   Academy of Orthopaedic Surgeons, "Joint Motion: Method of Measuring and
   Recording", 1965), from the rest pose of the skeleton (the A pose).
   """
-  alias World.Joint
+  alias World.{Joint, Limb}
 
   @fingers ~w(thumb index middle ring pinky)
 
@@ -70,6 +70,28 @@ defmodule World.People.Joints do
           limits: %{flex: {-30, 80}, spread: {-35, 35}, twist: {-40, 40}}
         )
       ]
+  end
+
+  @doc """
+  The limbs of a person (`World.Limb`): `arm_l`, `arm_r` (the end is the
+  wrist; the elbow goes down and back), `leg_l`, `leg_r` (the end is the
+  ankle; the knee goes to the front), `spine` (the end is the base of the
+  neck), and a chain for each finger (`index_l` and the others; the end
+  is the tip of the finger).
+  """
+  def limbs do
+    sides =
+      for side <- ~w(l r) do
+        [
+          Limb.new("arm_#{side}", ["upperarm_#{side}", "lowerarm_#{side}"], role: :arm, pole: {0.0, -0.3, -1.0}),
+          Limb.new("leg_#{side}", ["thigh_#{side}", "calf_#{side}"], role: :leg, pole: {0.0, 1.0, 0.0})
+        ] ++
+          for f <- @fingers do
+            Limb.new("#{f}_#{side}", for(n <- ~w(01 02 03), do: "#{f}_#{n}_#{side}"), role: :finger, solver: :chain)
+          end
+      end
+
+    List.flatten(sides) ++ [Limb.new("spine", ~w(spine_01 spine_02 spine_03), role: :spine, solver: :chain)]
   end
 
   defp first("thumb", side), do: "thumb_02_#{side}"

@@ -8,7 +8,11 @@ defmodule World.Orders do
   - `"options"`: the options of the blueprint;
   - `"colors"`: a color `#rrggbb` for a material role (`"paint"`);
   - `"joints"`: the value of a joint at rest, in degrees or meters
-    (`{"hood": 50}`).
+    (`{"hood": 50}`);
+  - `"targets"`: the point of the end of a limb of a figure, `[x, y, z]`
+    in meters in the axes of the figure (`{"arm_r": [0.3, 0.4, 1.3]}`).
+    The full order has this key only when it has a target: the hash of
+    an order with no target stays the same.
 
   `check/1` gives the full order: each option with its value, and the
   keys in one order. `hash/1` is the name of its files: the same order
@@ -16,7 +20,7 @@ defmodule World.Orders do
   """
   alias World.{Build, Detail, GLB, Log, Run}
   alias World.Orders.{Blueprint, Blueprints}
-  @keys ~w(blueprint options colors joints)
+  @keys ~w(blueprint options colors joints targets)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
   @files ~w(glb log replay parts receipt)
 
@@ -44,8 +48,10 @@ defmodule World.Orders do
          {:ok, options} <- Blueprint.check_options(blueprint.options, Map.get(order, "options", %{}), "options"),
          [] <- if(blueprint.check, do: blueprint.check.(options), else: []),
          {:ok, colors} <- colors(Map.get(order, "colors", %{})),
-         {:ok, joints} <- joints(Map.get(order, "joints", %{})) do
-      {:ok, %{"blueprint" => blueprint.name, "options" => options, "colors" => colors, "joints" => joints}}
+         {:ok, joints} <- joints(Map.get(order, "joints", %{})),
+         {:ok, targets} <- targets(Map.get(order, "targets", %{})) do
+      full = %{"blueprint" => blueprint.name, "options" => options, "colors" => colors, "joints" => joints}
+      {:ok, if(targets == %{}, do: full, else: Map.put(full, "targets", targets))}
     else
       errors when is_list(errors) -> {:error, errors}
       {:error, errors} -> {:error, errors}
@@ -83,6 +89,17 @@ defmodule World.Orders do
   end
 
   defp joints(_), do: {:error, [{"joints", "must be an object"}]}
+
+  defp targets(targets) when is_map(targets) do
+    errors =
+      for {name, v} <- Enum.sort(targets),
+          not match?([x, y, z] when is_number(x) and is_number(y) and is_number(z), v),
+          do: {"targets.#{name}", "must be a point: [x, y, z] in meters"}
+
+    if errors == [], do: {:ok, Map.new(targets, fn {k, v} -> {k, Enum.map(v, &(&1 / 1))} end)}, else: {:error, errors}
+  end
+
+  defp targets(_), do: {:error, [{"targets", "must be an object"}]}
 
   defp elem_errors({:ok, _}), do: []
   defp elem_errors({:error, errors}), do: errors
@@ -134,11 +151,12 @@ defmodule World.Orders do
       item = fn -> Detail.with(lvl, fn -> blueprint.build.(order["options"]) end) end
 
       scene = fn item, opts ->
-        s = Build.scene(item, [level: lvl, pose: order["joints"]] ++ opts)
+        targets = Map.new(Map.get(order, "targets", %{}), fn {k, [x, y, z]} -> {k, {x, y, z}} end)
+        s = Build.scene(item, [level: lvl, pose: order["joints"], targets: targets] ++ opts)
         %{s | materials: Map.merge(s.materials, materials(order["colors"]))}
       end
 
-      with :ok <- joints(order, fn opts -> scene.(item.(), opts) end) do
+      with :ok <- known(order, fn opts -> scene.(item.(), opts) end) do
         {:ok, make(file, order, lvl, item, scene)}
       end
     end
@@ -162,19 +180,24 @@ defmodule World.Orders do
     {result.glb, Log.to_json(log)}
   end
 
-  # A joint of the order must be a joint of the model.
-  defp joints(%{"joints" => joints}, _scene) when joints == %{}, do: :ok
+  # A joint of the order must be a joint of the model, and a target a
+  # limb of the model.
+  defp known(order, scene) do
+    names = for key <- ~w(joints targets), name <- Map.keys(Map.get(order, key, %{})), do: {key, name}
 
-  defp joints(%{"joints" => joints}, scene) do
-    known = scene.([]).extras["joints"]
+    if names == [] do
+      :ok
+    else
+      extras = scene.([]).extras
+      what = %{"joints" => {"joints", "a joint"}, "targets" => {"limbs", "a limb"}}
 
-    case for name <- Enum.sort(Map.keys(joints)), name not in known, do: name do
-      [] ->
-        :ok
+      errors =
+        for {key, name} <- Enum.sort(names),
+            {extra, noun} = what[key],
+            name not in extras[extra],
+            do: %{"path" => "#{key}.#{name}", "message" => "is not #{noun}: #{Enum.join(extras[extra], ", ")}"}
 
-      bad ->
-        {:error,
-         for(name <- bad, do: %{"path" => "joints.#{name}", "message" => "is not a joint: #{Enum.join(known, ", ")}"})}
+      if errors == [], do: :ok, else: {:error, errors}
     end
   end
 
@@ -211,6 +234,7 @@ defmodule World.Orders do
       "kind" => scene.extras["kind"],
       "size" => scene.extras["size"],
       "joints" => scene.extras["joints"],
+      "limbs" => scene.extras["limbs"],
       "sources" => scene.extras["sources"]
     })
   end

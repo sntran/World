@@ -494,4 +494,56 @@ defmodule World.SkeletonTest do
       assert Joints.pose(%{}, %{"tail" => 30}) == %{}
     end
   end
+
+  describe "the limbs (World.Limb)" do
+    defp tip(pose, limb) do
+      w = Skeleton.world(@skeleton, Skeleton.locals(@skeleton, pose))
+      Skeleton.tip(@skeleton, w, @skeleton.limbs[limb])
+    end
+
+    test "the limbs of a person" do
+      assert Skeleton.limbs(@skeleton) ==
+               ~w(arm_l arm_r index_l index_r leg_l leg_r middle_l middle_r pinky_l pinky_r ring_l ring_r spine thumb_l thumb_r)
+
+      assert %World.Limb{solver: :two_bone, role: :arm} = @skeleton.limbs["arm_r"]
+      # The end of an arm is the wrist.
+      assert Vec.len(Vec.sub(Skeleton.tip(@skeleton, @skeleton.rest, "lowerarm_r"), @skeleton.rest["hand_r"].at)) <
+               1.0e-9
+    end
+
+    test "two bones put the end at the point, with the hinge to the side of the pole" do
+      at = {0.3, 0.4, 1.3}
+      assert Vec.len(Vec.sub(tip(%{{:limb, "arm_r"} => %{at: at}}, "arm_r"), at)) < 1.0e-4
+      foot = {-0.1, 0.3, 0.3}
+      assert Vec.len(Vec.sub(tip(%{{:limb, "leg_l"} => %{at: foot}}, "leg_l"), foot)) < 1.0e-4
+      # The knee goes to the front.
+      knee = at(%{{:limb, "leg_l"} => %{at: foot}}).("calf_l")
+      assert elem(knee, 1) > 0.3
+      rest = tip(%{}, "arm_l")
+      moved = tip(%{{:limb, "arm_l"} => %{by: {0.0, 0.1, 0.1}}}, "arm_l")
+      assert Vec.len(Vec.sub(moved, Vec.add(rest, {0.0, 0.1, 0.1}))) < 1.0e-4
+    end
+
+    test "a chain puts its end at a point that it can reach" do
+      # The tip of a curled finger and of a bent back: points that the
+      # chain can reach.
+      for {limb, pose} <- [
+            {"index_r", Joints.pose(%{}, %{"index_r" => 60})},
+            {"spine", %{spine: [flex: 30, twist: 10]}}
+          ] do
+        at = tip(pose, limb)
+        assert Vec.len(Vec.sub(tip(%{}, limb), at)) > 0.01
+        assert Vec.len(Vec.sub(tip(%{{:limb, limb} => %{at: at}}, limb), at)) < 0.005
+      end
+
+      # A point at the head of a bone of the chain: that bone cannot turn
+      # to it, the others do.
+      head = @skeleton.rest["spine_03"].at
+      assert Vec.len(Vec.sub(tip(%{{:limb, "spine"} => %{at: head}}, "spine"), head)) < 0.2
+
+      assert_raise ArgumentError, ~r/no limb "tail"/, fn ->
+        tip(%{{:limb, "tail"} => %{at: {0.0, 0.0, 0.0}}}, "spine")
+      end
+    end
+  end
 end

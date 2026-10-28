@@ -83,14 +83,21 @@ defmodule World.Figure do
   @doc "The names of the values of the joints of the figure, for an order."
   def values(%__MODULE__{joints: joints}), do: Enum.flat_map(joints, &World.Joint.values/1)
 
+  @doc "The names of the limbs of the figure (`World.Limb`)."
+  def limbs(%__MODULE__{skeleton: nil}), do: []
+  def limbs(%__MODULE__{skeleton: s}), do: Skeleton.limbs(s)
+
   @doc """
   The figure with the values of its joints (a map of a value name to a
-  number, `World.People.Joints`): its bones turn to the new pose.
+  number, `World.People.Joints`) and the points of the ends of its limbs
+  (a map of a limb to a point `{x, y, z}` in the axes of the figure): its
+  bones turn to the new pose.
   """
-  def pose(%__MODULE__{} = f, values) when values == %{}, do: f
+  def pose(%__MODULE__{} = f, values, targets) when values == %{} and targets == %{}, do: f
 
-  def pose(%__MODULE__{skeleton: s} = f, values) do
-    locals = Skeleton.locals(s, Joints.pose(f.pose, values))
+  def pose(%__MODULE__{skeleton: s} = f, values, targets) do
+    limbs = Map.new(targets, fn {name, at} -> {{:limb, name}, %{at: at}} end)
+    locals = Skeleton.locals(s, Map.merge(Joints.pose(f.pose, values), limbs))
 
     nodes =
       for {n, i} <- Enum.with_index(f.nodes),

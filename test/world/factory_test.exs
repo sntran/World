@@ -313,6 +313,30 @@ defmodule World.FactoryTest do
       assert paths(Orders.build(Map.put(traveler, "joints", %{"elbow_r" => 1}), "far", "glb")) == ["joints.elbow_r"]
     end
 
+    test "the targets of the limbs in an order" do
+      node = fn glb, name -> Enum.find(World.GLBHelper.json(glb)["nodes"], &(&1["name"] == name)) end
+      person = %{"blueprint" => "person", "options" => %{"hair" => "none", "clothes" => []}}
+      # An order with no target has no key "targets": its hash stays.
+      assert {:ok, full} = Orders.check(person)
+      refute Map.has_key?(full, "targets")
+      reach = Map.put(person, "targets", %{"arm_r" => [0.3, 0.4, 1.3]})
+      assert {:ok, %{"targets" => %{"arm_r" => [0.3, 0.4, 1.3]}}} = Orders.check(reach)
+      {:ok, rest} = Orders.build(person, "far", "glb")
+      {:ok, up} = Orders.build(reach, "far", "glb")
+      assert node.(up, "upperarm_r")["rotation"] != node.(rest, "upperarm_r")["rotation"]
+      {:ok, receipt} = Orders.build(person, "far", "receipt")
+      assert "spine" in JSON.decode!(receipt)["limbs"]
+
+      assert paths(Orders.check(Map.put(person, "targets", %{"arm_r" => [1, 2]}))) == ["targets.arm_r"]
+      assert paths(Orders.check(Map.put(person, "targets", [1]))) == ["targets"]
+      assert paths(Orders.build(Map.put(person, "targets", %{"wing" => [0, 0, 1]}), "far", "glb")) == ["targets.wing"]
+
+      traveler = %{"blueprint" => "traveler", "options" => %{"vehicle" => "car", "hair" => "none", "clothes" => []}}
+
+      assert {:ok, <<"glTF", _::binary>>} =
+               Orders.build(Map.put(traveler, "targets", %{"traveler/arm_l" => [-0.3, 0.3, 1.0]}), "far", "glb")
+    end
+
     test "a wrong level, a wrong file, a joint that the model does not have, a wrong order" do
       order = %{"blueprint" => "strut", "options" => %{"length" => 0.3}}
       assert paths(Orders.build(order, "huge", "glb")) == ["level"]

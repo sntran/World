@@ -22,7 +22,9 @@ defmodule World.Build do
 
   @doc """
   The scene of a model. The options: `level` (`:near`, `:mid` or `:far`),
-  `pose` (a map of a joint name to its value: degrees or meters), and
+  `pose` (a map of a joint name to its value: degrees or meters),
+  `targets` (a map of a limb of a figure to the point of its end, in the
+  axes of the figure: `World.Limb`), and
   `split` (`true`: each part in a node of its own, with the id of its task
   of `World.Plan.flat/1` in the `"task"` of its extras, for the replay of
   a run).
@@ -30,6 +32,7 @@ defmodule World.Build do
   def scene(item, opts \\ []) do
     level = Keyword.get(opts, :level, :near)
     pose = Keyword.get(opts, :pose, %{})
+    targets = Keyword.get(opts, :targets, %{})
     name = item.name
     root = %Scene.Node{name: name}
 
@@ -45,6 +48,8 @@ defmodule World.Build do
           animations: [],
           materials: %{},
           joints: [],
+          limbs: [],
+          targets: targets,
           path: name,
           prefix: ""
         },
@@ -65,7 +70,8 @@ defmodule World.Build do
       "level" => Atom.to_string(level),
       "size" => for(v <- Tuple.to_list(size), do: Float.round(v / 1, 4)),
       "sources" => Map.get(item, :sources, []),
-      "joints" => for(n <- nodes, n.extras["role"], do: n.name) ++ acc.joints
+      "joints" => for(n <- nodes, n.extras["role"], do: n.name) ++ acc.joints,
+      "limbs" => acc.limbs
     }
 
     %{scene | extras: Map.merge(extras, Map.get(item, :extras, %{}))}
@@ -106,7 +112,13 @@ defmodule World.Build do
           into: %{},
           do: {String.replace_prefix(k, acc.prefix, ""), v}
 
-    f = Figure.pose(f, Map.take(values, Figure.values(f)))
+    targets =
+      for {k, v} <- acc.targets,
+          String.starts_with?(k, acc.prefix),
+          into: %{},
+          do: {String.replace_prefix(k, acc.prefix, ""), v}
+
+    f = Figure.pose(f, Map.take(values, Figure.values(f)), Map.take(targets, Figure.limbs(f)))
     offset = length(acc.nodes)
     skins = length(acc.skins)
 
@@ -131,7 +143,8 @@ defmodule World.Build do
           acc.animations ++
             for(a <- f.animations, do: %{a | channels: Enum.map(a.channels, &%{&1 | node: &1.node + offset})}),
         materials: Map.merge(acc.materials, f.materials),
-        joints: acc.joints ++ Enum.map(Figure.values(f), &(acc.prefix <> &1))
+        joints: acc.joints ++ Enum.map(Figure.values(f), &(acc.prefix <> &1)),
+        limbs: acc.limbs ++ Enum.map(Figure.limbs(f), &(acc.prefix <> &1))
     }
     |> props(f, offset, level, pose)
   end

@@ -61,6 +61,9 @@ test('an order from a URL', () => {
   assert.deepEqual(order, { blueprint: 'van', options: { make: 'ford', gear: 'a,b' }, colors: { paint: '#ff0000' }, joints: { hood: 50 } });
   const person = orderOf('traveler', new URLSearchParams('origin.asian=0.5&origin.african=0.5&vehicle=car'));
   assert.deepEqual(person.options, { origin: { asian: '0.5', african: '0.5' }, vehicle: 'car' });
+  const reach = orderOf('person', new URLSearchParams('target.arm_r=0.3,0.4,1.3&joint.elbow_l=90'));
+  assert.deepEqual(reach.targets, { arm_r: [0.3, 0.4, 1.3] });
+  assert.deepEqual(reach.joints, { elbow_l: 90 });
 });
 
 test('POST /orders keeps the full order and gives the URLs of its files', async () => {

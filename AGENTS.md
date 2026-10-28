@@ -71,7 +71,7 @@ about it.
 | Module | What it holds |
 |---|---|
 | `World.Vec`, `World.Frame`, `World.Mesh`, `World.Shape` | Points, frames, meshes and the shapes of parts: the matter of the world. |
-| `World.Part`, `World.Port`, `World.Assembly`, `World.Joint`, `World.Figure` | A part, its ports, an assembly of parts, a joint (hinge, slide or ball, with its limits), a figure with a skeleton and its joints. |
+| `World.Part`, `World.Port`, `World.Assembly`, `World.Joint`, `World.Limb`, `World.Figure` | A part, its ports, an assembly of parts, a joint (hinge, slide or ball, with its limits), a limb (a chain of bones and its solver), a figure with a skeleton, its joints, its limbs and its props. |
 | `World.Detail`, `World.Build`, `World.Scene`, `World.GLB` | The levels of detail, the build of a model into a scene, and the GLB writer. |
 | `World.Kit` | Small helpers for the shapes of items (inches, round boxes, handles, feet). |
 | `World.Materials` | `Stock` (tubes, lumber, sheets, extrusions), `Fasteners` (bolts, nuts, screws), `Construction` (bricks, blocks, lintels, tiles, panels). |
@@ -81,7 +81,7 @@ about it.
 | `World.Appliances` | The appliances of a house, and `Systems` (the water heater, the AC, the fans, the TV). |
 | `World.Gear` | `PowerStations`, and `Camper` (the gear of a camper van). |
 | `World.Vehicles` | `Wheels`, `Corners`, `Body`, `Hull`, the `Van` line and its stations, and each vehicle (`FordTransit`, `ChevyBolt`, `HondaVision`, `RoyalEnfieldHimalayan`, `TouringBicycle`). |
-| `World.People` | The people of the catalog, `Human` (a person from the data of MakeHuman), `Data`, `Skeleton` (the joints: flex, spread, twist, limits, aim, look, the hips, the spine, the hands and the feet to points), `Joints` (the joints of a person as `World.Joint`s, for an order), `Props` (the props on the ports of the bones: a fan, a bottle, a nón lá), `Pose` (the poses, the shapes of a hand, the animations, the routines of exercise). `World.People.exercise/2` is a group at a morning of exercise. |
+| `World.People` | The people of the catalog, `Human` (a person from the data of MakeHuman), `Data`, `Skeleton` (the joints: flex, spread, twist, limits, aim, look, the hips, the spine, the hands and the feet to points), `Joints` (the joints and the limbs of a person, for an order), `Props` (the props on the ports of the bones: a fan, a bottle, a nón lá), `Pose` (the poses, the shapes of a hand, the animations, the routines of exercise). `World.People.exercise/2` is a group at a morning of exercise. |
 | `World.Orders` | An order in, the files out: `Blueprint`, `Blueprints`. |
 | `World.Catalog` | Each model of the library by its name. |
 | `World.Service`, `World.Application` | The HTTP service of the VM, and the application. |

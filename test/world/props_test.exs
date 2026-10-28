@@ -27,6 +27,8 @@ defmodule World.PropsTest do
     {_, back, _} = Figure.port_frame(@person, "back").at
     assert back < -0.08
     assert Figure.port_frame(@person, "ground") == Frame.identity()
+    assert Figure.limbs(%Figure{}) == []
+    assert "arm_r" in Figure.limbs(@person)
     assert_raise ArgumentError, ~r/no bone "tail"/, fn -> Figure.bone_node(@person, "tail") end
   end
 

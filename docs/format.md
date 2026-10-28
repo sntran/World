@@ -364,6 +364,38 @@ Recording", 1965), from the A pose of the skeleton at rest.
 }
 ```
 
+### The limbs
+
+A limb (`World.Limb`) is a named chain of bones, and the way to put its
+end at a point (inverse kinematics). Its end is the tail of its last
+bone. A pose puts the end of a limb at a point with `{:limb, name} =>
+%{at: point}`, and an order with `"targets"`.
+
+| Limb | Bones | End | Solver |
+|---|---|---|---|
+| `arm_l`, `arm_r` | the upper arm, the forearm | The wrist. The elbow goes down and back. | Two bones: exact. |
+| `leg_l`, `leg_r` | the thigh, the calf | The ankle. The knee goes to the front. | Two bones: exact. |
+| `spine` | `spine_01` to `spine_03` | The base of the neck. | A chain. |
+| `thumb_l`, `index_l`, `middle_l`, `ring_l`, `pinky_l` (and `_r`) | the three bones of the finger | The tip of the finger. | A chain. |
+
+Two bones: the hinge bends as much as it must (the law of cosines), the
+first bone turns to the point, and the hinge goes to the side of the
+pole. A chain: each bone turns in turn, from the end to the root, so
+that the end goes to the point (cyclic coordinate descent, 48 times); it
+stops a few millimeters from a point that it can reach, and as near as
+it can to a point out of its reach. A chain has no limits yet.
+
+```json
+{
+  "blueprint": "person",
+  "targets": {"arm_r": [0.3, 0.4, 1.3], "index_r": [0.32, 0.45, 1.28]}
+}
+```
+
+The points are in meters, in the axes of the figure (x to the right
+side, y to the front, z up, the ground at z = 0). A person in a scene has
+the path of its node in front: `traveler/arm_r`.
+
 A straight elbow keeps its small angle out of the plane of the hinge
 (about 4 degrees), as a real arm. `spread` and `twist` have the same
 meaning on the two sides, so `Pose.mirror/1` makes the pose of the other

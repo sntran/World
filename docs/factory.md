@@ -45,7 +45,7 @@ An order is data, never code. World runs no code from an order.
 | `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. |
 | `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the world build the GLB at each level (`World.Run`). |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the run of the world that built the near level (`World.Log`: one line for the clock and the yard, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. |
-| `/m/BLUEPRINT.glb?OPTION=VALUE` (and the other files) | An order in the URL: `color.ROLE=%23rrggbb` gives a color, `joint.NAME=50` a joint, `A,B` a list, and `OPTION.FIELD=VALUE` a field of an object (`origin.asian=1`: give each field, because a field that is not in the URL has its default). |
+| `/m/BLUEPRINT.glb?OPTION=VALUE` (and the other files) | An order in the URL: `color.ROLE=%23rrggbb` gives a color, `joint.NAME=50` a joint, `target.LIMB=X,Y,Z` the end of a limb, `A,B` a list, and `OPTION.FIELD=VALUE` a field of an object (`origin.asian=1`: give each field, because a field that is not in the URL has its default). |
 | `/v/VERSION/...` | A copy that never changes, for a release of a game (later). |
 
 An order:
@@ -70,6 +70,12 @@ The joints of a person are in the order too: `"joints": {"elbow_r":
 120, "shoulder_r.spread": 80}` for a person, `"traveler/elbow_r"` for
 the person of a traveler. `docs/format.md`, "The joints of a person in
 an order", has the names and the limits.
+
+The ends of the limbs are in the order too: `"targets": {"arm_r": [0.3,
+0.4, 1.3]}` puts the wrist at that point (`docs/format.md`, "The
+limbs"). In a URL: `target.arm_r=0.3,0.4,1.3`. An order with no target
+has no key `"targets"`, so its hash stays the same as before. The
+receipt lists the limbs of the model.
 
 A `traveler` is a traveler of Phượt: a person (the options of `person`,
 with the colors of the hair and of the clothes, and `head`, the size of

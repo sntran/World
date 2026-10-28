@@ -40,6 +40,11 @@ defmodule World.People.Skeleton do
     the shoulder at rest): the wrist goes to the point, and the elbow to
     the side of `pole` (down and back by default). The elbow bends as much
     as it must.
+  - `{:limb, name}` to `%{at: point, pole: dir}` (or `by: move`, from
+    the end of the limb at rest): the end of the limb (`World.Limb`,
+    `limbs/1`) goes to the point, by the solver of the limb. `{:reach,
+    side}` and `{:foot, side}` are the arms and the legs with more: the
+    collarbone that lifts, the flat foot.
   - `{:foot, side}` to `%{at: point, pole: dir, flat: true, toe: deg}`
     (or `by: move`, from the ankle at rest): the ankle goes to the point
     (its place at rest by default), the knee
@@ -50,9 +55,10 @@ defmodule World.People.Skeleton do
   The directions and the points are in the axes of World of the person
   at rest (the ground under the person at z = 0).
   """
-  alias World.{Frame, Vec}
+  alias World.{Frame, Limb, Vec}
+  alias World.People.Joints
 
-  defstruct bones: [], rest: %{}, local: %{}, flex0: %{}, by_name: %{}
+  defstruct bones: [], rest: %{}, local: %{}, flex0: %{}, by_name: %{}, tails: %{}, limbs: %{}
 
   @spine ~w(spine_01 spine_02 spine_03)
 
@@ -72,9 +78,16 @@ defmodule World.People.Skeleton do
 
   @fingers ~w(index middle ring pinky)
 
-  @doc "A skeleton from the bones of `World.People.Human` (parents first)."
-  def new(bones) do
+  @doc """
+  A skeleton from bones (parents first, each with its `name`, `parent`,
+  `frame` at rest, and `tail`), and its limbs (`World.Limb`): the limbs
+  of a person (`World.People.Joints.limbs/0`) whose bones are in the
+  skeleton by default.
+  """
+  def new(bones, limbs \\ nil) do
     rest = Map.new(bones, &{&1.name, &1.frame})
+    names = MapSet.new(bones, & &1.name)
+    limbs = limbs || Enum.filter(Joints.limbs(), fn l -> Enum.all?(l.bones, &(&1 in names)) end)
 
     local =
       Map.new(bones, fn b ->
@@ -82,7 +95,15 @@ defmodule World.People.Skeleton do
         {b.name, Frame.compose(Frame.invert(parent), b.frame)}
       end)
 
-    s = %__MODULE__{bones: bones, rest: rest, local: local, by_name: Map.new(bones, &{&1.name, &1})}
+    s = %__MODULE__{
+      bones: bones,
+      rest: rest,
+      local: local,
+      by_name: Map.new(bones, &{&1.name, &1}),
+      tails: Map.new(bones, &{&1.name, Frame.point(Frame.invert(&1.frame), &1.tail)}),
+      limbs: Map.new(limbs, &{&1.name, &1})
+    }
+
     %{s | flex0: for(b <- bones, hinge?(b.name), into: %{}, do: {b.name, flex(s, rest, b.name)})}
   end
 
@@ -143,6 +164,7 @@ defmodule World.People.Skeleton do
     |> aim(s, "r", Map.get(pose, {:aim, :r}))
     |> reach(s, "l", Map.get(pose, {:reach, :l}), Map.get(pose, "lowerarm_l", []))
     |> reach(s, "r", Map.get(pose, {:reach, :r}), Map.get(pose, "lowerarm_r", []))
+    |> limbs(s, pose)
     |> place_feet(s, targets)
     |> look(s, Map.get(pose, :look))
   end
@@ -275,6 +297,56 @@ defmodule World.People.Skeleton do
     if steps == 0 or abs(g - d) < 1.0e-5 or abs(slope) < 1.0e-9,
       do: locals,
       else: bend(locals, s, {a, b, c}, d, flex + (d - g) / slope, more, steps - 1)
+  end
+
+  @doc "The names of the limbs of the skeleton."
+  def limbs(%__MODULE__{limbs: limbs}), do: limbs |> Map.keys() |> Enum.sort()
+
+  @doc "The end of a limb (the tail of its last bone) in the frames `world` of `world/2`."
+  def tip(%__MODULE__{} = s, world, %Limb{bones: bones}), do: tip(s, world, List.last(bones))
+  def tip(%__MODULE__{tails: tails}, world, bone), do: Frame.point(world[bone], tails[bone])
+
+  # The ends of the limbs go to their points, in the order of the names.
+  defp limbs(locals, s, pose) do
+    for({{:limb, name}, spec} <- pose, do: {name, spec})
+    |> Enum.sort()
+    |> Enum.reduce(locals, fn {name, spec}, locals ->
+      limb = Map.get(s.limbs, name) || raise ArgumentError, "the skeleton has no limb #{inspect(name)}"
+      at = Map.get_lazy(spec, :at, fn -> Vec.add(tip(s, s.rest, limb), spec.by) end)
+      solve(locals, s, limb, at, Map.get(spec, :pole, limb.pole), pose)
+    end)
+  end
+
+  # Two bones: the hinge bends, the first bone turns, the hinge goes to
+  # the side of the pole. The bone of the hinge keeps its other turns.
+  defp solve(locals, s, %Limb{solver: :two_bone, bones: [a, b]}, at, pole, pose) do
+    c = Enum.find(s.bones, &(&1.parent == b)).name
+    two_bone(locals, s, {a, b, c}, at, pole, Enum.reject(Map.get(pose, b, []), &match?({:flex, _}, &1)))
+  end
+
+  defp solve(locals, s, %Limb{solver: :chain, bones: bones}, at, _pole, _pose), do: descent(locals, s, bones, at, 48)
+
+  # Cyclic coordinate descent: each bone, from the end to the root, turns
+  # so that the end of the chain is in the direction of the point.
+  defp descent(locals, s, bones, target, steps) do
+    last = List.last(bones)
+
+    if steps == 0 or Vec.len(Vec.sub(tip(s, world(s, locals), last), target)) < 1.0e-4 do
+      locals
+    else
+      bones
+      |> Enum.reverse()
+      |> Enum.reduce(locals, fn bone, locals ->
+        w = world(s, locals)
+        at = w[bone].at
+        to = Vec.sub(target, at)
+
+        if Vec.len(to) < 1.0e-9,
+          do: locals,
+          else: rotate(locals, s, bone, between(Vec.sub(tip(s, w, last), at), Vec.norm(to), at))
+      end)
+      |> descent(s, bones, target, steps - 1)
+    end
   end
 
   @doc "The frame of each bone in the axes of the person, from its local frames."

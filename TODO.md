@@ -20,6 +20,20 @@ into the steps of `AGENTS.md`.
 - **The factories of a planet, for Humans Must Die.** Emergency
   vehicles, airplanes, ships, aircraft carriers, buildings: each family
   is a new factory of the world, with its modules and its sources.
+- **A hẻm of tube houses (nhà ống).** A blueprint for the narrow houses
+  of a town of Việt Nam: a front of 3 to 5 m, 2 to 4 floors on a frame
+  of concrete, walls of `brick_vn`, a roof of clay tiles or a flat
+  terrace with a parapet, balconies with iron railings, striped
+  awnings, shutters and folding doors, potted plants, a sign. Then a
+  hẻm: a row of houses on each side, the sidewalks with their curbs, the
+  paving of the street. A reference: the 3D chess game "Xóm Cờ Vua,
+  Hẻm Nắng".
+- **Plants from rules.** A trunk, branches, leaves and flowers from a
+  few numbers (L-systems or space colonization): the plants in pots and
+  the vines of the houses, the trees and the rocks along a road.
+- **Decals and lights.** A texture or a printed panel on the paint (the
+  stripe and the star of life of an ambulance, a sign), and materials
+  that glow (lamps, the light bar).
 
 ## From the development
 
