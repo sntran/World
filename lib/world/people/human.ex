@@ -27,6 +27,8 @@ defmodule World.People.Human do
     eyebrows: "eyebrow001",
     hair: "short02",
     clothes: ["male_casualsuit01", "shoes01"],
+    hair_color: nil,
+    clothes_colors: [],
     pose: %{}
   ]
 
@@ -35,12 +37,16 @@ defmodule World.People.Human do
   (0 is a woman, 1 a man), `age` (years, 25 to 90), `muscle`, `weight`
   and `height` (0 to 1, 0.5 is the mean), `race` (a map of
   "african", "asian", "caucasian" to a weight), `skin`, `eyes`,
-  `eyebrows`, `hair` (or nil), `clothes` (a list), `pose` (a map of a
+  `eyebrows`, `hair` (or nil), `clothes` (a list), `hair_color` (`[r, g,
+  b]`, or nil for the color of the hair), `clothes_colors` (a list of
+  `[r, g, b]` in the order of the clothes: at mid and far the color of
+  the item, at near a tint of its texture), `pose` (a map of a
   bone to `{axis, degrees}`, or a name of `World.People.Pose`), and
   `animations` (a list of names of `World.People.Pose`).
   """
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
+    o = Map.put(o, :colors, chosen_colors(o))
     base = Data.base()
     points = morph(base.points, o)
     clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
@@ -62,7 +68,19 @@ defmodule World.People.Human do
       name: name,
       kind: :person,
       params:
-        Map.take(o, [:gender, :age, :muscle, :weight, :height, :race, :skin, :hair, :clothes])
+        Map.take(o, [
+          :gender,
+          :age,
+          :muscle,
+          :weight,
+          :height,
+          :race,
+          :skin,
+          :hair,
+          :clothes,
+          :hair_color,
+          :clothes_colors
+        ])
         |> Map.new(fn {k, v} -> {Atom.to_string(k), v} end),
       sources: [
         "MakeHuman (CC0): the base mesh, the targets, the skeleton game_engine, and the assets #{Enum.join([o.skin | o.clothes], ", ")}."
@@ -269,7 +287,8 @@ defmodule World.People.Human do
         [{:skin, textured(Data.asset("skins", o.skin).texture, false)}] ++
           for(
             {role, a, mat} <- assets,
-            do: {role, textured((mat || a).texture, a.transparent or role in [:eyebrows, :eyelashes, :hair])}
+            do:
+              {role, tint(textured((mat || a).texture, a.transparent or role in [:eyebrows, :eyelashes, :hair]), a, o)}
           )
       )
 
@@ -312,11 +331,21 @@ defmodule World.People.Human do
     hair =
       if level == :mid and o.hair, do: [fitted(:hair, Data.asset("hair", o.hair), points, weights, o.ground)], else: []
 
-    colors = for {c, _} <- covers, do: {role.(c), %{"color" => c.color, "roughness" => 0.9, "metalness" => 0.0}}
+    colors =
+      for {c, _} <- covers,
+          do: {role.(c), %{"color" => Map.get(o.colors, c.name, c.color), "roughness" => 0.9, "metalness" => 0.0}}
+
     materials = Map.new([{:skin, textured(Data.asset("skins", o.skin).texture, false)} | colors])
 
     materials =
-      if hair == [], do: materials, else: Map.put(materials, :hair, textured(Data.asset("hair", o.hair).texture, true))
+      if hair == [],
+        do: materials,
+        else:
+          Map.put(
+            materials,
+            :hair,
+            tint(textured(Data.asset("hair", o.hair).texture, true), Data.asset("hair", o.hair), o)
+          )
 
     {Enum.sort_by(prims, & &1.material) ++ hair, materials}
   end
@@ -415,6 +444,26 @@ defmodule World.People.Human do
 
   defp pad4(ws), do: Enum.take(ws ++ List.duplicate({0, 0.0}, 4), 4)
   defp flip_v({u, v}), do: {u, 1.0 - v}
+
+  # The colors that the order chose, by the name of the asset.
+  defp chosen_colors(o) do
+    hair = if o.hair && o.hair_color, do: [{o.hair, o.hair_color}], else: []
+    Map.new(hair ++ Enum.zip(o.clothes, o.clothes_colors))
+  end
+
+  # The factor of a textured material. A gray texture (a hair) takes the
+  # color of the order, or the mean color of the texture before it was
+  # gray. Another texture takes the ratio of the color of the order to its
+  # mean color: a tint, which can only make it darker.
+  defp tint(spec, %{gray: gray} = a, o) when is_number(gray),
+    do: Map.put(spec, "color", Enum.map(Map.get(o.colors, a.name, a.color), &min(255, round(&1 * 255 / gray))))
+
+  defp tint(spec, a, o) do
+    case Map.fetch(o.colors, a.name) do
+      {:ok, c} -> Map.put(spec, "color", Enum.zip_with(c, a.color, &min(255, round(&1 * 255 / max(&2, 1)))))
+      :error -> spec
+    end
+  end
 
   defp textured(path, alpha) do
     mime = if String.ends_with?(path, ".png"), do: "image/png", else: "image/jpeg"

@@ -26,6 +26,19 @@
       "texture": "elvs_crude_t-shirt_male.png",
       "transparent": false
     },
+    "fedora01": {
+      "color": [
+        109,
+        105,
+        103
+      ],
+      "fit": "fedora01.mhclo.gz",
+      "license": "CC0",
+      "obj": "fedora01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "fedora01.png",
+      "transparent": false
+    },
     "female_casualsuit01": {
       "color": [
         118,
@@ -37,6 +50,45 @@
       "obj": "female_casualsuit01.obj.gz",
       "pack": "makehuman_system_assets",
       "texture": "female_casualsuit01.jpg",
+      "transparent": false
+    },
+    "female_casualsuit02": {
+      "color": [
+        128,
+        143,
+        168
+      ],
+      "fit": "female_casualsuit02.mhclo.gz",
+      "license": "CC0",
+      "obj": "female_casualsuit02.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "female_casualsuit02.jpg",
+      "transparent": false
+    },
+    "female_elegantsuit01": {
+      "color": [
+        69,
+        64,
+        62
+      ],
+      "fit": "female_elegantsuit01.mhclo.gz",
+      "license": "CC0",
+      "obj": "female_elegantsuit01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "female_elegantsuit01.png",
+      "transparent": false
+    },
+    "female_sportsuit01": {
+      "color": [
+        113,
+        125,
+        141
+      ],
+      "fit": "female_sportsuit01.mhclo.gz",
+      "license": "CC0",
+      "obj": "female_sportsuit01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "female_sportsuit01.png",
       "transparent": false
     },
     "joepal_crude_t-shirt_female": {
@@ -63,6 +115,84 @@
       "obj": "male_casualsuit01.obj.gz",
       "pack": "makehuman_system_assets",
       "texture": "male_casualsuit01.png",
+      "transparent": false
+    },
+    "male_casualsuit02": {
+      "color": [
+        55,
+        90,
+        134
+      ],
+      "fit": "male_casualsuit02.mhclo.gz",
+      "license": "CC0",
+      "obj": "male_casualsuit02.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "male_casualsuit02.jpg",
+      "transparent": false
+    },
+    "male_casualsuit03": {
+      "color": [
+        45,
+        46,
+        56
+      ],
+      "fit": "male_casualsuit03.mhclo.gz",
+      "license": "CC0",
+      "obj": "male_casualsuit03.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "male_casualsuit03.jpg",
+      "transparent": false
+    },
+    "male_casualsuit04": {
+      "color": [
+        63,
+        95,
+        123
+      ],
+      "fit": "male_casualsuit04.mhclo.gz",
+      "license": "CC0",
+      "obj": "male_casualsuit04.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "male_casualsuit04.jpg",
+      "transparent": false
+    },
+    "male_casualsuit05": {
+      "color": [
+        30,
+        35,
+        38
+      ],
+      "fit": "male_casualsuit05.mhclo.gz",
+      "license": "CC0",
+      "obj": "male_casualsuit05.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "male_casualsuit05.png",
+      "transparent": false
+    },
+    "male_casualsuit06": {
+      "color": [
+        168,
+        177,
+        184
+      ],
+      "fit": "male_casualsuit06.mhclo.gz",
+      "license": "CC0",
+      "obj": "male_casualsuit06.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "male_casualsuit06.jpg",
+      "transparent": false
+    },
+    "male_elegantsuit01": {
+      "color": [
+        39,
+        39,
+        39
+      ],
+      "fit": "male_elegantsuit01.mhclo.gz",
+      "license": "CC0",
+      "obj": "male_elegantsuit01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "male_elegantsuit01.png",
       "transparent": false
     },
     "male_worksuit01": {
@@ -103,13 +233,105 @@
       "pack": "makehuman_system_assets",
       "texture": "shoes02.png",
       "transparent": false
+    },
+    "shoes03": {
+      "color": [
+        8,
+        7,
+        8
+      ],
+      "fit": "shoes03.mhclo.gz",
+      "license": "CC0",
+      "obj": "shoes03.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "shoes03.jpg",
+      "transparent": false
+    },
+    "shoes04": {
+      "color": [
+        33,
+        33,
+        34
+      ],
+      "fit": "shoes04.mhclo.gz",
+      "license": "CC0",
+      "obj": "shoes04.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "shoes04.jpg",
+      "transparent": false
+    },
+    "shoes05": {
+      "color": [
+        62,
+        60,
+        61
+      ],
+      "fit": "shoes05.mhclo.gz",
+      "license": "CC0",
+      "obj": "shoes05.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "shoes05.png",
+      "transparent": false
+    },
+    "shoes06": {
+      "color": [
+        52,
+        55,
+        63
+      ],
+      "fit": "shoes06.mhclo.gz",
+      "license": "CC0",
+      "obj": "shoes06.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "shoes06.png",
+      "transparent": false
     }
   },
   "eye_materials": {
+    "blue": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "blue.png"
+    },
+    "bluegreen": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "bluegreen.png"
+    },
     "brown": {
       "license": "CC0",
       "pack": "makehuman_system_assets",
       "texture": "brown.png"
+    },
+    "brownlight": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "brownlight.png"
+    },
+    "deepblue": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "deepblue.png"
+    },
+    "green": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "green.png"
+    },
+    "grey": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "grey.png"
+    },
+    "ice": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "ice.png"
+    },
+    "lightblue": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "lightblue.png"
     }
   },
   "eyebrows": {
@@ -126,6 +348,110 @@
       "texture": "eyebrow001.png",
       "transparent": true
     },
+    "eyebrow002": {
+      "color": [
+        14,
+        8,
+        6
+      ],
+      "fit": "eyebrow002.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow002.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow002.png",
+      "transparent": true
+    },
+    "eyebrow003": {
+      "color": [
+        11,
+        6,
+        5
+      ],
+      "fit": "eyebrow003.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow003.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow003.png",
+      "transparent": true
+    },
+    "eyebrow004": {
+      "color": [
+        15,
+        7,
+        6
+      ],
+      "fit": "eyebrow004.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow004.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow004.png",
+      "transparent": true
+    },
+    "eyebrow005": {
+      "color": [
+        15,
+        8,
+        6
+      ],
+      "fit": "eyebrow005.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow005.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow005.png",
+      "transparent": true
+    },
+    "eyebrow006": {
+      "color": [
+        0,
+        0,
+        0
+      ],
+      "fit": "eyebrow006.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow006.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow006.png",
+      "transparent": true
+    },
+    "eyebrow007": {
+      "color": [
+        0,
+        0,
+        0
+      ],
+      "fit": "eyebrow007.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow007.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow007.png",
+      "transparent": true
+    },
+    "eyebrow008": {
+      "color": [
+        11,
+        6,
+        5
+      ],
+      "fit": "eyebrow008.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow008.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow008.png",
+      "transparent": true
+    },
+    "eyebrow009": {
+      "color": [
+        25,
+        20,
+        16
+      ],
+      "fit": "eyebrow009.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow009.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow009.png",
+      "transparent": true
+    },
     "eyebrow010": {
       "color": [
         12,
@@ -137,6 +463,32 @@
       "obj": "eyebrow010.obj.gz",
       "pack": "makehuman_system_assets",
       "texture": "eyebrow010.png",
+      "transparent": true
+    },
+    "eyebrow011": {
+      "color": [
+        0,
+        0,
+        0
+      ],
+      "fit": "eyebrow011.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow011.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow011.png",
+      "transparent": true
+    },
+    "eyebrow012": {
+      "color": [
+        6,
+        0,
+        0
+      ],
+      "fit": "eyebrow012.mhclo.gz",
+      "license": "CC0",
+      "obj": "eyebrow012.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "eyebrow012.png",
       "transparent": true
     }
   },
@@ -172,6 +524,20 @@
     }
   },
   "hair": {
+    "afro01": {
+      "color": [
+        15,
+        4,
+        4
+      ],
+      "fit": "afro01.mhclo.gz",
+      "gray": 200,
+      "license": "CC0",
+      "obj": "afro01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "afro01.png",
+      "transparent": true
+    },
     "bob01": {
       "color": [
         38,
@@ -179,10 +545,53 @@
         33
       ],
       "fit": "bob01.mhclo.gz",
+      "gray": 200,
       "license": "CC0",
       "obj": "bob01.obj.gz",
       "pack": "makehuman_system_assets",
       "texture": "bob01.png",
+      "transparent": true
+    },
+    "bob02": {
+      "color": [
+        159,
+        152,
+        137
+      ],
+      "fit": "bob02.mhclo.gz",
+      "gray": 200,
+      "license": "CC0",
+      "obj": "bob02.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "bob02.png",
+      "transparent": true
+    },
+    "braid01": {
+      "color": [
+        24,
+        19,
+        16
+      ],
+      "fit": "braid01.mhclo.gz",
+      "gray": 200,
+      "license": "CC0",
+      "obj": "braid01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "braid01.png",
+      "transparent": true
+    },
+    "long01": {
+      "color": [
+        49,
+        28,
+        20
+      ],
+      "fit": "long01.mhclo.gz",
+      "gray": 200,
+      "license": "CC0",
+      "obj": "long01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "long01.png",
       "transparent": true
     },
     "ponytail01": {
@@ -192,10 +601,25 @@
         41
       ],
       "fit": "ponytail01.mhclo.gz",
+      "gray": 200,
       "license": "CC0",
       "obj": "ponytail01.obj.gz",
       "pack": "makehuman_system_assets",
       "texture": "ponytail01.png",
+      "transparent": true
+    },
+    "short01": {
+      "color": [
+        27,
+        27,
+        27
+      ],
+      "fit": "short01.mhclo.gz",
+      "gray": 200,
+      "license": "CC0",
+      "obj": "short01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "short01.png",
       "transparent": true
     },
     "short02": {
@@ -205,10 +629,25 @@
         49
       ],
       "fit": "short02.mhclo.gz",
+      "gray": 200,
       "license": "CC0",
       "obj": "short02.obj.gz",
       "pack": "makehuman_system_assets",
       "texture": "short02.png",
+      "transparent": true
+    },
+    "short03": {
+      "color": [
+        79,
+        51,
+        42
+      ],
+      "fit": "short03.mhclo.gz",
+      "gray": 200,
+      "license": "CC0",
+      "obj": "short03.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "short03.png",
       "transparent": true
     },
     "short04": {
@@ -218,6 +657,7 @@
         36
       ],
       "fit": "short04.mhclo.gz",
+      "gray": 200,
       "license": "CC0",
       "obj": "short04.obj.gz",
       "pack": "makehuman_system_assets",
@@ -249,6 +689,28 @@
     }
   },
   "skins": {
+    "middleage_african_female": {
+      "color": [
+        97,
+        56,
+        39
+      ],
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "middleage_african_female.jpg",
+      "transparent": false
+    },
+    "middleage_african_male": {
+      "color": [
+        95,
+        59,
+        42
+      ],
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "middleage_african_male.jpg",
+      "transparent": false
+    },
     "middleage_asian_female": {
       "color": [
         212,
@@ -271,6 +733,50 @@
       "texture": "middleage_asian_male.jpg",
       "transparent": false
     },
+    "middleage_caucasian_female": {
+      "color": [
+        205,
+        160,
+        133
+      ],
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "middleage_caucasian_female.jpg",
+      "transparent": false
+    },
+    "middleage_caucasian_male": {
+      "color": [
+        205,
+        160,
+        131
+      ],
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "middleage_caucasian_male.jpg",
+      "transparent": false
+    },
+    "old_african_female": {
+      "color": [
+        93,
+        41,
+        24
+      ],
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "old_african_female.jpg",
+      "transparent": false
+    },
+    "old_african_male": {
+      "color": [
+        101,
+        57,
+        35
+      ],
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "old_african_male.jpg",
+      "transparent": false
+    },
     "old_asian_female": {
       "color": [
         199,
@@ -291,6 +797,28 @@
       "license": "CC0",
       "pack": "makehuman_system_assets",
       "texture": "old_asian_male.jpg",
+      "transparent": false
+    },
+    "old_caucasian_female": {
+      "color": [
+        211,
+        172,
+        148
+      ],
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "old_caucasian_female.jpg",
+      "transparent": false
+    },
+    "old_caucasian_male": {
+      "color": [
+        225,
+        177,
+        142
+      ],
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "old_caucasian_male.jpg",
       "transparent": false
     },
     "young_african_female": {

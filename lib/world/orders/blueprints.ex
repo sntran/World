@@ -77,6 +77,14 @@ defmodule World.Orders.Blueprints do
           item: option("item", :choice, values: names.("clothes")),
           max: 6
         ),
+        option("hair_color", :color, default: nil, doc: "The color of the hair. None: the color of its texture."),
+        option("clothes_colors", :list,
+          default: [],
+          item: option("item", :color, []),
+          max: 6,
+          doc:
+            "A color for each item of the clothes, in their order: at mid and far its color, at near a tint of its texture."
+        ),
         option("pose", :choice, default: "stand", values: Pose.names()),
         option("animations", :list, default: [], item: option("item", :choice, values: ["walk"]), max: 1)
       ],
@@ -93,6 +101,8 @@ defmodule World.Orders.Blueprints do
           eyebrows: o["eyebrows"],
           hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
           clothes: o["clothes"],
+          hair_color: o["hair_color"] && rgb(o["hair_color"]),
+          clothes_colors: Enum.map(o["clothes_colors"], &rgb/1),
           pose: o["pose"],
           animations: o["animations"]
         )
@@ -352,4 +362,7 @@ defmodule World.Orders.Blueprints do
       sources: ["L-track: 1 1/8 by 1/2 in, pockets each inch (see World.Framing)."]
     }
   end
+
+  # A color "#rrggbb" as [r, g, b].
+  defp rgb("#" <> hex), do: for(<<c::binary-size(2) <- hex>>, do: String.to_integer(c, 16))
 end

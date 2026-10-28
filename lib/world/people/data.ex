@@ -33,7 +33,9 @@ defmodule World.People.Data do
 
   @doc """
   An asset by its kind and name: its mesh (as `base/0`), its fit to the
-  body, the path of its texture (or nil), and if it is transparent.
+  body, the path of its texture (or nil), the mean color of the texture,
+  the mean of a gray texture (`gray`, a hair: its color is the factor of
+  its material), and if it is transparent.
   """
   def asset(kind, name) do
     cached({:asset, kind, name}, fn ->
@@ -46,6 +48,7 @@ defmodule World.People.Data do
         fit: if(entry["fit"], do: parse_fit(read_gz(Path.join(kind, entry["fit"])))),
         texture: if(entry["texture"], do: Path.join(folder, entry["texture"])),
         color: Map.get(entry, "color", [128, 128, 128]),
+        gray: entry["gray"],
         transparent: Map.get(entry, "transparent", false)
       }
     end)

@@ -24,4 +24,6 @@ each with the license CC0.
   steps of 0.25 mm.
 - The textures are smaller (1024, 512 or 256 pixels), with no color
   profile.
+- The textures of the hair are gray, made bright, so a hair can have
+  any color (`docs/format.md`, "A person").
 - `assets.json` lists the assets, with the mean color of each texture.

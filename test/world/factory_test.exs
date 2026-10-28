@@ -228,6 +228,48 @@ defmodule World.FactoryTest do
       end
     end
 
+    test "a person with the colors of the hair and of the clothes" do
+      order = %{
+        "blueprint" => "person",
+        "options" => %{
+          "hair" => "long01",
+          "hair_color" => "#E8C070",
+          "clothes" => ["female_sportsuit01", "shoes03"],
+          "clothes_colors" => ["#c0392b"],
+          "gender" => 0.0
+        }
+      }
+
+      {:ok, full} = Orders.check(order)
+      assert full["options"]["hair_color"] == "#e8c070"
+
+      # The full order gives null for the color of the hair, and it is
+      # correct again.
+      natural = put_in(full, ["options", "hair_color"], nil)
+      assert {:ok, ^natural} = Orders.check(natural)
+
+      factor = fn glb, name ->
+        m = Enum.find(World.GLBHelper.json(glb)["materials"], &(&1["name"] == name))
+        m["pbrMetallicRoughness"]["baseColorFactor"]
+      end
+
+      # At mid, the clothes have the color of the order, and the gray hair
+      # has it as its factor; with no color, the hair has its own color.
+      {:ok, mid} = Orders.build(order, "mid", "glb")
+      assert [r, g, b, 1.0] = factor.(mid, "color_female_sportsuit01")
+      assert r > g and r > b
+      assert [hr, hg, hb, 1.0] = factor.(mid, "hair")
+      assert hr > hg and hg > hb
+      {:ok, own} = Orders.build(natural, "mid", "glb")
+      assert factor.(own, "hair") != factor.(mid, "hair")
+
+      # At near, the color of the clothes is a tint of the texture; an item
+      # with no color has no tint.
+      {:ok, near} = Orders.build(order, "near", "glb")
+      assert [_, _, _, 1.0] = factor.(near, "clothes_female_sportsuit01")
+      assert factor.(near, "clothes_shoes03") == [1.0, 1.0, 1.0, 1.0]
+    end
+
     test "a wrong level, a wrong file, a joint that the model does not have, a wrong order" do
       order = %{"blueprint" => "strut", "options" => %{"length" => 0.3}}
       assert paths(Orders.build(order, "huge", "glb")) == ["level"]

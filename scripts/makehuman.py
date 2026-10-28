@@ -14,7 +14,8 @@ The script writes:
 - targets.bin.gz: the targets of the body of an adult, in a small binary
   format (see World.People.Data).
 - one folder for each kind of asset: the mesh (.obj.gz), its fit to the
-  body (.mhclo.gz or .proxy.gz), and its texture, smaller.
+  body (.mhclo.gz or .proxy.gz), and its texture, smaller. The texture
+  of a hair is gray (bright_gray), so the hair can have any color.
 - assets.json: the list of the assets.
 """
 import gzip
@@ -40,26 +41,37 @@ LEVELS = {"muscle": ["minmuscle", "averagemuscle", "maxmuscle"], "weight": ["min
 ASSETS = [
     ("skins", name, "makehuman_system_assets", f"skins/{name}", 1024)
     for name in [
-        "young_asian_male", "young_asian_female", "middleage_asian_male", "middleage_asian_female",
-        "old_asian_male", "old_asian_female", "young_caucasian_male", "young_caucasian_female",
-        "young_african_male", "young_african_female",
+        f"{age}_{origin}_{gender}"
+        for age in ["young", "middleage", "old"]
+        for origin in ["african", "asian", "caucasian"]
+        for gender in ["male", "female"]
     ]
 ] + [
     ("eyes", "high-poly", "makehuman_system_assets", "eyes/high-poly", None),
     ("eyes", "low-poly", "makehuman_system_assets", "eyes/low-poly", None),
-    ("eye_materials", "brown", "makehuman_system_assets", "eyes/materials", 256),
-    ("eyebrows", "eyebrow001", "makehuman_system_assets", "eyebrows/eyebrow001", 256),
-    ("eyebrows", "eyebrow010", "makehuman_system_assets", "eyebrows/eyebrow010", 256),
+] + [
+    ("eye_materials", name, "makehuman_system_assets", "eyes/materials", 256)
+    for name in ["blue", "bluegreen", "brown", "brownlight", "deepblue", "green", "grey", "ice", "lightblue"]
+] + [
+    ("eyebrows", f"eyebrow{n:03}", "makehuman_system_assets", f"eyebrows/eyebrow{n:03}", 256) for n in range(1, 13)
+] + [
     ("eyelashes", "eyelashes01", "makehuman_system_assets", "eyelashes/eyelashes01", 256),
-    ("hair", "short02", "makehuman_system_assets", "hair/short02", 1024),
-    ("hair", "short04", "makehuman_system_assets", "hair/short04", 1024),
-    ("hair", "ponytail01", "makehuman_system_assets", "hair/ponytail01", 1024),
-    ("hair", "bob01", "makehuman_system_assets", "hair/bob01", 1024),
-    ("clothes", "male_casualsuit01", "makehuman_system_assets", "clothes/male_casualsuit01", 1024),
-    ("clothes", "female_casualsuit01", "makehuman_system_assets", "clothes/female_casualsuit01", 1024),
-    ("clothes", "male_worksuit01", "makehuman_system_assets", "clothes/male_worksuit01", 1024),
-    ("clothes", "shoes01", "makehuman_system_assets", "clothes/shoes01", 512),
-    ("clothes", "shoes02", "makehuman_system_assets", "clothes/shoes02", 512),
+] + [
+    # The first four hairs have a texture of 1024 pixels; the hairs after
+    # them have 512, so the release stays small for the edge.
+    ("hair", name, "makehuman_system_assets", f"hair/{name}", 1024 if name in ["short02", "short04", "ponytail01", "bob01"] else 512)
+    for name in ["afro01", "bob01", "bob02", "braid01", "long01", "ponytail01", "short01", "short02", "short03", "short04"]
+] + [
+    ("clothes", name, "makehuman_system_assets", f"clothes/{name}", size)
+    for name, size in [
+        ("male_casualsuit01", 1024), ("female_casualsuit01", 1024), ("male_worksuit01", 1024),
+        ("shoes01", 512), ("shoes02", 512),
+        ("male_casualsuit02", 512), ("male_casualsuit03", 512), ("male_casualsuit04", 512),
+        ("male_casualsuit05", 512), ("male_casualsuit06", 512), ("male_elegantsuit01", 512),
+        ("female_casualsuit02", 512), ("female_elegantsuit01", 512), ("female_sportsuit01", 512),
+        ("shoes03", 256), ("shoes04", 256), ("shoes05", 256), ("shoes06", 256), ("fedora01", 256),
+    ]
+] + [
     ("clothes", "elvs_crude_t-shirt_male", "shirts01", "clothes/elvs_crude_t-shirt_male", 1024),
     ("clothes", "joepal_crude_t-shirt_female", "shirts01", "clothes/joepal_crude_t-shirt_female", 1024),
     ("clothes", "cortu_cargo_pants", "pants01", "clothes/cortu_cargo_pants", 1024),
@@ -128,12 +140,14 @@ def write_targets(dest):
         g.write(b"".join(out))
 
 
-def texture(src, dest_base, size):
+def texture(src, dest_base, size, gray=False):
     im = Image.open(src)
     # glTF wants images with no color profile.
     im.info.pop("icc_profile", None)
     if im.size[0] > size:
         im = im.resize((size, size), Image.LANCZOS)
+    if gray:
+        im = bright_gray(im)
     if im.mode == "RGBA":
         dest = dest_base + ".png"
         im.save(dest, optimize=True)
@@ -143,10 +157,26 @@ def texture(src, dest_base, size):
     return os.path.basename(dest)
 
 
+GRAY_MEAN = 200
+
+
+def bright_gray(im):
+    """The texture of a hair in gray, with the mean of the parts that are
+    not transparent at GRAY_MEAN: the color of the hair is the factor of
+    its material, so a hair can have any color (World.People.Human)."""
+    im = im.convert("RGBA")
+    alpha = im.getchannel("A")
+    gray = im.convert("L")
+    px = [g for g, a in zip(gray.get_flattened_data(), alpha.get_flattened_data()) if a > 128]
+    mean = sum(px) / len(px) if px else 128
+    gray = gray.point(lambda g: min(255, round(g * GRAY_MEAN / max(mean, 1))))
+    return Image.merge("RGBA", (gray, gray, gray, alpha))
+
+
 def mean_color(path):
     """The mean color of the parts of a texture that are not transparent."""
     im = Image.open(path).convert("RGBA").resize((64, 64))
-    px = [p for p in im.getdata() if p[3] > 128]
+    px = [p for p in im.get_flattened_data() if p[3] > 128]
     return [round(sum(p[k] for p in px) / len(px)) for k in range(3)] if px else [128, 128, 128]
 
 
@@ -193,8 +223,10 @@ def main():
                     entry["fit"] = name + ext + ".gz"
             if size and "diffuseTexture" in props:
                 tex = os.path.join(src, os.path.basename(props["diffuseTexture"]))
-                entry["texture"] = texture(tex, os.path.join(dest, name), size)
+                entry["texture"] = texture(tex, os.path.join(dest, name), size, gray=kind == "hair")
                 entry["color"] = mean_color(tex)
+                if kind == "hair":
+                    entry["gray"] = GRAY_MEAN
             entry["transparent"] = props.get("transparent", "False") == "True"
         manifest.setdefault(kind, {})[name] = entry
 

@@ -233,6 +233,18 @@ a body of about 1,600 faces with the hair; far is a body of 730 faces.
 At mid and far, the faces under clothes have the mean color of the
 clothes, and at far the scalp has the color of the hair.
 
+The colors of a person (`hair_color`, `clothes_colors`):
+
+- The texture of a hair is gray, with a mean of 200 (of 255). The
+  factor of its material is the color of the hair: the color of the
+  order, or the mean color of the texture before it became gray. A color
+  lighter than 200 in a channel stays at 200 in that channel.
+- At mid and far, an item of the clothes has the color of the order in
+  place of its mean color.
+- At near, the color of an item is a tint of its texture: the factor is
+  the color of the order over the mean color of the texture, at most 1.
+  A tint can only make a texture darker.
+
 A pose turns bones around their heads: a map of a bone to a list of
 `{axis, degrees}`, with the axes of World when the person stands at
 rest (`World.People.Pose`).

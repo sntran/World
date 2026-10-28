@@ -67,6 +67,8 @@ defmodule World.Orders.Blueprint do
         case {Map.fetch(given, o.name), o.default} do
           {:error, :required} -> {values, errors ++ [{path, "is required"}]}
           {:error, default} -> {Map.put(values, o.name, default), errors}
+          # The full order gives null for an option with no value by default.
+          {{:ok, nil}, nil} -> {Map.put(values, o.name, nil), errors}
           {{:ok, raw}, _} -> put(values, errors, o.name, value(o, raw, path))
         end
       end)

@@ -179,7 +179,9 @@ defmodule World.GLB do
           buf = add_view(buf, data, nil)
           image = length(buf.images)
 
-          {Map.merge(pbr, %{"baseColorFactor" => [1.0, 1.0, 1.0, 1.0], "baseColorTexture" => %{"index" => image}}),
+          # The color of the spec is a factor of the texture: white by
+          # default, the color of a hair, or a tint of clothes.
+          {Map.put(pbr, "baseColorTexture", %{"index" => image}),
            %{buf | images: [%{"bufferView" => view, "mimeType" => mime} | buf.images]}}
       end
 
