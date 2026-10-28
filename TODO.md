@@ -95,3 +95,98 @@ into the steps of `AGENTS.md`.
   binary is the only memory.
 - **Godot import.** A script for Vung_Tau that reads the joint nodes and
   the levels of detail of a GLB of World.
+
+## For Vũng Tàu
+
+Vũng Tàu gets its models from World (plan 0023 of Vung_Tau,
+[`docs/plans/0023-models-from-world.md`](https://github.com/sntran/Vung_Tau/blob/main/docs/plans/0023-models-from-world.md)).
+Section 9 of that plan is the catalog: each model of the game, with its
+details, the places and the times. Section 10 lists the requests below.
+The game is in Vũng Tàu in January and February 2019, so each model is
+as it was in 2019. The models are real: the shapes of the common makes
+of 2019, from photos and data sheets. The game puts no badge, no name
+and no logo on them.
+
+- **The tube house and the hẻm (W1).** The idea "A hẻm of tube houses"
+  above, with the options of the house kit of Vung_Tau (plan 0004): the
+  kind (tube house, villa, mini-hotel of 5 to 8 floors), the style (old
+  or new), the roof (a flat terrace with a parapet, corrugated metal,
+  clay tiles). Walls of hollow red bricks (gạch ống) under a role
+  `plaster`: the game paints the plaster with its own shader (damp,
+  streaks, patches of brick). A roll-up shutter (cửa cuốn) or a folding
+  iron gate (cửa xếp) at the ground floor, a front of granite or of
+  patterned tiles, a step and a small concrete ramp for the scooters,
+  iron cages over the windows and the balconies, back extensions, a
+  small room or a metal roof on posts on the terrace.
+- **The parts of a house front (W2).** Each one a model with a port on
+  the wall, so that the game can put many of them in one MultiMesh: rail
+  bars, balusters, pots with plants (bougainvillea, small bonsai), the
+  outdoor unit of an AC on a bracket, a water tank of stainless steel, a
+  solar water heater, a dish, an antenna, laundry on a pole, a bird cage,
+  a metal awning, a sign with a text decal, the plate of the house
+  number, the altar of the earth god on the floor near the door. Then
+  the street: concrete power poles with bundles of cables, transformers,
+  meter boxes, street lamps, tiled sidewalks and curbs.
+- **People of the South of Việt Nam (W3, W4, W5).** The approved look of
+  Vung_Tau `docs/prototype/people/` (plan 0006 there): a wider nose with
+  a lower bridge, a shorter face, high cheekbones, skin of people who
+  live in the sun, the marks of age. Clothes: đồ bộ (a printed shirt and
+  trousers that match), áo ba lỗ, quần đùi with checks, faded plain
+  colors, sun jackets, face masks, long sun gloves, wrap skirts, dép (no
+  shoes). Hair: a bun, hair tied back. Hats: the half-shell helmet and a
+  cap, with the nón lá. Ages from 18 (students, drivers), and children
+  (the idea "More people" above).
+- **Faces for speech (W6).** The face shapes of the ARKit standard that
+  Vung_Tau uses (plan 0006, R10) and the 15 visemes of the Meta
+  standard, as morph targets on a separate head mesh. The game moves the
+  mouth from the voice files.
+- **Animations of daily life (W7).** The idea "More animations of
+  people" above, with: talk with gestures, sit on a low stool, squat
+  with flat feet (ngồi chồm hổm), eat with chopsticks and a spoon, drink
+  from a glass, fan oneself, sweep, push a cart, carry a shoulder pole
+  (đòn gánh), row a basket boat, pull a net, sit behind a rider (also
+  sideways), lie in a hammock, swim with a ring, badminton, Chinese chess
+  (cờ tướng).
+- **The vehicles of 2019 (W8).** The idea "A catalog of makes and
+  models" above, for Vũng Tàu: the step-through motorbike with gears (the
+  shapes of the Honda Wave and Dream) with a rack for goods, a city
+  bicycle with a front basket, a small sedan and a 7-seat car as taxis,
+  the 16-seat passenger van (the Ford Transit) and a coach of 29 or 45
+  seats, a motor tricycle for goods (ba gác máy). A port for the license
+  plate, with a text decal from the order. Small things by seed: a helmet
+  on the mirror, a phone holder, a raincoat under a strap, a seat cover.
+- **Carts and stalls (W9).** The carts of bánh mì (a glass case, a
+  grill), hủ tiếu gõ (a pot of broth, a glass case, a lamp, bowls),
+  nước mía (a press with a motor, a case of cane) and fruit (a case on
+  ice). A shoulder pole with two baskets. Low plastic stools of about 25
+  cm and of about 45 cm, and their stacks. Low tables of stainless steel
+  and of plastic. A market stall: plastic baskets, aluminum basins, tanks
+  with air pumps, a dial scale, a tarp umbrella, boxes of polystyrene.
+  The round pan of bánh khọt. A hammock.
+- **Boats and the beach (W10).** A small wooden fishing boat (ghe, 8 to
+  12 m: the length, the colors, a cabin, flags, the load of rope, nets,
+  baskets and floats), the round basket boat (thúng chai, 1.5 to 2 m, of
+  bamboo with a dark coat, one oar), rows of fishing stakes with nets,
+  ships at anchor (the far level only), a fast ferry, swim rings, beach
+  umbrellas, canvas chairs, thatched huts.
+- **Animals (W11).** After the street dog: chickens, pigs, cats,
+  long-tailed macaques, fish, birds in cages, with walk, eat and sit.
+- **Plants for Vũng Tàu (W12).** The idea "Plants from rules" above,
+  first with the 14 tree types of Vung_Tau (`data/trees/types.json` there,
+  plan 0020): the same look as the sheets of its report 0020, with the
+  same triangles or fewer. Then the trees of Vung_Tau move to World.
+  Also the Tết plants (mai in a glazed pot, kumquat trees, marigolds,
+  chrysanthemums), the garden plants (rice on terraces, herbs, mãng cầu,
+  đu đủ, chuối, xoài, dừa), and the plants in pots.
+- **Statues and known places (W13).** A large figure of a person (an
+  option of scale, robes, a stone material) for the statues, and a
+  drawing for each known place of Vũng Tàu (plan 0008 there), with the
+  sources of its sizes.
+- **Pinned files for a game (W14).** The same order at the same commit
+  gives the same bytes on the site and with `mix world.order` in a clone
+  (the workspace of Vung_Tau cannot reach the site). A field `license` in
+  the receipt. A copy that never changes for a release (`/v/VERSION/`).
+- **A far level for rows and crowds (W15).** About 500 triangles for a
+  scooter, 1,500 for a person, 300 for a stool: the game shows rows of
+  40 parked scooters and groups of people. The far scooter has about
+  4,000 triangles now.
