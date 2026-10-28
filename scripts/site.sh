@@ -4,6 +4,7 @@
 # deploy", which uploads site/ as the static files of the Worker.
 #
 # - /: the review page (review/index.html), with the models at /models/.
+# - /replay.html: the replay of an order (review/replay.html).
 # - /models/: the files of the catalog (priv/models), which CI checks
 #   against the build of the code.
 # - /palette.json, /version.json (the commit of the build).
@@ -24,6 +25,7 @@ if ! grep -q "const base = '/models/';" site/index.html; then
     echo "site.sh: the review page has no line const base = '../priv/models/';" >&2
     exit 1
 fi
+cp review/replay.html site/replay.html
 
 # The commit names the files that the VM builds in R2, so each deploy
 # must have its own. The commit of Workers Builds, else the commit of

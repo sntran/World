@@ -47,7 +47,7 @@ defmodule World.Plan do
 
   @doc "The plan of a part, a figure or an assembly."
   def of(%Part{} = p), do: %__MODULE__{name: p.name, tasks: [make(p.name, p)], parts: parts([p])}
-  def of(%Figure{} = f), do: %__MODULE__{name: f.name, tasks: [%Task{id: f.name, action: :make, item: f.name}]}
+  def of(%Figure{} = f), do: %__MODULE__{name: f.name, tasks: [%Task{id: f.name, action: :make, item: f.name, work: f}]}
 
   def of(%Assembly{name: name, nodes: [{root, root_item, nil} | rest]}) do
     tasks = [make(root, root_item) | Enum.flat_map(rest, &step/1)]
@@ -153,7 +153,13 @@ defmodule World.Plan do
       "tasks" =>
         for(
           t <- tasks,
-          do: %{"id" => t.id, "action" => Atom.to_string(t.action), "station" => t.station, "waits" => t.waits}
+          do: %{
+            "id" => t.id,
+            "action" => Atom.to_string(t.action),
+            "station" => t.station,
+            "waits" => t.waits,
+            "uses" => t.uses
+          }
         )
     }
   end

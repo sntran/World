@@ -14,10 +14,11 @@ defmodule World.Orders do
   keys in one order. `hash/1` is the name of its files: the same order
   gives the same hash, and the same files.
   """
-  alias World.{Build, Detail, GLB}
+  alias World.{Build, Detail, GLB, Log, Run}
   alias World.Orders.{Blueprint, Blueprints}
   @keys ~w(blueprint options colors joints)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
+  @files ~w(glb log replay parts receipt)
 
   @doc "The names of the levels of detail."
   def levels, do: Map.keys(@levels) |> Enum.sort()
@@ -105,32 +106,75 @@ defmodule World.Orders do
 
   def encode(value), do: JSON.encode!(value)
 
+  @doc "The files of an order."
+  def files, do: @files
+
   @doc """
-  Build an order at a level (`"near"`, `"mid"` or `"far"`). Gives
-  `{:ok, %{glb: binary, parts: json, receipt: json}}`, or `{:error,
-  errors}` as `check/1`.
+  Build a file of an order at a level (`"near"`, `"mid"` or `"far"`). The
+  files (`files/0`):
+
+  - `"glb"`: the model. The people of the world build it (`World.Run`):
+    the foreman makes the files with the pose and the colors of the order.
+  - `"log"`: the log of a run of the order, in JSON (`World.Log`).
+  - `"replay"`: the model with each part in a node of its own, with the id
+    of its task, for the replay of the log.
+  - `"parts"`: the list of the parts. `"receipt"`: the receipt.
+
+  Gives `{:ok, binary}`, or `{:error, errors}` as `check/1`.
   """
-  def build(order, level) do
+  def build(order, level, file) do
     with {:ok, order} <- check(order),
-         {:ok, lvl} <- level(level) do
+         {:ok, lvl} <- level(level),
+         :ok <- file(file) do
       {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
       item = Detail.with(lvl, fn -> blueprint.build.(order["options"]) end)
-      scene = Build.scene(item, level: lvl, pose: order["joints"])
-      joints = scene.extras["joints"]
 
-      case for name <- Enum.sort(Map.keys(order["joints"])), name not in joints, do: name do
-        [] ->
-          scene = %{scene | materials: Map.merge(scene.materials, materials(order["colors"]))}
-          {:ok, %{glb: GLB.encode(scene), parts: parts(item), receipt: receipt(order, lvl, scene)}}
+      scene = fn opts ->
+        s = Build.scene(item, [level: lvl, pose: order["joints"]] ++ opts)
+        %{s | materials: Map.merge(s.materials, materials(order["colors"]))}
+      end
 
-        bad ->
-          {:error,
-           for(
-             name <- bad,
-             do: %{"path" => "joints.#{name}", "message" => "is not a joint: #{Enum.join(joints, ", ")}"}
-           )}
+      with :ok <- joints(order, scene) do
+        {:ok, make(file, order, lvl, item, scene)}
       end
     end
+  end
+
+  defp make("glb", order, _lvl, item, scene), do: elem(world(order, item, scene), 0)
+  defp make("log", order, _lvl, item, scene), do: elem(world(order, item, scene), 1)
+  defp make("replay", _order, _lvl, _item, scene), do: GLB.encode(scene.(split: true))
+  defp make("parts", _order, _lvl, item, _scene), do: parts(item)
+  defp make("receipt", order, lvl, _item, scene), do: receipt(order, lvl, scene.([]))
+
+  # A run of the world for the order: the files of the model and the log.
+  defp world(order, item, scene) do
+    run = Run.start()
+    {:ok, result} = Run.order(run, item, hash(order), files: fn _ -> GLB.encode(scene.([])) end)
+    log = Run.log(run)
+    Run.stop(run)
+    {result.glb, Log.to_json(log)}
+  end
+
+  # A joint of the order must be a joint of the model.
+  defp joints(%{"joints" => joints}, _scene) when joints == %{}, do: :ok
+
+  defp joints(%{"joints" => joints}, scene) do
+    known = scene.([]).extras["joints"]
+
+    case for name <- Enum.sort(Map.keys(joints)), name not in known, do: name do
+      [] ->
+        :ok
+
+      bad ->
+        {:error,
+         for(name <- bad, do: %{"path" => "joints.#{name}", "message" => "is not a joint: #{Enum.join(known, ", ")}"})}
+    end
+  end
+
+  defp file(file) do
+    if file in @files,
+      do: :ok,
+      else: {:error, [%{"path" => "file", "message" => "must be one of: #{Enum.join(@files, ", ")}"}]}
   end
 
   defp level(name) do

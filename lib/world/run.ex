@@ -50,7 +50,7 @@ defmodule World.Run do
   the run. The stock of the warehouse stays between the orders.
   """
   def start(yard \\ yard()) do
-    {:ok, log} = Server.start_link(yard.clock)
+    {:ok, log} = Server.start_link(yard.clock, Yard.describe(yard))
     {:ok, sk} = Storekeeper.start_link(name: "an", place: "warehouse", stock: yard.places["warehouse"].stock, log: log)
     {:ok, driver} = Driver.start_link(name: "binh", vehicle: "truck", yard: yard, log: log)
 
@@ -79,10 +79,19 @@ defmodule World.Run do
   @doc """
   Run an order of an item, and wait for its delivery: `{:ok, result}`
   (`from: :factory` with the plan, the bytes of each part and of the
-  model, and its files; or `from: :stock`), or `{:error, reason}`.
+  model, and its files; or `from: :stock`), or `{:error, reason}`. The
+  option `files` is the function that makes the files of the model from
+  the item (the GLB at near by default): an order with a level, a pose
+  and colors gives its own.
   """
-  def order(%__MODULE__{foreman: foreman}, item, order \\ nil),
-    do: Foreman.order(foreman, order || "order-#{System.unique_integer([:positive])}", item)
+  def order(%__MODULE__{foreman: foreman}, item, order \\ nil, opts \\ []),
+    do:
+      Foreman.order(
+        foreman,
+        order || "order-#{System.unique_integer([:positive])}",
+        item,
+        Keyword.get(opts, :files, &Foreman.files/1)
+      )
 
   @doc "The log of the run (`World.Log`)."
   def log(%__MODULE__{log: log}), do: Server.log(log)

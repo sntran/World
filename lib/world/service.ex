@@ -8,21 +8,26 @@ defmodule World.Service do
   - `POST /check`: an order in the body. 200 with `{"hash", "order"}` (the
     full order), or 422 with `{"errors"}`.
   - `POST /build?level=near&file=glb`: an order in the body. 200 with the
-    file (`glb`, `parts` or `receipt`), or 422 with `{"errors"}`.
+    file (`World.Orders.files/0`: `glb`, `log`, `replay`, `parts` or
+    `receipt`), or 422 with `{"errors"}`.
 
   A body that is not JSON gives 400. A body of more than 1 MB gives 413.
   """
   use Plug.Router
 
-  alias World.Orders.Blueprint
-
-  alias World.Orders.Blueprints
-
   alias World.Orders
+  alias World.Orders.{Blueprint, Blueprints}
+
   plug(:match)
   plug(:dispatch)
 
-  @types %{"glb" => "model/gltf-binary", "parts" => "application/json", "receipt" => "application/json"}
+  @types %{
+    "glb" => "model/gltf-binary",
+    "replay" => "model/gltf-binary",
+    "log" => "application/json",
+    "parts" => "application/json",
+    "receipt" => "application/json"
+  }
 
   get "/blueprints" do
     json(conn, 200, Enum.map(Blueprints.all(), &Blueprint.describe/1))
@@ -40,17 +45,12 @@ defmodule World.Service do
   post "/build" do
     conn = fetch_query_params(conn)
     file = Map.get(conn.query_params, "file", "glb")
+    level = Map.get(conn.query_params, "level", "near")
 
     with_order(conn, fn order ->
-      case {Map.fetch(@types, file), Orders.build(order, Map.get(conn.query_params, "level", "near"))} do
-        {:error, _} ->
-          json(conn, 422, %{"errors" => [%{"path" => "file", "message" => "must be one of: glb, parts, receipt"}]})
-
-        {{:ok, type}, {:ok, out}} ->
-          conn |> put_resp_content_type(type, nil) |> send_resp(200, Map.fetch!(out, String.to_existing_atom(file)))
-
-        {_, {:error, errors}} ->
-          json(conn, 422, %{"errors" => errors})
+      case Orders.build(order, level, file) do
+        {:ok, out} -> conn |> put_resp_content_type(Map.fetch!(@types, file), nil) |> send_resp(200, out)
+        {:error, errors} -> json(conn, 422, %{"errors" => errors})
       end
     end)
   end

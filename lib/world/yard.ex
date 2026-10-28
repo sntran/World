@@ -61,6 +61,42 @@ defmodule World.Yard do
 
   defp way(from, to, length, limit), do: %Road{from: from, to: to, length: length, limit: limit}
 
+  @doc """
+  The yard as data for the head of a log and for its replay: the places
+  (name, kind, family, position), the roads, the people (name, job,
+  place, station) and the vehicles (name, model, place, driver).
+  """
+  def describe(%__MODULE__{} = yard) do
+    %{
+      "places" =>
+        for(
+          {_, p} <- Enum.sort(yard.places),
+          do: %{
+            "name" => p.name,
+            "kind" => Atom.to_string(p.kind),
+            "family" => p.family && Atom.to_string(p.family),
+            "at" => Tuple.to_list(p.at)
+          }
+        ),
+      "roads" =>
+        for(
+          {{a, b}, r} <- Enum.sort(yard.roads),
+          a < b,
+          do: %{"from" => a, "to" => b, "length" => r.length, "limit" => r.limit}
+        ),
+      "people" =>
+        for(
+          {_, p} <- Enum.sort(yard.people),
+          do: %{"name" => p.name, "job" => Atom.to_string(p.job), "place" => p.place, "station" => p.station}
+        ),
+      "vehicles" =>
+        for(
+          {_, v} <- Enum.sort(yard.vehicles),
+          do: %{"name" => v.name, "model" => v.model, "place" => v.place, "driver" => v.driver}
+        )
+    }
+  end
+
   @doc "The road from a place to another: `{:ok, road}` or `{:error, :no_road}`."
   def route(%__MODULE__{roads: roads}, from, to) do
     case Map.fetch(roads, {from, to}) do

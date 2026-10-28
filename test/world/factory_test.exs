@@ -151,17 +151,41 @@ defmodule World.FactoryTest do
         "joints" => %{"cover" => 30}
       }
 
-      {:ok, out} = Orders.build(order, "far")
-      assert <<"glTF", _::binary>> = out.glb
-      json = World.GLBHelper.json(out.glb)
+      file = fn name ->
+        {:ok, bin} = Orders.build(order, "far", name)
+        bin
+      end
+
+      glb = file.("glb")
+      assert <<"glTF", _::binary>> = glb
+      json = World.GLBHelper.json(glb)
       blue = Enum.find(json["materials"], &(&1["name"] == "blue"))
       assert hd(blue["pbrMetallicRoughness"]["baseColorFactor"]) == 1.0
 
-      receipt = JSON.decode!(out.receipt)
+      receipt = JSON.decode!(file.("receipt"))
       assert receipt["hash"] == Orders.hash(elem(Orders.check(order), 1))
       assert receipt["level"] == "far" and receipt["joints"] == ["cover"]
       assert receipt["order"]["colors"] == %{"blue" => "#ff0000"}
-      assert JSON.decode!(out.parts)["parts"] != []
+      assert JSON.decode!(file.("parts"))["parts"] != []
+    end
+
+    test "the log of an order: the people of a yard build it, and the replay has a node for each task" do
+      order = %{"blueprint" => "strut", "options" => %{"length" => 0.3}}
+      {:ok, json} = Orders.build(order, "far", "log")
+      {:ok, log} = World.Log.from_json(json)
+      assert %{"kind" => "warehouse"} = Enum.find(log.yard["places"], &(&1["name"] == "warehouse"))
+      events = World.Log.events(log)
+      assert hd(events).kind == "order_received"
+      assert List.last(events).kind == "delivered"
+      hash = Orders.hash(elem(Orders.check(order), 1))
+      assert Enum.all?(events, &(&1.order == hash))
+
+      tasks =
+        for %{kind: "plan_made", data: %{"tasks" => tasks}} <- events, t <- tasks, t["uses"], do: t["id"]
+
+      {:ok, replay} = Orders.build(order, "far", "replay")
+      nodes = World.GLBHelper.json(replay)["nodes"]
+      assert Enum.sort(for(n <- nodes, id = n["extras"]["task"], do: id)) == Enum.sort(tasks)
     end
 
     test "each blueprint builds its default, or a small order" do
@@ -200,15 +224,16 @@ defmodule World.FactoryTest do
       ]
 
       for order <- orders do
-        assert {:ok, %{glb: <<"glTF", _::binary>>}} = Orders.build(order, "far"), inspect(order)
+        assert {:ok, <<"glTF", _::binary>>} = Orders.build(order, "far", "glb"), inspect(order)
       end
     end
 
-    test "a wrong level, a joint that the model does not have, a wrong order" do
+    test "a wrong level, a wrong file, a joint that the model does not have, a wrong order" do
       order = %{"blueprint" => "strut", "options" => %{"length" => 0.3}}
-      assert paths(Orders.build(order, "huge")) == ["level"]
-      assert paths(Orders.build(Map.put(order, "joints", %{"door" => 1}), "far")) == ["joints.door"]
-      assert paths(Orders.build(%{"blueprint" => "strut"}, "far")) == ["options.length"]
+      assert paths(Orders.build(order, "huge", "glb")) == ["level"]
+      assert paths(Orders.build(order, "far", "zip")) == ["file"]
+      assert paths(Orders.build(Map.put(order, "joints", %{"door" => 1}), "far", "glb")) == ["joints.door"]
+      assert paths(Orders.build(%{"blueprint" => "strut"}, "far", "glb")) == ["options.length"]
     end
 
     property "the JSON of a value has its keys in order, and JSON gives the value back" do

@@ -50,6 +50,8 @@ test('the name and the file of a path', () => {
   assert.equal(split('van.mid.glb')[1][1], 'mid');
   assert.equal(split('van.glb')[1][1], 'near');
   assert.equal(split('van.receipt.json')[1][2], 'receipt');
+  assert.equal(split('van.log.json')[1][2], 'log');
+  assert.deepEqual(split('van.replay.glb').map((x, i) => (i ? x[2] : x)), ['van', 'replay']);
   assert.equal(split('.glb'), null);
   assert.equal(split('van.txt'), null);
 });
@@ -67,6 +69,8 @@ test('POST /orders keeps the full order and gives the URLs of its files', async 
   const body = await r.json();
   assert.equal(body.hash, HASH);
   assert.equal(body.files['mid.glb'], `https://world.mkfifo.com/o/${HASH}.mid.glb`);
+  assert.equal(body.files['log.json'], `https://world.mkfifo.com/o/${HASH}.log.json`);
+  assert.equal(body.replay, `https://world.mkfifo.com/replay.html?order=${HASH}`);
   assert.ok(env.ORDERS.items.has(`orders/${HASH}.json`));
 });
 

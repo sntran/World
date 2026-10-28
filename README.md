@@ -21,9 +21,12 @@ World is also a factory: a web service at <https://world.mkfifo.com>. Each
 model has a URL, and a correction of World reaches each project with no
 new deploy of the project. `docs/factory.md` tells how it works.
 
-The next step is the world (`docs/world.md`): people, warehouses,
-factories and vehicles that build the models as in the real world, from
-the ground up, with real times in a log.
+The world (`docs/world.md`) builds each order: people, warehouses,
+factories and vehicles build the models as in the real world, from the
+ground up, with real times in a log. The replay page shows the log of
+an order. The flow of an order is a TLA+ specification, and the log of
+each run of the code replays as one of its behaviors
+(`docs/specs.md`).
 
 ## Why
 
@@ -109,7 +112,8 @@ models").
 | W0. The world: the plan | `docs/world.md`: the places, the factories by family, the people and their jobs, the vehicles that drive on the roads of the yard, the stock, the clock, the log and the replay; what each thing is in the computer; the steps W1 to W9. | Done |
 | W1. The world: its data | `World.Clock`, `World.Places`, `World.Yard`, `World.Stock`, `World.People.Person`, `World.Vehicles.Vehicle`, `World.Log`, and `World.Plan`: the tasks of an order from the tree of its assembly. | Done |
 | W2. The world: one thin slice | One order of the van through a warehouse, a truck with its driver on a road, and a factory with a foreman and two workers. The people are processes, and each act is an event of the log at its real time. The flow is a TLA+ specification (`specs/Order.tla`): the native checker of Accord checks it, and the log of a run replays as one of its behaviors. | Done |
-| W3 to W9. The world | The replay, the factories by family, the buildings, the stores (one bucket for each warehouse), the site, the other vans, the engineers. | To do |
+| W3. The world: the replay | The orders of the site go through the world: the log of each order (`/o/HASH.log.json`), the model with a node for each task (`/o/HASH.replay.glb`), and the replay page (`/replay.html?order=HASH`). `docs/specs.md` tells the specifications and their checks. | Done |
+| W4 to W9. The world | The factories by family, the buildings, the stores (one bucket for each warehouse), the measures of the site, the other vans, the engineers. | To do |
 | 7. DIY uses World | DIY draws its SVG from the models, and keeps its pictures. | To do |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |
@@ -134,6 +138,7 @@ const gltf = await new GLTFLoader().loadAsync('https://world.mkfifo.com/models/f
 | `/version.json` | The commit of World that the site has. |
 | `/blueprints` | The blueprints and their options. |
 | `POST /orders`, `/o/HASH.glb` | An order in JSON, and the files of the order. |
+| `/o/HASH.log.json`, `/replay.html?order=HASH` | The log of the people that built the order, and its replay. |
 | `/m/BLUEPRINT.glb?OPTION=VALUE` | An order in the URL, for example `/m/strut.glb?length=0.6&kind=solid`. |
 
 `docs/factory.md` tells the details. An Elixir app can also add the package and call its functions:

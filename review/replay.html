@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World: replay</title>
+<style>
+  :root { --paper: #f4f1e6; --ink: #222; --line: #c9c2ad; --soft: #6b6656; --mark: #c8551b; --road: #9a927c; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #1d1f22; --ink: #e8e6df; --line: #45484d; --soft: #a19d92; --mark: #f08a4b; --road: #6d6a62; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: var(--paper); color: var(--ink); display: grid; grid-template-columns: 340px 1fr; grid-template-rows: auto 1fr; height: 100vh; }
+  header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; }
+  header input[type=range] { flex: 1 1 200px; min-width: 0; }
+  button, select { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; min-height: 32px; }
+  #time { font-variant-numeric: tabular-nums; min-width: 15ch; }
+  aside { padding: 8px 16px; overflow: auto; border-right: 1px solid var(--line); }
+  aside h2 { font-size: 13px; margin: 12px 0 4px; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; }
+  svg { width: 100%; height: auto; max-height: 280px; display: block; }
+  svg text { fill: var(--ink); font-size: 32px; }
+  svg .road { stroke: var(--road); stroke-width: 10; stroke-linecap: round; }
+  svg .place { fill: var(--paper); stroke: var(--ink); stroke-width: 4; }
+  svg .truck { fill: var(--mark); }
+  ol { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+  ol li { border-top: 1px solid var(--line); padding: 3px 0; }
+  ol li time { color: var(--soft); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { border-top: 1px solid var(--line); padding: 2px 4px; vertical-align: top; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  main { position: relative; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #message { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; }
+  @media (max-width: 700px) {
+    body { grid-template-columns: 1fr; grid-template-rows: auto 50vh auto; height: auto; }
+    main { grid-row: 2; height: 50vh; }
+    aside { grid-row: 3; }
+    aside { border: 0; }
+  }
+</style>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header>
+  <h1>World: replay</h1>
+  <button id="play" type="button" aria-label="Play">Play</button>
+  <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Time of the replay">
+  <span id="time" aria-live="off"></span>
+  <label>Speed <select id="speed"></select></label>
+</header>
+<aside>
+  <h2>The yard</h2>
+  <svg id="map" role="img" aria-label="The map of the yard: the places, the roads and the truck"></svg>
+  <h2>The people</h2>
+  <table id="people"></table>
+  <h2>The order</h2>
+  <p id="order"></p>
+  <h2>The events</h2>
+  <ol id="events" reversed></ol>
+</aside>
+<main><canvas id="view"></canvas><p id="message">Loading.</p></main>
+<script type="module">
+// The replay of an order (docs/world.md, step W3): the log of the run
+// (World.Log, HASH.log.json) and the model with each part in a node of its
+// own (HASH.replay.glb). The page reads the log only: the map of the yard
+// shows the truck on its road, the table shows what each person does, and
+// the model grows when each task of the plan ends.
+//
+// ?order=HASH reads /o/HASH.log.json and /o/HASH.replay.glb (an order of
+// POST /orders). ?log=URL&model=URL reads other files, for a local test.
+// &t=0.5 starts at the middle of the order.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const params = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const message = $('message');
+const hash = params.get('order');
+const logURL = params.get('log') ?? (hash && `/o/${hash}.log.json`);
+const modelURL = params.get('model') ?? (hash && `/o/${hash}.replay.glb`);
+
+if (!logURL || !modelURL) {
+  message.textContent = 'Give an order: ?order=HASH (the hash from POST /orders), or ?log=URL&model=URL.';
+  throw new Error('no order');
+}
+
+// The log: one line for the clock and the yard, then one line for each event.
+const [headLine, ...lines] = (await fetchOk(logURL).then((r) => r.text())).split('\n').filter(Boolean);
+const head = JSON.parse(headLine);
+const events = lines.map((l) => JSON.parse(l));
+const yard = head.yard ?? { places: [], roads: [], people: [], vehicles: [] };
+const t0 = events[0].at;
+const t1 = events.at(-1).at;
+const span = Math.max(t1 - t0, 1);
+
+async function fetchOk(url) {
+  const r = await fetch(url);
+  if (!r.ok) { message.textContent = `${url}: ${r.status}. The edge builds a file at its first request: try again in a moment.`; throw new Error(url); }
+  return r;
+}
+
+// The time: the world time of the clock (day and hour), and the time since the order.
+const two = (n) => String(n).padStart(2, '0');
+function clockLabel(at) {
+  const s = Math.floor(at / 1000);
+  return `day ${Math.floor(s / 86400) + 1}, ${two(Math.floor(s / 3600) % 24)}:${two(Math.floor(s / 60) % 60)}`;
+}
+function since(ms) {
+  const m = Math.floor(ms / 60000);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  return h < 48 ? `${h} h ${m % 60} min` : `${Math.floor(h / 24)} d ${h % 24} h`;
+}
+
+// What each event tells, in words.
+function say(e) {
+  const d = e.data ?? {};
+  const n = (k) => `${d.count ?? ''} ${d[k] ?? ''}`.trim();
+  switch (e.kind) {
+    case 'order_received': return `${e.who} gets the order of ${d.item}.`;
+    case 'stock_checked': return `${e.who} checks the stock: ${Object.values(d.missing ?? {}).reduce((a, b) => a + b, 0)} missing.`;
+    case 'plan_made': return `${e.who} makes the plan: ${d.tasks.length} tasks.`;
+    case 'stored': return d.model ? `${e.who} puts the files of the model in the warehouse.` : `${e.who} puts ${n('item')} from the ${d.from} in the warehouse.`;
+    case 'refused': return `${e.who} refuses ${d.item ?? d.model}: the warehouse is full.`;
+    case 'picked': return `${e.who} picks ${n('item')} to the dock.`;
+    case 'loaded': return `${e.who} loads ${n('item')} on the ${d.vehicle}.`;
+    case 'unloaded': return `${e.who} unloads ${n('item')} at the ${e.place}.`;
+    case 'departed': return `${e.who} drives the ${d.vehicle} from the ${d.from} to the ${d.to}.`;
+    case 'arrived': return `${e.who} arrives at the ${d.to}.`;
+    case 'task_started': return `${e.who} starts ${d.task}.`;
+    case 'task_done': return `${e.who} ends ${d.task}.`;
+    case 'model_done': return `${e.who} makes the files of the model (${Math.round(d.bytes / 1024)} KB).`;
+    case 'delivered': return d.from === 'stock' ? `The ${e.place} gets ${d.item} from the stock.` : `The ${e.place} gets ${d.item}.`;
+    default: return `${e.who ?? ''} ${e.kind}`.trim();
+  }
+}
+
+// The map of the yard. The y axis of the world goes north: up on the map.
+const svg = $('map');
+const NS = 'http://www.w3.org/2000/svg';
+const at = Object.fromEntries(yard.places.map((p) => [p.name, p.at]));
+const xs = yard.places.map((p) => p.at[0]);
+const ys = yard.places.map((p) => -p.at[1]);
+// A margin for the marks, and more at the right for the names.
+const pad = 80;
+const right = 300;
+svg.setAttribute('viewBox', `${Math.min(...xs) - pad} ${Math.min(...ys) - pad} ${Math.max(...xs) - Math.min(...xs) + pad + right} ${Math.max(...ys) - Math.min(...ys) + 2 * pad}`);
+const el = (name, attrs, text) => {
+  const node = document.createElementNS(NS, name);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text) node.textContent = text;
+  return svg.appendChild(node);
+};
+for (const r of yard.roads) el('line', { class: 'road', x1: at[r.from][0], y1: -at[r.from][1], x2: at[r.to][0], y2: -at[r.to][1] });
+for (const p of yard.places) {
+  el('circle', { class: 'place', cx: p.at[0], cy: -p.at[1], r: 24 });
+  el('text', { x: p.at[0] + 34, y: -p.at[1] + 9 }, p.family ? `${p.name} (${p.kind})` : p.name);
+}
+const trucks = Object.fromEntries(yard.vehicles.map((v) => [v.name, el('rect', { class: 'truck', width: 44, height: 28, x: -22, y: -14 })]));
+
+// The trips of each vehicle: from a departure to its arrival.
+const trips = [];
+for (const [i, e] of events.entries()) {
+  if (e.kind !== 'departed') continue;
+  const end = events.slice(i + 1).find((a) => a.kind === 'arrived' && a.data.vehicle === e.data.vehicle);
+  trips.push({ vehicle: e.data.vehicle, from: e.data.from, to: e.data.to, start: e.at, end: end?.at ?? e.at + e.data.world_ms });
+}
+function placeOf(vehicle, t) {
+  let place = yard.vehicles.find((v) => v.name === vehicle)?.place;
+  for (const trip of trips) {
+    if (trip.vehicle !== vehicle || trip.start > t) continue;
+    if (t >= trip.end) { place = trip.to; continue; }
+    const f = (t - trip.start) / Math.max(trip.end - trip.start, 1);
+    const [a, b] = [at[trip.from], at[trip.to]];
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  }
+  return at[place];
+}
+
+// The model: each node with a task (extras "task") shows when its task
+// starts, in the color of a mark while it is in work, and in its own
+// colors when the task ends.
+const canvas = $('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(getComputedStyle(document.body).backgroundColor);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8070, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+sun.position.set(3, 6, 4);
+scene.add(sun);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 200);
+const controls = new OrbitControls(camera, canvas);
+const grid = new THREE.GridHelper(10, 20, 0x9a927c, 0xc9c2ad);
+scene.add(grid);
+const mark = new THREE.MeshStandardMaterial({ color: getComputedStyle(document.body).getPropertyValue('--mark').trim(), transparent: true, opacity: 0.7 });
+
+const gltf = await new GLTFLoader().parseAsync(await (await fetchOk(modelURL)).arrayBuffer(), '');
+const model = gltf.scene;
+scene.add(model);
+const parts = [];
+model.traverse((node) => {
+  if (!node.userData.task) return;
+  const meshes = [];
+  node.traverse((m) => { if (m.isMesh) meshes.push([m, m.material]); });
+  parts.push({ task: node.userData.task, node, meshes });
+});
+message.remove();
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = canvas.parentElement;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+(function frame() {
+  const box = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  const r = box.getSize(new THREE.Vector3()).length() / 2 || 1;
+  const a = THREE.MathUtils.degToRad(35);
+  camera.position.set(center.x + 3.2 * r * Math.sin(a), center.y + 1.4 * r, center.z + 3.2 * r * Math.cos(a));
+  controls.target.copy(center);
+  grid.scale.setScalar(Math.max(r, 0.2));
+  controls.update();
+})();
+
+// The state at a time: the last event at or before it.
+function upTo(t) {
+  let lo = 0, hi = events.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (events[mid].at <= t) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+
+const plan = events.find((e) => e.kind === 'plan_made');
+const total = plan ? plan.data.tasks.length : 0;
+const peopleTable = $('people');
+const rows = Object.fromEntries(yard.people.map((p) => {
+  const row = peopleTable.insertRow();
+  row.insertCell().textContent = p.name;
+  row.insertCell().textContent = p.job;
+  return [p.name, row.insertCell()];
+}));
+let shown = -1;
+
+function draw(t) {
+  const n = upTo(t);
+  $('time').textContent = `${clockLabel(t)} (+${since(t - t0)})`;
+  $('seek').value = Math.round(((t - t0) / span) * 1000);
+  for (const [name, rect] of Object.entries(trucks)) {
+    const [x, y] = placeOf(name, t) ?? [0, 0];
+    rect.setAttribute('transform', `translate(${x} ${-y})`);
+  }
+  if (n === shown) return;
+  shown = n;
+
+  const started = new Set(), done = new Set(), doing = {};
+  const status = Object.fromEntries(yard.people.map((p) => [p.name, `at the ${p.place}`]));
+  for (const e of events.slice(0, n)) {
+    if (e.kind === 'task_started') { started.add(e.data.task); doing[e.who] = e.data.task; }
+    if (e.kind === 'task_done') { done.add(e.data.task); delete doing[e.who]; }
+    if (e.who in status) status[e.who] = say(e).replace(`${e.who} `, '');
+  }
+  for (const [who, task] of Object.entries(doing)) status[who] = `works on ${task}`;
+  for (const [name, cell] of Object.entries(rows)) cell.textContent = status[name];
+  for (const p of parts) {
+    p.node.visible = started.has(p.task);
+    for (const [m, own] of p.meshes) m.material = done.has(p.task) ? own : mark;
+  }
+  const last = events[n - 1];
+  $('order').textContent = `${hash ?? ''} ${done.size} of ${total} tasks done.${last?.kind === 'delivered' ? ' Delivered.' : ''}`.trim();
+  const list = $('events');
+  list.replaceChildren(...events.slice(Math.max(0, n - 12), n).reverse().map((e) => {
+    const li = document.createElement('li');
+    const time = document.createElement('time');
+    time.textContent = `+${since(e.at - t0)}`;
+    li.append(time, say(e));
+    return li;
+  }));
+  list.start = n;
+}
+
+// The play: a speed is world time for each second of the page.
+const speed = $('speed');
+for (const [label, s] of [['whole order in 30 s', span / 30], ['1 min/s', 60e3], ['10 min/s', 600e3], ['1 h/s', 3600e3], ['1 d/s', 86400e3]]) speed.add(new Option(label, s));
+let t = t0 + span * Math.min(Math.max(Number(params.get('t') ?? 0), 0), 1);
+let playing = false;
+const play = $('play');
+function setPlaying(on) {
+  playing = on;
+  play.textContent = playing ? 'Pause' : 'Play';
+  play.setAttribute('aria-label', play.textContent);
+}
+play.onclick = () => {
+  if (!playing && t >= t1) t = t0;
+  setPlaying(!playing);
+};
+$('seek').oninput = (e) => { t = t0 + (span * e.target.value) / 1000; draw(t); };
+const clock = new THREE.Clock();
+draw(t);
+window.READY = true;
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  if (playing) {
+    t = Math.min(t + dt * Number(speed.value), t1);
+    if (t >= t1) setPlaying(false);
+    draw(t);
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

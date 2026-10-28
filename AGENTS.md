@@ -11,6 +11,9 @@ to work on the project, and the facts that are not in the code.
 2. `docs/format.md`: the format of a part, an assembly, a voxel model,
    and of each file.
 3. `README.md`: the product, and the state of each step ("Progress").
+4. `specs/` and `docs/specs.md`: the flow of an order in TLA+. A change
+   of the people of the world (`World.People`, `World.Run`) changes the
+   specification in the same commit, and the replay test must pass.
 
 An idea that is not a decision goes into `TODO.md`. The owner decides
 about it.
@@ -54,10 +57,12 @@ about it.
 - The Khronos glTF validator (`gltf-validator` on npm) for each GLB.
 - [Accord](https://github.com/sntran/accord), the branch
   `feat/native-tla-checker` (dev and test only): the native TLA+ checker,
-  with no Java, for `specs/` (`docs/world.md`, "The order flow in TLA+").
+  with no Java, for `specs/` (`docs/specs.md`).
 - The review page (`review/index.html`): three.js from a CDN, each model
   of `priv/models` from 12 cameras, with a slider for each joint.
-  Playwright makes the pictures in CI.
+  Playwright makes the pictures in CI. The replay page
+  (`review/replay.html`) reads the log and the replay GLB of an order:
+  `?log=URL&model=URL` for a local test.
 
 ## The contexts
 
@@ -168,6 +173,11 @@ trees from Blender:
 - **The `.wings` file of a person is not safe data.** `binary_to_term`
   with no `:safe` can make new atoms. The reader is strict
   (`docs/format.md`, "Wings files").
+- **Each part is one task of the world.** A house of bricks has 5,206
+  tasks: its order runs in about 2 seconds here, and its log has 3 MB at
+  the far level. An order of the site runs the world for each file of
+  the GLB and the log, so the edge does the work two times for a new
+  order. Step W7 measures it at the edge.
 
 ## The steps
 

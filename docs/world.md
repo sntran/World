@@ -344,6 +344,8 @@ files of the model, and the delivery. Its invariants:
 | `WaitsFirst` | A task starts only after each task that it waits for is done. |
 
 Its liveness property, `Delivers`: each order is delivered in the end.
+`docs/specs.md` tells each action, each invariant, the fault models and
+the limits of the specification.
 
 The checks, in the tests (`test/world/order_spec_test.exs`):
 
@@ -377,6 +379,7 @@ event less, or with two workers on one task, is not.
 | The yard | The positions of the places are in meters, on one flat yard. A map comes later. | The simplest world first. |
 | One bucket for each warehouse | A warehouse is one R2 bucket. A new warehouse is a new bucket. | In the game, a new warehouse is a collaboration with another city or country. |
 | The flow in TLA+ | `specs/Order.tla` is the specification of the flow of an order. The native checker of Accord (`sntran/accord`, the branch `feat/native-tla-checker`, no Java) checks a small model of it in the tests: its invariants, and that each order is delivered in the end. Two fault models must fail: a task that starts twice, and a warehouse too small for the files of the model. The log of a real run replays as a behavior of the same specification (`Accord.TLA.Checker.Machine`). | The people are processes: the order of their acts changes from run to run. A model check finds the races and the dead ends that a test does not find, and the replay keeps the code and the specification the same. |
+| The replay page | A static page (three.js and an SVG map) that reads the log and the replay GLB of an order from the site. No Phoenix LiveView. | The log is a file that does not change: a page that reads it needs no server and no socket. The Worker stays a plug (`World.Service`) in one VM of 128 MB. A live view of the world as it runs comes when the world runs for a long time (W4 and later); then a socket from the Durable Object can send the new lines of the log to the same page. |
 | The crew van of the Transit | It comes with the Sprinter and the ProMaster, after the first world. | The owner wants the crew van in the line. Ford does not sell it for 2024 to 2027: its sizes come from the earlier years. |
 
 ## The steps
@@ -389,11 +392,11 @@ and a picture of the replay where there is one.
 | W0. The plan | This document. | The owner agrees, or changes it. |
 | W1. The data of the world | `World.Clock`, `World.Places`, `World.Yard` (the roads), `World.Stock`, `World.People.Person` (the jobs), `World.Vehicles.Vehicle`, `World.Log` (the events and the checks). The plan of an order from its assembly (`World.Plan`). Done. | A property test: the plan of each model of the catalog has one task for each node, and each task waits for the task of its parent. A log with a bad order of events is refused. |
 | W2. One thin slice | One order of a van. One warehouse, one truck with its driver on a road of the yard, one vehicle factory with a foreman and two workers. The people are processes (`World.Run`, `World.People.Storekeeper`, `Driver`, `Foreman`, `Worker`). The log of the order, with real times. The flow in TLA+ (`specs/Order.tla`). Done. | A test runs the slice and reads its log: the van is delivered, the events are in order, the stock is never negative, the drive took the length of the road over the speed of the truck. The same order a second time comes from stock. |
-| W3. The replay | The page of the world on the review page, from a log. The world at a time as a GLB. | A picture of the truck on the road, and of a worker at the trim station with the seats. |
+| W3. The replay | The replay page (`review/replay.html`, `/replay.html?order=HASH`): the map of the yard with the truck on its road, what each person does, the events, and the model that grows when each task ends. The orders of the site go through the world (part of W7): `/o/HASH.log.json` and `/o/HASH.replay.glb` (`World.Build.scene/2` with `split: true`). No LiveView: the log is a file, and a static page reads it. Done. | A picture of the replay of the van at a time, on a phone and on a wide screen. A test: the replay GLB has one node for each task of the plan that takes a part. |
 | W4. The factories | The wheel factory and the seat factory next to the vehicle factory. A sub-order goes to the factory of its family; a vehicle brings the part by road. | The log of a van: the wheels come from the wheel factory, the seats from the seat factory, each by a drive. |
 | W5. The buildings | The warehouse and the factories are orders: the people build them from the materials and the houses factories, and the log has the build. The racks show the stock. | The log of a build of a warehouse. The size of the warehouse from the limit of its store. |
 | W6. The stores | Each warehouse is one R2 bucket. The release and the memory of the VM are warehouses too. The stock is the files. A full warehouse refuses. | A test with a small limit: the storekeeper refuses, and the foreman sends the model to another warehouse. |
-| W7. The site | The orders of the projects go through the world at <https://world.mkfifo.com>. `/o/HASH.log.json` and the replay of an order. | An order of Phượt gives its files and its log. The times in the log agree with the times of the service. |
+| W7. The site | The orders of the projects go through the world at <https://world.mkfifo.com> (done in W3). The measures of the edge: the time of a run and its memory. | An order of Phượt gives its files and its log. The times in the log agree with the times of the service. |
 | W8. The other vans | The Sprinter, the ProMaster and the crew van of the Transit, built on the line of the vehicle factory. | As the Transit: a render next to the photo of the dealer. |
 | W9. The engineers | Later, with the owner. | — |
 

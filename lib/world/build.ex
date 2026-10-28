@@ -21,8 +21,11 @@ defmodule World.Build do
   @limits %{near: {0.0, 0.0}, mid: {0.02, 0.003}, far: {0.10, 0.01}}
 
   @doc """
-  The scene of a model. The options: `level` (`:near`, `:mid` or `:far`)
-  and `pose` (a map of a joint name to its value: degrees or meters).
+  The scene of a model. The options: `level` (`:near`, `:mid` or `:far`),
+  `pose` (a map of a joint name to its value: degrees or meters), and
+  `split` (`true`: each part in a node of its own, with the id of its task
+  of `World.Plan.flat/1` in the `"task"` of its extras, for the replay of
+  a run).
   """
   def scene(item, opts \\ []) do
     level = Keyword.get(opts, :level, :near)
@@ -35,12 +38,12 @@ defmodule World.Build do
         keep_root(item),
         Frame.identity(),
         0,
-        %{nodes: [root], parts: %{0 => []}, skins: [], animations: [], materials: %{}},
+        %{nodes: [root], parts: %{0 => []}, skins: [], animations: [], materials: %{}, path: name, prefix: ""},
         level,
         pose
       )
 
-    {nodes, _} = finish(acc)
+    {nodes, _} = finish(acc, Keyword.get(opts, :split, false))
 
     materials = Map.merge(Map.get(item, :materials, %{}), acc.materials)
     scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: acc.animations, materials: materials}
@@ -102,12 +105,16 @@ defmodule World.Build do
   end
 
   defp walk(%Part{} = p, frame, node, acc, level, _pose) do
-    if keep?(p, level), do: update_in(acc.parts[node], &[{frame, p} | &1]), else: acc
+    if keep?(p, level), do: update_in(acc.parts[node], &[{frame, p, acc.path} | &1]), else: acc
   end
 
   defp walk(%Assembly{nodes: [{root, root_item, nil} | rest], place: place}, frame, node, acc, level, pose) do
     frame = Frame.compose(frame, place)
-    acc = walk(root_item, frame, node, acc, level, pose)
+    # The path of a node is its id in World.Plan.flat/1: the names of the
+    # nodes of the smaller assemblies, with "/" between them.
+    prefix = acc.prefix
+    at = fn acc, name -> %{acc | path: prefix <> name, prefix: prefix <> name <> "/"} end
+    acc = acc |> at.(root) |> then(&walk(root_item, frame, node, &1, level, pose))
     places = %{root => {node, frame}}
 
     {acc, _} =
@@ -115,6 +122,8 @@ defmodule World.Build do
         {parent_node, parent_frame} = Map.fetch!(places, c.to)
         a = %Assembly{nodes: [{root, root_item, nil} | rest], place: Frame.identity()}
         port = Frame.compose(parent_frame, port_in_node(a, c))
+
+        acc = at.(acc, name)
 
         if c.kind == :fixed do
           f = Frame.compose(port, Assembly.placement(c, item, 0.0))
@@ -144,7 +153,7 @@ defmodule World.Build do
         end
       end)
 
-    acc
+    %{acc | prefix: prefix}
   end
 
   # The frame of the port `at` of the node `to`, in the axes of that node.
@@ -157,20 +166,31 @@ defmodule World.Build do
   defp motion(:turns, deg), do: Frame.turn({0.0, 0.0, 1.0}, deg)
   defp motion(:slides, d), do: Frame.move({0.0, 0.0, d})
 
-  defp finish(%{nodes: nodes, parts: parts}) do
+  defp finish(%{nodes: nodes, parts: parts}, false) do
     nodes =
-      for {n, i} <- Enum.with_index(nodes) do
-        corners =
-          parts[i]
-          |> Enum.reverse()
-          |> Enum.flat_map(fn {f, p} -> for m <- p.shapes, do: {m.material, place(triangles(m), f)} end)
-          |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-
-        prims = for {mat, lists} <- Enum.sort_by(corners, &elem(&1, 0)), do: Scene.primitive(mat, Enum.concat(lists))
-        %{n | primitives: n.primitives ++ prims}
-      end
+      for {n, i} <- Enum.with_index(nodes),
+          do: %{n | primitives: n.primitives ++ primitives(Enum.reverse(parts[i]))}
 
     {nodes, parts}
+  end
+
+  # Each part in a node of its own, under the node of its joint.
+  defp finish(%{nodes: nodes, parts: parts}, true) do
+    split =
+      for {_, i} <- Enum.with_index(nodes), {f, p, path} <- Enum.reverse(parts[i]) do
+        %Scene.Node{name: path, parent: i, extras: %{"task" => path}, primitives: primitives([{f, p, path}])}
+      end
+
+    {nodes ++ split, parts}
+  end
+
+  defp primitives(parts) do
+    corners =
+      parts
+      |> Enum.flat_map(fn {f, p, _} -> for m <- p.shapes, do: {m.material, place(triangles(m), f)} end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    for {mat, lists} <- Enum.sort_by(corners, &elem(&1, 0)), do: Scene.primitive(mat, Enum.concat(lists))
   end
 
   defp place(corners, f), do: for({p, n} <- corners, do: {Frame.point(f, p), Frame.dir(f, n)})

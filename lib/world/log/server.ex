@@ -10,8 +10,8 @@ defmodule World.Log.Server do
 
   alias World.{Clock, Log}
 
-  @doc "Start a log with its clock."
-  def start_link(%Clock{} = clock), do: GenServer.start_link(__MODULE__, clock)
+  @doc "Start a log with its clock, and the yard of its run (data)."
+  def start_link(%Clock{} = clock, yard \\ nil), do: GenServer.start_link(__MODULE__, {clock, yard})
 
   @doc "Record an event (the options of `World.Log.add/3`, with no `wall`)."
   def record(server, kind, opts \\ []), do: GenServer.call(server, {:record, kind, opts})
@@ -20,7 +20,7 @@ defmodule World.Log.Server do
   def log(server), do: GenServer.call(server, :log)
 
   @impl true
-  def init(clock), do: {:ok, Log.new(clock)}
+  def init({clock, yard}), do: {:ok, Log.new(clock, yard)}
 
   @impl true
   def handle_call({:record, kind, opts}, _from, log) do

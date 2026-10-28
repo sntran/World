@@ -7,8 +7,9 @@ defmodule World.Log do
   Each event has its world time (`at`) and its wall time (`wall`), in
   milliseconds, its kind, its order (the hash), its place, its person or
   vehicle (`who`), and the data of its kind. The log keeps the scale and
-  the start of its clock. In JSON, the log is one line for the clock,
-  then one line for each event.
+  the start of its clock, and the yard of the run (`World.Yard.describe/1`)
+  when it has one. In JSON, the log is one line for the clock and the
+  yard, then one line for each event.
   """
   alias World.Clock
 
@@ -21,13 +22,13 @@ defmodule World.Log do
     defstruct at: 0, wall: 0, kind: nil, order: nil, place: nil, who: nil, data: %{}
   end
 
-  defstruct clock: nil, events: []
+  defstruct clock: nil, yard: nil, events: []
 
   @doc "The kinds of an event."
   def kinds, do: @kinds
 
-  @doc "An empty log with its clock."
-  def new(%Clock{} = clock), do: %__MODULE__{clock: clock}
+  @doc "An empty log with its clock, and the yard of its run (data)."
+  def new(%Clock{} = clock, yard \\ nil), do: %__MODULE__{clock: clock, yard: yard}
 
   @doc """
   Add an event of a kind. The options: `wall` (the wall time, now by
@@ -59,7 +60,7 @@ defmodule World.Log do
 
   @doc "The log in JSON: one line for the clock, then one line for each event."
   def to_json(%__MODULE__{clock: clock} = log) do
-    head = JSON.encode!(%{"scale" => clock.scale, "start" => clock.start})
+    head = JSON.encode!(%{"scale" => clock.scale, "start" => clock.start, "yard" => log.yard})
 
     lines =
       for e <- events(log) do
@@ -80,7 +81,7 @@ defmodule World.Log do
   @doc "A log from its JSON, then checked (`check/1`): `{:ok, log}` or `{:error, reason}`."
   def from_json(json) do
     [head | lines] = String.split(json, "\n", trim: true)
-    %{"scale" => scale, "start" => start} = JSON.decode!(head)
+    %{"scale" => scale, "start" => start} = head = JSON.decode!(head)
 
     events =
       for line <- lines, e = JSON.decode!(line) do
@@ -95,7 +96,7 @@ defmodule World.Log do
         }
       end
 
-    log = %__MODULE__{clock: %Clock{scale: scale, start: start}, events: Enum.reverse(events)}
+    log = %__MODULE__{clock: %Clock{scale: scale, start: start}, yard: head["yard"], events: Enum.reverse(events)}
     with :ok <- check(log), do: {:ok, log}
   end
 

@@ -11,9 +11,10 @@ defmodule World.People.Foreman do
      warehouse (`World.People.Storekeeper`).
   3. The driver hauls them to the dock of the factory
      (`World.People.Driver`).
-  4. Each time a part arrives or a task ends, the foreman gives each free
-     worker a task that can start: each task that it waits for is done,
-     and its part is at the dock (`World.People.Worker`).
+  4. At the start, and each time a part arrives or a task ends, the
+     foreman gives each free worker a task that can start: each task that
+     it waits for is done, and its part is at the dock
+     (`World.People.Worker`).
   5. When each task is done, the foreman makes the files of the model
      (`World.GLB`), the storekeeper puts them in the warehouse, and the
      customer gets them.
@@ -34,14 +35,19 @@ defmodule World.People.Foreman do
   @doc """
   Run an order of an item, and wait for its delivery: `{:ok, result}`, with
   the plan, the bytes of each part and of the model; or `{:error, reason}`.
+  `files` makes the files of the model from the item (`files/1`).
   """
-  def order(foreman, order, item), do: GenServer.call(foreman, {:order, order, item}, :infinity)
+  def order(foreman, order, item, files),
+    do: GenServer.call(foreman, {:order, order, item, files}, :infinity)
+
+  @doc "The files of a model by default: the GLB at the near level."
+  def files(item), do: item |> Build.scene() |> GLB.encode()
 
   @impl true
   def init(state), do: {:ok, state}
 
   @impl true
-  def handle_call({:order, order, item}, from, f) do
+  def handle_call({:order, order, item, files}, from, f) do
     record(f, "order_received", order, f.place, %{"item" => item.name})
     model = model(item)
 
@@ -51,14 +57,14 @@ defmodule World.People.Foreman do
         {:reply, {:ok, %{from: :stock}}, f}
 
       _ ->
-        build(f, order, item, from)
+        build(f, order, item, files, from)
     end
   end
 
   @doc "The name of the files of a model in the stock of a warehouse."
   def model(item), do: "model:" <> item.name
 
-  defp build(f, order, item, from) do
+  defp build(f, order, item, files, from) do
     plan = Plan.flat(item)
     record(f, "plan_made", order, f.place, Plan.to_data(plan))
     sizes = sizes(plan)
@@ -69,6 +75,7 @@ defmodule World.People.Foreman do
       run = %{
         order: order,
         item: item,
+        files: files,
         from: from,
         plan: plan,
         sizes: sizes,
@@ -79,7 +86,9 @@ defmodule World.People.Foreman do
         hauled: false
       }
 
-      {:noreply, Map.put(f, :run, run)}
+      # A task with no part (a person, the end of a smaller assembly with
+      # no parts) can start before the truck arrives.
+      f |> Map.put(:run, run) |> assign()
     else
       error -> {:reply, error, f}
     end
@@ -155,7 +164,7 @@ defmodule World.People.Foreman do
   defp finish(%{run: r} = f) do
     if r.waiting == [] and r.hauled and length(r.free) == map_size(f.workers) and
          MapSet.size(r.done) == length(r.plan.tasks) do
-      glb = r.item |> Build.scene() |> GLB.encode()
+      glb = r.files.(r.item)
       bytes = byte_size(glb)
       record(f, "model_done", r.order, f.place, %{"item" => r.item.name, "bytes" => bytes})
 

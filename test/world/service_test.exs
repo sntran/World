@@ -41,7 +41,17 @@ defmodule World.ServiceTest do
     assert json(receipt)["level"] == "far"
     assert json(call(:post, "/build?level=far&file=parts", @strut))["parts"] != []
 
-    assert [%{"path" => "file"}] = json(call(:post, "/build?file=zip", @strut))["errors"]
+    log = call(:post, "/build?level=far&file=log", @strut)
+    assert Plug.Conn.get_resp_header(log, "content-type") == ["application/json"]
+    assert {:ok, _} = World.Log.from_json(log.resp_body)
+
+    replay = call(:post, "/build?level=far&file=replay", @strut)
+    assert Plug.Conn.get_resp_header(replay, "content-type") == ["model/gltf-binary"]
+    assert <<"glTF", _::binary>> = replay.resp_body
+
+    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt"}] =
+             json(call(:post, "/build?file=zip", @strut))["errors"]
+
     assert [%{"path" => "level"}] = json(call(:post, "/build?level=huge", @strut))["errors"]
   end
 

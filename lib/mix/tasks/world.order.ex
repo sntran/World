@@ -8,9 +8,11 @@ defmodule Mix.Tasks.World.Order do
       mix world.order ORDER.json --dir DIR
 
   The files have the hash of the order as their name: `HASH.glb`,
-  `HASH.mid.glb`, `HASH.far.glb`, `HASH.parts.json` and
-  `HASH.receipt.json` (the receipt of the near level). A wrong order
-  stops the task with each error.
+  `HASH.mid.glb`, `HASH.far.glb`, and at the near level
+  `HASH.log.json` (the log of the run of the world that built it),
+  `HASH.replay.glb` (each part in a node of its own, for the replay),
+  `HASH.parts.json` and `HASH.receipt.json`. A wrong order stops the task
+  with each error.
   """
   use Mix.Task
 
@@ -32,14 +34,17 @@ defmodule Mix.Tasks.World.Order do
     hash = World.Orders.hash(order)
 
     files =
-      Enum.flat_map([{"near", ""}, {"mid", ".mid"}, {"far", ".far"}], fn {level, ext} ->
-        out = ok!(World.Orders.build(order, level))
-        glb = {hash <> ext <> ".glb", out.glb}
+      for {level, ext} <- [{"near", ""}, {"mid", ".mid"}, {"far", ".far"}],
+          file <- if(level == "near", do: World.Orders.files(), else: ["glb"]) do
+        name =
+          case file do
+            "glb" -> "#{hash}#{ext}.glb"
+            "replay" -> "#{hash}.replay.glb"
+            _ -> "#{hash}.#{file}.json"
+          end
 
-        if level == "near",
-          do: [glb, {hash <> ".parts.json", out.parts}, {hash <> ".receipt.json", out.receipt}],
-          else: [glb]
-      end)
+        {name, ok!(World.Orders.build(order, level, file))}
+      end
 
     File.mkdir_p!(dir)
     for {name, bin} <- files, do: File.write!(Path.join(dir, name), bin)

@@ -14,10 +14,13 @@
 // The routes:
 //
 // - GET /blueprints: the blueprints and their options.
-// - POST /orders: an order in JSON. 200 with the hash, the full order and
-//   the URLs of its files; 422 with the errors.
-// - GET /o/HASH.glb, .mid.glb, .far.glb, .parts.json, .receipt.json: the
-//   files of an order of POST /orders.
+// - POST /orders: an order in JSON. 200 with the hash, the full order,
+//   the URLs of its files and the URL of its replay page; 422 with the
+//   errors.
+// - GET /o/HASH.glb, .mid.glb, .far.glb, .parts.json, .receipt.json,
+//   .log.json, .replay.glb: the files of an order of POST /orders. The
+//   people of the world build the model (World.Run): the log tells what
+//   each one did, and the replay GLB has a node for each part.
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
 //   %23rrggbb&joint.NAME=DEGREES: an order in the URL. A list is
 //   VALUE,VALUE.
@@ -34,6 +37,8 @@ const FILES = [
   ['.far.glb', 'far', 'glb', 'model/gltf-binary'],
   ['.parts.json', 'near', 'parts', 'application/json'],
   ['.receipt.json', 'near', 'receipt', 'application/json'],
+  ['.log.json', 'near', 'log', 'application/json'],
+  ['.replay.glb', 'near', 'replay', 'model/gltf-binary'],
   ['.glb', 'near', 'glb', 'model/gltf-binary'],
 ];
 
@@ -123,7 +128,8 @@ async function route(request, env, { vm, commit }) {
     if (status !== 200) return json(status, body);
     await env.ORDERS.put(`orders/${body.hash}.json`, JSON.stringify(body.order), { httpMetadata: { contentType: 'application/json' } });
     const files = Object.fromEntries(FILES.map(([ext]) => [ext.slice(1), `${url.origin}/o/${body.hash}${ext}`]));
-    return json(200, { hash: body.hash, order: body.order, files });
+    const replay = `${url.origin}/replay.html?order=${body.hash}`;
+    return json(200, { hash: body.hash, order: body.order, files, replay });
   }
 
   if (request.method !== 'GET' && request.method !== 'HEAD') return errors(405, 'the method is not allowed');
