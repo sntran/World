@@ -190,6 +190,20 @@ defmodule Xuong.Shape do
   end
 
   @doc """
+  A skin over rings: each ring is a list of points (the same count in
+  each ring), in order around it. Quads join each ring to the next, and
+  a flat cap closes each end. `Xuong.Models.Hull` makes the rings.
+  """
+  def rings([[_, _, _ | _] = first | _] = rings, material, opts \\ []) do
+    n = length(first)
+    m = length(rings)
+    points = rings |> List.flatten() |> Enum.map(&Vec.float/1)
+    sides = for j <- 0..(m - 2)//1, k <- 0..(n - 1), do: quad(j, j + 1, k, rem(k + 1, n), n)
+    caps = [Enum.to_list((n - 1)..0//-1), Enum.to_list(((m - 1) * n)..(m * n - 1))]
+    place(Mesh.new(points, Mesh.outside(points, caps ++ sides), material, opts), opts)
+  end
+
+  @doc """
   Loft sections along y (the side and the top of a body): each row is
   `{y, z_low, z_high, half_width, power}`, centered at x = `x0`.
   """

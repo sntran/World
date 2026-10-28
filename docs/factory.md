@@ -61,7 +61,24 @@ An error tells the path of the wrong value and the rule:
 `{"errors": [{"path": "options.length", "message": "must be from 0.05 to 6.1 m"}]}`.
 
 The blueprints now: `catalog` (each model of the catalog, with colors
-and joints), `person`, `house`, `extrusion`, `strut` and `l_track`.
+and joints), `person`, `house`, `van`, `extrusion`, `strut` and
+`l_track`. An order of a van:
+
+```json
+{
+  "blueprint": "van",
+  "options": {
+    "model": "transit_148_medium",
+    "windows": "passenger",
+    "engine_bay": ["dc_charger"],
+    "roof": [{"kind": "solar", "at": 3.8}, {"kind": "fan", "at": 5.2}]
+  },
+  "colors": {"paint": "#1d3b5a"}
+}
+```
+
+The check of a van puts each item of the roof on the flat part of the
+roof, and two items do not touch.
 
 Each file has `Access-Control-Allow-Origin: *`, an `ETag`, and
 `Cache-Control: public, max-age=300, stale-while-revalidate=86400`. So a
@@ -163,7 +180,7 @@ So the two agree in two ways:
 |---|---|
 | F1 | This file. The Worker at `3d.mkfifo.com` serves the catalog and the review page. Done. |
 | F2 | Blueprints, orders and the receipt (`Xuong.Factory`), `mix xuong.order`, the builder in the VM, the cache in R2. People, houses and framing are the first blueprints: they have options already. Done. |
-| F3 | The van blueprint, from the traces of DIY and from photos: the Ford Transit, the Mercedes-Benz Sprinter and the Ram ProMaster, with their slots. |
+| F3 | The van blueprint, from the traces of DIY and from photos: the Ford Transit (high roof, medium roof, extended; cargo, crew and passenger windows), with the engine bay and the roof. Done. The Sprinter and the ProMaster come after their photos. |
 | F4 | People in the release (the data of MakeHuman in `priv/`), and less memory for the near level. |
 | F5 | Drawings. |
 | F6 | Supplied parts (with the reader of `.wings` of step 5 of `README.md`). |

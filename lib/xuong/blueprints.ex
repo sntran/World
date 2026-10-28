@@ -5,17 +5,18 @@ defmodule Xuong.Blueprints do
   - `catalog`: a model of `Xuong.Catalog` by its name;
   - `person`: a person of `Xuong.Human`;
   - `house`: a house of `Xuong.Models.Houses`;
+  - `van`: a van of `Xuong.Models.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `Xuong.Parts.Framing`.
   """
   alias Xuong.Blueprint
   alias Xuong.Human.{Data, Pose}
-  alias Xuong.Models.Houses
+  alias Xuong.Models.{Houses, Van}
   alias Xuong.Parts.{Building, Framing, Stock}
 
   import Blueprint, only: [option: 3]
 
   @doc "The blueprints, in the order of their names."
-  def all, do: Enum.sort_by([catalog(), person(), house(), extrusion(), strut(), l_track()], & &1.name)
+  def all, do: Enum.sort_by([catalog(), person(), house(), van(), extrusion(), strut(), l_track()], & &1.name)
 
   @doc "The names of the blueprints."
   def names, do: Enum.map(all(), & &1.name)
@@ -226,6 +227,86 @@ defmodule Xuong.Blueprints do
         ],
         message != nil,
         do: {"options.openings.#{i}", message}
+  end
+
+  # --- A van -------------------------------------------------------------------------------
+
+  defp van do
+    %Blueprint{
+      name: "van",
+      doc:
+        "A van from the traces of its make and the photos of dealers: its body, its doors that open, its wheels that turn and steer, the items of DIY in the engine bay, and the items on the roof. The color of the role paint is the color of the body.",
+      options: [
+        option("model", :choice,
+          default: "transit_148",
+          values: Van.models(),
+          doc: "The make, the wheelbase and the roof."
+        ),
+        option("windows", :choice,
+          default: "cargo",
+          values: ["cargo", "crew", "passenger"],
+          doc:
+            "cargo: the windows of the cab only; crew: and the windows of the second row; passenger: the windows all around."
+        ),
+        option("engine_bay", :list,
+          default: [],
+          item: option("item", :choice, values: ["dc_charger", "second_alternator"]),
+          max: 2,
+          doc: "The items of DIY in the engine bay."
+        ),
+        option("roof", :list,
+          default: [],
+          max: 6,
+          item:
+            option("item", :object,
+              fields: [
+                option("kind", :choice, values: ["fan", "solar"]),
+                option("at", :number, min: 0.0, max: 8.0, unit: "m", doc: "The center, from the front of the van.")
+              ]
+            ),
+          doc: "The items on the roof: a roof fan (MaxxFan) or a solar panel of 400 W."
+        )
+      ],
+      build: fn o ->
+        Van.build(o["model"],
+          name: "van",
+          windows: String.to_existing_atom(o["windows"]),
+          engine_bay: Enum.map(o["engine_bay"], &String.to_existing_atom/1),
+          roof: for(%{"kind" => k, "at" => d} <- o["roof"], do: {String.to_existing_atom(k), d})
+        )
+      end,
+      check: &van_check/1,
+      sources: [
+        "The sources of the model are in the receipt: the sizes of Ford, the traces of DIY and the photos of dealers."
+      ]
+    }
+  end
+
+  # Each item on the roof is on its flat part, and two items do not touch.
+  defp van_check(o) do
+    {d0, d1} = Van.roof_span(o["model"])
+
+    spans =
+      for {%{"kind" => k, "at" => d}, i} <- Enum.with_index(o["roof"]) do
+        half = Van.roof_item(String.to_existing_atom(k))
+        {i, d - half, d + half}
+      end
+
+    outside =
+      for {i, a, b} <- spans,
+          a < d0 or b > d1,
+          do:
+            {"options.roof.#{i}",
+             "must be on the flat part of the roof: its center from #{Float.round(d0, 3)} m + its half length to #{Float.round(d1, 3)} m - its half length"}
+
+    touch =
+      for {i, a, b} <- spans,
+          {j, c, e} <- spans,
+          i < j,
+          a < e and c < b,
+          do: {"options.roof.#{j}", "must not touch the item #{i}"}
+
+    outside ++ touch
   end
 
   # --- Framing -----------------------------------------------------------------------------

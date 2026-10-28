@@ -12,7 +12,14 @@ defmodule Xuong.Assembly do
   """
   alias Xuong.{Frame, Part, Port}
 
-  defstruct name: "assembly", kind: :item, sources: [], extras: %{}, nodes: [], ports: %{}, place: %Frame{}
+  defstruct name: "assembly",
+            kind: :item,
+            sources: [],
+            extras: %{},
+            materials: %{},
+            nodes: [],
+            ports: %{},
+            place: %Frame{}
 
   defmodule Connection do
     @moduledoc """
@@ -26,7 +33,9 @@ defmodule Xuong.Assembly do
 
   @doc """
   An assembly with its root. The options: `root` (the name of the root
-  node, `"body"` by default), `kind`, `sources`, `extras`, and `place`: a
+  node, `"body"` by default), `kind`, `sources`, `extras`, `materials` (the
+  default of a material role for this model: the white paint of a van),
+  and `place`: a
   frame that moves the whole assembly (for example, a model made with its
   back at y = 0 moves to its center).
   """
@@ -36,6 +45,7 @@ defmodule Xuong.Assembly do
       kind: Keyword.get(opts, :kind, :item),
       sources: Keyword.get(opts, :sources, []),
       extras: Keyword.get(opts, :extras, %{}),
+      materials: Keyword.get(opts, :materials, %{}),
       place: Keyword.get(opts, :place, Frame.identity()),
       nodes: [{Keyword.get(opts, :root, "body"), root_item, nil}]
     }

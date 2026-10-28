@@ -1,0 +1,360 @@
+{
+ "note": "The vans of the blueprint van (Xuong.Models.Van). Lengths in meters. A trace is a line of points [d, z]: d back from the front (or from the back), z up from the ground; \"top\" is the height of the roof. The points of a trace over 2 m stretch to the height of the model, so the cab keeps its height.",
+ "makes": {
+  "ford_transit": {
+   "name": "Ford Transit (US, 2020 to 2026)",
+   "traces": {
+    "high": {
+     "top": 2.753,
+     "back": [
+      [
+       0.313,
+       "top"
+      ],
+      [
+       0.275,
+       2.694
+      ],
+      [
+       0.217,
+       2.574
+      ],
+      [
+       0.155,
+       2.38
+      ],
+      [
+       0.127,
+       2.179
+      ],
+      [
+       0.127,
+       1.924
+      ],
+      [
+       0.102,
+       1.797
+      ],
+      [
+       0.102,
+       1.491
+      ],
+      [
+       0.076,
+       1.364
+      ],
+      [
+       0.076,
+       1.16
+      ],
+      [
+       0.025,
+       0.803
+      ],
+      [
+       0.025,
+       0.573
+      ],
+      [
+       0.005,
+       0.472
+      ],
+      [
+       0.02,
+       0.415
+      ],
+      [
+       0.066,
+       0.385
+      ],
+      [
+       0.217,
+       0.382
+      ],
+      [
+       0.321,
+       0.359
+      ]
+     ],
+     "roof": [
+      [
+       1.95,
+       2.33
+      ],
+      [
+       2.25,
+       2.554
+      ],
+      [
+       2.523,
+       2.663
+      ],
+      [
+       2.742,
+       "top"
+      ]
+     ]
+    },
+    "medium": {
+     "top": 2.556,
+     "back": [
+      [
+       0.263,
+       "top"
+      ],
+      [
+       0.225,
+       2.498
+      ],
+      [
+       0.182,
+       2.362
+      ],
+      [
+       0.128,
+       1.93
+      ],
+      [
+       0.102,
+       1.47
+      ],
+      [
+       0.077,
+       1.342
+      ],
+      [
+       0.051,
+       0.754
+      ],
+      [
+       0.005,
+       0.473
+      ],
+      [
+       0.02,
+       0.417
+      ],
+      [
+       0.049,
+       0.394
+      ],
+      [
+       0.243,
+       0.358
+      ]
+     ],
+     "roof": [
+      [
+       2.002,
+       2.28
+      ],
+      [
+       2.275,
+       2.416
+      ],
+      [
+       2.495,
+       2.477
+      ],
+      [
+       2.674,
+       2.503
+      ],
+      [
+       2.927,
+       "top"
+      ]
+     ]
+    }
+   },
+   "hull": {
+    "belt": 1.25,
+    "lean": 0.07,
+    "edge": 0.1,
+    "crown": [
+     0.32,
+     0.9
+    ],
+    "nose": [
+     0.3,
+     1.7
+    ],
+    "tail": [
+     0.1,
+     4.0
+    ],
+    "sill": 0.38,
+    "arches": [
+     0.53,
+     0.57
+    ]
+   },
+   "sources": [
+    "The traces of the side: the previews of the drawings of Outlines (getoutlines.com), 2019 to 2023, as in DIY, and the side photo of the owner (a Transit 148 in, medium roof).",
+    "Ford, Transit Body Builders Layout Book, 2022 model year, pages 18 to 24, and 2025 Ford Transit Technical Specifications, page 4: the length, the width, the heights, the wheelbase, the overhangs, the tracks, the openings of the doors, the height of the floor.",
+    "Measured on side photos of dealers (2022, 2023 and 2026 Transit-250, high roof, 148 in), with the wheelbase as the scale: the hood, the windshield, the lamps, the bands, the bumpers, the mirrors, the seams of the doors."
+   ],
+   "front": [
+    [
+     0.3,
+     0.3
+    ],
+    [
+     0.162,
+     0.286
+    ],
+    [
+     0.08,
+     0.33
+    ],
+    [
+     0.025,
+     0.42
+    ],
+    [
+     0.0,
+     0.516
+    ],
+    [
+     0.005,
+     0.6
+    ],
+    [
+     0.014,
+     0.664
+    ],
+    [
+     0.06,
+     0.86
+    ],
+    [
+     0.1,
+     1.03
+    ],
+    [
+     0.132,
+     1.18
+    ],
+    [
+     0.2,
+     1.24
+    ],
+    [
+     0.457,
+     1.313
+    ],
+    [
+     0.634,
+     1.372
+    ],
+    [
+     0.805,
+     1.392
+    ],
+    [
+     1.607,
+     2.094
+    ]
+   ],
+   "front_note": "The center line of the front, from the bottom of the bumper to the top of the windshield: Ford, Body Builders Layout Book 2022, page 21 (the cab, near to scale), and the side photos of dealers.",
+   "windows": {
+    "side": {
+     "from": 1.43,
+     "z": [
+      1.36,
+      2.08
+     ],
+     "seams": [
+      2.8,
+      3.79
+     ],
+     "front_top": 0.18,
+     "back_top": 0.09,
+     "back_bottom": 0.3
+    },
+    "slider": {
+     "from": 1.44,
+     "front_top": 0.2
+    },
+    "rear_doors": {
+     "x": 0.86,
+     "z": [
+      1.32,
+      2.23
+     ],
+     "outer_top": 0.07,
+     "outer_bottom": 0.2
+    },
+    "sources": [
+     "The windows of the passenger van and of the crew van (2026 and 2027 Transit T-350 XL, XLT and HD XL, 148 in): measured from the photos and the renders of Ford on the pages of dealers, with the wheelbase as the scale. x is from the front axle, z is from the ground, to 0.03 m. Medium roof: https://www.comvoy.com/work-van/arlington-wi/new-2026-ford-transit-350-xl-passenger-van-24080301, https://www.comvoy.com/work-van/colusa-ca/new-2026-ford-transit-350-xl-passenger-van-24727906, https://www.comvoy.com/work-van/brandon-ms/new-2027-ford-transit-350-xl-passenger-van-24178470, https://www.comvoy.com/work-van/kansas-city-mo/new-2026-ford-transit-350-xl-passenger-van-22784884. High roof: https://www.comvoy.com/work-van/starke-fl/new-2026-ford-transit-350-xl-passenger-van-23229223, https://www.comvoy.com/work-van/silsbee-tx/new-2027-ford-transit-350-xl-passenger-van-24900435, https://www.comvoy.com/work-van/sacramento-ca/new-2026-ford-transit-350-xlt-passenger-van-23683021. Extended: https://www.comvoy.com/work-van/manassas-va/new-2026-ford-transit-350-hd-xl-passenger-van-22388427, https://www.comvoy.com/work-van/hawthorne-ca/new-2026-ford-transit-350-hd-xl-passenger-van-24447026.",
+     "The crew van (2020 Transit 250, 148 in, medium roof): the glass of the sliding door only, at the right side: https://vanlifetrader.com/listing/partial-build-2020-ford-transit-crew-250-rwd-148″-wb-medium-roof/. The window of the second row at the left side is not measured: it is the first window of the passenger van."
+    ]
+   }
+  }
+ },
+ "models": {
+  "transit_148": {
+   "make": "ford_transit",
+   "name": "Ford Transit 148 in, high roof",
+   "roof": "high",
+   "length": 5.981,
+   "width": 2.066,
+   "height": 2.785,
+   "wheelbase": 3.75,
+   "front": 1.023,
+   "track": [
+    1.732,
+    1.743
+   ],
+   "tire": "235/65R16",
+   "floor": 0.73,
+   "rear_door": 1.887,
+   "sources": [
+    "Ford, 2025 Transit Technical Specifications: 235.5 by 81.3 by 109.6 in, wheelbase 147.6 in; Body Builders Layout Book 2022: front overhang 1023 mm, tracks 1732 and 1743 mm, floor 730 mm, rear door 1568 by 1887 mm."
+   ],
+   "quarter_end": 4.44
+  },
+  "transit_148_medium": {
+   "make": "ford_transit",
+   "name": "Ford Transit 148 in, medium roof",
+   "roof": "medium",
+   "length": 5.981,
+   "width": 2.066,
+   "height": 2.574,
+   "wheelbase": 3.75,
+   "front": 1.023,
+   "track": [
+    1.732,
+    1.743
+   ],
+   "tire": "235/65R16",
+   "floor": 0.73,
+   "rear_door": 1.648,
+   "sources": [
+    "Ford, 2025 Transit Technical Specifications: 235.5 by 81.3 by 101.3 in; Body Builders Layout Book 2022: rear door 1568 by 1648 mm."
+   ],
+   "quarter_end": 4.44
+  },
+  "transit_148_el": {
+   "make": "ford_transit",
+   "name": "Ford Transit 148 in extended, high roof",
+   "roof": "high",
+   "length": 6.704,
+   "width": 2.066,
+   "height": 2.803,
+   "wheelbase": 3.75,
+   "front": 1.023,
+   "track": [
+    1.732,
+    1.743
+   ],
+   "tire": "235/65R16",
+   "floor": 0.712,
+   "rear_door": 1.887,
+   "sources": [
+    "Ford, 2025 Transit Technical Specifications: 263.9 by 81.3 by 110.4 in; Body Builders Layout Book 2022: rear overhang 1931 mm, floor 712 mm."
+   ],
+   "quarter_end": 5.12
+  }
+ }
+}

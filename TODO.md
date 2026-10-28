@@ -41,9 +41,18 @@ into the steps of `AGENTS.md`.
 - **A catalog of makes and models.** Real vehicles with their real
   sizes and sources: the Chevy Bolt, the Honda Wave, the Honda Vision. A
   person chooses a vehicle in Phượt.
-- **The other vans of DIY.** The Ram ProMaster (136, 159, 159 extended),
-  the Mercedes-Benz Sprinter (144, 170, 170 extended) and the other
-  Transits (148 medium roof, 148 extended), each with its engine bay.
+- **The other vans of DIY.** The Ram ProMaster (136, 159, 159 extended)
+  and the Mercedes-Benz Sprinter (144, 170, 170 extended), each with its
+  engine bay, as makes of `priv/data/vans.json`. First the photos of
+  dealers and the drawings of the maker (the sizes, the traces, the
+  windows): not a memory.
+- **The heights of the passenger van.** Ford gives 97.1 in (medium
+  roof) and 108.4 in (high roof) for the passenger van, and 101.3 in and
+  109.6 in for the cargo van. The van uses the heights of the cargo van.
+  Find the cause (the load, the tires, a rail) in the drawings of Ford.
+- **The crew van at the left side.** No photo shows the left side of the
+  crew van: its window of the second row is the window of the passenger
+  van. A photo can correct it.
 - **A belt for the second alternator.** The second alternator of the van
   has no belt and no bracket on the engine. The kit of Ford for the
   Transit has its own bracket: its shape needs a source.

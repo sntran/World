@@ -42,7 +42,8 @@ defmodule Xuong.Build do
 
     {nodes, _} = finish(acc)
 
-    scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: acc.animations, materials: acc.materials}
+    materials = Map.merge(Map.get(item, :materials, %{}), acc.materials)
+    scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: acc.animations, materials: materials}
     {lo, hi} = if Scene.triangles(scene) > 0, do: Scene.bounds(scene), else: {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}
     size = Vec.sub(hi, lo)
 

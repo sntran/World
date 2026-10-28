@@ -122,6 +122,17 @@ defmodule Xuong.FactoryTest do
                ["options.openings.0"]
     end
 
+    test "a van checks the items on its roof" do
+      roof = fn items -> %{"blueprint" => "van", "options" => %{"roof" => items}} end
+      solar = fn at -> %{"kind" => "solar", "at" => at} end
+      fan = fn at -> %{"kind" => "fan", "at" => at} end
+
+      assert {:ok, _} = Factory.check(roof.([solar.(3.75), fan.(5.15)]))
+      assert paths(Factory.check(roof.([solar.(2.5)]))) == ["options.roof.0"]
+      assert paths(Factory.check(roof.([fan.(5.5)]))) == ["options.roof.0"]
+      assert paths(Factory.check(roof.([solar.(3.75), fan.(4.8)]))) == ["options.roof.1"]
+    end
+
     test "a person needs one origin" do
       none = %{"african" => 0, "asian" => 0, "caucasian" => 0}
       assert paths(Factory.check(%{"blueprint" => "person", "options" => %{"origin" => none}})) == ["options.origin"]
@@ -170,6 +181,15 @@ defmodule Xuong.FactoryTest do
         %{"blueprint" => "extrusion", "options" => %{"profile" => "1515", "length" => 0.2}},
         %{"blueprint" => "strut", "options" => %{"length" => 0.3}},
         %{"blueprint" => "l_track", "options" => %{"length" => 0.3}},
+        %{
+          "blueprint" => "van",
+          "options" => %{
+            "model" => "transit_148_medium",
+            "windows" => "crew",
+            "engine_bay" => ["dc_charger"],
+            "roof" => [%{"kind" => "solar", "at" => 3.8}, %{"kind" => "fan", "at" => 5.2}]
+          }
+        },
         %{
           "blueprint" => "person",
           "options" => %{"hair" => "none", "pose" => "sit", "origin" => %{"african" => 0.5, "asian" => 0.5}}

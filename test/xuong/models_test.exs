@@ -43,6 +43,54 @@ defmodule Xuong.ModelsTest do
     end
   end
 
+  # Each van has the size of Ford: the length and the height of the data,
+  # and the width with its mirrors.
+  for name <- Xuong.Models.Van.models() do
+    @name name
+
+    test "the van #{name}: its size, its levels and its doors" do
+      m = Xuong.Models.Van.model(@name)
+      fun = fn -> Xuong.Models.Van.build(@name) end
+      scenes = for level <- [:near, :mid, :far], do: {level, Build.scene(Detail.with(level, fun), level: level)}
+
+      # The windows all around fit in the limits too.
+      passenger = fn -> Xuong.Models.Van.build(@name, windows: :passenger) end
+
+      for level <- [:near, :mid, :far],
+          scene <- [Keyword.fetch!(scenes, level), Build.scene(Detail.with(level, passenger), level: level)] do
+        tris = Scene.triangles(scene)
+        assert tris <= @limits[level], "#{@name} has #{tris} triangles at #{level}"
+      end
+
+      [{:near, near} | _] = scenes
+      [sw, sl, sh] = near.extras["size"]
+      assert abs(sl - m["length"]) <= 0.06 and abs(sh - m["height"]) <= 0.05, inspect(near.extras["size"])
+      assert sw > m["width"] and sw < m["width"] + 0.5
+
+      van = fun.()
+      joints = for {name, _, %{kind: kind}} <- van.nodes, into: %{}, do: {name, kind}
+      assert %{"sliding_door" => :slides, "rear_door_right" => :turns, "rear_door_left" => :turns} = joints
+    end
+  end
+
+  test "the hull of a van: its span, its sections and its back" do
+    alias Xuong.Models.Hull
+    h = Xuong.Models.Van.hull("transit_148")
+    {d0, d1} = Hull.span(h)
+    assert d0 < 0.01 and abs(d1 - h.length) < 0.01
+    assert Hull.z_high(h, 3.0) == h.top
+    assert Hull.half_width(h, 3.0) == h.width / 2 and Hull.half_width(h, d1) < h.width / 2
+
+    # The back steps to the front over the bumper, and has no face over the top.
+    assert Hull.back(h, 0.7) < Hull.back(h, 1.6)
+    assert Hull.back(h, h.top + 1.0) == nil
+
+    # A section is a closed loop, and a wider skin is bigger.
+    section = Hull.section(h, 3.0)
+    assert length(section) > 8
+    assert Hull.area(Hull.section(h, 3.0, 0.01)) > Hull.area(section)
+  end
+
   test "the hood of the van opens on the engine bay, with the items of DIY in it" do
     van = Xuong.Models.FordTransit.model()
     assert {_, _, %{kind: :turns, role: :lid, limits: [0, 60]}} = List.keyfind(van.nodes, "hood", 0)

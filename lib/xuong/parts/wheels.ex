@@ -275,10 +275,18 @@ defmodule Xuong.Parts.Wheels do
     end
   end
 
+  @doc "The radius of a tire from its code: half its rim and its height."
+  def tire_radius(code) do
+    %{height: h, rim: d} = tire_size(code)
+    d / 2 + h
+  end
+
   @doc """
   A car wheel: a rim with a face of `spokes` spokes (5), the center cap,
   `lugs` lug nuts (5) on the circle `pcd` (0.1143 m), and the tire
-  (`car_wheel("215/50R17")`). The face is on the +z side.
+  (`car_wheel("215/50R17")`). The face is on the +z side. With `face:
+  :disc`, the face is a pressed disc of steel with `holes` holes (10), as
+  the steel wheel of a van, in place of the spokes.
   """
   def car_wheel(code, opts \\ []) do
     %{width: w, rim: d} = tire_size(code)
@@ -301,22 +309,9 @@ defmodule Xuong.Parts.Wheels do
       )
 
     spokes =
-      for k <- 0..(n - 1) do
-        a = 360 * k / n
-
-        sections =
-          for {t, hw} <- [{0.0, 0.03}, {0.5, 0.022}, {1.0, 0.03}] do
-            r = 0.075 + (ri - 0.075) * t
-            {polar(r, a, face_z - 0.012 * t), tangent(a), {0.0, 0.0, 1.0}, hw, 0.014, 4}
-          end
-
-        Part.new(
-          "spoke_car",
-          :spoke,
-          Shape.loft(sections, Keyword.get(opts, :rim_material, :aluminum), sides: 12, smooth: 1),
-          [hub_port()]
-        )
-      end
+      if Keyword.get(opts, :face) == :disc,
+        do: [disc_face(ri, face_z, Keyword.get(opts, :holes, 10))],
+        else: for(k <- 0..(n - 1)//1, do: spoke_car(k, n, ri, face_z, opts))
 
     # The lug nuts on the face, on their circle (PCD).
     pcd = Keyword.get(opts, :pcd, 0.1143)
@@ -334,7 +329,8 @@ defmodule Xuong.Parts.Wheels do
     Enum.reduce(1..lugs//1, asm, fn k, a ->
       at = polar(pcd / 2, 360 * k / lugs + 36, face_z + 0.002)
 
-      Assembly.add(a, "lug_#{k}", Xuong.Parts.Fasteners.nut("M12", material: :chrome),
+      # The lug nuts show only from near.
+      Assembly.add(a, "lug_#{k}", %{Xuong.Parts.Fasteners.nut("M12", material: :chrome) | detail: :near},
         at: Xuong.Port.new("lug_#{k}", at, {0, 0, 1}, {0, 1, 0}),
         port: "face"
       )
@@ -344,6 +340,48 @@ defmodule Xuong.Parts.Wheels do
   defp polar(r, deg, z) do
     a = deg * :math.pi() / 180
     {r * :math.cos(a), r * :math.sin(a), z / 1}
+  end
+
+  # A spoke of a car wheel, from the hub to the rim.
+  defp spoke_car(k, n, ri, face_z, opts) do
+    a = 360 * k / n
+
+    sections =
+      for {t, hw} <- [{0.0, 0.03}, {0.5, 0.022}, {1.0, 0.03}] do
+        r = 0.075 + (ri - 0.075) * t
+        {polar(r, a, face_z - 0.012 * t), tangent(a), {0.0, 0.0, 1.0}, hw, 0.014, 4}
+      end
+
+    Part.new(
+      "spoke_car",
+      :spoke,
+      Shape.loft(sections, Keyword.get(opts, :rim_material, :aluminum), sides: 12, smooth: 1),
+      [hub_port()]
+    )
+  end
+
+  # The pressed face of a steel wheel: a disc from the hub to the rim, a
+  # ring of holes (dark discs in the face), and a black cap.
+  defp disc_face(ri, face_z, holes) do
+    disc =
+      Shape.lathe([{0.08, face_z - 0.022}, {ri, face_z - 0.022}, {ri, face_z - 0.008}, {0.08, face_z - 0.004}], :steel,
+        kind: :ring,
+        sides: 32
+      )
+
+    r = 0.08 + (ri - 0.08) * 0.62
+
+    # The holes show only from near.
+    dots =
+      for k <- 0..(holes - 1)//1,
+          Xuong.Detail.level() == :near,
+          do:
+            Shape.cylinder(0.022, 0.004, :black,
+              sides: 10,
+              frame: Xuong.Frame.move(polar(r, 360 * k / holes, face_z - 0.008))
+            )
+
+    Part.new("wheel_disc_steel", :spoke, [disc | dots], [hub_port()])
   end
 
   defp tangent(deg) do

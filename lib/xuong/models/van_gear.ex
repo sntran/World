@@ -369,8 +369,10 @@ defmodule Xuong.Models.VanGear do
     walls = Kit.cavity({-c, -c, -0.06}, {c, c, 0.03}, 0.012, :white, :top) |> List.delete_at(3)
     flange = [Shape.box({-c - 0.03, -c - 0.03, 0.0}, {c + 0.03, c + 0.03, 0.012}, :white) | walls]
 
+    # The grille over the opening shows only from near.
     grille =
       for k <- 1..4,
+          Xuong.Detail.level() == :near,
           do:
             Shape.sweep(
               for(
@@ -632,10 +634,35 @@ defmodule Xuong.Models.VanGear do
 
     {cw, cl} = {(w - 2 * f - 0.03) / 6, (l - 2 * f - 0.05) / 18}
 
+    # The 108 cells; from mid, the six rows of cells; from far, one dark
+    # face.
     cells =
-      for i <- 0..5, j <- 0..17 do
-        {cx, cy} = {x0 + f + 0.015 + i * cw, y0 + f + 0.025 + j * cl}
-        Shape.box({cx + 0.002, cy + 0.002, t - 0.004}, {cx + cw - 0.002, cy + cl - 0.002, t - 0.003}, :solar_cell)
+      case Xuong.Detail.level() do
+        :far ->
+          [
+            Shape.box(
+              {x0 + f + 0.015, y0 + f + 0.025, t - 0.004},
+              {x1 - f - 0.015, y1 - f - 0.025, t - 0.003},
+              :solar_cell
+            )
+          ]
+
+        :mid ->
+          for i <- 0..5 do
+            cx = x0 + f + 0.015 + i * cw
+
+            Shape.box(
+              {cx + 0.002, y0 + f + 0.025, t - 0.004},
+              {cx + cw - 0.002, y1 - f - 0.025, t - 0.003},
+              :solar_cell
+            )
+          end
+
+        :near ->
+          for i <- 0..5, j <- 0..17 do
+            {cx, cy} = {x0 + f + 0.015 + i * cw, y0 + f + 0.025 + j * cl}
+            Shape.box({cx + 0.002, cy + 0.002, t - 0.004}, {cx + cw - 0.002, cy + cl - 0.002, t - 0.003}, :solar_cell)
+          end
       end
 
     glass = Shape.box({x0 + f, y0 + f, t - 0.003}, {x1 - f, y1 - f, t - 0.0005}, :glass)
