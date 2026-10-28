@@ -8,8 +8,6 @@ projects of the owner: [Phượt](https://github.com/sntran/phuot),
 [Vung_Tau](https://github.com/sntran/Vung_Tau) and
 [Humans_Must_Die](https://github.com/sntran/Humans_Must_Die).
 
-The first name of the project was Xưởng ("workshop" in Vietnamese).
-
 A model in World is made as a real thing is made: from real parts.
 A bolt, a bearing, a wheel and a panel are parts. A scooter is an
 assembly of parts and of smaller assemblies. Each part has its real size,

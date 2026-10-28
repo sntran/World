@@ -1,8 +1,8 @@
 # The world
 
-World started as Xưởng, a factory of 3D models: the factory
-(`docs/factory.md`) takes an order and gives the files of a model. In the world, people make
-the model, as in the real world. A storekeeper picks the parts from a
+The factory of World (`docs/factory.md`) takes an order and gives the
+files of a model. In the world, people make the model, as in the real
+world. A storekeeper picks the parts from a
 warehouse. A driver brings them to the factory. The workers on the
 line put them together. The places of the world are buildings, and
 people build them too, from bricks, studs and the other materials of

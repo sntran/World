@@ -132,7 +132,7 @@ of the VM):
 | `house_brick_vn` | mid | 147 ms | 404 ms | 88 MB |
 | `house_brick_vn` | near | 4.3 s | 6.7 s | 847 MB |
 
-At <https://3d.mkfifo.com>, the first address of the site (the deploy of 05ec8c6, 2026-10-28; the
+At the edge (the deploy of 05ec8c6, 2026-10-28; the
 time of the first request, with the check and the build):
 
 | Order | Level | Time | File | Result |
