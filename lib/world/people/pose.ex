@@ -237,7 +237,13 @@ defmodule World.People.Pose do
 
   # The channels of the bones that move: their turns, and the moves of the
   # bones that move (the hips).
-  defp channels(bones, base, frames, times) do
+  @doc """
+  The channels of an animation: for the bones (parents first; bone i is
+  node i + 1) that move from their frames `base`, the rotations, and the
+  moves of the bones that move (the hips), at each time of `times` (one
+  map of a bone to its local frame for each time in `frames`).
+  """
+  def channels(bones, base, frames, times) do
     for {b, i} <- Enum.with_index(bones, 1),
         values = Enum.map(frames, & &1[b.name]),
         {path, values, moved?} <- [

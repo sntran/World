@@ -97,7 +97,7 @@ defmodule World.Figure do
 
   def pose(%__MODULE__{skeleton: s} = f, values, targets) do
     limbs = Map.new(targets, fn {name, at} -> {{:limb, name}, %{at: at}} end)
-    locals = Skeleton.locals(s, Map.merge(Joints.pose(f.pose, values), limbs))
+    locals = Skeleton.locals(s, Map.merge(Joints.pose(f.pose, values, f.joints), limbs))
 
     nodes =
       for {n, i} <- Enum.with_index(f.nodes),

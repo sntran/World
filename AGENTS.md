@@ -82,6 +82,7 @@ about it.
 | `World.Gear` | `PowerStations`, and `Camper` (the gear of a camper van). |
 | `World.Vehicles` | `Wheels`, `Corners`, `Body`, `Hull`, the `Van` line and its stations, and each vehicle (`FordTransit`, `ChevyBolt`, `HondaVision`, `RoyalEnfieldHimalayan`, `TouringBicycle`). |
 | `World.People` | The people of the catalog, `Human` (a person from the data of MakeHuman), `Data`, `Skeleton` (the joints: flex, spread, twist, limits, aim, look, the hips, the spine, the hands and the feet to points), `Joints` (the joints and the limbs of a person, for an order), `Props` (the props on the ports of the bones: a fan, a bottle, a nón lá), `Pose` (the poses, the shapes of a hand, the animations, the routines of exercise). `World.People.exercise/2` is a group at a morning of exercise. |
+| `World.Rig`, `World.Animals` | A figure from bones, with a skin around them; the animals as species of a body plan (`dog/1`: a street dog). |
 | `World.Orders` | An order in, the files out: `Blueprint`, `Blueprints`. |
 | `World.Catalog` | Each model of the library by its name. |
 | `World.Service`, `World.Application` | The HTTP service of the VM, and the application. |

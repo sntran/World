@@ -6,6 +6,7 @@ defmodule World.Orders.Blueprints do
   - `person`: a person of `World.People.Human`;
   - `traveler`: a person on a vehicle of Phượt (`World.People.traveler/2`);
   - `exercise`: a group at a morning of exercise (`World.People.exercise/2`);
+  - `animal`: an animal of a species (`World.Animals.animal/2`);
   - `house`: a house of `World.Buildings`;
   - `van`: a van of `World.Vehicles.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `World.Framing`.
@@ -21,7 +22,7 @@ defmodule World.Orders.Blueprints do
   def all,
     do:
       Enum.sort_by(
-        [catalog(), person(), traveler(), exercise(), house(), van(), extrusion(), strut(), l_track()],
+        [catalog(), person(), traveler(), exercise(), animal(), house(), van(), extrusion(), strut(), l_track()],
         & &1.name
       )
 
@@ -90,6 +91,31 @@ defmodule World.Orders.Blueprints do
       end,
       check: &origin_check/1,
       sources: ["MakeHuman 1.x, the data of the base mesh, the targets and the assets (CC0)."]
+    }
+  end
+
+  # --- An animal ------------------------------------------------------------------------------
+
+  defp animal do
+    %Blueprint{
+      name: "animal",
+      doc:
+        "An animal from its bones (World.Animals): a species of a body plan. Now: street_dog, a street dog of Việt Nam (chó cỏ), about 50 cm at the shoulder, a short coat, a tail up. Its joints and limbs are in the order too.",
+      options: [
+        option("species", :choice, default: "street_dog", values: World.Animals.species()),
+        option("coat", :color, default: "#c8965a", doc: "The color of the coat."),
+        option("size", :number, default: 1.0, min: 0.6, max: 1.4, doc: "A scale of the animal: 1 is its common size."),
+        option("animations", :list,
+          default: [],
+          item: option("item", :choice, values: ["wag", "walk"]),
+          max: 2,
+          doc: "walk: a step of the gait (the dog: 0.7 s at about 0.43 m/s; an app moves the animal); wag: the tail."
+        )
+      ],
+      build: fn o ->
+        World.Animals.animal(o["species"], coat: rgb(o["coat"]), size: o["size"], animations: o["animations"])
+      end,
+      sources: ["The sizes of each species are in its sources: a guess from photos when there are no measurements."]
     }
   end
 

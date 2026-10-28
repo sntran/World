@@ -63,7 +63,7 @@ An error tells the path of the wrong value and the rule:
 `{"errors": [{"path": "options.length", "message": "must be from 0.05 to 6.1 m"}]}`.
 
 The blueprints now: `catalog` (each model of the catalog, with colors
-and joints), `person`, `traveler`, `exercise`, `house`, `van`,
+and joints), `person`, `traveler`, `exercise`, `animal`, `house`, `van`,
 `extrusion`, `strut` and `l_track`.
 
 The joints of a person are in the order too: `"joints": {"elbow_r":
@@ -101,6 +101,14 @@ A person on a moving vehicle is always in a safe pose: the eyes on the
 road, the hands on the bars or on the wheel. The vehicle goes to the
 front: seen from its right side, it goes to the right of the screen. At
 the far level the file is about 300 KB.
+
+An `animal` is an animal of a species, from its bones: `species` (now
+`street_dog`, a street dog of Việt Nam), `coat` (a color), `size` (0.6
+to 1.4: a scale of the animal) and `animations` (`walk`, `wag`). Its
+joints and the ends of its limbs are in the order too (`"joints":
+{"tail.spread": 20}`, `"targets": {"front_r": [0.07, 0.3, 0.15]}`). A
+species is data of a body plan, so one blueprint makes all the animals;
+the catalog has a model for each species (`street_dog`).
 
 An `exercise` is a group at a morning of exercise, as on the beach of
 Vũng Tàu: `routine` (`tai_chi`, `yoga` or `aerobics`), `count` (1 to 12

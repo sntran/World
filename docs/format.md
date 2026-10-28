@@ -423,6 +423,48 @@ A pose turns bones around their heads: a map of a bone to a list of
 `{axis, degrees}`, with the axes of World when the person stands at
 rest (`World.People.Pose`).
 
+## An animal
+
+An animal is a figure from bones (`World.Rig`): the data of the rig in,
+a figure out, with a skin that the build makes around the bones. A bone
+of a rig has its `name`, its `parent`, its `head` and its `tail` (points
+in the axes of the figure at rest), its hinge `x`, the half sizes of
+the body around it at its head and at its tail (`radius`), and its
+`material`. The skin is a tube around each bone with a body: rings at
+the head, the middle and the tail, and a round cap at each end. The
+points at the head follow the bone and its parent (half each), so a
+joint bends smooth. A rig also gives the limbs, the joints, the ports
+and small spheres (the eyes, a nose).
+
+An animal is a species of a body plan (`World.Animals`). The body plan
+gives the bones, the joints, the limbs, the ports and the gaits; the
+species gives its sizes, its colors and its sources. The body plans now:
+a quadruped with a tail. A cat or a water buffalo is the same plan with
+other sizes; a bird is another plan.
+
+The species now:
+
+| Species | The animal | Sources |
+|---|---|---|
+| `street_dog` | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, a tail up. | A guess from photos and from the medium breeds (about 15 kg): no measurements. |
+
+The dog:
+
+- Joints: the hinges `elbow_l`, `wrist_l`, `knee_l`, `hock_l` (and
+  `_r`): the value adds to the rest, more swings the lower bone to the
+  front. The balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine`,
+  and `tail` (`flex` lifts the tail, `spread` wags it to the right
+  side).
+- Limbs: `front_l`, `front_r` (two bones, the end is the wrist, the
+  elbow goes back), `hind_l`, `hind_r` (the end is the hock, the knee
+  goes to the front), `tail` and `head` (chains).
+- Ports: `ground`, `collar` (on the neck), `back` (on the spine, for a
+  bag), `mouth` (on the muzzle, for a stick).
+- Animations: `walk` (a step of 0.7 s with a stride of 30 cm, about
+  0.43 m/s; the feet in the order hind left, front left, hind right,
+  front right; each foot is on the ground for 0.6 of the step) and `wag`
+  (the tail wags twice in 0.8 s).
+
 ## The files of a model
 
 The build (`mix world.build`) writes:

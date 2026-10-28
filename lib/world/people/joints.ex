@@ -106,11 +106,11 @@ defmodule World.People.Joints do
   @doc """
   A pose of `World.People.Skeleton` with the values of the joints: a map
   of a value name (`values/0`) to a number. A value out of the limits
-  stops at the nearest limit. The names that are not joints of a person
-  stay out.
+  stops at the nearest limit. The names that are not joints (of a
+  person, or of the list `joints`: an animal) stay out.
   """
-  def pose(pose, values) do
-    Enum.reduce(all(), pose, fn j, pose ->
+  def pose(pose, values, joints \\ all()) do
+    Enum.reduce(joints, pose, fn j, pose ->
       Enum.reduce(j.axes, pose, fn axis, pose ->
         name = if axis, do: "#{j.name}.#{axis}", else: j.name
 
@@ -141,6 +141,10 @@ defmodule World.People.Joints do
   defp turn(%Joint{role: :neck}, :flex, v), do: {{-1.0, 0.0, 0.0}, v}
   defp turn(%Joint{role: :neck}, :spread, v), do: {{0.0, 1.0, 0.0}, v}
   defp turn(%Joint{role: :neck}, :twist, v), do: {{0.0, 0.0, 1.0}, v}
+  # A tail lifts (flex), wags to the right side (spread) and turns
+  # around itself.
+  defp turn(%Joint{role: :tail}, :flex, v), do: {{-1.0, 0.0, 0.0}, v}
+  defp turn(%Joint{role: :tail}, :spread, v), do: {{0.0, 0.0, 1.0}, v}
   defp turn(_j, :flex, v), do: {{1.0, 0.0, 0.0}, v}
   defp turn(%Joint{bone: bone}, :spread, v), do: {{0.0, if(String.ends_with?(bone, "_r"), do: -1.0, else: 1.0), 0.0}, v}
   defp turn(_j, :twist, v), do: {:twist, v}

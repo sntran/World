@@ -237,7 +237,13 @@ defmodule World.FactoryTest do
         %{"blueprint" => "exercise", "options" => %{"routine" => "yoga", "count" => 1, "seed" => 3}},
         %{"blueprint" => "person", "options" => %{"animations" => ["tai_chi"]}},
         %{"blueprint" => "person", "options" => %{"right_hand" => "fan", "left_hand" => "bottle", "hat" => "non_la"}},
-        %{"blueprint" => "exercise", "options" => %{"count" => 1, "fans" => true}}
+        %{"blueprint" => "exercise", "options" => %{"count" => 1, "fans" => true}},
+        %{
+          "blueprint" => "animal",
+          "options" => %{"coat" => "#2b2018", "size" => 0.8, "animations" => ["walk"]},
+          "joints" => %{"tail.spread" => 20},
+          "targets" => %{"front_r" => [0.07, 0.3, 0.15]}
+        }
       ]
 
       for order <- orders do
