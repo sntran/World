@@ -1,0 +1,14 @@
+// The Worker of https://3d.mkfifo.com: the factory of Xưởng
+// (docs/factory.md). "npm run build" makes site/ (scripts/site.sh), and
+// "wrangler deploy" uploads it as the static files of the Worker. Workers
+// Builds runs both at each push to main.
+{
+  "name": "xuong",
+  "compatibility_date": "2026-09-01",
+  // The domain of the site: a custom domain of the Worker (Cloudflare
+  // makes its DNS record and its certificate in the zone mkfifo.com).
+  "routes": [{ "pattern": "3d.mkfifo.com", "custom_domain": true }],
+  "workers_dev": false,
+  // site/_headers gives CORS and the cache of each file.
+  "assets": { "directory": "./site" }
+}
