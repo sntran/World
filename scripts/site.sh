@@ -34,7 +34,7 @@ COMMIT=$(commit "${WORKERS_CI_COMMIT_SHA:-}" || commit "$(git rev-parse HEAD 2>/
 printf '{"commit": "%s"}\n' "$COMMIT" > site/version.json
 
 # Each project can read the files from its own site. A correction of
-# Xưởng reaches the projects at most 5 minutes after the deploy; a copy
+# World reaches the projects at most 5 minutes after the deploy; a copy
 # in a cache serves while the new file comes.
 cat > site/_headers <<'HEADERS'
 /*

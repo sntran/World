@@ -1,6 +1,6 @@
 # The format of a model
 
-This file tells how Xưởng describes a part, an assembly and a voxel
+This file tells how World describes a part, an assembly and a voxel
 model, and how it writes them as files. It is a plan: the code comes in
 the steps of `README.md`.
 
@@ -21,7 +21,7 @@ the steps of `README.md`.
 ## A part
 
 ```elixir
-%Xuong.Part{
+%World.Part{
   name: "bolt_m8x60",
   kind: :bolt,
   params: %{thread: "M8", length: 0.060},
@@ -43,17 +43,17 @@ the steps of `README.md`.
   sheet, or a measurement. A size that is a guess says so.
 - `ports`: the places where the part connects to another part (below).
 - `shapes`: the meshes of the part, each with its material role. The
-  core of Wings makes them (`Xuong.Mesh`).
+  core of Wings makes them (`World.Mesh`).
 - `detail`: the class of the part for the levels of detail (below).
 - `print`: `:keep`, `:skip` (not in the STL: too thin) or `:only` (only
   in the STL: a thicker stand-in).
 
-A **standard part** is a function: `Xuong.Parts.Bolt.new("M8", 0.060)`.
+A **standard part** is a function: `World.Materials.Fasteners.bolt("M8", 0.060)`.
 Its tests compare its sizes with the tables of its standard.
 
 A **shaped part** is a `.wings` file and a small module next to it. The
 module gives the name, the sources and the ports, and reads the file
-(`Xuong.Wings.read/1`). When the Wings plugin of step 6 exists, the
+(`World.Wings.read/1`). When the Wings plugin of step 6 exists, the
 ports can also come from the file.
 
 ## A port
@@ -61,7 +61,7 @@ ports can also come from the file.
 A port is a frame on a part: a point and two directions.
 
 ```elixir
-%Xuong.Port{name: "hub", at: {0.0, 0.0, 0.0}, axis: {1.0, 0.0, 0.0}, up: {0.0, 0.0, 1.0}}
+%World.Port{name: "hub", at: {0.0, 0.0, 0.0}, axis: {1.0, 0.0, 0.0}, up: {0.0, 0.0, 1.0}}
 ```
 
 - `at`: the point, in the axes of the part.
@@ -80,7 +80,7 @@ An assembly is a tree. The root is a part or an assembly. Each child
 connects to its parent with one connection:
 
 ```elixir
-%Xuong.Connection{
+%World.Connection{
   child: "rear_wheel",
   child_port: "hub",
   parent_port: "rear_axle",
@@ -146,7 +146,7 @@ The build writes three levels of each model:
   only in the near level.
 - `detail` can move a part up or down a level: a light of a vehicle
   stays in the far level, because the eye looks for it.
-- A model is made again for each level (`Xuong.Detail`): at the mid
+- A model is made again for each level (`World.Detail`): at the mid
   level a round shape has half of its sides and one smooth step less,
   and the sections of a body are two times farther apart; at the far
   level, a quarter of the sides, no smooth step, and four times farther.
@@ -163,9 +163,9 @@ The build writes three levels of each model:
 
 ## A house
 
-A house is an assembly of its materials (`Xuong.Models.Houses`):
+A house is an assembly of its materials (`World.Buildings`):
 
-- **A wall of masonry**: units (`Xuong.Parts.Building`: the brick of
+- **A wall of masonry**: units (`World.Materials.Construction`: the brick of
   Việt Nam, TCVN 1451, 220 by 105 by 60 mm; the modular brick, ASTM
   C216; the hollow concrete block of 8 in, ASTM C90) in running bond,
   with joints of mortar of 10 mm, one or two wythes. At the end of a
@@ -209,7 +209,7 @@ person). In a `.wings` file, the name of a material is its role.
 
 ## A person
 
-A person (`Xuong.Human.person/2`) is a `Xuong.Figure`: a set of nodes
+A person (`World.People.Human.person/2`) is a `World.Figure`: a set of nodes
 that is ready, from the data of MakeHuman (`priv/makehuman/`). An
 assembly holds a figure as a part, at one of its two ports:
 
@@ -234,12 +234,12 @@ At mid and far, the faces under clothes have the mean color of the
 clothes, and at far the scalp has the color of the hair.
 
 A pose turns bones around their heads: a map of a bone to a list of
-`{axis, degrees}`, with the axes of Xưởng when the person stands at
-rest (`Xuong.Human.Pose`).
+`{axis, degrees}`, with the axes of World when the person stands at
+rest (`World.People.Pose`).
 
 ## The files of a model
 
-The build (`mix xuong.build`) writes:
+The build (`mix world.build`) writes:
 
 | File | Content |
 |---|---|
@@ -251,12 +251,12 @@ The build (`mix xuong.build`) writes:
 | `priv/models/NAME.vox` | the voxel version, when the model asks for one (step 8) |
 
 The build gives the same bytes for the same model.
-`mix xuong.build --check` builds again and compares; CI runs it.
+`mix world.build --check` builds again and compares; CI runs it.
 
 ## GLB
 
 - **The axes.** glTF has +Y up and the front of a model to +Z, with the
-  right hand. The writer takes a point (x, y, z) of Xưởng to
+  right hand. The writer takes a point (x, y, z) of World to
   (-x, z, y) of glTF. This is a turn, not a mirror, so the order of the
   corners of each triangle stays.
 - **The nodes.** The root node has the name of the model. Each joint is a
@@ -295,14 +295,14 @@ params and its sources, in a fixed order:
 
 - A shaped part is one `.wings` file. Each object of the file is a shape
   of the part. The name of each material is its role.
-- `Xuong.Wings.read/1` is strict: a file from a person is data, never
+- `World.Wings.read/1` is strict: a file from a person is data, never
   code. It decodes the term with `binary_to_term(Bin, [:safe])`, after it
   loads the names that a valid file can have (the atoms of Wings and of
-  `wpc_xuong`). It refuses a file with any other name, a file larger
+  `wpc_world`). It refuses a file with any other name, a file larger
   than its limit, and a term that is not a Wings file.
-- `Xuong.Wings.write/2` writes a part as a `.wings` file that Wings 3D
+- `World.Wings.write/2` writes a part as a `.wings` file that Wings 3D
   opens.
-- Before a mesh goes into the core of Wings, `Xuong.Mesh.clean/1`:
+- Before a mesh goes into the core of Wings, `World.Mesh.clean/1`:
   - merges the points at the same place,
   - removes the faces with no area,
   - gives the faces of each connected piece the same order of corners,
@@ -323,7 +323,7 @@ touch only at an edge or a corner.
   open source) and MagicaVoxel open it.
 - A voxel model gives a material role to each color of its palette, in
   `NAME.vox.json`. Tre maps each role to a color of its own palette.
-- **The voxel maker** (`Xuong.Voxel.from_model/2`) makes the voxel
+- **The voxel maker** (`World.Voxel.from_model/2`) makes the voxel
   version of a model at a size of a block. A block is full when its
   center is in a closed part, or when a thin part (a sheet, a leaf)
   goes through it. The block takes the role of the part that fills the

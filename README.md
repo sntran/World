@@ -1,11 +1,17 @@
-# Xưởng
+# World
 
-Xưởng ("workshop" in Vietnamese) is the library of 3D models of the
+World makes things as the real world makes them. People, materials,
+warehouses, factories and vehicles build each thing from the ground up:
+a bolt, a seat, a van, a house. World makes the 3D models of the
 projects of the owner: [Phượt](https://github.com/sntran/phuot),
-[DIY](https://github.com/sntran/DIY), [Tre](https://github.com/sntran/Tre)
-and [Vung_Tau](https://github.com/sntran/Vung_Tau).
+[DIY](https://github.com/sntran/DIY), [Tre](https://github.com/sntran/Tre),
+[Vung_Tau](https://github.com/sntran/Vung_Tau) and
+[Humans_Must_Die](https://github.com/sntran/Humans_Must_Die).
 
-A model in Xưởng is made as a real thing is made: from real parts.
+The first name of the project was Xưởng ("workshop" in Vietnamese). The
+repository is still `sntran/Xuong` until the owner renames it.
+
+A model in World is made as a real thing is made: from real parts.
 A bolt, a bearing, a wheel and a panel are parts. A scooter is an
 assembly of parts and of smaller assemblies. Each part has its real size,
 from a standard or from a measurement, in meters.
@@ -14,8 +20,8 @@ The library writes each model as GLB (glTF 2.0, binary): one format for
 the screens of each project. It also writes STL for a 3D printer, and a
 list of the parts (a bill of materials).
 
-Xưởng is also a factory: a web service at <https://3d.mkfifo.com>. Each
-model has a URL, and a correction of Xưởng reaches each project with no
+World is also a factory: a web service at <https://3d.mkfifo.com>. Each
+model has a URL, and a correction of World reaches each project with no
 new deploy of the project. `docs/factory.md` tells how it works.
 
 The next step is the world (`docs/world.md`): people, warehouses,
@@ -34,7 +40,7 @@ Four projects draw 3D things, and none shares its models with another:
 | Phượt | Elixir, Kotlin | None yet: the vehicle next to the avatar is a line icon | MapLibre, Android |
 
 The projects use four languages, so one library of code cannot serve
-them all. A file can: each project reads GLB. Xưởng is a library in
+them all. A file can: each project reads GLB. World is a library in
 Elixir that makes the files, and the files are in the repository and in
 each release.
 
@@ -55,7 +61,7 @@ each release.
    connection (fixed, turns, slides) gives the joints of the model.
 
 Tre also needs **voxel models** (models of blocks). They are a separate
-kind, in the MagicaVoxel format (`.vox`). A tool of Xưởng makes the voxel
+kind, in the MagicaVoxel format (`.vox`). A tool of World makes the voxel
 version of any model, at the size of a block (`docs/format.md`, "Voxel
 models").
 
@@ -88,24 +94,24 @@ models").
 | Step | Result | State |
 |---|---|---|
 | 0. The plan | This file, `AGENTS.md`, `CONTRIBUTING.md`, `TODO.md`, `docs/format.md`. | Done |
-| 1. The project and the core of Wings | A Mix project on [BEAM.com](https://github.com/sntran/BEAM.com). The core of Wings 3D in `wings/`. `Xuong.Mesh`, `Xuong.GLB`, the check of the Khronos validator, the review page. CI. | Done |
+| 1. The project and the core of Wings | A Mix project on [BEAM.com](https://github.com/sntran/BEAM.com). The core of Wings 3D in `wings/`. `World.Mesh`, `World.GLB`, the check of the Khronos validator, the review page. CI. | Done |
 | 2. Standard parts | Bolts, nuts, washers, bearings, tubes, sheets, lumber, extrusions, wheels and tires, each from its standard, with its ports. | Done |
 | 3. Assemblies and joints | Connections, joints, the list of the parts, three levels of detail, GLB with a node for each joint. The vehicles of Phượt: the Honda Vision 110, the Chevrolet Bolt EV, the Ford Transit 148 camper, the Royal Enfield Himalayan, a touring bicycle. | Done |
 | 3b. People | People from the data of MakeHuman (CC0): the shape of the body from its numbers, a skeleton of 53 bones with a skin, skins, hair and clothes, poses ("stand", "sit", "ride"), the animation "walk", and the three levels. A traveler, a man and a woman of Việt Nam, and a rider on the Honda Vision 110. | Done |
-| 4. Phượt uses Xưởng | The vehicle next to the avatar of Phượt is the model of Xưởng, and it moves with the trip. | To do |
+| 4. Phượt uses World | The vehicle next to the avatar of Phượt is the model of World, and it moves with the trip. | To do |
 | 5. Wings files | A strict reader and a writer of `.wings`. Shaped parts from `.wings` files. The clean-up of a mesh before Wings takes it. | To do |
-| 6. The Wings plugin | `wpc_xuong` for Wings 3D: ports and joints in the file, a pose to try, the axes in the view. | To do |
+| 6. The Wings plugin | `wpc_world` for Wings 3D: ports and joints in the file, a pose to try, the axes in the view. | To do |
 | 7a. The items of DIY | The appliances (a fridge, a washer and a dryer, a dishwasher, a range, a microwave, a freezer, a water heater, the AC, a mini split, a ceiling fan, a TV), the seven power stations, the gear of a van (a LiFePO4 battery, the Victron MultiPlus-II, SmartShunt, Lynx Distributor and Orion XS, a battery switch, a 12 V fridge, a roof fan, a diesel heater, a water tank, a solar panel), and builds of wood (a bed platform, a galley) with their lumber and screws. Doors, lids, drawers, fans and knobs are joints. | Done |
 | 7b. Houses | The materials (bricks of Việt Nam and of the US, concrete blocks, lintels, lumber, OSB, siding, clay tiles, metal panels, hinges), walls of masonry and of wood studs with openings, gable roofs, doors and windows that open, and houses from them: a house of bricks of Việt Nam with a roof of tiles, a cabin of wood with a metal roof. The list of the parts counts each brick, stud, tile and panel. | Done |
 | 7c. Framing systems | T-slot extrusions (80/20 10 and 15 series, metric 20, 30 and 40 mm) with T-nuts, corner brackets and button head screws; strut channel (Unistrut P1000 and P1000T) with spring nuts, fittings and threaded rod; L-track with fittings that slide. Inch threads for the fasteners. Builds: a shelf of 80/20, a rack and a trapeze of strut channel, a floor with L-track. | Done |
 | 7d. The engine bay | The hood of the Ford Transit opens on its engine bay: the 3.5 L V6 with its belt and pulleys, the radiator and its fan, the air box, the reservoirs and the fuse box. In the bay, the two items of DIY for the engine bay: the REDARC BCDC1250D (a DC-DC charger of 50 A) and a second alternator of 250 A with a pulley that turns. The parts in the bay are only in the near level. | Done |
 | F1. The factory: the site | `docs/factory.md`. The Worker at <https://3d.mkfifo.com>: the review page, and each file of the catalog at `/models/NAME.glb`, with CORS, an ETag and a cache of 5 minutes. | Done |
-| F2. The factory: orders | Blueprints with options (`catalog`, `person`, `house`, `extrusion`, `strut`, `l_track`), orders in JSON with colors and joints, the receipt, `mix xuong.order`, the VM of Xưởng in the Worker (`Xuong.Service`), and the files of each order in R2. | Done |
-| F3. The factory: vans | The blueprint `van` (`Xuong.Models.Van`) from the traces of DIY and the photos of dealers: the Ford Transit 148 in with a high roof, a medium roof, or extended. The options: the windows (cargo, crew, passenger), the items of DIY in the engine bay, and the items on the roof (a roof fan, a solar panel; the camper of Phượt has none). The seats are parts of their own (`Xuong.Parts.Seats`: a base, a cushion on its track, a back that reclines, the headrests), on the mounting points of the floor of each make; the catalog has a seat and a bench of a van. The doors open, the wheels turn and steer. The Sprinter and the ProMaster come after their photos (`TODO.md`). | Done |
+| F2. The factory: orders | Blueprints with options (`catalog`, `person`, `house`, `extrusion`, `strut`, `l_track`), orders in JSON with colors and joints, the receipt, `mix world.order`, the VM of World in the Worker (`World.Service`), and the files of each order in R2. | Done |
+| F3. The factory: vans | The blueprint `van` (`World.Vehicles.Van`) from the traces of DIY and the photos of dealers: the Ford Transit 148 in with a high roof, a medium roof, or extended. The options: the windows (cargo, crew, passenger), the items of DIY in the engine bay, and the items on the roof (a roof fan, a solar panel; the camper of Phượt has none). The seats are parts of their own (`World.Furniture.Seats`: a base, a cushion on its track, a back that reclines, the headrests), on the mounting points of the floor of each make; the catalog has a seat and a bench of a van. The doors open, the wheels turn and steer. The Sprinter and the ProMaster come after their photos (`TODO.md`). | Done |
 | F4. The factory: memory | Less memory for the near level at the edge. (The data of people is in `priv/` now, so the release has it.) | To do |
 | W0. The world: the plan | `docs/world.md`: the places, the factories by family, the people and their jobs, the vehicles that drive on the roads of the yard, the stock, the clock, the log and the replay; what each thing is in the computer; the steps W1 to W9. | Done |
-| W1 to W9. The world | `Xuong.World`: the data of the world, one thin slice (a van, a warehouse, a truck with its driver on a road, a factory), the replay, the factories by family, the buildings, the stores (one bucket for each warehouse), the site, the other vans, the engineers. | To do |
-| 7. DIY uses Xưởng | DIY draws its SVG from the models, and keeps its pictures. | To do |
+| W1 to W9. The world | `World.World`: the data of the world, one thin slice (a van, a warehouse, a truck with its driver on a road, a factory), the replay, the factories by family, the buildings, the stores (one bucket for each warehouse), the site, the other vans, the engineers. | To do |
+| 7. DIY uses World | DIY draws its SVG from the models, and keeps its pictures. | To do |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |
 
@@ -126,7 +132,7 @@ const gltf = await new GLTFLoader().loadAsync('https://3d.mkfifo.com/models/ford
 | `/models/NAME.glb`, `NAME.mid.glb`, `NAME.far.glb` | A model at each level. |
 | `/models/NAME.parts.json` | The list of its parts. |
 | `/palette.json` | The default color of each material role. |
-| `/version.json` | The commit of Xưởng that the site has. |
+| `/version.json` | The commit of World that the site has. |
 | `/blueprints` | The blueprints and their options. |
 | `POST /orders`, `/o/HASH.glb` | An order in JSON, and the files of the order. |
 | `/m/BLUEPRINT.glb?OPTION=VALUE` | An order in the URL, for example `/m/strut.glb?length=0.6&kind=solid`. |
@@ -134,7 +140,7 @@ const gltf = await new GLTFLoader().loadAsync('https://3d.mkfifo.com/models/ford
 `docs/factory.md` tells the details. An Elixir app can also add the package and call its functions:
 
 ```elixir
-{:xuong, github: "sntran/Xuong", ref: "COMMIT"}
+{:world, github: "sntran/Xuong", ref: "COMMIT"}
 ```
 
 To try the site on this computer: `npm install && npm run build && npx

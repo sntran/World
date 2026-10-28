@@ -1,5 +1,5 @@
 %% The progress bar of Wings 3D, with no window: each call does nothing.
-%% Xuong builds meshes with the core of Wings 3D and has no window.
+%% World builds meshes with the core of Wings 3D and has no window.
 -module(wings_pb).
 -export([start/1, update/1, update/2, done/0, done/1]).
 

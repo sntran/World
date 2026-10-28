@@ -1,12 +1,12 @@
 # The world
 
-The world is the next step of Xưởng. Today the factory (`docs/factory.md`)
-takes an order and gives the files of a model. In the world, people make
+World started as Xưởng, a factory of 3D models: the factory
+(`docs/factory.md`) takes an order and gives the files of a model. In the world, people make
 the model, as in the real world. A storekeeper picks the parts from a
 warehouse. A driver brings them to the factory. The workers on the
 line put them together. The places of the world are buildings, and
 people build them too, from bricks, studs and the other materials of
-Xưởng.
+World.
 
 The world is not a picture on top of the factory. Each thing in it has
 a real thing of the computer behind it. A warehouse is a store of
@@ -29,15 +29,15 @@ work starts. The code is the source of truth after that (`AGENTS.md`).
 | Word | What it is |
 |---|---|
 | **World** | The places, the roads, the people, the vehicles, the stock and the clock, in one assembly. |
-| **Place** | A building with a position: a warehouse, a factory, a supplier, a yard, the site of a customer. A place is a model of Xưởng (`Xuong.Models.Houses`): people build it. |
+| **Place** | A building with a position: a warehouse, a factory, a supplier, a yard, the site of a customer. A place is a model of World (`World.Buildings`): people build it. |
 | **Warehouse** | A place that keeps stock. Its size is the limit of its store. |
 | **Factory** | A place with lines and stations, where the workers build one family of things: vehicles, wheels, seats, slabs, houses, clothes. A sub-order goes to the factory of its family. |
 | **Supplier** | A place outside the world that gives a part the world cannot make: the data of MakeHuman, the drawings of a maker, a supplied part of an order. |
 | **Road** | The way from one place to another, with its length in meters. A vehicle drives on it at its speed, and a person walks on it. |
 | **Stock** | The parts and the models that are in a warehouse now, each with its count. |
-| **Person** | A figure (`Xuong.Figure`) with a job, at a place, with one task at a time. |
+| **Person** | A figure (`World.Figure`) with a job, at a place, with one task at a time. |
 | **Job** | What a person does: storekeeper, driver, worker of a station, foreman. Later: engineer, architect. |
-| **Vehicle** | A model of Xưởng that moves parts: a van, a truck, a cart. A driver controls it, and it has a position on the yard at each time. |
+| **Vehicle** | A model of World that moves parts: a van, a truck, a cart. A driver controls it, and it has a position on the yard at each time. |
 | **Order** | A request for a model: the order of the factory (`docs/factory.md`), or an order of the world for a part, a delivery or a building. |
 | **Plan** | The list of the tasks of an order, from the tree of its assembly, with the station of each task and what it waits for. |
 | **Task** | One step of a plan for one person: pick a part, load, drive, unload, connect a part to its parent, store. |
@@ -57,16 +57,16 @@ does not come.
 | A warehouse | A store of files: the R2 bucket of the orders (`xuong-orders`), the catalog in the release (`priv/models`), the memory of the VM (the cache next to the line), the cache of a project (the R2 of Phượt). |
 | The size of a warehouse | The limit of its store: the plan of R2 that the owner sets, the size of the release, the memory of the VM. The stock can not pass it. |
 | The stock of a warehouse | The files in the store, by the hash of their order. A part in stock is built: nobody builds it again. |
-| A factory | The processes that build one family of things, from the modules of that family: the vehicle factory from `Xuong.Models.Van` and the other vehicles, the wheel factory from `Xuong.Parts.Wheels`, the seat factory from `Xuong.Parts.Seats`. In the first world, all the factories are in one VM; later, each factory can have its own VM (its own Durable Object). |
+| A factory | The processes that build one family of things, from the modules of that family: the vehicle factory from `World.Vehicles.Van` and the other vehicles, the wheel factory from `World.Vehicles.Wheels`, the seat factory from `World.Furniture.Seats`. In the first world, all the factories are in one VM; later, each factory can have its own VM (its own Durable Object). |
 | A line and its stations | The stations of a model (`params.station` of each part): the body shop, the closures, the paint, the trim, the chassis, the upfit of a van. |
 | A worker | A process of the BEAM that runs the tasks of one station. Two workers are two processes: they build two parts at one time. |
 | A storekeeper | The process that reads and writes the store. |
-| A driver and a vehicle | A person (a process) that drives a model of a vehicle on a road, at the speed of the vehicle, with the parts on board. The files of the parts travel with the vehicle: the store at the end of the road gets them when the vehicle arrives. That arrival is the transfer of the files (from R2 to the VM, from the VM to R2, from Xưởng to a project), and one event. |
+| A driver and a vehicle | A person (a process) that drives a model of a vehicle on a road, at the speed of the vehicle, with the parts on board. The files of the parts travel with the vehicle: the store at the end of the road gets them when the vehicle arrives. That arrival is the transfer of the files (from R2 to the VM, from the VM to R2, from World to a project), and one event. |
 | A road and its length | A line between two places on the yard, in meters. The time of a drive is the length of the road over the speed of the vehicle, on the wall clock: the world waits for the vehicle. The transfer of the bytes takes milliseconds; the drive is the time of the world. |
 | A supplier | A source outside: a file of `priv/`, a URL, a supplied part in an order. |
 | The clock | The wall clock of the VM. Each event has its real time. |
 | The time of a task | The real time that the code of the task took: the build of a part, a transfer, a read of the store. |
-| A person | A process (`GenServer`) with a mailbox. Its body is a figure of Xưởng, with the poses `walk`, `carry` and `work`. |
+| A person | A process (`GenServer`) with a mailbox. Its body is a figure of World, with the poses `walk`, `carry` and `work`. |
 | The foreman | The process that makes the plan of an order from its assembly, and gives each task to a person. |
 
 The replay shows the real log. A person that walks across the factory
@@ -79,42 +79,42 @@ clock.
 
 ## The places
 
-A place is a building. The materials of Xưởng make it: bricks and
+A place is a building. The materials of World make it: bricks and
 concrete blocks, lumber studs, OSB, siding, metal panels, doors and
-windows (`Xuong.Models.Houses`, `Xuong.Parts.Building`). A place is an
+windows (`World.Buildings`, `World.Materials.Construction`). A place is an
 order too: the people of the world build it from its materials, and the
 log has its build.
 
 | Place | What it has | Its size |
 |---|---|---|
-| A warehouse | Racks (`Xuong.Models.Frames`: strut channel, shelves), a dock, a yard. | The limit of its store, in files and in bytes. The racks show the stock: a full rack is a full store. |
+| A warehouse | Racks (`World.Framing.Builds`: strut channel, shelves), a dock, a yard. | The limit of its store, in files and in bytes. The racks show the stock: a full rack is a full store. |
 | A factory | Lines with stations, a dock for the parts, a yard for the finished things. One factory for each family of things (below). | The number of its workers (processes) and the memory of its VM. |
 | A supplier | A gate: the parts come from outside. | None. |
 | The site of a customer | Where a delivery ends: Phượt, DIY, Vũng Tàu, Humans Must Die. | None. |
 
 Each place has a position in meters, in one flat frame: the yard of
-Xưởng. Later, a place can have a latitude and a longitude, so the world
+World. Later, a place can have a latitude and a longitude, so the world
 of Phượt puts the factory on its map.
 
 ### The factories
 
 The world has many factories, as the real world does. Each factory makes
-one family of things, from the modules of Xưởng of that family. An
+one family of things, from the modules of World of that family. An
 order for a thing goes to the factory of its family. A part of it from
 another family is a sub-order to that factory, and a vehicle brings
 the part by road.
 
 | Factory | What it makes | From |
 |---|---|---|
-| The materials | Bricks, concrete blocks, slabs, lintels, lumber, OSB, siding, metal panels. | `Xuong.Parts.Building`, `Xuong.Parts.Stock` |
-| The frames | T-slot frames, strut channel, racks, shelves. | `Xuong.Parts.Framing`, `Xuong.Models.Frames` |
-| The houses | Walls, roofs, doors, windows, houses, warehouses, factories. | `Xuong.Models.Houses` |
-| The wheels | Tires, rims, wheels. | `Xuong.Parts.Wheels` |
-| The seats | Seats and benches. | `Xuong.Parts.Seats` |
-| The vehicles | Vans, cars, scooters, motorcycles, bicycles; their bodies, doors and engine bays. | `Xuong.Models.Van`, `Xuong.Models.Vehicle` and the other vehicles |
-| The appliances and the power | Fridges, washers, ranges, power stations, the gear of a van. | `Xuong.Models.Appliances`, `Xuong.Models.PowerStations`, `Xuong.Models.VanGear` |
-| The clothes | The clothes and the hair of the people. | `Xuong.Human` |
-| The people | A person from the data of MakeHuman. | `Xuong.Models.People` |
+| The materials | Bricks, concrete blocks, slabs, lintels, lumber, OSB, siding, metal panels. | `World.Materials.Construction`, `World.Materials.Stock` |
+| The frames | T-slot frames, strut channel, racks, shelves. | `World.Framing`, `World.Framing.Builds` |
+| The houses | Walls, roofs, doors, windows, houses, warehouses, factories. | `World.Buildings` |
+| The wheels | Tires, rims, wheels. | `World.Vehicles.Wheels` |
+| The seats | Seats and benches. | `World.Furniture.Seats` |
+| The vehicles | Vans, cars, scooters, motorcycles, bicycles; their bodies, doors and engine bays. | `World.Vehicles.Van`, `World.Vehicles.Corners` and the other vehicles |
+| The appliances and the power | Fridges, washers, ranges, power stations, the gear of a van. | `World.Appliances`, `World.Gear.PowerStations`, `World.Gear.Camper` |
+| The clothes | The clothes and the hair of the people. | `World.People.Human` |
+| The people | A person from the data of MakeHuman. | `World.People` |
 
 A new family of things (an airplane, a ship) is a new factory, with its
 modules. The people of the world build the factory first, from the
@@ -122,7 +122,7 @@ materials and the houses factories.
 
 ## The people
 
-A person is a figure of Xưởng (`Xuong.Models.People`), with a name, a
+A person is a figure of World (`World.People`), with a name, a
 job and a place. A person does one task at a time, and walks between
 the tasks. The time of a walk is real: the person walks while the
 process waits.
@@ -190,7 +190,7 @@ work, with no new data:
 | A node with a joint (`turns`, `slides`) | The same task, and the joint goes into the log of the model. |
 | A node that holds a smaller assembly | An order of its own, in the same factory or in another, then one task to connect it. |
 | `params.station` of a part | The station of the task. |
-| The parts list (`Xuong.Build.parts/1`) | The parts to get from stock. |
+| The parts list (`World.Build.parts/1`) | The parts to get from stock. |
 
 The time of a task is not in the assembly. The world measures it when
 a worker does the task, and the log keeps it. The second plan of the
@@ -250,7 +250,7 @@ The review page gets a page of the world. From a log, it shows:
   tasks;
 - the model on the line, with one part more at each `task_done`.
 
-The replay is a model of Xưởng too: an assembly of the world at a time,
+The replay is a model of World too: an assembly of the world at a time,
 with a pose for each person and each vehicle. So the files of the world
 at a time are GLB files, and a project can show them.
 
@@ -289,12 +289,12 @@ the owner decides each step of it.
 
 | Topic | Decision | Why |
 |---|---|---|
-| The name | Xưởng stays for now. The owner decided to rename the project "World" after the foundation of the world is in place. | One rename, at one time, when the shape of the world is clear. |
+| The name | The project is World: the module `World`, and a context of the world for each family of things (`World.People`, `World.Vehicles`, `World.Buildings`). The repository, the Worker and the bucket keep the old name Xuong until the owner renames them. | The project builds things as the real world does. The renames of the repository and of the resources of Cloudflare break links and need the owner. |
 | Real, not invented | Each thing of the world is one thing of the computer, and each time is a measured time. | The replay is a record, and the statistics are true. |
 | The log is the truth | The replay, the statistics and the engineers read the log only. | One source. A test reads a log. |
-| A place is a model | A warehouse and a factory are orders, built by the people from the materials of Xưởng. | The world builds itself from the ground up. |
+| A place is a model | A warehouse and a factory are orders, built by the people from the materials of World. | The world builds itself from the ground up. |
 | People are processes | One `GenServer` for each person, one mailbox of tasks. | The BEAM is made for this. A person that waits does not stop the world. |
-| The plan comes from the assembly | No new data for the plan: the tree, the stations and the parts list of the assembly. | Each model of Xưởng is buildable in the world with no change. |
+| The plan comes from the assembly | No new data for the plan: the tree, the stations and the parts list of the assembly. | Each model of World is buildable in the world with no change. |
 | The driver drives | A driver is a person that drives a vehicle on a road from one place to the other, at the speed of the vehicle, with the parts on board. The files arrive with the vehicle. | This is how the world operates. The time of the drive is real time on the wall clock. |
 | Many factories | One factory for each family of things. A sub-order goes to the factory of its family, and a vehicle brings the part. | The real world has a clothes factory, a slab factory and a car factory, not one factory. |
 | No scale | The world has no scale of its own. Each project takes what it needs. | The world powers all the projects of the owner, at their own scales. |
@@ -310,7 +310,7 @@ and a picture of the replay where there is one.
 | Step | Result | Check |
 |---|---|---|
 | W0. The plan | This document. | The owner agrees, or changes it. |
-| W1. The data of the world | `Xuong.World`: places, roads, stock, people, jobs, vehicles, the clock, the events and the log. The plan of an order from its assembly (`Xuong.World.Plan`). | A property test: the plan of each model of the catalog has one task for each node, and each task waits for the task of its parent. A log with a bad order of events is refused. |
+| W1. The data of the world | `World.World`: places, roads, stock, people, jobs, vehicles, the clock, the events and the log. The plan of an order from its assembly (`World.World.Plan`). | A property test: the plan of each model of the catalog has one task for each node, and each task waits for the task of its parent. A log with a bad order of events is refused. |
 | W2. One thin slice | One order of a van. One warehouse, one truck with its driver on a road of the yard, one vehicle factory with a foreman and two workers. The people are processes. The log of the order, with real times. | A test runs the slice and reads its log: the van is delivered, the events are in order, the stock is never negative, the drive took the length of the road over the speed of the truck. The same order a second time comes from stock. |
 | W3. The replay | The page of the world on the review page, from a log. The world at a time as a GLB. | A picture of the truck on the road, and of a worker at the trim station with the seats. |
 | W4. The factories | The wheel factory and the seat factory next to the vehicle factory. A sub-order goes to the factory of its family; a vehicle brings the part by road. | The log of a van: the wheels come from the wheel factory, the seats from the seat factory, each by a drive. |

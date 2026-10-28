@@ -1,5 +1,5 @@
 {
- "note": "The vans of the blueprint van (Xuong.Models.Van). Lengths in meters. A trace is a line of points [d, z]: d back from the front (or from the back), z up from the ground; \"top\" is the height of the roof. The points of a trace over 2 m stretch to the height of the model, so the cab keeps its height.",
+ "note": "The vans of the blueprint van (World.Vehicles.Van). Lengths in meters. A trace is a line of points [d, z]: d back from the front (or from the back), z up from the ground; \"top\" is the height of the roof. The points of a trace over 2 m stretch to the height of the model, so the cab keeps its height.",
  "makes": {
   "ford_transit": {
    "name": "Ford Transit (US, 2020 to 2026)",

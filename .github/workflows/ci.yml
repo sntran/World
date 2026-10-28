@@ -2,7 +2,7 @@
 #
 # - mix precommit: the compile with no warnings, the format, and the
 #   tests with 100% coverage.
-# - mix xuong.build --check: the files of priv/models are the build of
+# - mix world.build --check: the files of priv/models are the build of
 #   the code.
 # - npm test: the Khronos glTF validator on each GLB of priv/models.
 # - npm run build and wrangler deploy --dry-run: the site of
@@ -76,7 +76,7 @@ jobs:
       - run: mix.com precommit
       - name: The format did not change a file
         run: git diff --exit-code
-      - run: MIX_ENV=test mix.com xuong.build --check
+      - run: MIX_ENV=test mix.com world.build --check
       - run: npm ci
       - run: npm test
       - run: BEAM_COM="$HOME/bin/beam.com" npm run build

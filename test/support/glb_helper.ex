@@ -1,4 +1,4 @@
-defmodule Xuong.GLBHelper do
+defmodule World.GLBHelper do
   @moduledoc "Reads the JSON chunk of a GLB, for the tests."
 
   def json(<<"glTF", 2::little-32, total::little-32, len::little-32, "JSON", json::binary-size(len), _::binary>> = glb) do

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds edge.com: the release of Xưởng in one file of beam.com
+# Builds edge.com: the release of World in one file of beam.com
 # (https://github.com/sntran/BEAM.com), with only the part that the
 # WebAssembly runtime reads (--target wasm32). worker.js serves it with
 # the runtime of the npm package beam.com. "npm run build" runs it, also
@@ -21,6 +21,6 @@ beam mix local.hex --force --if-missing
 beam mix local.rebar --force --if-missing
 beam mix deps.get --only prod
 beam mix compile
-rm -rf _build/prod/rel/xuong
+rm -rf _build/prod/rel/world
 RELEASE_ERTS=false beam mix release --overwrite
-beam _build/prod/rel/xuong -o edge.com --target wasm32
+beam _build/prod/rel/world -o edge.com --target wasm32

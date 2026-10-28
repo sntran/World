@@ -28,7 +28,7 @@ into the steps of `AGENTS.md`.
   cable) needs a tool for its own weights.
 - **More animations of people.** "walk" is the only clip: a run, a sit
   down, the hands that turn the bars of a scooter. Each clip is a
-  function of the turns of the bones in time (`Xuong.Human.Pose`).
+  function of the turns of the bones in time (`World.People.Pose`).
 - **Clothes in their own colors at mid and far.** A low-poly body has
   the mean color of each piece of clothes: a suit of a shirt and jeans
   is all one color. The color of each face can come from the texture
@@ -40,7 +40,7 @@ into the steps of `AGENTS.md`.
   and beams (the frame of a house in Việt Nam), plaster and paint on a
   wall. The nails of a frame in the list of the parts.
 - **A bond of two wythes.** A wall of 220 mm in Việt Nam has headers
-  across the two wythes; the wall of Xưởng has two wythes of stretchers.
+  across the two wythes; the wall of World has two wythes of stretchers.
 - **Loops of connections.** A frame with two struts to one part: the
   tree takes one strut, and a fixed connection closes the loop.
 - **Vertex colors and textures.** The core of Wings keeps UV and vertex
@@ -80,4 +80,4 @@ into the steps of `AGENTS.md`.
   or queue: in the 128 MB of the edge, a grid in `:atomics` or in one
   binary is the only memory.
 - **Godot import.** A script for Vung_Tau that reads the joint nodes and
-  the levels of detail of a GLB of Xưởng.
+  the levels of detail of a GLB of World.

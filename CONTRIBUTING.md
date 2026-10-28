@@ -1,4 +1,4 @@
-# Contributing to Xưởng
+# Contributing to World
 
 ## Build and test
 
@@ -23,8 +23,8 @@ From step 1, in the directory of the project:
 ```sh
 mix.com deps.get
 mix.com test --cover            # the coverage must be 100%
-mix.com xuong.build             # the files of priv/models
-mix.com xuong.build --check     # build again and compare, as CI does
+mix.com world.build             # the files of priv/models
+mix.com world.build --check     # build again and compare, as CI does
 npm install && npm test         # the Khronos validator on each GLB
 sh scripts/wings.sh COMMIT      # copy the core of Wings 3D again
 ```
@@ -39,7 +39,8 @@ python3 -m http.server -d . 8000   # then open http://localhost:8000/review/
 
 1. Find the source of each size: the standard, the data sheet, or a
    measurement with its tool.
-2. Write the function of the part in `lib/xuong/parts/`, with its ports
+2. Write the function of the part in the context of its family
+   (`AGENTS.md`, "The contexts"), with its ports
    (`docs/format.md`, "A port") and its `sources`.
 3. Write its tests: a property test that each size agrees with the table
    of its standard, and a test of each port.
@@ -52,9 +53,9 @@ materials").
 
 ## Add a model
 
-A model is an assembly in `lib/xuong/models/`. Connect each part to its
+A model is an assembly in the context of its family. Connect each part to its
 parent at two ports, with the kind of the connection. Give each joint
-its role. Then run `mix.com xuong.build` and commit the files of
+its role. Then run `mix.com world.build` and commit the files of
 `priv/models` with the code.
 
 ## Rules for a change

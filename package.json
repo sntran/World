@@ -1,7 +1,7 @@
 {
-  "name": "xuong",
+  "name": "world",
   "private": true,
-  "description": "The site of Xuong (https://3d.mkfifo.com) and the checks of its files: the Khronos glTF validator on each GLB.",
+  "description": "The site of World (https://3d.mkfifo.com) and the checks of its files: the Khronos glTF validator on each GLB.",
   "license": "AGPL-3.0-only",
   "type": "module",
   "engines": {

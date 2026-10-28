@@ -2,14 +2,14 @@
 // "The URLs"). The static files of site/ (the catalog, the review page)
 // go out before the Worker runs. handler() takes:
 //
-// - vm(request, hash): the VM of Xưởng (Xuong.Service): /blueprints,
+// - vm(request, hash): the VM of World (World.Service): /blueprints,
 //   /check, /build. The hash of the order, when there is one, chooses
 //   the builder;
 // - env.ORDERS: the R2 bucket. orders/HASH.json is a full order, and
 //   builds/COMMIT/FILE is a file that the VM built at the commit COMMIT;
 // - commit: the commit of the deploy (site/version.json). A new deploy
 //   builds each file again at its first request, so a correction of
-//   Xưởng reaches each order.
+//   World reaches each order.
 //
 // The routes:
 //
@@ -88,7 +88,7 @@ async function file(request, env, vm, commit, hash, order, [, level, kind, type]
     object = await env.ORDERS.get(key);
   }
   const etag = object.httpEtag;
-  const extra = { etag, 'cache-control': CACHE, 'x-xuong-commit': commit, 'x-xuong-order': hash };
+  const extra = { etag, 'cache-control': CACHE, 'x-world-commit': commit, 'x-world-order': hash };
   if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers: headers(extra) });
   return new Response(object.body, { headers: headers({ 'content-type': type, ...extra }) });
 }

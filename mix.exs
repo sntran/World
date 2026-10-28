@@ -1,9 +1,9 @@
-defmodule Xuong.MixProject do
+defmodule World.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :xuong,
+      app: :world,
       version: "0.1.0",
       elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
@@ -16,19 +16,19 @@ defmodule Xuong.MixProject do
       deps: deps(),
       # The release for the Worker (scripts/edge.sh): the WebAssembly
       # runtime of beam.com has its own ERTS.
-      releases: [xuong: [include_erts: System.get_env("RELEASE_ERTS") != "false"]],
+      releases: [world: [include_erts: System.get_env("RELEASE_ERTS") != "false"]],
       aliases: aliases(),
       test_coverage: [
         summary: [threshold: 100],
         # The copy of Wings 3D has its own tests upstream.
-        ignore_modules: [~r/^:?(wings_|e3d|tools$|trace_2d$)/, Xuong.GLBHelper]
+        ignore_modules: [~r/^:?(wings_|e3d|tools$|trace_2d$)/, World.GLBHelper]
       ]
     ]
   end
 
   def cli, do: [preferred_envs: [precommit: :test]]
 
-  def application, do: [mod: {Xuong.Application, []}, extra_applications: [:logger, :crypto]]
+  def application, do: [mod: {World.Application, []}, extra_applications: [:logger, :crypto]]
 
   defp deps do
     [

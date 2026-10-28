@@ -1,9 +1,9 @@
 # The factory
 
-Xưởng is a factory for 3D models. A project sends an order, and the
+World is a factory for 3D models. A project sends an order, and the
 factory builds the model from its parts and gives the files. The
 projects (Phượt, DIY, Vũng Tàu) are on Cloudflare, so the factory is a
-web service: <https://3d.mkfifo.com>. A model has a URL. When Xưởng
+web service: <https://3d.mkfifo.com>. A model has a URL. When World
 corrects a part, each model that uses the part changes at the same URL,
 and the projects do not deploy again.
 
@@ -11,24 +11,24 @@ and the projects do not deploy again.
 
 | Word | What it is |
 |---|---|
-| **Warehouse** | The parts that Xưởng keeps: the standard parts (bolts, nuts, extrusions, strut channel, lumber, bricks, wheels and tires), the shapes (a box, a cylinder, a lathe, a loft, a sweep, a prism), and the materials (the roles of `priv/palette.json`). |
+| **Warehouse** | The parts that World keeps: the standard parts (bolts, nuts, extrusions, strut channel, lumber, bricks, wheels and tires), the shapes (a box, a cylinder, a lathe, a loft, a sweep, a prism), and the materials (the roles of `priv/palette.json`). |
 | **Blueprint** | A family of models with options: `van`, `person`, `house`, `power_station`. Each option has a name, a type, a default, a unit and a range or a list. The data of a blueprint (the sizes of each make, the traces of a body) is in `priv/data`, not in the code. |
 | **Order** | A JSON document: a blueprint and its options, or a drawing, and the parts to fit into its slots. |
-| **Drawing** | The design of a model that Xưởng has no blueprint for: its parts (shapes, standard parts, orders of blueprints, supplied parts) and its nodes (the JSON form of `Xuong.Assembly`). |
+| **Drawing** | The design of a model that World has no blueprint for: its parts (shapes, standard parts, orders of blueprints, supplied parts) and its nodes (the JSON form of `World.Assembly`). |
 | **Supplied part** | A mesh that the order gives (GLB, OBJ or `.wings`), with its ports. |
 | **Slot** | A port of a blueprint where another order fits: the engine bay of a van, its roof, the seat of a scooter for a rider. |
-| **Receipt** | What the factory gives with the files: the full order with each default, the version of Xưởng, the sources of each part, where each part comes from (blueprint, drawing, supplied), and the hash of the order. |
+| **Receipt** | What the factory gives with the files: the full order with each default, the version of World, the sources of each part, where each part comes from (blueprint, drawing, supplied), and the hash of the order. |
 
 ## The four kinds of work
 
-| A real factory | Xưởng | When |
+| A real factory | World | When |
 |---|---|---|
 | Products of the catalog | An order of a blueprint | The common models, with sources and tests. |
-| Build to print | An order with a drawing | A model that Xưởng has no blueprint for. No pull request is necessary. |
+| Build to print | An order with a drawing | A model that World has no blueprint for. No pull request is necessary. |
 | Parts of the customer | Supplied parts in a drawing | A shape that the warehouse cannot make. |
-| The engineering department | A pull request to Xưởng | A drawing that many orders use becomes a blueprint, with its sources and tests. |
+| The engineering department | A pull request to World | A drawing that many orders use becomes a blueprint, with its sources and tests. |
 
-An order is data, never code. Xưởng runs no code from an order.
+An order is data, never code. World runs no code from an order.
 
 ## The URLs
 
@@ -39,7 +39,7 @@ An order is data, never code. Xưởng runs no code from an order.
 | `/models/NAME.glb`, `NAME.mid.glb`, `NAME.far.glb` | A model of the catalog at each level. |
 | `/models/NAME.parts.json` | The list of its parts. |
 | `/palette.json` | The default color of each material role. |
-| `/version.json` | The commit of Xưởng that the site has. |
+| `/version.json` | The commit of World that the site has. |
 | `/blueprints` | Each blueprint with its options: the type, the default, the unit, the range or the values. |
 | `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), and the URLs of its files; or 422 with the errors. |
 | `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. |
@@ -82,20 +82,20 @@ roof, and two items do not touch.
 
 Each file has `Access-Control-Allow-Origin: *`, an `ETag`, and
 `Cache-Control: public, max-age=300, stale-while-revalidate=86400`. So a
-project gets a correction at most 5 minutes after the deploy of Xưởng,
+project gets a correction at most 5 minutes after the deploy of World,
 and it can use a copy in its cache while it gets the new file.
 
 ## The line of a van
 
 A van of the blueprint `van` is built as the maker builds it, station
-after station (`Xuong.Models.Van`):
+after station (`World.Vehicles.Van`):
 
 | Station | What it adds |
 |---|---|
 | The body shop | The body of sheets on the hull, 3 cm thick, with the openings cut: the windshield, the front doors, the sliding door, the rear doors, the windows of the body, the arches of the wheels. Inside: the floors, the wells of the wheels, the pillar behind the front door, and the mounting points of the seats (the ports `seat_driver`, `seat_passenger`, `row_2` and more, from the seats of the make in `priv/data/vans.json`). |
 | The closures | The hood, the front doors with their windows and mirrors, the sliding door, the rear doors: each in its opening, on its hinges or its rail. |
 | The paint | The role `paint` of the body and the doors. |
-| The trim | The glass in the openings, the black plastic, the lamps, the grille, the small parts, the dash, and the seats (`Xuong.Parts.Seats`) on their mounting points: the two front seats on their tracks, with backs that recline, and the benches of the rows of the crew van and the passenger van. |
+| The trim | The glass in the openings, the black plastic, the lamps, the grille, the small parts, the dash, and the seats (`World.Furniture.Seats`) on their mounting points: the two front seats on their tracks, with backs that recline, and the benches of the rows of the crew van and the passenger van. |
 | The chassis | The engine bay and the wheels. |
 | The upfit | The items of DIY on the roof and in the engine bay. |
 
@@ -116,8 +116,8 @@ version of the blueprint (`van@2`): the old version stays.
 
 | Order | Where |
 |---|---|
-| A model of the catalog | CI builds it natively (`mix xuong.build --check`), and the files are in the repository. The Worker serves them as static files: no build at a request. |
-| An order at a request | The VM of Xưởng (beam.com, WebAssembly) in a Durable Object of the Worker builds it (`worker.js`, `handler.js`, `Xuong.Service`). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
+| A model of the catalog | CI builds it natively (`mix world.build --check`), and the files are in the repository. The Worker serves them as static files: no build at a request. |
+| An order at a request | The VM of World (beam.com, WebAssembly) in a Durable Object of the Worker builds it (`worker.js`, `handler.js`, `World.Service`). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 The VM at the edge, measured with Node.js 25 and the runtime of
 beam.com 0.1.0-rc.6 (the time of one build, and the peak of the memory
@@ -177,13 +177,13 @@ network:
 - Text-to-scene: a language model writes a scene as JSON (each object
   with its category, its caption, its place, its turn about the up axis
   and its box), then text-to-shape makes each object.
-- For later, the paper names what Xưởng has now: shapes from parts,
+- For later, the paper names what World has now: shapes from parts,
   people with a skeleton and layers of clothes, and joints (a steering
   wheel that turns the wheels, a door that slides).
 
-What it means for Xưởng:
+What it means for World:
 
-| Topic | Cube | Xưởng |
+| Topic | Cube | World |
 |---|---|---|
 | The source of a shape | Learned from about 1.5 million assets (Objaverse and Roblox). | Standards, data sheets, drawings and photos. |
 | Sizes | A box from the scene; the shape inside it is learned. | The real sizes of each part. |
@@ -194,13 +194,13 @@ What it means for Xưởng:
 So the two agree in two ways:
 
 1. **The order is the scene graph.** The JSON scene of Cube and an order
-   of Xưởng have the same idea: a language model writes the layout, and
-   a builder makes each object. An order of Xưởng gives more (options
+   of World have the same idea: a language model writes the layout, and
+   a builder makes each object. An order of World gives more (options
    with ranges, slots, joints), and the check gives each error back to
    the model (step F7).
 2. **Cube can supply parts.** A shape that the warehouse cannot make can
    come from Cube, made one time on a GPU, cleaned
-   (`Xuong.Mesh.clean/1`), and kept as a supplied part (step F6) with its
+   (`World.Mesh.clean/1`), and kept as a supplied part (step F6) with its
    text as its source. It is not a measured shape: the receipt says so.
    Read the license of the weights before a use.
 
@@ -209,7 +209,7 @@ So the two agree in two ways:
 | Step | What |
 |---|---|
 | F1 | This file. The Worker at `3d.mkfifo.com` serves the catalog and the review page. Done. |
-| F2 | Blueprints, orders and the receipt (`Xuong.Factory`), `mix xuong.order`, the builder in the VM, the cache in R2. People, houses and framing are the first blueprints: they have options already. Done. |
+| F2 | Blueprints, orders and the receipt (`World.Orders`), `mix world.order`, the builder in the VM, the cache in R2. People, houses and framing are the first blueprints: they have options already. Done. |
 | F3 | The van blueprint, from the traces of DIY and from photos: the Ford Transit (high roof, medium roof, extended; cargo, crew and passenger windows), with the engine bay and the roof. Done. The Sprinter and the ProMaster come after their photos. |
 | F4 | People in the release (the data of MakeHuman in `priv/`), and less memory for the near level. |
 | F5 | Drawings. |

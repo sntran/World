@@ -1,7 +1,7 @@
 # Credits
 
 The assets from outside, each with its license. The code and the models
-of Xưởng are under the AGPL-3.0 (`LICENSE`).
+of World are under the AGPL-3.0 (`LICENSE`).
 
 | Folder | What | Source | License |
 |---|---|---|---|

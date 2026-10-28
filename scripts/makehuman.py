@@ -12,7 +12,7 @@ The script writes:
 - base.obj.gz, rig.json.gz, weights.json.gz: the base mesh, the skeleton
   "game_engine" and its weights.
 - targets.bin.gz: the targets of the body of an adult, in a small binary
-  format (see Xuong.Human.Targets).
+  format (see World.People.Data).
 - one folder for each kind of asset: the mesh (.obj.gz), its fit to the
   body (.mhclo.gz or .proxy.gz), and its texture, smaller.
 - assets.json: the list of the assets.

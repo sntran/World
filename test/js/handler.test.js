@@ -86,7 +86,7 @@ test('GET /o/ builds a file one time, then serves it from R2, with an ETag', asy
   const first = await handler(req(`/o/${HASH}.mid.glb`), env, { vm: v, commit: 'c1' });
   assert.equal(first.status, 200);
   assert.equal(first.headers.get('content-type'), 'model/gltf-binary');
-  assert.equal(first.headers.get('x-xuong-commit'), 'c1');
+  assert.equal(first.headers.get('x-world-commit'), 'c1');
   assert.equal(await first.text(), 'mid glb');
   const etag = first.headers.get('etag');
 

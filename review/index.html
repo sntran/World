@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Xưởng: review</title>
+<title>World: review</title>
 <style>
   :root { --paper: #f4f1e6; --ink: #222; --line: #c9c2ad; }
   @media (prefers-color-scheme: dark) { :root { --paper: #1d1f22; --ink: #e8e6df; --line: #45484d; } }
@@ -22,7 +22,7 @@
 </head>
 <body>
 <aside>
-  <h1>Xưởng</h1>
+  <h1>World</h1>
   <label for="model">Model</label>
   <select id="model"></select>
   <label for="level">Level of detail</label>
@@ -40,7 +40,7 @@
 // for each joint. The URL keeps the choice: ?model=NAME&level=.far&yaw=35,
 // a pose: &pose=fork:20,seat:60, and an animation at a time (seconds):
 // &animation=walk&t=0.3 (no t: the animation plays). A close view: &focus=0,2.4,0.9
-// (a point in the axes of Xuong: x right, y front, z up) and &zoom=4.
+// (a point in the axes of World: x right, y front, z up) and &zoom=4.
 // Serve the root of the repository: python3 -m http.server, then /review/.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';

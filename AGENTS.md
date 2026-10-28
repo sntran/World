@@ -1,6 +1,6 @@
-# How to work on Xưởng
+# How to work on World
 
-Read `README.md` first: it tells what Xưởng is, and the state of each
+Read `README.md` first: it tells what World is, and the state of each
 step. `docs/format.md` tells the format of a model. This file tells how
 to work on the project, and the facts that are not in the code.
 
@@ -56,6 +56,31 @@ about it.
   of `priv/models` from 12 cameras, with a slider for each joint.
   Playwright makes the pictures in CI.
 
+## The contexts
+
+`World` is the project. Each module under it is a part of the world.
+
+| Module | What it holds |
+|---|---|
+| `World.Vec`, `World.Frame`, `World.Mesh`, `World.Shape` | Points, frames, meshes and the shapes of parts: the matter of the world. |
+| `World.Part`, `World.Port`, `World.Assembly`, `World.Figure` | A part, its ports, an assembly of parts, a figure with a skeleton. |
+| `World.Detail`, `World.Build`, `World.Scene`, `World.GLB` | The levels of detail, the build of a model into a scene, and the GLB writer. |
+| `World.Kit` | Small helpers for the shapes of items (inches, round boxes, handles, feet). |
+| `World.Materials` | `Stock` (tubes, lumber, sheets, extrusions), `Fasteners` (bolts, nuts, screws), `Construction` (bricks, blocks, lintels, tiles, panels). |
+| `World.Framing` | T-slot extrusions, strut channel, L-track, and `Builds` from them. |
+| `World.Buildings` | Walls, roofs, doors, windows and houses, from the materials. |
+| `World.Furniture` | `Seats` (seats and benches), `VanBuilds` (a bed platform, a galley). |
+| `World.Appliances` | The appliances of a house, and `Systems` (the water heater, the AC, the fans, the TV). |
+| `World.Gear` | `PowerStations`, and `Camper` (the gear of a camper van). |
+| `World.Vehicles` | `Wheels`, `Corners`, `Body`, `Hull`, the `Van` line and its stations, and each vehicle (`FordTransit`, `ChevyBolt`, `HondaVision`, `RoyalEnfieldHimalayan`, `TouringBicycle`). |
+| `World.People` | The people of the catalog, `Human` (a person from the data of MakeHuman), `Data`, `Pose`. |
+| `World.Orders` | An order in, the files out: `Blueprint`, `Blueprints`. |
+| `World.Catalog` | Each model of the library by its name. |
+| `World.Service`, `World.Application` | The HTTP service of the VM, and the application. |
+
+The world of `docs/world.md` (places, stock, the clock, the log) comes
+as new contexts here.
+
 ## The core of Wings
 
 `wings/` has a copy of the modules of Wings 3D that build, change and
@@ -78,22 +103,22 @@ new commit. The copy changes only these things:
 
 | Topic | Decision | Why |
 |---|---|---|
-| The name | Xưởng ("workshop"): the repository `sntran/Xuong`, the OTP app `:xuong`, the module `Xuong`. | A workshop holds the parts, the shaped parts, the assemblies and the tools. |
+| The name | World: the OTP app `:world`, the module `World`, and a context of the world for each family of things (`World.People`, `World.Vehicles`, `World.Buildings`, `World.Materials`). The first name was Xưởng ("workshop"); the repository is `sntran/Xuong` until the owner renames it, and the Worker `xuong` and the bucket `xuong-orders` keep their names until then. | The project builds things as the real world does: people, materials, warehouses and factories. A workshop is one place of that world. Each context is one part of the world, not a kind of file. |
 | The levels of a model | Standard parts, shaped parts, assemblies. | A model is made as a real thing is made. The joints and the list of the parts come from the connections. |
 | The language | Elixir, on BEAM.com. | DIY and Phượt are Elixir. The core of Wings is Erlang, and runs in the same VM with no window. |
 | The source of a shape | Code for a standard part. A `.wings` file for a shaped part. | Wings 3D is free, small, and in Erlang. A person can open each part, change it, and save it. |
 | The one format | GLB (glTF 2.0) for the screens. STL only for a printer. | Godot, three.js, Android and MapLibre read GLB. GLB has nodes for the joints, materials, and levels of detail. STL has none of them. |
 | The joints | From the connections of an assembly. Rigid joints first (each part follows one joint). | They cover vehicles, furniture, machines and the figures of Tre. A person has a skin (a mesh that bends) from the skeleton of MakeHuman. |
-| The people | The data of MakeHuman (CC0) in `priv/makehuman/`: a body from its numbers, the skeleton `game_engine`, skins, hair and clothes. A low-poly body of MakeHuman at mid and far. | Real shapes and real weights, free to use. A person is a `Xuong.Figure`, and an assembly holds it at its port `hips` or `ground`. |
+| The people | The data of MakeHuman (CC0) in `priv/makehuman/`: a body from its numbers, the skeleton `game_engine`, skins, hair and clothes. A low-poly body of MakeHuman at mid and far. | Real shapes and real weights, free to use. A person is a `World.Figure`, and an assembly holds it at its port `hips` or `ground`. |
 | The animation | Data in the format (poses), not a timeline in Wings. | The apps move the models in code: the wheels turn with the speed, the legs of Tre swing in a walk. |
 | Voxels | A separate kind of model in `.vox`, and a voxel maker from any model. | The mesh of Wings cannot hold blocks that touch at an edge or a corner. Tre needs blocks at its own sizes. |
 | The axes | Right hand: x to the right side, y to the front, z up, in meters. The origin of a model on the ground at the center of its box. | One rule for each model. The GLB writer turns the axes with no mirror. |
 | The colors | A role of material. The palette of the package, and a palette of each app. | One model, the colors of each app. |
 | The files of the build in Git | Yes, with a check in CI. | An app reads the files with no build. |
-| The way the projects use Xưởng | A web service, the factory at <https://3d.mkfifo.com> (`docs/factory.md`), not a library in each app. | Phượt, DIY and Vũng Tàu are on Cloudflare. A model has a URL, and a correction of Xưởng reaches them with no new deploy. |
+| The way the projects use World | A web service, the factory at <https://3d.mkfifo.com> (`docs/factory.md`), not a library in each app. | Phượt, DIY and Vũng Tàu are on Cloudflare. A model has a URL, and a correction of World reaches them with no new deploy. |
 | Orders | Data in JSON, never code: a blueprint, its options, colors and joints. The hash of the full order names its files. | An order can come from any project and any language. The same order gives the same files. |
 | Realism | The sizes from a standard, a data sheet or a drawing, and the shape from photos of the real thing, never from a memory. A render and a photo side by side before a commit. | Phượt and Vũng Tàu need models that look real. |
-| The world | The next step of Xưởng (`docs/world.md`): people, warehouses, factories and vehicles build the models, and each thing of the world is one real thing of the computer, with real times. The owner decided to rename the project "World" after the foundation of the world is in place, not before. | A model is made as a real thing is made; the world makes it as the real world does. One rename, at one time. |
+| The world | The next step of World (`docs/world.md`): people, warehouses, factories and vehicles build the models, and each thing of the world is one real thing of the computer, with real times. The owner decided to rename the project "World" after the foundation of the world is in place, not before. | A model is made as a real thing is made; the world makes it as the real world does. One rename, at one time. |
 | The license | AGPL-3.0. The core of Wings keeps its own terms in `wings/LICENSE`. | The models stay free, and nobody can close them. |
 
 ## Known problems
@@ -103,7 +128,7 @@ on BEAM.com, on the 77 models of DIY, the shape kinds of Tre, and 42
 trees from Blender:
 
 - **Floats only.** The core of Wings fails on a box or a prism with
-  integer points. `Xuong.Mesh` changes each point to floats.
+  integer points. `World.Mesh` changes each point to floats.
 - **A flat face has two faces.** One polygon alone fails in
   `wings_we_build`. A flat part (a label, a window) has its front and its
   back.
@@ -122,7 +147,7 @@ trees from Blender:
 - **Blocks and bad meshes become many objects.** Blocks that touch at an
   edge, points where two fans of faces meet, and pieces with faces in two
   orders go through the last steps of the import of Wings: one object for
-  each piece or each face. `Xuong.Mesh.clean/1` (`docs/format.md`) does
+  each piece or each face. `World.Mesh.clean/1` (`docs/format.md`) does
   the repair first.
 - **Speed.** In the interpreter of BEAM.com, most models build in less
   than 2 seconds. A tree with 19,000 triangles in many small objects
@@ -139,12 +164,12 @@ app that uses the models.
 | Step | Result | Check |
 |---|---|---|
 | 0. The plan | `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `TODO.md`, `docs/format.md`, `LICENSE`. | The owner agrees, or changes them. |
-| 1. The project and the core of Wings | Mix project, `wings/` with `scripts/wings.sh`, `Xuong.Mesh` (build, smooth, triangulate, clean), `Xuong.GLB`, the review page, CI on BEAM.com with the validator. | A box, a cylinder, a lathe and a loft give GLB files with no error and no warning. `scripts/wings.sh` twice gives the same files. Coverage 100%. |
-| 2. Standard parts | `Xuong.Parts`: bolt, nut, washer, bearing, tube, sheet, lumber, extrusion, rim, tire, wheel. Each with its ports and its sources. | Property tests: each size agrees with the table of its standard. Each part on the review page. |
-| 3. Assemblies and joints | `Xuong.Assembly`, `Xuong.Connection`, joints, poses, the list of the parts, the three levels, `mix xuong.build` and `--check`. The Honda Vision 110 from parts. | The wheels and the bars turn on the review page. The list of the parts of the scooter. The triangles of each level are in their limits. The build gives the same bytes twice. |
-| 4. Phượt uses Xưởng | The vehicle next to the avatar of Phượt is the far level of its model. It moves a little in a drive (the wheels turn, the body bobs), and stops when the vehicle stops. | On a phone of 390 px, in Phượt. With `prefers-reduced-motion`, nothing moves. |
-| 5. Wings files | `Xuong.Wings.read/1` (strict) and `write/2`. Shaped parts from `.wings` files. The body panels of the scooter as shaped parts. | A file that `write/2` makes opens in Wings 3D on the desk of the owner, and `read/1` reads its change. A file with an unknown atom is refused. |
-| 6. The Wings plugin | `wpc_xuong`: ports and joints in the plugin state of the file, a command to try a pose, the axes in the view. | The data and its export: tests here. The window: the owner tries it in Wings 3D. |
-| 7. DIY uses Xưởng | The models of DIY as assemblies of Xưởng. DIY draws its SVG from them, and depends on `:xuong`. | The pictures of DIY do not change: its tests compare the frames before and after. |
-| 8. Voxel models | `Xuong.Voxel`: `.vox` read and write, the voxel maker. In Tre: the stamp of a `.vox` model into the fine grid. | A stool and a cart of Xưởng in the world of Tre, with the colors of Tre. A `.vox` file opens in Goxel. |
-| 9. STL for a printer | `Xuong.STL`, a file for each material, the checks of a print (closed, outside, thick enough, the size). | A slicer (PrusaSlicer) slices the scooter at 1:43 with no error. |
+| 1. The project and the core of Wings | Mix project, `wings/` with `scripts/wings.sh`, `World.Mesh` (build, smooth, triangulate, clean), `World.GLB`, the review page, CI on BEAM.com with the validator. | A box, a cylinder, a lathe and a loft give GLB files with no error and no warning. `scripts/wings.sh` twice gives the same files. Coverage 100%. |
+| 2. Standard parts | `World.Parts`: bolt, nut, washer, bearing, tube, sheet, lumber, extrusion, rim, tire, wheel. Each with its ports and its sources. | Property tests: each size agrees with the table of its standard. Each part on the review page. |
+| 3. Assemblies and joints | `World.Assembly`, `World.Connection`, joints, poses, the list of the parts, the three levels, `mix world.build` and `--check`. The Honda Vision 110 from parts. | The wheels and the bars turn on the review page. The list of the parts of the scooter. The triangles of each level are in their limits. The build gives the same bytes twice. |
+| 4. Phượt uses World | The vehicle next to the avatar of Phượt is the far level of its model. It moves a little in a drive (the wheels turn, the body bobs), and stops when the vehicle stops. | On a phone of 390 px, in Phượt. With `prefers-reduced-motion`, nothing moves. |
+| 5. Wings files | `World.Wings.read/1` (strict) and `write/2`. Shaped parts from `.wings` files. The body panels of the scooter as shaped parts. | A file that `write/2` makes opens in Wings 3D on the desk of the owner, and `read/1` reads its change. A file with an unknown atom is refused. |
+| 6. The Wings plugin | `wpc_world`: ports and joints in the plugin state of the file, a command to try a pose, the axes in the view. | The data and its export: tests here. The window: the owner tries it in Wings 3D. |
+| 7. DIY uses World | The models of DIY as assemblies of World. DIY draws its SVG from them, and depends on `:world`. | The pictures of DIY do not change: its tests compare the frames before and after. |
+| 8. Voxel models | `World.Voxel`: `.vox` read and write, the voxel maker. In Tre: the stamp of a `.vox` model into the fine grid. | A stool and a cart of World in the world of Tre, with the colors of Tre. A `.vox` file opens in Goxel. |
+| 9. STL for a printer | `World.STL`, a file for each material, the checks of a print (closed, outside, thick enough, the size). | A slicer (PrusaSlicer) slices the scooter at 1:43 with no error. |
