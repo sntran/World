@@ -78,7 +78,9 @@ defmodule Xuong.Models.VanGear do
             Shape.sweep(
               [{x, -0.04, zt - 0.03}, {x, -0.04, zt + 0.03}, {x, 0.04, zt + 0.03}, {x, 0.04, zt - 0.03}],
               0.005,
-              :black, sides: 6)
+              :black,
+              sides: 6
+            )
 
     Assembly.new(
       "battery_battle_born_bb10012",
@@ -137,7 +139,9 @@ defmodule Xuong.Models.VanGear do
         "multiplus_cover",
         :cover,
         [rbox({x0, y0 + 0.012, 0.02}, {x1, y1, zc}, :dark, 0.06)],
-        [same("o", @o, {0, 0, 1}, {0, 1, 0})], sources: ["The cover of the connections, with 4 screws."])
+        [same("o", @o, {0, 0, 1}, {0, 1, 0})],
+        sources: ["The cover of the connections, with 4 screws."]
+      )
 
     asm =
       Assembly.new(
@@ -319,7 +323,9 @@ defmodule Xuong.Models.VanGear do
               Shape.sweep(
                 [{x0 - 0.002, y, zl - 0.15}, {x0 - 0.03, y, zl - 0.12}, {x0 - 0.03, y, 0.08}, {x0 - 0.002, y, 0.05}],
                 0.008,
-                :gray, sides: 6)
+                :gray,
+                sides: 6
+              )
 
     lid =
       Part.new(
@@ -370,7 +376,9 @@ defmodule Xuong.Models.VanGear do
                 do: {0.045 * k * :math.cos(:math.pi() * i / 8), 0.045 * k * :math.sin(:math.pi() * i / 8), 0.03}
               ),
               0.002,
-              :white, sides: 4)
+              :white,
+              sides: 4
+            )
 
     blades =
       for k <- 0..9 do
@@ -390,7 +398,9 @@ defmodule Xuong.Models.VanGear do
         "maxxfan_rotor",
         :fan,
         [Kit.rod({0.0, 0.0, -0.01}, {0, 0, 1}, 0.03, 0.02, :white) | blades],
-        [same("axle", @o, {0, 0, 1}, {0, 1, 0})], inside: true)
+        [same("axle", @o, {0, 0, 1}, {0, 1, 0})],
+        inside: true
+      )
 
     lid =
       Part.new(
@@ -433,7 +443,9 @@ defmodule Xuong.Models.VanGear do
           {x, k} <- [{x0, 0.8}, {x0 + 0.03, 1.0}, {x1 - 0.03, 1.0}, {x1, 0.85}],
           do: {{x, 0.0, h / 2}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, w / 2 * k, h / 2 * k, 5}
         ),
-        :black, sides: 20),
+        :black,
+        sides: 20
+      ),
       Shape.box({x0 + 0.04, -w / 2 - 0.002, h * 0.35}, {x0 + 0.12, -w / 2, h * 0.65}, :dark),
       Kit.rod({x0, 0.0, h / 2}, {-1, 0, 0}, mm(45), 0.02, :black, 16),
       Kit.rod({x1, 0.0, h / 2}, {1, 0, 0}, mm(45), 0.02, :black, 16),

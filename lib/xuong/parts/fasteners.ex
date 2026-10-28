@@ -1,7 +1,8 @@
 defmodule Xuong.Parts.Fasteners do
   @moduledoc """
-  Bolts, screws, nuts and washers with metric threads, at the sizes of
-  their ISO standards, and wood screws. The thread itself is not in the mesh.
+  Bolts, screws, nuts and washers with metric threads (ISO) and unified
+  inch threads (ASME: "1/4-20", "1/2-13"), at the sizes of their
+  standards, button head screws, and wood screws. The thread itself is not in the mesh.
 
   The axis of a fastener is its z axis. A hole of another part has a
   port with its axis into the hole: the bolt goes in along it.
@@ -87,17 +88,55 @@ defmodule Xuong.Parts.Fasteners do
     "#12" => {0.216, 0.438, 0.132}
   }
 
-  @doc "The threads in the tables, from small to large."
+  # The unified inch threads (ASME B18.2.1 and B18.2.2): the width across
+  # the flats of a hex head, the height of the head, the height of a hex
+  # nut; a SAE flat washer: its inner and outer diameters and its
+  # thickness; a socket button head (ASME B18.3): its diameter and its
+  # height. All in inches.
+  @inch %{
+    "1/4-20" => %{hex: {0.4375, 0.156}, nut: 0.219, washer: {0.281, 0.625, 0.065}, button: {0.437, 0.132}},
+    "5/16-18" => %{hex: {0.5, 0.203}, nut: 0.266, washer: {0.344, 0.688, 0.065}, button: {0.547, 0.166}},
+    "3/8-16" => %{hex: {0.5625, 0.234}, nut: 0.328, washer: {0.406, 0.812, 0.065}, button: {0.656, 0.199}},
+    "1/2-13" => %{hex: {0.75, 0.312}, nut: 0.438, washer: {0.531, 1.062, 0.095}, button: {0.875, 0.265}}
+  }
+
+  # Socket button head screws with metric threads (ISO 7380): the head
+  # diameter dk and its height k, in mm.
+  @button_head %{"M4" => {7.6, 2.2}, "M5" => {9.5, 2.75}, "M6" => {10.5, 3.3}, "M8" => {14.0, 4.4}}
+
+  @doc "The metric threads in the tables, from small to large."
   def threads, do: @hex_head |> Map.keys() |> Enum.sort_by(&diameter/1)
 
-  @doc "The nominal diameter of a thread, in meters: `\"M8\"` is 0.008."
+  @doc "The unified inch threads in the tables, from small to large."
+  def inch_threads, do: @inch |> Map.keys() |> Enum.sort_by(&diameter/1)
+
+  @doc """
+  The nominal diameter of a thread, in meters: `"M8"` is 0.008, and
+  `"1/2-13"` (1/2 in, 13 threads to the inch) is 0.0127.
+  """
   def diameter("M" <> d), do: String.to_integer(d) / 1000
 
+  def diameter(inch) do
+    [n, d] = inch |> String.split("-") |> hd() |> String.split("/")
+    String.to_integer(n) / String.to_integer(d) * 0.0254
+  end
+
   @doc "The sizes of the tables, in meters, for the tests."
-  def table(:hex_head, t), do: mm(Map.fetch!(@hex_head, t))
-  def table(:nut, t), do: Map.fetch!(@nut_height, t) / 1000
-  def table(:washer, t), do: mm(Map.fetch!(@washer, t))
-  def table(:cap_head, t), do: mm(Map.fetch!(@cap_head, t))
+  def table(kind, "M" <> _ = t), do: metric(kind, t)
+  def table(kind, t), do: inch(kind, Map.fetch!(@inch, t))
+
+  defp metric(:hex_head, t), do: mm(Map.fetch!(@hex_head, t))
+  defp metric(:nut, t), do: Map.fetch!(@nut_height, t) / 1000
+  defp metric(:washer, t), do: mm(Map.fetch!(@washer, t))
+  defp metric(:cap_head, t), do: mm(Map.fetch!(@cap_head, t))
+  defp metric(:button_head, t), do: mm(Map.fetch!(@button_head, t))
+
+  defp inch(:hex_head, %{hex: h}), do: inches(h)
+  defp inch(:nut, %{nut: m}), do: m * 0.0254
+  defp inch(:washer, %{washer: w}), do: inches(w)
+  defp inch(:button_head, %{button: b}), do: inches(b)
+
+  defp inches(t), do: t |> Tuple.to_list() |> Enum.map(&(&1 * 0.0254)) |> List.to_tuple()
 
   defp mm(t), do: t |> Tuple.to_list() |> Enum.map(&(&1 / 1000)) |> List.to_tuple()
 
@@ -109,12 +148,15 @@ defmodule Xuong.Parts.Fasteners do
     shank = Shape.cylinder(d / 2, length, :steel, sides: 12, frame: Xuong.Frame.move({0, 0, -length}))
 
     fastener(
-      "bolt_#{String.downcase(thread)}x#{mm_name(length)}",
+      "bolt_#{thread_name(thread)}x#{mm_name(length)}",
       :bolt,
       [head, shank],
       thread,
       length,
-      ["ISO 4017: s #{s * 1000} mm, k #{k * 1000} mm."],
+      [
+        standard(thread, "ISO 4017", "ASME B18.2.1") <>
+          ": s #{Float.round(s * 1000, 2)} mm, k #{Float.round(k * 1000, 2)} mm."
+      ],
       opts
     )
   end
@@ -127,7 +169,7 @@ defmodule Xuong.Parts.Fasteners do
     shank = Shape.cylinder(d / 2, length, :black, sides: 12, frame: Xuong.Frame.move({0, 0, -length}))
 
     fastener(
-      "cap_screw_#{String.downcase(thread)}x#{mm_name(length)}",
+      "cap_screw_#{thread_name(thread)}x#{mm_name(length)}",
       :cap_screw,
       [head, shank],
       thread,
@@ -163,6 +205,31 @@ defmodule Xuong.Parts.Fasteners do
     )
   end
 
+  @doc """
+  A socket button head screw: ISO 7380 for a metric thread, ASME B18.3 for
+  an inch thread (`button_screw("1/4-20", 0.0127)`), the screw of the
+  brackets of T-slot extrusions.
+  """
+  def button_screw(thread, length, opts \\ []) do
+    {dk, k} = table(:button_head, thread)
+    d = diameter(thread)
+    head = Shape.lathe([{0.0, k}, {dk / 4, k}, {dk / 2 * 0.85, k * 0.55}, {dk / 2, 0.0}, {0.0, 0.0}], :black, sides: 16)
+    shank = Shape.cylinder(d / 2, length, :black, sides: 12, frame: Xuong.Frame.move({0, 0, -length}))
+
+    fastener(
+      "button_screw_#{thread_name(thread)}x#{mm_name(length)}",
+      :button_screw,
+      [head, shank],
+      thread,
+      length,
+      [
+        standard(thread, "ISO 7380", "ASME B18.3") <>
+          ": head #{Float.round(dk * 1000, 2)} mm, height #{Float.round(k * 1000, 2)} mm."
+      ],
+      opts
+    )
+  end
+
   defp fastener(name, kind, shapes, thread, length, sources, opts) do
     Part.new(
       name,
@@ -185,12 +252,15 @@ defmodule Xuong.Parts.Fasteners do
     shape = Shape.lathe([{d / 2, 0.0}, {r, 0.0}, {r, m}, {d / 2, m}], :steel, kind: :ring, sides: 6)
 
     Part.new(
-      "nut_#{String.downcase(thread)}",
+      "nut_#{thread_name(thread)}",
       :nut,
       [material(shape, opts)],
       flat_ports(m),
       params: %{"thread" => thread},
-      sources: ["ISO 4032: s #{s * 1000} mm, m #{m * 1000} mm."],
+      sources: [
+        standard(thread, "ISO 4032", "ASME B18.2.2") <>
+          ": s #{Float.round(s * 1000, 2)} mm, m #{Float.round(m * 1000, 2)} mm."
+      ],
       inside: Keyword.get(opts, :inside, false)
     )
   end
@@ -201,12 +271,15 @@ defmodule Xuong.Parts.Fasteners do
     shape = Shape.lathe([{d1 / 2, 0.0}, {d2 / 2, 0.0}, {d2 / 2, h}, {d1 / 2, h}], :steel, kind: :ring, sides: 16)
 
     Part.new(
-      "washer_#{String.downcase(thread)}",
+      "washer_#{thread_name(thread)}",
       :washer,
       [material(shape, opts)],
       flat_ports(h),
       params: %{"thread" => thread},
-      sources: ["ISO 7089: d1 #{d1 * 1000} mm, d2 #{d2 * 1000} mm, h #{h * 1000} mm."],
+      sources: [
+        standard(thread, "ISO 7089", "SAE flat washer") <>
+          ": d1 #{Float.round(d1 * 1000, 2)} mm, d2 #{Float.round(d2 * 1000, 2)} mm, h #{Float.round(h * 1000, 2)} mm."
+      ],
       inside: Keyword.get(opts, :inside, false)
     )
   end
@@ -218,6 +291,15 @@ defmodule Xuong.Parts.Fasteners do
   defp hexagon(s), do: Shape.polygon(s / :math.sqrt(3), 6, 30.0)
 
   defp material(mesh, opts), do: %{mesh | material: Keyword.get(opts, :material, mesh.material)}
+
+  @doc """
+  The name of a thread in the name of a part: `"M8"` is `"m8"`, `"1/2-13"`
+  is `"1_2_13"`.
+  """
+  def thread_name(thread), do: thread |> String.downcase() |> String.replace(["/", "-"], "_")
+
+  defp standard("M" <> _, metric, _inch), do: metric
+  defp standard(_, _metric, inch), do: inch
 
   defp mm_name(length), do: length |> Kernel.*(1000) |> round() |> Integer.to_string()
 end

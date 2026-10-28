@@ -35,17 +35,23 @@ defmodule Xuong.Models.Systems do
           {0.11, top + 0.01},
           {0.0, top + 0.01}
         ],
-        :white, sides: 40)
+        :white,
+        sides: 40
+      )
 
     hood =
       Shape.lathe(
         [{0.0, top + 0.03}, {0.07, top + 0.03}, {0.07, top + 0.06}, {0.05, top + 0.09}, {0.05, h}, {0.0, h}],
-        :steel, sides: 20)
+        :steel,
+        sides: 20
+      )
 
     pan =
       Shape.lathe(
         [{0.0, 0.0}, {r + 0.03, 0.0}, {r + 0.03, 0.04}, {r + 0.02, 0.04}, {r + 0.02, 0.005}, {0.0, 0.005}],
-        :plastic, sides: 40)
+        :plastic,
+        sides: 40
+      )
 
     pipes =
       for {x, mat} <- [{-0.13, :copper}, {0.13, :copper}] do
@@ -77,7 +83,9 @@ defmodule Xuong.Models.Systems do
         "water_heater_rheem_prog50",
         :tank,
         [jacket, hood, pan, drain, label | List.flatten(pipes)] ++ valve ++ relief,
-        [origin()], params: %{"gallons" => 50, "fuel" => "gas"})
+        [origin()],
+        params: %{"gallons" => 50, "fuel" => "gas"}
+      )
 
     knob_at = {0.0, r + 0.07, 0.37}
 
@@ -167,14 +175,18 @@ defmodule Xuong.Models.Systems do
         "ac_goodman_gsx140361",
         :unit,
         base ++ posts ++ coil ++ List.flatten(grille) ++ [compressor | panel] ++ fan_grille,
-        [origin()], params: %{"tons" => 3})
+        [origin()],
+        params: %{"tons" => 3}
+      )
 
     fan =
       Part.new(
         "ac_fan",
         :fan,
         [Kit.rod({0.0, 0.0, zt - 0.06}, {0, 0, 1}, 0.04, 0.03, :black) | blades],
-        [same("axle", {0.0, 0.0, zt - 0.05}, {0, 0, 1}, {0, 1, 0})], inside: true)
+        [same("axle", {0.0, 0.0, zt - 0.05}, {0, 0, 1}, {0, 1, 0})],
+        inside: true
+      )
 
     Assembly.new("ac_goodman_gsx140361", unit,
       root: "unit",
@@ -228,7 +240,9 @@ defmodule Xuong.Models.Systems do
         "mini_split_panel",
         :lid,
         [rbox({x0 + 0.015, yf - 0.02, 0.05}, {x1 - 0.015, yf + 0.004, h - 0.01}, :white, 0.03)] ++ leds,
-        [same("hinge", {0.0, yf - 0.01, h - 0.01}, {1, 0, 0}, {0, 0, -1})], detail: :always)
+        [same("hinge", {0.0, yf - 0.01, h - 0.01}, {1, 0, 0}, {0, 0, -1})],
+        detail: :always
+      )
 
     vane =
       Part.new(
@@ -239,7 +253,9 @@ defmodule Xuong.Models.Systems do
             frame: Frame.new({0.0, yf - 0.02, 0.025}, {0, 0, 1}, {0, 1, 0})
           )
         ],
-        [same("vane", {0.0, yf - 0.02, 0.025}, {1, 0, 0}, {0, 1, 0})], detail: :always)
+        [same("vane", {0.0, yf - 0.02, 0.025}, {1, 0, 0}, {0, 1, 0})],
+        detail: :always
+      )
 
     Assembly.new(
       "mini_split_mitsubishi_msz_gl12na",
@@ -286,7 +302,9 @@ defmodule Xuong.Models.Systems do
     motor =
       Shape.lathe(
         [{0.0, zb - 0.02}, {0.1, zb - 0.02}, {0.13, zb + 0.02}, {0.11, zb + 0.07}, {0.04, zb + 0.09}, {0.0, zb + 0.09}],
-        :metal, sides: 32)
+        :metal,
+        sides: 32
+      )
 
     blades =
       for k <- 0..4 do

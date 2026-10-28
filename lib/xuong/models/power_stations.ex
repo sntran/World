@@ -68,7 +68,9 @@ defmodule Xuong.Models.PowerStations do
       ),
       Shape.lathe(
         [{0.0, -w / 2 + 0.003}, {r * 0.47, -w / 2 + 0.003}, {r * 0.47, w / 2 - 0.003}, {0.0, w / 2 - 0.003}],
-        :dark, sides: 16)
+        :dark,
+        sides: 16
+      )
     ]
 
     Part.new(name, :wheel, shapes, [same("hub", @o, {0, 0, 1}, {0, 1, 0})], params: %{"diameter" => 2 * r})
@@ -137,7 +139,9 @@ defmodule Xuong.Models.PowerStations do
               {x1 - 0.05, y0 - 0.02, z0}
             ],
             0.01,
-            :black, sides: 8)
+            :black,
+            sides: 8
+          )
         ],
         [same("slide", {0.0, y0 - 0.02, z0}, {0, 0, 1}, {0, 1, 0})]
       )
@@ -277,7 +281,9 @@ defmodule Xuong.Models.PowerStations do
               {x1 - 0.04, y1 - 0.3, zb + 0.01}
             ],
             0.009,
-            :dark, sides: 8)
+            :dark,
+            sides: 8
+          )
         ],
         [same("slide", {0.0, y1, zb}, {0, 1, 0}, {0, 0, 1})]
       )
@@ -299,7 +305,9 @@ defmodule Xuong.Models.PowerStations do
         String.replace(name, "power_station_", ""),
         :station,
         body ++ front ++ sides ++ vents ++ top_handles ++ stand,
-        [origin()], params: params),
+        [origin()],
+        params: params
+      ),
       root: "station",
       kind: :power,
       sources: [source]
@@ -378,7 +386,10 @@ defmodule Xuong.Models.PowerStations do
       "inverter",
       Part.new("delta_pro_ultra_inverter", :inverter, inverter, [same("bottom", {0.0, 0.0, z}, {0, 0, 1}, {0, 1, 0})],
         params: %{"output_w" => 7200}
-      ), at: Kit.same("top", {0.0, 0.0, z}, {0, 0, 1}, {0, 1, 0}), port: "bottom")
+      ),
+      at: Kit.same("top", {0.0, 0.0, z}, {0, 0, 1}, {0, 1, 0}),
+      port: "bottom"
+    )
   end
 
   # --- Anker ------------------------------------------------------------------------
@@ -422,7 +433,9 @@ defmodule Xuong.Models.PowerStations do
               {x1 - 0.05, y1 - 0.05, h - 0.12}
             ],
             0.012,
-            :dark, sides: 8)
+            :dark,
+            sides: 8
+          )
         ],
         [same("slide", {0.0, y1 - 0.05, h}, {0, 0, 1}, {0, 1, 0})]
       )

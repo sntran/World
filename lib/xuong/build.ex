@@ -215,7 +215,8 @@ defmodule Xuong.Build do
     |> Enum.map(fn {{name, kind, params, sources}, count} ->
       %{"name" => name, "kind" => Atom.to_string(kind), "count" => count, "params" => params, "sources" => sources}
     end)
-    |> Enum.sort_by(& &1["name"])
+    # Two parts can have one name with other params: all the fields fix the order.
+    |> Enum.sort_by(&{&1["name"], &1["kind"], &1["params"], &1["sources"]})
   end
 
   # A part with no shapes is a mark (the origin of a build), and a part of

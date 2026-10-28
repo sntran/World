@@ -66,7 +66,10 @@ defmodule Xuong.Models.Appliances do
       "shelves",
       Part.new("fridge_shelves", :shelf, inside ++ List.flatten(crispers), [same("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})],
         inside: true
-      ), at: Kit.same("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}), port: "o")
+      ),
+      at: Kit.same("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
+      port: "o"
+    )
     |> Assembly.add("door_left", fridge_door(:left, x0, 0.0, yb, yd, zm + 0.045, zt, d),
       at: "door_left",
       port: "hinge",
@@ -283,7 +286,11 @@ defmodule Xuong.Models.Appliances do
     shapes = [
       Shape.lathe(
         [{ring - 0.065, 0.012}, {ring, 0.012}, {ring + 0.005, 0.045}, {ring - 0.02, 0.065}, {ring - 0.065, 0.06}],
-        frame_color, kind: :ring, sides: 40, frame: f),
+        frame_color,
+        kind: :ring,
+        sides: 40,
+        frame: f
+      ),
       Shape.lathe([{0.0, -0.05}, {0.12, -0.04}, {ring - 0.06, 0.02}, {ring - 0.06, 0.05}, {0.0, 0.05}], :glass_dark,
         sides: 32,
         frame: f
@@ -468,7 +475,9 @@ defmodule Xuong.Models.Appliances do
                 {x0 + 0.05, y0 + 0.05, z}
               ],
               0.003,
-              :chrome, sides: 6)
+              :chrome,
+              sides: 6
+            )
 
     door =
       Part.new(
@@ -583,7 +592,9 @@ defmodule Xuong.Models.Appliances do
         "turntable",
         :plate,
         [Shape.lathe([{0.0, 0.0}, {0.16, 0.0}, {0.165, 0.012}, {0.0, 0.006}], :glass, sides: 32)],
-        [same("axle", {0.0, 0.0, 0.0}, {0, 0, 1}, {0, 1, 0})], inside: true)
+        [same("axle", {0.0, 0.0, 0.0}, {0, 0, 1}, {0, 1, 0})],
+        inside: true
+      )
 
     door =
       Part.new(

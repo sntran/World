@@ -188,9 +188,13 @@ defmodule Xuong.Models.VanBuilds do
           Shape.sweep(
             [{sx, y0 + 0.04, h}, {sx, y0 + 0.04, h + 0.3}, {sx, y0 + 0.2, h + 0.3}, {sx, y0 + 0.2, h + 0.24}],
             0.012,
-            :chrome, sides: 10)
+            :chrome,
+            sides: 10
+          )
         ],
-        [same("swivel", {sx, y0 + 0.04, h}, {0, 0, 1}, {0, 1, 0})], detail: :always)
+        [same("swivel", {sx, y0 + 0.04, h}, {0, 0, 1}, {0, 1, 0})],
+        detail: :always
+      )
 
     asm =
       asm

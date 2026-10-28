@@ -118,7 +118,9 @@ defmodule Xuong.Parts.Stock do
         Part.port("top", {length / 2, w / 2, t}, {0, 0, -1}, {1, 0, 0})
       ],
       params: %{"nominal" => nominal, "length" => length},
-      sources: ["Softwood lumber, PS 20: a #{nominal} is #{t / 0.0254} in by #{w / 0.0254} in."]
+      sources: [
+        "Softwood lumber, PS 20: a #{nominal} is #{Float.round(t / 0.0254, 3)} in by #{Float.round(w / 0.0254, 3)} in."
+      ]
     )
   end
 
@@ -155,36 +157,10 @@ defmodule Xuong.Parts.Stock do
   end
 
   @doc """
-  An aluminum extrusion of the 20 mm series with T-slots (as "2020"),
-  along z from 0 to `length`, with the same ports as a tube.
+  An aluminum extrusion with T-slots (`extrusion("2020", 0.3)`): one of
+  `Xuong.Parts.Framing.profiles/0`.
   """
-  def extrusion("2020", length, opts \\ []) do
-    # One side of the profile with its slot, turned four times: the slot
-    # is 6.2 mm wide at its opening, as in the 20 mm series of the trade.
-    side = [
-      {-10.0, -10.0},
-      {-3.1, -10.0},
-      {-3.1, -8.2},
-      {-5.5, -8.2},
-      {-5.5, -4.0},
-      {5.5, -4.0},
-      {5.5, -8.2},
-      {3.1, -8.2},
-      {3.1, -10.0}
-    ]
-
-    loop = for k <- 0..3, {x, y} <- turn_quarter(side, k), do: {x / 1000, y / 1000}
-    shape = Shape.prism(loop, length, Keyword.get(opts, :material, :aluminum))
-
-    long("extrusion_2020x#{mm(length)}", :extrusion, shape, length, %{"profile" => "2020", "length" => length},
-      sources: ["The 20 mm series of T-slot extrusions: 20 x 20 mm, slot 6.2 mm."]
-    )
-  end
-
-  defp turn_quarter(points, k) do
-    a = k * :math.pi() / 2
-    for {x, y} <- points, do: {x * :math.cos(a) - y * :math.sin(a), x * :math.sin(a) + y * :math.cos(a)}
-  end
+  def extrusion(profile, length, opts \\ []), do: Xuong.Parts.Framing.extrusion(profile, length, opts)
 
   @doc """
   A deep groove ball bearing (`bearing("6203")`): the outer ring and the

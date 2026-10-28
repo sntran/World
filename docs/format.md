@@ -116,6 +116,8 @@ Each connection that is not `:fixed` is a **joint**. A joint has a
   washer, a turntable).
 - `knob`: a knob or a dial, and a faucet that swivels.
 - `vane`: a vane that turns the flow of air (a mini split).
+- `slide`: a part that a person moves along a track and locks (a
+  fitting in an L-track).
 - `limb`: a part of a person or of an animal.
 
 A model has no joint for the lean of a vehicle with two wheels. An app
