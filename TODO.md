@@ -17,8 +17,9 @@ into the steps of `AGENTS.md`.
   new model. A population of plans that compete (genetic programming),
   flocks of people (boids), in Erlang. After the first world
   (`docs/world.md`, "The engineers").
-- **The world for Humans Must Die.** The models of a planet, from the
-  same parts. The owner gives the needs of the project.
+- **The factories of a planet, for Humans Must Die.** Emergency
+  vehicles, airplanes, ships, aircraft carriers, buildings: each family
+  is a new factory of the world, with its modules and its sources.
 
 ## From the development
 
