@@ -127,29 +127,36 @@ defmodule World.Orders do
          {:ok, lvl} <- level(level),
          :ok <- file(file) do
       {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
-      item = Detail.with(lvl, fn -> blueprint.build.(order["options"]) end)
 
-      scene = fn opts ->
+      # The item and its scene are functions: in a run of the world, the
+      # foreman makes the item, so the memory holds one item only (the edge
+      # has 128 MB).
+      item = fn -> Detail.with(lvl, fn -> blueprint.build.(order["options"]) end) end
+
+      scene = fn item, opts ->
         s = Build.scene(item, [level: lvl, pose: order["joints"]] ++ opts)
         %{s | materials: Map.merge(s.materials, materials(order["colors"]))}
       end
 
-      with :ok <- joints(order, scene) do
+      with :ok <- joints(order, fn opts -> scene.(item.(), opts) end) do
         {:ok, make(file, order, lvl, item, scene)}
       end
     end
   end
 
-  defp make("glb", order, _lvl, item, scene), do: elem(world(order, item, scene), 0)
-  defp make("log", order, _lvl, item, scene), do: elem(world(order, item, scene), 1)
-  defp make("replay", _order, _lvl, _item, scene), do: GLB.encode(scene.(split: true))
-  defp make("parts", _order, _lvl, item, _scene), do: parts(item)
-  defp make("receipt", order, lvl, _item, scene), do: receipt(order, lvl, scene.([]))
+  defp make(file, order, _lvl, item, scene) when file in ["glb", "log"] do
+    {glb, log} = world(order, item, scene)
+    if file == "glb", do: glb, else: log
+  end
+
+  defp make("replay", _order, _lvl, item, scene), do: GLB.encode(scene.(item.(), split: true))
+  defp make("parts", _order, _lvl, item, _scene), do: parts(item.())
+  defp make("receipt", order, lvl, item, scene), do: receipt(order, lvl, scene.(item.(), []))
 
   # A run of the world for the order: the files of the model and the log.
   defp world(order, item, scene) do
     run = Run.start()
-    {:ok, result} = Run.order(run, item, hash(order), files: fn _ -> GLB.encode(scene.([])) end)
+    {:ok, result} = Run.order(run, item, hash(order), files: &GLB.encode(scene.(&1, [])))
     log = Run.log(run)
     Run.stop(run)
     {result.glb, Log.to_json(log)}

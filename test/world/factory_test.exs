@@ -139,6 +139,7 @@ defmodule World.FactoryTest do
     test "a person needs one origin" do
       none = %{"african" => 0, "asian" => 0, "caucasian" => 0}
       assert paths(Orders.check(%{"blueprint" => "person", "options" => %{"origin" => none}})) == ["options.origin"]
+      assert paths(Orders.check(%{"blueprint" => "traveler", "options" => %{"origin" => none}})) == ["options.origin"]
     end
   end
 
@@ -220,7 +221,8 @@ defmodule World.FactoryTest do
         %{
           "blueprint" => "person",
           "options" => %{"hair" => "none", "pose" => "sit", "origin" => %{"african" => 0.5, "asian" => 0.5}}
-        }
+        },
+        %{"blueprint" => "traveler", "options" => %{"vehicle" => "car", "hair_color" => "#3b2a20"}}
       ]
 
       for order <- orders do

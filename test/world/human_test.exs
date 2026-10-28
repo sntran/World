@@ -89,6 +89,23 @@ defmodule World.HumanTest do
     assert Enum.any?(Build.parts(model), &(&1["name"] == "rider"))
   end
 
+  test "a traveler on each vehicle of Phượt: the person is in the seat, and the glass of a car is clear" do
+    assert World.People.vehicles() == ~w(bicycle camper car foot motorbike motorcycle)
+
+    for v <- World.People.vehicles() do
+      scene = Build.scene(Detail.with(:far, fn -> World.People.traveler(v) end), level: :far)
+      [_, _, h] = scene.extras["size"]
+
+      # The head of the person stays under the roof of the car and the van.
+      case v do
+        "foot" -> assert scene.extras["kind"] == "person" and h > 1.5
+        "car" -> assert h < 1.62 and scene.materials[:glass_dark]["alpha"] == 0.35
+        "camper" -> assert h < 2.81 and scene.materials[:paint]["color"] != nil
+        _ -> assert scene.extras["kind"] == "vehicle" and h > 1.5
+      end
+    end
+  end
+
   test "the numbers of a person give the weights of the targets" do
     o = %{gender: 0.25, age: 90, muscle: 0.25, weight: 0.75, height: 0.25, race: %{"asian" => 2.0, "african" => 2.0}}
     weights = Map.new(Human.target_weights(o))
@@ -119,7 +136,7 @@ defmodule World.HumanTest do
   end
 
   test "the poses and the animations" do
-    assert Pose.names() == ["rest", "ride", "ride_bicycle", "sit", "stand"]
+    assert Pose.names() == ["drive", "rest", "ride", "ride_bicycle", "sit", "stand"]
     assert Pose.resolve(%{"a" => []}) == %{"a" => []}
     assert_raise ArgumentError, ~r/unknown pose/, fn -> Pose.resolve("fly") end
     assert_raise ArgumentError, ~r/unknown animation/, fn -> Pose.animation("fly", []) end

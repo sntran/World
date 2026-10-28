@@ -4,6 +4,7 @@ defmodule World.Orders.Blueprints do
 
   - `catalog`: a model of `World.Catalog` by its name;
   - `person`: a person of `World.People.Human`;
+  - `traveler`: a person on a vehicle of Phượt (`World.People.traveler/2`);
   - `house`: a house of `World.Buildings`;
   - `van`: a van of `World.Vehicles.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `World.Framing`.
@@ -16,7 +17,8 @@ defmodule World.Orders.Blueprints do
   import Blueprint, only: [option: 3]
 
   @doc "The blueprints, in the order of their names."
-  def all, do: Enum.sort_by([catalog(), person(), house(), van(), extrusion(), strut(), l_track()], & &1.name)
+  def all,
+    do: Enum.sort_by([catalog(), person(), traveler(), house(), van(), extrusion(), strut(), l_track()], & &1.name)
 
   @doc "The names of the blueprints."
   def names, do: Enum.map(all(), & &1.name)
@@ -49,71 +51,98 @@ defmodule World.Orders.Blueprints do
   # --- A person ----------------------------------------------------------------------------
 
   defp person do
-    assets = Data.assets()
-    names = fn kind -> assets |> Map.fetch!(kind) |> Map.keys() |> Enum.sort() end
-    share = fn name, default -> option(name, :number, default: default, min: 0.0, max: 1.0) end
-
     %Blueprint{
       name: "person",
       doc:
         "A person from the data of MakeHuman (CC0): the shape of the body from its numbers, a skeleton of 53 bones, a skin, hair and clothes.",
-      options: [
-        option("gender", :number, default: 1.0, min: 0.0, max: 1.0, doc: "0 is a woman, 1 is a man."),
-        option("age", :number, default: 30.0, min: 25.0, max: 90.0, unit: "years"),
-        share.("muscle", 0.5),
-        share.("weight", 0.5),
-        share.("height", 0.5),
-        option("origin", :object,
-          default: %{"african" => 0.0, "asian" => 1.0, "caucasian" => 0.0},
-          fields: [share.("african", 0.0), share.("asian", 1.0), share.("caucasian", 0.0)],
-          doc: "The weight of each origin of the shape of the body."
-        ),
-        option("skin", :choice, default: "young_asian_male", values: names.("skins")),
-        option("eyes", :choice, default: "brown", values: names.("eye_materials")),
-        option("eyebrows", :choice, default: "eyebrow001", values: names.("eyebrows")),
-        option("hair", :choice, default: "short02", values: ["none" | names.("hair")]),
-        option("clothes", :list,
-          default: ["male_casualsuit01", "shoes01"],
-          item: option("item", :choice, values: names.("clothes")),
-          max: 6
-        ),
-        option("hair_color", :color, default: nil, doc: "The color of the hair. None: the color of its texture."),
-        option("clothes_colors", :list,
-          default: [],
-          item: option("item", :color, []),
-          max: 6,
-          doc:
-            "A color for each item of the clothes, in their order: at mid and far its color, at near a tint of its texture."
-        ),
-        option("pose", :choice, default: "stand", values: Pose.names()),
-        option("animations", :list, default: [], item: option("item", :choice, values: ["walk"]), max: 1)
-      ],
+      options:
+        person_options() ++
+          [
+            option("pose", :choice, default: "stand", values: Pose.names()),
+            option("animations", :list, default: [], item: option("item", :choice, values: ["walk"]), max: 1)
+          ],
       build: fn o ->
-        World.People.Human.person("person",
-          gender: o["gender"],
-          age: o["age"],
-          muscle: o["muscle"],
-          weight: o["weight"],
-          height: o["height"],
-          race: Map.reject(o["origin"], fn {_, w} -> w == 0 end),
-          skin: o["skin"],
-          eyes: o["eyes"],
-          eyebrows: o["eyebrows"],
-          hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
-          clothes: o["clothes"],
-          hair_color: o["hair_color"] && rgb(o["hair_color"]),
-          clothes_colors: Enum.map(o["clothes_colors"], &rgb/1),
-          pose: o["pose"],
-          animations: o["animations"]
-        )
+        World.People.Human.person("person", person_opts(o) ++ [pose: o["pose"], animations: o["animations"]])
       end,
-      check: fn o ->
-        if Enum.all?(o["origin"], fn {_, w} -> w == 0 end),
-          do: [{"options.origin", "must have one weight more than 0"}],
-          else: []
-      end,
+      check: &origin_check/1,
       sources: ["MakeHuman 1.x, the data of the base mesh, the targets and the assets (CC0)."]
     }
+  end
+
+  # --- A traveler: a person on a vehicle of Phượt -----------------------------------------------
+
+  defp traveler do
+    %Blueprint{
+      name: "traveler",
+      doc:
+        "A person (the options of the blueprint person) on a vehicle of Phượt, in the pose of the vehicle: in the seat of the driver of a car or a van, on a motorcycle, a motorbike or a bicycle, or on foot with the animation walk. The vehicle goes to the front (+y).",
+      options: [option("vehicle", :choice, default: "motorbike", values: World.People.vehicles()) | person_options()],
+      build: fn o -> World.People.traveler(o["vehicle"], person_opts(o)) end,
+      check: &origin_check/1,
+      sources: ["The vehicles of World, and a person from the data of MakeHuman (CC0)."]
+    }
+  end
+
+  # The options of the body and the looks of a person.
+  defp person_options do
+    assets = Data.assets()
+    names = fn kind -> assets |> Map.fetch!(kind) |> Map.keys() |> Enum.sort() end
+    share = fn name, default -> option(name, :number, default: default, min: 0.0, max: 1.0) end
+
+    [
+      option("gender", :number, default: 1.0, min: 0.0, max: 1.0, doc: "0 is a woman, 1 is a man."),
+      option("age", :number, default: 30.0, min: 25.0, max: 90.0, unit: "years"),
+      share.("muscle", 0.5),
+      share.("weight", 0.5),
+      share.("height", 0.5),
+      option("origin", :object,
+        default: %{"african" => 0.0, "asian" => 1.0, "caucasian" => 0.0},
+        fields: [share.("african", 0.0), share.("asian", 1.0), share.("caucasian", 0.0)],
+        doc: "The weight of each origin of the shape of the body."
+      ),
+      option("skin", :choice, default: "young_asian_male", values: names.("skins")),
+      option("eyes", :choice, default: "brown", values: names.("eye_materials")),
+      option("eyebrows", :choice, default: "eyebrow001", values: names.("eyebrows")),
+      option("hair", :choice, default: "short02", values: ["none" | names.("hair")]),
+      option("hair_color", :color, default: nil, doc: "The color of the hair. None: the color of its texture."),
+      option("clothes", :list,
+        default: ["male_casualsuit01", "shoes01"],
+        item: option("item", :choice, values: names.("clothes")),
+        max: 6
+      ),
+      option("clothes_colors", :list,
+        default: [],
+        item: option("item", :color, []),
+        max: 6,
+        doc:
+          "A color for each item of the clothes, in their order: at mid and far its color, at near a tint of its texture."
+      )
+    ]
+  end
+
+  # The options of World.People.Human.person/2 from the options of an order.
+  defp person_opts(o) do
+    [
+      gender: o["gender"],
+      age: o["age"],
+      muscle: o["muscle"],
+      weight: o["weight"],
+      height: o["height"],
+      race: Map.reject(o["origin"], fn {_, w} -> w == 0 end),
+      skin: o["skin"],
+      eyes: o["eyes"],
+      eyebrows: o["eyebrows"],
+      hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
+      hair_color: o["hair_color"] && rgb(o["hair_color"]),
+      clothes: o["clothes"],
+      clothes_colors: Enum.map(o["clothes_colors"], &rgb/1)
+    ]
+  end
+
+  defp origin_check(o) do
+    if Enum.all?(o["origin"], fn {_, w} -> w == 0 end),
+      do: [{"options.origin", "must have one weight more than 0"}],
+      else: []
   end
 
   # --- A house -----------------------------------------------------------------------------

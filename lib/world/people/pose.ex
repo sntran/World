@@ -7,7 +7,8 @@ defmodule World.People.Pose do
 
   The named poses: `"stand"` (the arms down at the sides), `"sit"` (on a
   chair or a stool), `"ride"` (on a scooter or a motorbike: the hands
-  forward on the bars), `"ride_bicycle"`. The named animations: `"walk"`
+  forward on the bars), `"ride_bicycle"`, `"drive"` (in the seat of a
+  car or a van: the hands forward on the wheel). The named animations: `"walk"`
   (one step of each leg in 1.1 s, in a loop).
   """
   alias World.Frame
@@ -44,16 +45,26 @@ defmodule World.People.Pose do
       "lowerarm_l" => [{@x, -12}],
       "lowerarm_r" => [{@x, -12}]
     },
+    "drive" => %{
+      "thigh_l" => [{@x, 80}],
+      "thigh_r" => [{@x, 80}],
+      "calf_l" => [{@x, -70}],
+      "calf_r" => [{@x, -70}],
+      "upperarm_l" => [{@y, -45}, {@x, 45}, {@z, -20}],
+      "upperarm_r" => [{@y, 45}, {@x, 45}, {@z, 20}],
+      "lowerarm_l" => [{@x, -25}],
+      "lowerarm_r" => [{@x, -25}]
+    },
     "ride_bicycle" => %{
-      "spine_01" => [{@x, -25}],
+      "spine_01" => [{@x, -40}],
       "thigh_l" => [{@x, 70}],
       "thigh_r" => [{@x, 40}],
       "calf_l" => [{@x, -85}],
       "calf_r" => [{@x, -45}],
-      "upperarm_l" => [{@y, -30}, {@x, 60}],
-      "upperarm_r" => [{@y, 30}, {@x, 60}],
-      "lowerarm_l" => [{@x, 15}],
-      "lowerarm_r" => [{@x, 15}]
+      "upperarm_l" => [{@y, -30}, {@x, 35}],
+      "upperarm_r" => [{@y, 30}, {@x, 35}],
+      "lowerarm_l" => [{@x, 10}],
+      "lowerarm_r" => [{@x, 10}]
     }
   }
 

@@ -33,7 +33,8 @@ defmodule World.People.Foreman do
   def start_link(opts), do: GenServer.start_link(__MODULE__, Map.new(opts))
 
   @doc """
-  Run an order of an item, and wait for its delivery: `{:ok, result}`, with
+  Run an order of an item (or of a function that makes it, in the
+  process of the foreman), and wait for its delivery: `{:ok, result}`, with
   the plan, the bytes of each part and of the model; or `{:error, reason}`.
   `files` makes the files of the model from the item (`files/1`).
   """
@@ -48,6 +49,7 @@ defmodule World.People.Foreman do
 
   @impl true
   def handle_call({:order, order, item, files}, from, f) do
+    item = if is_function(item, 0), do: item.(), else: item
     record(f, "order_received", order, f.place, %{"item" => item.name})
     model = model(item)
 
@@ -164,6 +166,8 @@ defmodule World.People.Foreman do
   defp finish(%{run: r} = f) do
     if r.waiting == [] and r.hauled and length(r.free) == map_size(f.workers) and
          MapSet.size(r.done) == length(r.plan.tasks) do
+      # The garbage of the run goes before the largest build of the order.
+      :erlang.garbage_collect()
       glb = r.files.(r.item)
       bytes = byte_size(glb)
       record(f, "model_done", r.order, f.place, %{"item" => r.item.name, "bytes" => bytes})
@@ -179,7 +183,8 @@ defmodule World.People.Foreman do
         end
 
       GenServer.reply(r.from, result)
-      {:noreply, Map.delete(f, :run)}
+      # The plan and the files of the order are garbage now.
+      {:noreply, Map.delete(f, :run), :hibernate}
     else
       {:noreply, f}
     end

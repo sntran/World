@@ -63,8 +63,20 @@ An error tells the path of the wrong value and the rule:
 `{"errors": [{"path": "options.length", "message": "must be from 0.05 to 6.1 m"}]}`.
 
 The blueprints now: `catalog` (each model of the catalog, with colors
-and joints), `person`, `house`, `van`, `extrusion`, `strut` and
-`l_track`. An order of a van:
+and joints), `person`, `traveler`, `house`, `van`, `extrusion`, `strut`
+and `l_track`.
+
+A `traveler` is the avatar of a traveler of Phượt: a person (the options
+of `person`, with the colors of the hair and of the clothes) on a vehicle
+of Phượt (`vehicle`: `car`, `camper`, `motorcycle`, `motorbike`,
+`bicycle`, `foot`), in the pose of the vehicle. In the car and the van,
+the person sits in the seat of the driver (the left side), and the glass
+is clear. The vehicle goes to the front: seen from its left side, it goes
+to the right of the screen. At the far level the file is about 300 KB.
+The driver of the van shows in the window of the door at the near level
+only: at mid and far, the window is a panel on the body.
+
+An order of a van:
 
 ```json
 {

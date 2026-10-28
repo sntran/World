@@ -27,7 +27,9 @@ defmodule World.People.Worker do
     if task.work, do: Build.scene(task.work)
     record(w, "task_done", order, task)
     send(foreman, {:done, w.name, task.id})
-    {:noreply, w}
+    # The mesh of a part is garbage now: the worker gives its memory back
+    # before the next task (the edge has 128 MB).
+    {:noreply, w, :hibernate}
   end
 
   defp record(w, kind, order, task) do

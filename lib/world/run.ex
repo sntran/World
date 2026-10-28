@@ -77,7 +77,8 @@ defmodule World.Run do
   end
 
   @doc """
-  Run an order of an item, and wait for its delivery: `{:ok, result}`
+  Run an order of an item (or of a function that makes the item: the
+  foreman calls it), and wait for its delivery: `{:ok, result}`
   (`from: :factory` with the plan, the bytes of each part and of the
   model, and its files; or `from: :stock`), or `{:error, reason}`. The
   option `files` is the function that makes the files of the model from
