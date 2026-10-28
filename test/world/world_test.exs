@@ -179,9 +179,10 @@ defmodule World.WorldTest do
       assert door.joint == :door and door.station == "closures" and door.waits == ["body"] and door.at == "p"
       wheel_task = Enum.find(plan.tasks, &(&1.id == "wheel"))
       assert wheel_task.waits == ["body", "wheel/order"] and wheel_task.at == "axle" and wheel_task.item == "wheel"
+      assert wheel_task.station == "wheels"
       # The mark of the origin is not a part to get; the wheel brings its own parts.
       assert plan.parts == %{"body" => 1, "door" => 1}
-      assert Map.keys(Plan.stations(plan)) |> Enum.sort_by(&to_string/1) == [nil, "body_shop", "closures"]
+      assert Map.keys(Plan.stations(plan)) |> Enum.sort_by(&to_string/1) == [nil, "body_shop", "closures", "wheels"]
 
       # The tasks that can start, as the tasks end.
       assert Enum.map(Plan.ready(plan, []), & &1.id) == ["origin", "wheel/order"]

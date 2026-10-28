@@ -17,12 +17,15 @@ defmodule World.Vehicles.Corners do
   @doc """
   Add a corner to an assembly: `name` is `"front_left"`, `"rear_right"`,
   ... The options: `steer` (a front corner turns: `true`), `limits` of the
-  steering (degrees), `disc` (the diameter of the brake disc, or nil).
+  steering (degrees), `disc` (the diameter of the brake disc, or nil),
+  `station` (the station of the line that puts the knuckle on, in its
+  `params`).
   """
   def corner(asm, name, wheel, {x, y, z}, opts) do
     side = if x >= 0, do: 1.0, else: -1.0
     knuckle_name = "#{name}_knuckle"
     knuckle = knuckle(knuckle_name, {x, y, z}, side, Keyword.get(opts, :disc))
+    knuckle = if st = opts[:station], do: %{knuckle | params: %{"station" => st}}, else: knuckle
 
     joint =
       if Keyword.get(opts, :steer, false),

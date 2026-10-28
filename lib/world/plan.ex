@@ -8,6 +8,7 @@ defmodule World.Plan do
   - Each node with a part is a task `:connect`: the worker connects the
     part to its parent node, at the station of the part
     (`params["station"]`). The task waits for the task of its parent.
+    A smaller assembly connects at the station of its root part.
   - A node with a smaller assembly or a figure is an order of its own:
     a task `:order` (`NODE/order`), then the task `:connect` that waits
     for it and for the parent.
@@ -65,6 +66,7 @@ defmodule World.Plan do
   end
 
   defp station(%Part{params: params}), do: params["station"]
+  defp station(%Assembly{nodes: [{_, root, nil} | _]}), do: station(root)
   defp station(_), do: nil
 
   defp port_name(%World.Port{name: name}), do: name

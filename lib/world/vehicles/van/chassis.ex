@@ -30,10 +30,20 @@ defmodule World.Vehicles.Van.Chassis do
 
     asm
     |> engine_bay(van, items)
-    |> Corners.corner("front_right", wheel, {tf / 2, l - f, rz}, steer: true, limits: [-38, 38], disc: 0.30)
-    |> Corners.corner("front_left", wheel, {-tf / 2, l - f, rz}, steer: true, limits: [-38, 38], disc: 0.30)
-    |> Corners.corner("rear_right", wheel, {tr / 2, l - f - wb, rz}, disc: 0.30)
-    |> Corners.corner("rear_left", wheel, {-tr / 2, l - f - wb, rz}, disc: 0.30)
+    |> Corners.corner("front_right", wheel, {tf / 2, l - f, rz},
+      steer: true,
+      limits: [-38, 38],
+      disc: 0.30,
+      station: @station
+    )
+    |> Corners.corner("front_left", wheel, {-tf / 2, l - f, rz},
+      steer: true,
+      limits: [-38, 38],
+      disc: 0.30,
+      station: @station
+    )
+    |> Corners.corner("rear_right", wheel, {tr / 2, l - f - wb, rz}, disc: 0.30, station: @station)
+    |> Corners.corner("rear_left", wheel, {-tr / 2, l - f - wb, rz}, disc: 0.30, station: @station)
   end
 
   # The parts in the bay are `inside`: they are only in the near level.
