@@ -227,7 +227,8 @@ The GLB of a person has:
 - textures in the GLB (the skin, the eyes, the hair, the clothes). Hair,
   eyebrows and eyelashes have the alpha mode `MASK`;
 - the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
-  2.6 s, to play once, from the pose "stand" back to it).
+  2.6 s, to play once, from the pose "stand" back to it; the fingers of
+  the point turn around the axis of the palm).
 
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair; far is a body of 730 faces.

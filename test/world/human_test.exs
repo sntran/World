@@ -168,7 +168,8 @@ defmodule World.HumanTest do
     [wave, point] = scene.animations
     names = fn a -> Enum.map(a.channels, &Enum.at(scene.nodes, &1.node).name) |> Enum.sort() end
     assert names.(wave) == ["head", "lowerarm_r", "upperarm_r"]
-    assert names.(point) == ["head", "upperarm_l"]
+    assert "upperarm_l" in names.(point) and "index_01_l" not in names.(point)
+    assert Enum.count(names.(point), &String.starts_with?(&1, ~w(middle ring pinky))) == 9
 
     # Each clip plays once: it starts and stops in the pose of the scene.
     for a <- [wave, point], c <- a.channels do
@@ -192,11 +193,16 @@ defmodule World.HumanTest do
       fn name -> frames[Enum.find_index(nodes, &(&1.name == name))].at end
     end
 
-    # The left hand points to the front of the vehicle (+y), a little to
-    # the viewer (+x), near the height of the shoulder.
-    pos = at.(point, 1.2)
+    # The left arm points up to the front of the vehicle (+y), a little to
+    # the viewer (+x): the index finger is out, on the line of the arm,
+    # and the other fingers are in the fist.
+    pos = at.(point, 0.4)
     {dx, dy, dz} = World.Vec.sub(pos.("hand_l"), pos.("upperarm_l"))
-    assert dy > 0.3 and dx > 0 and dx < dy and abs(dz) < 0.1
+    assert dy > 0.3 and dx > 0 and dx < dy and dz > 0.05
+    {ix, iy, iz} = World.Vec.sub(pos.("index_03_l"), pos.("index_01_l"))
+    assert iy > ix and iy > abs(iz)
+    near = fn n -> World.Vec.len(World.Vec.sub(pos.(n), pos.("hand_l"))) end
+    assert near.("middle_03_l") < near.("index_03_l") - 0.04
 
     # The right hand is over the shoulder.
     pos = at.(wave, 1.0)

@@ -10,9 +10,10 @@ defmodule World.People.Pose do
   forward on the bars), `"ride_bicycle"`, `"drive"` (in the seat of a
   car or a van: the hands forward on the wheel). The named animations: `"walk"`
   (one step of each leg in 1.1 s, in a loop); `"wave"` (the right hand
-  goes up and waves three times, in 2.6 s, once); `"point"` (the left arm
-  points to the left side of the person and the head looks there, in
-  2.6 s, once). A clip that plays once starts and stops in the pose
+  goes up and waves three times, in 2.6 s, once); `"point"` (an excited
+  point: the left arm goes up fast to the left side of the person, with
+  the index finger out and the other fingers in the fist, and jabs three
+  times; the body leans there and the head looks there; in 2.6 s, once). A clip that plays once starts and stops in the pose
   "stand".
   """
   alias World.Frame
@@ -164,15 +165,38 @@ defmodule World.People.Pose do
     }
   end
 
-  # The left arm points to the left side of the person, a little forward
-  # and up, and the head looks there.
-  defp point_turns(t) do
-    k = lift(t, 0.5, 2.0, 2.6)
-    beat = 4 * :math.sin(2 * :math.pi() * 2 * max(0.0, t - 0.5) / 1.5)
+  # The axis that curls the fingers of the left hand into the palm: the
+  # fingers at rest go forward and down, and the palm looks to the body.
+  @curl_l {-0.44, -0.56, -0.69}
 
-    %{
-      "upperarm_l" => [{@y, -38 + (88 + beat) * k}, {@z, -20 * k}],
-      "head" => [{@z, 35 * k}]
-    }
+  # An excited point: the left arm goes up fast to the left side of the
+  # person, a little forward and up, straight, with the index finger out
+  # and the other fingers in the fist. The forearm jabs three times to
+  # get attention, the body leans and turns there, and the head looks
+  # there. (The rest pose bends the elbow forward: -55 about x makes the
+  # arm straight.)
+  defp point_turns(t) do
+    k = lift(t, 0.3, 2.1, 2.6)
+    jab = if t > 0.35 and t < 1.85, do: 35 * (1 - :math.cos(2 * :math.pi() * 3 * (t - 0.35) / 1.5)) / 2, else: 0.0
+
+    Map.merge(left_fist(k), %{
+      "upperarm_l" => [{@z, -20 * k}, {@y, -38 + 118 * k}],
+      "lowerarm_l" => [{@x, (-55 + jab) * k}],
+      "hand_l" => [{@curl_l, -30 * k}],
+      "spine_02" => [{@y, -7 * k}, {@z, 12 * k}],
+      "head" => [{@z, 30 * k}, {@x, 8 * k}]
+    })
+  end
+
+  # The middle, ring and little fingers of the left hand in the fist, and
+  # the thumb folded under the index finger, as far as `k` (0 to 1): the
+  # index finger stays out.
+  defp left_fist(k) do
+    curl =
+      for f <- ~w(middle ring pinky),
+          {n, deg} <- [{"01", 75}, {"02", 95}, {"03", 65}],
+          do: {"#{f}_#{n}_l", [{@curl_l, deg * k}]}
+
+    Map.new(curl ++ [{"thumb_02_l", [{@curl_l, -40 * k}]}, {"thumb_03_l", [{@curl_l, -40 * k}]}])
   end
 end
