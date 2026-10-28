@@ -140,6 +140,12 @@ defmodule World.FactoryTest do
       none = %{"african" => 0, "asian" => 0, "caucasian" => 0}
       assert paths(Orders.check(%{"blueprint" => "person", "options" => %{"origin" => none}})) == ["options.origin"]
       assert paths(Orders.check(%{"blueprint" => "traveler", "options" => %{"origin" => none}})) == ["options.origin"]
+
+      # An order from a URL gives the fields of an object as strings.
+      url = %{"african" => "0.5", "asian" => "0.5", "caucasian" => "0"}
+
+      assert {:ok, %{"options" => %{"origin" => %{"african" => 0.5}}}} =
+               Orders.check(%{"blueprint" => "traveler", "options" => %{"origin" => url}})
     end
   end
 

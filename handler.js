@@ -23,7 +23,7 @@
 //   each one did, and the replay GLB has a node for each part.
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
 //   %23rrggbb&joint.NAME=DEGREES: an order in the URL. A list is
-//   VALUE,VALUE.
+//   VALUE,VALUE, and OPTION.FIELD=VALUE is a field of an object.
 //
 // When the VM stops (an order that needs more memory than the edge has),
 // the answer is 503 with the errors in JSON, and the next request starts
@@ -65,13 +65,18 @@ export function split(name) {
 }
 
 // The order of a URL /m/BLUEPRINT.EXT?...: color.ROLE and joint.NAME, and
-// the options.
+// the options. OPTION.FIELD is a field of an option that is an object
+// (origin.asian=1).
 export function orderOf(blueprint, params) {
   const order = { blueprint, options: {}, colors: {}, joints: {} };
   for (const [key, value] of params) {
     if (key.startsWith('color.')) order.colors[key.slice(6)] = value;
     else if (key.startsWith('joint.')) order.joints[key.slice(6)] = Number(value);
-    else order.options[key] = value;
+    else if (key.includes('.')) {
+      const [option, field] = key.split('.', 2);
+      const object = typeof order.options[option] === 'object' ? order.options[option] : {};
+      order.options[option] = { ...object, [field]: value };
+    } else order.options[key] = value;
   }
   return order;
 }
