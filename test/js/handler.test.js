@@ -28,9 +28,10 @@ function bucket() {
 // A VM that checks an order with a blueprint "box", and counts the builds.
 function vm() {
   const calls = [];
-  const fn = async (request) => {
+  const fn = async (request, hash) => {
     const url = new URL(request.url);
     calls.push(url.pathname + url.search);
+    if (url.pathname === '/build') assert.equal(hash, HASH);
     if (url.pathname === '/blueprints') return Response.json([{ name: 'box' }]);
     const order = await request.json();
     if (order.blueprint !== 'box') return Response.json({ errors: [{ path: 'blueprint', message: 'no' }] }, { status: 422 });
@@ -131,4 +132,15 @@ test('the other routes', async () => {
   assert.equal(options.headers.get('access-control-allow-methods'), 'GET, POST, OPTIONS');
   assert.equal((await handler(req('/o/x', { method: 'DELETE' }), env, { vm: vm(), commit: 'c1' })).status, 405);
   assert.equal((await handler(req('/nope'), env, { vm: vm(), commit: 'c1' })).status, 404);
+});
+
+test('a VM that stops gives 503 with the errors', async () => {
+  const stops = async () => {
+    throw new Error('the object stopped');
+  };
+  const r = await handler(req('/m/box.glb'), { ORDERS: bucket() }, { vm: stops, commit: 'c1' });
+  assert.equal(r.status, 503);
+  assert.equal(r.headers.get('retry-after'), '10');
+  assert.equal(r.headers.get('access-control-allow-origin'), '*');
+  assert.match((await r.json()).errors[0].message, /the builder stopped/);
 });

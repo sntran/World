@@ -25,7 +25,12 @@ if ! grep -q "const base = '/models/';" site/index.html; then
     exit 1
 fi
 
-COMMIT=${WORKERS_CI_COMMIT_SHA:-$(git rev-parse HEAD 2>/dev/null || echo unknown)}
+# The commit names the files that the VM builds in R2, so each deploy
+# must have its own. The commit of Workers Builds, else the commit of
+# git; a value that is not a commit (a name of a branch) does not count.
+# With no commit, the time of the build.
+commit() { printf '%s' "$1" | grep -Eq '^[0-9a-f]{7,40}$' && printf '%s' "$1"; }
+COMMIT=$(commit "${WORKERS_CI_COMMIT_SHA:-}" || commit "$(git rev-parse HEAD 2>/dev/null)" || date -u +build-%Y%m%d%H%M%S)
 printf '{"commit": "%s"}\n' "$COMMIT" > site/version.json
 
 # Each project can read the files from its own site. A correction of

@@ -16,16 +16,16 @@ import { handler } from './handler.js';
 export class Beam extends BeamObject {}
 
 // The object of a request: one of 4 builders, from the first digit of
-// the hash in the URL, or the builder 0.
+// the hash of the order, so the builds of one order go to one builder.
+// A request with no order (/blueprints, /check) goes to any builder.
 const builders = serve(app, {
   name: (request) => `builder-${parseInt(request.headers.get('x-xuong-builder') ?? '0', 16) % 4}`,
 });
 
 export default {
   fetch(request, env, ctx) {
-    const vm = (r) => {
-      const hash = new URL(request.url).pathname.match(/[0-9a-f]{32}/)?.[0] ?? '0';
-      r.headers.set('x-xuong-builder', hash[0]);
+    const vm = (r, hash) => {
+      r.headers.set('x-xuong-builder', hash?.[0] ?? Math.floor(Math.random() * 16).toString(16));
       return builders.fetch(r, env, ctx);
     };
     return handler(request, env, { vm, commit: version.commit });

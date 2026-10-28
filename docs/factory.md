@@ -113,6 +113,17 @@ of the VM):
 | `house_brick_vn` | mid | 147 ms | 404 ms | 88 MB |
 | `house_brick_vn` | near | 4.3 s | 6.7 s | 847 MB |
 
+At <https://3d.mkfifo.com> (the deploy of 05ec8c6, 2026-10-28; the
+time of the first request, with the check and the build):
+
+| Order | Level | Time | File | Result |
+|---|---|---|---|---|
+| `strut`, 0.5 m | far | 2.2 s (0.3 s from R2) | 11 KB | Built |
+| `ford_transit_148_camper` | far | 3.1 s | 169 KB | Built |
+| `ford_transit_148_camper` | mid | 2.6 s | 301 KB | Built |
+| `ford_transit_148_camper` | near | 5.7 s | 1.1 MB | Built |
+| `person` (the defaults) | near | 6.9 s | | The VM stopped (error 1101). The next request started it again (2.8 s). |
+
 The time is not a problem. The memory is: a Worker has 128 MB. The mid
 and far levels and the small items fit; the near level of a large model
 does not. In `wrangler dev`, the near level of a person (3 MB) took

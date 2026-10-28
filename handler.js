@@ -2,8 +2,9 @@
 // "The URLs"). The static files of site/ (the catalog, the review page)
 // go out before the Worker runs. handler() takes:
 //
-// - vm(request): the VM of Xưởng (Xuong.Service): /blueprints, /check,
-//   /build;
+// - vm(request, hash): the VM of Xưởng (Xuong.Service): /blueprints,
+//   /check, /build. The hash of the order, when there is one, chooses
+//   the builder;
 // - env.ORDERS: the R2 bucket. orders/HASH.json is a full order, and
 //   builds/COMMIT/FILE is a file that the VM built at the commit COMMIT;
 // - commit: the commit of the deploy (site/version.json). A new deploy
@@ -20,6 +21,10 @@
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
 //   %23rrggbb&joint.NAME=DEGREES: an order in the URL. A list is
 //   VALUE,VALUE.
+//
+// When the VM stops (an order that needs more memory than the edge has),
+// the answer is 503 with the errors in JSON, and the next request starts
+// the VM again.
 
 const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
@@ -77,7 +82,7 @@ async function file(request, env, vm, commit, hash, order, [, level, kind, type]
   let object = await env.ORDERS.get(key);
   if (!object) {
     const url = `http://vm/build?level=${level}&file=${kind}`;
-    const r = await vm(new Request(url, { method: 'POST', body: JSON.stringify(order) }));
+    const r = await vm(new Request(url, { method: 'POST', body: JSON.stringify(order) }), hash);
     if (r.status !== 200) return new Response(r.body, { status: r.status, headers: headers({ 'content-type': 'application/json' }) });
     await env.ORDERS.put(key, await r.arrayBuffer(), { httpMetadata: { contentType: type } });
     object = await env.ORDERS.get(key);
@@ -88,7 +93,15 @@ async function file(request, env, vm, commit, hash, order, [, level, kind, type]
   return new Response(object.body, { headers: headers({ 'content-type': type, ...extra }) });
 }
 
-export async function handler(request, env, { vm, commit }) {
+export async function handler(request, env, options) {
+  try {
+    return await route(request, env, options);
+  } catch {
+    return json(503, { errors: [{ path: '', message: 'the builder stopped: the order needs more memory than the edge has, or the VM failed' }] }, { 'retry-after': '10' });
+  }
+}
+
+async function route(request, env, { vm, commit }) {
   const url = new URL(request.url);
   const path = url.pathname;
 
