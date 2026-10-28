@@ -11,7 +11,9 @@ defmodule Xuong.Build do
     each part; `:mid` drops the parts shorter than 2 cm or thinner than
     3 mm, and the parts `inside`; `:far` drops the parts shorter than
     10 cm or thinner than 1 cm. Each level smooths one step less. The
-    root part of the model stays at each level.
+    root part of the model stays at each level. A part with `detail: :low`
+    is only in mid and far: it stands in for many small parts (one wall
+    in place of its bricks).
   """
   alias Xuong.{Assembly, Figure, Frame, GLB, Mesh, Part, Scene, Vec}
   alias Xuong.Assembly.Connection
@@ -191,7 +193,9 @@ defmodule Xuong.Build do
 
   defp keep_root(item), do: item
 
+  defp keep?(%Part{shapes: []}, _), do: true
   defp keep?(%Part{detail: :always}, _), do: true
+  defp keep?(%Part{detail: :low}, level), do: level != :near
   defp keep?(%Part{}, :near), do: true
   defp keep?(%Part{detail: :near}, _), do: false
   defp keep?(%Part{inside: true}, _), do: false
@@ -214,8 +218,10 @@ defmodule Xuong.Build do
     |> Enum.sort_by(& &1["name"])
   end
 
-  # A part with no shapes is a mark (the origin of a build), not a thing to buy.
+  # A part with no shapes is a mark (the origin of a build), and a part of
+  # the low levels stands in for other parts: not things to buy.
   defp all_parts(%Part{shapes: []}), do: []
+  defp all_parts(%Part{detail: :low}), do: []
   defp all_parts(%Part{} = p), do: [p]
   defp all_parts(%Figure{} = f), do: [%Part{name: f.name, kind: f.kind, params: f.params, sources: f.sources}]
   defp all_parts(%Assembly{nodes: nodes}), do: Enum.flat_map(nodes, fn {_, item, _} -> all_parts(item) end)

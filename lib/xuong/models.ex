@@ -28,6 +28,7 @@ defmodule Xuong.Models do
     ] ++
       Xuong.Models.PowerStations.all() ++
       Xuong.Models.VanGear.all() ++
-      [{"van_bed_platform", &Xuong.Models.VanBuilds.bed_platform/0}, {"van_galley", &Xuong.Models.VanBuilds.galley/0}]
+      [{"van_bed_platform", &Xuong.Models.VanBuilds.bed_platform/0}, {"van_galley", &Xuong.Models.VanBuilds.galley/0}] ++
+      Xuong.Models.Houses.all()
   end
 end

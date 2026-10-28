@@ -147,9 +147,42 @@ The build writes three levels of each model:
   level a round shape has half of its sides and one smooth step less,
   and the sections of a body are two times farther apart; at the far
   level, a quarter of the sides, no smooth step, and four times farther.
-- The triangles of a vehicle are 50,000 or fewer in the near level,
-  12,000 or fewer in the mid level, and 5,000 or fewer in the far level.
+- The root part of a model stays at each level: a small model (a switch
+  of 7 cm) keeps its body at far.
+- A part with `detail: :low` is only in the mid and far levels: it
+  stands in for many small parts (a solid wall for its bricks, a solid
+  roof for its tiles). It is not in the list of the parts.
+- The triangles of a vehicle or an item are 50,000 or fewer in the near
+  level, 12,000 or fewer in the mid level, and 5,000 or fewer in the far
+  level. A house can have 300,000 in the near level (one part for each
+  brick and tile), 20,000 in the mid level and 12,000 in the far level.
   A test of each model checks it.
+
+## A house
+
+A house is an assembly of its materials (`Xuong.Models.Houses`):
+
+- **A wall of masonry**: units (`Xuong.Parts.Building`: the brick of
+  Việt Nam, TCVN 1451, 220 by 105 by 60 mm; the modular brick, ASTM
+  C216; the hollow concrete block of 8 in, ASTM C90) in running bond,
+  with joints of mortar of 10 mm, one or two wythes. At the end of a
+  course and at an opening a unit is cut: a cut unit has the name of the
+  whole unit, so the list counts the units to buy. A lintel of concrete
+  goes over each opening; a gable narrows to its ridge.
+- **A wall of wood studs**: 2x4 at 16 in, a bottom plate (cut at each
+  door), a double top plate, a king stud, a jack stud and a header of two
+  2x8 at each opening, a sill and cripples under a window; OSB of 7/16 in
+  (its params count the sheets of 4 by 8 ft) and lap siding.
+- **A gable roof**: rafters of 2x6 at 24 in, a ridge board of 2x8, OSB,
+  fascia, and clay tiles (10 to the square meter) or metal panels (PBR,
+  36 in of cover; the last panel is cut to the width).
+- **Doors and windows**: a prehung door (jambs, a slab on three hinges, a
+  knob) that opens to the inside; a casement window that opens out, or a
+  fixed window.
+
+The axes of a wall: along x from 0 to its length, its outside face at
+y = 0, z up. An opening is `{kind, x, width, z, height}` in the axes of
+the wall: the rough opening.
 
 ## The materials
 

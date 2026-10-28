@@ -48,6 +48,25 @@ defmodule Xuong.Assembly do
   """
   def add(%__MODULE__{nodes: nodes} = a, name, item, opts) do
     if List.keymember?(nodes, name, 0), do: raise(ArgumentError, "the assembly #{a.name} has a node #{name} already")
+    %{a | nodes: nodes ++ [node(a, name, item, opts)]}
+  end
+
+  @doc """
+  Add many nodes at one time (the bricks of a wall): a list of `{name,
+  item, opts}`, as for `add/4`. Each node connects to a node that is in
+  the assembly before the call.
+  """
+  def add_all(%__MODULE__{nodes: nodes} = a, children) do
+    {new, _} =
+      Enum.map_reduce(children, MapSet.new(nodes, &elem(&1, 0)), fn {name, item, opts}, names ->
+        if MapSet.member?(names, name), do: raise(ArgumentError, "the assembly #{a.name} has a node #{name} already")
+        {node(a, name, item, opts), MapSet.put(names, name)}
+      end)
+
+    %{a | nodes: nodes ++ new}
+  end
+
+  defp node(%__MODULE__{nodes: nodes} = a, name, item, opts) do
     to = Keyword.get(opts, :to, root_name(a))
     unless List.keymember?(nodes, to, 0), do: raise(ArgumentError, "the assembly #{a.name} has no node #{to}")
     kind = Keyword.get(opts, :kind, :fixed)
@@ -69,7 +88,7 @@ defmodule Xuong.Assembly do
     # Each port must exist now: a wrong name stops the code that makes the model.
     _ = port_frame(a, to, conn.at)
     _ = item_port_frame(item, conn.port)
-    %{a | nodes: nodes ++ [{name, item, conn}]}
+    {name, item, conn}
   end
 
   @doc """

@@ -25,8 +25,9 @@ defmodule Xuong.Part do
   sizes. `docs/format.md`, "A part".
 
   - `detail`: `nil` (the size of the part decides its levels),
-    `:always` (it stays at each level: a light of a vehicle), or `:near`
-    (only the near level).
+    `:always` (it stays at each level: a light of a vehicle), `:near`
+    (only the near level), or `:low` (only mid and far: a part that
+    stands in for many small parts, not in the list of the parts).
   - `inside`: a part that a body hides (a bolt in a frame, a bearing in a
     hub): only the near level.
   """

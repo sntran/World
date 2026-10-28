@@ -23,6 +23,12 @@ into the steps of `AGENTS.md`.
   of the clothes.
 - **More people.** Children (the targets of a child are not in the
   folder yet), more hair and clothes from the packs of MakeHuman.
+- **More of a house.** Floors of joists, a ceiling, inner walls, stairs,
+  a second floor, a hip roof, roof tiles at the ridge, concrete columns
+  and beams (the frame of a house in Việt Nam), plaster and paint on a
+  wall. The nails of a frame in the list of the parts.
+- **A bond of two wythes.** A wall of 220 mm in Việt Nam has headers
+  across the two wythes; the wall of Xưởng has two wythes of stretchers.
 - **Loops of connections.** A frame with two struts to one part: the
   tree takes one strut, and a fixed connection closes the loop.
 - **Vertex colors and textures.** The core of Wings keeps UV and vertex
