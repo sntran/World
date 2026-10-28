@@ -199,20 +199,63 @@ long tasks first.
 
 ## Time
 
-Time is real. The clock of the world is the wall clock of the VM. The
-log keeps the real time of each event, in UTC, with milliseconds.
+Time is real. The clock of the world comes from the wall clock of the
+VM, and the code takes real time to build a thing. But the code builds
+much faster than people do. The camper van takes 0.46 s of code, and
+about 30 hours of work in a real plant. So the world has a scale: one
+second of the wall clock is one day of the world (86,400 world seconds).
 
-- The time of a task is the time the code took: the build of a part,
-  a read of the store.
-- The time of a drive is the length of the road over the speed of the
-  vehicle. The world waits for the vehicle: the drive is real time.
-- The time of a walk is the way of the person over the speed of a
-  person. A person walks to its next task; the world waits.
+### The scale from the measurements
 
-The replay runs the log at any speed: one hour of the world in one
-minute, or in real time. The statistics come from the log: the time of
-an order from `order_received` to `delivered`, the time of each station,
-the stock of each warehouse over time, the orders by blueprint.
+The code times are the mean of three builds at the near level, with
+`World.Build.scene/2`, on the computer of the development (BEAM.com
+0.1.0-rc.6, native code).
+
+| Thing | The time of the code | The time of the real work | Real ÷ code |
+|---|---|---|---|
+| The camper van (`ford_transit_148_camper`) | 0.46 s | About 30 hours of work for each vehicle in the plants of North America: stamping, engine and assembly (the Harbour Report of 2007: 30.37 hours). | About 240,000 |
+| A wall of 164 bricks (`wall_brick_sample`) | 15 ms | 164 × 58 s: a bricklayer lays about 500 bricks in a day of 8 hours. | About 650,000 |
+| A house of 7,108 bricks (`house_brick_vn`) | 1.9 s | About 114 hours of bricklaying. | About 215,000 |
+
+At the edge, the VM runs in a WebAssembly interpreter, about 10 times
+slower than native code: there the ratio is about 20,000 to 65,000.
+
+One day for one second (86,400) is between the two. With this scale, a
+worker of the world builds a van in 11 hours (native code) to 4.6 days
+(the edge). A real plant takes about 30 hours: the same order of size. A faster computer is a faster factory, as a better tool is in the
+real world. Step W7 measures the ratio at the edge again. The owner
+can change the scale: it is one number of the world, and each log keeps
+it.
+
+### The rules of the clock
+
+- The time of the world: its start, plus 86,400 times the wall time
+  since its start. The log keeps the world time and the wall time of
+  each event, in milliseconds.
+- The time of a task: the wall time of the code (the build of a part, a
+  read of the store), times the scale.
+- The speeds are real, in world time. A person walks at 1.4 m/s. A
+  vehicle on the yard drives at 20 km/h; on a road between two places,
+  at the limit of the road. The wall time of a drive is its world time
+  over the scale: the world waits for the vehicle.
+- A walk of 100 m takes 71 world seconds (0.8 ms of the wall clock). A
+  van takes hours of the world. The world is as the real world: a
+  walk across the yard is short, and a build is long.
+- The calendar of the world runs fast: one hour of the wall clock is
+  about 10 years of the world. The world gives its time as days since
+  its start ("day 412, 14:05"), not as dates of the real calendar.
+
+The replay runs the log at any speed: one world day in one second, or
+slower to see a worker at a station. The statistics come from the log:
+the time of an order from `order_received` to `delivered`, the time of
+each station, the stock of each warehouse over time, the orders by
+blueprint.
+
+Sources of the real times: the Harbour Report of 2007
+(<https://europe.autonews.com/article/20080605/COPY/569014825/harbour-report-chrysler-toyota-tie-for-2007-efficiency-title>),
+and the output of a bricklayer
+(<https://www.mybuilder.com/questions/v/24046/how-many-brick-layed-per-day>,
+<https://uk.indeed.com/hire/job-description/bricklayer>).
 
 ## The events and the log
 
@@ -298,6 +341,7 @@ the owner decides each step of it.
 | The driver drives | A driver is a person that drives a vehicle on a road from one place to the other, at the speed of the vehicle, with the parts on board. The files arrive with the vehicle. | This is how the world operates. The time of the drive is real time on the wall clock. |
 | Many factories | One factory for each family of things. A sub-order goes to the factory of its family, and a vehicle brings the part. | The real world has a clothes factory, a slab factory and a car factory, not one factory. |
 | No scale | The world has no scale of its own. Each project takes what it needs. | The world powers all the projects of the owner, at their own scales. |
+| The clock | One second of the wall clock is one day of the world (86,400). The speeds are real speeds in world time: 1.4 m/s for a person, 20 km/h on the yard. | The code builds about 20,000 times (at the edge) to 650,000 times (native) faster than people. One day is between the two, and the real speeds keep a walk short and a build long, as in the real world. |
 | The yard | The positions of the places are in meters, on one flat yard. A map comes later. | The simplest world first. |
 | One bucket for each warehouse | A warehouse is one R2 bucket. A new warehouse is a new bucket. | In the game, a new warehouse is a collaboration with another city or country. |
 | The crew van of the Transit | It comes with the Sprinter and the ProMaster, after the first world. | The owner wants the crew van in the line. Ford does not sell it for 2024 to 2027: its sizes come from the earlier years. |
@@ -322,7 +366,5 @@ and a picture of the replay where there is one.
 
 ## Open questions for the owner
 
-- **The speeds on the yard.** A person walks at 1.4 m/s. A vehicle on
-  the yard drives at a limit of the yard (20 km/h?), or at its own
-  speed. The lengths of the roads come from the positions of the
-  places.
+- **The scale of the clock.** One second of the wall clock is one day of
+  the world (86,400). Step W7 measures the edge again.
