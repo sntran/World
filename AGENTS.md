@@ -183,7 +183,9 @@ trees from Blender:
   file has 4.8 MB (1.5 MB at far): each person is a full person with its
   own animation. In the interpreter of the VM it is about 10 times
   slower. Use the far level for a group, or a `person` with a routine
-  for each place.
+  for each place. At the edge (128 MB) a group of 2 or 3 people builds
+  at the far level (about 650 KB, 12 to 15 s), and a group of 4 or more
+  stops the builder: build it on a computer (`mix world.order`) until F4.
 - **One build at a time in a VM.** Two cold builds at one time in one
   builder (4 builders, by the first digit of the hash) stopped the VM
   (128 MB). `World.Service` builds one file at a time (`:global.trans`);
