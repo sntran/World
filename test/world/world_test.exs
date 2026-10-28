@@ -141,11 +141,16 @@ defmodule World.WorldTest do
             assert [%Plan.Task{action: :make}] = plan.tasks
         end
 
-        # The tasks come in an order where each task waits only for the tasks before it.
-        Enum.reduce(plan.tasks, MapSet.new(), fn t, before ->
-          assert Enum.all?(t.waits, &MapSet.member?(before, &1))
-          MapSet.put(before, t.id)
-        end)
+        # The tasks come in an order where each task waits only for the
+        # tasks before it, in the plan and in its flat plan for one factory.
+        for p <- [plan, Plan.flat(item)] do
+          assert length(p.tasks) == length(Enum.uniq_by(p.tasks, & &1.id))
+
+          Enum.reduce(p.tasks, MapSet.new(), fn t, before ->
+            assert Enum.all?(t.waits, &MapSet.member?(before, &1))
+            MapSet.put(before, t.id)
+          end)
+        end
       end
     end
 
@@ -192,6 +197,14 @@ defmodule World.WorldTest do
       data = Plan.to_data(plan)
       assert %{"id" => "wheel", "action" => "connect", "waits" => ["body", "wheel/order"]} = List.last(data["tasks"])
       assert Plan.of(box.("seat", nil)).parts == %{"seat" => 1}
+
+      # The flat plan: the tasks of the wheel come first, then the end of
+      # the wheel waits for each of them.
+      flat = Plan.flat(van)
+      assert Enum.map(flat.tasks, & &1.id) == ["origin", "body", "door", "wheel/rim", "wheel/order", "wheel"]
+      assert Enum.find(flat.tasks, &(&1.id == "wheel/order")).waits == ["wheel/rim"]
+      assert flat.parts == %{"body" => 1, "door" => 1, "rim" => 1}
+      assert [%Plan.Task{id: "seat", uses: "seat"}] = Plan.flat(box.("seat", nil)).tasks
     end
   end
 

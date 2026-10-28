@@ -52,6 +52,9 @@ about it.
 - The core of Wings 3D in `wings/`: the modules of the mesh, with no
   window (below).
 - The Khronos glTF validator (`gltf-validator` on npm) for each GLB.
+- [Accord](https://github.com/sntran/accord), the branch
+  `feat/native-tla-checker` (dev and test only): the native TLA+ checker,
+  with no Java, for `specs/` (`docs/world.md`, "The order flow in TLA+").
 - The review page (`review/index.html`): three.js from a CDN, each model
   of `priv/models` from 12 cameras, with a slider for each joint.
   Playwright makes the pictures in CI.
@@ -87,7 +90,9 @@ The world of `docs/world.md`:
 | `World.Stock` | The stock of a warehouse, with the limit of its store in bytes. |
 | `World.People.Person`, `World.Vehicles.Vehicle` | A person with a job (storekeeper, driver, worker, foreman), and a vehicle with its speed and its load. |
 | `World.Plan` | The tasks of an order, from the tree of its assembly. |
-| `World.Log` | The events of the world in the order of their time, in JSON, and their checks. |
+| `World.Log` | The events of the world in the order of their time, in JSON, and their checks. `World.Log.Server` keeps the log of a run. |
+| `World.Run` | A run of the world: the people of a yard as processes, and one order at a time. |
+| `World.People.Storekeeper`, `Driver`, `Foreman`, `Worker` | The jobs of the people as processes: the stock, the haul on the road, the plan and the tasks, the work of a task. |
 
 ## The core of Wings
 

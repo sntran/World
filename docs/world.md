@@ -328,6 +328,38 @@ that compete (genetic programming), flocks of people that move as one
 (boids). That work comes after the first world, and it is research:
 the owner decides each step of it.
 
+## The order flow in TLA+
+
+`specs/Order.tla` is the flow of one order: the supplier, the
+warehouse and its storekeeper, the truck and its driver on the road,
+the dock of the factory, the workers and the tasks of the plan, the
+files of the model, and the delivery. Its invariants:
+
+| Invariant | What it says |
+|---|---|
+| `InLimit` | The warehouse never holds more than its size. |
+| `Conservation` | A part is at one place only: in the store, at a dock, on the truck, or in the model. |
+| `InCapacity` | The truck never carries more than its capacity. |
+| `OneWorkerOneTask` | Two workers never do one task. |
+| `WaitsFirst` | A task starts only after each task that it waits for is done. |
+
+Its liveness property, `Delivers`: each order is delivered in the end.
+
+The checks, in the tests (`test/world/order_spec_test.exs`):
+
+- `specs/MCOrder.tla` with `MCOrder.cfg`: a small model (a body, two
+  doors, a wheel of a rim and a tire, two workers): about 20,000 states.
+  Each invariant holds, and each order is delivered.
+- `MCOrderFault.cfg`: a task can start twice. The checker must find two
+  workers on one task.
+- `MCOrderSmall.cfg`: the files of the model do not fit in the
+  warehouse. The checker must find the dead end.
+
+The replay (`test/support/order_spec.ex`, `test/world/run_test.exs`):
+the log of a real run of the van (343 events) is a behavior of the
+specification, with the plan of the van as its constants. A log with an
+event less, or with two workers on one task, is not.
+
 ## The decisions
 
 | Topic | Decision | Why |
@@ -344,6 +376,7 @@ the owner decides each step of it.
 | The clock | One second of the wall clock is one day of the world (86,400). The speeds are real speeds in world time: 1.4 m/s for a person, 20 km/h on the yard. | The code builds about 20,000 times (at the edge) to 650,000 times (native) faster than people. One day is between the two, and the real speeds keep a walk short and a build long, as in the real world. |
 | The yard | The positions of the places are in meters, on one flat yard. A map comes later. | The simplest world first. |
 | One bucket for each warehouse | A warehouse is one R2 bucket. A new warehouse is a new bucket. | In the game, a new warehouse is a collaboration with another city or country. |
+| The flow in TLA+ | `specs/Order.tla` is the specification of the flow of an order. The native checker of Accord (`sntran/accord`, the branch `feat/native-tla-checker`, no Java) checks a small model of it in the tests: its invariants, and that each order is delivered in the end. Two fault models must fail: a task that starts twice, and a warehouse too small for the files of the model. The log of a real run replays as a behavior of the same specification (`Accord.TLA.Checker.Machine`). | The people are processes: the order of their acts changes from run to run. A model check finds the races and the dead ends that a test does not find, and the replay keeps the code and the specification the same. |
 | The crew van of the Transit | It comes with the Sprinter and the ProMaster, after the first world. | The owner wants the crew van in the line. Ford does not sell it for 2024 to 2027: its sizes come from the earlier years. |
 
 ## The steps
@@ -355,7 +388,7 @@ and a picture of the replay where there is one.
 |---|---|---|
 | W0. The plan | This document. | The owner agrees, or changes it. |
 | W1. The data of the world | `World.Clock`, `World.Places`, `World.Yard` (the roads), `World.Stock`, `World.People.Person` (the jobs), `World.Vehicles.Vehicle`, `World.Log` (the events and the checks). The plan of an order from its assembly (`World.Plan`). Done. | A property test: the plan of each model of the catalog has one task for each node, and each task waits for the task of its parent. A log with a bad order of events is refused. |
-| W2. One thin slice | One order of a van. One warehouse, one truck with its driver on a road of the yard, one vehicle factory with a foreman and two workers. The people are processes. The log of the order, with real times. | A test runs the slice and reads its log: the van is delivered, the events are in order, the stock is never negative, the drive took the length of the road over the speed of the truck. The same order a second time comes from stock. |
+| W2. One thin slice | One order of a van. One warehouse, one truck with its driver on a road of the yard, one vehicle factory with a foreman and two workers. The people are processes (`World.Run`, `World.People.Storekeeper`, `Driver`, `Foreman`, `Worker`). The log of the order, with real times. The flow in TLA+ (`specs/Order.tla`). Done. | A test runs the slice and reads its log: the van is delivered, the events are in order, the stock is never negative, the drive took the length of the road over the speed of the truck. The same order a second time comes from stock. |
 | W3. The replay | The page of the world on the review page, from a log. The world at a time as a GLB. | A picture of the truck on the road, and of a worker at the trim station with the seats. |
 | W4. The factories | The wheel factory and the seat factory next to the vehicle factory. A sub-order goes to the factory of its family; a vehicle brings the part by road. | The log of a van: the wheels come from the wheel factory, the seats from the seat factory, each by a drive. |
 | W5. The buildings | The warehouse and the factories are orders: the people build them from the materials and the houses factories, and the log has the build. The racks show the stock. | The log of a build of a warehouse. The size of the warehouse from the limit of its store. |

@@ -108,7 +108,8 @@ models").
 | F4. The factory: memory | Less memory for the near level at the edge. (The data of people is in `priv/` now, so the release has it.) | To do |
 | W0. The world: the plan | `docs/world.md`: the places, the factories by family, the people and their jobs, the vehicles that drive on the roads of the yard, the stock, the clock, the log and the replay; what each thing is in the computer; the steps W1 to W9. | Done |
 | W1. The world: its data | `World.Clock`, `World.Places`, `World.Yard`, `World.Stock`, `World.People.Person`, `World.Vehicles.Vehicle`, `World.Log`, and `World.Plan`: the tasks of an order from the tree of its assembly. | Done |
-| W2 to W9. The world | One thin slice (a van, a warehouse, a truck with its driver on a road, a factory), the replay, the factories by family, the buildings, the stores (one bucket for each warehouse), the site, the other vans, the engineers. | To do |
+| W2. The world: one thin slice | One order of the van through a warehouse, a truck with its driver on a road, and a factory with a foreman and two workers. The people are processes, and each act is an event of the log at its real time. The flow is a TLA+ specification (`specs/Order.tla`): the native checker of Accord checks it, and the log of a run replays as one of its behaviors. | Done |
+| W3 to W9. The world | The replay, the factories by family, the buildings, the stores (one bucket for each warehouse), the site, the other vans, the engineers. | To do |
 | 7. DIY uses World | DIY draws its SVG from the models, and keeps its pictures. | To do |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |
