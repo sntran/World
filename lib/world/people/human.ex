@@ -13,7 +13,7 @@ defmodule World.People.Human do
   - `:far`: a body of 730 faces, with the colors of the clothes on it.
   """
   alias World.{Detail, Figure, Frame, Part, Scene, Vec}
-  alias World.People.{Data, Pose}
+  alias World.People.{Data, Pose, Skeleton}
 
   @defaults [
     gender: 1.0,
@@ -98,6 +98,18 @@ defmodule World.People.Human do
       materials: materials,
       ports: ports(bones)
     }
+  end
+
+  @doc """
+  The skeleton (`World.People.Skeleton`) of a person with the options of
+  `person/2`, with no mesh: to try a pose and measure it.
+  """
+  def skeleton(opts \\ []) do
+    o = Map.new(Keyword.merge(@defaults, opts))
+    base = Data.base()
+    points = morph(base.points, o)
+    clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
+    Skeleton.new(skeleton(points, ground(base, points, clothes)))
   end
 
   # --- The shape of the body ----------------------------------------------------
@@ -555,17 +567,14 @@ defmodule World.People.Human do
 
   defp nodes(name, bones, prims, pose, head) do
     index = bones |> Enum.with_index(1) |> Map.new(fn {b, i} -> {b.name, i} end)
-    world = Map.new(bones, &{&1.name, &1.frame})
+    locals = Skeleton.locals(Skeleton.new(bones), Pose.expand(pose))
 
     bone_nodes =
       for b <- bones do
-        parent_world = if b.parent, do: world[b.parent], else: Frame.identity()
-        local = Frame.compose(Frame.invert(parent_world), b.frame)
-
         %Scene.Node{
           name: b.name,
           parent: if(b.parent, do: index[b.parent], else: 0),
-          frame: Pose.turn(local, b, pose),
+          frame: locals[b.name],
           scale: if(b.name == "head", do: head / 1, else: 1.0)
         }
       end

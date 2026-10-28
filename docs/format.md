@@ -227,8 +227,44 @@ The GLB of a person has:
 - textures in the GLB (the skin, the eyes, the hair, the clothes). Hair,
   eyebrows and eyelashes have the alpha mode `MASK`;
 - the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
-  2.6 s, to play once, from the pose "stand" back to it; the fingers of
-  the point turn around the axis of the palm).
+  2.6 s, to play once, from the pose "stand" back to it). The channels
+  of a clip are the bones that move in it.
+
+### The skeleton and the poses
+
+`World.People.Skeleton` turns the joints of the skeleton. Each bone has
+its own axes, from the roll of the rig: y goes from its head to its
+tail, x is the hinge of its joint (z for the thumb). The bones of the
+right side are the mirrors of the bones of the left side. A pose is a
+map:
+
+| Key | Value | What it does |
+|---|---|---|
+| a bone | a list of turns, in order | `{:flex, deg}` bends the joint around its hinge, `{:spread, deg}` turns it to the side, `{:twist, deg}` turns it around the bone. `{{x, y, z}, deg}` turns it around an axis of World of the person at rest (the old form: the poses "sit", "ride" and "drive" use it). |
+| `{:aim, :l}`, `{:aim, :r}` | `%{to: dir, pole: dir, end: :wrist}` | The shoulder turns so that the wrist (or the elbow, `end: :elbow`) is in the direction `to`, and the elbow (or the wrist) goes to the side of `pole`. The collarbone lifts a little with an arm over the horizon. |
+| `:look` | a direction | The neck (two parts of five) and the head turn so that the face looks there. |
+| `{:hand, :l}`, `{:hand, :r}` | `"relaxed"`, `"open"`, `"fist"`, `"point"`, `"thumbs_up"` | The shape of the hand (`World.People.Pose`). |
+
+The flex of a hinge (the elbow, the wrist, the knee, the joints of the
+fingers and the two last joints of the thumb) is the angle from
+straight, in the plane of the hinge, in its limits:
+
+| Hinge | Limits (degrees) | At rest |
+|---|---|---|
+| Elbow (`lowerarm`) | 0 to 150 | 46 |
+| Wrist (`hand`) | -70 to 80 | 13 |
+| Knee (`calf`) | 0 to 150 | 6 |
+| Finger, first joint (`index_01` and the others) | -15 to 90 | 10 to 17 |
+| Finger, second joint | 0 to 110 | about 12 |
+| Finger, last joint | 0 to 80 | about 8 |
+| Thumb, second joint | -20 to 60 | 21 |
+| Thumb, last joint | -10 to 80 | 5 |
+
+A straight elbow keeps its small angle out of the plane of the hinge
+(about 4 degrees), as a real arm. `spread` and `twist` have the same
+meaning on the two sides, so `Pose.mirror/1` makes the pose of the other
+side. The directions are in the axes of World of the person at rest (x
+to the right side, y to the front, z up).
 
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair; far is a body of 730 faces.

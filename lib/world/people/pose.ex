@@ -1,9 +1,11 @@
 defmodule World.People.Pose do
   @moduledoc """
-  Poses and animations of a person. A pose is a map of a bone to a list
-  of turns `{axis, degrees}`. The axis is in the axes of World (x to the
-  right side, y to the front, z up) when the person stands at rest; the
-  bone turns around its head.
+  Poses and animations of a person. A pose is a pose of
+  `World.People.Skeleton`: a map of a bone to a list of turns (the flex,
+  the spread and the twist of its joint, or a turn around an axis of
+  World), an aim of an arm, a look of the face, and here also the shape
+  of a hand (`{:hand, side}` to a name of `hands/0`). `mirror/1` makes
+  the pose of the other side.
 
   The named poses: `"stand"` (the arms down at the sides), `"sit"` (on a
   chair or a stool), `"ride"` (on a scooter or a motorbike: the hands
@@ -13,10 +15,13 @@ defmodule World.People.Pose do
   goes up and waves three times, in 2.6 s, once); `"point"` (an excited
   point: the left arm goes up fast to the left side of the person, with
   the index finger out and the other fingers in the fist, and jabs three
-  times; the body leans there and the head looks there; in 2.6 s, once). A clip that plays once starts and stops in the pose
-  "stand".
+  times; the body leans there and the head looks there; in 2.6 s, once).
+  A clip blends each bone from the pose "stand" to the pose of the clip
+  on the shortest arc; a clip that plays once starts and stops in the
+  pose "stand".
   """
-  alias World.Frame
+  alias World.{Frame, Vec}
+  alias World.People.Skeleton
 
   @x {1.0, 0.0, 0.0}
   @y {0.0, 1.0, 0.0}
@@ -83,45 +88,124 @@ defmodule World.People.Pose do
   def resolve(name) when is_map_key(@poses, name), do: @poses[name]
   def resolve(name), do: raise(ArgumentError, "unknown pose #{inspect(name)}")
 
-  @doc """
-  The frame of a bone (relative to its parent) in a pose: its frame at
-  rest, then its turns around its own head.
-  """
-  def turn(local, bone, pose) do
-    to_bone = Frame.invert(%{bone.frame | at: {0.0, 0.0, 0.0}})
+  # The shapes of a hand: the flex of the three joints of each finger
+  # (from straight), of the index finger when it has its own, and of the
+  # two last joints of the thumb.
+  @hands %{
+    "relaxed" => %{fingers: {12, 18, 10}, thumb: {15, 10}},
+    "open" => %{fingers: {0, 0, 0}, thumb: {0, 0}},
+    "fist" => %{fingers: {85, 100, 70}, thumb: {60, 45}},
+    "point" => %{fingers: {85, 100, 70}, index: {0, 0, 0}, thumb: {60, 45}},
+    "thumbs_up" => %{fingers: {85, 100, 70}, thumb: {-10, 0}}
+  }
 
-    pose
-    |> Map.get(bone.name, [])
-    |> Enum.reduce(local, fn {axis, deg}, f -> Frame.compose(f, Frame.turn(Frame.dir(to_bone, axis), deg)) end)
+  @doc "The names of the shapes of a hand."
+  def hands, do: Map.keys(@hands) |> Enum.sort()
+
+  @doc """
+  The turns of the fingers of a hand (`:l` or `:r`) in a shape of
+  `hands/0`, as a pose.
+  """
+  def hand(side, shape) when is_map_key(@hands, shape) do
+    %{fingers: {a, b, c}, thumb: {t2, t3}} = h = @hands[shape]
+
+    fingers =
+      for f <- ~w(index middle ring pinky),
+          {d1, d2, d3} = if(f == "index", do: Map.get(h, :index, {a, b, c}), else: {a, b, c}),
+          {n, deg} <- [{"01", d1}, {"02", d2}, {"03", d3}],
+          do: {"#{f}_#{n}_#{side}", [flex: deg]}
+
+    Map.new(fingers ++ [{"thumb_02_#{side}", [flex: t2]}, {"thumb_03_#{side}", [flex: t3]}])
   end
+
+  def hand(_side, shape), do: raise(ArgumentError, "unknown hand #{inspect(shape)}")
+
+  @doc """
+  A pose for `World.People.Skeleton`: each `{:hand, side}` becomes the
+  turns of its fingers (`hand/2`), before the other turns of the bone.
+  """
+  def expand(pose) do
+    Enum.reduce(pose, %{}, fn
+      {{:hand, side}, shape}, acc -> Map.merge(hand(side, shape), acc, fn _, a, b -> a ++ b end)
+      {key, value}, acc -> Map.update(acc, key, value, &(&1 ++ value))
+    end)
+  end
+
+  @doc """
+  The mirror of a pose: the left side becomes the right side. A turn
+  around an axis of World mirrors its axis; `flex`, `spread` and `twist`
+  stay (the skeleton mirrors them).
+  """
+  def mirror(pose) do
+    Map.new(pose, fn
+      {{kind, side}, value} when kind in [:aim, :hand] -> {{kind, other(side)}, mirror_value(value)}
+      {:look, dir} -> {:look, flip(dir)}
+      {bone, turns} -> {swap(bone), Enum.map(turns, &mirror_turn/1)}
+    end)
+  end
+
+  defp other(:l), do: :r
+  defp other(:r), do: :l
+
+  defp swap(bone) do
+    cond do
+      String.ends_with?(bone, "_l") -> String.replace_suffix(bone, "_l", "_r")
+      String.ends_with?(bone, "_r") -> String.replace_suffix(bone, "_r", "_l")
+      true -> bone
+    end
+  end
+
+  defp mirror_value(%{} = aim), do: Map.new(aim, fn {k, v} -> {k, if(is_tuple(v), do: flip(v), else: v)} end)
+  defp mirror_value(shape), do: shape
+
+  # A direction in the mirror.
+  defp flip({x, y, z}), do: {-x, y, z}
+
+  # A turn in the mirror: its axis is a direction of turn (the mirror
+  # keeps x, and changes the sign of y and z).
+  defp mirror_turn({{x, y, z}, deg}), do: {{x, -y, -z}, deg}
+  defp mirror_turn(turn), do: turn
 
   @doc """
   An animation by its name, for the bones of a person (parents first,
   as `World.People.Human` makes them): the channels of the rotations of the
-  bones, with the indices of the nodes of the figure (bone i is node
-  i + 1).
+  bones that move, with the indices of the nodes of the figure (bone i is
+  node i + 1).
   """
-  def animation("walk", bones), do: clip("walk", bones, 1.1, 12, &walk_turns(&1 / 1.1))
-  def animation("wave", bones), do: clip("wave", bones, 2.6, 39, &wave_turns/1)
-  def animation("point", bones), do: clip("point", bones, 2.6, 39, &point_turns/1)
+  def animation("walk", bones), do: clip("walk", bones, 1.1, 12, &{walk_turns(&1 / 1.1), 1.0})
+  def animation("wave", bones), do: clip("wave", bones, 2.6, 39, &wave/1)
+  def animation("point", bones), do: clip("point", bones, 2.6, 39, &point/1)
   def animation(name, _bones), do: raise(ArgumentError, "unknown animation #{inspect(name)}")
 
-  # A clip of `steps` frames in `length` seconds: the turns at each time
-  # (on top of the arms down) of the bones that the turns name.
-  defp clip(name, bones, length, steps, turns) do
+  # A clip of `steps` frames in `length` seconds. At each time, `at` gives
+  # a pose (on top of the pose "stand") and how far the person is in it,
+  # from 0 (the pose "stand") to 1: each bone turns on the shortest arc.
+  # The channels are the bones that move.
+  defp clip(name, bones, length, steps, at) do
+    skeleton = Skeleton.new(bones)
+    stand = @poses["stand"]
+    base = Skeleton.locals(skeleton, stand)
     times = for k <- 0..steps, do: k * length / steps
-    world = Map.new(bones, &{&1.name, &1.frame})
+
+    frames =
+      for t <- times do
+        {pose, k} = at.(t)
+        target = Skeleton.locals(skeleton, expand(Map.merge(stand, pose)))
+        Map.new(target, fn {bone, f} -> {bone, Frame.blend(base[bone], f, k)} end)
+      end
 
     channels =
-      for {b, i} <- Enum.with_index(bones, 1), Map.has_key?(turns.(0.0), b.name) do
-        parent = if b.parent, do: world[b.parent], else: Frame.identity()
-        local = Frame.compose(Frame.invert(parent), b.frame)
-        values = for t <- times, do: turn(local, b, Map.merge(@arms_down, turns.(t)))
+      for {b, i} <- Enum.with_index(bones, 1),
+          values = Enum.map(frames, & &1[b.name]),
+          Enum.any?(values, &moved?(&1, base[b.name])) do
         %{node: i, path: :rotation, times: times, values: values}
       end
 
     %{name: name, channels: channels}
   end
+
+  defp moved?(a, b),
+    do: Enum.any?([{a.x, b.x}, {a.y, b.y}, {a.z, b.z}], fn {u, v} -> Vec.len(Vec.sub(u, v)) > 1.0e-6 end)
 
   # How far a clip that plays once is in its move, from 0 (the pose
   # "stand") to 1: up from 0 to `up` s, down from `down` s to `stop` s, with
@@ -151,52 +235,34 @@ defmodule World.People.Pose do
     }
   end
 
-  # A wave of the right hand: the arm goes up to the side, the forearm
-  # goes up, and the hand moves from side to side three times. The rest
-  # pose has the arms 45 degrees down: -38 is down, -57 is a little up.
-  defp wave_turns(t) do
-    k = lift(t, 0.45, 2.1, 2.6)
-    swing = 22 * :math.sin(2 * :math.pi() * 3 * max(0.0, t - 0.45) / 1.65)
+  # A wave of the right hand: the upper arm goes out to the side and a
+  # little up, the elbow bends, and the forearm swings from side to side
+  # three times around the upper arm, as a person waves. The hand is open.
+  defp wave(t) do
+    sway = 0.5 * :math.sin(2 * :math.pi() * 3 * max(0.0, t - 0.45) / 1.65)
 
-    %{
-      "upperarm_r" => [{@y, 38 - 95 * k}, {@x, 15 * k}],
-      "lowerarm_r" => [{@y, k * (-65 + swing)}],
-      "head" => [{@y, 8 * k}]
-    }
+    {%{
+       {:aim, :r} => %{to: {0.92, 0.12, 0.36}, end: :elbow, pole: {sway, 0.2, 1.0}},
+       "lowerarm_r" => [flex: 95],
+       {:hand, :r} => "open",
+       "head" => [{@y, 8}]
+     }, lift(t, 0.45, 2.1, 2.6)}
   end
 
-  # The axis that curls the fingers of the left hand into the palm: the
-  # fingers at rest go forward and down, and the palm looks to the body.
-  @curl_l {-0.44, -0.56, -0.69}
-
-  # An excited point: the left arm goes up fast to the left side of the
-  # person, a little forward and up, straight, with the index finger out
-  # and the other fingers in the fist. The forearm jabs three times to
-  # get attention, the body leans and turns there, and the head looks
-  # there. (The rest pose bends the elbow forward: -55 about x makes the
-  # arm straight.)
-  defp point_turns(t) do
-    k = lift(t, 0.3, 2.1, 2.6)
+  # An excited point: the left arm goes up fast, straight, to the left
+  # side of the person, a little forward and up, with the index finger
+  # out. The forearm jabs three times (the wrist stays on the line), the
+  # body leans and turns there, and the face looks there.
+  defp point(t) do
     jab = if t > 0.35 and t < 1.85, do: 35 * (1 - :math.cos(2 * :math.pi() * 3 * (t - 0.35) / 1.5)) / 2, else: 0.0
 
-    Map.merge(left_fist(k), %{
-      "upperarm_l" => [{@z, -20 * k}, {@y, -38 + 118 * k}],
-      "lowerarm_l" => [{@x, (-55 + jab) * k}],
-      "hand_l" => [{@curl_l, -30 * k}],
-      "spine_02" => [{@y, -7 * k}, {@z, 12 * k}],
-      "head" => [{@z, 30 * k}, {@x, 8 * k}]
-    })
-  end
-
-  # The middle, ring and little fingers of the left hand in the fist, and
-  # the thumb folded under the index finger, as far as `k` (0 to 1): the
-  # index finger stays out.
-  defp left_fist(k) do
-    curl =
-      for f <- ~w(middle ring pinky),
-          {n, deg} <- [{"01", 75}, {"02", 95}, {"03", 65}],
-          do: {"#{f}_#{n}_l", [{@curl_l, deg * k}]}
-
-    Map.new(curl ++ [{"thumb_02_l", [{@curl_l, -40 * k}]}, {"thumb_03_l", [{@curl_l, -40 * k}]}])
+    {%{
+       {:aim, :l} => %{to: {-0.85, 0.35, 0.4}, pole: {0.0, -0.3, -1.0}},
+       "lowerarm_l" => [flex: jab],
+       "hand_l" => [flex: 0],
+       {:hand, :l} => "point",
+       "spine_02" => [{@y, -7}, {@z, 12}],
+       :look => {-0.75, 0.6, 0.15}
+     }, lift(t, 0.3, 2.1, 2.6)}
   end
 end

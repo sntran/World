@@ -81,7 +81,7 @@ about it.
 | `World.Appliances` | The appliances of a house, and `Systems` (the water heater, the AC, the fans, the TV). |
 | `World.Gear` | `PowerStations`, and `Camper` (the gear of a camper van). |
 | `World.Vehicles` | `Wheels`, `Corners`, `Body`, `Hull`, the `Van` line and its stations, and each vehicle (`FordTransit`, `ChevyBolt`, `HondaVision`, `RoyalEnfieldHimalayan`, `TouringBicycle`). |
-| `World.People` | The people of the catalog, `Human` (a person from the data of MakeHuman), `Data`, `Pose`. |
+| `World.People` | The people of the catalog, `Human` (a person from the data of MakeHuman), `Data`, `Skeleton` (the joints: flex, spread, twist, limits, aim, look), `Pose` (the poses, the shapes of a hand, the animations). |
 | `World.Orders` | An order in, the files out: `Blueprint`, `Blueprints`. |
 | `World.Catalog` | Each model of the library by its name. |
 | `World.Service`, `World.Application` | The HTTP service of the VM, and the application. |

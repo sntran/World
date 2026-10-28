@@ -167,9 +167,13 @@ defmodule World.HumanTest do
     scene = Build.scene(Detail.with(:far, fn -> World.People.traveler("motorbike", [], "parked") end), level: :far)
     [wave, point] = scene.animations
     names = fn a -> Enum.map(a.channels, &Enum.at(scene.nodes, &1.node).name) |> Enum.sort() end
-    assert names.(wave) == ["head", "lowerarm_r", "upperarm_r"]
-    assert "upperarm_l" in names.(point) and "index_01_l" not in names.(point)
-    assert Enum.count(names.(point), &String.starts_with?(&1, ~w(middle ring pinky))) == 9
+    # The wave: the right arm, the open hand and the head; the left side
+    # does not move.
+    assert ~w(clavicle_r head index_03_r lowerarm_r thumb_03_r upperarm_r) -- names.(wave) == []
+    refute Enum.any?(names.(wave), &String.ends_with?(&1, "_l"))
+    # The point: the left arm and hand, the body and the head.
+    assert ~w(clavicle_l hand_l head lowerarm_l neck_01 pinky_03_l spine_02 upperarm_l) -- names.(point) == []
+    refute Enum.any?(names.(point), &String.ends_with?(&1, "_r"))
 
     # Each clip plays once: it starts and stops in the pose of the scene.
     for a <- [wave, point], c <- a.channels do

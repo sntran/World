@@ -90,6 +90,40 @@ defmodule World.Frame do
     {qx / l, qy / l, qz / l, qw / l}
   end
 
+  @doc "The frame of a unit quaternion `{x, y, z, w}`, at a point."
+  def from_quaternion({x, y, z, w}, at) do
+    %__MODULE__{
+      x: {1 - 2 * (y * y + z * z), 2 * (x * y + z * w), 2 * (x * z - y * w)},
+      y: {2 * (x * y - z * w), 1 - 2 * (x * x + z * z), 2 * (y * z + x * w)},
+      z: {2 * (x * z + y * w), 2 * (y * z - x * w), 1 - 2 * (x * x + y * y)},
+      at: Vec.float(at)
+    }
+  end
+
+  @doc """
+  The frame at `k` (0 to 1) of the way from `a` to `b`: the turn on the
+  shortest arc (slerp), and the point on the line.
+  """
+  def blend(%__MODULE__{} = a, %__MODULE__{} = b, k) do
+    {ax, ay, az, aw} = quaternion(a)
+    {bx, by, bz, bw} = quaternion(b)
+    d = ax * bx + ay * by + az * bz + aw * bw
+    # The two signs of a quaternion are the same turn: take the near one.
+    {d, {bx, by, bz, bw}} = if d < 0, do: {-d, {-bx, -by, -bz, -bw}}, else: {d, {bx, by, bz, bw}}
+
+    {p, q} =
+      if d > 0.9995 do
+        {1 - k, k}
+      else
+        o = :math.acos(d)
+        {:math.sin((1 - k) * o) / :math.sin(o), :math.sin(k * o) / :math.sin(o)}
+      end
+
+    {x, y, z, w} = {p * ax + q * bx, p * ay + q * by, p * az + q * bz, p * aw + q * bw}
+    l = :math.sqrt(x * x + y * y + z * z + w * w)
+    from_quaternion({x / l, y / l, z / l, w / l}, Vec.lerp(a.at, b.at, k))
+  end
+
   @doc "The 16 numbers of the frame as a 4 x 4 matrix, column by column."
   def matrix(%__MODULE__{x: {a, b, c}, y: {d, e, f}, z: {g, h, i}, at: {x, y, z}}),
     do: [a, b, c, 0.0, d, e, f, 0.0, g, h, i, 0.0, x, y, z, 1.0]
