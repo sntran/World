@@ -13,8 +13,8 @@
     "test": "node --test test/js/*.test.js && node scripts/validate.mjs priv/models"
   },
   "devDependencies": {
+    "beam.com": "0.1.0-rc.6",
     "gltf-validator": "2.0.0-dev.3.10",
-    "wrangler": "4.142.0",
-    "beam.com": "0.1.0-rc.6"
+    "wrangler": "4.154.0"
   }
 }

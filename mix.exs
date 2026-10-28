@@ -32,9 +32,9 @@ defmodule Xuong.MixProject do
 
   defp deps do
     [
-      {:bandit, "~> 1.6"},
-      {:plug, "~> 1.16"},
-      {:stream_data, "~> 1.1", only: [:dev, :test]}
+      {:bandit, "~> 1.14"},
+      {:plug, "~> 1.20"},
+      {:stream_data, "~> 1.4", only: [:dev, :test]}
     ]
   end
 
