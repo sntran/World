@@ -449,12 +449,19 @@ defmodule Xuong.Models.Van do
     # the side, around the corner and 0.06 m along the side.
     hw = Hull.half_width(h, d1 - 0.01)
 
-    {zs, ts} =
+    # Its parts, from the photos: red at the bottom, the clear lamp of
+    # the reverse in the middle, red at the top.
+    {parts, ts} =
       if Detail.level() == :far,
-        do: {[0.7, 0.803, 1.16, 1.355], [0.0, 1.0]},
-        else: {[0.7, 0.803, 0.9, 1.0, 1.08, 1.16, 1.26, 1.355], [0.0, 0.25, 0.5, 0.75, 1.0]}
+        do: {[{[0.7, 0.803, 1.16, 1.355], :light_back}], [0.0, 1.0]},
+        else:
+          {[
+             {[0.7, 0.803, 0.87], :light_back},
+             {[0.87, 0.95, 1.05, 1.13], :light_front},
+             {[1.13, 1.16, 1.26, 1.355], :light_back}
+           ], [0.0, 0.25, 0.5, 0.75, 1.0]}
 
-    back_lamp = fn s ->
+    back_lamp = fn s, zs, material ->
       for z <- zs do
         u = Hull.back(h, z)
 
@@ -465,30 +472,48 @@ defmodule Xuong.Models.Van do
         {xi, yi} = List.last(side)
         for {x, y} <- [{hw - 0.09, u - 0.015} | side] ++ [{xi - 0.05, yi}, {hw - 0.09, u + 0.03}], do: {s * x, y, z}
       end
-      |> Shape.rings(:light_back)
+      |> Shape.rings(material)
     end
 
-    back = [back_lamp.(1), back_lamp.(-1)]
+    back = for s <- [1, -1], {zs, material} <- parts, do: back_lamp.(s, zs, material)
 
-    stop =
-      Hull.skin(h, l - 0.36, l - 0.29, :black,
-        offset: 0.012,
-        sides: 12,
-        step: 0.02,
-        clip: fn d -> [{:z_min, Hull.z_high(h, d) - 0.05}, {:x_max, 0.32}, {:x_min, -0.32}] end
-      )
+    # The third stop lamp: a black housing on the back edge of the roof,
+    # 0.74 m wide, with a red lens of 0.4 m at its top (the photos of the
+    # back of the van).
+    stop = stop_lamp(h)
 
     Part.new(
       "lamps_transit",
       :light,
       case Detail.level() do
-        :far -> lamp.(0.02, 0.7, :black, 0.0) ++ back
-        :mid -> lamp.(0.02, 0.7, :black, 0.0) ++ lamp.(0.56, 0.7, :orange, 0.002) ++ back
-        :near -> lamp.(0.02, 0.7, :black, 0.0) ++ reflector ++ lamp.(0.56, 0.7, :orange, 0.002) ++ back ++ [stop]
+        :far -> lamp.(0.02, 0.7, :black, 0.0) ++ back ++ stop
+        :mid -> lamp.(0.02, 0.7, :black, 0.0) ++ lamp.(0.56, 0.7, :orange, 0.002) ++ back ++ stop
+        :near -> lamp.(0.02, 0.7, :black, 0.0) ++ reflector ++ lamp.(0.56, 0.7, :orange, 0.002) ++ back ++ stop
       end,
       [origin()],
       detail: :always
     )
+  end
+
+  # The housing and the lens of the third stop lamp. Its profile (y, z)
+  # goes from the back face, under the edge of the roof, up over the
+  # back of the roof; the two ends are at x = -0.37 and 0.37.
+  defp stop_lamp(h) do
+    top = h.top
+    low = top - 0.09
+    {ub, ut} = {Hull.back(h, low), Hull.back(h, top)}
+    face = fn t -> {ub - 0.015 + (ut - 0.03 - ub + 0.015) * t, low + (top + 0.02 - low) * t} end
+    {y0, z0} = face.(0.0)
+    {y1, z1} = face.(1.0)
+    housing = [{y0, z0}, {y1, z1}, {ut + 0.25, top + 0.02}, {ut + 0.25, top - 0.01}, {y0 + 0.06, z0}]
+
+    {ya, za} = face.(0.55)
+    {yb, zb} = face.(0.95)
+    lens = [{ya - 0.005, za}, {yb - 0.005, zb}, {yb + 0.01, zb}, {ya + 0.01, za}]
+
+    for {profile, w, material} <- [{housing, 0.37, :black}, {lens, 0.2, :light_back}] do
+      Shape.rings(for(x <- [-w, w], do: for({y, z} <- profile, do: {x, y, z})), material)
+    end
   end
 
   # The grille (a hexagon) with the oval.
@@ -621,7 +646,7 @@ defmodule Xuong.Models.Van do
       )
 
     hinges =
-      for s <- [1, -1], z <- [0.74, 1.99] do
+      for s <- [1, -1], z <- [0.6, 1.99] do
         x = s * (Hull.half_width(h, d1 - 0.02) - 0.05)
         u = Hull.back(h, z)
         Shape.box({x - 0.035, u - 0.016, z}, {x + 0.035, u + 0.03, z + 0.09}, :black)
