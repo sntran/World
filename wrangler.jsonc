@@ -1,14 +1,14 @@
-// The Worker of https://3d.mkfifo.com: the factory of World
+// The Worker of https://world.mkfifo.com: the factory of World
 // (docs/factory.md). "npm run build" makes site/ (scripts/site.sh) and
 // edge.com (scripts/edge.sh), and "wrangler deploy" uploads them. Workers
 // Builds runs both at each push to main.
 {
-  "name": "xuong",
+  "name": "world",
   "main": "worker.js",
   "compatibility_date": "2026-09-01",
   // The domain of the site: a custom domain of the Worker (Cloudflare
   // makes its DNS record and its certificate in the zone mkfifo.com).
-  "routes": [{ "pattern": "3d.mkfifo.com", "custom_domain": true }],
+  "routes": [{ "pattern": "world.mkfifo.com", "custom_domain": true }],
   "workers_dev": false,
   // The static files: the review page and the catalog. They go out
   // before the Worker runs. site/_headers gives CORS and the cache.
@@ -19,8 +19,8 @@
   "durable_objects": { "bindings": [{ "name": "BEAM", "class_name": "Beam" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Beam"] }],
   // The orders and the files that the VM built. Make the bucket before
-  // the first deploy: npx wrangler r2 bucket create xuong-orders
-  "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "xuong-orders" }],
+  // the first deploy: npx wrangler r2 bucket create world
+  "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world" }],
   // WORLD_SERVER starts the HTTP server of the VM (World.Application).
   // -Mea min: the smallest allocators, for the 128 MB of an isolate.
   "vars": { "WORLD_SERVER": "true", "BEAM_ERL_FLAGS": "-Mea min" },

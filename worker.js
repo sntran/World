@@ -1,4 +1,4 @@
-// The Worker of https://3d.mkfifo.com (docs/factory.md). The static files
+// The Worker of https://world.mkfifo.com (docs/factory.md). The static files
 // of site/ (the review page and the catalog) go out before the Worker
 // runs. The other requests go to handler.js: the orders, with their
 // files in R2, and the VM of World for each file that R2 does not have.

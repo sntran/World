@@ -2,7 +2,7 @@
 
 The data in this folder is from [MakeHuman](http://www.makehumancommunity.org/).
 Its license is **CC0** (public domain): you can use it, change it and
-share it with no conditions. `Xuong.Human` makes people from it.
+share it with no conditions. `World.People.Human` makes people from it.
 
 `scripts/makehuman.py` makes this folder from these sources:
 
@@ -20,7 +20,7 @@ each with the license CC0.
 
 - The base mesh, the skeleton, the weights, the meshes and the fit files
   of the assets are the same, in gzip.
-- The targets are in a small binary format (`Xuong.Human.Data`), in
+- The targets are in a small binary format (`World.People.Data`), in
   steps of 0.25 mm.
 - The textures are smaller (1024, 512 or 256 pixels), with no color
   profile.

@@ -43,7 +43,7 @@ function vm() {
   return fn;
 }
 
-const req = (path, init) => new Request(`https://3d.mkfifo.com${path}`, init);
+const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
 
 test('the name and the file of a path', () => {
   assert.deepEqual(split('van.mid.glb')[0], 'van');
@@ -66,7 +66,7 @@ test('POST /orders keeps the full order and gives the URLs of its files', async 
   assert.equal(r.headers.get('access-control-allow-origin'), '*');
   const body = await r.json();
   assert.equal(body.hash, HASH);
-  assert.equal(body.files['mid.glb'], `https://3d.mkfifo.com/o/${HASH}.mid.glb`);
+  assert.equal(body.files['mid.glb'], `https://world.mkfifo.com/o/${HASH}.mid.glb`);
   assert.ok(env.ORDERS.items.has(`orders/${HASH}.json`));
 });
 

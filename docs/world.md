@@ -54,7 +54,7 @@ does not come.
 
 | In the world | In the computer |
 |---|---|
-| A warehouse | A store of files: the R2 bucket of the orders (`xuong-orders`), the catalog in the release (`priv/models`), the memory of the VM (the cache next to the line), the cache of a project (the R2 of Phượt). |
+| A warehouse | A store of files: the R2 bucket of the orders (`world`), the catalog in the release (`priv/models`), the memory of the VM (the cache next to the line), the cache of a project (the R2 of Phượt). |
 | The size of a warehouse | The limit of its store: the plan of R2 that the owner sets, the size of the release, the memory of the VM. The stock can not pass it. |
 | The stock of a warehouse | The files in the store, by the hash of their order. A part in stock is built: nobody builds it again. |
 | A factory | The processes that build one family of things, from the modules of that family: the vehicle factory from `World.Vehicles.Van` and the other vehicles, the wheel factory from `World.Vehicles.Wheels`, the seat factory from `World.Furniture.Seats`. In the first world, all the factories are in one VM; later, each factory can have its own VM (its own Durable Object). |
@@ -332,7 +332,7 @@ the owner decides each step of it.
 
 | Topic | Decision | Why |
 |---|---|---|
-| The name | The project is World: the module `World`, and a context of the world for each family of things (`World.People`, `World.Vehicles`, `World.Buildings`). The repository, the Worker and the bucket keep the old name Xuong until the owner renames them. | The project builds things as the real world does. The renames of the repository and of the resources of Cloudflare break links and need the owner. |
+| The name | The project is World: the module `World`, and a context of the world for each family of things (`World.People`, `World.Vehicles`, `World.Buildings`). The repository is `sntran/World`, the Worker `world` at <https://world.mkfifo.com>, and the bucket `world`. | The project builds things as the real world does. |
 | Real, not invented | Each thing of the world is one thing of the computer, and each time is a measured time. | The replay is a record, and the statistics are true. |
 | The log is the truth | The replay, the statistics and the engineers read the log only. | One source. A test reads a log. |
 | A place is a model | A warehouse and a factory are orders, built by the people from the materials of World. | The world builds itself from the ground up. |
@@ -360,7 +360,7 @@ and a picture of the replay where there is one.
 | W4. The factories | The wheel factory and the seat factory next to the vehicle factory. A sub-order goes to the factory of its family; a vehicle brings the part by road. | The log of a van: the wheels come from the wheel factory, the seats from the seat factory, each by a drive. |
 | W5. The buildings | The warehouse and the factories are orders: the people build them from the materials and the houses factories, and the log has the build. The racks show the stock. | The log of a build of a warehouse. The size of the warehouse from the limit of its store. |
 | W6. The stores | Each warehouse is one R2 bucket. The release and the memory of the VM are warehouses too. The stock is the files. A full warehouse refuses. | A test with a small limit: the storekeeper refuses, and the foreman sends the model to another warehouse. |
-| W7. The site | The orders of the projects go through the world at <https://3d.mkfifo.com>. `/o/HASH.log.json` and the replay of an order. | An order of Phượt gives its files and its log. The times in the log agree with the times of the service. |
+| W7. The site | The orders of the projects go through the world at <https://world.mkfifo.com>. `/o/HASH.log.json` and the replay of an order. | An order of Phượt gives its files and its log. The times in the log agree with the times of the service. |
 | W8. The other vans | The Sprinter, the ProMaster and the crew van of the Transit, built on the line of the vehicle factory. | As the Transit: a render next to the photo of the dealer. |
 | W9. The engineers | Later, with the owner. | — |
 

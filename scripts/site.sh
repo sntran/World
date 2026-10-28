@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds site/: the files of https://3d.mkfifo.com (docs/factory.md, "The
+# Builds site/: the files of https://world.mkfifo.com (docs/factory.md, "The
 # URLs"). Workers Builds runs it ("npm run build") before "wrangler
 # deploy", which uploads site/ as the static files of the Worker.
 #

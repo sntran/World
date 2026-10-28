@@ -3,7 +3,7 @@
 World is a factory for 3D models. A project sends an order, and the
 factory builds the model from its parts and gives the files. The
 projects (Phượt, DIY, Vũng Tàu) are on Cloudflare, so the factory is a
-web service: <https://3d.mkfifo.com>. A model has a URL. When World
+web service: <https://world.mkfifo.com>. A model has a URL. When World
 corrects a part, each model that uses the part changes at the same URL,
 and the projects do not deploy again.
 
@@ -132,7 +132,7 @@ of the VM):
 | `house_brick_vn` | mid | 147 ms | 404 ms | 88 MB |
 | `house_brick_vn` | near | 4.3 s | 6.7 s | 847 MB |
 
-At <https://3d.mkfifo.com> (the deploy of 05ec8c6, 2026-10-28; the
+At <https://3d.mkfifo.com>, the first address of the site (the deploy of 05ec8c6, 2026-10-28; the
 time of the first request, with the check and the build):
 
 | Order | Level | Time | File | Result |
@@ -208,7 +208,7 @@ So the two agree in two ways:
 
 | Step | What |
 |---|---|
-| F1 | This file. The Worker at `3d.mkfifo.com` serves the catalog and the review page. Done. |
+| F1 | This file. The Worker at `world.mkfifo.com` serves the catalog and the review page. Done. |
 | F2 | Blueprints, orders and the receipt (`World.Orders`), `mix world.order`, the builder in the VM, the cache in R2. People, houses and framing are the first blueprints: they have options already. Done. |
 | F3 | The van blueprint, from the traces of DIY and from photos: the Ford Transit (high roof, medium roof, extended; cargo, crew and passenger windows), with the engine bay and the roof. Done. The Sprinter and the ProMaster come after their photos. |
 | F4 | People in the release (the data of MakeHuman in `priv/`), and less memory for the near level. |
@@ -222,12 +222,12 @@ So the two agree in two ways:
 The owner does this one time:
 
 1. In the dashboard of Cloudflare, Workers and Pages, make a Worker from
-   the repository `sntran/xuong` (Workers Builds). The build command is
+   the repository `sntran/World` (Workers Builds). The build command is
    `npm run build`, the deploy command is `npx wrangler deploy`.
-2. `wrangler.jsonc` has the custom domain `3d.mkfifo.com`: the deploy
+2. `wrangler.jsonc` has the custom domain `world.mkfifo.com`: the deploy
    makes its DNS record and its certificate in the zone `mkfifo.com`.
 3. Make the R2 bucket of the orders before the first deploy:
-   `npx wrangler r2 bucket create xuong-orders`. It needs no public
+   `npx wrangler r2 bucket create world`. It needs no public
    access: the Worker reads it.
 4. The Worker needs the Workers Paid plan: `edge.com` is about 45 MB, and
    a build takes more CPU time than the Free plan gives.

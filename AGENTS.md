@@ -103,7 +103,7 @@ new commit. The copy changes only these things:
 
 | Topic | Decision | Why |
 |---|---|---|
-| The name | World: the OTP app `:world`, the module `World`, and a context of the world for each family of things (`World.People`, `World.Vehicles`, `World.Buildings`, `World.Materials`). The first name was Xưởng ("workshop"); the repository is `sntran/Xuong` until the owner renames it, and the Worker `xuong` and the bucket `xuong-orders` keep their names until then. | The project builds things as the real world does: people, materials, warehouses and factories. A workshop is one place of that world. Each context is one part of the world, not a kind of file. |
+| The name | World: the OTP app `:world`, the module `World`, and a context of the world for each family of things (`World.People`, `World.Vehicles`, `World.Buildings`, `World.Materials`). The first name was Xưởng ("workshop"). The repository is `sntran/World`, the Worker is `world` at <https://world.mkfifo.com>, and the R2 bucket is `world`. | The project builds things as the real world does: people, materials, warehouses and factories. A workshop is one place of that world. Each context is one part of the world, not a kind of file. |
 | The levels of a model | Standard parts, shaped parts, assemblies. | A model is made as a real thing is made. The joints and the list of the parts come from the connections. |
 | The language | Elixir, on BEAM.com. | DIY and Phượt are Elixir. The core of Wings is Erlang, and runs in the same VM with no window. |
 | The source of a shape | Code for a standard part. A `.wings` file for a shaped part. | Wings 3D is free, small, and in Erlang. A person can open each part, change it, and save it. |
@@ -115,7 +115,7 @@ new commit. The copy changes only these things:
 | The axes | Right hand: x to the right side, y to the front, z up, in meters. The origin of a model on the ground at the center of its box. | One rule for each model. The GLB writer turns the axes with no mirror. |
 | The colors | A role of material. The palette of the package, and a palette of each app. | One model, the colors of each app. |
 | The files of the build in Git | Yes, with a check in CI. | An app reads the files with no build. |
-| The way the projects use World | A web service, the factory at <https://3d.mkfifo.com> (`docs/factory.md`), not a library in each app. | Phượt, DIY and Vũng Tàu are on Cloudflare. A model has a URL, and a correction of World reaches them with no new deploy. |
+| The way the projects use World | A web service, the factory at <https://world.mkfifo.com> (`docs/factory.md`), not a library in each app. | Phượt, DIY and Vũng Tàu are on Cloudflare. A model has a URL, and a correction of World reaches them with no new deploy. |
 | Orders | Data in JSON, never code: a blueprint, its options, colors and joints. The hash of the full order names its files. | An order can come from any project and any language. The same order gives the same files. |
 | Realism | The sizes from a standard, a data sheet or a drawing, and the shape from photos of the real thing, never from a memory. A render and a photo side by side before a commit. | Phượt and Vũng Tàu need models that look real. |
 | The world | The next step of World (`docs/world.md`): people, warehouses, factories and vehicles build the models, and each thing of the world is one real thing of the computer, with real times. The owner decided to rename the project "World" after the foundation of the world is in place, not before. | A model is made as a real thing is made; the world makes it as the real world does. One rename, at one time. |
@@ -158,7 +158,7 @@ trees from Blender:
 
 ## The steps
 
-Each step is one branch and one pull request in `sntran/Xuong`, or in the
+Each step is one branch and one pull request in `sntran/World`, or in the
 app that uses the models.
 
 | Step | Result | Check |
