@@ -7,3 +7,6 @@ erl_crash.dump
 /site/
 /.wrangler/
 /edge.com
+
+# The tmp_dir of the tests (ExUnit).
+/tmp/
