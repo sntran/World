@@ -429,12 +429,22 @@ An animal is a figure from bones (`World.Rig`): the data of the rig in,
 a figure out, with a skin that the build makes around the bones. A bone
 of a rig has its `name`, its `parent`, its `head` and its `tail` (points
 in the axes of the figure at rest), its hinge `x`, the half sizes of
-the body around it at its head and at its tail (`radius`), and its
-`material`. The skin is a tube around each bone with a body: rings at
-the head, the middle and the tail, and a round cap at each end. The
-points at the head follow the bone and its parent (half each), so a
-joint bends smooth. A rig also gives the limbs, the joints, the ports
-and small spheres (the eyes, a nose).
+the body around it at its head and at its tail (`radius`), its
+`material`, its `group`, and its `skin`.
+
+The skin is one smooth surface (`World.Blob`). Each bone has a round
+body: a cone with round ends. The bodies of a group (the bones of the
+back, the bones of one leg) join with no blend; the groups join with a
+smooth union of the width `blend`, so a thigh grows out of the hips as
+a muscle does, with no seam. The mesh comes from the field of distances
+on a grid (surface nets): a step of 12 mm at near for the dog, longer
+at mid and far. Each point follows the bones near it, more the nearer
+one. A thin bone (an ear) has `skin: :tube`: a tube of its own. A small
+sphere (an eye, a nose) can sit on the skin: its center is on a ray
+from a point inside.
+
+A limb can keep the bone after its end flat on the ground (`flat: true`
+in the pose): a paw on the ground in a step.
 
 An animal is a species of a body plan (`World.Animals`). The body plan
 gives the bones, the joints, the limbs, the ports and the gaits; the
@@ -460,9 +470,15 @@ The dog:
   goes to the front), `tail` and `head` (chains).
 - Ports: `ground`, `collar` (on the neck), `back` (on the spine, for a
   bag), `mouth` (on the muzzle, for a stick).
+- Bones: the shoulder blade goes down to the front from the withers,
+  the upper arm back to the elbow under the chest, the forearm down to
+  the wrist; the thigh goes to the front to the knee, the shin back to
+  the hock. The upper bones are in the body: the leg comes out of it at
+  the elbow and at the knee. A paw is a small round pad.
 - Animations: `walk` (a step of 0.7 s with a stride of 30 cm, about
   0.43 m/s; the feet in the order hind left, front left, hind right,
-  front right; each foot is on the ground for 0.6 of the step) and `wag`
+  front right; each foot is on the ground for 0.6 of the step, flat, and
+  folds back at the wrist in the air) and `wag`
   (the tail wags twice in 0.8 s).
 
 ## A drawing

@@ -40,9 +40,11 @@ defmodule World.People.Skeleton do
     the shoulder at rest): the wrist goes to the point, and the elbow to
     the side of `pole` (down and back by default). The elbow bends as much
     as it must.
-  - `{:limb, name}` to `%{at: point, pole: dir}` (or `by: move`, from
-    the end of the limb at rest): the end of the limb (`World.Limb`,
-    `limbs/1`) goes to the point, by the solver of the limb. `{:reach,
+  - `{:limb, name}` to `%{at: point, pole: dir, flat: false}` (or `by:
+    move`, from the end of the limb at rest): the end of the limb
+    (`World.Limb`, `limbs/1`) goes to the point, by the solver of the
+    limb. With `flat: true`, the bone after the end (a paw) keeps its turn
+    of the rest: flat on the ground. `{:reach,
     side}` and `{:foot, side}` are the arms and the legs with more: the
     collarbone that lifts, the flat foot.
   - `{:foot, side}` to `%{at: point, pole: dir, flat: true, toe: deg}`
@@ -313,8 +315,17 @@ defmodule World.People.Skeleton do
     |> Enum.reduce(locals, fn {name, spec}, locals ->
       limb = Map.get(s.limbs, name) || raise ArgumentError, "the skeleton has no limb #{inspect(name)}"
       at = Map.get_lazy(spec, :at, fn -> Vec.add(tip(s, s.rest, limb), spec.by) end)
-      solve(locals, s, limb, at, Map.get(spec, :pole, limb.pole), pose)
+      locals = solve(locals, s, limb, at, Map.get(spec, :pole, limb.pole), pose)
+      if Map.get(spec, :flat, false), do: flat(locals, s, List.last(limb.bones)), else: locals
     end)
+  end
+
+  # The bone after the end of a limb (a foot, a paw) keeps its turn of
+  # the rest: it stays flat on the ground.
+  defp flat(locals, s, last) do
+    child = Enum.find(s.bones, &(&1.parent == last)).name
+    w = world(s, locals)
+    Map.put(locals, child, Frame.compose(Frame.invert(w[last]), %{s.rest[child] | at: w[child].at}))
   end
 
   # Two bones: the hinge bends, the first bone turns, the hinge goes to

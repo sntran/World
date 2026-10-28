@@ -48,7 +48,9 @@ defmodule World.Animals do
       limbs: limbs(),
       joints: joints(),
       ports: ports(k),
-      spheres: for({c, r, bone} <- spheres(), do: {scale_point(c, k), r * k, bone, :eye}),
+      spheres: for({c, r, bone} <- spheres(), do: {scale_spot(c, k), r * k, bone, :eye}),
+      blend: 0.03 * k,
+      step: 0.012 * k,
       materials: %{
         fur: %{"color" => coat, "roughness" => 0.95, "metalness" => 0.0},
         eye: %{"color" => [24, 18, 16], "roughness" => 0.25, "metalness" => 0.0}
@@ -78,41 +80,73 @@ defmodule World.Animals do
       {"tail_03", "tail_02", {0, -0.39, 0.55}, {0, -0.40, 0.63}, {{0.017, 0.017}, {0.007, 0.007}}}
     ]
 
+    # A leg of a dog: the shoulder blade goes down to the front from the
+    # withers, the upper arm goes back to the elbow under the chest, and
+    # the forearm goes down to the wrist; the thigh goes to the front to
+    # the knee, the shin back to the hock. The upper bones are in the
+    # body: the leg comes out of it at the elbow and at the knee. A paw is
+    # a small round pad.
+    paw = {{0.026, 0.02}, {0.024, 0.016}}
+
     sides =
       for {side, s} <- [{"l", -1}, {"r", 1}] do
         x = fn v -> s * v end
 
         [
-          {"ear_#{side}", "head", {x.(0.04), 0.37, 0.61}, {x.(0.055), 0.35, 0.69}, {{0.022, 0.006}, {0.004, 0.003}}},
-          {"front_upper_#{side}", "spine_03", {x.(0.075), 0.22, 0.36}, {x.(0.075), 0.17, 0.25},
-           {{0.045, 0.05}, {0.03, 0.03}}},
-          {"front_lower_#{side}", "front_upper_#{side}", {x.(0.075), 0.17, 0.25}, {x.(0.075), 0.18, 0.08},
-           {{0.025, 0.025}, {0.02, 0.02}}},
-          {"front_foot_#{side}", "front_lower_#{side}", {x.(0.075), 0.18, 0.08}, {x.(0.075), 0.20, 0.03},
-           {{0.02, 0.02}, {0.018, 0.018}}},
-          {"front_toe_#{side}", "front_foot_#{side}", {x.(0.075), 0.20, 0.03}, {x.(0.075), 0.25, 0.02},
-           {{0.022, 0.018}, {0.02, 0.014}}},
-          {"hind_upper_#{side}", "pelvis", {x.(0.07), -0.23, 0.38}, {x.(0.07), -0.15, 0.25},
-           {{0.06, 0.07}, {0.035, 0.035}}},
-          {"hind_lower_#{side}", "hind_upper_#{side}", {x.(0.07), -0.15, 0.25}, {x.(0.07), -0.24, 0.12},
-           {{0.03, 0.03}, {0.02, 0.02}}},
-          {"hind_foot_#{side}", "hind_lower_#{side}", {x.(0.07), -0.24, 0.12}, {x.(0.07), -0.22, 0.03},
-           {{0.018, 0.018}, {0.018, 0.018}}},
-          {"hind_toe_#{side}", "hind_foot_#{side}", {x.(0.07), -0.22, 0.03}, {x.(0.07), -0.17, 0.02},
-           {{0.022, 0.018}, {0.02, 0.014}}}
+          {"ear_#{side}", "head", {x.(0.04), 0.37, 0.61}, {x.(0.055), 0.35, 0.69}, {{0.022, 0.006}, {0.004, 0.003}},
+           :tube},
+          {"shoulder_blade_#{side}", "spine_03", {x.(0.055), 0.20, 0.47}, {x.(0.065), 0.27, 0.36},
+           {{0.025, 0.045}, {0.04, 0.045}}},
+          {"front_upper_#{side}", "shoulder_blade_#{side}", {x.(0.065), 0.27, 0.36}, {x.(0.065), 0.19, 0.27},
+           {{0.04, 0.048}, {0.03, 0.03}}},
+          {"front_lower_#{side}", "front_upper_#{side}", {x.(0.065), 0.19, 0.27}, {x.(0.062), 0.19, 0.09},
+           {{0.026, 0.028}, {0.019, 0.019}}},
+          {"front_foot_#{side}", "front_lower_#{side}", {x.(0.062), 0.19, 0.09}, {x.(0.062), 0.205, 0.03},
+           {{0.019, 0.019}, {0.018, 0.018}}},
+          {"front_toe_#{side}", "front_foot_#{side}", {x.(0.062), 0.205, 0.03}, {x.(0.062), 0.245, 0.022}, paw},
+          {"hind_upper_#{side}", "pelvis", {x.(0.065), -0.21, 0.40}, {x.(0.068), -0.13, 0.26},
+           {{0.07, 0.09}, {0.036, 0.038}}},
+          {"hind_lower_#{side}", "hind_upper_#{side}", {x.(0.068), -0.13, 0.26}, {x.(0.066), -0.25, 0.12},
+           {{0.032, 0.034}, {0.02, 0.02}}},
+          {"hind_foot_#{side}", "hind_lower_#{side}", {x.(0.066), -0.25, 0.12}, {x.(0.066), -0.235, 0.03},
+           {{0.019, 0.019}, {0.018, 0.018}}},
+          {"hind_toe_#{side}", "hind_foot_#{side}", {x.(0.066), -0.235, 0.03}, {x.(0.066), -0.195, 0.022}, paw}
         ]
       end
 
-    for {name, parent, head, tail, radius} <- trunk ++ List.flatten(sides),
-        do: %{name: name, parent: parent, head: head, tail: tail, radius: radius}
+    for bone <- trunk ++ List.flatten(sides) do
+      [name, parent, head, tail, radius | skin] = Tuple.to_list(bone)
+
+      %{
+        name: name,
+        parent: parent,
+        head: head,
+        tail: tail,
+        radius: radius,
+        skin: List.first(skin, :blob),
+        group: group(name)
+      }
+    end
+  end
+
+  # The groups of the skin: the bones of a group join with no blend.
+  defp group(name) do
+    cond do
+      name in ~w(pelvis spine_01 spine_02 spine_03) -> "trunk"
+      name in ~w(neck_01 head) -> "neck"
+      String.starts_with?(name, "tail") -> "tail"
+      String.contains?(name, ~w(front_upper front_lower front_foot)) -> "front_" <> String.last(name)
+      String.contains?(name, ~w(hind_upper hind_lower hind_foot)) -> "hind_" <> String.last(name)
+      true -> name
+    end
   end
 
   # The eyes and the nose.
   defp spheres do
     [
-      {{-0.03, 0.462, 0.59}, 0.012, "head"},
-      {{0.03, 0.462, 0.59}, 0.012, "head"},
-      {{0.0, 0.545, 0.515}, 0.013, "muzzle"}
+      {{:on, {-0.02, 0.4, 0.58}, {-0.5, 1.0, 0.3}}, 0.012, "head"},
+      {{:on, {0.02, 0.4, 0.58}, {0.5, 1.0, 0.3}}, 0.012, "head"},
+      {{:on, {0.0, 0.49, 0.53}, {0.0, 1.0, -0.35}}, 0.014, "muzzle"}
     ]
   end
 
@@ -120,6 +154,7 @@ defmodule World.Animals do
     do: %{b | head: scale_point(b.head, k), tail: scale_point(b.tail, k), radius: scale_radius(b.radius, k)}
 
   defp scale_point({x, y, z}, k), do: {x * k, y * k, z * k}
+  defp scale_spot({:on, from, dir}, k), do: {:on, scale_point(from, k), dir}
   defp scale_radius({{a, b}, {c, d}}, k), do: {{a * k, b * k}, {c * k, d * k}}
 
   defp limbs do
@@ -201,12 +236,22 @@ defmodule World.Animals do
     Rig.clip("walk", skeleton, period, 14, fn t ->
       feet =
         for {limb, phase} <- phases, into: %{} do
-          {{:limb, limb}, %{by: foot(:math.fmod(t / period + phase, 1.0), 0.3 * k, 0.06 * k)}}
+          {{:limb, limb}, foot(:math.fmod(t / period + phase, 1.0), 0.3 * k, 0.06 * k)}
+        end
+
+      # A paw in the air folds back at the wrist (more at the front).
+      folds =
+        for {limb, phase} <- phases, u = :math.fmod(t / period + phase, 1.0), u >= 0.6, into: %{} do
+          [part, side] = String.split(limb, "_")
+          fold = if part == "front", do: -70, else: -25
+          {"#{part}_foot_#{side}", [flex: fold * :math.sin(:math.pi() * (u - 0.6) / 0.4)]}
         end
 
       wave = :math.sin(2 * :math.pi() * t / period)
 
-      Map.merge(feet, %{
+      feet
+      |> Map.merge(folds)
+      |> Map.merge(%{
         "tail_01" => [spread: 12 * wave],
         "tail_02" => [spread: 8 * wave],
         "neck_01" => [flex: 3 * wave]
@@ -223,11 +268,12 @@ defmodule World.Animals do
 
   defp animation(name, _skeleton, _k), do: raise(ArgumentError, "unknown animation of a dog #{inspect(name)}")
 
-  # The move of a foot from its place at rest at a part of the step.
-  defp foot(u, stride, _lift) when u < 0.6, do: {0.0, stride * (0.5 - u / 0.6), 0.0}
+  # The move of a foot from its place at rest at a part of the step: on
+  # the ground, the paw stays flat.
+  defp foot(u, stride, _lift) when u < 0.6, do: %{by: {0.0, stride * (0.5 - u / 0.6), 0.0}, flat: true}
 
   defp foot(u, stride, lift) do
     v = (u - 0.6) / 0.4
-    {0.0, stride * (v - 0.5), lift * :math.sin(:math.pi() * v)}
+    %{by: {0.0, stride * (v - 0.5), lift * :math.sin(:math.pi() * v)}}
   end
 end

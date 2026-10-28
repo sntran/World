@@ -22,7 +22,7 @@ defmodule World.Rig do
   joint bends smooth; the others follow the bone. The tubes of two bones
   meet inside each other at the joint.
   """
-  alias World.{Detail, Figure, Frame, Port, Scene, Vec}
+  alias World.{Blob, Detail, Figure, Frame, Port, Scene, Vec}
   alias World.People.{Pose, Skeleton}
 
   @doc """
@@ -30,7 +30,11 @@ defmodule World.Rig do
   `limbs` (`World.Limb`s), `joints` (`World.Joint`s), `ports` (a list of
   `{name, bone, port}`: a port in the axes of the figure at rest, on the
   bone, or on no bone with nil), `spheres` (a list of `{center, radius,
-  bone, material}`: the eyes, a nose), `materials` (a material role to
+  bone, material}`: the eyes, a nose; a center `{:on, from, dir}` is on
+  the smooth skin, on the ray from `from`), `blend` and `step` (a smooth skin,
+  `World.Blob`: the width of the blend of two bodies, and the step of
+  its grid at near, in meters; with no blend, a tube around each bone),
+  `materials` (a material role to
   its spec), `pose`, `animations` (a list of functions of the skeleton to
   an animation, as `clip/5`), `kind`, `params` and `sources`.
   """
@@ -45,7 +49,7 @@ defmodule World.Rig do
       for b <- bones,
           do: %Scene.Node{name: b.name, parent: if(b.parent, do: index[b.parent] + 1, else: 0), frame: locals[b.name]}
 
-    prims = skin(bones, index) ++ spheres(Keyword.get(opts, :spheres, []), index)
+    prims = skin(bones, index, opts) ++ spheres(Keyword.get(opts, :spheres, []), bones, index, opts)
     mesh = %Scene.Node{name: name <> "_mesh", skin: 0, primitives: prims}
 
     skin = %{
@@ -109,11 +113,24 @@ defmodule World.Rig do
     |> Map.put(:frame, Frame.new(head, Vec.cross(x, y), y))
   end
 
-  # A tube around each bone with a body, one primitive for each material.
-  defp skin(bones, index) do
-    bones
-    |> Enum.filter(&Map.get(&1, :radius))
-    |> Enum.map(&{Map.get(&1, :material, :fur), tube(&1, index)})
+  # The skin: with a `blend`, one smooth surface around the bones with a
+  # body (`World.Blob`), and a tube around each bone with `skin: :tube`
+  # (a thin ear); with no blend, a tube around each bone. One primitive
+  # for each material.
+  defp skin(bones, index, opts) do
+    {blend, step} = {Keyword.get(opts, :blend), Keyword.get(opts, :step, 0.012)}
+    bodies = Enum.filter(bones, &Map.get(&1, :radius))
+    {smooth, tubes} = Enum.split_with(bodies, &(blend && Map.get(&1, :skin, :blob) == :blob))
+
+    blob =
+      if smooth == [],
+        do: [],
+        else: [
+          {Map.get(hd(smooth), :material, :fur),
+           Blob.mesh(Enum.map(smooth, &Map.put(&1, :index, index[&1.name])), Detail.step(step), blend)}
+        ]
+
+    (blob ++ Enum.map(tubes, &{Map.get(&1, :material, :fur), tube(&1, index)}))
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Enum.sort()
     |> Enum.map(fn {material, parts} -> join(material, parts) end)
@@ -160,10 +177,26 @@ defmodule World.Rig do
 
   defp own(bone), do: {{bone, 0, 0, 0}, {1.0, 0.0, 0.0, 0.0}}
 
-  # A small sphere on one bone: an eye, a nose.
-  defp spheres(list, index) do
+  # A small sphere on one bone: an eye, a nose. A center `{:on, from,
+  # dir}` is on the smooth skin, on the ray from `from` in the direction
+  # `dir`: the sphere is a third in the skin.
+  defp spheres(list, bones, index, opts) do
+    smooth =
+      for b <- bones, Map.get(b, :radius), Map.get(b, :skin, :blob) == :blob, do: Map.put(b, :index, index[b.name])
+
+    center = fn
+      {:on, from, dir}, r ->
+        Vec.sub(
+          Blob.surface(smooth, Vec.float(from), Vec.float(dir), Keyword.fetch!(opts, :blend)),
+          Vec.scale(Vec.norm(dir), r / 3)
+        )
+
+      c, _r ->
+        Vec.float(c)
+    end
+
     list
-    |> Enum.map(fn {c, r, bone, material} -> {material, ball(Vec.float(c), r, own(index[bone]))} end)
+    |> Enum.map(fn {c, r, bone, material} -> {material, ball(center.(c, r), r, own(index[bone]))} end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Enum.sort()
     |> Enum.map(fn {material, parts} -> join(material, parts) end)

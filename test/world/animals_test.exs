@@ -91,13 +91,15 @@ defmodule World.AnimalsTest do
           {"top", nil, Part.port("top", {0, 0, 1}, {0, 0, 1})},
           {"hand", "arm", Part.port("hand", {0, 0.4, 0.5}, {0, 1, 0})}
         ],
+        spheres: [{{0, 0.4, 0.5}, 0.02, "arm", :paint}],
         kind: :prop
       )
 
     assert f.kind == :prop and length(f.nodes) == 4
     [mesh] = for n <- f.nodes, n.primitives != [], do: n
-    assert [%{material: :paint, joints: joints}] = mesh.primitives
-    assert Enum.uniq(joints) == [{0, 0, 0, 0}]
+    # The tube of the root, and the sphere on the arm.
+    assert [%{material: :paint, joints: tube}, %{material: :paint, joints: ball}] = mesh.primitives
+    assert Enum.uniq(tube) == [{0, 0, 0, 0}] and Enum.uniq(ball) == [{1, 0, 0, 0}]
     # The x of the arm is up: the bone turns around z of World.
     assert Vec.len(Vec.sub(f.skeleton.rest["arm"].x, {0.0, 0.0, 1.0})) < 1.0e-9
     assert Figure.port_frame(f, "hand").at == Frame.point(Figure.bone_frame(f, "arm"), Figure.port!(f, "hand").at)
