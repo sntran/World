@@ -80,7 +80,10 @@ game) and a vehicle of Phượt (`vehicle`: `car`, `camper`, `motorcycle`,
   level only: at mid and far, the window is a panel on the body.
 - `parked` (the avatar of the traveler): the person stands next to the
   parked vehicle, on its right side, and looks to the right (+x). The
-  person has no helmet.
+  person has no helmet. The model has two animations to play once (2.6
+  s each): `wave` (the right hand waves to the viewer) and `point` (the
+  left hand points to the front of the vehicle, +y, and the head looks
+  there).
 
 A person on a moving vehicle is always in a safe pose: the eyes on the
 road, the hands on the bars or on the wheel. The vehicle goes to the

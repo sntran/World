@@ -159,7 +159,49 @@ defmodule World.HumanTest do
 
       # The person stands out of the vehicle, at its right side.
       if v != "foot", do: assert(w > 0.9), else: assert(scene.extras["kind"] == "person")
+      assert Enum.map(scene.animations, & &1.name) == ["wave", "point"]
     end
+  end
+
+  test "the parked traveler waves to the viewer and points to the front of the vehicle" do
+    scene = Build.scene(Detail.with(:far, fn -> World.People.traveler("motorbike", [], "parked") end), level: :far)
+    [wave, point] = scene.animations
+    names = fn a -> Enum.map(a.channels, &Enum.at(scene.nodes, &1.node).name) |> Enum.sort() end
+    assert names.(wave) == ["head", "lowerarm_r", "upperarm_r"]
+    assert names.(point) == ["head", "upperarm_l"]
+
+    # Each clip plays once: it starts and stops in the pose of the scene.
+    for a <- [wave, point], c <- a.channels do
+      assert length(c.times) == 40 and List.last(c.times) == 2.6
+      node = Enum.at(scene.nodes, c.node)
+
+      for f <- [hd(c.values), List.last(c.values)],
+          do: assert(World.Vec.len(World.Vec.sub(f.y, node.frame.y)) < 1.0e-9)
+    end
+
+    # The world at a time of a clip: its frames in the nodes.
+    at = fn a, t ->
+      k = Enum.find_index(hd(a.channels).times, &(abs(&1 - t) < 1.0e-9))
+
+      nodes =
+        Enum.reduce(a.channels, scene.nodes, fn c, nodes ->
+          List.update_at(nodes, c.node, &%{&1 | frame: Enum.at(c.values, k)})
+        end)
+
+      frames = Scene.world_frames(%{scene | nodes: nodes})
+      fn name -> frames[Enum.find_index(nodes, &(&1.name == name))].at end
+    end
+
+    # The left hand points to the front of the vehicle (+y), a little to
+    # the viewer (+x), near the height of the shoulder.
+    pos = at.(point, 1.2)
+    {dx, dy, dz} = World.Vec.sub(pos.("hand_l"), pos.("upperarm_l"))
+    assert dy > 0.3 and dx > 0 and dx < dy and abs(dz) < 0.1
+
+    # The right hand is over the shoulder.
+    pos = at.(wave, 1.0)
+    {_, _, dz} = World.Vec.sub(pos.("hand_r"), pos.("upperarm_r"))
+    assert dz > 0.2
   end
 
   test "the numbers of a person give the weights of the targets" do

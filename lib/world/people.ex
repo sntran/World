@@ -88,6 +88,9 @@ defmodule World.People do
   # The color of a helmet when the order gives none.
   @helmet [236, 232, 222]
 
+  # The animations of the parked traveler (the avatar), to play once.
+  @moments ["wave", "point"]
+
   @doc "The vehicles of a traveler (the names of Phượt), and \"foot\"."
   def vehicles, do: Enum.sort(["foot" | Map.keys(@vehicles)])
 
@@ -101,7 +104,9 @@ defmodule World.People do
     In a car or a van, the glass is clear, so the driver shows.
   - `"parked"` (the avatar): the person stands next to the parked vehicle,
     on its right side, and looks to the right (+x), to the viewer of the
-    side of the vehicle. On foot, the person stands.
+    side of the vehicle. On foot, the person stands. The person has the
+    animations "wave" (to the viewer) and "point" (with the left hand, to
+    the front of the vehicle, +y), each to play once.
 
   A moving vehicle has its driver in a safe pose: the eyes on the road,
   the hands on the bars or on the wheel.
@@ -112,7 +117,7 @@ defmodule World.People do
     do: Human.person("traveler", Keyword.merge(opts, pose: "stand", animations: ["walk"], helmet: nil))
 
   def traveler("foot", opts, "parked"),
-    do: facing(Human.person("traveler", Keyword.merge(opts, pose: "stand", helmet: nil)))
+    do: facing(Human.person("traveler", Keyword.merge(opts, pose: "stand", animations: @moments, helmet: nil)))
 
   def traveler(vehicle, opts, "ride") do
     {model, hips, pose, _} = Map.fetch!(@vehicles, vehicle)
@@ -132,7 +137,7 @@ defmodule World.People do
 
   def traveler(vehicle, opts, "parked") do
     {model, _, _, {x, y}} = Map.fetch!(@vehicles, vehicle)
-    person = Human.person("traveler", Keyword.merge(opts, pose: "stand", helmet: nil))
+    person = Human.person("traveler", Keyword.merge(opts, pose: "stand", animations: @moments, helmet: nil))
     m = model.()
 
     Assembly.new("traveler_" <> vehicle <> "_parked", m,

@@ -75,7 +75,7 @@ defmodule World.Orders.Blueprints do
     %Blueprint{
       name: "traveler",
       doc:
-        "A person (the options of the blueprint person) and a vehicle of Phượt. The scene ride: the person in the pose of the vehicle, in the seat of the driver of a car or a van, on a motorcycle, a motorbike or a bicycle with a helmet, or on foot with the animation walk. The scene parked: the person stands next to the parked vehicle, on its right side, and looks to the right (+x). The vehicle goes to the front (+y).",
+        "A person (the options of the blueprint person) and a vehicle of Phượt. The scene ride: the person in the pose of the vehicle, in the seat of the driver of a car or a van, on a motorcycle, a motorbike or a bicycle with a helmet, or on foot with the animation walk. The scene parked: the person stands next to the parked vehicle, on its right side, and looks to the right (+x), with the animations wave and point (once each). The vehicle goes to the front (+y).",
       options:
         [
           option("vehicle", :choice, default: "motorbike", values: World.People.vehicles()),

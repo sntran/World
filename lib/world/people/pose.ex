@@ -9,7 +9,11 @@ defmodule World.People.Pose do
   chair or a stool), `"ride"` (on a scooter or a motorbike: the hands
   forward on the bars), `"ride_bicycle"`, `"drive"` (in the seat of a
   car or a van: the hands forward on the wheel). The named animations: `"walk"`
-  (one step of each leg in 1.1 s, in a loop).
+  (one step of each leg in 1.1 s, in a loop); `"wave"` (the right hand
+  goes up and waves three times, in 2.6 s, once); `"point"` (the left arm
+  points to the left side of the person and the head looks there, in
+  2.6 s, once). A clip that plays once starts and stops in the pose
+  "stand".
   """
   alias World.Frame
 
@@ -96,22 +100,35 @@ defmodule World.People.Pose do
   bones, with the indices of the nodes of the figure (bone i is node
   i + 1).
   """
-  def animation("walk", bones) do
-    times = for k <- 0..12, do: k * 1.1 / 12
+  def animation("walk", bones), do: clip("walk", bones, 1.1, 12, &walk_turns(&1 / 1.1))
+  def animation("wave", bones), do: clip("wave", bones, 2.6, 39, &wave_turns/1)
+  def animation("point", bones), do: clip("point", bones, 2.6, 39, &point_turns/1)
+  def animation(name, _bones), do: raise(ArgumentError, "unknown animation #{inspect(name)}")
+
+  # A clip of `steps` frames in `length` seconds: the turns at each time
+  # (on top of the arms down) of the bones that the turns name.
+  defp clip(name, bones, length, steps, turns) do
+    times = for k <- 0..steps, do: k * length / steps
     world = Map.new(bones, &{&1.name, &1.frame})
 
     channels =
-      for {b, i} <- Enum.with_index(bones, 1), Map.has_key?(walk_turns(0.0), b.name) do
+      for {b, i} <- Enum.with_index(bones, 1), Map.has_key?(turns.(0.0), b.name) do
         parent = if b.parent, do: world[b.parent], else: Frame.identity()
         local = Frame.compose(Frame.invert(parent), b.frame)
-        values = for t <- times, do: turn(local, b, Map.merge(@arms_down, walk_turns(t / 1.1)))
+        values = for t <- times, do: turn(local, b, Map.merge(@arms_down, turns.(t)))
         %{node: i, path: :rotation, times: times, values: values}
       end
 
-    %{name: "walk", channels: channels}
+    %{name: name, channels: channels}
   end
 
-  def animation(name, _bones), do: raise(ArgumentError, "unknown animation #{inspect(name)}")
+  # How far a clip that plays once is in its move, from 0 (the pose
+  # "stand") to 1: up from 0 to `up` s, down from `down` s to `stop` s, with
+  # a smooth start and a smooth stop.
+  defp lift(t, up, down, stop) do
+    k = min(1.0, t / up) |> min((stop - t) / (stop - down)) |> max(0.0)
+    k * k * (3 - 2 * k)
+  end
 
   # The turns of a walk at a phase from 0 to 1: the legs swing in turn,
   # the knee bends after the leg goes back, the arms swing against the
@@ -130,6 +147,32 @@ defmodule World.People.Pose do
       "upperarm_r" => [{@y, 38}, {@x, 18 * s}],
       "lowerarm_l" => [{@x, 12}],
       "lowerarm_r" => [{@x, 12}]
+    }
+  end
+
+  # A wave of the right hand: the arm goes up to the side, the forearm
+  # goes up, and the hand moves from side to side three times. The rest
+  # pose has the arms 45 degrees down: -38 is down, -57 is a little up.
+  defp wave_turns(t) do
+    k = lift(t, 0.45, 2.1, 2.6)
+    swing = 22 * :math.sin(2 * :math.pi() * 3 * max(0.0, t - 0.45) / 1.65)
+
+    %{
+      "upperarm_r" => [{@y, 38 - 95 * k}, {@x, 15 * k}],
+      "lowerarm_r" => [{@y, k * (-65 + swing)}],
+      "head" => [{@y, 8 * k}]
+    }
+  end
+
+  # The left arm points to the left side of the person, a little forward
+  # and up, and the head looks there.
+  defp point_turns(t) do
+    k = lift(t, 0.5, 2.0, 2.6)
+    beat = 4 * :math.sin(2 * :math.pi() * 2 * max(0.0, t - 0.5) / 1.5)
+
+    %{
+      "upperarm_l" => [{@y, -38 + (88 + beat) * k}, {@z, -20 * k}],
+      "head" => [{@z, 35 * k}]
     }
   end
 end
