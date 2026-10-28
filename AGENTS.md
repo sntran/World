@@ -178,6 +178,11 @@ trees from Blender:
   the far level. An order of the site runs the world for each file of
   the GLB and the log, so the edge does the work two times for a new
   order. Step W7 measures it at the edge.
+- **One build at a time in a VM.** Two cold builds at one time in one
+  builder (4 builders, by the first digit of the hash) stopped the VM
+  (128 MB). `World.Service` builds one file at a time (`:global.trans`);
+  the next request waits. A near level of the car or the van, alone,
+  still stops the VM (F4).
 
 ## The steps
 

@@ -45,11 +45,13 @@ defmodule World.People.Pose do
       "lowerarm_l" => [{@x, -12}],
       "lowerarm_r" => [{@x, -12}]
     },
+    # The legs go forward to the pedals, under the dashboard, not down to
+    # the floor.
     "drive" => %{
-      "thigh_l" => [{@x, 80}],
-      "thigh_r" => [{@x, 80}],
-      "calf_l" => [{@x, -70}],
-      "calf_r" => [{@x, -70}],
+      "thigh_l" => [{@x, 85}],
+      "thigh_r" => [{@x, 85}],
+      "calf_l" => [{@x, -45}],
+      "calf_r" => [{@x, -45}],
       "upperarm_l" => [{@y, -45}, {@x, 45}, {@z, -20}],
       "upperarm_r" => [{@y, 45}, {@x, 45}, {@z, 20}],
       "lowerarm_l" => [{@x, -25}],

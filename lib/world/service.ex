@@ -48,7 +48,7 @@ defmodule World.Service do
     level = Map.get(conn.query_params, "level", "near")
 
     with_order(conn, fn order ->
-      case Orders.build(order, level, file) do
+      case one_at_a_time(fn -> Orders.build(order, level, file) end) do
         {:ok, out} -> conn |> put_resp_content_type(Map.fetch!(@types, file), nil) |> send_resp(200, out)
         {:error, errors} -> json(conn, 422, %{"errors" => errors})
       end
@@ -58,6 +58,11 @@ defmodule World.Service do
   match _ do
     json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such page"}]})
   end
+
+  # One build at a time in the VM: the edge has 128 MB, and two builds of
+  # a near level at one time need more. A second build waits for the lock
+  # (`:global.trans/4` tries again until it has it).
+  defp one_at_a_time(fun), do: :global.trans({__MODULE__, self()}, fun, [node()], :infinity)
 
   defp with_order(conn, fun) do
     case read_body(conn, length: 1_000_000) do

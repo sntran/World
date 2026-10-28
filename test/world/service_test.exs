@@ -55,6 +55,17 @@ defmodule World.ServiceTest do
     assert [%{"path" => "level"}] = json(call(:post, "/build?level=huge", @strut))["errors"]
   end
 
+  test "two builds at one time: the second waits for the first, and each gives its file" do
+    builds =
+      for length <- [0.3, 0.4],
+          do:
+            Task.async(fn ->
+              call(:post, "/build?level=far", ~s({"blueprint": "strut", "options": {"length": #{length}}}))
+            end)
+
+    assert [%{status: 200}, %{status: 200}] = Task.await_many(builds, 60_000)
+  end
+
   test "a page that is not there" do
     assert call(:get, "/nope").status == 404
   end
