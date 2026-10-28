@@ -63,8 +63,8 @@ An error tells the path of the wrong value and the rule:
 `{"errors": [{"path": "options.length", "message": "must be from 0.05 to 6.1 m"}]}`.
 
 The blueprints now: `catalog` (each model of the catalog, with colors
-and joints), `person`, `traveler`, `house`, `van`, `extrusion`, `strut`
-and `l_track`.
+and joints), `person`, `traveler`, `exercise`, `house`, `van`,
+`extrusion`, `strut` and `l_track`.
 
 A `traveler` is a traveler of Phượt: a person (the options of `person`,
 with the colors of the hair and of the clothes, and `head`, the size of
@@ -90,6 +90,19 @@ A person on a moving vehicle is always in a safe pose: the eyes on the
 road, the hands on the bars or on the wheel. The vehicle goes to the
 front: seen from its right side, it goes to the right of the screen. At
 the far level the file is about 300 KB.
+
+An `exercise` is a group at a morning of exercise, as on the beach of
+Vũng Tàu: `routine` (`tai_chi`, `yoga` or `aerobics`), `count` (1 to 12
+people, 6 by default) and `seed`. A leader at the origin faces the group
+(+y) and does the routine as in a mirror; the people stand in rows of
+three in front of the leader and face the leader (-y). Each person is
+different (the age of the routine: 55 to 75 for tai chi, 25 to 50 for
+yoga, 35 to 65 for aerobics; the body, the hair, the clothes and the
+color of the shirt), from the seed, and starts the routine up to 0.35 s
+late. The routine is one animation of the model, in a loop (16 s, 24 s
+and 8 s). A person (`person`) can also have a routine as its animation:
+an app can place each person and start the loop at its own time. A group
+of 7 people is about 1.5 MB at the far level and 4.8 MB at the mid level.
 
 An order of a van:
 

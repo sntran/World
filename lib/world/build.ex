@@ -46,7 +46,7 @@ defmodule World.Build do
     {nodes, _} = finish(acc, Keyword.get(opts, :split, false))
 
     materials = Map.merge(Map.get(item, :materials, %{}), acc.materials)
-    scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: acc.animations, materials: materials}
+    scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: join(acc.animations), materials: materials}
     {lo, hi} = if Scene.triangles(scene) > 0, do: Scene.bounds(scene), else: {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}
     size = Vec.sub(hi, lo)
 
@@ -67,6 +67,18 @@ defmodule World.Build do
 
   # The root of the figure goes under the node; a skinned mesh stays a
   # root node (its bones place it).
+  # The animations of the same name (the routine of each person of a
+  # group) become one animation: an app plays them together.
+  defp join(animations) do
+    animations
+    |> Enum.group_by(& &1.name)
+    |> Enum.map(fn {name, [a | _] = all} ->
+      {Enum.find_index(animations, &(&1 == a)), %{name: name, channels: Enum.flat_map(all, & &1.channels)}}
+    end)
+    |> Enum.sort()
+    |> Enum.map(&elem(&1, 1))
+  end
+
   defp figure_parent(0, _, node, _), do: node
   defp figure_parent(_, %{parent: nil}, _, _), do: nil
   defp figure_parent(_, %{parent: p}, _, offset), do: p + offset

@@ -5,6 +5,7 @@ defmodule World.Orders.Blueprints do
   - `catalog`: a model of `World.Catalog` by its name;
   - `person`: a person of `World.People.Human`;
   - `traveler`: a person on a vehicle of Phượt (`World.People.traveler/2`);
+  - `exercise`: a group at a morning of exercise (`World.People.exercise/2`);
   - `house`: a house of `World.Buildings`;
   - `van`: a van of `World.Vehicles.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `World.Framing`.
@@ -18,7 +19,11 @@ defmodule World.Orders.Blueprints do
 
   @doc "The blueprints, in the order of their names."
   def all,
-    do: Enum.sort_by([catalog(), person(), traveler(), house(), van(), extrusion(), strut(), l_track()], & &1.name)
+    do:
+      Enum.sort_by(
+        [catalog(), person(), traveler(), exercise(), house(), van(), extrusion(), strut(), l_track()],
+        & &1.name
+      )
 
   @doc "The names of the blueprints."
   def names, do: Enum.map(all(), & &1.name)
@@ -59,13 +64,34 @@ defmodule World.Orders.Blueprints do
         person_options() ++
           [
             option("pose", :choice, default: "stand", values: Pose.names()),
-            option("animations", :list, default: [], item: option("item", :choice, values: ["walk"]), max: 1)
+            option("animations", :list,
+              default: [],
+              item: option("item", :choice, values: ["walk" | Pose.routines()]),
+              max: 1
+            )
           ],
       build: fn o ->
         World.People.Human.person("person", person_opts(o) ++ [pose: o["pose"], animations: o["animations"]])
       end,
       check: &origin_check/1,
       sources: ["MakeHuman 1.x, the data of the base mesh, the targets and the assets (CC0)."]
+    }
+  end
+
+  # --- A group at a morning of exercise ------------------------------------------------------
+
+  defp exercise do
+    %Blueprint{
+      name: "exercise",
+      doc:
+        "A group at a morning of exercise, as on the beach of Vũng Tàu: a leader at the origin who faces the group (+y) and does the routine as in a mirror, and the people in rows of three in front, who face the leader (-y). Each person is different, from the seed, and starts a little late. The routine is one animation of the model, in a loop.",
+      options: [
+        option("routine", :choice, default: "tai_chi", values: Pose.routines()),
+        option("count", :number, default: 6.0, min: 1.0, max: 12.0, doc: "The people in front of the leader."),
+        option("seed", :number, default: 1.0, min: 1.0, max: 1_000_000.0, doc: "Another seed gives other people.")
+      ],
+      build: fn o -> World.People.exercise(o["routine"], count: round(o["count"]), seed: round(o["seed"])) end,
+      sources: ["People of World from the data of MakeHuman (CC0), and the routines of World.People.Pose."]
     }
   end
 

@@ -244,6 +244,32 @@ map:
 | `{:aim, :l}`, `{:aim, :r}` | `%{to: dir, pole: dir, end: :wrist}` | The shoulder turns so that the wrist (or the elbow, `end: :elbow`) is in the direction `to`, and the elbow (or the wrist) goes to the side of `pole`. The collarbone lifts a little with an arm over the horizon. |
 | `:look` | a direction | The neck (two parts of five) and the head turn so that the face looks there. |
 | `{:hand, :l}`, `{:hand, :r}` | `"relaxed"`, `"open"`, `"fist"`, `"point"`, `"thumbs_up"` | The shape of the hand (`World.People.Pose`). |
+| `:spine` | `[flex: deg, spread: deg, twist: deg]` | A bend to the front, a bend to the right side, a turn to the left side: a third on each bone of the spine. |
+| `:hips` | `%{at: move, turn: [flex:, spread:, twist:]}` | The hips (and all the body) move and turn. The feet stay on the ground. |
+| `{:reach, :l}`, `{:reach, :r}` | `%{by: move}` (from the shoulder at rest) or `%{at: point}`, and `pole` | The wrist goes to the point; the elbow bends as much as it must, to the side of `pole` (down and back by default). The other turns of the forearm stay (a twist turns the palm: +70 down, -60 to the other hand). |
+| `{:foot, :l}`, `{:foot, :r}` | `%{by: move}` (from the ankle at rest) or `%{at: point}`, and `pole`, `flat` (true), `toe` (degrees out) | The ankle goes to the point, the knee to the side of `pole` (the front by default), and a flat foot keeps its sole level. `:free`: no target. |
+
+The arm (`reach`) and the leg (`foot`) are chains of two bones: the law
+of cosines gives the bend of the middle joint, a few steps of Newton
+correct the small angle out of the plane of the hinge, then the first
+bone turns to the target and around the line to the pole.
+
+### The routines
+
+A routine (`World.People.Pose.routine/1`) is a list of poses at their
+times, in a loop. Each bone moves on the shortest arc from one pose to
+the next, with a smooth start and stop. During each move the feet stay
+on their targets; a foot that goes to a new place lifts on an arc (at
+most 12 cm). The hips move: the animation has a channel of translation
+for the bone `pelvis`. An option `delay` starts a person late, and
+`mirror` makes the routine of a leader who faces the group.
+
+| Routine | Length | What it shows |
+|---|---|---|
+| `tai_chi` | 16 s | The opening: the arms rise with the palms down and sink on bent knees; "wave hands like clouds" to the left and to the right, with the weight from one leg to the other and the waist turning. |
+| `yoga` | 24 s | Mountain with the palms together at the chest, the arms up, a forward fold, the tree on the left leg (the right foot at the left knee, the hands together over the head), warrior II to the left. |
+| `aerobics` | 8 s | At 120 beats a minute: a march with the knees up and the arms pumping, jumping jacks, steps to the side with punches, knee lifts with a clap. |
+
 
 The flex of a hinge (the elbow, the wrist, the knee, the joints of the
 fingers and the two last joints of the thumb) is the angle from

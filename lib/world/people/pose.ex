@@ -16,6 +16,9 @@ defmodule World.People.Pose do
   point: the left arm goes up fast to the left side of the person, with
   the index finger out and the other fingers in the fist, and jabs three
   times; the body leans there and the head looks there; in 2.6 s, once).
+  The routines of a morning of exercise (`routines/0`, `routine/1`):
+  `"tai_chi"`, `"yoga"` and `"aerobics"`, in a loop, with the options
+  `delay` (seconds late) and `mirror` (the leader who faces the group).
   A clip blends each bone from the pose "stand" to the pose of the clip
   on the shortest arc; a clip that plays once starts and stops in the
   pose "stand".
@@ -92,12 +95,18 @@ defmodule World.People.Pose do
   # (from straight), of the index finger when it has its own, and of the
   # two last joints of the thumb.
   @hands %{
-    "relaxed" => %{fingers: {12, 18, 10}, thumb: {15, 10}},
+    "relaxed" => %{fingers: {25, 20, 8}, thumb: {15, 10}},
     "open" => %{fingers: {0, 0, 0}, thumb: {0, 0}},
     "fist" => %{fingers: {85, 100, 70}, thumb: {60, 45}},
     "point" => %{fingers: {85, 100, 70}, index: {0, 0, 0}, thumb: {60, 45}},
     "thumbs_up" => %{fingers: {85, 100, 70}, thumb: {-10, 0}}
   }
+
+  # The routines of a morning of exercise (`routine/1`).
+  @routines ~w(aerobics tai_chi yoga)
+
+  @doc "The names of the routines: animations in a loop."
+  def routines, do: @routines
 
   @doc "The names of the shapes of a hand."
   def hands, do: Map.keys(@hands) |> Enum.sort()
@@ -138,11 +147,24 @@ defmodule World.People.Pose do
   """
   def mirror(pose) do
     Map.new(pose, fn
-      {{kind, side}, value} when kind in [:aim, :hand] -> {{kind, other(side)}, mirror_value(value)}
+      {{kind, side}, value} when kind in [:aim, :hand, :reach, :foot] -> {{kind, other(side)}, mirror_value(value)}
       {:look, dir} -> {:look, flip(dir)}
+      {:spine, turns} -> {:spine, Enum.map(turns, &mirror_body/1)}
+      {:hips, spec} -> {:hips, Map.new(spec, &mirror_hips/1)}
       {bone, turns} -> {swap(bone), Enum.map(turns, &mirror_turn/1)}
     end)
   end
+
+  # A pose of the left side, and the same pose of the right side.
+  defp sym(pose), do: Map.merge(pose, mirror(pose))
+
+  defp mirror_hips({:turn, turns}), do: {:turn, Enum.map(turns, &mirror_body/1)}
+  defp mirror_hips({key, move}), do: {key, flip(move)}
+
+  # A bend of the body to the front stays; a bend to the side and a turn
+  # go the other way.
+  defp mirror_body({:flex, deg}), do: {:flex, deg}
+  defp mirror_body({kind, deg}), do: {kind, -deg}
 
   defp other(:l), do: :r
   defp other(:r), do: :l
@@ -167,15 +189,26 @@ defmodule World.People.Pose do
   defp mirror_turn(turn), do: turn
 
   @doc """
-  An animation by its name, for the bones of a person (parents first,
+  An animation by its name (or a routine of the caller, `{name, {length,
+  fps, keys}}` as `routine/1`), for the bones of a person (parents first,
   as `World.People.Human` makes them): the channels of the rotations of the
   bones that move, with the indices of the nodes of the figure (bone i is
   node i + 1).
   """
-  def animation("walk", bones), do: clip("walk", bones, 1.1, 12, &{walk_turns(&1 / 1.1), 1.0})
-  def animation("wave", bones), do: clip("wave", bones, 2.6, 39, &wave/1)
-  def animation("point", bones), do: clip("point", bones, 2.6, 39, &point/1)
-  def animation(name, _bones), do: raise(ArgumentError, "unknown animation #{inspect(name)}")
+  def animation(name, bones, opts \\ [])
+  def animation("walk", bones, _opts), do: clip("walk", bones, 1.1, 12, &{walk_turns(&1 / 1.1), 1.0})
+  def animation("wave", bones, _opts), do: clip("wave", bones, 2.6, 39, &wave/1)
+  def animation("point", bones, _opts), do: clip("point", bones, 2.6, 39, &point/1)
+
+  def animation(name, bones, opts) when name in @routines, do: animation({name, routine(name)}, bones, opts)
+
+  # A routine of the caller: `{name, {length, fps, keys}}` as `routine/1`.
+  def animation({name, {length, fps, keys}}, bones, opts) do
+    keys = if Keyword.get(opts, :mirror, false), do: for({t, pose} <- keys, do: {t, mirror(pose)}), else: keys
+    loop(name, bones, length, fps, keys, Keyword.get(opts, :delay, 0.0))
+  end
+
+  def animation(name, _bones, _opts), do: raise(ArgumentError, "unknown animation #{inspect(name)}")
 
   # A clip of `steps` frames in `length` seconds. At each time, `at` gives
   # a pose (on top of the pose "stand") and how far the person is in it,
@@ -194,18 +227,75 @@ defmodule World.People.Pose do
         Map.new(target, fn {bone, f} -> {bone, Frame.blend(base[bone], f, k)} end)
       end
 
-    channels =
-      for {b, i} <- Enum.with_index(bones, 1),
-          values = Enum.map(frames, & &1[b.name]),
-          Enum.any?(values, &moved?(&1, base[b.name])) do
-        %{node: i, path: :rotation, times: times, values: values}
-      end
-
-    %{name: name, channels: channels}
+    %{name: name, channels: channels(bones, base, frames, times)}
   end
 
-  defp moved?(a, b),
+  # The channels of the bones that move: their turns, and the moves of the
+  # bones that move (the hips).
+  defp channels(bones, base, frames, times) do
+    for {b, i} <- Enum.with_index(bones, 1),
+        values = Enum.map(frames, & &1[b.name]),
+        {path, values, moved?} <- [
+          {:rotation, values, &turned?(&1, base[b.name])},
+          {:translation, Enum.map(values, & &1.at), &(Vec.len(Vec.sub(&1, base[b.name].at)) > 1.0e-6)}
+        ],
+        Enum.any?(values, moved?) do
+      %{node: i, path: path, times: times, values: values}
+    end
+  end
+
+  defp turned?(a, b),
     do: Enum.any?([{a.x, b.x}, {a.y, b.y}, {a.z, b.z}], fn {u, v} -> Vec.len(Vec.sub(u, v)) > 1.0e-6 end)
+
+  # A routine in a loop: its poses at their times (on top of the pose
+  # "stand"), with a smooth move from each pose to the next, and from the
+  # last to the first. The feet stay on their targets during each move,
+  # and a foot that goes to a new place lifts on the way. A person late
+  # by `delay` seconds is at the time `t - delay` of the routine.
+  defp loop(name, bones, length, fps, keys, delay) do
+    skeleton = Skeleton.new(bones)
+    stand = @poses["stand"]
+
+    solved =
+      for {t, pose} <- keys ++ [{length, elem(hd(keys), 1)}] do
+        pose = expand(Map.merge(stand, pose))
+        {t, Skeleton.locals(skeleton, pose), Skeleton.feet(skeleton, pose)}
+      end
+
+    steps = round(length * fps)
+    times = for k <- 0..steps, do: k * length / steps
+    frames = for t <- times, do: sample(skeleton, solved, fmod(t - delay, length))
+    %{name: name, channels: channels(bones, Skeleton.locals(skeleton, stand), frames, times)}
+  end
+
+  defp fmod(t, length), do: t - Float.floor(t / length) * length
+
+  defp sample(skeleton, solved, u) do
+    [{t0, l0, f0}, {t1, l1, f1}] =
+      solved |> Enum.chunk_every(2, 1, :discard) |> Enum.find(fn [{t0, _, _}, {t1, _, _}] -> u >= t0 and u <= t1 end)
+
+    k = (u - t0) / (t1 - t0)
+    k = k * k * (3 - 2 * k)
+    frames = Map.new(l0, fn {bone, f} -> {bone, Frame.blend(f, l1[bone], k)} end)
+    Skeleton.place_feet(frames, skeleton, Map.new([:l, :r], &{&1, step(f0[&1], f1[&1], k)}))
+  end
+
+  # The target of a foot on the way from one place to the next: a foot
+  # that moves more than 3 cm lifts on an arc (at most 12 cm high).
+  defp step(nil, _b, _k), do: nil
+  defp step(_a, nil, _k), do: nil
+
+  defp step(a, b, k) do
+    far = Vec.len(Vec.sub(b.at, a.at))
+    lift = if far > 0.03, do: min(0.12, far / 2) * :math.sin(:math.pi() * k), else: 0.0
+
+    %{
+      at: Vec.add(Vec.lerp(a.at, b.at, k), {0.0, 0.0, lift}),
+      pole: Vec.norm(Vec.lerp(a.pole, b.pole, k)),
+      flat: a.flat and b.flat,
+      toe: a.toe + (b.toe - a.toe) * k
+    }
+  end
 
   # How far a clip that plays once is in its move, from 0 (the pose
   # "stand") to 1: up from 0 to `up` s, down from `down` s to `stop` s, with
@@ -265,4 +355,167 @@ defmodule World.People.Pose do
        :look => {-0.75, 0.6, 0.15}
      }, lift(t, 0.3, 2.1, 2.6)}
   end
+
+  @doc """
+  A routine: `{length, frames per second, [{time, pose}]}`, the poses at
+  their times in seconds, in a loop. The person faces the front (+y).
+
+  - `"tai_chi"` (16 s): the opening of tai chi, slow, on bent knees: the
+    arms rise and sink, then "wave hands like clouds" to the left and to
+    the right, with the weight from one leg to the other and the waist
+    turning.
+  - `"yoga"` (24 s): mountain with the hands together at the chest, the
+    arms up, a forward fold, the tree on the left leg, then warrior II to
+    the left.
+  - `"aerobics"` (8 s, 120 beats a minute): a march with the knees up
+    and the arms pumping, jumping jacks, steps to the side with punches,
+    and knee lifts with a clap.
+  """
+  def routine("tai_chi") do
+    stance = sym(%{{:foot, :l} => %{by: {-0.08, 0.0, 0.0}, toe: 10}, {:hand, :l} => "relaxed"})
+    at = fn z, more -> Map.merge(stance, Map.merge(%{:hips => %{at: {0.0, 0.0, z}}}, more)) end
+    # The forearms turn the palms down (+70).
+    arms = fn to, flex, wrist ->
+      sym(%{
+        {:aim, :l} => %{to: to, pole: {0.0, -0.3, -1.0}},
+        "lowerarm_l" => [flex: flex, twist: 70],
+        "hand_l" => [flex: wrist]
+      })
+    end
+
+    clouds =
+      Map.merge(stance, %{
+        :hips => %{at: {-0.06, 0.0, -0.13}, turn: [twist: 15]},
+        :spine => [twist: 10],
+        {:reach, :l} => %{by: {0.15, 0.38, 0.0}},
+        "lowerarm_l" => [twist: -30],
+        {:reach, :r} => %{by: {-0.15, 0.28, -0.35}},
+        "lowerarm_r" => [twist: -60],
+        :look => {-0.45, 1.0, 0.05}
+      })
+
+    {16.0, 10,
+     [
+       {0.0, at.(-0.03, %{})},
+       {2.5, at.(-0.06, arms.({-0.3, 1.0, 0.0}, 20, 10))},
+       {5.0, at.(-0.14, arms.({-0.35, 0.8, -0.55}, 40, -35))},
+       {7.5, clouds},
+       {10.0, at.(-0.13, sym(%{{:reach, :l} => %{by: {0.05, 0.32, -0.15}}}))},
+       {12.5, mirror(clouds)},
+       {14.5, at.(-0.05, arms.({-0.25, 0.5, -0.85}, 20, 0))}
+     ]}
+  end
+
+  def routine("yoga") do
+    together = &together/2
+    open = fn wrist -> sym(%{{:hand, :l} => "open", "hand_l" => [flex: wrist]}) end
+    # The hands together, palm to palm (`together/2`).
+    namaste = together.({0.135, 0.26, -0.12}, 55)
+    mountain = Map.put(namaste, :hips, %{at: {0.0, 0.0, 0.0}})
+
+    raised =
+      [open.(0), sym(%{{:aim, :l} => %{to: {-0.15, 0.05, 1.0}}, "lowerarm_l" => [flex: 0]})]
+      |> merge(%{:hips => %{at: {0.0, 0.0, 0.0}}, :spine => [flex: -10], :look => {0.0, 1.0, 0.35}})
+
+    fold =
+      [open.(0), sym(%{{:aim, :l} => %{to: {0.05, 0.15, -1.0}}, "lowerarm_l" => [flex: 5]})]
+      |> merge(%{:hips => %{at: {0.0, -0.05, -0.04}, turn: [flex: 55]}, :spine => [flex: 30]})
+
+    tree =
+      [together.({0.15, 0.06, 0.45}, 10)]
+      |> merge(%{
+        :hips => %{at: {-0.04, 0.0, -0.01}},
+        {:foot, :r} => %{by: {-0.24, 0.03, 0.4}, flat: false, pole: {1.0, 0.3, 0.0}}
+      })
+
+    warrior =
+      [open.(0), sym(%{{:aim, :l} => %{to: {-1.0, 0.0, 0.03}}, "lowerarm_l" => [flex: 0]})]
+      |> merge(%{
+        :hips => %{at: {-0.1, 0.0, -0.18}},
+        {:foot, :l} => %{by: {-0.42, 0.02, 0.0}, toe: 85, pole: {-1.0, 0.2, 0.0}},
+        {:foot, :r} => %{by: {0.3, -0.02, 0.0}, toe: 5},
+        :look => {-1.0, 0.1, 0.0}
+      })
+
+    {24.0, 10,
+     [
+       {0.0, mountain},
+       {3.0, raised},
+       {6.0, fold},
+       {8.5, fold},
+       {10.5, raised},
+       {12.0, mountain},
+       {14.0, tree},
+       {16.5, tree},
+       {18.0, mountain},
+       {19.5, warrior},
+       {22.0, warrior}
+     ]}
+  end
+
+  def routine("aerobics") do
+    fists = sym(%{{:hand, :l} => "fist"})
+    open = sym(%{{:hand, :l} => "open"})
+    arm = fn side, to, flex -> %{{:aim, side} => %{to: to}, "lowerarm_#{side}" => [flex: flex]} end
+
+    march =
+      [fists, arm.(:l, {-0.15, -0.5, -0.85}, 80), arm.(:r, {0.15, 0.7, -0.7}, 95)]
+      |> merge(%{:hips => %{at: {0.0, 0.0, -0.02}}, {:foot, :l} => %{by: {0.02, 0.12, 0.25}, flat: false}})
+
+    jack = fn width, to, z ->
+      merge([open, sym(%{{:foot, :l} => %{by: {width, 0.0, 0.0}, toe: 15}} |> Map.merge(arm.(:l, to, 10)))], %{
+        :hips => %{at: {0.0, 0.0, z}}
+      })
+    end
+
+    out = jack.(-0.18, {-0.4, 0.0, 0.92}, -0.04)
+    in_ = jack.(0.05, {-0.2, 0.05, -1.0}, -0.02)
+
+    side =
+      [fists, arm.(:r, {0.05, 1.0, 0.1}, 0), arm.(:l, {-0.3, 0.6, -0.5}, 120)]
+      |> merge(%{:hips => %{at: {0.1, 0.0, -0.06}}, {:foot, :r} => %{by: {0.28, 0.0, 0.0}, toe: 10}})
+
+    punch =
+      merge([fists, arm.(:l, {-0.05, 1.0, 0.1}, 0), arm.(:r, {0.3, 0.6, -0.5}, 120)], %{
+        :hips => %{at: {0.0, 0.0, -0.03}}
+      })
+
+    knee =
+      [open, sym(arm.(:l, {-0.15, 0.1, 1.0}, 10))]
+      |> merge(%{:hips => %{at: {0.0, 0.0, -0.02}}, {:foot, :l} => %{by: {0.02, 0.12, 0.28}, flat: false}})
+
+    clap = Map.put(together({0.14, 0.32, -0.05}, 25), :hips, %{at: {0.0, 0.0, -0.04}})
+
+    {8.0, 15,
+     [
+       {0.0, march},
+       {0.5, mirror(march)},
+       {1.0, march},
+       {1.5, mirror(march)},
+       {2.0, out},
+       {2.5, in_},
+       {3.0, out},
+       {3.5, in_},
+       {4.0, side},
+       {4.5, punch},
+       {5.0, mirror(side)},
+       {5.5, mirror(punch)},
+       {6.0, knee},
+       {6.5, clap},
+       {7.0, mirror(knee)},
+       {7.5, clap}
+     ]}
+  end
+
+  def routine(name), do: raise(ArgumentError, "unknown routine #{inspect(name)}")
+
+  # The two hands together, palm to palm: the wrists at `by` from the
+  # shoulders (a little apart), the forearms turned so that the palms
+  # face each other (-60), the wrists bent by `wrist` (up for the fingers).
+  defp together(by, wrist) do
+    sym(%{{:reach, :l} => %{by: by}, "lowerarm_l" => [twist: -60], "hand_l" => [flex: wrist], {:hand, :l} => "open"})
+  end
+
+  # One pose from many: the maps in order, then `more`.
+  defp merge(maps, more), do: Enum.reduce(maps ++ [more], %{}, &Map.merge(&2, &1))
 end

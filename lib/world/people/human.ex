@@ -46,7 +46,8 @@ defmodule World.People.Human do
   1 is the size of the body, more is the bigger head of a game), `helmet`
   (`[r, g, b]`: a helmet of a rider of that color, or nil), `pose` (a map
   of a bone to `{axis, degrees}`, or a name of `World.People.Pose`), and
-  `animations` (a list of names of `World.People.Pose`).
+  `animations` (a list of names of `World.People.Pose`, or of `{name,
+  opts}`: `delay` in seconds and `mirror` for a routine).
   """
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
@@ -94,7 +95,11 @@ defmodule World.People.Human do
       ],
       nodes: nodes,
       skins: [skin],
-      animations: for(a <- Map.get(o, :animations, []), do: Pose.animation(a, bones)),
+      animations:
+        for(
+          a <- Map.get(o, :animations, []),
+          do: if(is_tuple(a), do: Pose.animation(elem(a, 0), bones, elem(a, 1)), else: Pose.animation(a, bones))
+        ),
       materials: materials,
       ports: ports(bones)
     }

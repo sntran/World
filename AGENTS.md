@@ -81,7 +81,7 @@ about it.
 | `World.Appliances` | The appliances of a house, and `Systems` (the water heater, the AC, the fans, the TV). |
 | `World.Gear` | `PowerStations`, and `Camper` (the gear of a camper van). |
 | `World.Vehicles` | `Wheels`, `Corners`, `Body`, `Hull`, the `Van` line and its stations, and each vehicle (`FordTransit`, `ChevyBolt`, `HondaVision`, `RoyalEnfieldHimalayan`, `TouringBicycle`). |
-| `World.People` | The people of the catalog, `Human` (a person from the data of MakeHuman), `Data`, `Skeleton` (the joints: flex, spread, twist, limits, aim, look), `Pose` (the poses, the shapes of a hand, the animations). |
+| `World.People` | The people of the catalog, `Human` (a person from the data of MakeHuman), `Data`, `Skeleton` (the joints: flex, spread, twist, limits, aim, look, the hips, the spine, the hands and the feet to points), `Pose` (the poses, the shapes of a hand, the animations, the routines of exercise). `World.People.exercise/2` is a group at a morning of exercise. |
 | `World.Orders` | An order in, the files out: `Blueprint`, `Blueprints`. |
 | `World.Catalog` | Each model of the library by its name. |
 | `World.Service`, `World.Application` | The HTTP service of the VM, and the application. |
@@ -178,6 +178,12 @@ trees from Blender:
   the far level. An order of the site runs the world for each file of
   the GLB and the log, so the edge does the work two times for a new
   order. Step W7 measures it at the edge.
+- **A group of people is heavy.** An `exercise` group of 7 people builds
+  in about 17 s on this computer at the mid level (5 s at far), and its
+  file has 4.8 MB (1.5 MB at far): each person is a full person with its
+  own animation. In the interpreter of the VM it is about 10 times
+  slower. Use the far level for a group, or a `person` with a routine
+  for each place.
 - **One build at a time in a VM.** Two cold builds at one time in one
   builder (4 builders, by the first digit of the hash) stopped the VM
   (128 MB). `World.Service` builds one file at a time (`:global.trans`);

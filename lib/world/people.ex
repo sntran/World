@@ -9,7 +9,8 @@ defmodule World.People do
 
   `traveler/3` puts a person on each vehicle of Phượt (the position of a
   traveler on the map), or next to it, parked (the avatar of the
-  traveler).
+  traveler). `exercise/2` is a group at a morning of exercise (tai chi,
+  yoga or aerobics), as on the beach of Vũng Tàu.
   """
   alias World.{Assembly, Frame, GLB, Part}
   alias World.People.Human
@@ -146,6 +147,115 @@ defmodule World.People do
       sources: ["The #{m.name} of World, parked, and a person of World next to it."]
     )
     |> Assembly.add("traveler", person, at: Part.port("stand", {x, y, 0.0}, {0, 0, 1}, {1, 0, 0}), port: "ground")
+  end
+
+  # The people of a morning of exercise: their ages by the routine, their
+  # clothes and the colors of their shirts (the palette of the beach of
+  # Vũng Tàu).
+  @ages %{"tai_chi" => {55, 75}, "yoga" => {25, 50}, "aerobics" => {35, 65}}
+  @women [
+    ["female_sportsuit01"],
+    ["female_casualsuit01"],
+    ["female_casualsuit02"],
+    ["joepal_crude_t-shirt_female", "cortu_cargo_pants"]
+  ]
+  @men [
+    ["male_casualsuit01"],
+    ["male_casualsuit03"],
+    ["male_casualsuit05"],
+    ["elvs_crude_t-shirt_male", "cortu_cargo_pants"]
+  ]
+  @shirts [[242, 242, 242], [233, 199, 216], [196, 54, 44], [47, 114, 196], [242, 195, 60], [155, 211, 154]]
+
+  @doc """
+  A group at a morning of exercise: a leader at the origin who faces the
+  group (+y) and does the routine as in a mirror, and `count` people (6
+  by default, at most 12) in rows of three in front of the leader, who
+  face the leader (-y). Each person is different (the age by the
+  routine, the body, the hair, the clothes), from `seed`, and starts the
+  routine a little late (at most 0.35 s), as a real group. The routine
+  (`World.People.Pose.routines/0`) is one animation of the model, in a
+  loop. The options: `count` and `seed` (1 by default).
+  """
+  def exercise(routine, opts) do
+    count = Keyword.get(opts, :count, 6)
+    seed = Keyword.get(opts, :seed, 1)
+    if count not in 1..12, do: raise(ArgumentError, "a group has 1 to 12 people, not #{inspect(count)}")
+    {leader, _} = somebody(routine, seed, 0)
+
+    people =
+      for i <- 1..count do
+        {opts, rand} = somebody(routine, seed, i)
+        {jitter_x, rand} = :rand.uniform_s(rand)
+        {jitter_y, rand} = :rand.uniform_s(rand)
+        {delay, _} = :rand.uniform_s(rand)
+
+        at =
+          {(rem(i - 1, 3) - 1) * 1.4 + (jitter_x - 0.5) * 0.2, 2.2 + div(i - 1, 3) * 1.5 + (jitter_y - 0.5) * 0.2, 0.0}
+
+        person =
+          Human.person(
+            "person_#{i}",
+            opts ++ [pose: "stand", animations: [{routine, delay: Float.round(delay * 0.35, 2)}]]
+          )
+
+        {"person_#{i}", person, at: Part.port("place_#{i}", at, {0, 0, 1}, {0, -1, 0}), port: "ground"}
+      end
+
+    Assembly.new(
+      "exercise_" <> routine,
+      Human.person("leader", leader ++ [pose: "stand", animations: [{routine, mirror: true}]]),
+      root: "leader",
+      kind: :person,
+      sources: ["People of World from the data of MakeHuman (CC0), with the routine #{routine} of World.People.Pose."]
+    )
+    |> Assembly.add_all(people)
+  end
+
+  # The options of the person `i` of a group, and the state of the
+  # random numbers after them.
+  defp somebody(routine, seed, i) do
+    rand = :rand.seed_s(:exsss, {seed, i, 2019})
+    {g, rand} = :rand.uniform_s(rand)
+    {a, rand} = :rand.uniform_s(rand)
+    {h, rand} = :rand.uniform_s(rand)
+    {w, rand} = :rand.uniform_s(rand)
+    {gray, rand} = :rand.uniform_s(rand)
+    woman? = g < 0.6
+    {lo, hi} = Map.fetch!(@ages, routine)
+    age = round(lo + a * (hi - lo))
+
+    {hair, rand} =
+      pick(if(woman?, do: ~w(bob01 bob02 ponytail01 long01 braid01), else: ~w(short01 short02 short03 short04)), rand)
+
+    {outfit, rand} = pick(if(woman?, do: @women, else: @men), rand)
+    {shirt, rand} = pick(@shirts, rand)
+    {shoes, rand} = pick(~w(shoes01 shoes02 shoes03 shoes04 shoes05 shoes06), rand)
+
+    group =
+      cond do
+        age < 40 -> "young"
+        age < 60 -> "middleage"
+        true -> "old"
+      end
+
+    {[
+       gender: if(woman?, do: 0.0, else: 1.0),
+       age: age,
+       height: 0.3 + h * 0.35,
+       weight: 0.35 + w * 0.35,
+       skin: "#{group}_asian_#{if woman?, do: "female", else: "male"}",
+       eyebrows: if(woman?, do: "eyebrow010", else: "eyebrow001"),
+       hair: hair,
+       hair_color: if(age >= 55 and gray < 0.5, do: [180, 178, 172]),
+       clothes: outfit ++ [shoes],
+       clothes_colors: [shirt]
+     ], rand}
+  end
+
+  defp pick(list, rand) do
+    {k, rand} = :rand.uniform_s(length(list), rand)
+    {Enum.at(list, k - 1), rand}
   end
 
   # A person that looks to the right (+x): the root turns.

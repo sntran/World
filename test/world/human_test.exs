@@ -214,6 +214,39 @@ defmodule World.HumanTest do
     assert dz > 0.2
   end
 
+  test "a group at a morning of exercise: a leader in the mirror, and people in rows who face the leader" do
+    group = World.People.exercise("tai_chi", count: 4, seed: 7)
+    assert group == World.People.exercise("tai_chi", count: 4, seed: 7)
+    refute group == World.People.exercise("tai_chi", count: 4, seed: 8)
+    assert Enum.map(group.nodes, &elem(&1, 0)) == ~w(leader person_1 person_2 person_3 person_4)
+
+    scene = Build.scene(Detail.with(:far, fn -> World.People.exercise("tai_chi", count: 4, seed: 7) end), level: :far)
+    # One animation: the routine of the five people.
+    [clip] = scene.animations
+    assert clip.name == "tai_chi"
+    roots = for {n, i} <- Enum.with_index(scene.nodes), n.name in ~w(leader person_1 person_2 person_3 person_4), do: i
+    owners = clip.channels |> Enum.map(&owner(scene, &1.node, roots)) |> Enum.uniq() |> Enum.sort()
+    assert owners == Enum.sort(roots)
+
+    frames = Scene.world_frames(scene)
+    face = fn name -> World.Frame.dir(frames[Enum.find_index(scene.nodes, &(&1.name == name))], {0.0, 1.0, 0.0}) end
+    assert_in_delta elem(face.("leader"), 1), 1.0, 1.0e-9
+    assert_in_delta elem(face.("person_1"), 1), -1.0, 1.0e-9
+    # The people stand in front of the leader, in rows of three.
+    {_, y1, _} = frames[Enum.find_index(scene.nodes, &(&1.name == "person_1"))].at
+    {_, y4, _} = frames[Enum.find_index(scene.nodes, &(&1.name == "person_4"))].at
+    assert y1 > 2.0 and y4 > y1 + 1.2
+
+    # The ages of the routine.
+    for {_, %{params: %{"age" => age}}, _} <- group.nodes, do: assert(age in 55..75)
+    assert_raise ArgumentError, ~r/1 to 12 people/, fn -> World.People.exercise("yoga", count: 13) end
+  end
+
+  # The root node of the person of a node.
+  defp owner(scene, i, roots) do
+    if i in roots, do: i, else: owner(scene, Enum.at(scene.nodes, i).parent, roots)
+  end
+
   test "the numbers of a person give the weights of the targets" do
     o = %{gender: 0.25, age: 90, muscle: 0.25, weight: 0.75, height: 0.25, race: %{"asian" => 2.0, "african" => 2.0}}
     weights = Map.new(Human.target_weights(o))
