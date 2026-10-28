@@ -8,6 +8,17 @@ into the steps of `AGENTS.md`.
 - A service on the web (LiveView) that makes a new model from numbers:
   from a model of the library, or from a `.wings` file that a person
   sends.
+- **The crew van of the Transit.** Ford does not sell it for 2024 to
+  2027. The owner wants it in the line: its sizes come from the earlier
+  years. It comes with the Sprinter and the ProMaster (`docs/world.md`,
+  step W7).
+- **The engineers and the architects of the world.** People that read
+  the log of the world and propose a new process, a new component or a
+  new model. A population of plans that compete (genetic programming),
+  flocks of people (boids), in Erlang. After the first world
+  (`docs/world.md`, "The engineers").
+- **The world for Humans Must Die.** The models of a planet, from the
+  same parts. The owner gives the needs of the project.
 
 ## From the development
 

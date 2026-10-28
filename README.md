@@ -18,6 +18,10 @@ Xưởng is also a factory: a web service at <https://3d.mkfifo.com>. Each
 model has a URL, and a correction of Xưởng reaches each project with no
 new deploy of the project. `docs/factory.md` tells how it works.
 
+The next step is the world (`docs/world.md`): people, warehouses,
+factories and vehicles that build the models as in the real world, from
+the ground up, with real times in a log.
+
 ## Why
 
 Four projects draw 3D things, and none shares its models with another:
@@ -99,6 +103,8 @@ models").
 | F2. The factory: orders | Blueprints with options (`catalog`, `person`, `house`, `extrusion`, `strut`, `l_track`), orders in JSON with colors and joints, the receipt, `mix xuong.order`, the VM of Xưởng in the Worker (`Xuong.Service`), and the files of each order in R2. | Done |
 | F3. The factory: vans | The blueprint `van` (`Xuong.Models.Van`) from the traces of DIY and the photos of dealers: the Ford Transit 148 in with a high roof, a medium roof, or extended. The options: the windows (cargo, crew, passenger), the items of DIY in the engine bay, and the items on the roof (a roof fan, a solar panel; the camper of Phượt has none). The seats are parts of their own (`Xuong.Parts.Seats`: a base, a cushion on its track, a back that reclines, the headrests), on the mounting points of the floor of each make; the catalog has a seat and a bench of a van. The doors open, the wheels turn and steer. The Sprinter and the ProMaster come after their photos (`TODO.md`). | Done |
 | F4. The factory: memory | Less memory for the near level at the edge. (The data of people is in `priv/` now, so the release has it.) | To do |
+| W0. The world: the plan | `docs/world.md`: the places, the people and their jobs, the vehicles, the stock, the clock, the log and the replay; what each thing is in the computer; the steps W1 to W8. | Done |
+| W1 to W8. The world | `Xuong.World`: the data of the world, one thin slice (a van, a warehouse, a truck, a factory), the replay, the buildings, the stores, the site, the other vans, the engineers. | To do |
 | 7. DIY uses Xưởng | DIY draws its SVG from the models, and keeps its pictures. | To do |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |

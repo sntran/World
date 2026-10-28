@@ -93,6 +93,7 @@ new commit. The copy changes only these things:
 | The way the projects use Xưởng | A web service, the factory at <https://3d.mkfifo.com> (`docs/factory.md`), not a library in each app. | Phượt, DIY and Vũng Tàu are on Cloudflare. A model has a URL, and a correction of Xưởng reaches them with no new deploy. |
 | Orders | Data in JSON, never code: a blueprint, its options, colors and joints. The hash of the full order names its files. | An order can come from any project and any language. The same order gives the same files. |
 | Realism | The sizes from a standard, a data sheet or a drawing, and the shape from photos of the real thing, never from a memory. A render and a photo side by side before a commit. | Phượt and Vũng Tàu need models that look real. |
+| The world | The next step of Xưởng (`docs/world.md`): people, warehouses, factories and vehicles build the models, and each thing of the world is one real thing of the computer, with real times. The owner decided to rename the project "World" after the foundation of the world is in place, not before. | A model is made as a real thing is made; the world makes it as the real world does. One rename, at one time. |
 | The license | AGPL-3.0. The core of Wings keeps its own terms in `wings/LICENSE`. | The models stay free, and nobody can close them. |
 
 ## Known problems
