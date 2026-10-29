@@ -1,0 +1,47 @@
+{
+  "name": "sheep",
+  "plan": "quadruped",
+  "mesh": "sheep",
+  "clips": "deer",
+  "bones": {
+    "pelvis": [
+      "Hips",
+      "Body",
+      "Back",
+      "BackLeg.L",
+      "BackLeg.R"
+    ],
+    "spine_01": [
+      "Torso",
+      "Shoulders",
+      "FrontLeg.L",
+      "FrontLeg.R"
+    ],
+    "neck_01": "Neck",
+    "head": "Head",
+    "front_upper_l": "FrontUpLeg.L",
+    "front_lower_l": "FrontLowLeg.L",
+    "front_foot_l": "FrontFoot.L",
+    "hind_upper_l": "BackUpLeg.L",
+    "hind_lower_l": "BackLowLeg.L",
+    "hind_foot_l": "BackFoot.L",
+    "front_upper_r": "FrontUpLeg.R",
+    "front_lower_r": "FrontLowLeg.R",
+    "front_foot_r": "FrontFoot.R",
+    "hind_upper_r": "BackUpLeg.R",
+    "hind_lower_r": "BackLowLeg.R",
+    "hind_foot_r": "BackFoot.R"
+  },
+  "parents": {
+    "front_foot_l": "front_lower_l",
+    "front_foot_r": "front_lower_r",
+    "hind_foot_l": "hind_lower_l",
+    "hind_foot_r": "hind_lower_r"
+  },
+  "materials": {
+    "Black": "fur",
+    "White": "dark"
+  },
+  "smooth": 1,
+  "muzzle": 0.5
+}

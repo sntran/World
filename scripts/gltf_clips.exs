@@ -123,8 +123,12 @@ clips =
       ],
       a = Enum.find(gltf["animations"], &(&1["name"] in file_names)),
       into: %{} do
-    times = GLTF.read(gltf, hd(a["samplers"])["input"])
-    values = Enum.map(a["samplers"], &List.to_tuple(GLTF.read(gltf, &1["output"])))
+    # The times of the sampler with the most keys. A sampler with fewer
+    # keys (a part that does not move) gives its value at each of these
+    # times, linear between its keys (a turn as a unit again).
+    samplers = Enum.map(a["samplers"], &{GLTF.read(gltf, &1["input"]), GLTF.read(gltf, &1["output"])})
+    times = samplers |> Enum.map(&elem(&1, 0)) |> Enum.max_by(&length/1)
+    values = Enum.map(samplers, fn {ts, vs} -> List.to_tuple(Enum.map(times, &GLTF.sample(ts, vs, &1))) end)
     step = if List.last(times) > 2, do: 2, else: 1
     keys = Enum.take_every(0..(length(times) - 1), step)
 

@@ -1,10 +1,10 @@
 defmodule World.Animals.Quadruped do
   @moduledoc """
-  The body plan of an animal on four legs with a tail: a dog, a cat, a
-  goat, a horse, a cow.
+  The body plan of an animal on four legs: a dog, a cat, a goat, a
+  horse, a cow, a pig, a sheep.
 
   The bones of World: `pelvis`, `spine_01`, `neck_01`, `head`, `ear_l`
-  and `ear_r` (when the template has them), the tail (`tail_01` ...),
+  and `ear_r` and the tail (`tail_01` ...) when the template has them,
   and for each side (`_l`, `_r`) `front_upper`, `front_lower`,
   `front_foot` (the upper arm, the forearm, the paw or the hoof) and
   `hind_upper`, `hind_lower`, `hind_foot` (the thigh, the shin, the
@@ -14,10 +14,10 @@ defmodule World.Animals.Quadruped do
   `wrist_l`, `knee_l`, `hock_l` (and `_r`; more bends the elbow and the
   knee, and swings the paw to the front at the wrist and at the hock),
   the balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine` and `tail`
-  (flex lifts the tail, spread wags it to the right side). The limbs:
+  (with a tail: flex lifts the tail, spread wags it to the right side). The limbs:
   `front_l`, `front_r` (the end is the wrist), `hind_l`, `hind_r` (the
   end is the hock): the elbow goes to the back, the knee to the front.
-  `tail` and `head` are chains. The ports: `ground`, `collar` (on the neck), `back`
+  `tail` (with a tail) and `head` are chains. The ports: `ground`, `collar` (on the neck), `back`
   (on the spine, for a bag), `mouth` (for a stick).
 
   The animations: `walk`, `run` (a gallop), `idle`, `idle_low` (the
@@ -25,8 +25,8 @@ defmodule World.Animals.Quadruped do
   hind legs kick to the back: only the animals with hooves), `jump` (in
   a gallop), `jump_stop` (a jump up and a stop), `hit_l` and `hit_r` (a
   hit on the left or the right side) and `death` are the clips of the
-  template (`World.Animals.retarget/5`); `wag` (the tail wags twice) is
-  code. The
+  template (`World.Animals.retarget/5`); `wag` (the tail wags twice,
+  with a tail) is code. The
   number of the gait of a species (`gait`): `wag` (the time of a wag,
   s).
   """
@@ -104,13 +104,11 @@ defmodule World.Animals.Quadruped do
           pole: if(part == "front", do: {0.0, -1.0, 0.0}, else: {0.0, 1.0, 0.0})
         )
     ) ++
-      [
-        Limb.new("tail", tail, role: :tail, solver: :chain),
-        Limb.new("head", ~w(neck_01 head), role: :neck, solver: :chain)
-      ]
+      for(bones = [_ | _] <- [tail], do: Limb.new("tail", bones, role: :tail, solver: :chain)) ++
+      [Limb.new("head", ~w(neck_01 head), role: :neck, solver: :chain)]
   end
 
-  def joints(_by) do
+  def joints(by) do
     legs =
       for side <- @sides do
         [
@@ -142,13 +140,15 @@ defmodule World.Animals.Quadruped do
           role: :spine,
           bone: "spine_01",
           limits: %{flex: {-20, 30}, spread: {-20, 20}, twist: {-15, 15}}
-        ),
+        )
+      ] ++
+      for _ <- List.wrap(by["tail_01"]) do
         Joint.new("tail", :ball,
           role: :tail,
           bone: "tail_01",
           limits: %{flex: {-60, 40}, spread: {-60, 60}, twist: {-30, 30}}
         )
-      ]
+      end
   end
 
   def ports(by) do

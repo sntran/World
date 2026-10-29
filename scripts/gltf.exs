@@ -80,6 +80,34 @@ defmodule GLTF do
     gltf["nodes"] |> Enum.with_index() |> Enum.map(&elem(&1, 1)) |> Enum.sort_by(depth)
   end
 
+  @doc """
+  The value of a sampler (its times and values) at a time: a value of the
+  sampler at one of its times, else linear between the values around it
+  (a quaternion as a unit again), else the first or the last value.
+  """
+  def sample(times, values, t) do
+    case Enum.find_index(times, &(&1 >= t)) do
+      nil ->
+        List.last(values)
+
+      0 ->
+        hd(values)
+
+      i ->
+        {t0, t1} = {Enum.at(times, i - 1), Enum.at(times, i)}
+        {a, b} = {Enum.at(values, i - 1), Enum.at(values, i)}
+
+        if t1 == t do
+          b
+        else
+          k = (t - t0) / (t1 - t0)
+          v = Enum.zip_with(Tuple.to_list(a), Tuple.to_list(b), &(&1 + (&2 - &1) * k))
+          v = if tuple_size(a) == 4, do: Enum.map(v, &(&1 / :math.sqrt(Enum.sum(Enum.map(v, fn x -> x * x end))))), else: v
+          List.to_tuple(v)
+        end
+    end
+  end
+
   def qmul({ax, ay, az, aw}, {bx, by, bz, bw}) do
     {aw * bx + ax * bw + ay * bz - az * by, aw * by - ax * bz + ay * bw + az * bx,
      aw * bz + ax * by - ay * bx + az * bw, aw * bw - ax * bx - ay * by - az * bz}

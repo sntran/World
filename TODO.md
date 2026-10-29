@@ -170,9 +170,6 @@ and no logo on them.
   ships at anchor (the far level only), a fast ferry, swim rings, beach
   umbrellas, canvas chairs, thatched huts.
 - **Animals (W11).** Next steps of the templates of four legs:
-  - The other animals of the Ultimate pack (alpaca, husky, stag) and
-    the farm pack of Quaternius on poly.pizza (a pig, a sheep, a
-    chicken), as templates.
   - The shape space (`priv/animals/spaces/`): more meshes in it (the
     alpaca, the husky and the stag of the Ultimate pack, the farm pack,
     CC0 scans); fewer points that meet no face (10 % to 30 % now); a

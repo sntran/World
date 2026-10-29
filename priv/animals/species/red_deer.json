@@ -1,0 +1,34 @@
+{
+  "name": "red_deer",
+  "plan": "quadruped",
+  "template": "stag",
+  "height": 1.22,
+  "about": "A red deer stag: about 1.22 m at the shoulder, a reddish-brown coat in summer, a light rump, large antlers.",
+  "gait": {
+    "wag": 0.8
+  },
+  "sources": [
+    "Red deer stags in Scotland average 201 cm in head-and-body length and 122 cm high at the shoulder; reddish-brown in their summer coats; antlers typically 71 cm in total length (https://en.wikipedia.org/wiki/Red_deer).",
+    "The colors: from a photo of a red deer stag in summer (https://www.inaturalist.org/observations/16696749).",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
+  ],
+  "shape": {},
+  "markings": {},
+  "colors": {
+    "fur": [
+      120,
+      76,
+      46
+    ],
+    "marking": [
+      128,
+      88,
+      58
+    ]
+  },
+  "fur": {
+    "coat": 0.015,
+    "face": 0.006,
+    "socks": 0.006
+  }
+}

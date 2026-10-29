@@ -173,7 +173,9 @@ defmodule World.AnimalsTest do
     %{"walk_speed" => slow, "run_speed" => fast, "jump_speed" => jump_speed} = all.params
     assert slow > 0.2 and fast > 2 * slow and jump_speed > slow
 
-    assert Animals.species() == ~w(cat cow deer donkey fox goat horse macaque pig street_dog water_buffalo wolf)
+    assert Animals.species() ==
+             ~w(alpaca cat cow deer donkey fox goat horse husky macaque pig red_deer sheep street_dog water_buffalo wolf)
+
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
 
@@ -242,13 +244,19 @@ defmodule World.AnimalsTest do
       {"horse", 1.35},
       {"donkey", 1.1},
       {"cow", 1.1},
-      {"water_buffalo", 1.3}
+      {"water_buffalo", 1.3},
+      {"alpaca", 0.9},
+      {"husky", 0.55},
+      {"red_deer", 1.22},
+      {"sheep", 0.74}
     ]
 
     for {name, h} <- heights do
       animal = Animals.animal(name, animations: ~w(walk))
       assert_in_delta withers(animal), h, 0.05 * h, name
-      assert Figure.limbs(animal) == ~w(front_l front_r head hind_l hind_r tail)
+      # A tail, when the template has the bones of a tail.
+      tail = if Map.has_key?(animal.skeleton.rest, "tail_01"), do: ~w(tail), else: []
+      assert Figure.limbs(animal) == ~w(front_l front_r head hind_l hind_r) ++ tail
       # The walk of its template, with the feet on the ground.
       on_ground(animal, hd(animal.animations))
     end
@@ -259,14 +267,15 @@ defmodule World.AnimalsTest do
     assert cat.materials.fur["color"] == [78, 78, 84]
     assert cat.materials.marking["color"] == [236, 233, 226] and cat.materials.dark["color"] == [236, 233, 226]
 
-    # A pig on the cow, with no horns of the cow; its black head and back
-    # are in the colors of the points, of the fur and of the lighter parts.
+    # A pig on the pig of the farm pack: the clips of the cow (its file
+    # has no walk), and no wag (no bones of a tail). Its black head and
+    # back are in the colors of the points of the fur.
+    assert "kick" in Animals.animations("pig") and "wag" not in Animals.animations("pig")
+    assert "wag" in Animals.animations("cow")
     pig = Build.scene(Animals.animal("pig", []))
-    refute :horn in Map.keys(pig.materials)
     [fur] = for n <- pig.nodes, p <- n.primitives, p.material == :fur, do: p
     assert Enum.any?(fur.colors, &(elem(&1, 0) < 60)) and Enum.any?(fur.colors, &(elem(&1, 0) > 200))
-    [marking] = for n <- pig.nodes, p <- n.primitives, p.material == :marking, do: p
-    assert marking.colors != nil and pig.materials.marking["color"] == [255, 255, 255]
+    assert pig.materials.fur["color"] == [255, 255, 255]
 
     # The new horns of a water buffalo are wide; it has none of the bull.
     buffalo = Build.scene(Animals.animal("water_buffalo", []))

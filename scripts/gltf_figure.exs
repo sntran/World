@@ -10,7 +10,10 @@
 #
 # - The points of the mesh are at the bind pose of the skin. The same
 #   point in two primitives (at the border of two materials, or with two
-#   normals) is one point.
+#   normals) is one point. A mesh with no skin on a bone (the antlers of
+#   the stag on the head) is part of the mesh, at its place at rest, with
+#   all its weight on that bone, and with a material of its own (the name
+#   of its node, the color of its material).
 # - A bone is at the inverse of its inverse bind matrix. A bone with no
 #   weight and no bone with weights under it (a target of inverse
 #   kinematics) stays out.
@@ -52,16 +55,41 @@ heads =
   end)
 
 # The primitives: the points (one point for each place), the triangles,
-# the material of each triangle, the weights of each point.
-mesh = Enum.find(nodes, &Map.has_key?(&1, "mesh"))
-prims = Enum.at(gltf["meshes"], mesh["mesh"])["primitives"]
+# the material of each triangle, the weights of each point. The mesh with
+# the skin, and the meshes with no skin on a bone, at their place at rest
+# (each point with a weight 1 on the bone: the first joint of the skin
+# is the joint 0 of its primitives).
+mesh = Enum.find(nodes, &Map.has_key?(&1, "skin"))
+rest_world = GLTF.world(gltf)
+
+rigid =
+  for {n, i} <- Enum.with_index(nodes), Map.has_key?(n, "mesh"), not Map.has_key?(n, "skin"), parent[i] in joints do
+    {at, q, s} = rest_world[i]
+    place = fn {x, y, z} -> GLTF.add(at, GLTF.rotate(q, {x * elem(s, 0), y * elem(s, 1), z * elem(s, 2)})) end
+    {Enum.at(gltf["meshes"], n["mesh"])["primitives"], {place, Enum.find_index(joints, &(&1 == parent[i])), n["name"]}}
+  end
+
+# The materials of the file, and one for each mesh with no skin.
+materials = gltf["materials"] ++ for {[p | _], {_, _, name}} <- rigid, do: Map.put(Enum.at(gltf["materials"], p["material"] || 0), "name", name)
+own = for {{_, {_, _, name}}, k} <- Enum.with_index(rigid), into: %{}, do: {name, length(gltf["materials"]) + k}
+
+prims = [{Enum.at(gltf["meshes"], mesh["mesh"])["primitives"], nil} | rigid]
 key = fn {x, y, z} -> {round(x * 1.0e5), round(y * 1.0e5), round(z * 1.0e5)} end
 
 {places, faces, face_materials, weights, _} =
-  Enum.reduce(prims, {%{}, [], [], %{}, 0}, fn p, {places, faces, mats, weights, _} ->
+  for({list, on} <- prims, p <- list, do: {p, on})
+  |> Enum.reduce({%{}, [], [], %{}, 0}, fn {p, on}, {places, faces, mats, weights, _} ->
     ps = read.(p["attributes"]["POSITION"])
-    js = read.(p["attributes"]["JOINTS_0"])
-    ws = read.(p["attributes"]["WEIGHTS_0"])
+
+    {ps, js, ws} =
+      case on do
+        nil ->
+          {ps, read.(p["attributes"]["JOINTS_0"]), read.(p["attributes"]["WEIGHTS_0"])}
+
+        {place, j, _} ->
+          n = length(ps)
+          {Enum.map(ps, place), List.duplicate({j, 0, 0, 0}, n), List.duplicate({1.0, 0.0, 0.0, 0.0}, n)}
+      end
 
     {places, ids, weights} =
       Enum.zip([ps, js, ws])
@@ -79,7 +107,8 @@ key = fn {x, y, z} -> {round(x * 1.0e5), round(y * 1.0e5), round(z * 1.0e5)} end
 
     ids = ids |> Enum.reverse() |> List.to_tuple()
     tris = read.(p["indices"]) |> Enum.chunk_every(3) |> Enum.map(fn t -> Enum.map(t, &elem(ids, &1)) end)
-    {places, faces ++ tris, mats ++ List.duplicate(p["material"] || 0, length(tris)), weights, 0}
+    material = if on, do: own[elem(on, 2)], else: p["material"] || 0
+    {places, faces ++ tris, mats ++ List.duplicate(material, length(tris)), weights, 0}
   end)
 
 points = places |> Map.values() |> Enum.sort() |> Enum.map(&elem(&1, 1))
@@ -118,7 +147,7 @@ data = %{
   "points" => Enum.map(points, &round.(shift.(&1))),
   "faces" => faces,
   "materials" =>
-    for m <- gltf["materials"] do
+    for m <- materials do
       [r, g, b | _] = get_in(m, ["pbrMetallicRoughness", "baseColorFactor"]) || [1, 1, 1, 1]
       %{"name" => m["name"], "color" => Enum.map([r, g, b], &round(255 * srgb.(&1)))}
     end,

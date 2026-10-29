@@ -1,0 +1,43 @@
+{
+  "name": "sheep",
+  "plan": "quadruped",
+  "template": "sheep",
+  "height": 0.74,
+  "about": "A Suffolk sheep: a large sheep with white wool and no horns, a black face and black legs free of wool; a ewe is about 74 cm at the withers.",
+  "shape": {
+    "leg_length": 1.0,
+    "leg_girth": 1.0,
+    "body_length": 1.0,
+    "body_width": 1.0,
+    "body_depth": 1.0,
+    "neck_length": 1.0,
+    "neck_girth": 1.0,
+    "head_size": 1.0,
+    "muzzle_length": 1.0,
+    "muzzle_width": 1.0
+  },
+  "colors": {
+    "fur": [
+      226,
+      220,
+      204
+    ],
+    "dark": [
+      34,
+      30,
+      30
+    ],
+    "hoof": [
+      40,
+      36,
+      34
+    ]
+  },
+  "gait": {
+    "wag": 0.2
+  },
+  "sources": [
+    "Wikipedia, Suffolk sheep (https://en.wikipedia.org/wiki/Suffolk_sheep): \"The Suffolk is a large sheep, white-woolled and polled, with a black face and black legs free of wool.\" The infobox: a ewe 74 cm and 88 kg, a ram 80 cm and 125 kg.",
+    "The colors and the numbers of the shape: a guess from photos of Suffolk sheep."
+  ]
+}

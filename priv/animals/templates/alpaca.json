@@ -1,0 +1,51 @@
+{
+  "name": "alpaca",
+  "plan": "quadruped",
+  "mesh": "alpaca",
+  "bones": {
+    "pelvis": "Back",
+    "spine_01": "Torso",
+    "neck_01": "Neck1",
+    "head": "Head",
+    "ear_l": "Ear1.L",
+    "front_upper_l": "FrontUpperLeg.L",
+    "front_lower_l": "FrontLowerLeg.L",
+    "front_foot_l": "IKFrontLeg.L",
+    "hind_upper_l": "BackLeg.L",
+    "hind_lower_l": "BackUpperLeg.L",
+    "hind_foot_l": [
+      "BackLowerLeg.L",
+      "IKBackLeg.L"
+    ],
+    "ear_r": "Ear1.R",
+    "front_upper_r": "FrontUpperLeg.R",
+    "front_lower_r": "FrontLowerLeg.R",
+    "front_foot_r": "IKFrontLeg.R",
+    "hind_upper_r": "BackLeg.R",
+    "hind_lower_r": "BackUpperLeg.R",
+    "hind_foot_r": [
+      "BackLowerLeg.R",
+      "IKBackLeg.R"
+    ],
+    "tail_01": "Tail1",
+    "tail_02": "Tail2",
+    "tail_03": "Tail3"
+  },
+  "parents": {
+    "ear_l": "head",
+    "front_foot_l": "front_lower_l",
+    "ear_r": "head",
+    "front_foot_r": "front_lower_r"
+  },
+  "materials": {
+    "Main": "fur",
+    "Main_Light": "marking",
+    "Hooves": "hoof",
+    "Main_Dark": "dark",
+    "Muzzle": "muzzle",
+    "Eyes_Black": "eye",
+    "Eyes_White": "white"
+  },
+  "smooth": 1,
+  "muzzle": 0.5
+}

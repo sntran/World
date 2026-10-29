@@ -126,10 +126,11 @@ defmodule World.Animals.Shape do
         moved
       end
 
-    # The tail turns down around the root of the tail.
+    # The tail turns down around the root of the tail (a template with no
+    # tail has no turn).
     tail_bones = for b <- bones, String.starts_with?(b.name, "tail_"), do: b.name
     pivot = heads["tail_01"]
-    turn = &turn_x(&1, pivot, n["tail_down"] * :math.pi() / 180)
+    turn = if pivot, do: &turn_x(&1, pivot, n["tail_down"] * :math.pi() / 180), else: & &1
 
     moved =
       for {p, i} <- Enum.with_index(moved) do

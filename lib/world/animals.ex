@@ -77,13 +77,18 @@ defmodule World.Animals do
 
   @doc """
   The names of the animations of a species: of its body plan, but a clip
-  only when the clips of its template have it.
+  only when the clips of its template have it, and `wag` only when its
+  template has a tail.
   """
   def animations(name) do
     s = spec(name)
     plan = @plans[s["plan"]]
-    clips = clips(@templates[s["template"]]["mesh"])
-    Enum.reject(plan.animations(), &(&1 in plan.clips() and not Map.has_key?(clips, &1)))
+    t = @templates[s["template"]]
+    clips = clips(t)
+
+    plan.animations()
+    |> Enum.reject(&(&1 in plan.clips() and not Map.has_key?(clips, &1)))
+    |> Enum.reject(&(&1 == "wag" and not Map.has_key?(t["bones"], "tail_01")))
   end
 
   @doc """
@@ -157,7 +162,7 @@ defmodule World.Animals do
 
     scale = s["height"] * k / plan.height(points, weights)
     at = &Vec.scale(&1, scale)
-    clips = clips(t["mesh"])
+    clips = clips(t)
 
     bones =
       for b <- bones do
@@ -279,10 +284,38 @@ defmodule World.Animals do
     {data, bones(plan, map, Map.get(t, "parents", %{}), file_bones, owner, points, weights), points, weights}
   end
 
-  # The clips of a template (`scripts/gltf_clips.exs`), or none.
-  defp clips(mesh) do
-    path = Path.join([:code.priv_dir(:world), "animals", "clips", mesh <> ".json"])
+  # The clips of a template (`scripts/gltf_clips.exs`), or none. A
+  # template with `clips` (a file with no clips for a walk) has the clips
+  # of that template: the moves of the pelvis, the heights of the paws
+  # and the speeds go to the units of its own mesh, by the heights of
+  # the hips (the head of `hind_upper_l`).
+  defp clips(%{"clips" => from} = t) do
+    from = @templates[from]
+    k = hip(t) / hip(from)
+
+    Map.new(clips(from), fn {name, c} ->
+      {name,
+       %{
+         c
+         | "pelvis" => Enum.map(c["pelvis"], fn m -> Enum.map(m, &(&1 * k)) end),
+           "feet" => Map.new(c["feet"], fn {f, hs} -> {f, Enum.map(hs, &(&1 * k))} end),
+           "speed" => c["speed"] * k
+       }}
+    end)
+  end
+
+  defp clips(t) do
+    path = Path.join([:code.priv_dir(:world), "animals", "clips", t["mesh"] <> ".json"])
     if File.exists?(path), do: path |> File.read!() |> JSON.decode!() |> Map.fetch!("clips"), else: %{}
+  end
+
+  defp hip(t) do
+    name = hd(List.wrap(t["bones"]["hind_upper_l"]))
+
+    data =
+      Path.join([:code.priv_dir(:world), "animals", "meshes", t["mesh"] <> ".json"]) |> File.read!() |> JSON.decode!()
+
+    data["bones"] |> Enum.find(&(&1["name"] == name)) |> Map.fetch!("head") |> Enum.at(2)
   end
 
   # The speeds of the clips that move the animal (m/s): an app moves the
@@ -525,8 +558,8 @@ defmodule World.Animals do
   end
 
   # The bones of World, parents first, in the units of the mesh: the head
-  # from the mesh; the parent from `parents`, else of the bone of the
-  # mesh; the tail at the head of the next bone of the body plan, else at
+  # from the mesh; the parent from `parents`, else from the bones above
+  # the bone of the mesh; the tail at the head of the next bone of the body plan, else at
   # the end of the bone of the mesh, else at the head of a bone under it
   # with no bone of World of its own, else at the point of its skin
   # farthest on, from its parent.
@@ -537,7 +570,16 @@ defmodule World.Animals do
         # A bone under it that gives it its weights (not the root of an
         # ear under the head).
         kid = Enum.find(Map.values(file_bones), &(&1["parent"] == file and owner.(&1["name"]) == name))
-        parent = parents[name] || (f["parent"] && owner.(f["parent"]))
+        # The parent: the bone of World of the nearest bone above it that
+        # is not its own (a body of the file under its hips).
+        parent =
+          parents[name] ||
+            (f["parent"] &&
+               Stream.iterate(f["parent"], &file_bones[&1]["parent"])
+               |> Enum.take_while(& &1)
+               |> Enum.map(owner)
+               |> Enum.find(&(&1 != name)))
+
         head = List.to_tuple(f["head"])
 
         tail =

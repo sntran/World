@@ -467,9 +467,16 @@ its height and its gait. A new species is one small file, and an order
 can change the numbers. A species starts from the template with the
 nearest body, and its numbers change the rest.
 
-- The templates of four legs are the eight animals of the Ultimate
+- The templates of four legs are the eleven animals of the Ultimate
   Animated Animal Pack of Quaternius (CC0), on one rig: `shiba_inu`,
-  `wolf`, `fox`, `deer`, `horse`, `donkey`, `cow`, `bull`.
+  `wolf`, `fox`, `deer`, `horse`, `donkey`, `cow`, `bull`, `alpaca`,
+  `husky`, `stag` (the stag has no bones of the ears, and its antlers
+  are a mesh on the head with the role `horn`); and the `pig` and the
+  `sheep` of the Farm Animals Pack of Quaternius (CC0), from its FBX
+  files (`scripts/fbx_gltf.exs` makes a glTF file of the mesh, the
+  bones and the skin). The farm rig has no bones of the ears or the
+  tail, and its files have no walk: the pig has the clips of the cow,
+  the sheep the clips of the deer (`clips`).
 - The template of primates, `primate`, is the low-poly body of a man of
   MakeHuman (CC0), its skeleton `game_engine` (the bones of a person)
   and its eyes, with a tail of 8 bones (`scripts/primate_template.exs`,
@@ -482,7 +489,7 @@ The species is `priv/animals/species/NAME.json`:
 | Key of a species | What it is |
 |---|---|
 | `name`, `about`, `sources` | The name (a to z, 0 to 9 and _), one sentence about the animal, and where its sizes come from. |
-| `plan` | `quadruped` (four legs and a tail) or `primate` (two arms with hands, two legs and a tail). |
+| `plan` | `quadruped` (four legs, and a tail when the template has one) or `primate` (two arms with hands, two legs and a tail). |
 | `template` | The name of the template. |
 | `shape` | The numbers of the shape (below); a number not given is its default (the template as it is). |
 | `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings`: a region of the coat to its color; they paint the faces of `fur` and `marking`. The option `coat` of the order is the color of `fur`. |
@@ -499,6 +506,7 @@ The keys of a template:
 | `mesh`, `bones`, `materials`, `smooth` | The name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
 
 | `parents` | A bone of World to its parent, when the rig of the file has another parent: the paw of the Ultimate rig is a target of inverse kinematics, and World puts it under the forearm. |
+| `clips` | The template whose clips it takes (its own file has none for a walk). The moves of the pelvis, the heights of the paws and the speeds go to the units of its mesh, by the heights of the two hips (the head of `hind_upper_l`). |
 | `muzzle` | The part of the bone of the head, from its head, where the muzzle starts. |
 | `brow` | A template of an upright head (the primates): the part of the bone of the head at the brow. The muzzle is then the front of the face under the eyes, and the skull over the brow goes down by `cranium`. |
 
@@ -637,7 +645,11 @@ The species now:
 | `donkey` | quadruped | A donkey (lừa): about 1.1 m at the withers. | The template `donkey`. |
 | `cow` | quadruped | A cow of Việt Nam (bò vàng): about 1.1 m at the withers, yellow-brown. | The template `cow`, with a yellow-brown coat. |
 | `water_buffalo` | quadruped | A water buffalo of Việt Nam (trâu): about 1.3 m at the withers, dark gray, wide horns. | Numbers on the template `bull`, with wide horns of World in place of the horns of the file. |
-| `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | Numbers on the template `cow`, with no horns. |
+| `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | The template `pig`, with shorter legs and a deeper body. |
+| `sheep` | quadruped | A Suffolk sheep: about 74 cm at the withers, white wool, a black face and black legs. | The template `sheep`. |
+| `alpaca` | quadruped | An alpaca: about 90 cm at the shoulder, a long neck, thick wool. | The template `alpaca`. |
+| `husky` | quadruped | A Siberian husky: about 55 cm at the withers, gray and white. | The template `husky`. |
+| `red_deer` | quadruped | A red deer stag: about 1.22 m at the shoulder, reddish-brown, large antlers. | The template `stag`. |
 | `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, dark hands and feet, on four limbs. | Numbers on the template `primate`: the arms 0.9 of the legs, a narrow chest, a low skull, a muzzle, a long thin tail, narrow hands. The colors from photos: a golden olive back, gray limbs, a pale belly. |
 
 The numbers of the presets are a guess from the sizes in their
