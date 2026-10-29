@@ -174,7 +174,7 @@ defmodule World.AnimalsTest do
     assert slow > 0.2 and fast > 2 * slow and jump_speed > slow
 
     assert Animals.species() ==
-             ~w(alpaca carp cat cow deer donkey douc fox gibbon goat horse husky hyena macaque pig pig_tailed_macaque red_deer rhesus_macaque sheep street_dog tilapia water_buffalo wolf)
+             ~w(alpaca carp cat chicken cow deer donkey douc duck fox gibbon goat horse husky hyena macaque pig pig_tailed_macaque red_deer rhesus_macaque sheep street_dog tilapia water_buffalo wolf)
 
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
@@ -482,5 +482,54 @@ defmodule World.AnimalsTest do
     end
 
     assert depth.("tilapia") > depth.("carp") + 0.05
+  end
+
+  test "a bird: the chicken and the duck, a walk, a peck, a flap" do
+    for {name, height} <- [{"chicken", 0.45}, {"duck", 0.5}] do
+      a = Animals.animal(name, animations: ~w(walk idle peck flap))
+      assert Animals.animations(name) == ~w(walk idle peck flap)
+      assert a.params["walk_speed"] > 0.1
+      [_, _, h] = Build.scene(a).extras["size"]
+      assert_in_delta h, height, 0.02
+      s = a.skeleton
+      [walk, idle, peck, flap] = a.animations
+      ground = elem(s.rest["ball_l"].at, 2)
+
+      # The walk: the feet go to the front and the back, in turn, and one
+      # is in the air while the other is on the ground.
+      steps = frames(a, walk)
+      ys = Enum.map(steps, &elem(&1["ball_l"].at, 1))
+      assert Enum.max(ys) - Enum.min(ys) > 0.15 * height
+
+      assert Enum.any?(steps, fn f ->
+               elem(f["ball_l"].at, 2) > ground + 0.01 and abs(elem(f["ball_r"].at, 2) - ground) < 0.005
+             end)
+
+      # The peck: the beak goes down near the ground, the feet stay; the
+      # idle and the flap keep the feet too.
+      pecks = frames(a, peck)
+      assert Enum.min(Enum.map(pecks, &elem(&1["beak"].at, 2))) < 0.3 * height
+
+      for f <- pecks ++ frames(a, idle) ++ frames(a, flap),
+          do: assert(Vec.len(Vec.sub(f["ball_l"].at, s.rest["ball_l"].at)) < 0.01)
+
+      # The flap: the wings open to the sides.
+      out = frames(a, flap) |> Enum.map(&elem(&1["hand_l"].at, 0)) |> Enum.max()
+      assert out > elem(s.rest["hand_l"].at, 0) + 0.1 * height
+    end
+
+    # The duck has a longer and wider beak, and no comb.
+    beak = fn name ->
+      a = Animals.animal(name, [])
+      b = Enum.find(a.skeleton.bones, &(&1.name == "beak"))
+      [_, _, h] = Build.scene(a).extras["size"]
+      {Vec.len(Vec.sub(b.tail, b.head)) / h, a}
+    end
+
+    {chicken, c} = beak.("chicken")
+    {duck, d} = beak.("duck")
+    assert Map.has_key?(c.materials, :comb) and not Map.has_key?(d.materials, :comb)
+    assert Map.has_key?(d.materials, :beak)
+    assert duck > 1.4 * chicken
   end
 end

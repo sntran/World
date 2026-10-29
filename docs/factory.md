@@ -114,7 +114,8 @@ An `animal` is an animal of a species, from its bones: `species`
 (`street_dog`, `cat`, `wolf`, `fox`, `deer`, `goat`, `pig`, `horse`,
 `donkey`, `cow`, `water_buffalo`, `sheep`, `alpaca`, `husky`,
 `red_deer`, `hyena`, `macaque`, `rhesus_macaque`,
-`pig_tailed_macaque`, `douc`, `gibbon`, `carp`, `tilapia`), `coat` (a
+`pig_tailed_macaque`, `douc`, `gibbon`, `carp`, `tilapia`, `chicken`,
+`duck`), `coat` (a
 color; the color of the species by default), `size` (0.6 to 1.4: a
 scale of the animal), `shape` (numbers of the
 shape over the numbers of the species, as `{"leg_length": 1.2,
@@ -128,7 +129,8 @@ animations of its body plan: `walk`, `run`, `idle`, `idle_low`, `eat`,
 `attack`, `kick` (only the animals with hooves), `jump`, `jump_stop`,
 `hit_l`, `hit_r`, `death` and `wag` for four legs, `walk` (on four
 limbs, or on two legs for the gibbon), `sit`, `climb`, `hang` and
-`jump` for the primates, `swim` and `idle` for the fish; the walk, the run and the jump are in
+`jump` for the primates, `swim` and `idle` for the fish, `walk`, `idle`, `peck` and `flap`
+for the birds; the walk, the run and the jump are in
 place, and the parts list gives their speeds, `walk_speed`, `run_speed`,
 `jump_speed` and `swim_speed`, in m/s). Its joints and the ends of its limbs
 are in the order too (`"joints": {"tail.spread": 20}`, `"targets":

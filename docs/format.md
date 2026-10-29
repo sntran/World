@@ -503,7 +503,7 @@ The keys of a template:
 
 | Key of a template | What it is |
 |---|---|
-| `mesh`, `bones`, `materials`, `smooth` | The name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`, `fin`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
+| `mesh`, `bones`, `materials`, `smooth` | The name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`, `fin`, `beak`, `comb`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
 
 | `parents` | A bone of World to its parent, when the rig of the file has another parent: the paw of the Ultimate rig is a target of inverse kinematics, and World puts it under the forearm. |
 | `clips` | The template whose clips it takes (its own file has none for a walk). The moves of the pelvis, the heights of the paws and the speeds go to the units of its mesh, by the heights of the two hips (the head of `hind_upper_l`). |
@@ -537,6 +537,7 @@ when the front legs and the hind legs are not the same length.
 | `head_size` | 0.6 to 1.6 | All the head. |
 | `muzzle_length`, `muzzle_width` | 0.3 to 1.8, 0.6 to 1.8 | The front of the head, from the eyes to the nose (a primate: the front of the face under the eyes). |
 | `cranium` | 0.5 to 1.2 | A primate: the height of the skull over the brow. |
+| `beak_length`, `beak_width` | 0.5 to 2.5 | A bird: the length and the width of the beak (the bone `beak`); its depth stays. |
 | `ear_size`, `ear_width` | 0.5 to 2.0 | The length and the width of the ears. |
 | `ear_droop` | -40 to 120 | Degrees: more turns the ears down and to their sides (0: as the template). |
 | `tail_length`, `tail_girth` | 0.1 to 2.0, 0.2 to 3.0 | The tail. |
@@ -673,6 +674,8 @@ The species now:
 | `rhesus_macaque` | primate | A rhesus macaque (khỉ vàng, Macaca mulatta): about 53 cm long without the tail, a tail of about 22 cm, a brown or gray coat with a more orange back and hips, a bare pink face, on four limbs. | Numbers on the template `primate`, as the macaque with a shorter tail; the regions `back` and `legs` for the orange back and hips. |
 | `pig_tailed_macaque` | primate | A northern pig-tailed macaque (khỉ đuôi lợn, Macaca leonina): about 55 cm long without the tail, a short thin tail of about 20 cm that curves up, a brown coat with a dark crown and a dark tail, on four limbs. | Numbers on the template `primate`, with a short tail that goes up (`tail_down` -40); the regions `head` and `tail`. |
 | `douc` | primate | A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus): about 62 cm long without the tail, a white tail as long as the body, a silver-gray coat, black thighs, red lower legs, a yellow-brown face, on four limbs. | Numbers on the template `primate`; the regions `legs`, `socks`, `face` and `tail`. The socks also color the hands: the hands are red, not black, and the white forearms are not there. |
+| `chicken` | bird | A hen of Việt Nam (gà ta): about 45 cm high at the top of the comb, red-brown feathers, a dark tail, a small red comb and wattles, yellow legs. | The template `bird`. |
+| `duck` | bird | A white domestic duck (vịt, a Pekin duck): about 50 cm high, creamy white feathers, a long wide yellow-orange bill, short yellow-orange legs. | The template `bird` with no comb (`without`), a beak 1.7 times longer and 2 times wider, shorter legs, a longer neck, a larger head. The body is more level than the 40º of a Pekin duck, the feet have no webs, and the eyes are a little large. |
 | `carp` | fish | A common carp (cá chép, Cyprinus carpio): about 50 cm long, a robust body, a long dorsal fin, a forked tail fin, dark gold with a darker back and a pale belly, bronze fins. | The template `fish`, a little slimmer (`body_depth` 0.9). No barbels. |
 | `tilapia` | fish | A Nile tilapia (cá rô phi, Oreochromis niloticus): about 30 cm long, a deep body, gray with a darker back and a pale belly. | The template `fish`, deeper (`body_depth` 1.4). The tail fin of the template is forked, the tail fin of a tilapia is not; no bands. |
 | `gibbon` | primate | A northern white-cheeked gibbon (vượn đen má trắng, Nomascus leucogenys), a male: about 55 cm long, no tail, black with white cheeks, very long arms. On the ground it walks on two legs with its arms up (`"upright": true` in its gait). | Numbers on the template `primate`: the arms 1.3 times the legs. The template has a tail: the gibbon has the shortest, thin. The face region is white, not only the cheeks. |
@@ -799,6 +802,27 @@ ground.
   list, from `period` and `stride` of the gait) and `idle` (smaller and
   slower waves of the tail, in place).
 
+A bird (`World.Animals.Bird`): its bones are `pelvis` (the root, the
+back of the body), `spine_01` (the breast), `neck_01`, `head`, `beak`,
+`tail_01`, and for each side the wing (`upperarm_l`, `lowerarm_l`,
+`hand_l`: folded along the body, to the back) and the leg (`thigh_l` in
+the body, `calf_l`: the drumstick, `foot_l`: the bare shank, `ball_l`:
+the toes). The size of a bird (its `height`) is the height of its
+highest point (the top of the head, or of the comb).
+
+- Joints: the balls `neck`, `tail`, `shoulder_l`, `shoulder_r` (spread
+  opens the wing), `hip_l`, `hip_r`, and the hinges `hock_l`, `hock_r`
+  (between the drumstick and the shank).
+- Limbs: `leg_l`, `leg_r` (the drumstick and the shank: the end is the
+  root of the toes, the hock goes to the back), `head` (a chain).
+- Ports: `ground`, `beak` (at the tip of the beak), `back`.
+- Animations: `walk` (the feet in turn, each on the ground for 0.6 of
+  the step; the head stays and then goes to the front, as a chicken
+  walks; the speed is in `walk_speed`), `idle` (the head turns to look,
+  in short jerks, in 3 s), `peck` (the neck goes down to the ground
+  twice, the body leans a little) and `flap` (the wings open, beat three
+  times and fold, in 1.2 s). In each, the feet stay on the ground.
+
 A new species: write `priv/animals/species/NAME.json` with the
 template of the nearest body, the numbers of its shape, its colors,
 its height, from the sizes of the animal and from photos.
@@ -815,7 +839,7 @@ write `priv/animals/templates/NAME.json`: a bone of World to the bones
 of the mesh, the materials and their roles. Look at the bones and the
 materials of the mesh in its JSON.
 
-A new body plan (a bird, a snake) is a module with the
+A new body plan (a snake, a bird that flies) is a module with the
 functions of `World.Animals.Quadruped`: `bones/0`, `next/1`, `hinge/2`,
 `height/2`, `animations/0`, `limbs/1`, `joints/1`, `ports/1`, `stance/2`
 (the pose at rest, from the skeleton and the gait),
@@ -896,6 +920,22 @@ each point of a fin follows the two bones nearest to it along the body.
 The eyes are spheres on the bone `head`. The materials: `body` (the
 role `fur`, with the colors of the coat), `fins` (the role `fin`) and
 `eye`.
+
+`scripts/bird_template.exs` makes the mesh of the template of birds
+from the bones of World, with no file from outside:
+
+    mix run scripts/bird_template.exs priv/animals/meshes/bird.json
+
+The bird has the body of a hen, about 0.45 m high at the top of the
+comb. The smooth skin (`World.Blob`) has groups: the body, the neck and
+the head, the tail, each wing (flat bodies on the sides of the body),
+each leg (the thigh in the body, the drumstick), with a blend of 2 cm
+between them; the shanks are a skin of their own. The beak is a wedge,
+wider than deep, to a blunt tip, on the bone `beak`; the comb and the
+wattles are plates on the head; the tail is a fan of feathers, up and
+to the back; the toes are three to the front and one to the back. The
+materials: `feathers` (the role `fur`), `legs` (`skin`), `beak`,
+`comb` and `eye`.
 
 ## A drawing
 

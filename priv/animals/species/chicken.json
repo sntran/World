@@ -1,0 +1,47 @@
+{
+  "name": "chicken",
+  "plan": "bird",
+  "template": "bird",
+  "height": 0.45,
+  "about": "A hen of Việt Nam (gà ta): about 45 cm high at the top of the comb, red-brown feathers, a small red comb, yellow legs.",
+  "shape": {},
+  "colors": {
+    "fur": [
+      150,
+      92,
+      50
+    ],
+    "skin": [
+      206,
+      170,
+      80
+    ],
+    "beak": [
+      214,
+      184,
+      100
+    ],
+    "comb": [
+      190,
+      40,
+      36
+    ]
+  },
+  "markings": {
+    "tail": [
+      70,
+      50,
+      34
+    ]
+  },
+  "gait": {
+    "period": 0.5,
+    "stride": 0.3,
+    "lift": 0.08
+  },
+  "sources": [
+    "Wikipedia, Chicken (https://en.wikipedia.org/wiki/Chicken): \"Adult chickens of both sexes have a fleshy crest on their heads called a comb or cockscomb\", \"hanging flaps of skin on either side under their beaks called wattles\", \"combs and wattles are more prominent in males\"; \"The body is round, the legs are unfeathered in most breeds, and the wings are short\"; \"Size and coloration vary widely between breeds\".",
+    "The height (45 cm at the top of the comb), the red-brown feathers, the dark tail and the yellow legs of a hen of Việt Nam: a guess from photos of iNaturalist (https://www.inaturalist.org/photos/92534456, https://www.inaturalist.org/photos/467736456).",
+    "The time and the length of a step: a guess."
+  ]
+}

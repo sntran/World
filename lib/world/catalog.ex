@@ -32,7 +32,7 @@ defmodule World.Catalog do
   defp animals do
     for name <-
           ~w(street_dog cat fox deer horse donkey cow water_buffalo wolf goat pig sheep alpaca husky red_deer hyena) ++
-            ~w(macaque rhesus_macaque pig_tailed_macaque douc gibbon carp tilapia),
+            ~w(macaque rhesus_macaque pig_tailed_macaque douc gibbon carp tilapia chicken duck),
         do: {name, fn -> World.Animals.animal(name, animations: World.Animals.animations(name)) end}
   end
 

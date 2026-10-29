@@ -1,0 +1,36 @@
+{
+  "name": "bird",
+  "plan": "bird",
+  "mesh": "bird",
+  "bones": {
+    "pelvis": "pelvis",
+    "spine_01": "spine_01",
+    "neck_01": "neck_01",
+    "head": "head",
+    "beak": "beak",
+    "tail_01": "tail_01",
+    "upperarm_l": "upperarm_l",
+    "lowerarm_l": "lowerarm_l",
+    "hand_l": "hand_l",
+    "thigh_l": "thigh_l",
+    "calf_l": "calf_l",
+    "foot_l": "foot_l",
+    "ball_l": "ball_l",
+    "upperarm_r": "upperarm_r",
+    "lowerarm_r": "lowerarm_r",
+    "hand_r": "hand_r",
+    "thigh_r": "thigh_r",
+    "calf_r": "calf_r",
+    "foot_r": "foot_r",
+    "ball_r": "ball_r"
+  },
+  "materials": {
+    "feathers": "fur",
+    "legs": "skin",
+    "beak": "beak",
+    "comb": "comb",
+    "eye": "eye"
+  },
+  "smooth": 1,
+  "muzzle": 0.6
+}

@@ -28,6 +28,7 @@ defmodule World.Animals.Shape do
   | `muzzle_length` | 0.3 to 1.8 | The front of the head, from the eyes to the nose. |
   | `muzzle_width` | 0.6 to 1.8 | The width and the depth of the front of the head. |
   | `cranium` | 0.5 to 1.2 | A primate: the height of the skull over the brow. |
+  | `beak_length`, `beak_width` | 0.5 to 2.5 | A bird: the length and the width of the beak (the bone `beak`); its depth stays. |
   | `ear_size` | 0.5 to 2.0 | The ears (the bones `ear_l`, `ear_r`). |
   | `ear_width` | 0.5 to 2.0 | The width of the ears. |
   | `ear_droop` | -40 to 120 | Degrees: more turns the ears down to the sides. |
@@ -60,6 +61,8 @@ defmodule World.Animals.Shape do
     "muzzle_length" => {0.3, 1.8, 1.0},
     "muzzle_width" => {0.6, 1.8, 1.0},
     "cranium" => {0.5, 1.2, 1.0},
+    "beak_length" => {0.5, 2.5, 1.0},
+    "beak_width" => {0.5, 2.5, 1.0},
     "ear_size" => {0.5, 2.0, 1.0},
     "ear_width" => {0.5, 2.0, 1.0},
     "ear_droop" => {-40.0, 120.0, 0.0},
@@ -334,6 +337,9 @@ defmodule World.Animals.Shape do
 
       name == "head" ->
         {n["head_size"], n["head_size"], n["head_size"]}
+
+      name == "beak" ->
+        {n["head_size"] * n["beak_width"], n["head_size"] * n["beak_length"], n["head_size"]}
 
       String.starts_with?(name, "tail_") ->
         {n["tail_girth"], n["tail_length"], n["tail_girth"]}

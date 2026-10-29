@@ -53,7 +53,12 @@ defmodule World.Animals do
   # The colors of the roles that no mesh, template or species gives.
   @colors %{"horn" => [172, 161, 117], "eye" => [24, 24, 24], "nose" => [40, 34, 32], "white" => [240, 240, 240]}
 
-  @plans %{"quadruped" => World.Animals.Quadruped, "primate" => World.Animals.Primate, "fish" => World.Animals.Fish}
+  @plans %{
+    "quadruped" => World.Animals.Quadruped,
+    "primate" => World.Animals.Primate,
+    "fish" => World.Animals.Fish,
+    "bird" => World.Animals.Bird
+  }
   @roles %{
     "fur" => :fur,
     "marking" => :marking,
@@ -67,7 +72,9 @@ defmodule World.Animals do
     "muzzle" => :muzzle,
     "iris" => :iris,
     "mane" => :mane,
-    "fin" => :fin
+    "fin" => :fin,
+    "beak" => :beak,
+    "comb" => :comb
   }
 
   @doc "The names of the species."
@@ -163,7 +170,13 @@ defmodule World.Animals do
     colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
     fur = if f = s["fur"], do: Shape.fur(regions, f["coat"], Map.delete(f, "coat"))
 
-    scale = s["height"] * k / plan.height(points, weights)
+    # The size of the animal from the points of the faces that it keeps
+    # (a duck has no comb).
+    kept = faces |> List.flatten() |> MapSet.new()
+
+    scale =
+      s["height"] * k / plan.height(points, Map.new(weights, fn {b, m} -> {b, Map.take(m, MapSet.to_list(kept))} end))
+
     at = &Vec.scale(&1, scale)
     clips = clips(t)
 
@@ -176,7 +189,6 @@ defmodule World.Animals do
     points = Enum.map(points, at)
     by = Map.new(bones, &{&1.name, &1})
     head_length = Vec.len(Vec.sub(by["head"].tail, by["head"].head))
-    kept = faces |> List.flatten() |> MapSet.new()
 
     parts =
       horns(

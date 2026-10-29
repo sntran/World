@@ -194,8 +194,10 @@ and no logo on them.
   - The face of the macaque: next to photos, the bridge of the nose and
     the lips still have the shape of a person (the low-poly face of
     MakeHuman has few points there), and the eyes are farther apart.
-  - Chickens and ducks (a template of birds); the gaits eat, sit and
-    run.
+  - The birds: a rooster (a larger comb and tail, hackles); feet with
+    webs for the duck, a bill deeper at its root, smaller eyes, the body
+    of a duck at 40º; feathers (a pattern, the direction); a bird that
+    flies (a pigeon, a swallow); a sit (a hen on its nest); a run.
   - The fish: scales and the gill cover; the barbels of the carp; a tail
     fin that is not forked (the tilapia) and the bands of the tilapia; a
     koi (a region for spots); more fish of Việt Nam (cá trê, cá lóc).

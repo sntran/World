@@ -105,7 +105,7 @@ defmodule World.Animals.UVTest do
   end
 
   test "the templates: each corner in the square, no face turns over, the scale in a range of √3" do
-    for name <- ~w(shiba_inu wolf fox deer horse donkey cow bull alpaca husky stag pig sheep primate fish) do
+    for name <- ~w(shiba_inu wolf fox deer horse donkey cow bull alpaca husky stag pig sheep primate fish bird) do
       %{bones: bones, points: points, weights: weights, template: t} = Animals.template(name)
 
       faces =
