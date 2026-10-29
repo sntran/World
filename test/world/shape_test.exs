@@ -91,7 +91,7 @@ defmodule World.Animals.ShapeTest do
   end
 
   test "the regions and the colors of the coat", c do
-    regions = Shape.regions(c.bones, c.points, c.weights)
+    regions = Shape.regions(c.bones, c.points, c.weights, c.eyes)
     assert Map.keys(regions) |> Enum.sort() == Enum.sort(Shape.regions())
 
     for {r, list} <- regions do
@@ -132,7 +132,7 @@ defmodule World.Animals.ShapeTest do
   end
 
   test "a primate: the arms, the skull, the muzzle to the front, and the coat" do
-    %{bones: b, points: p, weights: w, template: t} = Animals.template("primate")
+    %{bones: b, points: p, weights: w, template: t, eyes: eyes} = Animals.template("primate")
     {long, _} = Shape.apply(b, p, w, %{"arm_length" => 1.5}, t)
     assert_in_delta length(long, "upperarm_l"), 1.5 * length(b, "upperarm_l"), 1.0e-9
     assert_in_delta length(long, "thigh_l"), length(b, "thigh_l"), 1.0e-9
@@ -184,5 +184,15 @@ defmodule World.Animals.ShapeTest do
     assert face != [] and Enum.min(face) > elem(bone(b, "head").head, 1)
     hand = for {i, k} <- w["hand_l"], k > 0.9, do: Enum.at(regions["socks"], i)
     assert hand != [] and Enum.all?(hand, &(&1 > 0.9))
+
+    # The upper lids: over the eyes and in front of them, on the two
+    # sides. With no eyes, no lids.
+    assert Enum.all?(regions["lids"], &(&1 == 0.0))
+    lids = for {m, i} <- Enum.with_index(Shape.regions(b, p, w, eyes)["lids"]), m > 0.5, do: Enum.at(p, i)
+    eye = fn f -> eyes |> Enum.map(&f.(Enum.at(p, &1))) |> Enum.min_max() end
+    {_, eye_top} = eye.(&elem(&1, 2))
+    {eye_back, _} = eye.(&elem(&1, 1))
+    assert Enum.any?(lids, &(elem(&1, 0) > 0)) and Enum.any?(lids, &(elem(&1, 0) < 0))
+    assert Enum.all?(lids, &(elem(&1, 2) > eye_top - 0.02 and elem(&1, 1) > eye_back))
   end
 end

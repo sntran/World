@@ -72,7 +72,7 @@ defmodule World.Animals.Shape do
     "horn_spread" => {0.0, 1.0, 0.0}
   }
 
-  @regions ~w(back belly mane legs socks head face ears tail tail_tip)
+  @regions ~w(back belly mane legs socks head face lids ears tail tail_tip)
   @foot ~r/(^|_)foot_[lr]$/
   @leg ~r/^(front_|hind_|thigh_|calf_|foot_)/
 
@@ -355,8 +355,10 @@ defmodule World.Animals.Shape do
   # its bone (from the neck to the nose): the muzzle is the front part of
   # the bone. The head of a primate is up along its bone, and its face is
   # to the front (-z): the template gives its `brow` (a part of the bone),
-  # the muzzle is the front of the face under the brow, and the skull over
-  # the brow goes down by `cranium`.
+  # the muzzle is the front of the face under the eyes, and the skull over
+  # the brow goes down by `cranium`. The muzzle of a primate goes to the
+  # front as a block: all its front by the same distance, so the nose and
+  # the lips keep their depth and do not make a point.
   defp face({x, y, z}, n, len, template) do
     f0 = template["muzzle"] * len
 
@@ -366,10 +368,10 @@ defmodule World.Animals.Shape do
       {x * w, y + (n["muzzle_length"] - 1) * max(0.0, y - f0), z * w}
     else
       brow = template["brow"] * len
-      r = smooth(f0 - 0.15 * len, f0 + 0.15 * len, -z) * (1 - smooth(brow - 0.25 * len, brow - 0.1 * len, y))
+      r = smooth(f0 - 0.15 * len, f0 + 0.075 * len, -z) * (1 - smooth(brow - 0.3 * len, brow - 0.175 * len, y))
       w = 1 + (n["muzzle_width"] - 1) * r
       y = if y > brow, do: brow + (y - brow) * n["cranium"], else: y
-      {x * w, y, z - (n["muzzle_length"] - 1) * r * max(0.0, -z - f0 + 0.15 * len)}
+      {x * w, y, z - (n["muzzle_length"] - 1) * r * 0.3 * len}
     end
   end
 
@@ -403,11 +405,12 @@ defmodule World.Animals.Shape do
   point in it. `back` and `belly` are the top and the bottom of the
   body and the neck; `mane` the top of the neck (the crest, where a horse
   has its mane); `legs` the legs; `socks` the paws and the low part of
-  the legs; `head` all the head; `face` the muzzle; `ears` (the bones of
+  the legs; `head` all the head; `face` the muzzle; `lids` the upper
+  lids, over the points of `eyes`; `ears` (the bones of
   the ears); `tail` all the tail; `tail_tip` (the last bone of the
   tail).
   """
-  def regions(bones, points, weights) do
+  def regions(bones, points, weights, eyes \\ []) do
     by = Map.new(bones, &{&1.name, &1})
     frames = Map.new(bones, &{&1.name, frame(&1)})
     head = by["head"]
@@ -430,6 +433,7 @@ defmodule World.Animals.Shape do
     trunk = Enum.filter(~w(pelvis spine_01 spine_02 spine_03 neck_01), &Map.has_key?(by, &1))
     tail = Enum.filter(names, &String.starts_with?(&1, "tail_"))
     tail_tip = List.last(tail)
+    lids = lids(frames["head"], points, eyes)
 
     # The height of each point of the body over the bone that moves it
     # most, as a part of the range of the body there.
@@ -460,6 +464,7 @@ defmodule World.Animals.Shape do
           "socks" => min(sum.(feet, i) + low, 1.0),
           "head" => w.("head", i),
           "face" => w.("head", i) * face_part(Map.has_key?(by, "upperarm_l"), hy, hz, len),
+          "lids" => w.("head", i) * lids.(p),
           "ears" => min(w.("ear_l", i) + w.("ear_r", i), 1.0),
           "tail" => min(sum.(tail, i), 1.0),
           "tail_tip" => w.(tail_tip, i)
@@ -468,6 +473,32 @@ defmodule World.Animals.Shape do
         Map.new(acc, fn {r, list} -> {r, [min(parts[r], 1.0) | list]} end)
     end
     |> Map.new(fn {r, list} -> {r, Enum.reverse(list)} end)
+  end
+
+  # The upper lids: over each eye (the points of `eyes` on its side of
+  # the head), in front of its center, as wide as the eye.
+  defp lids(_frame, _points, []), do: fn _ -> 0.0 end
+
+  defp lids(frame, points, eyes) do
+    eyes =
+      for {_, e} <- Enum.group_by(eyes, &(elem(Enum.at(points, &1), 0) > 0)) do
+        ps = Enum.map(e, &local(frame, Enum.at(points, &1)))
+        c = Vec.scale(Enum.reduce(ps, &Vec.add/2), 1 / length(ps))
+        {c, ps |> Enum.map(&Vec.len(Vec.sub(&1, c))) |> Enum.max()}
+      end
+
+    fn p ->
+      q = local(frame, p)
+
+      eyes
+      |> Enum.map(fn {c, r} ->
+        {dx, dy, dz} = Vec.sub(q, c)
+
+        smooth(-0.2 * r, 0.3 * r, dy) * (1 - smooth(0.9 * r, 1.5 * r, dy)) * (1 - smooth(0.8 * r, 1.3 * r, abs(dx))) *
+          smooth(-0.5 * r, 0.0, -dz)
+      end)
+      |> Enum.max()
+    end
   end
 
   # The face: the front part of the bone of the head of an animal on four

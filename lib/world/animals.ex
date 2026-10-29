@@ -147,7 +147,7 @@ defmodule World.Animals do
     markings = Map.merge(Map.get(s, "markings", %{}), Keyword.get(opts, :markings, %{}))
 
     shape = Map.merge(s["shape"], Keyword.get(opts, :shape, %{}))
-    regions = Shape.regions(bones, points, weights)
+    regions = Shape.regions(bones, points, weights, eyes(t, data))
     # The coefficients of the shape space of the template.
     moves =
       case Keyword.get(opts, :space) || s["space"] do
@@ -253,13 +253,22 @@ defmodule World.Animals do
 
   @doc """
   A template at rest, before the numbers of a shape: `%{template, bones,
-  points, weights}` (in the units of its mesh; the bones of World, the
-  weights of each bone of World).
+  points, weights, eyes}` (in the units of its mesh; the bones of World,
+  the weights of each bone of World, the points of the eyes).
   """
   def template(name) do
     t = Map.fetch!(@templates, name)
-    {_, bones, points, weights} = rest(t, @plans[t["plan"]])
-    %{template: t, bones: bones, points: points, weights: weights}
+    {data, bones, points, weights} = rest(t, @plans[t["plan"]])
+    %{template: t, bones: bones, points: points, weights: weights, eyes: eyes(t, data)}
+  end
+
+  # The points of the eyes of a mesh.
+  defp eyes(t, data) do
+    for {f, m} <- Enum.zip(data["faces"], data["face_materials"]),
+        material_role(t, data, m) == :eye,
+        i <- f,
+        uniq: true,
+        do: i
   end
 
   # The mesh of a species or a template, its bones of World and the

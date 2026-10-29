@@ -508,7 +508,7 @@ The keys of a template:
 | `parents` | A bone of World to its parent, when the rig of the file has another parent: the paw of the Ultimate rig is a target of inverse kinematics, and World puts it under the forearm. |
 | `clips` | The template whose clips it takes (its own file has none for a walk). The moves of the pelvis, the heights of the paws and the speeds go to the units of its mesh, by the heights of the two hips (the head of `hind_upper_l`). |
 | `muzzle` | The part of the bone of the head, from its head, where the muzzle starts. |
-| `brow` | A template of an upright head (the primates): the part of the bone of the head at the brow. The muzzle is then the front of the face under the eyes, and the skull over the brow goes down by `cranium`. |
+| `brow` | A template of an upright head (the primates): the part of the bone of the head at the brow. The muzzle is then the front of the face under the eyes, and the skull over the brow goes down by `cranium`. A longer muzzle moves the front of the face to the front as a block, so the nose and the lips keep their depth. |
 
  The end of a bone of World is the head of the next bone of the
 body plan; else the end of the bone of the file; else the head of a
@@ -551,8 +551,9 @@ The coat is a base color and a color for each region, with soft edges
 this order, a later one over an earlier one: `back`, `belly`, `mane`
 (the top of the neck), `legs`, `socks` (the paws, the hands and the
 feet, and the low part of the legs), `head`, `face` (the muzzle; the
-face of a primate under the brow), `ears`, `tail` (all the tail),
-`tail_tip`.
+face of a primate under the brow), `lids` (the upper lids: over each
+eye, in front of it, as wide as the eye, from the faces of the role
+`eye`), `ears`, `tail` (all the tail), `tail_tip`.
 
 #### The shape space
 
@@ -668,7 +669,7 @@ The species now:
 | `alpaca` | quadruped | An alpaca: about 90 cm at the shoulder, a long neck, thick wool. | The template `alpaca`. |
 | `husky` | quadruped | A Siberian husky: about 55 cm at the withers, gray and white. | The template `husky`. |
 | `red_deer` | quadruped | A red deer stag: about 1.22 m at the shoulder, reddish-brown, large antlers. | The template `stag`. |
-| `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, dark hands and feet, on four limbs. | Numbers on the template `primate`: the arms 0.9 of the legs, a narrow chest, a low skull, a muzzle, a long thin tail, narrow hands. The colors from photos: a golden olive back, gray limbs, a pale belly. |
+| `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, pale upper lids, dark hands and feet, on four limbs. | Numbers on the template `primate`: the arms 0.9 of the legs, a narrow chest, a low skull, a muzzle, a long thin tail, narrow hands. The colors from photos: a golden olive back, gray limbs, a pale belly, pale lids. |
 | `rhesus_macaque` | primate | A rhesus macaque (khỉ vàng, Macaca mulatta): about 53 cm long without the tail, a tail of about 22 cm, a brown or gray coat with a more orange back and hips, a bare pink face, on four limbs. | Numbers on the template `primate`, as the macaque with a shorter tail; the regions `back` and `legs` for the orange back and hips. |
 | `pig_tailed_macaque` | primate | A northern pig-tailed macaque (khỉ đuôi lợn, Macaca leonina): about 55 cm long without the tail, a short thin tail of about 20 cm that curves up, a brown coat with a dark crown and a dark tail, on four limbs. | Numbers on the template `primate`, with a short tail that goes up (`tail_down` -40); the regions `head` and `tail`. |
 | `douc` | primate | A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus): about 62 cm long without the tail, a white tail as long as the body, a silver-gray coat, black thighs, red lower legs, a yellow-brown face, on four limbs. | Numbers on the template `primate`; the regions `legs`, `socks`, `face` and `tail`. The socks also color the hands: the hands are red, not black, and the white forearms are not there. |

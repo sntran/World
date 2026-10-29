@@ -191,10 +191,9 @@ and no logo on them.
   - Fur on the template of primates: the body of MakeHuman is smooth,
     so the macaque with no fur shells has the shape of its body only. A
     crest of hair on the head and long hair on the cheeks.
-  - The face of the macaque: next to photos, the nose and the lips still
-    have the shape of a person, and the muzzle is not a block with the
-    nose at its top. The pale upper lids of a macaque need a region of
-    the coat.
+  - The face of the macaque: next to photos, the bridge of the nose and
+    the lips still have the shape of a person (the low-poly face of
+    MakeHuman has few points there), and the eyes are farther apart.
   - Chickens and ducks (a template of birds), fish; the gaits eat, sit
     and run.
 - **Plants for Vũng Tàu (W12).** The idea "Plants from rules" above,

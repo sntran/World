@@ -3,7 +3,7 @@
   "plan": "primate",
   "template": "primate",
   "height": 0.5,
-  "about": "A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): a male about 50 cm long without the tail, a tail longer than the body, a gray-brown coat with a lighter belly, a bare pink-brown face, dark hands and feet. It walks on four limbs.",
+  "about": "A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): a male about 50 cm long without the tail, a tail longer than the body, a gray-brown coat with a lighter belly, a bare pink-brown face with pale upper lids, dark hands and feet. It walks on four limbs.",
   "shape": {
     "leg_length": 0.6,
     "arm_length": 0.88,
@@ -59,6 +59,11 @@
       120,
       112,
       98
+    ],
+    "lids": [
+      200,
+      190,
+      194
     ]
   },
   "gait": {
