@@ -215,12 +215,14 @@ defmodule World.HumanTest do
   end
 
   test "a group at a morning of exercise: a leader in the mirror, and people in rows who face the leader" do
-    group = World.People.exercise("tai_chi", count: 4, seed: 7)
-    assert group == World.People.exercise("tai_chi", count: 4, seed: 7)
-    refute group == World.People.exercise("tai_chi", count: 4, seed: 8)
+    # At far: a group at near takes four times as long to make.
+    make = fn seed -> Detail.with(:far, fn -> World.People.exercise("tai_chi", count: 4, seed: seed) end) end
+    group = make.(7)
+    assert group == make.(7)
+    refute group == make.(8)
     assert Enum.map(group.nodes, &elem(&1, 0)) == ~w(leader person_1 person_2 person_3 person_4)
 
-    scene = Build.scene(Detail.with(:far, fn -> World.People.exercise("tai_chi", count: 4, seed: 7) end), level: :far)
+    scene = Build.scene(group, level: :far)
     # One animation: the routine of the five people.
     [clip] = scene.animations
     assert clip.name == "tai_chi"
