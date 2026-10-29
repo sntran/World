@@ -12,6 +12,7 @@
   main { position: relative; }
   canvas { display: block; width: 100%; height: 100%; }
   label { display: block; margin: 8px 0 2px; }
+  input[type=checkbox] { width: auto; }
   select, input[type=range] { width: 100%; }
   table { border-collapse: collapse; width: 100%; font-size: 12px; }
   td { border-top: 1px solid var(--line); padding: 2px 4px; vertical-align: top; }
@@ -28,6 +29,7 @@
   <label for="level">Level of detail</label>
   <select id="level"><option value="">near</option><option value=".mid">mid</option><option value=".far">far</option></select>
   <p id="info"></p>
+  <label><input type="checkbox" id="fur"> Fur (shells from <code>_FUR</code> and the UVs)</label>
   <label for="animation">Animation</label>
   <select id="animation"><option value="">none</option></select>
   <div id="joints"></div>
@@ -41,6 +43,7 @@
 // a pose: &pose=fork:20,seat:60, and an animation at a time (seconds):
 // &animation=walk&t=0.3 (no t: the animation plays). A close view: &focus=0,2.4,0.9
 // (a point in the axes of World: x right, y front, z up) and &zoom=4.
+// The fur of an animal: &fur=1.
 // Serve the root of the repository: python3 -m http.server, then /review/.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -76,7 +79,9 @@ const wanted = params.get('model');
 for (const name of wanted && !list.includes(wanted) ? [...list, wanted] : list) modelSelect.add(new Option(name, name));
 modelSelect.value = params.get('model') ?? list[0];
 levelSelect.value = params.get('level') ?? '';
-modelSelect.onchange = levelSelect.onchange = () => load(true);
+const furBox = document.getElementById('fur');
+furBox.checked = params.get('fur') === '1';
+modelSelect.onchange = levelSelect.onchange = furBox.onchange = () => load(true);
 
 function resize() {
   const { clientWidth: w, clientHeight: h } = canvas.parentElement;
@@ -88,7 +93,7 @@ addEventListener('resize', resize);
 
 async function load(remember) {
   const name = modelSelect.value;
-  if (remember) history.replaceState(null, '', `?model=${name}&level=${levelSelect.value}`);
+  if (remember) history.replaceState(null, '', `?model=${name}&level=${levelSelect.value}${furBox.checked ? '&fur=1' : ''}`);
   const gltf = await loader.loadAsync(`${base}${name}${levelSelect.value}.glb`);
   if (current) scene.remove(current);
   current = gltf.scene;
@@ -99,7 +104,8 @@ async function load(remember) {
   document.getElementById('info').textContent = `Size: ${(extras.size ?? []).map((v) => v.toFixed(3)).join(' × ')} m. Triangles: ${tris}.`;
   joints(current);
   animations(gltf);
-  parts(name);
+  const rows = await parts(name);
+  if (furBox.checked) fur(current, rows[0]?.params?.uv_size ?? 1);
   frame(params.get('yaw'));
   window.READY = true;
 }
@@ -151,10 +157,48 @@ async function parts(name) {
   const res = await fetch(`${base}${name}.parts.json`);
   const table = document.getElementById('parts');
   table.replaceChildren();
-  for (const p of (await res.json()).parts) {
+  const rows = (await res.json()).parts;
+  for (const p of rows) {
     const row = table.insertRow();
     row.insertCell().textContent = p.name;
     Object.assign(row.insertCell(), { className: 'n', textContent: p.count });
+  }
+  return rows;
+}
+
+// The fur of an animal, as an app can draw it: 24 shells over the skin,
+// each out along the normal by a part of _FUR (the length of the fur, m).
+// A strand is a cell of 1.5 mm of the UVs (uv_size m for each unit); a
+// shell keeps the cells with a number over its part, so the strands get
+// thin to their tips.
+function fur(root, uvSize) {
+  const meshes = [];
+  root.traverse((o) => { if (o.isSkinnedMesh && o.geometry.attributes._fur) meshes.push(o); });
+  const shell = (base, k) => {
+    const m = base.clone();
+    m.defines = { ...m.defines, USE_UV: '' };
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, { uShell: { value: k }, uRepeat: { value: uvSize / 0.0015 } });
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float _fur; uniform float uShell; varying float vFur;')
+        .replace('#include <skinning_vertex>', '#include <skinning_vertex>\ntransformed += normalize(objectNormal) * _fur * uShell; vFur = _fur;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uShell; uniform float uRepeat; varying float vFur;')
+        .replace('void main() {', `void main() {
+  float h = fract(sin(dot(floor(vUv * uRepeat), vec2(12.9898, 78.233))) * 43758.5453);
+  if (uShell > 0.0 && (vFur < 0.0005 || h < uShell)) discard;`)
+        .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= mix(0.55, 1.0, uShell);');
+    };
+    return m;
+  };
+  for (const mesh of meshes) {
+    mesh.material = shell(mesh.material, 0);
+    for (let i = 1; i <= 24; i++) {
+      const s = new THREE.SkinnedMesh(mesh.geometry, shell(mesh.material, i / 24));
+      s.bind(mesh.skeleton, mesh.bindMatrix);
+      s.frustumCulled = false;
+      mesh.parent.add(s);
+    }
   }
 }
 

@@ -131,6 +131,37 @@ defmodule World.RigTest do
     assert Map.has_key?(prim["attributes"], "COLOR_0")
   end
 
+  test "a base mesh with UVs and fur: a seam splits a point, a smooth step makes the UVs of each face" do
+    # Each face of the cube has its own square of UV: each edge is a seam.
+    uvs =
+      for {f, k} <- Enum.with_index(@cube_faces),
+          do: Enum.map(Enum.zip(f, [{0, 0}, {1, 0}, {1, 1}, {0, 1}]), fn {_, {u, v}} -> {(u + 2 * k) / 12, v / 2} end)
+
+    fur = for {_, _, z} <- @cube_points, do: if(z < 0, do: 0.0, else: 0.02)
+    roles = [:eye | List.duplicate(:fur, 5)]
+    mesh = %{points: @cube_points, faces: @cube_faces, weights: %{}, smooth: 1, roles: roles, fur: fur, uvs: uvs}
+    f = Rig.figure("box", bones: bones(), mesh: Map.put(mesh, :colored, [:fur]))
+
+    [node] = for n <- f.nodes, n.primitives != [], do: n
+    [eye, skin] = node.primitives
+    # A face after one step is 3 × 3 points of its own: 9 for the eye and
+    # 45 for the 5 faces of fur (26 points with no seams).
+    assert length(eye.positions) == 9 and length(skin.positions) == 45
+    assert length(skin.uvs) == 45 and eye.fur == nil and length(skin.fur) == 45
+
+    # The center of a face has the mean UV of its corners; a point on a
+    # seam has one normal on its two sides; the fur is a mean too.
+    assert {1 / 24, 0.25} in eye.uvs
+
+    by_place = Enum.group_by(Enum.zip(eye.positions ++ skin.positions, eye.normals ++ skin.normals), &elem(&1, 0))
+    for {_, list} <- by_place, do: assert(length(Enum.uniq_by(list, &elem(&1, 1))) == 1)
+    assert Enum.min(skin.fur) == 0.0 and Enum.max(skin.fur) == 0.02 and 0.01 in skin.fur
+
+    attrs = World.GLBHelper.json(World.GLB.encode(World.Build.scene(f)))["meshes"] |> hd() |> Map.fetch!("primitives")
+    assert [%{"attributes" => %{"TEXCOORD_0" => _} = eye_attrs}, %{"attributes" => %{"_FUR" => _}}] = attrs
+    refute Map.has_key?(eye_attrs, "_FUR")
+  end
+
   test "a rig with a smooth skin: one surface, a thin tube, a sphere on the skin" do
     bones =
       bones() ++

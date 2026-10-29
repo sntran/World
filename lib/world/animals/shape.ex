@@ -36,8 +36,9 @@ defmodule World.Animals.Shape do
   | `horns` | 0 to 1.5 | The length of new horns, in lengths of the head (0: no new horns). |
   | `horn_spread` | 0 to 1 | 0: the horns go up and to the back (a goat); 1: out to the sides (a water buffalo). |
 
-  The coat: a color for each region of the skin, with soft edges between
-  the regions (`regions/3`, `colors/3`).
+  The coat: a color and a length of the fur for each region of the skin,
+  with soft edges between the regions (`regions/3`, `colors/3`,
+  `fur/3`).
   """
   alias World.Vec
 
@@ -340,12 +341,22 @@ defmodule World.Animals.Shape do
   `regions/0`, as much as the point is in the region.
   """
   def colors(regions, base, coat) do
-    n = length(regions["back"])
+    rgb = fn c -> List.to_tuple(Enum.map(c, &(&1 / 1))) end
+    blend(regions, rgb.(base), Map.new(coat, fn {r, c} -> {r, rgb.(c)} end), &Vec.lerp/3)
+  end
 
-    Enum.reduce(@regions, List.duplicate(List.to_tuple(Enum.map(base, &(&1 / 1))), n), fn r, colors ->
-      case coat[r] do
-        nil -> colors
-        c -> Enum.zip_with(colors, regions[r], fn col, m -> Vec.lerp(col, List.to_tuple(Enum.map(c, &(&1 / 1))), m) end)
+  @doc """
+  The length of the fur at each point (m): the `base` length, and over
+  it the length of each region of `lengths` (a region to a length), as
+  `colors/3`.
+  """
+  def fur(regions, base, lengths), do: blend(regions, base / 1, lengths, fn a, b, m -> a + (b - a) * m end)
+
+  defp blend(regions, base, values, mix) do
+    Enum.reduce(@regions, List.duplicate(base, length(regions["back"])), fn r, list ->
+      case values[r] do
+        nil -> list
+        v -> Enum.zip_with(list, regions[r], &mix.(&1, v, &2))
       end
     end)
   end

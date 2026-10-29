@@ -253,6 +253,23 @@ defmodule World.AnimalsTest do
     assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
     assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
     assert m.params["walk_speed"] == 0.58
+
+    # The UVs and the fur: the fur from the species (no fur on the face,
+    # 2.5 cm on the coat), on the fur only (not on the eyes); one unit of
+    # UV is about 1.3 m of skin.
+    [eye] = for n <- scene.nodes, p <- n.primitives, p.material == :eye, do: p
+    [fur] = for n <- scene.nodes, p <- n.primitives, p.material == :fur, do: p
+    assert eye.fur == nil and length(eye.uvs) == length(eye.positions)
+    assert length(fur.fur) == length(fur.positions) and length(fur.uvs) == length(fur.positions)
+    assert Enum.min(fur.fur) == 0.0
+    assert_in_delta Enum.max(fur.fur), 0.025, 1.0e-9
+    assert m.params["uv_size"] > 1.0 and m.params["uv_size"] < 1.6
+    big = Animals.animal("macaque", size: 2.0)
+
+    assert_in_delta Enum.max(hd(for n <- Build.scene(big).nodes, p <- n.primitives, p.material == :fur, do: p).fur),
+                    0.05,
+                    1.0e-9
+
     s = m.skeleton
     rest = s.rest
 

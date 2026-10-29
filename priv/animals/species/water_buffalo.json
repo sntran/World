@@ -39,7 +39,14 @@
     "wag": 0.8
   },
   "sources": [
-    "A swamp buffalo of Việt Nam (trâu): 1.2 to 1.4 m at the withers, 350 to 450 kg, dark gray, horns that curve out and back. The template is a bull without its horns; the numbers of the shape are a guess from photos."
+    "A swamp buffalo of Việt Nam (trâu): 1.2 to 1.4 m at the withers, 350 to 450 kg, dark gray, horns that curve out and back. The template is a bull without its horns; the numbers of the shape are a guess from photos.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
   ],
-  "markings": {}
+  "markings": {},
+  "fur": {
+    "coat": 0.003,
+    "face": 0.002,
+    "socks": 0.002,
+    "tail_tip": 0.03
+  }
 }

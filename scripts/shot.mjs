@@ -4,6 +4,7 @@
 //   node scripts/shot.mjs NAME OUT.png [level] [yaw] [pose] [animation] [t]
 //
 // FOCUS=x,y,z and ZOOM=4 give a close view of a point (the review page).
+// FUR=1 draws the fur of an animal.
 //
 // The level is "" (near), ".mid" or ".far".
 //
@@ -19,7 +20,7 @@ const port = process.env.PORT ?? '8820';
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'], executablePath: process.env.CHROMIUM });
 const page = await browser.newPage({ viewport: { width: 1100, height: 700 } });
 page.on('pageerror', (e) => console.log('error', String(e)));
-await page.goto(`http://127.0.0.1:${port}/review/?model=${name}&level=${level}&yaw=${yaw}&pose=${pose}&animation=${animation}&t=${t}${process.env.FOCUS ? `&focus=${process.env.FOCUS}&zoom=${process.env.ZOOM ?? 4}` : ''}`);
+await page.goto(`http://127.0.0.1:${port}/review/?model=${name}&level=${level}&yaw=${yaw}&pose=${pose}&animation=${animation}&t=${t}${process.env.FOCUS ? `&focus=${process.env.FOCUS}&zoom=${process.env.ZOOM ?? 4}` : ''}${process.env.FUR ? '&fur=1' : ''}`);
 await page.waitForFunction(() => window.READY === true, null, { timeout: 120000 });
 await page.waitForTimeout(500);
 await page.screenshot({ path: out });

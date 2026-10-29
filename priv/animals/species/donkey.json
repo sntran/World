@@ -8,9 +8,16 @@
     "wag": 0.8
   },
   "sources": [
-    "A standard donkey: 0.9 to 1.2 m at the withers."
+    "A standard donkey: 0.9 to 1.2 m at the withers.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
   ],
   "shape": {},
   "markings": {},
-  "colors": {}
+  "colors": {},
+  "fur": {
+    "coat": 0.015,
+    "face": 0.006,
+    "socks": 0.006,
+    "ears": 0.01
+  }
 }

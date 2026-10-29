@@ -142,6 +142,14 @@ defmodule World.Animals.ShapeTest do
     # The face is the front of the head; the hands and the feet are the
     # socks.
     regions = Shape.regions(b, p, w)
+
+    # The fur: the length of the coat, and over it the length of each
+    # region (no fur on the face).
+    fur = Shape.fur(regions, 0.03, %{"face" => 0.0})
+    assert length(fur) == length(p) and Enum.max(fur) == 0.03
+
+    for {l, m} <- Enum.zip(fur, regions["face"]), m == 1.0, do: assert(l == 0.0)
+
     face = for {m, i} <- Enum.with_index(regions["face"]), m > 0.5, do: elem(Enum.at(p, i), 1)
     assert face != [] and Enum.min(face) > elem(bone(b, "head").head, 1)
     hand = for {i, k} <- w["hand_l"], k > 0.9, do: Enum.at(regions["socks"], i)

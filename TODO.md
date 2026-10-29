@@ -183,15 +183,19 @@ and no logo on them.
   - A shape space learned from meshes (part B): fit the templates and
     CC0 scans to one template, and keep the shape changes that the
     numbers do not give (PCA).
-  - UV coordinates and a map of fur on the template, so an app can add
-    fur (shells) that fits each species.
+  - The fur (`_FUR`, the UVs): more regions for its length (the mane
+    and the tail of a horse, the tail of a macaque, which has short
+    hair); fur on the dark legs of the fox (the material `dark` is also
+    the nose and the hooves, so it has no fur now); the lengths from
+    measurements, not from photos; a direction of the fur for each point
+    in place of +v of the UVs; the fur in the apps (Phượt, Vũng Tàu).
   - More primates on the template of primates: a rhesus macaque, a
     pig-tailed macaque, a gibbon, a langur (douc). Hands that grip and
     feet with a thumb that grips (the feet of the template are the feet
     of a person); a climb; a jump.
   - Fur on the template of primates: the body of MakeHuman is smooth,
-    so the macaque has the shape of its body with no fur. A crest of
-    hair on the head and long hair on the cheeks.
+    so the macaque with no fur shells has the shape of its body only. A
+    crest of hair on the head and long hair on the cheeks.
   - The face of the macaque: next to photos, the nose and the lips still
     have the shape of a person, and the muzzle is not a block with the
     nose at its top. The pale upper lids of a macaque need a region of

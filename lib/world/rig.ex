@@ -38,7 +38,9 @@ defmodule World.Rig do
   `{point, weight}`, `roles` the material of each face, or one `material`
   for all, `colors` an `{r, g, b}` (0 to 255) for each point: the
   colors of the vertices, that the color of the material multiplies;
-  `colored` the roles that have them, all by default),
+  `fur` a length for each point (m: the fur of the point, `_FUR` in the
+  GLB); `colored` the roles that have colors and fur, all by default;
+  `uvs` a list for each face of a `{u, v}` for each corner),
   `parts` (a list of `{material, bone, points, triangles}`: a shape on
   one bone, each point `{position, normal}` at rest: horns), `blend` and `step` (a smooth skin,
   `World.Blob`: the width of the blend of two bodies, and the step of
@@ -223,37 +225,51 @@ defmodule World.Rig do
         acc -> Map.update(acc, i, %{index[bone] => w}, &Map.put(&1, index[bone], w))
       end
 
-    # The color of a point (when the mesh has colors) goes with its
-    # weights in the smooth steps, as the keys :r, :g and :b.
-    colors = Map.get(mesh, :colors)
+    # The color and the length of the fur of a point (when the mesh has
+    # them) go with its weights in the smooth steps, as the keys :r, :g,
+    # :b and :fur.
+    {colors, fur} = {Map.get(mesh, :colors), Map.get(mesh, :fur)}
     color = fn i -> if colors, do: Enum.at(colors, i) |> then(fn {r, g, b} -> %{r: r, g: g, b: b} end), else: %{} end
+    fur_of = fn i -> if fur, do: %{fur: Enum.at(fur, i)}, else: %{} end
 
     start =
       points
       |> Enum.with_index()
-      |> Enum.map(fn {p, i} -> {Vec.float(p), Map.merge(Map.get(by_point, i, %{}), color.(i))} end)
+      |> Enum.map(fn {p, i} ->
+        {Vec.float(p), Map.get(by_point, i, %{}) |> Map.merge(color.(i)) |> Map.merge(fur_of.(i))}
+      end)
 
     steps = max(Map.get(mesh, :smooth, 0) - %{near: 0, mid: 1, far: 2}[Detail.level()], 0)
     roles = Map.get(mesh, :roles) || List.duplicate(Map.get(mesh, :material, :fur), length(faces))
+    uvs = Map.get(mesh, :uvs) || Enum.map(faces, &List.duplicate(nil, length(&1)))
 
     # Each step makes a face of n sides into n faces, in the order of the
-    # faces: each new face keeps the role of its face.
-    {points, faces, roles} =
-      Enum.reduce(List.duplicate(1, steps), {start, faces, roles}, fn 1, {points, faces, roles} ->
+    # faces: each new face keeps the role of its face, and the UVs of its
+    # corners are means of the UVs of the corners of its face (the corner,
+    # the middles of its two edges, the center).
+    {points, faces, roles, uvs} =
+      Enum.reduce(List.duplicate(1, steps), {start, faces, roles, uvs}, fn 1, {points, faces, roles, uvs} ->
         {points, new} = World.Subdivision.smooth(points, faces, 1)
-        {points, new, Enum.flat_map(Enum.zip(faces, roles), fn {f, r} -> List.duplicate(r, length(f)) end)}
+
+        {points, new, Enum.flat_map(Enum.zip(faces, roles), fn {f, r} -> List.duplicate(r, length(f)) end),
+         split_uvs(uvs)}
       end)
 
     places = points |> Enum.map(&elem(&1, 0)) |> List.to_tuple()
     fan = fn [a | rest] -> rest |> Enum.chunk_every(2, 1, :discard) |> Enum.map(fn [b, c] -> [a, b, c] end) end
-    tris = faces |> Enum.zip(roles) |> Enum.flat_map(fn {f, r} -> Enum.map(fan.(f), &{&1, r}) end)
+
+    # The corners of each triangle: a point and its UV (nil with no UVs).
+    tris =
+      [faces, uvs, roles]
+      |> Enum.zip()
+      |> Enum.flat_map(fn {f, u, r} -> Enum.map(fan.(Enum.zip(f, u)), &{&1, r}) end)
 
     # The normal of a point: the sum of the normals of its faces (each as
     # large as its face).
     normals =
-      Enum.reduce(tris, %{}, fn {[a, b, c] = t, _}, acc ->
+      Enum.reduce(tris, %{}, fn {[{a, _}, {b, _}, {c, _}] = t, _}, acc ->
         n = Vec.cross(Vec.sub(elem(places, b), elem(places, a)), Vec.sub(elem(places, c), elem(places, a)))
-        Enum.reduce(t, acc, &Map.update(&2, &1, n, fn m -> Vec.add(m, n) end))
+        Enum.reduce(t, acc, fn {i, _}, acc -> Map.update(acc, i, n, &Vec.add(&1, n)) end)
       end)
 
     verts =
@@ -265,27 +281,57 @@ defmodule World.Rig do
 
         {p, Vec.norm(Map.get(normals, i, {0.0, 0.0, 1.0})),
          {List.to_tuple(Enum.map(top, &elem(&1, 0))), List.to_tuple(Enum.map(top, &elem(&1, 1)))},
-         if(colors, do: {ws.r, ws.g, ws.b})}
+         if(colors, do: {ws.r, ws.g, ws.b}), nil, if(fur, do: ws.fur)}
       end
       |> List.to_tuple()
 
-    # One primitive for each role, with the points of its faces only.
+    # One primitive for each role, with the points of its faces only: one
+    # vertex for each point and UV (a point on a seam of the UVs is two
+    # vertices).
     prims =
       tris
       |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
       |> Enum.sort()
       |> Enum.map(fn {role, ts} ->
-        used = ts |> List.flatten() |> Enum.uniq() |> Enum.sort()
+        used = ts |> Enum.concat() |> Enum.uniq() |> Enum.sort()
         at = used |> Enum.with_index() |> Map.new()
-        # The colors of the points only on the roles of `colored` (all by
-        # default).
+        # The colors and the fur of the points only on the roles of
+        # `colored` (all by default).
         keep? = role in Map.get(mesh, :colored, [role])
-        points = for i <- used, do: if(keep?, do: elem(verts, i), else: put_elem(elem(verts, i), 3, nil))
+
+        points =
+          for {i, uv} <- used do
+            v = put_elem(elem(verts, i), 4, uv)
+            if keep?, do: v, else: v |> put_elem(3, nil) |> put_elem(5, nil)
+          end
+
         join(role, [{points, Enum.map(ts, fn t -> Enum.map(t, &at[&1]) end)}])
       end)
 
-    triangles = for {[a, b, c], _} <- tris, do: {elem(places, a), elem(places, b), elem(places, c)}
+    triangles = for {[{a, _}, {b, _}, {c, _}], _} <- tris, do: {elem(places, a), elem(places, b), elem(places, c)}
     {prims, &hit(triangles, &1, &2)}
+  end
+
+  # The UVs of the corners of the faces after one smooth step, in the
+  # order of `World.Subdivision`: for each corner of a face, the corner,
+  # the middle of the next edge, the center, the middle of the last edge.
+  defp split_uvs(uvs) do
+    Enum.flat_map(uvs, fn u ->
+      m = length(u)
+      center = mid(u)
+
+      for j <- 0..(m - 1) do
+        {prev, here, next} = {Enum.at(u, rem(j - 1 + m, m)), Enum.at(u, j), Enum.at(u, rem(j + 1, m))}
+        [here, mid([here, next]), center, mid([prev, here])]
+      end
+    end)
+  end
+
+  defp mid([nil | _]), do: nil
+
+  defp mid(uvs) do
+    n = length(uvs)
+    {Enum.sum(Enum.map(uvs, &elem(&1, 0))) / n, Enum.sum(Enum.map(uvs, &elem(&1, 1))) / n}
   end
 
   # The nearest point of the triangles on a ray (Möller and Trumbore), or
@@ -364,7 +410,15 @@ defmodule World.Rig do
       indices: indices,
       joints: Enum.map(points, &elem(elem(&1, 2), 0)),
       weights: Enum.map(points, &elem(elem(&1, 2), 1)),
-      colors: if(match?({_, _, _, {_, _, _}}, hd(points)), do: Enum.map(points, &elem(&1, 3)))
+      colors: field(points, 3),
+      uvs: field(points, 4),
+      fur: field(points, 5)
     }
+  end
+
+  # A value of the points (the color, the UV, the length of the fur), when
+  # the points have it.
+  defp field([first | _] = points, k) do
+    if tuple_size(first) > k and elem(first, k) != nil, do: Enum.map(points, &elem(&1, k))
   end
 end

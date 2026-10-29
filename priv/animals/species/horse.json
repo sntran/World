@@ -8,9 +8,16 @@
     "wag": 0.8
   },
   "sources": [
-    "The horses of the north of Việt Nam are small: about 1.2 to 1.4 m at the withers. The template is a horse."
+    "The horses of the north of Việt Nam are small: about 1.2 to 1.4 m at the withers. The template is a horse.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
   ],
   "shape": {},
   "markings": {},
-  "colors": {}
+  "colors": {},
+  "fur": {
+    "coat": 0.008,
+    "face": 0.004,
+    "socks": 0.004,
+    "ears": 0.004
+  }
 }

@@ -20,13 +20,17 @@ defmodule World.Animals do
   withers for a quadruped, the length of the head and the body for a
   primate), `shape` (numbers), `colors` (a role to its color; `fur` is
   the base color of the coat), `markings` (a region of the coat to its
-  color), `without` (roles whose faces go) and `gait`. The keys of a
+  color), `fur` (the length of the fur, m: `coat` and a region to its
+  length), `without` (roles whose faces go) and `gait`. Each animal has
+  the UVs of its template (`World.Animals.UV`), `_FUR` on its fur, and
+  `uv_size` in its params (the length of one unit of UV on the skin, m).
+  The keys of a
   template: `mesh`, `bones` (a bone of World to the bones of the mesh),
   `materials` (a material of the mesh to a role), `smooth`, `parents`,
   `muzzle` and `brow`.
   """
   alias World.{Frame, Rig, Vec}
-  alias World.Animals.Shape
+  alias World.Animals.{Shape, UV}
   alias World.People.{Pose, Skeleton}
 
   @root Path.join([__DIR__, "..", "..", "priv", "animals"])
@@ -102,11 +106,16 @@ defmodule World.Animals do
     # the role of each.
     without = Enum.map(Map.get(s, "without", []), &@roles[&1])
 
-    {faces, roles} =
-      data["faces"]
-      |> Enum.zip(Enum.map(data["face_materials"], &material_role(t, data, &1)))
-      |> Enum.reject(fn {_, role} -> role in without end)
-      |> Enum.unzip()
+    # The UVs of the template (`World.Animals.UV`), at rest.
+    {faces, roles, uvs} =
+      [
+        data["faces"],
+        Enum.map(data["face_materials"], &material_role(t, data, &1)),
+        UV.charts(bones, points, weights, data["faces"])
+      ]
+      |> Enum.zip()
+      |> Enum.reject(fn {_, role, _} -> role in without end)
+      |> unzip3()
 
     # The colors: of the materials of the mesh, of the template, of the
     # species, and the coat of the order.
@@ -122,6 +131,7 @@ defmodule World.Animals do
     regions = Shape.regions(bones, points, weights)
     {bones, points} = Shape.apply(bones, points, weights, shape, t)
     colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
+    fur = if f = s["fur"], do: Shape.fur(regions, f["coat"], Map.delete(f, "coat"))
 
     scale = s["height"] * k / plan.height(points, weights)
     at = &Vec.scale(&1, scale)
@@ -171,6 +181,8 @@ defmodule World.Animals do
         smooth: Map.get(t, "smooth", 0),
         roles: roles,
         colors: colors,
+        fur: fur && Enum.map(fur, &(&1 * k)),
+        uvs: uvs,
         colored: [:fur, :marking]
       },
       limbs: plan.limbs(by),
@@ -195,7 +207,7 @@ defmodule World.Animals do
       pose: &plan.pose/1,
       kind: :animal,
       params:
-        %{"coat" => coat, "size" => k}
+        %{"coat" => coat, "size" => k, "uv_size" => Float.round(UV.size(points, faces, uvs), 3)}
         |> Map.merge(plan.speeds(k * s["height"], Map.get(s, "gait", %{})))
         |> Map.merge(speeds(clips, scale)),
       sources: [data["source"] <> " " <> data["license"], s["about"] | s["sources"]]
@@ -308,6 +320,8 @@ defmodule World.Animals do
   end
 
   # The role of a material of the mesh (by its index).
+  defp unzip3(list), do: {Enum.map(list, &elem(&1, 0)), Enum.map(list, &elem(&1, 1)), Enum.map(list, &elem(&1, 2))}
+
   defp material_role(s, data, i) do
     name = data["materials"] |> Enum.at(i) |> Map.fetch!("name")
     @roles[Map.get(s["materials"], name, "fur")]

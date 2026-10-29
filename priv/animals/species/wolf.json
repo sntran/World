@@ -8,9 +8,18 @@
     "wag": 0.5
   },
   "sources": [
-    "A gray wolf (Canis lupus): 66 to 92 cm at the shoulder, 105 to 160 cm long without the tail."
+    "A gray wolf (Canis lupus): 66 to 92 cm at the shoulder, 105 to 160 cm long without the tail.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
   ],
   "shape": {},
   "markings": {},
-  "colors": {}
+  "colors": {},
+  "fur": {
+    "coat": 0.05,
+    "belly": 0.03,
+    "face": 0.012,
+    "socks": 0.015,
+    "ears": 0.01,
+    "tail_tip": 0.07
+  }
 }

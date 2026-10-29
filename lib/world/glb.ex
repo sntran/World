@@ -134,6 +134,13 @@ defmodule World.GLB do
         {attrs, buf}
       end
 
+    # The length of the fur of each point (m), for an app that draws fur:
+    # an attribute of the application (its name starts with _).
+    {attrs, buf} =
+      if p.fur,
+        do: with_attr(attrs, "_FUR", floats(buf, Enum.map(p.fur, &{&1 / 1}), "SCALAR", 34962, false)),
+        else: {attrs, buf}
+
     {ind, buf} = indices(buf, p.indices, length(p.positions))
     {%{"attributes" => attrs, "indices" => ind, "material" => Map.fetch!(mat_index, p.material)}, buf}
   end

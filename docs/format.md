@@ -488,6 +488,7 @@ The species is `priv/animals/species/NAME.json`:
 | `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings`: a region of the coat to its color; they paint the faces of `fur` and `marking`. The option `coat` of the order is the color of `fur`. |
 | `without` | The roles whose faces go (`["horn"]`: the bull with no horns of the file, for horns of World). |
 | `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped; the length of the head and the body (from the top of the head to the lowest point of the pelvis, when it stands) for a primate. The option `size` of the order scales it. |
+| `fur` | The length of the fur, in meters: `coat` for all the coat, and a region of the coat to its length (`"face": 0` for a bare face), mixed as the colors of `markings`. The option `size` of the order scales it. With no `fur`, the GLB has no `_FUR`. |
 | `gait` | The numbers of the gaits of the body plan that are code: for four legs, `wag` (the time of a wag, s); for a primate, `period` (the time of a step, s), `stride` and `lift` (parts of the length of the animal). |
 
 The keys of a template:
@@ -537,6 +538,31 @@ this order, a later one over an earlier one: `back`, `belly`, `legs`,
 `socks` (the paws, the hands and the feet, and the low part of the
 legs), `head`, `face` (the muzzle; the face of a primate under the
 brow), `ears`, `tail_tip`.
+
+#### The UVs and the fur
+
+Each template has UV coordinates (`TEXCOORD_0`), from
+`World.Animals.UV`, for a texture that repeats (the noise of fur), not
+for a painted texture. Each face goes to the bone that moves it most;
+each bone has six charts, the sides of a box around it (its axes x and
+z, and its two ends), and a face goes to the chart of the axis nearest
+to its normal. So no face turns over, and a length on the skin is at
+most 1.73 times its length in UV, in one direction. One scale for all
+the charts: `uv_size` in the `params` of the parts list is the length of
+one unit of UV on the skin, in meters (about 1.3 for the macaque, 3 for
+the wolf, 4 for the horse). On the four sides of a bone, +v goes along
+the bone: to the back on the body, the neck and the head; away from the
+body on the legs, the tail and the ears. So +v is the direction in
+which the fur lies. A point on a seam of the UVs is two vertices with
+one normal.
+
+`_FUR` (an attribute of the application, a float for each vertex) is
+the length of the fur at the point, in meters, from the `fur` of the
+species, on the materials `fur` and `marking` only. An app can draw
+the fur as shells: copies of the skin, each out along the normal by a
+part of `_FUR`, that keep the strands of a noise in UV (a strand of
+1.5 mm is `uv_size / 0.0015` cells for each unit of UV). The review page
+does this with its switch "Fur" (`&fur=1`).
 
 The species now:
 
@@ -625,7 +651,8 @@ A new species: write `priv/animals/species/NAME.json` with the
 template of the nearest body, the numbers of its shape, its colors,
 its height, from the sizes of the animal and from photos.
 Build it (`mix world.build`), and look at it next to photos, at rest
-and in each animation. Add a model to the catalog (`World.Catalog`)
+and in each animation, and with its fur (`scripts/shot.mjs` with
+`FUR=1`). Add a model to the catalog (`World.Catalog`)
 and a test. An order can do the same with no file: the options `shape`
 and `markings` over a species.
 
