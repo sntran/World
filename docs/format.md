@@ -666,14 +666,28 @@ The clips of a template are in `priv/animals/clips/NAME.json` (from
 `scripts/gltf_clips.exs`, below): for each clip its `length` and
 `times` (s), the turn of each bone of World at each time (a quaternion
 in the axes of World, from the pose at rest), the move of the pelvis
-(in the units of the mesh) and the `speed` (in the units of the mesh
-for each second). On an animal (`World.Animals.retarget/5`), each bone
-turns from its rest by the turn of the clip, the pelvis moves by the
-move of the clip times the scale of the animal, and the other bones
-keep their place on their parent: the bones keep the lengths of the
-shape. The legs of a shape are not the legs of the file: when the
-lowest end of the feet goes below the lowest end at rest, all the
-animal goes up, so no foot goes into the ground.
+(in the units of the mesh), the `speed` (in the units of the mesh for
+each second) and `feet`: for each foot, the height of its paw in the
+file over its height at rest at each time (in the units of the mesh;
+the paw is the IK bone of the file, the place that the artist gave to
+the paw). On an animal (`World.Animals.retarget/5`), each bone turns
+from its rest by the turn of the clip, the pelvis moves by the move of
+the clip times the scale of the animal, and the other bones keep their
+place on their parent: the bones keep the lengths of the shape. The
+legs of a shape are not the legs of the file, so the feet go into the
+ground or above it. Then:
+
+1. A foot is on the ground at the times when its paw in the file is
+   less than 1% of the height of the pelvis above its rest.
+2. The body goes down by the mean height of the feet on the ground over
+   their paws (the lowest point of the skin of a foot, over that point
+   at rest). At a time with no foot on the ground (in a gallop), this
+   move changes linearly in time. When a leg on the ground is too short
+   for its place, the body goes down more, until the leg is straight.
+3. Each foot goes to the height of its paw (at the scale of the
+   animal, never below the ground): the upper and the lower bone of the
+   leg turn (two-bone inverse kinematics, with the knee in the plane of
+   its bend), and the foot keeps its turn.
 
 A primate (`World.Animals.Primate`): its bones have the names of the
 bones of a person (`pelvis`, `spine_01` to `spine_03`, `neck_01`,
@@ -760,7 +774,9 @@ The turn of a bone of World is the mean turn of the bones of the file
 that give it their weights (each by its weights, from the mesh of the
 template); a bone with no weights has the turn of its own bone of the
 file. The speed is the middle value of the speeds to the back of the
-paws on the ground.
+paws on the ground. The height of the paw of a foot is the height of
+the IK bone of the file in its list of bones (`IKFrontLeg.L`,
+`IKBackLeg.L`, ...), or of its first bone.
 
 `scripts/primate_template.exs` makes the mesh of the template of
 primates from the data of MakeHuman in `priv/makehuman/`:

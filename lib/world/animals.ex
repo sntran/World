@@ -215,7 +215,7 @@ defmodule World.Animals do
       animations:
         for a <- names do
           if clip = clips[a],
-            do: &retarget(a, &1, clip, scale, plan.feet()),
+            do: &retarget(a, &1, clip, scale, soles(plan, points, weights)),
             else: &plan.animation(a, &1, k * s["height"], Map.get(s, "gait", %{}))
         end,
       pose: &plan.pose/1,
@@ -285,39 +285,92 @@ defmodule World.Animals do
 
   @doc """
   A clip of a template on the bones of an animal (its skeleton, the
-  meters for each unit of the mesh of the template, and the bones of its
-  feet). Each bone turns from its rest by the turn of its bones of the
-  file, in the axes of the animal; the pelvis also moves by its move of
-  the file; the other bones keep their place on their parent, so the
-  bones keep their lengths of the shape. The legs of the shape are not
-  the legs of the file: when the lowest end of the feet goes below the
-  lowest end at rest, all the animal goes up, so no foot goes into the
-  ground.
+  meters for each unit of the mesh of the template, and the points of
+  the skin of each foot at rest). Each bone turns from its rest by the
+  turn of its bones of the file, in the axes of the animal; the pelvis
+  also moves by its move of the file; the other bones keep their place
+  on their parent, so the bones keep their lengths of the shape.
+
+  The legs of the shape are not the legs of the file, so the feet go
+  into the ground or above it. The height of a foot is the lowest point
+  of its skin, over that point at rest. The clips loop (the last time is
+  the first), and the steps are:
+
+  1. The clip gives the height of the paw of each foot in the file over
+     its height at rest (`feet`). A foot is on the ground at the times
+     when its paw is less than 1% of the height of the pelvis above it.
+  2. The body goes down by the mean height of the feet on the ground
+     over the heights of their paws. At a time with no foot on the
+     ground (in a gallop), the move changes linearly in time between the
+     times around it. When a leg on the ground is too short for its
+     place, the body goes down more, until the leg is straight.
+  3. Each foot goes to the height of its paw (at the scale of the
+     animal, and never below the ground): the upper and the lower bone
+     of its leg turn (two-bone inverse kinematics, the knee in the plane
+     of its bend), and the foot keeps its turn.
   """
-  def retarget(name, %Skeleton{bones: bones} = s, clip, scale, feet) do
-    low = fn world -> feet |> Enum.map(&elem(Skeleton.tip(s, world, &1), 2)) |> Enum.min() end
-    ground = low.(s.rest)
+  def retarget(name, %Skeleton{bones: bones} = s, clip, scale, soles) do
+    feet = soles |> Map.keys() |> Enum.sort()
+    by = Map.new(bones, &{&1.name, &1})
+    # The points of the skin of each foot in the axes of the foot.
+    local = Map.new(soles, fn {f, ps} -> {f, Enum.map(ps, &Frame.point(Frame.invert(s.rest[f]), &1))} end)
+    low = fn world, f -> local[f] |> Enum.map(&elem(Frame.point(world[f], &1), 2)) |> Enum.min() end
+    h = elem(s.rest["pelvis"].at, 2)
+
+    moved =
+      for k <- 0..(length(clip["times"]) - 1) do
+        Enum.reduce(bones, %{}, fn b, w ->
+          rest = s.rest[b.name]
+          # The file has 4 decimals: a unit quaternion again.
+          [qx, qy, qz, qw] = Enum.at(clip["bones"][b.name], k)
+          l = :math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw)
+          q = Frame.from_quaternion({qx / l, qy / l, qz / l, qw / l}, {0.0, 0.0, 0.0})
+
+          at =
+            if b.parent,
+              do: Frame.point(w[b.parent], s.local[b.name].at),
+              else: Vec.add(rest.at, Vec.scale(List.to_tuple(Enum.at(clip["pelvis"], k)), scale))
+
+          Map.put(w, b.name, %Frame{x: Frame.dir(q, rest.x), y: Frame.dir(q, rest.y), z: Frame.dir(q, rest.z), at: at})
+        end)
+      end
+
+    # The times of the loop (the last time is the first). The height of
+    # each foot over its height at rest (in the clip, and of its paw in
+    # the file, never below the ground), and the times when its paw is on
+    # the ground.
+    loop = Enum.drop(moved, -1)
+    up = Map.new(feet, fn f -> {f, Enum.map(loop, &(low.(&1, f) - low.(s.rest, f)))} end)
+    lift = Map.new(feet, fn f -> {f, clip["feet"][f] |> Enum.drop(-1) |> Enum.map(&max(&1 * scale, 0.0))} end)
+    on = Map.new(feet, fn f -> {f, Enum.map(lift[f], &(&1 <= 0.01 * h))} end)
+    error = fn f, k -> Enum.at(up[f], k) - Enum.at(lift[f], k) end
+
+    body =
+      loop
+      |> Enum.with_index()
+      |> Enum.map(fn {_, k} ->
+        case for(f <- feet, Enum.at(on[f], k), do: error.(f, k)) do
+          [] -> nil
+          errors -> -Enum.sum(errors) / length(errors)
+        end
+      end)
+      |> between()
+
+    # A leg on the ground that is too short to go to its place: the body
+    # goes down more, until the leg is straight.
+    body =
+      for {{w, b}, k} <- Enum.with_index(Enum.zip(loop, body)) do
+        short = for f <- feet, Enum.at(on[f], k), do: short(w, by, f, -(error.(f, k) + b))
+        b - Enum.max([0.0 | short])
+      end
+
+    by_foot = Map.new(feet, fn f -> {f, for({b, k} <- Enum.with_index(body), do: -(error.(f, k) + b))} end)
 
     frames =
-      for k <- 0..(length(clip["times"]) - 1) do
-        moved =
-          Enum.reduce(bones, %{}, fn b, w ->
-            rest = s.rest[b.name]
-            # The file has 4 decimals: a unit quaternion again.
-            [qx, qy, qz, qw] = Enum.at(clip["bones"][b.name], k)
-            l = :math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw)
-            q = Frame.from_quaternion({qx / l, qy / l, qz / l, qw / l}, {0.0, 0.0, 0.0})
-
-            at =
-              if b.parent,
-                do: Frame.point(w[b.parent], s.local[b.name].at),
-                else: Vec.add(rest.at, Vec.scale(List.to_tuple(Enum.at(clip["pelvis"], k)), scale))
-
-            Map.put(w, b.name, %Frame{x: Frame.dir(q, rest.x), y: Frame.dir(q, rest.y), z: Frame.dir(q, rest.z), at: at})
-          end)
-
-        up = max(ground - low.(moved), 0.0)
-        world = Map.new(moved, fn {bone, f} -> {bone, %{f | at: Vec.add(f.at, {0.0, 0.0, up})}} end)
+      for {w, k} <- Enum.with_index(moved) do
+        k = rem(k, length(loop))
+        w = Map.new(w, fn {bone, f} -> {bone, %{f | at: Vec.add(f.at, {0.0, 0.0, Enum.at(body, k)})}} end)
+        world = Enum.reduce(feet, w, &reach(&2, bones, by, &1, Enum.at(by_foot[&1], k)))
 
         Map.new(bones, fn b ->
           {b.name, if(b.parent, do: Frame.compose(Frame.invert(world[b.parent]), world[b.name]), else: world[b.name])}
@@ -325,6 +378,89 @@ defmodule World.Animals do
       end
 
     %{name: name, channels: Pose.channels(bones, s.local, frames, clip["times"])}
+  end
+
+  # The points of the skin of each foot: the points that it moves most.
+  defp soles(plan, points, weights) do
+    points = List.to_tuple(points)
+    Map.new(plan.feet(), fn f -> {f, for({i, w} <- weights[f], w >= 0.5, do: elem(points, i))} end)
+  end
+
+  # The values of a loop with a value at some times (nil at the others):
+  # a value at each time, linear in time between the values around it.
+  defp between(values) do
+    n = length(values)
+    known = for {v, k} <- Enum.with_index(values), v != nil, do: {k, v}
+
+    for {v, k} <- Enum.with_index(values) do
+      if v do
+        v
+      else
+        {k0, a} = Enum.min_by(known, fn {i, _} -> rem(k - i + n, n) end)
+        {k1, b} = Enum.min_by(known, fn {i, _} -> rem(i - k + n, n) end)
+        {back, ahead} = {rem(k - k0 + n, n), rem(k1 - k + n, n)}
+        a + (b - a) * back / (back + ahead)
+      end
+    end
+  end
+
+  # A foot goes up by dz: the lower bone of its leg turns at the knee to
+  # make the leg as long as it must be, then the upper bone turns at the
+  # hip to the new place; the foot (and the bones under it) keep their
+  # turn.
+  defp reach(w, bones, by, foot, dz) do
+    {upper, lower, hip, knee, ankle} = leg(w, by, foot)
+    target = Vec.add(ankle, {0.0, 0.0, dz})
+    {l1, l2} = {Vec.len(Vec.sub(knee, hip)), Vec.len(Vec.sub(ankle, knee))}
+    d = Vec.len(Vec.sub(target, hip)) |> max(abs(l1 - l2)) |> min(l1 + l2)
+
+    # The bend: the angle between the upper and the lower bone, now and
+    # for the length d. A little of the axis x of the lower bone gives a
+    # plane to a straight leg.
+    plane = Vec.add(Vec.cross(Vec.sub(knee, hip), Vec.sub(ankle, knee)), Vec.scale(w[lower].x, 1.0e-6))
+    now = angle(Vec.sub(knee, hip), Vec.sub(ankle, knee))
+    cos = ((l1 * l1 + l2 * l2 - d * d) / (2 * l1 * l2)) |> max(-1.0) |> min(1.0)
+    bent = turn(w, bones, lower, plane, :math.pi() - :math.acos(cos) - now, knee)
+
+    from = Vec.sub(bent[foot].at, hip)
+    to = Vec.sub(target, hip)
+    swung = turn(bent, bones, upper, Vec.cross(from, to), angle(from, to), hip)
+
+    move = Vec.sub(swung[foot].at, ankle)
+    Enum.reduce(under(bones, foot), swung, &Map.put(&2, &1, %{w[&1] | at: Vec.add(w[&1].at, move)}))
+  end
+
+  # How much lower the body must go so that the leg of a foot is long
+  # enough to move the foot up by dz (the hip and the place of the foot
+  # move with the body, and the place of the foot stays).
+  defp short(w, by, foot, dz) do
+    {_, _, hip, knee, ankle} = leg(w, by, foot)
+    l = 0.999 * (Vec.len(Vec.sub(knee, hip)) + Vec.len(Vec.sub(ankle, knee)))
+    {x, y, z} = Vec.sub(Vec.add(ankle, {0.0, 0.0, dz}), hip)
+    -:math.sqrt(max(l * l - x * x - y * y, 0.0)) - z
+  end
+
+  # The upper and the lower bone of the leg of a foot, and the places of
+  # the hip, the knee and the ankle.
+  defp leg(w, by, foot) do
+    lower = by[foot].parent
+    upper = by[lower].parent
+    {upper, lower, w[upper].at, w[lower].at, w[foot].at}
+  end
+
+  # The angle between two directions (radians).
+  defp angle(u, v), do: :math.atan2(Vec.len(Vec.cross(u, v)), Vec.dot(u, v))
+
+  # A bone and the bones under it turn by an angle (radians) around an
+  # axis through a point.
+  defp turn(w, bones, root, axis, angle, at) do
+    r = Frame.turn(axis, angle * 180 / :math.pi(), at)
+    Enum.reduce(under(bones, root), w, &Map.put(&2, &1, Frame.compose(r, &2[&1])))
+  end
+
+  # A bone and all the bones under it (the bones are parents first).
+  defp under(bones, root) do
+    Enum.reduce(bones, [root], fn b, acc -> if b.parent in acc, do: [b.name | acc], else: acc end)
   end
 
   # New horns: on the highest points of the head that the animal keeps.

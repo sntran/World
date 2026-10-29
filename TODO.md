@@ -170,11 +170,6 @@ and no logo on them.
   ships at anchor (the far level only), a fast ferry, swim rings, beach
   umbrellas, canvas chairs, thatched huts.
 - **Animals (W11).** Next steps of the templates of four legs:
-  - Feet that stay on the ground in the clips: inverse kinematics of
-    each paw on the ground to its place, for a shape with legs that are
-    not the legs of the file. Now the animal only goes up when a paw
-    goes into the ground, so a paw of a pig or a cat can be up to 3% of
-    the height above the ground in a walk.
   - More clips of the Ultimate pack: an attack, a jump, a death, a head
     low at rest.
   - The other animals of the Ultimate pack (alpaca, husky, stag) and

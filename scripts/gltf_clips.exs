@@ -21,6 +21,10 @@
 #   to the back of the lowest paw, on the ground, when the animal moves
 #   in place. An app moves the animal at this speed so the paws do not
 #   slide.
+# - The feet: for each foot of World, the height of its paw over its
+#   height at rest at each time, in the units of the mesh. The paw is the
+#   IK bone of the file for the foot (its name starts with "IK": the
+#   place that the artist gave to the paw), or its first bone.
 Code.require_file("gltf.exs", __DIR__)
 
 [input, template, output, source, license | rest] = System.argv()
@@ -48,6 +52,12 @@ bones = Map.new(t["bones"], fn {world, file} -> {world, weighted[world] || [{nam
 # The paw of each foot: the bone of the file with the most weight.
 paws = for side <- ~w(l r), part <- ~w(front hind), do: bones["#{part}_foot_#{side}"] |> Enum.max_by(&elem(&1, 1)) |> elem(0)
 pelvis = names[hd(List.wrap(t["bones"]["pelvis"]))]
+
+iks =
+  for {world, files} <- t["bones"], world =~ ~r/_foot_[lr]$/, into: %{} do
+    files = List.wrap(files)
+    {world, names[Enum.find(files, hd(files), &String.starts_with?(&1, "IK"))]}
+  end
 
 # The mean of turns (quaternions), each with its weight.
 mean = fn list ->
@@ -138,7 +148,17 @@ clips =
       if world_name in ~w(walk run),
         do: speeds |> Enum.sort() |> Enum.at(div(length(speeds), 2)) |> Float.round(4),
         else: 0.0
-    {world_name, %{"length" => Float.round(List.last(ts), 4), "times" => round.(ts, 4), "bones" => turns, "pelvis" => moves, "speed" => speed}}
+    feet = Map.new(iks, fn {foot, i} -> {foot, for(w <- poses, do: Float.round(low.(w, i) - low.(rest_world, i), 4) + 0.0)} end)
+
+    {world_name,
+     %{
+       "length" => Float.round(List.last(ts), 4),
+       "times" => round.(ts, 4),
+       "bones" => turns,
+       "pelvis" => moves,
+       "speed" => speed,
+       "feet" => feet
+     }}
   end
 
 File.write!(output, JSON.encode!(%{"source" => source, "license" => license, "clips" => clips}))

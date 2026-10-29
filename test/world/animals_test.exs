@@ -80,9 +80,33 @@ defmodule World.AnimalsTest do
     end
   end
 
-  # The lowest end of the feet.
-  defp low(%{skeleton: s}, world) do
-    World.Animals.Quadruped.feet() |> Enum.map(&elem(Skeleton.tip(s, world, &1), 2)) |> Enum.min()
+  # The height of each foot over its height at rest (a part of the height
+  # of the pelvis) at each time of a clip: the lowest point of its skin
+  # (the points that the foot moves most).
+  defp feet(%{skeleton: s} = animal, clip) do
+    index = s.bones |> Enum.with_index() |> Map.new(fn {b, i} -> {b.name, i} end)
+    skin = for n <- Build.scene(animal).nodes, p <- n.primitives, p.joints, do: p
+    h = elem(s.rest["pelvis"].at, 2)
+
+    Map.new(World.Animals.Quadruped.feet(), fn f ->
+      points =
+        for p <- skin,
+            {at, {j, _, _, _}, {w, _, _, _}} <- Enum.zip([p.positions, p.joints, p.weights]),
+            j == index[f] and w > 0.5,
+            do: Frame.point(Frame.invert(s.rest[f]), at)
+
+      low = fn world -> points |> Enum.map(&elem(Frame.point(world[f], &1), 2)) |> Enum.min() end
+      {f, for(world <- frames(animal, clip), do: (low.(world) - low.(s.rest)) / h)}
+    end)
+  end
+
+  # No foot goes into the ground; in a walk and a run, each foot comes
+  # down to the ground.
+  defp on_ground(animal, clip) do
+    for {f, ups} <- feet(animal, clip) do
+      assert Enum.min(ups) > -0.005, "#{clip.name} #{f}"
+      if clip.name in ~w(walk run), do: assert(Enum.min(ups) < 0.005, "#{clip.name} #{f}")
+    end
   end
 
   test "the clips of the template on the bones, and the wag", %{dog: dog} do
@@ -97,17 +121,16 @@ defmodule World.AnimalsTest do
 
     all = Animals.animal("street_dog", animations: ~w(walk run idle eat))
     assert Enum.map(all.animations, & &1.name) == ~w(walk run idle eat)
-    ground = low(all, s.rest)
 
-    for clip <- all.animations, world <- frames(all, clip) do
+    for clip <- all.animations do
       # Each bone keeps its length: its head is on its parent where it is
-      # at rest. No foot goes into the ground.
-      for b <- s.bones, b.parent do
+      # at rest.
+      for world <- frames(all, clip), b <- s.bones, b.parent do
         at = Frame.point(world[b.parent], s.local[b.name].at)
         assert Vec.len(Vec.sub(world[b.name].at, at)) < 1.0e-9
       end
 
-      assert low(all, world) > ground - 1.0e-9, clip.name
+      on_ground(all, clip)
     end
 
     # A walk and a run loop: the last time is the first. The head goes
@@ -199,9 +222,8 @@ defmodule World.AnimalsTest do
       animal = Animals.animal(name, animations: ~w(walk))
       assert_in_delta withers(animal), h, 0.05 * h, name
       assert Figure.limbs(animal) == ~w(front_l front_r head hind_l hind_r tail)
-      # The walk of its template: no foot goes into the ground.
-      ground = low(animal, animal.skeleton.rest)
-      for world <- frames(animal, hd(animal.animations)), do: assert(low(animal, world) > ground - 1.0e-9, name)
+      # The walk of its template, with the feet on the ground.
+      on_ground(animal, hd(animal.animations))
     end
 
     # The cat on the fox: gray, with a white chest and white paws (the

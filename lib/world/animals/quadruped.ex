@@ -22,7 +22,7 @@ defmodule World.Animals.Quadruped do
 
   The animations: `walk`, `run` (a gallop), `idle` and `eat` (the head
   down to the ground) are the clips of the template
-  (`World.Animals.retarget/4`); `wag` (the tail wags twice) is code. The
+  (`World.Animals.retarget/5`); `wag` (the tail wags twice) is code. The
   number of the gait of a species (`gait`): `wag` (the time of a wag,
   s).
   """
