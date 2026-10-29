@@ -294,6 +294,21 @@ defmodule World.FactoryTest do
                Orders.check(order)
 
       assert {:ok, <<"glTF", _::binary>>} = Orders.build(order, "far", "glb")
+
+      # The shape space: only on a template with a space (the wolf).
+      horse = World.Animals.space("wolf")["animals"]["horse"]
+
+      spaced = %{
+        "blueprint" => "animal",
+        "options" => %{"species" => "wolf", "shape" => horse["shape"], "space" => horse["space"]}
+      }
+
+      assert {:ok, %{"options" => %{"space" => [_ | _]}}} = Orders.check(spaced)
+      assert {:ok, <<"glTF", _::binary>>} = Orders.build(spaced, "far", "glb")
+
+      assert {:error,
+              [%{"path" => "options.space", "message" => "a cat has no shape space; the species with one: wolf"}]} =
+               Orders.check(%{"blueprint" => "animal", "options" => %{"species" => "cat", "space" => [1]}})
     end
 
     test "a person with the colors of the hair and of the clothes" do

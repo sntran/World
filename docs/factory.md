@@ -117,7 +117,11 @@ color; the color of the species by default), `size` (0.6 to 1.4: a
 scale of the animal), `shape` (numbers of the
 shape over the numbers of the species, as `{"leg_length": 1.2,
 "ear_droop": 30}`), `markings` (a region of the
-coat to its color, as `{"socks": "#ffffff"}`) and `animations` (the
+coat to its color, as `{"socks": "#ffffff"}`), `space` (the
+coefficients of the shape space of the template, for the `wolf`: the
+space lists the numbers and the coefficients of the horse, the cow, the
+deer and more, so a wolf with the `shape` and the `space` of the horse
+has the shape of a horse; `docs/format.md`, "The shape space") and `animations` (the
 animations of its body plan: `walk`, `run`, `idle`, `eat` and `wag` for
 four legs, `walk` (on four limbs) and `sit` for the macaque; the walk and
 the run are in place, and the parts list gives their speeds,

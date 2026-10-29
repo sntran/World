@@ -21,7 +21,8 @@ defmodule World.Animals do
   primate), `shape` (numbers), `colors` (a role to its color; `fur` is
   the base color of the coat), `markings` (a region of the coat to its
   color), `fur` (the length of the fur, m: `coat` and a region to its
-  length), `without` (roles whose faces go) and `gait`. Each animal has
+  length), `space` (the coefficients of the shape space of the template,
+  `World.Animals.Space`), `without` (roles whose faces go) and `gait`. Each animal has
   the UVs of its template (`World.Animals.UV`), `_FUR` on its fur, and
   `uv_size` in its params (the length of one unit of UV on the skin, m).
   The keys of a
@@ -30,7 +31,7 @@ defmodule World.Animals do
   `muzzle` and `brow`.
   """
   alias World.{Frame, Rig, Vec}
-  alias World.Animals.{Shape, UV}
+  alias World.Animals.{Shape, Space, UV}
   alias World.People.{Pose, Skeleton}
 
   @root Path.join([__DIR__, "..", "..", "priv", "animals"])
@@ -83,7 +84,10 @@ defmodule World.Animals do
   the species by default), `markings` (a template: a region of the coat
   to its color, over the colors of the species), `shape` (a template:
   numbers of `World.Animals.Shape` over the numbers of the species),
-  `size` (a scale of all the animal: 1 is the height of the species),
+  `space` (the coefficients of the shape space of the template, over
+  the space of the species; an `ArgumentError` for a template with no
+  space), `size` (a scale of all the animal: 1 is the height of the
+  species),
   and `animations` (names of the animations of its body plan).
   """
   def animal(name, opts) do
@@ -129,7 +133,17 @@ defmodule World.Animals do
 
     shape = Map.merge(s["shape"], Keyword.get(opts, :shape, %{}))
     regions = Shape.regions(bones, points, weights)
-    {bones, points} = Shape.apply(bones, points, weights, shape, t)
+    # The coefficients of the shape space of the template.
+    moves =
+      case Keyword.get(opts, :space) || s["space"] do
+        nil ->
+          nil
+
+        cs ->
+          Space.moves(Space.get(t["mesh"]) || raise(ArgumentError, "the template #{t["mesh"]} has no shape space"), cs)
+      end
+
+    {bones, points} = Shape.apply(bones, points, weights, shape, t, moves)
     colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
     fur = if f = s["fur"], do: Shape.fur(regions, f["coat"], Map.delete(f, "coat"))
 
@@ -213,6 +227,9 @@ defmodule World.Animals do
       sources: [data["source"] <> " " <> data["license"], s["about"] | s["sources"]]
     )
   end
+
+  @doc "The shape space of the template of a species (`World.Animals.Space`), or nil."
+  def space(name), do: Space.get(@templates[spec(name)["template"]]["mesh"])
 
   @doc """
   A template at rest, before the numbers of a shape: `%{template, bones,

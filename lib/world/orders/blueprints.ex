@@ -153,6 +153,13 @@ defmodule World.Orders.Blueprints do
           fields: for(r <- World.Animals.Shape.regions(), do: option(r, :color, default: nil)),
           doc: "A region of the coat to its color, over the colors of the species."
         ),
+        option("space", :list,
+          default: [],
+          item: option("item", :number, min: -4.0, max: 4.0),
+          max: 8,
+          doc:
+            "The coefficients of the shape space of the template (World.Animals.Space), over the space of the species: only for a species on a template with a space (the wolf: wolf). The space file lists the coefficients of each template that it comes from: the horse, the cow, the deer and more."
+        ),
         option("animations", :list,
           default: [],
           item:
@@ -171,6 +178,7 @@ defmodule World.Orders.Blueprints do
           size: o["size"],
           shape: for({k, v} <- o["shape"], v != nil, into: %{}, do: {k, v}),
           markings: for({k, v} <- o["markings"], v != nil, into: %{}, do: {k, rgb(v)}),
+          space: if(o["space"] != [], do: o["space"]),
           animations: o["animations"]
         )
       end,
@@ -182,9 +190,18 @@ defmodule World.Orders.Blueprints do
   defp animal_check(o) do
     known = World.Animals.animations(o["species"])
 
-    for {a, i} <- Enum.with_index(o["animations"]),
-        a not in known,
-        do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
+    space =
+      if o["space"] != [] and World.Animals.space(o["species"]) == nil,
+        do: [
+          {"options.space",
+           "a #{o["species"]} has no shape space; the species with one: #{Enum.join(Enum.filter(World.Animals.species(), &World.Animals.space/1), ", ")}"}
+        ],
+        else: []
+
+    space ++
+      for {a, i} <- Enum.with_index(o["animations"]),
+          a not in known,
+          do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
   end
 
   # --- A group at a morning of exercise ------------------------------------------------------

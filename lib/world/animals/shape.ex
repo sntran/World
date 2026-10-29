@@ -31,8 +31,10 @@ defmodule World.Animals.Shape do
   | `ear_width` | 0.5 to 2.0 | The width of the ears. |
   | `ear_droop` | -40 to 120 | Degrees: more turns the ears down to the sides. |
   | `tail_length` | 0.1 to 2.0 | The tail. |
-  | `tail_girth` | 0.4 to 3.0 | The thickness of the tail. |
-  | `tail_down` | -30 to 150 | Degrees: more turns the tail down (0: up as in the template). |
+  | `tail_girth` | 0.2 to 3.0 | The thickness of the tail. |
+  | `tail_down` | -60 to 150 | Degrees: more turns the tail down (0: up as in the template). |
+  | `neck_up` | -45 to 60 | Degrees: more turns the neck and the head up around the joint of the neck and the body (0: as in the template). |
+  | `head_down` | -45 to 90 | Degrees: more turns the head down around the joint of the head and the neck (0: as in the template). |
   | `horns` | 0 to 1.5 | The length of new horns, in lengths of the head (0: no new horns). |
   | `horn_spread` | 0 to 1 | 0: the horns go up and to the back (a goat); 1: out to the sides (a water buffalo). |
 
@@ -61,8 +63,10 @@ defmodule World.Animals.Shape do
     "ear_width" => {0.5, 2.0, 1.0},
     "ear_droop" => {-40.0, 120.0, 0.0},
     "tail_length" => {0.1, 2.0, 1.0},
-    "tail_girth" => {0.4, 3.0, 1.0},
-    "tail_down" => {-30.0, 150.0, 0.0},
+    "tail_girth" => {0.2, 3.0, 1.0},
+    "tail_down" => {-60.0, 150.0, 0.0},
+    "neck_up" => {-45.0, 60.0, 0.0},
+    "head_down" => {-45.0, 90.0, 0.0},
     "horns" => {0.0, 1.5, 0.0},
     "horn_spread" => {0.0, 1.0, 0.0}
   }
@@ -81,13 +85,16 @@ defmodule World.Animals.Shape do
   bones are maps with `name`, `parent`, `head` and `tail`, parents
   first; `weights` is a bone to a map of a point to its weight. The
   template gives `muzzle` (the part of the head where the muzzle
-  starts). Gives `{bones, points}`.
+  starts). `space` is nil, or a move for each point from a shape space
+  (`World.Animals.Space`): in the axes of the bone that moves the point
+  most, in the units of the template, scaled as that bone. Gives
+  `{bones, points}`.
   """
-  def apply(bones, points, weights, n, template) do
+  def apply(bones, points, weights, n, template, space \\ nil) do
     n = Map.merge(Map.new(@numbers, fn {k, {_, _, d}} -> {k, d} end), n)
     by = Map.new(bones, &{&1.name, &1})
     frames = Map.new(bones, &{&1.name, frame(&1)})
-    scales = Map.new(bones, &{&1.name, scale(&1.name, n)})
+    scales = Map.new(bones, &{&1.name, bone_scale(&1.name, n)})
     head = by["head"]
     len = Vec.len(Vec.sub(head.tail, head.head))
 
@@ -117,6 +124,21 @@ defmodule World.Animals.Shape do
           Vec.add(acc, Vec.scale(move(b, p, frames, scales, heads, n, len, template), w / sum))
         end)
       end)
+
+    # The moves of the shape space: in the axes of the bone that moves the
+    # point most (a bone turns only after this, with the tail and the
+    # ears), scaled as that bone.
+    moved =
+      if space do
+        Enum.zip_with([moved, space, Enum.to_list(0..(length(points) - 1))], fn [p, {a, b, c}, i] ->
+          {bone, _} = by_point |> Map.get(i, [{"pelvis", 1.0}]) |> Enum.max_by(fn {bone, w} -> {w, bone} end)
+          {_, x, y, z} = frames[bone]
+          {sx, sy, sz} = scales[bone]
+          p |> Vec.add(Vec.scale(x, a * sx)) |> Vec.add(Vec.scale(y, b * sy)) |> Vec.add(Vec.scale(z, c * sz))
+        end)
+      else
+        moved
+      end
 
     # The tail turns down around the root of the tail.
     tail_bones = for b <- bones, String.starts_with?(b.name, "tail_"), do: b.name
@@ -155,6 +177,13 @@ defmodule World.Animals.Shape do
           {Enum.map(bones, &if(&1.name == ear, do: %{&1 | tail: spin.(&1.tail)}, else: &1)), moved}
       end
 
+    # The neck and the head turn up around the joint of the neck and the
+    # body, and the head down around the joint of the head and the neck (a
+    # point as much as its weights on the bones that turn). No turn at 0:
+    # the same points.
+    {bones, moved} = bend({bones, moved}, by_point, ~w(neck_01 head ear_l ear_r), "neck_01", n["neck_up"])
+    {bones, moved} = bend({bones, moved}, by_point, ~w(head ear_l ear_r), "head", -n["head_down"])
+
     # The paws on the ground: the lowest point of the feet.
     feet = for b <- bones, b.name =~ ~r/(^|_)foot_[lr]$/, {i, w} <- Map.get(weights, b.name, %{}), w >= 0.5, do: i
     ground = feet |> Enum.map(&elem(Enum.at(moved, &1), 2)) |> Enum.min()
@@ -162,9 +191,27 @@ defmodule World.Animals.Shape do
     {Enum.map(bones, &%{&1 | head: down.(&1.head), tail: down.(&1.tail)}), Enum.map(moved, down)}
   end
 
-  # The frame of a bone: its head, and its axes x (to the side), y (along
-  # the bone) and z.
-  defp frame(b) do
+  # The bones `names` turn up by `degrees` around the head of the bone
+  # `at`, on the axis x; a point turns as much as its weights on them.
+  defp bend(state, _by_point, _names, _at, degrees) when degrees == 0, do: state
+
+  defp bend({bones, moved}, by_point, names, at, degrees) do
+    turn = &turn_x(&1, Enum.find(bones, fn b -> b.name == at end).head, degrees * :math.pi() / 180)
+
+    moved =
+      for {p, i} <- Enum.with_index(moved) do
+        t = by_point |> Map.get(i, []) |> Enum.filter(&(elem(&1, 0) in names)) |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+        Vec.lerp(p, turn.(p), min(t, 1.0))
+      end
+
+    {for(b <- bones, do: if(b.name in names, do: %{b | head: turn.(b.head), tail: turn.(b.tail)}, else: b)), moved}
+  end
+
+  @doc """
+  The frame of a bone (a map with `head` and `tail`): its head, and its
+  axes x (to the side), y (along the bone) and z.
+  """
+  def frame(b) do
     y = Vec.norm(Vec.sub(b.tail, b.head))
     x = Vec.norm(Vec.sub({1.0, 0.0, 0.0}, Vec.scale(y, elem(y, 0))))
     {b.head, x, y, Vec.cross(x, y)}
@@ -178,10 +225,13 @@ defmodule World.Animals.Shape do
   defp global({_, x, y, z}, o, {a, b, c}),
     do: o |> Vec.add(Vec.scale(x, a)) |> Vec.add(Vec.scale(y, b)) |> Vec.add(Vec.scale(z, c))
 
-  # The scale of a bone: {across in x, along, across in z}. The arms of a
-  # primate have their own numbers; its collarbones are the width of the
-  # body.
-  defp scale(name, n) do
+  @doc """
+  The scale of a bone after the numbers `n` (all the numbers: `numbers/0`
+  gives the defaults): `{across in x, along, across in z}`. The arms of
+  a primate have their own numbers; its collarbones are the width of the
+  body.
+  """
+  def bone_scale(name, n) do
     cond do
       name in ~w(pelvis spine_01 spine_02 spine_03) ->
         {n["body_width"], n["body_length"], n["body_depth"]}

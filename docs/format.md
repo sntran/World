@@ -488,6 +488,7 @@ The species is `priv/animals/species/NAME.json`:
 | `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings`: a region of the coat to its color; they paint the faces of `fur` and `marking`. The option `coat` of the order is the color of `fur`. |
 | `without` | The roles whose faces go (`["horn"]`: the bull with no horns of the file, for horns of World). |
 | `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped; the length of the head and the body (from the top of the head to the lowest point of the pelvis, when it stands) for a primate. The option `size` of the order scales it. |
+| `space` | The coefficients of the shape space of the template (below), for a species on a template with a space. The option `space` of the order is over it. |
 | `fur` | The length of the fur, in meters: `coat` for all the coat, and a region of the coat to its length (`"face": 0` for a bare face), mixed as the colors of `markings`. The option `size` of the order scales it. With no `fur`, the GLB has no `_FUR`. |
 | `gait` | The numbers of the gaits of the body plan that are code: for four legs, `wag` (the time of a wag, s); for a primate, `period` (the time of a step, s), `stride` and `lift` (parts of the length of the animal). |
 
@@ -527,8 +528,10 @@ scales the animal.
 | `cranium` | 0.5 to 1.2 | A primate: the height of the skull over the brow. |
 | `ear_size`, `ear_width` | 0.5 to 2.0 | The length and the width of the ears. |
 | `ear_droop` | -40 to 120 | Degrees: more turns the ears down and to their sides (0: as the template). |
-| `tail_length`, `tail_girth` | 0.1 to 2.0, 0.4 to 3.0 | The tail. |
-| `tail_down` | -30 to 150 | Degrees: more turns the tail down (0: as the template). |
+| `tail_length`, `tail_girth` | 0.1 to 2.0, 0.2 to 3.0 | The tail. |
+| `tail_down` | -60 to 150 | Degrees: more turns the tail down (0: as the template). |
+| `neck_up` | -45 to 60 | Degrees: more turns the neck and the head up, around the joint of the neck and the body (0: as the template). |
+| `head_down` | -45 to 90 | Degrees: more turns the head down, around the joint of the head and the neck (0: as the template). |
 | `horns` | 0 to 1.5 | Horns of World, in lengths of the head (0: no horns of World; the horns of a template are part of its mesh). |
 | `horn_spread` | 0 to 1 | 0: the horns go up and to the back (the goat); 1: out to the sides and up (the buffalo). |
 
@@ -538,6 +541,59 @@ this order, a later one over an earlier one: `back`, `belly`, `legs`,
 `socks` (the paws, the hands and the feet, and the low part of the
 legs), `head`, `face` (the muzzle; the face of a primate under the
 brow), `ears`, `tail_tip`.
+
+#### The shape space
+
+A shape space (`priv/animals/spaces/MESH.json`, `World.Animals.Space`)
+holds the shape changes of other templates that the numbers do not
+give, as SMAL does for animals: a move of each point of the template,
+in the axes of the bone that moves the point most (in the units of the
+template; `World.Animals.Shape` scales it as that bone, before the turns
+of the tail, the neck and the head). The file has the `mean` of the
+moves, the principal components (`components`: each with its `sigma`,
+its standard deviation, and its `vectors`, a move of each point), and,
+for each template that it comes from, its numbers (`shape`) and its
+coefficients (`space`). The coefficients `c` of an animal give the moves
+`mean + c1 × sigma1 × vectors1 + c2 × sigma2 × vectors2 + ...`; with no
+`space`, the template has no move.
+
+Now the template `wolf` has a space, from the eight templates of four
+legs (the wolf too): 7 components. The numbers and the coefficients of
+the horse on the wolf make a wolf with the shape of the horse (its
+outline, not its hooves or its mane, and the colors of the wolf), and a
+part of the way between two sets of numbers and coefficients is an
+animal between the two.
+
+`scripts/shape_space.exs` makes a space:
+
+    mix run scripts/shape_space.exs wolf priv/animals/spaces/wolf.json shiba_inu fox deer horse donkey cow bull
+
+For each template:
+
+1. Its size: the length of its back (the bones `pelvis` and `spine_01`)
+   is the length of the back of the base.
+2. Its numbers: the lengths of the legs, the neck, the tail and the ears
+   from the lengths of its bones; the girths and the size of the head
+   from the root mean square of the distance of the points of each bone
+   to its axis; the length of the muzzle from the point of the head
+   farthest along its bone; `neck_up`, `head_down` and `tail_down` from
+   the angles of the neck, of the line from the head to the tip of the
+   nose, and of all the tail. Each number in its range. The base after
+   these numbers is the fit.
+3. The rest of its shape: for each point of the fit, a ray from the
+   nearest point of its bone to the point (in the axes of the bone; for
+   the head, y goes from the joint of the neck to the tip of the nose)
+   starts at the same place of the same bone of the template (along the
+   tail as one chain, for a tail with another number of bones; the head,
+   for an ear of a template with no bones of the ears). The move of the
+   point is along the ray, to the face that the ray meets nearest to the
+   length of the fit (0.4 to 2.5 times it, on the same bone or a bone
+   next to it; only the head and the ears for the head). A point that
+   meets no face (10 % to 30 % of the points) takes the mean of the moves
+   of the points next to it.
+
+So a space holds shape, not pose: the moves are in the axes of the
+bones, and the angles are numbers.
 
 #### The UVs and the fur
 
@@ -653,8 +709,8 @@ its height, from the sizes of the animal and from photos.
 Build it (`mix world.build`), and look at it next to photos, at rest
 and in each animation, and with its fur (`scripts/shot.mjs` with
 `FUR=1`). Add a model to the catalog (`World.Catalog`)
-and a test. An order can do the same with no file: the options `shape`
-and `markings` over a species.
+and a test. An order can do the same with no file: the options `shape`,
+`markings` and `space` over a species.
 
 A new template of four legs: find a model with bones and a skin, with a
 license that lets World give it again (CC0, CC-BY), and add a row to

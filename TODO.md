@@ -180,9 +180,12 @@ and no logo on them.
   - The other animals of the Ultimate pack (alpaca, husky, stag) and
     the farm pack of Quaternius on poly.pizza (a pig, a sheep, a
     chicken), as templates.
-  - A shape space learned from meshes (part B): fit the templates and
-    CC0 scans to one template, and keep the shape changes that the
-    numbers do not give (PCA).
+  - The shape space (`priv/animals/spaces/`): more meshes in it (the
+    alpaca, the husky and the stag of the Ultimate pack, the farm pack,
+    CC0 scans); fewer points that meet no face (10 % to 30 % now); a
+    space for the primates; the hooves and the paws, the mane and the
+    horns of a template are not in the space of the wolf. Species from
+    the space (a hyena, a pig) with photos.
   - The fur (`_FUR`, the UVs): more regions for its length (the mane
     and the tail of a horse, the tail of a macaque, which has short
     hair); fur on the dark legs of the fox (the material `dark` is also
