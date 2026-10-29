@@ -99,6 +99,38 @@ defmodule World.RigTest do
     assert count.(near) == 26 and count.(mid) == 8
   end
 
+  test "a base mesh with the colors of its points, and a part on a bone" do
+    colors = for {_, _, z} <- @cube_points, do: if(z < 0, do: {0, 0, 0}, else: {255, 255, 255})
+
+    horn =
+      {[{{0.0, 0.0, 0.5}, {0.0, 0.0, 1.0}}, {{0.1, 0.0, 0.5}, {0.0, 0.0, 1.0}}, {{0.0, 0.1, 0.6}, {0.0, 0.0, 1.0}}],
+       [[0, 1, 2]]}
+
+    f =
+      Rig.figure("box",
+        bones: bones(),
+        mesh: %{
+          points: @cube_points,
+          faces: @cube_faces,
+          weights: %{"low" => for(i <- 0..7, do: {i, 1.0})},
+          smooth: 1,
+          colors: colors
+        },
+        parts: [{:horn, "high", elem(horn, 0), elem(horn, 1)}]
+      )
+
+    [mesh] = for n <- f.nodes, n.primitives != [], do: n
+    [skin, part] = mesh.primitives
+    # The new points of the smooth step are means of the colors.
+    assert length(skin.colors) == 26 and Enum.any?(skin.colors, fn {r, _, _} -> r > 0 and r < 255 end)
+    assert Enum.all?(skin.joints, &(&1 == {0, 0, 0, 0}))
+    assert part.material == :horn and part.colors == nil and Enum.uniq(part.joints) == [{1, 0, 0, 0}]
+
+    glb = World.GLB.encode(World.Build.scene(f))
+    [prim | _] = World.GLBHelper.json(glb)["meshes"] |> hd() |> Map.fetch!("primitives")
+    assert Map.has_key?(prim["attributes"], "COLOR_0")
+  end
+
   test "a rig with a smooth skin: one surface, a thin tube, a sphere on the skin" do
     bones =
       bones() ++

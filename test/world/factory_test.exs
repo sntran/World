@@ -267,6 +267,31 @@ defmodule World.FactoryTest do
 
       assert {:ok, %{"options" => %{"coat" => nil}}} =
                Orders.check(%{"blueprint" => "animal", "options" => %{"species" => "monkey"}})
+
+      # Numbers of the shape and markings: only for a species of a
+      # template, each number in its range.
+      assert {:error, [%{"path" => "options.shape", "message" => "a monkey has no template: it has no shape"}]} =
+               Orders.check(%{
+                 "blueprint" => "animal",
+                 "options" => %{"species" => "monkey", "shape" => %{"ear_up" => 1}}
+               })
+
+      assert {:error, [%{"path" => "options.shape.leg_length"}]} =
+               Orders.check(%{
+                 "blueprint" => "animal",
+                 "options" => %{"species" => "cat", "shape" => %{"leg_length" => 3}}
+               })
+
+      order = %{
+        "blueprint" => "animal",
+        "options" => %{"species" => "wolf", "shape" => %{"ear_up" => 0.5}, "markings" => %{"socks" => "#FFFFFF"}}
+      }
+
+      assert {:ok,
+              %{"options" => %{"shape" => %{"ear_up" => 0.5, "horns" => nil}, "markings" => %{"socks" => "#ffffff"}}}} =
+               Orders.check(order)
+
+      assert {:ok, <<"glTF", _::binary>>} = Orders.build(order, "far", "glb")
     end
 
     test "a person with the colors of the hair and of the clothes" do

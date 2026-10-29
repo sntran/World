@@ -24,7 +24,7 @@ defmodule World.AnimalsTest do
     {{_, _, ground}, _} = Scene.bounds(scene)
     assert_in_delta ground, 0.0, 0.01
     assert scene.extras["kind"] == "animal"
-    assert Map.keys(scene.materials) -- [:eye, :fur] == []
+    assert Map.keys(scene.materials) |> Enum.sort() == [:eye, :fur, :nose]
 
     for p <- Enum.flat_map(scene.nodes, & &1.primitives), w <- p.weights do
       assert_in_delta Enum.sum(Tuple.to_list(w)), 1.0, 1.0e-9
@@ -32,7 +32,11 @@ defmodule World.AnimalsTest do
 
     big = Build.scene(Animals.animal("street_dog", size: 1.2))
     assert_in_delta Enum.at(big.extras["size"], 2), 1.2 * h, 0.01
-    assert Animals.animal("street_dog", coat: [10, 20, 30]).materials.fur["color"] == [10, 20, 30]
+    # The coat is in the colors of the points; the material is white.
+    brown = Animals.animal("street_dog", coat: [10, 20, 30])
+    assert brown.materials.fur["color"] == [255, 255, 255] and brown.params["coat"] == [10, 20, 30]
+    [fur] = for n <- brown.nodes, p <- n.primitives, p.material == :fur, do: p
+    assert Enum.all?(fur.colors, &(Vec.len(Vec.sub(&1, {10.0, 20.0, 30.0})) < 1.0e-9))
   end
 
   test "the joints, the limbs and the ports of the dog", %{dog: dog} do
@@ -71,7 +75,7 @@ defmodule World.AnimalsTest do
     index = fn bone -> 1 + Enum.find_index(s.bones, &(&1.name == bone)) end
     assert index.("front_lower_l") in nodes and index.("tail_01") in nodes
     assert MapSet.new(wag.channels, & &1.node) == MapSet.new(~w(tail_01 tail_02 tail_03), index)
-    assert Animals.species() == ~w(cat monkey street_dog)
+    assert Animals.species() == ~w(cat goat monkey pig street_dog wolf)
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
 
@@ -113,20 +117,54 @@ defmodule World.AnimalsTest do
     assert Build.scene(f, pose: %{"arm" => 30}).nodes |> Enum.at(3) |> Map.get(:frame) != Enum.at(f.nodes, 2).frame
   end
 
-  test "a cat: the same body plan as the dog, with its own mesh, colors and gait" do
-    cat = Animals.animal("cat", animations: ["walk", "wag"])
-    scene = Build.scene(cat)
-    assert cat.name == "cat"
-    # 25 cm at the withers (the tail is up, above it).
-    assert Enum.at(scene.extras["size"], 2) > 0.25
-    assert Map.keys(scene.materials) |> Enum.sort() == [:dark, :eye, :fur, :marking, :skin]
-    assert cat.materials.marking["color"] == [236, 233, 226]
-    assert Figure.limbs(cat) == ~w(front_l front_r head hind_l hind_r tail)
-    assert Enum.map(cat.animations, & &1.name) == ~w(walk wag)
+  # The highest point of the spine (the withers), at far (no smooth
+  # steps: the points of the template).
+  defp withers(animal) do
+    scene = World.Detail.with(:far, fn -> Build.scene(animal) end)
+    # The joints of a point are indices of the bones of the skin.
+    spine = Enum.find_index(animal.skeleton.bones, &(&1.name == "spine_01"))
 
-    for p <- Enum.flat_map(scene.nodes, & &1.primitives), w <- p.weights do
-      assert_in_delta Enum.sum(Tuple.to_list(w)), 1.0, 1.0e-9
+    for n <- scene.nodes,
+        p <- n.primitives,
+        p.material == :fur,
+        {pos, j, w} <- Enum.zip([p.positions, p.joints, p.weights]),
+        elem(j, 0) == spine and elem(w, 0) >= 0.5,
+        reduce: 0.0,
+        do: (top -> max(top, elem(pos, 2)))
+  end
+
+  test "the presets of the template: the height at the withers, the colors and the parts of each" do
+    for {name, h} <- [{"cat", 0.25}, {"wolf", 0.8}, {"goat", 0.55}, {"pig", 0.6}] do
+      animal = Animals.animal(name, animations: ~w(walk wag))
+      assert_in_delta withers(animal), h, 0.05 * h, name
+      assert Figure.limbs(animal) == ~w(front_l front_r head hind_l hind_r tail)
+      assert Enum.map(animal.animations, & &1.name) == ~w(walk wag)
     end
+
+    cat = Build.scene(Animals.animal("cat", []))
+    assert Map.keys(cat.materials) |> Enum.sort() == [:eye, :fur, :nose]
+    [fur] = for n <- cat.nodes, p <- n.primitives, p.material == :fur, do: p
+    # Gray, with white paws.
+    assert Enum.any?(fur.colors, &(Vec.len(Vec.sub(&1, {78.0, 78.0, 84.0})) < 1.0e-6))
+    assert Enum.any?(fur.colors, &(elem(&1, 0) > 200))
+
+    goat = Build.scene(Animals.animal("goat", []))
+    assert :horn in Map.keys(goat.materials)
+    [horns] = for n <- goat.nodes, p <- n.primitives, p.material == :horn, do: p
+    {{_, _, low}, _} = World.Vec.bounds(horns.positions)
+    {_, {_, _, top}} = Scene.bounds(goat)
+    assert low > 0.5 * top
+
+    # A shape and markings of an order over the preset.
+    long =
+      Animals.animal("goat", shape: %{"horns" => 1.2, "leg_length" => 1.3}, markings: %{"socks" => [255, 255, 255]})
+
+    # The same height at the withers: longer legs give a shorter body.
+    length = fn a -> a |> Build.scene() |> Map.get(:extras) |> Map.get("size") |> Enum.at(1) end
+    assert length.(long) < length.(Animals.animal("goat", []))
+    [fur] = for n <- Build.scene(long).nodes, p <- n.primitives, p.material == :fur, do: p
+    # White socks above the dark hooves.
+    assert Enum.any?(fur.colors, &(elem(&1, 0) > 200 and elem(&1, 2) > 200))
   end
 
   test "a monkey: two legs, two arms and a tail" do

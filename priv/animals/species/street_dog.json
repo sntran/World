@@ -1,85 +1,18 @@
 {
   "name": "street_dog",
   "plan": "quadruped",
-  "mesh": "dog",
+  "template": "quadruped",
   "about": "A street dog of Việt Nam (chó cỏ): a medium dog of mixed breed with a short coat, about 50 cm at the shoulder, a tail that it holds up.",
   "height": 0.5,
-  "bones": {
-    "pelvis": "Bone",
-    "spine_01": "Bone.001",
-    "neck_01": "Bone.002",
-    "head": "Bone.003",
-    "tail_01": "Bone.004",
-    "tail_02": "Bone.005",
-    "tail_03": "Bone.006",
-    "tail_04": "Bone.007",
-    "hind_upper_l": "Bone.008",
-    "hind_lower_l": "Bone.009",
-    "hind_foot_l": "Bone.010",
-    "front_upper_l": "Bone.017",
-    "front_lower_l": "Bone.018",
-    "front_foot_l": "Bone.019",
-    "hind_upper_r": "Bone.011",
-    "hind_lower_r": "Bone.012",
-    "hind_foot_r": "Bone.013",
-    "front_upper_r": "Bone.014",
-    "front_lower_r": "Bone.015",
-    "front_foot_r": "Bone.016"
-  },
-  "materials": {
-    "Dog": "fur"
-  },
+  "shape": {},
   "colors": {
     "fur": [
       200,
       150,
       90
-    ],
-    "eye": [
-      24,
-      18,
-      16
     ]
   },
-  "smooth": 2,
-  "spheres": [
-    {
-      "bone": "head",
-      "at": 0.35,
-      "up": 0.02,
-      "dir": [
-        -0.55,
-        1.0,
-        0.35
-      ],
-      "radius": 0.016,
-      "role": "eye"
-    },
-    {
-      "bone": "head",
-      "at": 0.35,
-      "up": 0.02,
-      "dir": [
-        0.55,
-        1.0,
-        0.35
-      ],
-      "radius": 0.016,
-      "role": "eye"
-    },
-    {
-      "bone": "head",
-      "at": 0.8,
-      "up": -0.01,
-      "dir": [
-        0.0,
-        1.0,
-        0.1
-      ],
-      "radius": 0.02,
-      "role": "eye"
-    }
-  ],
+  "markings": {},
   "gait": {
     "period": 0.7,
     "stride": 0.32,

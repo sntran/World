@@ -460,31 +460,78 @@ in the pose): a paw on the ground in a step.
 
 An animal is a species of a body plan (`World.Animals`). The body plan
 is code: it gives the bones of World, the joints, the limbs, the ports
-and the gaits. The species is data: two files, and no code.
+and the gaits. The species is data, in one of two ways:
 
-- `priv/animals/meshes/NAME.json`: the base mesh, its bones and its
-  weights, from a file of a model (`scripts/fbx_figure.exs`, below).
-- `priv/animals/species/NAME.json`: the species.
+- **On a template** (the way to prefer): a template is one mesh for a
+  body plan (`priv/animals/templates/NAME.json`), and the species is
+  only numbers (`World.Animals.Shape`): its shape, the colors of its
+  coat, its height and its gait. A new species is one small file, and
+  an order can change the numbers. The template `quadruped` is the
+  mesh of the dog: all the four-legged animals are numbers on it.
+- **On its own mesh**: `priv/animals/meshes/NAME.json` from a file of a
+  model (`scripts/fbx_figure.exs`, below), with the bone of the mesh for
+  each bone of World. For a body that no template has yet (the monkey).
+
+The species is `priv/animals/species/NAME.json`:
 
 | Key of a species | What it is |
 |---|---|
 | `name`, `about`, `sources` | The name (a to z, 0 to 9 and _), one sentence about the animal, and where its sizes come from. |
 | `plan` | `quadruped` (four legs and a tail) or `biped` (two legs, two arms and a tail). |
-| `mesh` | The name of the file in `meshes/`. |
-| `bones` | A bone of World to the bone of the mesh. A bone of the mesh with no bone of World gives its weights to the nearest bone above it with a bone of World (the fingers go to the hand, the eyes to the head). The bones of the tail are `tail_01`, `tail_02` ..., as many as the mesh has. |
+| `template` | The name of the template, or no key for a species on its own mesh. |
+| `shape` | A template: the numbers of the shape (below); a number not given is its default (the dog). |
+| `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `eye`, `nose`, `horn`). `markings` (a template): a region of the coat to its color. The option `coat` of the order is the color of `fur`. |
 | `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped, at the top of the head for a biped. The option `size` of the order scales it. |
-| `materials`, `colors` | A material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `dark`, `white`), and a role to its color. The option `coat` of the order is the color of `fur`. |
-| `smooth` | The smooth steps of the mesh at near: 2 for a mesh of a few hundred faces, 0 for a mesh of thousands. |
-| `spheres` | The eyes or a nose that the mesh does not have: on a ray from a point of a bone (`at`: a part of the bone from its head; `up`: meters above it) in the direction `dir`, with a `radius` (m) and a `role`. |
+| `spheres` | The eyes or a nose that the mesh does not have: on a ray from a point of a bone (`at`: a part of the bone from its head; `up`: above it) in the direction `dir`, with a `radius` and a `role`. On a template, `up` and `radius` are in lengths of the head of the template (times `head_size`); on a mesh, in meters. A template gives the eyes and the nose; a species can give its own. |
 | `gait` | The numbers of the gaits of the body plan (the time of a step, the stride as a part of the height, and more: see the module of the body plan). |
+| `mesh`, `bones`, `materials`, `smooth` | A species on its own mesh, or a template: the name of the file in `meshes/`; a bone of World to the bone of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `dark`, `white`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
+
+A template also gives `muzzle` (the part of the head where the muzzle
+starts) and `ears` (`x`, `y`, `z`: where the ears are on the head, in
+lengths of the head).
+
+The numbers of a shape change the bones at rest and the skin around
+them. A bone has a scale along it (its length) and across it (its
+girth); each point of the skin moves with the bones that move it, by
+its weights, so the skin stays smooth at the joints. Some numbers
+change one part: the muzzle, the ears, the tail, the paws. After the
+change, the lowest point of the paws is on the ground, and the height
+scales the animal.
+
+| Number | Range | What it changes |
+|---|---|---|
+| `body_length` | 0.6 to 1.8 | The length of the back. |
+| `body_width`, `body_depth` | 0.6 to 1.8 | The width and the depth of the body. |
+| `leg_length`, `leg_girth` | 0.5 to 1.6, 0.5 to 1.8 | The legs. |
+| `neck_length`, `neck_girth` | 0.4 to 1.8 | The neck. |
+| `head_size` | 0.6 to 1.6 | All the head. |
+| `muzzle_length`, `muzzle_width` | 0.3 to 1.8, 0.6 to 1.8 | The front of the head, from the eyes to the nose. |
+| `ear_size` | 0.5 to 2.0 | The ears. |
+| `ear_up`, `ear_point` | 0 to 1 | The ears: 0 folds them down to the sides (the dog), 1 up; 1 narrows them to a point. |
+| `tail_length`, `tail_girth` | 0.1 to 2.0, 0.4 to 3.0 | The tail. |
+| `tail_down` | -30 to 150 | Degrees: more turns the tail down (0: up, as the dog). |
+| `hooves` | 0 to 1 | 1: each paw is a narrow, short hoof. |
+| `horns` | 0 to 1.5 | The horns, in lengths of the head (0: no horns). |
+
+The coat is a base color and a color for each region, with soft edges
+(the colors of the points: `COLOR_0` in the GLB). The regions paint in
+this order, a later one over an earlier one: `back`, `belly`, `legs`,
+`socks` (the paws and the low part of the legs), `head`, `face` (the
+muzzle), `ears`, `tail_tip`, `hooves`.
 
 The species now:
 
-| Species | Plan | The animal | Mesh |
+| Species | Plan | The animal | Shape |
 |---|---|---|---|
-| `street_dog` | quadruped | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, a tail up. | Quaternius, Animal Pack Vol.2 (CC0): `Dog.fbx`. |
-| `cat` | quadruped | A cat of Việt Nam (mèo ta): about 25 cm at the shoulder, gray with a white chest and white paws. | Quaternius, Animal Pack Vol.2 (CC0): `Cat.fbx`. |
-| `monkey` | biped | A monkey of a cartoon (khỉ): about 60 cm high when it stands, a brown coat, a light face, belly, hands and feet, a long tail. | tomk, monkey 3d model rigged fbx (CC0): `monkey.FBX`, with the colors of its textures. |
+| `street_dog` | quadruped | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, a tail up. | The template: the dog of Quaternius, Animal Pack Vol.2 (CC0). |
+| `cat` | quadruped | A cat of Việt Nam (mèo ta): about 25 cm at the shoulder, gray with a white chest and white paws. | Numbers on the template. |
+| `wolf` | quadruped | A gray wolf: about 80 cm at the shoulder, long legs, a long muzzle, ears up, a thick tail that hangs down. | Numbers on the template. |
+| `goat` | quadruped | A goat of Việt Nam (dê cỏ): about 55 cm at the shoulder, hooves, small horns, a short tail up. | Numbers on the template. |
+| `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | Numbers on the template. |
+| `monkey` | biped | A monkey of a cartoon (khỉ): about 60 cm high when it stands, a brown coat, a light face, belly, hands and feet, a long tail. | Its own mesh: tomk, monkey 3d model rigged fbx (CC0), with the colors of its textures. |
+
+The numbers of the presets are a guess from the sizes in their
+`sources` and from photos, not measurements of the shape.
 
 A quadruped (`World.Animals.Quadruped`):
 
@@ -517,7 +564,15 @@ A biped (`World.Animals.Biped`):
   against the legs, the tail sways), `wave` (the right hand waves above
   the shoulder) and `wag` (the tail swings).
 
-A new species of a known body plan:
+A new species of four legs: write `priv/animals/species/NAME.json`
+with `"template": "quadruped"`, the numbers of its shape, its colors,
+its height and its gait, from the sizes of the animal and from photos.
+Build it (`mix world.build`), and look at it next to photos, at rest
+and in each animation. Add a model to the catalog (`World.Catalog`)
+and a test. An order can do the same with no file: the options `shape`
+and `markings` over a species.
+
+A new species of a body plan with no template:
 
 1. Find a model with bones and a skin, with a license that lets World
    give it again (CC0, CC-BY). Add a row to `CREDITS.md`.
@@ -526,8 +581,7 @@ A new species of a known body plan:
 3. Write `priv/animals/species/NAME.json`: the bones, the height, the
    materials and colors, the spheres, the gait. Look at the bones and
    the materials of the mesh in its JSON.
-4. Build it (`mix world.build`) and look at it at rest and in each
-   animation. Add a model to the catalog (`World.Catalog`) and a test.
+4. Build it, look at it, add it to the catalog and a test, as above.
 
 A new body plan (a bird, a fish, a snake) is a module with the
 functions of `World.Animals.Quadruped`: `bones/0`, `next/1`, `hinge/2`,

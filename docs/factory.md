@@ -111,14 +111,18 @@ with its joints and clips, the list of the parts, the log. Each error
 has its path.
 
 An `animal` is an animal of a species, from its bones: `species`
-(`street_dog`, `cat`, `monkey`), `coat` (a color; the color of the
-species by default), `size` (0.6 to 1.4: a scale of the animal) and
-`animations` (the animations of its body plan: `walk` and `wag` for a
-dog or a cat, `walk`, `wave` and `wag` for a monkey). Its joints and the
-ends of its limbs are in the order too (`"joints": {"tail.spread": 20}`,
-`"targets": {"front_r": [0.07, 0.3, 0.15]}`). A species is data of a
-body plan (`docs/format.md`, "An animal"), so one blueprint makes all
-the animals; the catalog has a model for each species.
+(`street_dog`, `cat`, `wolf`, `goat`, `pig`, `monkey`), `coat` (a
+color; the color of the species by default), `size` (0.6 to 1.4: a
+scale of the animal), `shape` (a four-legged species: numbers of the
+shape over the numbers of the species, as `{"leg_length": 1.2,
+"ear_up": 1}`), `markings` (a four-legged species: a region of the
+coat to its color, as `{"socks": "#ffffff"}`) and `animations` (the
+animations of its body plan: `walk` and `wag` for four legs, `walk`,
+`wave` and `wag` for a monkey). Its joints and the ends of its limbs
+are in the order too (`"joints": {"tail.spread": 20}`, `"targets":
+{"front_r": [0.07, 0.3, 0.15]}`). A species is data of a body plan
+(`docs/format.md`, "An animal"): an app can order a four-legged animal
+that World has no species for, with numbers only.
 
 An `exercise` is a group at a morning of exercise, as on the beach of
 Vũng Tàu: `routine` (`tai_chi`, `yoga` or `aerobics`), `count` (1 to 12

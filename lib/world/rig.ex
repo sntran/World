@@ -34,9 +34,12 @@ defmodule World.Rig do
   bone, material}`: the eyes, a nose; a center `{:on, from, dir}` is on
   the skin, on the ray from `from`), `mesh` (a base mesh in place of a
   skin that the build makes: `%{points, faces, weights, smooth,
-  material, roles}`, the weights a map of a bone to a list of `{point,
-  weight}`, `roles` the material of each face, or one `material` for
-  all), `blend` and `step` (a smooth skin,
+  material, roles, colors}`, the weights a map of a bone to a list of
+  `{point, weight}`, `roles` the material of each face, or one `material`
+  for all, `colors` an `{r, g, b}` (0 to 255) for each point: the
+  colors of the vertices, that the color of the material multiplies),
+  `parts` (a list of `{material, bone, points, triangles}`: a shape on
+  one bone, each point `{position, normal}` at rest: horns), `blend` and `step` (a smooth skin,
   `World.Blob`: the width of the blend of two bodies, and the step of
   its grid at near, in meters; with no blend, a tube around each bone),
   `materials` (a material role to
@@ -60,7 +63,12 @@ defmodule World.Rig do
         mesh -> mesh_skin(mesh, index)
       end
 
-    prims = prims ++ spheres(Keyword.get(opts, :spheres, []), index, surface)
+    prims =
+      prims ++
+        spheres(Keyword.get(opts, :spheres, []), index, surface) ++
+        for {material, bone, points, tris} <- Keyword.get(opts, :parts, []),
+            do: join(material, [{Enum.map(points, fn {p, n} -> {p, n, own(index[bone])} end), tris}])
+
     mesh = %Scene.Node{name: name <> "_mesh", skin: 0, primitives: prims}
 
     skin = %{
@@ -207,7 +215,16 @@ defmodule World.Rig do
         acc -> Map.update(acc, i, %{index[bone] => w}, &Map.put(&1, index[bone], w))
       end
 
-    start = points |> Enum.with_index() |> Enum.map(fn {p, i} -> {Vec.float(p), Map.get(by_point, i, %{})} end)
+    # The color of a point (when the mesh has colors) goes with its
+    # weights in the smooth steps, as the keys :r, :g and :b.
+    colors = Map.get(mesh, :colors)
+    color = fn i -> if colors, do: Enum.at(colors, i) |> then(fn {r, g, b} -> %{r: r, g: g, b: b} end), else: %{} end
+
+    start =
+      points
+      |> Enum.with_index()
+      |> Enum.map(fn {p, i} -> {Vec.float(p), Map.merge(Map.get(by_point, i, %{}), color.(i))} end)
+
     steps = max(Map.get(mesh, :smooth, 0) - %{near: 0, mid: 1, far: 2}[Detail.level()], 0)
     roles = Map.get(mesh, :roles) || List.duplicate(Map.get(mesh, :material, :fur), length(faces))
 
@@ -233,13 +250,14 @@ defmodule World.Rig do
 
     verts =
       for {{p, ws}, i} <- Enum.with_index(points) do
-        top = ws |> Enum.sort_by(fn {b, w} -> {-w, b} end) |> Enum.take(4)
+        top = ws |> Enum.filter(&is_integer(elem(&1, 0))) |> Enum.sort_by(fn {b, w} -> {-w, b} end) |> Enum.take(4)
         sum = top |> Enum.map(&elem(&1, 1)) |> Enum.sum()
         top = if sum > 0, do: Enum.map(top, fn {b, w} -> {b, w / sum} end), else: [{0, 1.0}]
         top = top ++ List.duplicate({0, 0.0}, 4 - length(top))
 
         {p, Vec.norm(Map.get(normals, i, {0.0, 0.0, 1.0})),
-         {List.to_tuple(Enum.map(top, &elem(&1, 0))), List.to_tuple(Enum.map(top, &elem(&1, 1)))}}
+         {List.to_tuple(Enum.map(top, &elem(&1, 0))), List.to_tuple(Enum.map(top, &elem(&1, 1)))},
+         if(colors, do: {ws.r, ws.g, ws.b})}
       end
       |> List.to_tuple()
 
@@ -333,7 +351,8 @@ defmodule World.Rig do
       normals: Enum.map(points, &elem(&1, 1)),
       indices: indices,
       joints: Enum.map(points, &elem(elem(&1, 2), 0)),
-      weights: Enum.map(points, &elem(elem(&1, 2), 1))
+      weights: Enum.map(points, &elem(elem(&1, 2), 1)),
+      colors: if(match?({_, _, _, {_, _, _}}, hd(points)), do: Enum.map(points, &elem(&1, 3)))
     }
   end
 end

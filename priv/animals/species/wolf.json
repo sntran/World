@@ -1,0 +1,67 @@
+{
+  "name": "wolf",
+  "plan": "quadruped",
+  "template": "quadruped",
+  "about": "A gray wolf: about 80 cm at the shoulder, long legs, a deep and narrow chest, a long muzzle, ears up, a thick tail that hangs down.",
+  "height": 0.8,
+  "shape": {
+    "body_length": 1.15,
+    "body_width": 0.85,
+    "body_depth": 1.05,
+    "leg_length": 1.1,
+    "neck_length": 1.1,
+    "neck_girth": 1.2,
+    "head_size": 1.05,
+    "muzzle_length": 1.25,
+    "ear_up": 1,
+    "ear_point": 0.7,
+    "ear_size": 0.85,
+    "tail_length": 1.1,
+    "tail_girth": 2.2,
+    "tail_down": 110
+  },
+  "colors": {
+    "fur": [
+      128,
+      122,
+      112
+    ],
+    "eye": [
+      150,
+      120,
+      40
+    ]
+  },
+  "markings": {
+    "back": [
+      86,
+      80,
+      74
+    ],
+    "belly": [
+      206,
+      198,
+      184
+    ],
+    "face": [
+      190,
+      182,
+      170
+    ],
+    "tail_tip": [
+      40,
+      36,
+      34
+    ]
+  },
+  "gait": {
+    "period": 0.75,
+    "stride": 0.32,
+    "lift": 0.1,
+    "drop": 0.03,
+    "wag": 0.5
+  },
+  "sources": [
+    "A gray wolf (Canis lupus): 66 to 92 cm at the shoulder, 105 to 160 cm long without the tail, a tail of 35 to 50 cm. The numbers of the shape are a guess from these sizes and from photos."
+  ]
+}

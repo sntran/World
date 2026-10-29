@@ -1,9 +1,9 @@
 defmodule World.Subdivision do
   @moduledoc """
   The smooth steps of a mesh of faces with any number of sides
-  (Catmull-Clark), with the data of each point: its place and its
-  weights (a map of a bone to its weight). Each new point is a mean of
-  old points, so the weights of a skin stay a sum of 1.
+  (Catmull-Clark), with the data of each point: its place and a map of
+  numbers (the weight of each bone, a color). Each new point is a mean
+  of old points, so the weights of a skin stay a sum of 1.
 
   After one step each face of n sides is n faces of 4 sides. A point
   on a border (an edge of one face) stays where it is, and a new point

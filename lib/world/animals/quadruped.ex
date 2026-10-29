@@ -62,7 +62,7 @@ defmodule World.Animals.Quadruped do
     points
     |> Enum.with_index()
     |> Enum.filter(fn {_, i} -> Map.get(spine, i, 0) >= 0.5 end)
-    |> Enum.map(fn {[_, _, z], _} -> z end)
+    |> Enum.map(fn {{_, _, z}, _} -> z end)
     |> Enum.max()
   end
 

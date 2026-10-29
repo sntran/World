@@ -22,9 +22,17 @@ defmodule World.Scene do
   defmodule Primitive do
     @moduledoc """
     The triangles of one material: points, normals, an index list, and
-    optional UV, joints (4 for each point) and weights (4 for each point).
+    optional UV, joints (4 for each point), weights (4 for each point)
+    and colors (`{r, g, b}`, 0 to 255, for each point).
     """
-    defstruct material: :paint, positions: [], normals: [], indices: [], uvs: nil, joints: nil, weights: nil
+    defstruct material: :paint,
+              positions: [],
+              normals: [],
+              indices: [],
+              uvs: nil,
+              joints: nil,
+              weights: nil,
+              colors: nil
   end
 
   @doc """

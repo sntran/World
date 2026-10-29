@@ -1,0 +1,65 @@
+{
+  "name": "goat",
+  "plan": "quadruped",
+  "template": "quadruped",
+  "about": "A goat of Việt Nam (dê cỏ): a small goat, about 55 cm at the shoulder, brown with a dark back, hooves, small horns, a short tail up.",
+  "height": 0.55,
+  "shape": {
+    "body_length": 1.05,
+    "body_width": 0.85,
+    "body_depth": 1.15,
+    "leg_length": 1.05,
+    "leg_girth": 0.7,
+    "hooves": 1,
+    "neck_length": 1.15,
+    "neck_girth": 0.8,
+    "muzzle_length": 1.2,
+    "muzzle_width": 0.75,
+    "ear_up": 0.3,
+    "ear_size": 1.1,
+    "ear_point": 0.5,
+    "tail_length": 0.25,
+    "tail_down": -10,
+    "horns": 0.6,
+    "head_size": 0.95
+  },
+  "colors": {
+    "fur": [
+      128,
+      86,
+      54
+    ],
+    "eye": [
+      150,
+      120,
+      40
+    ],
+    "horn": [
+      110,
+      96,
+      78
+    ]
+  },
+  "markings": {
+    "back": [
+      64,
+      44,
+      30
+    ],
+    "hooves": [
+      40,
+      34,
+      30
+    ]
+  },
+  "gait": {
+    "period": 0.7,
+    "stride": 0.3,
+    "lift": 0.1,
+    "drop": 0.03,
+    "wag": 0.25
+  },
+  "sources": [
+    "A goat of Việt Nam (dê cỏ): a small local goat, 50 to 60 cm at the shoulder, 25 to 40 kg. The numbers of the shape are a guess from these sizes and from photos."
+  ]
+}

@@ -62,7 +62,7 @@ defmodule World.Animals.Biped do
   def hinge(name, _dir), do: if(String.starts_with?(name, "shin_"), do: {-1.0, 0.0, 0.0}, else: {1.0, 0.0, 0.0})
 
   @doc "The height of the mesh: its highest point."
-  def height(points, _weights), do: points |> Enum.map(fn [_, _, z] -> z end) |> Enum.max()
+  def height(points, _weights), do: points |> Enum.map(fn {_, _, z} -> z end) |> Enum.max()
 
   @doc "The names of the animations."
   def animations, do: ~w(walk wave wag)

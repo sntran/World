@@ -138,6 +138,21 @@ defmodule World.Orders.Blueprints do
         option("species", :choice, default: "street_dog", values: World.Animals.species()),
         option("coat", :color, default: nil, doc: "The color of the coat (the color of the species by default)."),
         option("size", :number, default: 1.0, min: 0.6, max: 1.4, doc: "A scale of the animal: 1 is its common size."),
+        option("shape", :object,
+          default: %{},
+          fields:
+            for(
+              {name, {min, max, _}} <- Enum.sort(World.Animals.Shape.numbers()),
+              do: option(name, :number, default: nil, min: min, max: max)
+            ),
+          doc:
+            "A species of a template (four legs): numbers of the shape over the numbers of the species (World.Animals.Shape): the lengths and the thickness of the body, the legs, the neck, the head, the muzzle, the ears, the tail; hooves and horns."
+        ),
+        option("markings", :object,
+          default: %{},
+          fields: for(r <- World.Animals.Shape.regions(), do: option(r, :color, default: nil)),
+          doc: "A species of a template: a region of the coat to its color, over the colors of the species."
+        ),
         option("animations", :list,
           default: [],
           item:
@@ -154,6 +169,8 @@ defmodule World.Orders.Blueprints do
         World.Animals.animal(o["species"],
           coat: o["coat"] && rgb(o["coat"]),
           size: o["size"],
+          shape: for({k, v} <- o["shape"], v != nil, into: %{}, do: {k, v}),
+          markings: for({k, v} <- o["markings"], v != nil, into: %{}, do: {k, rgb(v)}),
           animations: o["animations"]
         )
       end,
@@ -164,10 +181,17 @@ defmodule World.Orders.Blueprints do
 
   defp animal_check(o) do
     known = World.Animals.animations(o["species"])
+    template? = World.Animals.spec(o["species"])["template"] != nil
 
-    for {a, i} <- Enum.with_index(o["animations"]),
-        a not in known,
-        do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
+    for(
+      {a, i} <- Enum.with_index(o["animations"]),
+      a not in known,
+      do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
+    ) ++
+      for key <- ~w(shape markings),
+          not template?,
+          Enum.any?(o[key], fn {_, v} -> v != nil end),
+          do: {"options.#{key}", "a #{o["species"]} has no template: it has no #{key}"}
   end
 
   # --- A group at a morning of exercise ------------------------------------------------------

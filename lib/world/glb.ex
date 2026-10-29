@@ -123,6 +123,17 @@ defmodule World.GLB do
     {attrs, buf} =
       if p.weights, do: with_attr(attrs, "WEIGHTS_0", floats(buf, p.weights, "VEC4", 34962, false)), else: {attrs, buf}
 
+    # The colors of the vertices: sRGB 0 to 255 in, linear 0 to 1 out.
+    {attrs, buf} =
+      if p.colors do
+        linear =
+          for {r, g, b} <- p.colors, do: {srgb_to_linear(r / 255), srgb_to_linear(g / 255), srgb_to_linear(b / 255)}
+
+        with_attr(attrs, "COLOR_0", floats(buf, linear, "VEC3", 34962, false))
+      else
+        {attrs, buf}
+      end
+
     {ind, buf} = indices(buf, p.indices, length(p.positions))
     {%{"attributes" => attrs, "indices" => ind, "material" => Map.fetch!(mat_index, p.material)}, buf}
   end
