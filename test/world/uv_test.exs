@@ -66,6 +66,9 @@ defmodule World.Animals.UVTest do
     side = [%{name: "ear_l", head: {0.0, 0.0, 0.0}, tail: {1.0, 0.0, 0.0}}]
     uvs = UV.charts(side, @box, %{}, @tris)
     assert Enum.all?(uvs, &(signed(&1) > 0))
+
+    # No faces: no UVs.
+    assert UV.charts(bone("leg_l"), @box, weights("leg_l"), []) == []
   end
 
   property "random triangles on two bones: each corner in the square, no face turns over" do

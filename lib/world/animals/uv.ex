@@ -109,6 +109,8 @@ defmodule World.Animals.UV do
 
   # The charts in rows into the square 0 to 1, the tallest first, with a
   # gap between them: one scale for all.
+  defp pack([]), do: []
+
   defp pack(placed) do
     boxes =
       placed
