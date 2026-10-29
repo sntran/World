@@ -20,16 +20,13 @@ defmodule World.Animals.Quadruped do
   `tail` and `head` are chains. The ports: `ground`, `collar` (on the neck), `back`
   (on the spine, for a bag), `mouth` (for a stick).
 
-  The animations: `walk` (the feet in the order hind left, front left,
-  hind right, front right; each foot is on the ground for 0.6 of the
-  step, flat, and folds back at the wrist in the air; the body is a
-  little lower than at rest, so each paw reaches its point on the
-  ground) and `wag` (the tail wags twice). The numbers of the gait of a
-  species (`gait`): `period` (the time of a step, s), `stride`, `lift`
-  and `drop` (parts of the height of the animal), `wag` (the time of a
-  wag, s).
+  The animations: `walk`, `run` (a gallop), `idle` and `eat` (the head
+  down to the ground) are the clips of the template
+  (`World.Animals.retarget/4`); `wag` (the tail wags twice) is code. The
+  number of the gait of a species (`gait`): `wag` (the time of a wag,
+  s).
   """
-  alias World.{Animals, Joint, Limb, Part, Rig, Vec}
+  alias World.{Joint, Limb, Part, Rig, Vec}
 
   @sides ~w(l r)
 
@@ -72,8 +69,11 @@ defmodule World.Animals.Quadruped do
     |> Enum.max()
   end
 
+  @doc "The bones of the feet: the paws or the hooves."
+  def feet, do: for(side <- @sides, part <- ~w(front hind), do: "#{part}_foot_#{side}")
+
   @doc "The names of the animations."
-  def animations, do: ~w(walk wag)
+  def animations, do: ~w(walk run idle eat wag)
 
   def limbs(by) do
     tail = Enum.filter(bones(), &(String.starts_with?(&1, "tail_") and Map.has_key?(by, &1)))
@@ -148,43 +148,6 @@ defmodule World.Animals.Quadruped do
   end
 
   @doc "An animation of the body plan, for an animal of height `h` (m) and the numbers of the gait of its species."
-  def animation("walk", skeleton, h, gait) do
-    period = Map.get(gait, "period", 0.7)
-
-    {stride, lift, drop} =
-      {Map.get(gait, "stride", 0.32) * h, Map.get(gait, "lift", 0.1) * h, Map.get(gait, "drop", 0.03) * h}
-
-    phases = %{"hind_l" => 0.0, "front_l" => 0.25, "hind_r" => 0.5, "front_r" => 0.75}
-    bones = Map.keys(skeleton.rest)
-
-    Rig.clip("walk", skeleton, period, 14, fn t ->
-      feet =
-        for {limb, phase} <- phases,
-            into: %{},
-            do: {{:limb, limb}, Animals.foot(:math.fmod(t / period + phase, 1.0), stride, lift, 0.6)}
-
-      # A paw in the air folds back at the wrist (more at the front).
-      folds =
-        for {limb, phase} <- phases, u = :math.fmod(t / period + phase, 1.0), u >= 0.6, into: %{} do
-          [part, side] = String.split(limb, "_")
-          fold = if part == "front", do: -40, else: -15
-          {"#{part}_foot_#{side}", [flex: fold * :math.sin(:math.pi() * (u - 0.6) / 0.4)]}
-        end
-
-      wave = :math.sin(2 * :math.pi() * t / period)
-
-      feet
-      |> Map.merge(folds)
-      |> Map.merge(%{:hips => %{at: {0.0, 0.0, -drop}}, {:foot, :l} => :free, {:foot, :r} => :free})
-      |> Map.merge(
-        Map.take(
-          %{"tail_01" => [spread: 12 * wave], "tail_02" => [spread: 8 * wave], "neck_01" => [flex: 3 * wave]},
-          bones
-        )
-      )
-    end)
-  end
-
   def animation("wag", skeleton, _h, gait) do
     period = Map.get(gait, "wag", 0.4)
     tail = Enum.filter(~w(tail_01 tail_02 tail_03), &Map.has_key?(skeleton.rest, &1))

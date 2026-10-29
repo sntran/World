@@ -12,10 +12,6 @@
     ]
   },
   "gait": {
-    "period": 0.7,
-    "stride": 0.22,
-    "lift": 0.1,
-    "drop": 0.015,
     "wag": 0.4
   },
   "sources": [

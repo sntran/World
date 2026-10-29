@@ -170,10 +170,13 @@ and no logo on them.
   ships at anchor (the far level only), a fast ferry, swim rings, beach
   umbrellas, canvas chairs, thatched huts.
 - **Animals (W11).** Next steps of the templates of four legs:
-  - The animations of the Ultimate pack (walk, gallop, idle, eat) on the
-    bones of World, in place of the walk of the code: the hind legs of
-    the dog and the cat fold in the walk of the code, because the hind
-    legs of the Ultimate rig are almost straight at rest.
+  - Feet that stay on the ground in the clips: inverse kinematics of
+    each paw on the ground to its place, for a shape with legs that are
+    not the legs of the file. Now the animal only goes up when a paw
+    goes into the ground, so a paw of a pig or a cat can be up to 3% of
+    the height above the ground in a walk.
+  - More clips of the Ultimate pack: an attack, a jump, a death, a head
+    low at rest.
   - The other animals of the Ultimate pack (alpaca, husky, stag) and
     the farm pack of Quaternius on poly.pizza (a pig, a sheep, a
     chicken), as templates.

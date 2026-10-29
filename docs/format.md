@@ -487,7 +487,7 @@ The species is `priv/animals/species/NAME.json`:
 | `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings` (a template): a region of the coat to its color; they paint the faces of `fur` and `marking`. The option `coat` of the order is the color of `fur`. |
 | `without` | A template: the roles whose faces go (`["horn"]`: the bull with no horns of the file, for horns of World). |
 | `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped, at the top of the head for a biped. The option `size` of the order scales it. |
-| `gait` | The numbers of the gaits of the body plan (the time of a step, the stride as a part of the height, and more: see the module of the body plan). |
+| `gait` | The numbers of the gaits of the body plan that are code: for four legs, `wag` (the time of a wag, s); for the monkey, the time of a step, the stride as a part of the height, and more (see the module of the body plan). |
 | `mesh`, `bones`, `materials`, `smooth` | A species on its own mesh, or a template: the name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
 
 A template also gives `parents` (a bone of World to its parent, when
@@ -560,10 +560,25 @@ A quadruped (`World.Animals.Quadruped`):
   back, the knee to the front. `tail` and `head` are chains.
 - Ports: `ground`, `collar` (on the neck), `back` (on the spine, for a
   bag), `mouth` (on the muzzle, for a stick).
-- Animations: `walk` (the feet in the order hind left, front left, hind
-  right, front right; each foot is on the ground for 0.6 of the step,
-  flat, and folds back at the wrist in the air; the body is a little
-  lower than at rest) and `wag` (the tail wags twice).
+- Animations: `walk`, `run` (a gallop), `idle` and `eat` (the head down
+  to the ground) are the clips of the template, on the bones of the
+  shape (below); `wag` (the tail wags twice) is code. The clips are in
+  place: an app moves the animal at the speed of the clip
+  (`walk_speed` and `run_speed` in the `params` of the parts list, in
+  m/s), so the paws do not slide.
+
+The clips of a template are in `priv/animals/clips/NAME.json` (from
+`scripts/gltf_clips.exs`, below): for each clip its `length` and
+`times` (s), the turn of each bone of World at each time (a quaternion
+in the axes of World, from the pose at rest), the move of the pelvis
+(in the units of the mesh) and the `speed` (in the units of the mesh
+for each second). On an animal (`World.Animals.retarget/5`), each bone
+turns from its rest by the turn of the clip, the pelvis moves by the
+move of the clip times the scale of the animal, and the other bones
+keep their place on their parent: the bones keep the lengths of the
+shape. The legs of a shape are not the legs of the file: when the
+lowest end of the feet goes below the lowest end at rest, all the
+animal goes up, so no foot goes into the ground.
 
 A biped (`World.Animals.Biped`):
 
@@ -580,7 +595,7 @@ A biped (`World.Animals.Biped`):
 
 A new species of four legs: write `priv/animals/species/NAME.json`
 with the template of the nearest body, the numbers of its shape, its colors,
-its height and its gait, from the sizes of the animal and from photos.
+its height, from the sizes of the animal and from photos.
 Build it (`mix world.build`), and look at it next to photos, at rest
 and in each animation. Add a model to the catalog (`World.Catalog`)
 and a test. An order can do the same with no file: the options `shape`
@@ -635,6 +650,19 @@ the inverse of its inverse bind matrix. The same point in two
 primitives is one point. A material has the base color of the file.
 The templates of four legs come from the glTF files of the Ultimate
 Animated Animal Pack with this script.
+
+`scripts/gltf_clips.exs` makes the clips of a template from the
+animations of its glTF file:
+
+    mix run scripts/gltf_clips.exs IN.gltf TEMPLATE.json OUT.json "SOURCE" "LICENSE" [FRONT]
+
+It reads the clips `Walk` (`walk`), `Gallop` (`run`), `Idle` (`idle`)
+and `Eating` (`eat`); a clip of more than 2 s keeps every second key.
+The turn of a bone of World is the mean turn of the bones of the file
+that give it their weights (each by its weights, from the mesh of the
+template); a bone with no weights has the turn of its own bone of the
+file. The speed is the middle value of the speeds to the back of the
+paws on the ground.
 
 ## A drawing
 

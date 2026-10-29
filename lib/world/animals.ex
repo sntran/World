@@ -24,8 +24,9 @@ defmodule World.Animals do
   the mesh), `materials` (a material of the mesh to a role) and
   `smooth`; on a template, `parents` and `muzzle`.
   """
-  alias World.{Rig, Vec}
+  alias World.{Frame, Rig, Vec}
   alias World.Animals.Shape
+  alias World.People.{Pose, Skeleton}
 
   @root Path.join([__DIR__, "..", "..", "priv", "animals"])
   @species_files Path.wildcard(Path.join([@root, "species", "*.json"]))
@@ -129,6 +130,7 @@ defmodule World.Animals do
 
     scale = s["height"] * k / plan.height(points, weights)
     at = &Vec.scale(&1, scale)
+    clips = if s["template"], do: clips(t["mesh"]), else: %{}
 
     bones =
       for b <- bones do
@@ -189,9 +191,14 @@ defmodule World.Animals do
              "metalness" => 0.0
            }}
         end),
-      animations: for(a <- names, do: &plan.animation(a, &1, k * s["height"], Map.get(s, "gait", %{}))),
+      animations:
+        for a <- names do
+          if clip = clips[a],
+            do: &retarget(a, &1, clip, scale, plan.feet()),
+            else: &plan.animation(a, &1, k * s["height"], Map.get(s, "gait", %{}))
+        end,
       kind: :animal,
-      params: %{"coat" => coat, "size" => k},
+      params: Map.merge(%{"coat" => coat, "size" => k}, speeds(clips, scale)),
       sources: [data["source"] <> " " <> data["license"], s["about"] | s["sources"]]
     )
   end
@@ -234,6 +241,64 @@ defmodule World.Animals do
 
     points = Enum.map(data["points"], &List.to_tuple/1)
     {data, bones(plan, map, Map.get(t, "parents", %{}), file_bones, owner, points, weights), points, weights}
+  end
+
+  # The clips of a template (`scripts/gltf_clips.exs`).
+  defp clips(mesh) do
+    Path.join([:code.priv_dir(:world), "animals", "clips", mesh <> ".json"])
+    |> File.read!()
+    |> JSON.decode!()
+    |> Map.fetch!("clips")
+  end
+
+  # The speeds of the clips that move the animal (m/s): an app moves the
+  # animal at this speed.
+  defp speeds(clips, scale) do
+    for {name, c} <- clips, c["speed"] > 0, into: %{}, do: {"#{name}_speed", Float.round(c["speed"] * scale, 2)}
+  end
+
+  @doc """
+  A clip of a template on the bones of an animal (its skeleton, the
+  meters for each unit of the mesh of the template, and the bones of its
+  feet). Each bone turns from its rest by the turn of its bones of the
+  file, in the axes of the animal; the pelvis also moves by its move of
+  the file; the other bones keep their place on their parent, so the
+  bones keep their lengths of the shape. The legs of the shape are not
+  the legs of the file: when the lowest end of the feet goes below the
+  lowest end at rest, all the animal goes up, so no foot goes into the
+  ground.
+  """
+  def retarget(name, %Skeleton{bones: bones} = s, clip, scale, feet) do
+    low = fn world -> feet |> Enum.map(&elem(Skeleton.tip(s, world, &1), 2)) |> Enum.min() end
+    ground = low.(s.rest)
+
+    frames =
+      for k <- 0..(length(clip["times"]) - 1) do
+        moved =
+          Enum.reduce(bones, %{}, fn b, w ->
+            rest = s.rest[b.name]
+            # The file has 4 decimals: a unit quaternion again.
+            [qx, qy, qz, qw] = Enum.at(clip["bones"][b.name], k)
+            l = :math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw)
+            q = Frame.from_quaternion({qx / l, qy / l, qz / l, qw / l}, {0.0, 0.0, 0.0})
+
+            at =
+              if b.parent,
+                do: Frame.point(w[b.parent], s.local[b.name].at),
+                else: Vec.add(rest.at, Vec.scale(List.to_tuple(Enum.at(clip["pelvis"], k)), scale))
+
+            Map.put(w, b.name, %Frame{x: Frame.dir(q, rest.x), y: Frame.dir(q, rest.y), z: Frame.dir(q, rest.z), at: at})
+          end)
+
+        up = max(ground - low.(moved), 0.0)
+        world = Map.new(moved, fn {bone, f} -> {bone, %{f | at: Vec.add(f.at, {0.0, 0.0, up})}} end)
+
+        Map.new(bones, fn b ->
+          {b.name, if(b.parent, do: Frame.compose(Frame.invert(world[b.parent]), world[b.name]), else: world[b.name])}
+        end)
+      end
+
+    %{name: name, channels: Pose.channels(bones, s.local, frames, clip["times"])}
   end
 
   # New horns: on the highest points of the head that the animal keeps.

@@ -160,9 +160,9 @@ defmodule World.Orders.Blueprints do
               values:
                 World.Animals.species() |> Enum.flat_map(&World.Animals.animations/1) |> Enum.uniq() |> Enum.sort()
             ),
-          max: 3,
+          max: 5,
           doc:
-            "walk: a step of the gait (the dog: 0.7 s at about 0.23 m/s; an app moves the animal); wag: the tail; wave: a hand (an animal with hands). Each species has the animations of its body plan."
+            "walk, run (a gallop), idle and eat: the clips of the template of a four-legged animal, in place (an app moves the animal at walk_speed or run_speed of the parts list, in m/s); walk of a monkey: a step on two legs; wag: the tail; wave: a hand (an animal with hands). Each species has the animations of its body plan."
         )
       ],
       build: fn o ->

@@ -18,45 +18,16 @@
 #   255).
 # - The axes of World: z up, y to the front, x = y x z; the ground at
 #   z = 0 and the middle at x = 0, y = 0.
+Code.require_file("gltf.exs", __DIR__)
+
 [input, output, source, license | rest] = System.argv()
-gltf = input |> File.read!() |> JSON.decode!()
-
-buffers =
-  for b <- gltf["buffers"] do
-    case b["uri"] do
-      "data:" <> data -> data |> String.split(",", parts: 2) |> List.last() |> Base.decode64!()
-      file -> File.read!(Path.join(Path.dirname(input), file))
-    end
-  end
-
-# The values of an accessor: a list of tuples (or of numbers for a
-# scalar).
-read = fn index ->
-  a = Enum.at(gltf["accessors"], index)
-  view = Enum.at(gltf["bufferViews"], a["bufferView"])
-  n = %{"SCALAR" => 1, "VEC2" => 2, "VEC3" => 3, "VEC4" => 4, "MAT4" => 16}[a["type"]]
-  {size, take} =
-    case a["componentType"] do
-      5126 -> {4, fn <<v::little-float-32>> -> v end}
-      5125 -> {4, fn <<v::little-32>> -> v end}
-      5123 -> {2, fn <<v::little-16>> -> v end}
-      5121 -> {1, fn <<v::8>> -> v end}
-    end
-
-  stride = view["byteStride"] || size * n
-  start = Map.get(view, "byteOffset", 0) + Map.get(a, "byteOffset", 0)
-  bin = Enum.at(buffers, view["buffer"])
-
-  for i <- 0..(a["count"] - 1) do
-    values = for k <- 0..(n - 1), do: take.(binary_part(bin, start + i * stride + k * size, size))
-    if n == 1, do: hd(values), else: List.to_tuple(values)
-  end
-end
+gltf = GLTF.load(input)
+read = &GLTF.read(gltf, &1)
 
 nodes = gltf["nodes"]
 skin = hd(gltf["skins"])
 joints = skin["joints"]
-parent = for {n, i} <- Enum.with_index(nodes), c <- Map.get(n, "children", []), into: %{}, do: {c, i}
+parent = GLTF.parents(gltf)
 
 # The head of a bone: the translation of the inverse of its inverse bind
 # matrix (columns first): -R^T t for a matrix of a turn R and a move t.

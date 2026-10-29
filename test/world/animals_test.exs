@@ -61,27 +61,74 @@ defmodule World.AnimalsTest do
     assert Figure.port!(dog, "ground").bone == nil
   end
 
-  test "the walk keeps a foot on the ground while it goes back, and the wag turns the tail", %{dog: dog} do
+  # The frames of the bones in the axes of the animal at each time of a
+  # clip.
+  defp frames(%{skeleton: s}, clip) do
+    for k <- 0..(length(hd(clip.channels).times) - 1) do
+      s.bones
+      |> Enum.with_index(1)
+      |> Map.new(fn {b, i} ->
+        f =
+          for c <- clip.channels, c.node == i, reduce: s.local[b.name] do
+            f when c.path == :rotation -> %{Enum.at(c.values, k) | at: f.at}
+            f -> %{f | at: Enum.at(c.values, k)}
+          end
+
+        {b.name, f}
+      end)
+      |> then(&Skeleton.world(s, &1))
+    end
+  end
+
+  # The lowest end of the feet.
+  defp low(%{skeleton: s}, world) do
+    World.Animals.Quadruped.feet() |> Enum.map(&elem(Skeleton.tip(s, world, &1), 2)) |> Enum.min()
+  end
+
+  test "the clips of the template on the bones, and the wag", %{dog: dog} do
     [walk, wag] = dog.animations
     assert walk.name == "walk" and wag.name == "wag"
     s = dog.skeleton
-    rest = s.rest["front_foot_l"].at
-
-    # A front foot up and to the back: flat.
-    w = Skeleton.world(s, Skeleton.locals(s, %{{:limb, "front_l"} => %{by: {0.0, -0.03, 0.03}, flat: true}}))
-    assert Vec.len(Vec.sub(w["front_foot_l"].at, Vec.add(rest, {0.0, -0.03, 0.03}))) < 1.0e-4
-    # The paw keeps its turn of the rest.
-    assert Vec.len(Vec.sub(w["front_foot_l"].y, s.rest["front_foot_l"].y)) < 1.0e-6
-    nodes = MapSet.new(walk.channels, & &1.node)
     index = fn bone -> 1 + Enum.find_index(s.bones, &(&1.name == bone)) end
-    assert index.("front_lower_l") in nodes and index.("tail_01") in nodes
+    nodes = MapSet.new(walk.channels, & &1.node)
+    assert index.("front_lower_l") in nodes and index.("hind_foot_r") in nodes and index.("tail_01") in nodes
+    assert %{path: :translation} = Enum.find(walk.channels, &(&1.node == index.("pelvis") and &1.path == :translation))
     assert MapSet.new(wag.channels, & &1.node) == MapSet.new(~w(tail_01 tail_02 tail_03), index)
+
+    all = Animals.animal("street_dog", animations: ~w(walk run idle eat))
+    assert Enum.map(all.animations, & &1.name) == ~w(walk run idle eat)
+    ground = low(all, s.rest)
+
+    for clip <- all.animations, world <- frames(all, clip) do
+      # Each bone keeps its length: its head is on its parent where it is
+      # at rest. No foot goes into the ground.
+      for b <- s.bones, b.parent do
+        at = Frame.point(world[b.parent], s.local[b.name].at)
+        assert Vec.len(Vec.sub(world[b.name].at, at)) < 1.0e-9
+      end
+
+      assert low(all, world) > ground - 1.0e-9, clip.name
+    end
+
+    # A walk and a run loop: the last time is the first. The head goes
+    # down to eat.
+    [walk, run, _, eat] = Enum.map(all.animations, &frames(all, &1))
+
+    for clip <- [walk, run],
+        do: assert(Vec.len(Vec.sub(List.last(clip)["head"].at, hd(clip)["head"].at)) < 1.0e-3)
+
+    assert eat |> Enum.map(&elem(&1["head"].at, 2)) |> Enum.min() < elem(s.rest["head"].at, 2) - 0.15
+
+    # The speeds of the clips that move the animal: a run is faster.
+    %{"walk_speed" => slow, "run_speed" => fast} = all.params
+    assert slow > 0.2 and fast > 2 * slow
+
     assert Animals.species() == ~w(cat cow deer donkey fox goat horse monkey pig street_dog water_buffalo wolf)
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
 
-    assert_raise ArgumentError, ~r/unknown animation of a street_dog "run"/, fn ->
-      Animals.animal("street_dog", animations: ["run"])
+    assert_raise ArgumentError, ~r/unknown animation of a street_dog "fly"/, fn ->
+      Animals.animal("street_dog", animations: ["fly"])
     end
 
     refute Animals.__mix_recompile__?()
@@ -149,10 +196,12 @@ defmodule World.AnimalsTest do
     ]
 
     for {name, h} <- heights do
-      animal = Animals.animal(name, animations: ~w(walk wag))
+      animal = Animals.animal(name, animations: ~w(walk))
       assert_in_delta withers(animal), h, 0.05 * h, name
       assert Figure.limbs(animal) == ~w(front_l front_r head hind_l hind_r tail)
-      assert Enum.map(animal.animations, & &1.name) == ~w(walk wag)
+      # The walk of its template: no foot goes into the ground.
+      ground = low(animal, animal.skeleton.rest)
+      for world <- frames(animal, hd(animal.animations)), do: assert(low(animal, world) > ground - 1.0e-9, name)
     end
 
     # The cat on the fox: gray, with a white chest and white paws (the

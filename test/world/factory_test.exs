@@ -259,7 +259,13 @@ defmodule World.FactoryTest do
     end
 
     test "an animal: each species has the animations of its body plan" do
-      assert {:error, [%{"path" => "options.animations.1", "message" => "a cat has no animation wave: walk, wag"}]} =
+      assert {:error,
+              [
+                %{
+                  "path" => "options.animations.1",
+                  "message" => "a cat has no animation wave: walk, run, idle, eat, wag"
+                }
+              ]} =
                Orders.check(%{
                  "blueprint" => "animal",
                  "options" => %{"species" => "cat", "animations" => ["walk", "wave"]}

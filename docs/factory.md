@@ -118,8 +118,10 @@ scale of the animal), `shape` (a four-legged species: numbers of the
 shape over the numbers of the species, as `{"leg_length": 1.2,
 "ear_droop": 30}`), `markings` (a four-legged species: a region of the
 coat to its color, as `{"socks": "#ffffff"}`) and `animations` (the
-animations of its body plan: `walk` and `wag` for four legs, `walk`,
-`wave` and `wag` for a monkey). Its joints and the ends of its limbs
+animations of its body plan: `walk`, `run`, `idle`, `eat` and `wag` for
+four legs, `walk`, `wave` and `wag` for a monkey; the walk and the run
+of four legs are in place, and the parts list gives their speeds,
+`walk_speed` and `run_speed`, in m/s). Its joints and the ends of its limbs
 are in the order too (`"joints": {"tail.spread": 20}`, `"targets":
 {"front_r": [0.07, 0.3, 0.15]}`). A species is data of a body plan
 (`docs/format.md`, "An animal"): an app can order a four-legged animal
