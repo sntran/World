@@ -178,12 +178,10 @@ and no logo on them.
     for spots (the hyena, a leopard), and a back that slopes down to the
     hips (the hyena has longer front legs); round ears (the ears of the
     wolf stay pointed with a larger `ear_width`).
-  - The fur (`_FUR`, the UVs): more regions for its length (the mane
-    and the tail of a horse, the tail of a macaque, which has short
-    hair); fur on the dark legs of the fox (the material `dark` is also
-    the nose and the hooves, so it has no fur now); the lengths from
-    measurements, not from photos; a direction of the fur for each point
-    in place of +v of the UVs; the fur in the apps (Phượt, Vũng Tàu).
+  - The fur (`_FUR`, `_FUR_DIR`, the UVs): the lengths from
+    measurements, not from photos; whorls and partings in the direction
+    of the fur (now only along the bones); the fur in the apps (Phượt,
+    Vũng Tàu).
   - More primates on the template of primates: a rhesus macaque, a
     pig-tailed macaque, a gibbon, a langur (douc). Hands that grip and
     feet with a thumb that grips (the feet of the template are the feet

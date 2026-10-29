@@ -23,7 +23,9 @@ defmodule World.Animals do
   color), `fur` (the length of the fur, m: `coat` and a region to its
   length), `space` (the coefficients of the shape space of the template,
   `World.Animals.Space`), `without` (roles whose faces go) and `gait`. Each animal has
-  the UVs of its template (`World.Animals.UV`), `_FUR` on its fur, and
+  the UVs of its template (`World.Animals.UV`), `_FUR` and `_FUR_DIR` on
+  its fur, its mane and its dark parts (`World.Animals.Shape.fur/3`,
+  `fur_dirs/3`), and
   `uv_size` in its params (the length of one unit of UV on the skin, m).
   The keys of a
   template: `mesh`, `bones` (a bone of World to the bones of the mesh),
@@ -209,8 +211,13 @@ defmodule World.Animals do
         roles: roles,
         colors: colors,
         fur: fur && Enum.map(fur, &(&1 * k)),
+        fur_dirs: fur && Shape.fur_dirs(bones, points, weights),
         uvs: uvs,
-        colored: [:fur, :marking]
+        # The colors of the coat on the fur and its lighter parts; the fur
+        # also on the mane (of a horse) and the dark parts (the legs of a
+        # fox).
+        colored: [:fur, :marking],
+        furred: [:fur, :marking, :mane, :dark]
       },
       limbs: plan.limbs(by),
       joints: plan.joints(by),

@@ -41,7 +41,7 @@ defmodule World.Animals.Shape do
 
   The coat: a color and a length of the fur for each region of the skin,
   with soft edges between the regions (`regions/3`, `colors/3`,
-  `fur/3`).
+  `fur/3`), and the direction of the fur at each point (`fur_dirs/3`).
   """
   alias World.Vec
 
@@ -72,7 +72,7 @@ defmodule World.Animals.Shape do
     "horn_spread" => {0.0, 1.0, 0.0}
   }
 
-  @regions ~w(back belly legs socks head face ears tail_tip)
+  @regions ~w(back belly mane legs socks head face ears tail tail_tip)
   @foot ~r/(^|_)foot_[lr]$/
   @leg ~r/^(front_|hind_|thigh_|calf_|foot_)/
 
@@ -401,9 +401,11 @@ defmodule World.Animals.Shape do
   The regions of the coat at each point of the template (at rest,
   before the numbers): a region to a list of the part (0 to 1) of each
   point in it. `back` and `belly` are the top and the bottom of the
-  body and the neck; `legs` the legs; `socks` the paws and the low part
-  of the legs; `head` all the head; `face` the muzzle; `ears` (the bones
-  of the ears); `tail_tip` (the last bone of the tail).
+  body and the neck; `mane` the top of the neck (the crest, where a horse
+  has its mane); `legs` the legs; `socks` the paws and the low part of
+  the legs; `head` all the head; `face` the muzzle; `ears` (the bones of
+  the ears); `tail` all the tail; `tail_tip` (the last bone of the
+  tail).
   """
   def regions(bones, points, weights) do
     by = Map.new(bones, &{&1.name, &1})
@@ -420,7 +422,8 @@ defmodule World.Animals.Shape do
     feet = Enum.filter(legs, &(&1 =~ ~r/_foot_|^hand_|^foot_|^ball_/))
     lower = Enum.filter(legs, &(&1 =~ ~r/_lower_|^lowerarm_|^calf_/))
     trunk = Enum.filter(~w(pelvis spine_01 spine_02 spine_03 neck_01), &Map.has_key?(by, &1))
-    tail_tip = names |> Enum.filter(&String.starts_with?(&1, "tail_")) |> List.last()
+    tail = Enum.filter(names, &String.starts_with?(&1, "tail_"))
+    tail_tip = List.last(tail)
 
     # The height of each point of the body over the bone that moves it
     # most, as a part of the range of the body there.
@@ -446,11 +449,13 @@ defmodule World.Animals.Shape do
         parts = %{
           "back" => t * smooth(0.65, 0.85, z),
           "belly" => t * (1 - smooth(0.2, 0.4, z)),
+          "mane" => w.("neck_01", i) * smooth(0.65, 0.85, z),
           "legs" => min(sum.(legs, i), 1.0),
           "socks" => min(sum.(feet, i) + low, 1.0),
           "head" => w.("head", i),
           "face" => w.("head", i) * face_part(Map.has_key?(by, "upperarm_l"), hy, hz, len),
           "ears" => min(w.("ear_l", i) + w.("ear_r", i), 1.0),
+          "tail" => min(sum.(tail, i), 1.0),
           "tail_tip" => w.(tail_tip, i)
         }
 
@@ -480,6 +485,32 @@ defmodule World.Animals.Shape do
   `colors/3`.
   """
   def fur(regions, base, lengths), do: blend(regions, base / 1, lengths, fn a, b, m -> a + (b - a) * m end)
+
+  @doc """
+  The direction of the fur at each point, at rest (a unit vector, or
+  `{0, 0, 0}` for a point on no bone): the hair lies to the back on the
+  body, the neck and the head (from the head to the root of each bone),
+  and to the end of each bone on the legs, the arms, the ears and the
+  tail. The mean of the bones of the point, by their weights. The skin
+  (`World.Rig`) keeps the part of it along the skin.
+  """
+  def fur_dirs(bones, points, weights) do
+    dirs =
+      for b <- bones, into: %{} do
+        d = Vec.norm(Vec.sub(b.tail, b.head))
+        {b.name, if(b.name =~ ~r/^(pelvis|spine_|neck_|head$)/, do: Vec.scale(d, -1.0), else: d)}
+      end
+
+    by_point =
+      for {b, m} <- weights, {i, w} <- m, reduce: %{} do
+        acc -> Map.update(acc, i, Vec.scale(dirs[b], w), &Vec.add(&1, Vec.scale(dirs[b], w)))
+      end
+
+    for i <- 0..(length(points) - 1) do
+      v = Map.get(by_point, i, {0.0, 0.0, 0.0})
+      if Vec.len(v) > 1.0e-9, do: Vec.norm(v), else: {0.0, 0.0, 0.0}
+    end
+  end
 
   defp blend(regions, base, values, mix) do
     Enum.reduce(@regions, List.duplicate(base, length(regions["back"])), fn r, list ->

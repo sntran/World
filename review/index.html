@@ -167,7 +167,8 @@ async function parts(name) {
 }
 
 // The fur of an animal, as an app can draw it: 24 shells over the skin,
-// each out along the normal by a part of _FUR (the length of the fur, m).
+// each out along the normal by a part of _FUR (the length of the fur, m),
+// and more along _FUR_DIR (the way the hair lies) to the tips.
 // A strand is a cell of 1.5 mm of the UVs (uv_size m for each unit); a
 // shell keeps the cells with a number over its part, so the strands get
 // thin to their tips.
@@ -180,8 +181,8 @@ function fur(root, uvSize) {
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, { uShell: { value: k }, uRepeat: { value: uvSize / 0.0015 } });
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float _fur; uniform float uShell; varying float vFur;')
-        .replace('#include <skinning_vertex>', '#include <skinning_vertex>\ntransformed += normalize(objectNormal) * _fur * uShell; vFur = _fur;');
+        .replace('#include <common>', '#include <common>\nattribute float _fur; attribute vec3 _fur_dir; uniform float uShell; varying float vFur;')
+        .replace('#include <skinning_vertex>', '#include <skinning_vertex>\nvec3 lie = (skinMatrix * vec4(_fur_dir, 0.0)).xyz;\ntransformed += (normalize(objectNormal) + 0.8 * uShell * lie) * _fur * uShell; vFur = _fur;');
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', '#include <common>\nuniform float uShell; uniform float uRepeat; varying float vFur;')
         .replace('void main() {', `void main() {

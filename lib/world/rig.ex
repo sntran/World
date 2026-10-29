@@ -39,7 +39,10 @@ defmodule World.Rig do
   for all, `colors` an `{r, g, b}` (0 to 255) for each point: the
   colors of the vertices, that the color of the material multiplies;
   `fur` a length for each point (m: the fur of the point, `_FUR` in the
-  GLB); `colored` the roles that have colors and fur, all by default;
+  GLB); `fur_dirs` a direction for each point (the hair lies that way;
+  the part along the skin, as a unit vector, is `_FUR_DIR` in the GLB);
+  `colored` the roles that have colors, all by default; `furred` the
+  roles that have fur, `colored` by default;
   `uvs` a list for each face of a `{u, v}` for each corner),
   `parts` (a list of `{material, bone, points, triangles}`: a shape on
   one bone, each point `{position, normal}` at rest: horns), `blend` and `step` (a smooth skin,
@@ -225,18 +228,20 @@ defmodule World.Rig do
         acc -> Map.update(acc, i, %{index[bone] => w}, &Map.put(&1, index[bone], w))
       end
 
-    # The color and the length of the fur of a point (when the mesh has
-    # them) go with its weights in the smooth steps, as the keys :r, :g,
-    # :b and :fur.
-    {colors, fur} = {Map.get(mesh, :colors), Map.get(mesh, :fur)}
+    # The color, the length of the fur and the direction of the fur of a
+    # point (when the mesh has them) go with its weights in the smooth
+    # steps, as the keys :r, :g, :b, :fur, :dx, :dy and :dz.
+    {colors, fur, dirs} = {Map.get(mesh, :colors), Map.get(mesh, :fur), Map.get(mesh, :fur_dirs)}
     color = fn i -> if colors, do: Enum.at(colors, i) |> then(fn {r, g, b} -> %{r: r, g: g, b: b} end), else: %{} end
     fur_of = fn i -> if fur, do: %{fur: Enum.at(fur, i)}, else: %{} end
+    dir_of = fn i -> if dirs, do: Enum.at(dirs, i) |> then(fn {x, y, z} -> %{dx: x, dy: y, dz: z} end), else: %{} end
 
     start =
       points
       |> Enum.with_index()
       |> Enum.map(fn {p, i} ->
-        {Vec.float(p), Map.get(by_point, i, %{}) |> Map.merge(color.(i)) |> Map.merge(fur_of.(i))}
+        {Vec.float(p),
+         Map.get(by_point, i, %{}) |> Map.merge(color.(i)) |> Map.merge(fur_of.(i)) |> Map.merge(dir_of.(i))}
       end)
 
     steps = max(Map.get(mesh, :smooth, 0) - %{near: 0, mid: 1, far: 2}[Detail.level()], 0)
@@ -279,9 +284,10 @@ defmodule World.Rig do
         top = if sum > 0, do: Enum.map(top, fn {b, w} -> {b, w / sum} end), else: [{0, 1.0}]
         top = top ++ List.duplicate({0, 0.0}, 4 - length(top))
 
-        {p, Vec.norm(Map.get(normals, i, {0.0, 0.0, 1.0})),
-         {List.to_tuple(Enum.map(top, &elem(&1, 0))), List.to_tuple(Enum.map(top, &elem(&1, 1)))},
-         if(colors, do: {ws.r, ws.g, ws.b}), nil, if(fur, do: ws.fur)}
+        n = Vec.norm(Map.get(normals, i, {0.0, 0.0, 1.0}))
+
+        {p, n, {List.to_tuple(Enum.map(top, &elem(&1, 0))), List.to_tuple(Enum.map(top, &elem(&1, 1)))},
+         if(colors, do: {ws.r, ws.g, ws.b}), nil, if(fur, do: ws.fur), if(dirs, do: along({ws.dx, ws.dy, ws.dz}, n))}
       end
       |> List.to_tuple()
 
@@ -295,14 +301,18 @@ defmodule World.Rig do
       |> Enum.map(fn {role, ts} ->
         used = ts |> Enum.concat() |> Enum.uniq() |> Enum.sort()
         at = used |> Enum.with_index() |> Map.new()
-        # The colors and the fur of the points only on the roles of
-        # `colored` (all by default).
-        keep? = role in Map.get(mesh, :colored, [role])
+        # The colors of the points only on the roles of `colored` (all by
+        # default), the fur only on the roles of `furred` (`colored` by
+        # default).
+        colored = Map.get(mesh, :colored, [role])
+        color? = role in colored
+        fur? = role in Map.get(mesh, :furred, colored)
 
         points =
           for {i, uv} <- used do
             v = put_elem(elem(verts, i), 4, uv)
-            if keep?, do: v, else: v |> put_elem(3, nil) |> put_elem(5, nil)
+            v = if color?, do: v, else: put_elem(v, 3, nil)
+            if fur?, do: v, else: v |> put_elem(5, nil) |> put_elem(6, nil)
           end
 
         join(role, [{points, Enum.map(ts, fn t -> Enum.map(t, &at[&1]) end)}])
@@ -412,12 +422,20 @@ defmodule World.Rig do
       weights: Enum.map(points, &elem(elem(&1, 2), 1)),
       colors: field(points, 3),
       uvs: field(points, 4),
-      fur: field(points, 5)
+      fur: field(points, 5),
+      fur_dirs: field(points, 6)
     }
   end
 
-  # A value of the points (the color, the UV, the length of the fur), when
-  # the points have it.
+  # The part of a direction along the skin (with the normal n), as a unit
+  # vector; the normal for a direction across the skin or of no bone.
+  defp along(d, n) do
+    t = Vec.sub(d, Vec.scale(n, Vec.dot(d, n)))
+    if Vec.len(t) > 1.0e-6, do: Vec.norm(t), else: n
+  end
+
+  # A value of the points (the color, the UV, the length and the direction
+  # of the fur), when the points have it.
   defp field([first | _] = points, k) do
     if tuple_size(first) > k and elem(first, k) != nil, do: Enum.map(points, &elem(&1, k))
   end

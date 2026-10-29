@@ -100,6 +100,15 @@ defmodule World.Animals.ShapeTest do
       assert Enum.any?(list, &(&1 >= 0.5)), r
     end
 
+    # The fur lies to the back on the body, down on the legs, to the end
+    # of the tail; a unit vector, or none for a point on no bone.
+    dirs = Shape.fur_dirs(c.bones, c.points, c.weights)
+    assert length(dirs) == length(c.points)
+    on = fn bone -> for({d, i} <- Enum.with_index(dirs), Map.get(c.weights[bone], i, 0) == 1.0, do: d) end
+    assert Enum.all?(on.("spine_01"), &(elem(&1, 1) < 0)) and Enum.all?(on.("front_lower_l"), &(elem(&1, 2) < 0))
+    assert Enum.all?(dirs, &(abs(World.Vec.len(&1) - 1) < 1.0e-9))
+    assert Shape.fur_dirs(c.bones, [{0, 0, 0} | c.points], %{}) |> Enum.uniq() == [{0.0, 0.0, 0.0}]
+
     plain = Shape.colors(regions, [10, 20, 30], %{})
     assert Enum.uniq(plain) == [{10.0, 20.0, 30.0}]
     socks = Shape.colors(regions, [0, 0, 0], %{"socks" => [255, 255, 255]})

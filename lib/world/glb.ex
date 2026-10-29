@@ -9,7 +9,7 @@ defmodule World.GLB do
     `materials` of the scene. Its name is its role.
   - The same scene gives the same bytes.
   """
-  alias World.{Frame, Scene}
+  alias World.{Frame, Scene, Vec}
   @external_resource palette_path = Path.join([__DIR__, "..", "..", "priv", "palette.json"])
   @palette palette_path |> File.read!() |> JSON.decode!() |> Map.fetch!("roles")
 
@@ -139,6 +139,13 @@ defmodule World.GLB do
     {attrs, buf} =
       if p.fur,
         do: with_attr(attrs, "_FUR", floats(buf, Enum.map(p.fur, &{&1 / 1}), "SCALAR", 34962, false)),
+        else: {attrs, buf}
+
+    # The direction of the fur of each point (a unit vector along the skin,
+    # at rest, in the axes of glTF: the joints turn it as the normal).
+    {attrs, buf} =
+      if p.fur_dirs,
+        do: with_attr(attrs, "_FUR_DIR", floats(buf, Enum.map(p.fur_dirs, &gl(Vec.float(&1))), "VEC3", 34962, false)),
         else: {attrs, buf}
 
     {ind, buf} = indices(buf, p.indices, length(p.positions))

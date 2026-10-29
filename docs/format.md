@@ -548,10 +548,11 @@ when the front legs and the hind legs are not the same length.
 
 The coat is a base color and a color for each region, with soft edges
 (the colors of the points: `COLOR_0` in the GLB). The regions paint in
-this order, a later one over an earlier one: `back`, `belly`, `legs`,
-`socks` (the paws, the hands and the feet, and the low part of the
-legs), `head`, `face` (the muzzle; the face of a primate under the
-brow), `ears`, `tail_tip`.
+this order, a later one over an earlier one: `back`, `belly`, `mane`
+(the top of the neck), `legs`, `socks` (the paws, the hands and the
+feet, and the low part of the legs), `head`, `face` (the muzzle; the
+face of a primate under the brow), `ears`, `tail` (all the tail),
+`tail_tip`.
 
 #### The shape space
 
@@ -631,11 +632,21 @@ one normal.
 
 `_FUR` (an attribute of the application, a float for each vertex) is
 the length of the fur at the point, in meters, from the `fur` of the
-species, on the materials `fur` and `marking` only. An app can draw
-the fur as shells: copies of the skin, each out along the normal by a
-part of `_FUR`, that keep the strands of a noise in UV (a strand of
-1.5 mm is `uv_size / 0.0015` cells for each unit of UV). The review page
-does this with its switch "Fur" (`&fur=1`).
+species, on the materials `fur`, `marking`, `mane` (the mesh of the
+mane and the tail of a horse: the fur is the strands on it) and `dark`
+(the dark legs of a fox; its nose is in the region `face`).
+`_FUR_DIR` (three floats for each vertex) is the direction in which the
+hair lies, at rest, in the axes of glTF: a unit vector along the skin.
+On the body, the neck and the head it goes to the back (from the head
+to the root of each bone); on the legs, the arms, the ears and the tail
+to the end of each bone; the mean of the bones of the point by their
+weights, without its part along the normal (the normal, where the bones
+point across the skin). The joints turn it as they turn the normal. An
+app can draw the fur as shells: copies of the skin, each out along the
+normal by a part of `_FUR`, that keep the strands of a noise in UV (a
+strand of 1.5 mm is `uv_size / 0.0015` cells for each unit of UV); the
+outer shells lean along `_FUR_DIR`. The review page does this with its
+switch "Fur" (`&fur=1`).
 
 The species now:
 

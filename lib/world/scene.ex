@@ -23,8 +23,9 @@ defmodule World.Scene do
     @moduledoc """
     The triangles of one material: points, normals, an index list, and
     optional UV, joints (4 for each point), weights (4 for each point),
-    colors (`{r, g, b}`, 0 to 255, for each point) and the length of the
-    fur of each point (m).
+    colors (`{r, g, b}`, 0 to 255, for each point), the length of the
+    fur of each point (m) and the direction of the fur of each point (a
+    unit vector along the skin, at rest).
     """
     defstruct material: :paint,
               positions: [],
@@ -34,7 +35,8 @@ defmodule World.Scene do
               joints: nil,
               weights: nil,
               colors: nil,
-              fur: nil
+              fur: nil,
+              fur_dirs: nil
   end
 
   @doc """

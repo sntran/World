@@ -139,7 +139,19 @@ defmodule World.RigTest do
 
     fur = for {_, _, z} <- @cube_points, do: if(z < 0, do: 0.0, else: 0.02)
     roles = [:eye | List.duplicate(:fur, 5)]
-    mesh = %{points: @cube_points, faces: @cube_faces, weights: %{}, smooth: 1, roles: roles, fur: fur, uvs: uvs}
+    dirs = List.duplicate({1.0, 0.0, 0.0}, length(@cube_points))
+
+    mesh = %{
+      points: @cube_points,
+      faces: @cube_faces,
+      weights: %{},
+      smooth: 1,
+      roles: roles,
+      fur: fur,
+      fur_dirs: dirs,
+      uvs: uvs
+    }
+
     f = Rig.figure("box", bones: bones(), mesh: Map.put(mesh, :colored, [:fur]))
 
     [node] = for n <- f.nodes, n.primitives != [], do: n
@@ -157,9 +169,24 @@ defmodule World.RigTest do
     for {_, list} <- by_place, do: assert(length(Enum.uniq_by(list, &elem(&1, 1))) == 1)
     assert Enum.min(skin.fur) == 0.0 and Enum.max(skin.fur) == 0.02 and 0.01 in skin.fur
 
+    # The direction of the fur along the skin: x on the faces along x, the
+    # normal on the faces across x.
+    for {d, n} <- Enum.zip(skin.fur_dirs, skin.normals) do
+      assert abs(World.Vec.len(d) - 1) < 1.0e-9
+      assert abs(World.Vec.dot(d, n)) < 1.0e-6 or d == n
+    end
+
     attrs = World.GLBHelper.json(World.GLB.encode(World.Build.scene(f)))["meshes"] |> hd() |> Map.fetch!("primitives")
-    assert [%{"attributes" => %{"TEXCOORD_0" => _} = eye_attrs}, %{"attributes" => %{"_FUR" => _}}] = attrs
+
+    assert [%{"attributes" => %{"TEXCOORD_0" => _} = eye_attrs}, %{"attributes" => %{"_FUR" => _, "_FUR_DIR" => _}}] =
+             attrs
+
     refute Map.has_key?(eye_attrs, "_FUR")
+
+    # Fur on a role with no colors: `furred`.
+    g = Rig.figure("box", bones: bones(), mesh: mesh |> Map.put(:colored, [:fur]) |> Map.put(:furred, [:eye, :fur]))
+    [eye, _] = hd(for n <- g.nodes, n.primitives != [], do: n).primitives
+    assert length(eye.fur) == 9 and length(eye.fur_dirs) == 9
   end
 
   test "a rig with a smooth skin: one surface, a thin tube, a sphere on the skin" do

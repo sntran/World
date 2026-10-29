@@ -278,6 +278,13 @@ defmodule World.AnimalsTest do
     assert Enum.any?(fur.colors, &(elem(&1, 0) < 60)) and Enum.any?(fur.colors, &(elem(&1, 0) > 200))
     assert pig.materials.fur["color"] == [255, 255, 255]
 
+    # The mane and the tail of a horse (a mesh of hair) have fur: 5 cm on
+    # the mane, 8 cm on the tail; the fur lies along the skin.
+    horse = Build.scene(Animals.animal("horse", []))
+    [mane] = for n <- horse.nodes, p <- n.primitives, p.material == :mane, do: p
+    assert_in_delta Enum.max(mane.fur), 0.08, 1.0e-6
+    assert Enum.any?(mane.fur, &(abs(&1 - 0.05) < 0.005)) and length(mane.fur_dirs) == length(mane.positions)
+
     # The new horns of a water buffalo are wide; it has none of the bull.
     buffalo = Build.scene(Animals.animal("water_buffalo", []))
     [horns] = for n <- buffalo.nodes, p <- n.primitives, p.material == :horn, do: p
@@ -322,6 +329,10 @@ defmodule World.AnimalsTest do
     assert length(fur.fur) == length(fur.positions) and length(fur.uvs) == length(fur.positions)
     assert Enum.min(fur.fur) == 0.0
     assert_in_delta Enum.max(fur.fur), 0.025, 1.0e-9
+    # The tail has short hair.
+    tail = for {b, k} <- Enum.with_index(m.skeleton.bones), String.starts_with?(b.name, "tail_"), do: k
+    on_tail = for {f, j, w} <- Enum.zip([fur.fur, fur.joints, fur.weights]), elem(j, 0) in tail, elem(w, 0) > 0.9, do: f
+    assert on_tail != [] and Enum.max(on_tail) < 0.01
     assert m.params["uv_size"] > 1.0 and m.params["uv_size"] < 1.6
     big = Animals.animal("macaque", size: 2.0)
 
