@@ -66,9 +66,10 @@
   },
   "materials": {
     "body": "fur",
-    "eye": "eye"
+    "eye": "eye",
+    "nose": "nose"
   },
   "smooth": 1,
-  "muzzle": 0.375,
-  "brow": 0.375
+  "muzzle": 0.45,
+  "brow": 0.44
 }

@@ -1,29 +1,30 @@
 # Make the mesh of the template of primates (priv/animals/meshes/) from
 # the body of MakeHuman (CC0, priv/makehuman/): the low-poly body of a man
 # (the mid level of World.People.Human, "male1591"), its skeleton
-# "game_engine" and its weights, the low-poly eyes, and a tail of 8
-# bones that World adds. The same format as scripts/gltf_figure.exs.
+# "game_engine" and its weights, with a head of a macaque and a tail of
+# 8 bones that World adds. The same format as scripts/gltf_figure.exs.
 #
 #     mix run scripts/primate_template.exs OUT.json
 #
 # - The body: the numbers of World.People.Human by default, with no
 #   clothes and no hair. The same point at a seam of the texture is one
 #   point.
-# - The eyes: the asset "low-poly" of MakeHuman on the body, on the bone
-#   "head".
+# - The head: a smooth skin of World (World.Blob) on the bones "head"
+#   and "neck_01", with eyes and nostrils, in place of the head of the
+#   person (below).
 # - The tail: a tube from the back of the pelvis, down and a little to the
 #   back, 0.9 m long (about the height of the body from the seat to the
 #   top of the head), 4.5 cm thick at the root and 1.2 cm at the tip, in 8
 #   bones (Tail1 to Tail8). A ring of points between two bones follows
 #   them both.
-alias World.People.{Data, Human}
-alias World.Vec
+alias World.People.Human
+alias World.{Blob, Frame, Vec}
 
 [output] = System.argv()
-o = %{gender: 1.0, age: 30, muscle: 0.5, weight: 0.5, height: 0.5, race: %{"asian" => 1.0}}
 f = World.Detail.with(:mid, fn -> Human.person("primate", clothes: [], hair: nil) end)
 [body] = for n <- f.nodes, p <- n.primitives, do: p
 names = Enum.map(f.skeleton.bones, & &1.name)
+index = names |> Enum.with_index() |> Map.new()
 key = fn {x, y, z} -> {round(x * 1.0e5), round(y * 1.0e5), round(z * 1.0e5)} end
 
 # The points of the body, one for each place, and the weights of each.
@@ -50,87 +51,125 @@ faces =
   |> Enum.map(fn t -> Enum.map(t, &elem(ids, &1)) end)
   |> Enum.filter(&(length(Enum.uniq(&1)) == 3))
 
-# The eyes, as World.People.Human fits an asset: the sum of three points
-# of the body with their weights, and an offset in the scale of the body.
-base = Data.base()
-arr = :array.from_list(Tuple.to_list(base.points))
+# The head of a macaque in place of the head of the person: the faces
+# of the person with a point on the bone "head" (a weight of 0.2 or
+# more) or over the base of the neck (1.395 m) go, and a smooth skin of
+# World (World.Blob) is the head. The parts (from photos of long-tailed
+# macaques; the sizes are guesses): a round skull, a brow ridge over the
+# eyes, the cheeks, a muzzle that goes to the front under the eyes with
+# the nostrils at its front, a jaw with no chin under the muzzle, small
+# ears that stand out to the sides, and a short neck that hides the edge
+# of the body. Each point of the skin takes the weights of the 4 nearest
+# points of the head and the neck of the person, so it moves as the head
+# of the person. The eyes are near together, to the front, under the
+# brow ridge; the nostrils are two small dark points.
+head_w = Map.new(weights["head"], fn [i, w] -> {i, w} end)
 
-morphed =
-  Human.target_weights(o)
-  |> Enum.reduce(arr, fn {name, w}, arr ->
-    Enum.reduce(Data.target(name), arr, fn {i, {dx, dy, dz}}, arr ->
-      {x, y, z} = :array.get(i, arr)
-      :array.set(i, {x + w * dx, y + w * dy, z + w * dz}, arr)
-    end)
-  end)
-  |> :array.to_list()
-  |> List.to_tuple()
-
-ground = (for f <- base.groups["body"], {v, _} <- f, do: elem(elem(morphed, v), 1)) |> Enum.min() |> Kernel.*(0.1)
-eyes = Data.asset("eyes", "low-poly")
-
-scale = fn axis, k ->
-  with {a, b, d} <- Map.get(eyes.fit.scales, axis, 1.0), do: abs(elem(elem(morphed, a), k) - elem(elem(morphed, b), k)) / d
-end
-
-s = {scale.("x_scale", 0), scale.("y_scale", 1), scale.("z_scale", 2)}
-
-eye_points =
-  for {vs, ws, {dx, dy, dz}} <- Tuple.to_list(eyes.fit.refs) do
-    p = Enum.zip(vs, ws) |> Enum.map(fn {v, w} -> Vec.scale(elem(morphed, v), w) end) |> Enum.reduce(&Vec.add/2)
-    p = Vec.add(p, {dx * elem(s, 0), dy * elem(s, 1), dz * elem(s, 2)})
-    Vec.sub(Human.to_world(p), {0.0, 0.0, ground})
+# The points of the person above the shoulders and their weights, for
+# the weights of the new head (below).
+person =
+  for {p, i} <- Enum.with_index(points), elem(p, 2) > 1.3 do
+    {p, for({b, list} <- weights, b in ~w(spine_03 neck_01 head), [^i, w] <- list, do: {index[b], w})}
   end
 
-# The face of a macaque (photos: docs/format.md, "The macaque"): the eyes
-# are larger and rounder than the eyes of a person, and the nose is flat
-# between the eyes. The lids open around the center of each eye (more up
-# and down than to the sides), the eye is a little larger, and the bridge
-# of the nose goes back to near the plane of the eyes.
-smooth = fn a, b, v ->
-  t = ((v - a) / (b - a)) |> max(0.0) |> min(1.0)
-  t * t * (3 - 2 * t)
+faces = Enum.reject(faces, fn t -> Enum.any?(t, &(Map.get(head_w, &1, 0.0) >= 0.2 or elem(Enum.at(points, &1), 2) > 1.395)) end)
+
+# The points that the faces keep, in their order, and the weights.
+used = faces |> List.flatten() |> Enum.uniq() |> Enum.sort()
+renumber = used |> Enum.with_index() |> Map.new()
+points = Enum.map(used, &Enum.at(points, &1))
+faces = Enum.map(faces, fn t -> Enum.map(t, &renumber[&1]) end)
+
+weights =
+  for {b, list} <- weights, l = for([i, w] <- list, Map.has_key?(renumber, i), do: [renumber[i], w]), l != [], into: %{},
+    do: {b, l}
+
+# A body of the skin on the bone `name`: from `a` to `b`, its radius
+# {across, up} at each end (in m, at the size of the person), in a group
+# (the bodies of two groups join with a blend).
+body = fn name, a, b, r0, r1, group ->
+  dir = Vec.norm(Vec.sub(b, a))
+  up = if abs(elem(dir, 2)) > 0.9, do: {0.0, 1.0, 0.0}, else: {0.0, 0.0, 1.0}
+  z = Vec.norm(Vec.sub(up, Vec.scale(dir, Vec.dot(up, dir))))
+  %{name: name, head: a, tail: b, radius: {r0, r1}, group: group, frame: Frame.new(a, z, dir)}
 end
 
-centers =
-  for side <- [-1, 1] do
-    e = Enum.filter(eye_points, &(elem(&1, 0) * side > 0))
-    Vec.scale(Enum.reduce(e, &Vec.add/2), 1 / length(e))
-  end
+mirror = fn {x, y, z} -> {-x, y, z} end
 
-{_, eye_y, eye_z} = hd(centers)
-nose_z = points |> Enum.filter(&(abs(elem(&1, 0)) < 0.01)) |> Enum.max_by(&elem(&1, 1)) |> elem(2)
+# The skull, the brow ridge, the muzzle, the jaw and the neck; the cheeks
+# and the ears on each side.
+bodies =
+  [
+    body.("head", {0.0, 0.0, 1.53}, {0.0, 0.05, 1.535}, {0.07, 0.068}, {0.066, 0.064}, "skull"),
+    body.("head", {-0.045, 0.098, 1.552}, {0.045, 0.098, 1.552}, {0.016, 0.014}, {0.016, 0.014}, "skull"),
+    body.("head", {0.0, 0.07, 1.495}, {0.0, 0.13, 1.482}, {0.034, 0.034}, {0.026, 0.027}, "muzzle"),
+    body.("head", {0.0, 0.05, 1.455}, {0.0, 0.11, 1.452}, {0.03, 0.02}, {0.021, 0.015}, "jaw"),
+    body.("neck_01", {0.0, 0.01, 1.37}, {0.0, 0.02, 1.47}, {0.058, 0.05}, {0.054, 0.05}, "neck")
+  ] ++
+    for m <- [& &1, mirror] do
+      [
+        body.("head", m.({0.042, 0.04, 1.5}), m.({0.036, 0.085, 1.49}), {0.027, 0.027}, {0.022, 0.022}, "skull"),
+        body.("head", m.({0.058, -0.004, 1.532}), m.({0.08, -0.026, 1.537}), {0.005, 0.013}, {0.005, 0.016}, "ear")
+      ]
+    end
+    |> List.flatten()
 
-open = fn p ->
-  Enum.reduce(centers, p, fn c, {x, y, z} = p ->
-    {dx, dy, dz} = Vec.sub(p, c)
-    w = (1 - smooth.(0.014, 0.035, :math.sqrt(dx * dx + dz * dz))) * (1 - smooth.(0.01, 0.03, abs(dy)))
-    {x + 0.35 * dx * w, y, z + 1.0 * dz * w}
-  end)
+blob_bodies = for b <- bodies, do: Map.put(b, :index, index[b.name])
+{skin, skin_tris} = Blob.mesh(blob_bodies, 0.008, 0.018)
+
+# A sphere on the skin: on the ray from `from` along `dir`, its center
+# `inside` of its radius under the skin.
+sphere = fn from, dir, r, inside ->
+  c = Vec.add(Blob.surface(blob_bodies, from, dir, 0.018), Vec.scale(dir, -inside * r))
+  {rings, segs} = {6, 10}
+
+  ps =
+    for i <- 0..rings, j <- 0..(segs - 1) do
+      {a, b} = {:math.pi() * i / rings, 2 * :math.pi() * j / segs}
+      Vec.add(c, Vec.scale({:math.sin(a) * :math.cos(b), :math.sin(a) * :math.sin(b), :math.cos(a)}, r))
+    end
+
+  k = fn i, j -> i * segs + rem(j, segs) end
+  {ps, for(i <- 0..(rings - 1), j <- 0..(segs - 1), t <- [[k.(i, j), k.(i + 1, j), k.(i + 1, j + 1)], [k.(i, j), k.(i + 1, j + 1), k.(i, j + 1)]], do: t)}
 end
 
-flat = fn {x, y, z} ->
-  w = (1 - smooth.(0.012, 0.03, abs(x))) * smooth.(nose_z - 0.025, nose_z - 0.01, z) * (1 - smooth.(eye_z, eye_z + 0.03, z))
-  {x, y - 0.7 * w * max(0.0, y - eye_y - 0.008), z}
-end
+eyes = for x <- [0.02, -0.02], do: sphere.({x, 0.0, 1.528}, {0.0, 1.0, 0.0}, 0.0125, 0.6)
+nostrils = for x <- [0.007, -0.007], do: sphere.({x, 0.0, 1.488}, {0.0, 1.0, 0.0}, 0.0045, 0.5)
 
-points = Enum.map(points, &(&1 |> flat.() |> open.()))
-
-eye_points =
-  Enum.map(eye_points, fn p ->
-    c = Enum.min_by(centers, &Vec.len(Vec.sub(p, &1)))
-    Vec.add(c, Vec.scale(Vec.sub(p, c), 1.15))
-  end)
-
+# The new points of the head: the skin with its weights, and the eyes and
+# the nostrils on the bone head. The material of each face: 0 the skin,
+# 1 the eyes, 2 the nostrils.
 n0 = length(points)
 
-eye_faces =
-  for f <- eyes.mesh.groups |> Map.values() |> Enum.concat(),
-      [a | rest] = Enum.map(f, &(elem(&1, 0) + n0)),
-      [b, c] <- Enum.chunk_every(rest, 2, 1, :discard),
-      do: [a, b, c]
+# The weights of a point of the skin: the weights of the 4 nearest points
+# of the person, each by 1 / its distance.
+near_weights = fn p ->
+  near = person |> Enum.map(fn {q, jw} -> {Vec.len(Vec.sub(p, q)), jw} end) |> Enum.sort() |> Enum.take(4)
+  ws = for {d, jw} <- near, {j, w} <- jw, do: {j, w / max(d, 1.0e-4)}
+  sum = ws |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+  ws |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> Enum.map(fn {j, l} -> {j, Enum.sum(l) / sum} end)
+end
 
-weights = Map.update!(weights, "head", &(&1 ++ for(i <- n0..(n0 + length(eye_points) - 1), do: [i, 1.0])))
+head_parts =
+  [{0, Enum.map(skin, fn {p, _, _} -> {p, near_weights.(p)} end), skin_tris}] ++
+    for({ps, tris} <- eyes, do: {1, Enum.map(ps, &{&1, [{index["head"], 1.0}]}), tris}) ++
+    for {ps, tris} <- nostrils, do: {2, Enum.map(ps, &{&1, [{index["head"], 1.0}]}), tris}
+
+{head_points, head_faces, head_materials, weights, _} =
+  Enum.reduce(head_parts, {[], [], [], weights, n0}, fn {m, ps, tris}, {pts, fs, ms, weights, n} ->
+    weights =
+      ps
+      |> Enum.with_index(n)
+      |> Enum.reduce(weights, fn {{_, jw}, i}, acc ->
+        jw
+        |> Enum.filter(fn {_, w} -> w > 0 end)
+        |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+        |> Enum.reduce(acc, fn {j, ws}, acc -> Map.update(acc, Enum.at(names, j), [[i, Enum.sum(ws)]], &[[i, Enum.sum(ws)] | &1]) end)
+      end)
+
+    {pts ++ Enum.map(ps, &elem(&1, 0)), fs ++ Enum.map(tris, fn t -> Enum.map(t, &(&1 + n)) end), ms ++ List.duplicate(m, length(tris)), weights,
+     n + length(ps)}
+  end)
 
 # The tail: its root at the back of the pelvis, at the height of the head
 # of the pelvis.
@@ -144,7 +183,7 @@ dir = Vec.norm({0.0, -0.25, -1.0})
 side = {1.0, 0.0, 0.0}
 up = Vec.cross(dir, side)
 radius = fn t -> 0.045 + (0.012 - 0.045) * t end
-n1 = n0 + length(eye_points)
+n1 = n0 + length(head_points)
 
 rings =
   for k <- 0..count, j <- 0..(sides - 1) do
@@ -197,18 +236,22 @@ tail_bones =
     }
   end
 
-all = points ++ eye_points ++ rings ++ [tip]
-tris = faces ++ eye_faces ++ tail_faces
+all = points ++ head_points ++ rings ++ [tip]
+tris = faces ++ head_faces ++ tail_faces
 
 data = %{
   "source" =>
-    "MakeHuman (CC0): the low-poly body male1591, the skeleton game_engine and its weights, and the low-poly eyes (https://github.com/makehumancommunity/mpfb2); the tail is of World.",
+    "MakeHuman (CC0): the low-poly body male1591, the skeleton game_engine and its weights (https://github.com/makehumancommunity/mpfb2); the head of a macaque and the tail are of World.",
   "license" => "CC0 1.0 (public domain): https://creativecommons.org/publicdomain/zero/1.0/",
   "points" => Enum.map(all, round),
   "faces" => tris,
-  "materials" => [%{"name" => "body", "color" => [170, 140, 110]}, %{"name" => "eye", "color" => [40, 28, 18]}],
+  "materials" => [
+    %{"name" => "body", "color" => [170, 140, 110]},
+    %{"name" => "eye", "color" => [40, 28, 18]},
+    %{"name" => "nose", "color" => [40, 30, 28]}
+  ],
   "face_materials" =>
-    List.duplicate(0, length(faces)) ++ List.duplicate(1, length(eye_faces)) ++ List.duplicate(0, length(tail_faces)),
+    List.duplicate(0, length(faces)) ++ head_materials ++ List.duplicate(0, length(tail_faces)),
   "bones" =>
     for(
       b <- f.skeleton.bones,

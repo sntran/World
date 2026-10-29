@@ -75,7 +75,7 @@ defmodule World.Animals.Shape do
     "horn_spread" => {0.0, 1.0, 0.0}
   }
 
-  @regions ~w(back belly mane legs socks head face lids ears tail tail_tip)
+  @regions ~w(back belly mane legs socks head face cheeks lids ears tail tail_tip)
   @foot ~r/(^|_)foot_[lr]$/
   @leg ~r/^(front_|hind_|thigh_|calf_|foot_)/
 
@@ -416,7 +416,8 @@ defmodule World.Animals.Shape do
   point in it. `back` and `belly` are the top and the bottom of the
   body and the neck; `mane` the top of the neck (the crest, where a horse
   has its mane); `legs` the legs; `socks` the paws and the low part of
-  the legs; `head` all the head; `face` the muzzle; `lids` the upper
+  the legs; `head` all the head; `face` the muzzle; `cheeks` the sides of the
+  head behind the face; `lids` the upper
   lids, over the points of `eyes`; `ears` (the bones of
   the ears); `tail` all the tail; `tail_tip` (the last bone of the
   tail).
@@ -459,7 +460,9 @@ defmodule World.Animals.Shape do
       acc ->
         t = sum.(trunk, i)
         z = if t > 0, do: (elem(local(frames[Enum.max_by(trunk, &w.(&1, i))], p), 2) - lo) / (hi - lo), else: 0.5
-        {_, hy, hz} = local(frames["head"], p)
+        {hx, hy, hz} = local(frames["head"], p)
+        primate = Map.has_key?(by, "upperarm_l")
+        face = face_part(primate, hy, hz, len)
 
         low =
           Enum.sum(
@@ -474,7 +477,8 @@ defmodule World.Animals.Shape do
           "legs" => min(sum.(legs, i), 1.0),
           "socks" => min(sum.(feet, i) + low, 1.0),
           "head" => w.("head", i),
-          "face" => w.("head", i) * face_part(Map.has_key?(by, "upperarm_l"), hy, hz, len),
+          "face" => w.("head", i) * face,
+          "cheeks" => w.("head", i) * cheeks(primate, abs(hx), hy, hz, len) * (1 - face),
           "lids" => w.("head", i) * lids.(p),
           "ears" => min(w.("ear_l", i) + w.("ear_r", i), 1.0),
           "tail" => min(sum.(tail, i), 1.0),
@@ -515,7 +519,17 @@ defmodule World.Animals.Shape do
   # The face: the front part of the bone of the head of an animal on four
   # legs, the front of the head of a primate under the brow (as `face/4`).
   defp face_part(false, y, _z, len), do: smooth(0.45 * len, 0.6 * len, y)
-  defp face_part(true, y, z, len), do: smooth(0.35 * len, 0.5 * len, -z) * (1 - smooth(0.4 * len, 0.5 * len, y))
+  defp face_part(true, y, z, len), do: smooth(0.25 * len, 0.38 * len, -z) * (1 - smooth(0.4 * len, 0.47 * len, y))
+
+  # The cheeks: the sides of the head, behind the face. Of a primate:
+  # from the outer corners of the eyes to the sides, from the temples
+  # down to the jaw, in the front half of the head.
+  defp cheeks(false, x, y, _z, len), do: smooth(0.12 * len, 0.22 * len, x) * smooth(0.15 * len, 0.3 * len, y)
+
+  defp cheeks(true, x, y, z, len),
+    do:
+      smooth(0.15 * len, 0.25 * len, x) * smooth(-0.25 * len, -0.1 * len, y) * (1 - smooth(0.3 * len, 0.4 * len, y)) *
+        smooth(-0.15 * len, 0.0, -z)
 
   @doc """
   The color of each point: the `base` color, and over it the color of

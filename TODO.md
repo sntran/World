@@ -186,14 +186,15 @@ and no logo on them.
     template are the feet of a person); the thumb of the hand does not
     fold well in `"grip"`; a speed for the climb; a template with no
     tail for the gibbon; a region for the hands of the douc (now the
-    socks color them) and its white forearms; the white cheeks of the
-    gibbon (now the full face).
+    socks color them) and its white forearms.
   - Fur on the template of primates: the body of MakeHuman is smooth,
     so the macaque with no fur shells has the shape of its body only. A
     crest of hair on the head and long hair on the cheeks.
-  - The face of the macaque: next to photos, the bridge of the nose and
-    the lips still have the shape of a person (the low-poly face of
-    MakeHuman has few points there), and the eyes are farther apart.
+  - The head of the macaque: the eyes have one color (no iris and no
+    pupil), there is no line of the mouth, and the ears have the color
+    of the fur (the ears of a macaque are bare and dark gray). On four
+    limbs the neck is long and the head is high over the line of the
+    back; in photos the head is lower and more to the front.
   - The birds: a rooster (a larger comb and tail, hackles); feet with
     webs for the duck, a bill deeper at its root, smaller eyes, the body
     of a duck at 40º; feathers (a pattern, the direction); a bird that

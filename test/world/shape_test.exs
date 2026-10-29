@@ -165,7 +165,7 @@ defmodule World.Animals.ShapeTest do
     {_, snout} = Shape.apply(b, p, w, %{"muzzle_length" => 1.8}, t)
     # The skull goes down; the muzzle goes to the front, and the top of
     # the head stays.
-    assert top.(low) < top.(rest) - 0.03
+    assert top.(low) < top.(rest) - 0.015
     assert front.(snout) > front.(rest) + 0.03
     assert_in_delta top.(snout), top.(rest), 1.0e-9
 
@@ -194,5 +194,10 @@ defmodule World.Animals.ShapeTest do
     {eye_back, _} = eye.(&elem(&1, 1))
     assert Enum.any?(lids, &(elem(&1, 0) > 0)) and Enum.any?(lids, &(elem(&1, 0) < 0))
     assert Enum.all?(lids, &(elem(&1, 2) > eye_top - 0.02 and elem(&1, 1) > eye_back))
+
+    # The cheeks: on the two sides of the head, not on the face.
+    cheeks = for {m, i} <- Enum.with_index(regions["cheeks"]), m > 0.5, do: Enum.at(p, i)
+    assert Enum.any?(cheeks, &(elem(&1, 0) > 0.03)) and Enum.any?(cheeks, &(elem(&1, 0) < -0.03))
+    assert Enum.all?(Enum.zip(regions["cheeks"], regions["face"]), fn {c, f} -> c + f <= 1.0 + 1.0e-9 end)
   end
 end

@@ -314,7 +314,7 @@ defmodule World.AnimalsTest do
     m = Animals.animal("macaque", animations: Animals.animations("macaque"))
     assert Animals.animations("macaque") == ~w(walk sit climb hang jump)
     scene = Build.scene(m)
-    assert Map.keys(scene.materials) |> Enum.sort() == [:eye, :fur]
+    assert Map.keys(scene.materials) |> Enum.sort() == [:eye, :fur, :nose]
     assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
     assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
     assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
