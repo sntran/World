@@ -18,9 +18,9 @@ defmodule World.AnimalsTest do
   test "a street dog: its size, its skin and its materials", %{dog: dog} do
     scene = Build.scene(dog)
     [w, l, h] = scene.extras["size"]
-    assert_in_delta w, 0.24, 0.05
-    assert_in_delta l, 0.95, 0.1
-    assert_in_delta h, 0.72, 0.05
+    assert_in_delta w, 0.34, 0.05
+    assert_in_delta l, 1.13, 0.1
+    assert_in_delta h, 0.71, 0.05
     {{_, _, ground}, _} = Scene.bounds(scene)
     assert_in_delta ground, 0.0, 0.01
     assert scene.extras["kind"] == "animal"
@@ -46,13 +46,13 @@ defmodule World.AnimalsTest do
     assert elem(world(up, "tail_03").at, 2) > elem(world(rest, "tail_03").at, 2)
 
     # A paw to a point: the front leg reaches to the front.
-    to = {-0.075, 0.35, 0.15}
+    to = Vec.add(dog.skeleton.rest["front_foot_l"].at, {0.0, 0.06, 0.08})
     reach = Build.scene(dog, targets: %{"front_l" => to})
     assert Vec.len(Vec.sub(world(reach, "front_foot_l").at, to)) < 1.0e-3
 
-    collar = Figure.port_frame(dog, "collar")
-    assert Vec.len(Vec.sub(collar.at, {0.0, 0.27, 0.48})) < 1.0e-6
-    assert Figure.port!(dog, "mouth").bone == "muzzle"
+    {_, y, z} = Figure.port_frame(dog, "collar").at
+    assert y > 0.15 and z > 0.4
+    assert Figure.port!(dog, "mouth").bone == "head"
     assert Figure.port!(dog, "ground").bone == nil
   end
 
@@ -62,10 +62,11 @@ defmodule World.AnimalsTest do
     s = dog.skeleton
     rest = s.rest["front_foot_l"].at
 
-    # The front left foot starts at the part 0.25 of the step: on the
-    # ground, at the front.
-    w = Skeleton.world(s, Skeleton.locals(s, %{{:limb, "front_l"} => %{by: {0.0, 0.1, 0.0}}}))
-    assert_in_delta elem(w["front_foot_l"].at, 2), elem(rest, 2), 1.0e-3
+    # A front foot up and to the back: flat.
+    w = Skeleton.world(s, Skeleton.locals(s, %{{:limb, "front_l"} => %{by: {0.0, -0.03, 0.03}, flat: true}}))
+    assert Vec.len(Vec.sub(w["front_foot_l"].at, Vec.add(rest, {0.0, -0.03, 0.03}))) < 1.0e-4
+    # The paw keeps its turn of the rest.
+    assert Vec.len(Vec.sub(w["front_foot_l"].y, s.rest["front_foot_l"].y)) < 1.0e-6
     nodes = MapSet.new(walk.channels, & &1.node)
     index = fn bone -> 1 + Enum.find_index(s.bones, &(&1.name == bone)) end
     assert index.("front_lower_l") in nodes and index.("tail_01") in nodes

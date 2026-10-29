@@ -7,13 +7,13 @@ defmodule World.Animals do
   with a tail (a dog). A cat or a water buffalo is the same plan with
   other sizes; a bird is another plan.
 
-  - `"street_dog"` (`dog/1`): a street dog of Việt Nam (chó cỏ): a medium dog of mixed
-    breed with a short coat, about 50 cm at the shoulder, a tail that it
-    holds up. The sizes are a guess from the photos of the street dogs
+  - `"street_dog"` (`dog/1`): a street dog of Việt Nam (chó cỏ): a
+    medium dog of mixed breed with a short coat, about 50 cm at the
+    shoulder, a tail that it holds up. The sizes are a guess from the photos of the street dogs
     of Việt Nam and from the medium breeds (about 15 kg): no
     measurements.
   """
-  alias World.{Joint, Limb, Part, Rig}
+  alias World.{Joint, Limb, Part, Rig, Vec}
 
   @coat [200, 150, 90]
   @species ~w(street_dog)
@@ -25,32 +25,82 @@ defmodule World.Animals do
   def animal("street_dog", opts), do: dog(opts)
   def animal(name, _opts), do: raise(ArgumentError, "unknown species #{inspect(name)}: #{Enum.join(@species, ", ")}")
 
+  # The bones of World from the bones of the base mesh: the name, the bone
+  # of the mesh, and the bone whose head is the tail (nil: the end node
+  # of the mesh).
+  @bones [
+           {"pelvis", "Bone", "Bone.001"},
+           {"spine_01", "Bone.001", "Bone.002"},
+           {"neck_01", "Bone.002", "Bone.003"},
+           {"head", "Bone.003", nil},
+           {"tail_01", "Bone.004", "Bone.005"},
+           {"tail_02", "Bone.005", "Bone.006"},
+           {"tail_03", "Bone.006", "Bone.007"},
+           {"tail_04", "Bone.007", nil}
+         ] ++
+           for(
+             {side, hind, front} <- [
+               {"l", ~w(Bone.008 Bone.009 Bone.010), ~w(Bone.017 Bone.018 Bone.019)},
+               {"r", ~w(Bone.011 Bone.012 Bone.013), ~w(Bone.014 Bone.015 Bone.016)}
+             ],
+             {part, chain} <- [{"hind", hind}, {"front", front}],
+             {{name, from}, to} <- Enum.zip(Enum.zip(~w(upper lower foot), chain), tl(chain) ++ [nil]),
+             do: {"#{part}_#{name}_#{side}", from, to}
+           )
+
+  @names Map.new(@bones, fn {name, from, _} -> {from, name} end)
+
   @doc """
   A street dog. The options: `coat` (`[r, g, b]`, a tan coat by default),
   `size` (a scale of all the dog: 1 is about 50 cm at the shoulder), and
   `animations` (a list of `"walk"` and `"wag"`).
 
+  The body is the base mesh of a dog of Quaternius (CC0,
+  `priv/animals/dog.json`, from `scripts/fbx_figure.exs`) with its
+  weights, on the bones of World, smooth at near and at mid
+  (`World.Subdivision`). The eyes and the nose are on the mesh.
+
   The joints (the values add to the rest): the hinges `elbow_l`,
-  `wrist_l`, `knee_l`, `hock_l` (and `_r`; more swings the lower bone to
-  the front), the balls `shoulder_l`, `hip_l` (and `_r`), `neck`,
-  `spine` and `tail` (flex lifts the tail, spread wags it to the right
+  `wrist_l`, `knee_l`, `hock_l` (and `_r`; more bends the elbow and the
+  knee, and swings the paw to the front at the wrist and at the hock),
+  the balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine` and `tail` (flex lifts the tail, spread wags it to the right
   side). The limbs: `front_l`, `front_r` (the end is the wrist), `hind_l`,
   `hind_r` (the end is the hock), `tail` and `head`.
   """
   def dog(opts) do
     k = Keyword.get(opts, :size, 1.0) / 1
     coat = Keyword.get(opts, :coat, @coat)
-    bones = for b <- bones(), do: scale(b, k)
     names = Keyword.get(opts, :animations, [])
+    data = Path.join([:code.priv_dir(:world), "animals", "dog.json"]) |> File.read!() |> JSON.decode!()
+
+    # The scale: the top of the back (the points of the spine) at 50 cm.
+    spine = for [i, w] <- data["weights"]["Bone.001"], w >= 0.5, into: MapSet.new(), do: i
+
+    withers =
+      data["points"]
+      |> Enum.with_index()
+      |> Enum.filter(&(elem(&1, 1) in spine))
+      |> Enum.map(&Enum.at(elem(&1, 0), 2))
+      |> Enum.max()
+
+    scale = 0.5 * k / withers
+    at = fn [x, y, z] -> {x * scale, y * scale, z * scale} end
+    source = Map.new(data["bones"], &{&1["name"], &1})
+    bones = for {name, from, to} <- @bones, do: bone(name, source[from], to && source[to], at)
+    by = Map.new(bones, &{&1.name, &1})
 
     Rig.figure("dog",
       bones: bones,
+      mesh: %{
+        points: Enum.map(data["points"], at),
+        faces: data["faces"],
+        weights: for({from, list} <- data["weights"], into: %{}, do: {@names[from], Enum.map(list, &List.to_tuple/1)}),
+        smooth: 2
+      },
       limbs: limbs(),
       joints: joints(),
-      ports: ports(k),
-      spheres: for({c, r, bone} <- spheres(), do: {scale_spot(c, k), r * k, bone, :eye}),
-      blend: 0.03 * k,
-      step: 0.012 * k,
+      ports: ports(by),
+      spheres: spheres(by, k),
       materials: %{
         fur: %{"color" => coat, "roughness" => 0.95, "metalness" => 0.0},
         eye: %{"color" => [24, 18, 16], "roughness" => 0.25, "metalness" => 0.0}
@@ -59,115 +109,45 @@ defmodule World.Animals do
       kind: :animal,
       params: %{"coat" => coat, "size" => k},
       sources: [
-        "A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder and 15 kg. The sizes and the bones are a guess from photos and from the medium breeds of dogs; the gait is the walk of a dog (the feet in the order hind left, front left, hind right, front right)."
+        data["source"] <> " " <> data["license"],
+        "A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder. The size is a guess from photos and from the medium breeds of dogs; the gait is the walk of a dog (the feet in the order hind left, front left, hind right, front right)."
       ]
     )
   end
 
-  # The bones of the dog: head, tail, radius at the head and at the tail
-  # ({x, z}: the half width and the half height of the body).
-  defp bones do
-    trunk = [
-      {"pelvis", nil, {0, -0.27, 0.42}, {0, -0.14, 0.43}, {{0.085, 0.10}, {0.09, 0.11}}},
-      {"spine_01", "pelvis", {0, -0.14, 0.43}, {0, 0.0, 0.43}, {{0.09, 0.11}, {0.095, 0.12}}},
-      {"spine_02", "spine_01", {0, 0.0, 0.43}, {0, 0.13, 0.43}, {{0.095, 0.12}, {0.10, 0.13}}},
-      {"spine_03", "spine_02", {0, 0.13, 0.43}, {0, 0.24, 0.44}, {{0.10, 0.13}, {0.085, 0.11}}},
-      {"neck_01", "spine_03", {0, 0.24, 0.44}, {0, 0.34, 0.56}, {{0.065, 0.075}, {0.05, 0.06}}},
-      {"head", "neck_01", {0, 0.34, 0.56}, {0, 0.45, 0.57}, {{0.06, 0.065}, {0.05, 0.055}}},
-      {"muzzle", "head", {0, 0.43, 0.55}, {0, 0.54, 0.51}, {{0.035, 0.035}, {0.022, 0.022}}},
-      {"tail_01", "pelvis", {0, -0.27, 0.43}, {0, -0.34, 0.48}, {{0.025, 0.025}, {0.022, 0.022}}},
-      {"tail_02", "tail_01", {0, -0.34, 0.48}, {0, -0.39, 0.55}, {{0.022, 0.022}, {0.017, 0.017}}},
-      {"tail_03", "tail_02", {0, -0.39, 0.55}, {0, -0.40, 0.63}, {{0.017, 0.017}, {0.007, 0.007}}}
-    ]
-
-    # A leg of a dog: the shoulder blade goes down to the front from the
-    # withers, the upper arm goes back to the elbow under the chest, and
-    # the forearm goes down to the wrist; the thigh goes to the front to
-    # the knee, the shin back to the hock. The upper bones are in the
-    # body: the leg comes out of it at the elbow and at the knee. A paw is
-    # a small round pad.
-    paw = {{0.026, 0.02}, {0.024, 0.016}}
-
-    sides =
-      for {side, s} <- [{"l", -1}, {"r", 1}] do
-        x = fn v -> s * v end
-
-        [
-          {"ear_#{side}", "head", {x.(0.04), 0.37, 0.61}, {x.(0.055), 0.35, 0.69}, {{0.022, 0.006}, {0.004, 0.003}},
-           :tube},
-          {"shoulder_blade_#{side}", "spine_03", {x.(0.055), 0.20, 0.47}, {x.(0.065), 0.27, 0.36},
-           {{0.025, 0.045}, {0.04, 0.045}}},
-          {"front_upper_#{side}", "shoulder_blade_#{side}", {x.(0.065), 0.27, 0.36}, {x.(0.065), 0.19, 0.27},
-           {{0.04, 0.048}, {0.03, 0.03}}},
-          {"front_lower_#{side}", "front_upper_#{side}", {x.(0.065), 0.19, 0.27}, {x.(0.062), 0.19, 0.09},
-           {{0.026, 0.028}, {0.019, 0.019}}},
-          {"front_foot_#{side}", "front_lower_#{side}", {x.(0.062), 0.19, 0.09}, {x.(0.062), 0.205, 0.03},
-           {{0.019, 0.019}, {0.018, 0.018}}},
-          {"front_toe_#{side}", "front_foot_#{side}", {x.(0.062), 0.205, 0.03}, {x.(0.062), 0.245, 0.022}, paw},
-          {"hind_upper_#{side}", "pelvis", {x.(0.065), -0.21, 0.40}, {x.(0.068), -0.13, 0.26},
-           {{0.07, 0.09}, {0.036, 0.038}}},
-          {"hind_lower_#{side}", "hind_upper_#{side}", {x.(0.068), -0.13, 0.26}, {x.(0.066), -0.25, 0.12},
-           {{0.032, 0.034}, {0.02, 0.02}}},
-          {"hind_foot_#{side}", "hind_lower_#{side}", {x.(0.066), -0.25, 0.12}, {x.(0.066), -0.235, 0.03},
-           {{0.019, 0.019}, {0.018, 0.018}}},
-          {"hind_toe_#{side}", "hind_foot_#{side}", {x.(0.066), -0.235, 0.03}, {x.(0.066), -0.195, 0.022}, paw}
-        ]
-      end
-
-    for bone <- trunk ++ List.flatten(sides) do
-      [name, parent, head, tail, radius | skin] = Tuple.to_list(bone)
-
-      %{
-        name: name,
-        parent: parent,
-        head: head,
-        tail: tail,
-        radius: radius,
-        skin: List.first(skin, :blob),
-        group: group(name)
-      }
-    end
+  defp bone(name, from, to, at) do
+    parent = from["parent"] && @names[from["parent"]]
+    tail = if to, do: to["head"], else: from["tail"]
+    # The hinge of a lower leg: a bend takes its end to the back, and the
+    # knee or the elbow to the front (the side of the pole of the limb).
+    x = if String.contains?(name, "_lower_"), do: {-1.0, 0.0, 0.0}, else: {1.0, 0.0, 0.0}
+    %{name: name, parent: parent, head: at.(from["head"]), tail: at.(tail), x: x}
   end
 
-  # The groups of the skin: the bones of a group join with no blend.
-  defp group(name) do
-    cond do
-      name in ~w(pelvis spine_01 spine_02 spine_03) -> "trunk"
-      name in ~w(neck_01 head) -> "neck"
-      String.starts_with?(name, "tail") -> "tail"
-      String.contains?(name, ~w(front_upper front_lower front_foot)) -> "front_" <> String.last(name)
-      String.contains?(name, ~w(hind_upper hind_lower hind_foot)) -> "hind_" <> String.last(name)
-      true -> name
-    end
-  end
+  # The eyes and the nose: on the mesh, on rays from the inside of the
+  # head.
+  defp spheres(by, k) do
+    head = by["head"]
+    along = fn t, up -> Vec.add(Vec.lerp(head.head, head.tail, t), {0.0, 0.0, up * k}) end
 
-  # The eyes and the nose.
-  defp spheres do
     [
-      {{:on, {-0.02, 0.4, 0.58}, {-0.5, 1.0, 0.3}}, 0.012, "head"},
-      {{:on, {0.02, 0.4, 0.58}, {0.5, 1.0, 0.3}}, 0.012, "head"},
-      {{:on, {0.0, 0.49, 0.53}, {0.0, 1.0, -0.35}}, 0.014, "muzzle"}
+      {{:on, along.(0.35, 0.02), {-0.55, 1.0, 0.35}}, 0.016 * k, "head", :eye},
+      {{:on, along.(0.35, 0.02), {0.55, 1.0, 0.35}}, 0.016 * k, "head", :eye},
+      {{:on, along.(0.8, -0.01), {0.0, 1.0, 0.1}}, 0.02 * k, "head", :eye}
     ]
   end
-
-  defp scale(b, k),
-    do: %{b | head: scale_point(b.head, k), tail: scale_point(b.tail, k), radius: scale_radius(b.radius, k)}
-
-  defp scale_point({x, y, z}, k), do: {x * k, y * k, z * k}
-  defp scale_spot({:on, from, dir}, k), do: {:on, scale_point(from, k), dir}
-  defp scale_radius({{a, b}, {c, d}}, k), do: {{a * k, b * k}, {c * k, d * k}}
 
   defp limbs do
     for(
       side <- ~w(l r),
       do: [
-        Limb.new("front_#{side}", ["front_upper_#{side}", "front_lower_#{side}"], role: :leg, pole: {0.0, -1.0, 0.0}),
+        Limb.new("front_#{side}", ["front_upper_#{side}", "front_lower_#{side}"], role: :leg, pole: {0.0, 1.0, 0.0}),
         Limb.new("hind_#{side}", ["hind_upper_#{side}", "hind_lower_#{side}"], role: :leg, pole: {0.0, 1.0, 0.0})
       ]
     )
     |> List.flatten()
     |> Kernel.++([
-      Limb.new("tail", ~w(tail_01 tail_02 tail_03), role: :tail, solver: :chain),
+      Limb.new("tail", ~w(tail_01 tail_02 tail_03 tail_04), role: :tail, solver: :chain),
       Limb.new("head", ~w(neck_01 head), role: :neck, solver: :chain)
     ])
   end
@@ -214,21 +194,26 @@ defmodule World.Animals do
   end
 
   # The ports: the ground, a collar on the neck, the back (a bag), and
-  # the mouth (a stick).
-  defp ports(k) do
+  # the mouth (a stick), from the bones.
+  defp ports(by) do
+    {neck, spine, head} = {by["neck_01"], by["spine_01"], by["head"]}
+    along = Vec.norm(Vec.sub(neck.tail, neck.head))
+
     [
       {"ground", nil, Part.port("ground", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})},
-      {"collar", "neck_01", Part.port("collar", scale_point({0.0, 0.27, 0.48}, k), {0, 0.6, 0.8}, {0, -0.8, 0.6})},
-      {"back", "spine_02", Part.port("back", scale_point({0.0, 0.06, 0.55}, k), {0, 0, 1}, {0, 1, 0})},
-      {"mouth", "muzzle", Part.port("mouth", scale_point({0.0, 0.52, 0.5}, k), {1, 0, 0}, {0, 0, 1})}
+      {"collar", "neck_01",
+       Part.port("collar", Vec.lerp(neck.head, neck.tail, 0.5), along, {0.0, -elem(along, 2), elem(along, 1)})},
+      {"back", "spine_01", Part.port("back", Vec.lerp(spine.head, spine.tail, 0.5), {0, 0, 1}, {0, 1, 0})},
+      {"mouth", "head", Part.port("mouth", head.tail, {1, 0, 0}, {0, 0, 1})}
     ]
   end
 
   # The walk: each foot goes back on the ground for 0.6 of the step, and
   # to the front in the air for the rest; the feet in the order hind left,
   # front left, hind right, front right. The tail wags a little, the head
-  # nods. A step of 0.7 s with a stride of 30 cm: about 0.43 m/s (an app
-  # moves the dog at that speed). The wag: the tail wags twice in 0.8 s.
+  # nods. A step of 0.7 s with a stride of 16 cm (the legs are about 32
+  # cm long): about 0.23 m/s (an app moves the dog at that speed). The
+  # wag: the tail wags twice in 0.8 s.
   defp animation("walk", skeleton, k) do
     period = 0.7
     phases = %{"hind_l" => 0.0, "front_l" => 0.25, "hind_r" => 0.5, "front_r" => 0.75}
@@ -236,21 +221,24 @@ defmodule World.Animals do
     Rig.clip("walk", skeleton, period, 14, fn t ->
       feet =
         for {limb, phase} <- phases, into: %{} do
-          {{:limb, limb}, foot(:math.fmod(t / period + phase, 1.0), 0.3 * k, 0.06 * k)}
+          {{:limb, limb}, foot(:math.fmod(t / period + phase, 1.0), 0.16 * k, 0.05 * k)}
         end
 
       # A paw in the air folds back at the wrist (more at the front).
       folds =
         for {limb, phase} <- phases, u = :math.fmod(t / period + phase, 1.0), u >= 0.6, into: %{} do
           [part, side] = String.split(limb, "_")
-          fold = if part == "front", do: -70, else: -25
+          fold = if part == "front", do: -40, else: -15
           {"#{part}_foot_#{side}", [flex: fold * :math.sin(:math.pi() * (u - 0.6) / 0.4)]}
         end
 
       wave = :math.sin(2 * :math.pi() * t / period)
 
+      # The body is 1.5 cm lower than at rest: the legs bend a little, so
+      # each paw can reach its point on the ground.
       feet
       |> Map.merge(folds)
+      |> Map.merge(%{:hips => %{at: {0.0, 0.0, -0.015 * k}}, {:foot, :l} => :free, {:foot, :r} => :free})
       |> Map.merge(%{
         "tail_01" => [spread: 12 * wave],
         "tail_02" => [spread: 8 * wave],

@@ -1,8 +1,9 @@
 defmodule World.Rig do
   @moduledoc """
   A figure from bones: the data of a rig in, a `World.Figure` out, with
-  a skin that the build makes around the bones. For an animal, or for any
-  figure with no mesh of its own.
+  a skin: a base mesh with the weights of its bones, or a skin that the
+  build makes around the bones. For an animal, or for any figure with
+  bones that is not a person.
 
   A bone of a rig is a map:
 
@@ -16,11 +17,11 @@ defmodule World.Rig do
     bone with no body;
   - `material`: the material of its body (`:fur` by default).
 
-  The skin is a tube around each bone with a body: rings of points at
-  the head, the middle and the tail, and a round cap at each end. The
-  points at the head follow the bone and its parent (half each), so the
-  joint bends smooth; the others follow the bone. The tubes of two bones
-  meet inside each other at the joint.
+  With no base mesh and no `blend`, the skin is a tube around each bone
+  with a body: rings of points at the head, the middle and the tail, and
+  a round cap at each end. The points at the head follow the bone and
+  its parent (half each), so the joint bends smooth; the others follow
+  the bone. The tubes of two bones meet inside each other at the joint.
   """
   alias World.{Blob, Detail, Figure, Frame, Port, Scene, Vec}
   alias World.People.{Pose, Skeleton}
@@ -31,7 +32,10 @@ defmodule World.Rig do
   `{name, bone, port}`: a port in the axes of the figure at rest, on the
   bone, or on no bone with nil), `spheres` (a list of `{center, radius,
   bone, material}`: the eyes, a nose; a center `{:on, from, dir}` is on
-  the smooth skin, on the ray from `from`), `blend` and `step` (a smooth skin,
+  the skin, on the ray from `from`), `mesh` (a base mesh in place of a
+  skin that the build makes: `%{points, faces, weights, smooth,
+  material}`, the weights a map of a bone to a list of `{point,
+  weight}`), `blend` and `step` (a smooth skin,
   `World.Blob`: the width of the blend of two bodies, and the step of
   its grid at near, in meters; with no blend, a tube around each bone),
   `materials` (a material role to
@@ -49,7 +53,13 @@ defmodule World.Rig do
       for b <- bones,
           do: %Scene.Node{name: b.name, parent: if(b.parent, do: index[b.parent] + 1, else: 0), frame: locals[b.name]}
 
-    prims = skin(bones, index, opts) ++ spheres(Keyword.get(opts, :spheres, []), bones, index, opts)
+    {prims, surface} =
+      case Keyword.get(opts, :mesh) do
+        nil -> {skin(bones, index, opts), blob_surface(bones, index, opts)}
+        mesh -> mesh_skin(mesh, index)
+      end
+
+    prims = prims ++ spheres(Keyword.get(opts, :spheres, []), index, surface)
     mesh = %Scene.Node{name: name <> "_mesh", skin: 0, primitives: prims}
 
     skin = %{
@@ -177,22 +187,90 @@ defmodule World.Rig do
 
   defp own(bone), do: {{bone, 0, 0, 0}, {1.0, 0.0, 0.0, 0.0}}
 
-  # A small sphere on one bone: an eye, a nose. A center `{:on, from,
-  # dir}` is on the smooth skin, on the ray from `from` in the direction
-  # `dir`: the sphere is a third in the skin.
-  defp spheres(list, bones, index, opts) do
+  # The point of the smooth skin on a ray (`World.Blob.surface/4`).
+  defp blob_surface(bones, index, opts) do
     smooth =
       for b <- bones, Map.get(b, :radius), Map.get(b, :skin, :blob) == :blob, do: Map.put(b, :index, index[b.name])
 
-    center = fn
-      {:on, from, dir}, r ->
-        Vec.sub(
-          Blob.surface(smooth, Vec.float(from), Vec.float(dir), Keyword.fetch!(opts, :blend)),
-          Vec.scale(Vec.norm(dir), r / 3)
-        )
+    fn from, dir -> Blob.surface(smooth, from, dir, Keyword.fetch!(opts, :blend)) end
+  end
 
-      c, _r ->
-        Vec.float(c)
+  # The skin of a base mesh: its points (at rest), its faces, and the
+  # weights of each bone (a map of a bone name to a list of `{point,
+  # weight}`), smooth `smooth` steps at near (one less at mid, none at
+  # far, `World.Subdivision`). Gives the primitive and the point of the
+  # mesh on a ray.
+  defp mesh_skin(%{points: points, faces: faces, weights: weights} = mesh, index) do
+    by_point =
+      for {bone, list} <- weights, {i, w} <- list, reduce: %{} do
+        acc -> Map.update(acc, i, %{index[bone] => w}, &Map.put(&1, index[bone], w))
+      end
+
+    start = points |> Enum.with_index() |> Enum.map(fn {p, i} -> {Vec.float(p), Map.get(by_point, i, %{})} end)
+    steps = max(Map.get(mesh, :smooth, 0) - %{near: 0, mid: 1, far: 2}[Detail.level()], 0)
+    {points, faces} = World.Subdivision.smooth(start, faces, steps)
+    places = points |> Enum.map(&elem(&1, 0)) |> List.to_tuple()
+
+    tris =
+      Enum.flat_map(faces, fn [a | rest] ->
+        rest |> Enum.chunk_every(2, 1, :discard) |> Enum.map(fn [b, c] -> [a, b, c] end)
+      end)
+
+    # The normal of a point: the sum of the normals of its faces (each as
+    # large as its face).
+    normals =
+      Enum.reduce(tris, %{}, fn [a, b, c] = t, acc ->
+        n = Vec.cross(Vec.sub(elem(places, b), elem(places, a)), Vec.sub(elem(places, c), elem(places, a)))
+        Enum.reduce(t, acc, &Map.update(&2, &1, n, fn m -> Vec.add(m, n) end))
+      end)
+
+    verts =
+      for {{p, ws}, i} <- Enum.with_index(points) do
+        top = ws |> Enum.sort_by(fn {b, w} -> {-w, b} end) |> Enum.take(4)
+        sum = top |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+        top = if sum > 0, do: Enum.map(top, fn {b, w} -> {b, w / sum} end), else: [{0, 1.0}]
+        top = top ++ List.duplicate({0, 0.0}, 4 - length(top))
+
+        {p, Vec.norm(Map.get(normals, i, {0.0, 0.0, 1.0})),
+         {List.to_tuple(Enum.map(top, &elem(&1, 0))), List.to_tuple(Enum.map(top, &elem(&1, 1)))}}
+      end
+
+    triangles = for [a, b, c] <- tris, do: {elem(places, a), elem(places, b), elem(places, c)}
+    {[join(Map.get(mesh, :material, :fur), [{verts, tris}])], &hit(triangles, &1, &2)}
+  end
+
+  # The nearest point of the triangles on a ray (Möller and Trumbore), or
+  # the start of the ray when it meets none.
+  defp hit(triangles, from, dir) do
+    dir = Vec.norm(dir)
+
+    ts =
+      for {a, b, c} <- triangles,
+          e1 = Vec.sub(b, a),
+          e2 = Vec.sub(c, a),
+          p = Vec.cross(dir, e2),
+          det = Vec.dot(e1, p),
+          abs(det) > 1.0e-12,
+          s = Vec.sub(from, a),
+          u = Vec.dot(s, p) / det,
+          u >= 0 and u <= 1,
+          q = Vec.cross(s, e1),
+          v = Vec.dot(dir, q) / det,
+          v >= 0 and u + v <= 1,
+          t = Vec.dot(e2, q) / det,
+          t > 0,
+          do: t
+
+    Vec.add(from, Vec.scale(dir, Enum.min(ts, fn -> 0.0 end)))
+  end
+
+  # A small sphere on one bone: an eye, a nose. A center `{:on, from,
+  # dir}` is on the smooth skin, on the ray from `from` in the direction
+  # `dir`: the sphere is a third in the skin.
+  defp spheres(list, index, surface) do
+    center = fn
+      {:on, from, dir}, r -> Vec.sub(surface.(Vec.float(from), Vec.float(dir)), Vec.scale(Vec.norm(dir), r / 3))
+      c, _r -> Vec.float(c)
     end
 
     list

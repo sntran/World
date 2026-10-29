@@ -426,22 +426,32 @@ rest (`World.People.Pose`).
 ## An animal
 
 An animal is a figure from bones (`World.Rig`): the data of the rig in,
-a figure out, with a skin that the build makes around the bones. A bone
-of a rig has its `name`, its `parent`, its `head` and its `tail` (points
-in the axes of the figure at rest), its hinge `x`, the half sizes of
-the body around it at its head and at its tail (`radius`), its
-`material`, its `group`, and its `skin`.
+a figure out. A bone of a rig has its `name`, its `parent`, its `head`
+and its `tail` (points in the axes of the figure at rest), its hinge
+`x`, the half sizes of the body around it at its head and at its tail
+(`radius`), its `material`, its `group`, and its `skin`.
 
-The skin is one smooth surface (`World.Blob`). Each bone has a round
-body: a cone with round ends. The bodies of a group (the bones of the
-back, the bones of one leg) join with no blend; the groups join with a
-smooth union of the width `blend`, so a thigh grows out of the hips as
-a muscle does, with no seam. The mesh comes from the field of distances
-on a grid (surface nets): a step of 12 mm at near for the dog, longer
-at mid and far. Each point follows the bones near it, more the nearer
-one. A thin bone (an ear) has `skin: :tube`: a tube of its own. A small
-sphere (an eye, a nose) can sit on the skin: its center is on a ray
-from a point inside.
+The skin is one of three:
+
+- A base mesh (`mesh`): the points of a mesh at rest, its faces, and
+  the weights of each bone on its points. Each smooth step (Catmull and
+  Clark, `World.Subdivision`) makes each face into faces of 4 sides and
+  moves each point to a mean of the points near it; the weights go with
+  the points, so the weights of a point stay a sum of 1. A point on a
+  border stays where it is. The steps are `smooth` at near, one less at
+  mid, two less at far (not less than none).
+- A smooth skin (`blend`, `World.Blob`). Each bone has a round body: a
+  cone with round ends. The bodies of a group (the bones of the back,
+  the bones of one leg) join with no blend; the groups join with a
+  smooth union of the width `blend`, so a thigh grows out of the hips
+  as a muscle does, with no seam. The mesh comes from the field of
+  distances on a grid (surface nets), with the step `step` at near,
+  longer at mid and far. Each point follows the bones near it, more the
+  nearer one. A thin bone (an ear) has `skin: :tube`: a tube of its own.
+- With no mesh and no blend, a tube around each bone with a body.
+
+A small sphere (an eye, a nose) can sit on the skin: its center is on a
+ray from a point inside, a third of its radius in the skin.
 
 A limb can keep the bone after its end flat on the ground (`flat: true`
 in the pose): a paw on the ground in a step.
@@ -456,30 +466,43 @@ The species now:
 
 | Species | The animal | Sources |
 |---|---|---|
-| `street_dog` | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, a tail up. | A guess from photos and from the medium breeds (about 15 kg): no measurements. |
+| `street_dog` | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, a tail up. | The base mesh of a dog of Quaternius (CC0, `priv/animals/dog.json`). The size is a guess from photos and from the medium breeds (about 15 kg): no measurements. |
+
+### A base mesh from a file
+
+`scripts/fbx_figure.exs` reads a binary FBX file (version 7.4, the
+export of Blender 2.7) and writes the data of its figure as JSON:
+
+    mix run scripts/fbx_figure.exs IN.fbx OUT.json "SOURCE" "LICENSE"
+
+The JSON has the points of the mesh at rest (in the axes of World, in
+meters, the ground at z = 0), its faces, its bones (`name`, `parent`,
+`head`, and `tail` for a bone with an end node), the weights of each
+bone (a list of `[point, weight]`), its `source` and its `license`. A
+bone with no weights and no bone with weights under it (a target of
+inverse kinematics of the file) stays out. The species maps each bone
+of the file to a bone of World. Use only a file with a license that
+lets World give it again (CC0, CC-BY), and add a row to `CREDITS.md`.
 
 The dog:
 
 - Joints: the hinges `elbow_l`, `wrist_l`, `knee_l`, `hock_l` (and
-  `_r`): the value adds to the rest, more swings the lower bone to the
-  front. The balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine`,
-  and `tail` (`flex` lifts the tail, `spread` wags it to the right
-  side).
-- Limbs: `front_l`, `front_r` (two bones, the end is the wrist, the
-  elbow goes back), `hind_l`, `hind_r` (the end is the hock, the knee
-  goes to the front), `tail` and `head` (chains).
+  `_r`): the value adds to the rest; more bends the elbow and the knee,
+  and swings the paw to the front at the wrist and at the hock. The
+  balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine`, and `tail`
+  (`flex` lifts the tail, `spread` wags it to the right side).
+- Limbs: `front_l`, `front_r` (two bones, the end is the wrist),
+  `hind_l`, `hind_r` (the end is the hock): the elbow and the knee go
+  to the front, to the side of the pole. `tail` and `head` are chains.
 - Ports: `ground`, `collar` (on the neck), `back` (on the spine, for a
   bag), `mouth` (on the muzzle, for a stick).
-- Bones: the shoulder blade goes down to the front from the withers,
-  the upper arm back to the elbow under the chest, the forearm down to
-  the wrist; the thigh goes to the front to the knee, the shin back to
-  the hock. The upper bones are in the body: the leg comes out of it at
-  the elbow and at the knee. A paw is a small round pad.
-- Animations: `walk` (a step of 0.7 s with a stride of 30 cm, about
-  0.43 m/s; the feet in the order hind left, front left, hind right,
+- Skin: the base mesh with 2 smooth steps at near. The eyes and the
+  nose are on the mesh, on rays from the inside of the head.
+- Animations: `walk` (a step of 0.7 s with a stride of 16 cm, about
+  0.23 m/s; the feet in the order hind left, front left, hind right,
   front right; each foot is on the ground for 0.6 of the step, flat, and
-  folds back at the wrist in the air) and `wag`
-  (the tail wags twice in 0.8 s).
+  folds back at the wrist in the air; the body is 1.5 cm lower than at
+  rest) and `wag` (the tail wags twice in 0.8 s).
 
 ## A drawing
 

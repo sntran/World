@@ -140,7 +140,7 @@ defmodule World.Orders.Blueprints do
           default: [],
           item: option("item", :choice, values: ["wag", "walk"]),
           max: 2,
-          doc: "walk: a step of the gait (the dog: 0.7 s at about 0.43 m/s; an app moves the animal); wag: the tail."
+          doc: "walk: a step of the gait (the dog: 0.7 s at about 0.23 m/s; an app moves the animal); wag: the tail."
         )
       ],
       build: fn o ->
