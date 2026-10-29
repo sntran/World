@@ -30,9 +30,11 @@
 #    the ray meets nearest to the length of the fit (faces of the same
 #    bone or of a bone next to it, of the head and the ears only for the
 #    head, 0.4 to 2.5 times the length of the
-#    fit: a hit farther is another part of the body). The move is in the axes of the bone,
-#    over the scale of the bone. A point that meets no face takes the
-#    mean of the moves of the points next to it.
+#    fit: a hit farther is another part of the body). A ray that meets no
+#    face goes to the point of those faces nearest to its end, when that
+#    point is nearer than the length of the fit. The move is in the axes
+#    of the bone, over the scale of the bone. A point with no move takes
+#    the mean of the moves of the points next to it.
 #
 # The shape space: the mean of the moves of all the templates (the base
 # too, with no move), and the principal components of the moves around
@@ -47,7 +49,10 @@ alias World.Vec
 
 load = fn name ->
   %{bones: bones, points: points, weights: weights, template: t} = Animals.template(name)
-  data = Path.join([:code.priv_dir(:world), "animals", "meshes", t["mesh"] <> ".json"]) |> File.read!() |> JSON.decode!()
+
+  data =
+    Path.join([:code.priv_dir(:world), "animals", "meshes", t["mesh"] <> ".json"]) |> File.read!() |> JSON.decode!()
+
   by_point = for {b, m} <- weights, {i, w} <- m, reduce: %{}, do: (acc -> Map.update(acc, i, [{b, w}], &[{b, w} | &1]))
   owner = fn i -> by_point |> Map.get(i, [{"pelvis", 1.0}]) |> Enum.max_by(fn {b, w} -> {w, b} end) |> elem(0) end
   %{name: name, bones: bones, points: points, weights: weights, template: t, faces: data["faces"], owner: owner}
@@ -56,7 +61,9 @@ end
 len = fn b -> Vec.len(Vec.sub(b.tail, b.head)) end
 by = fn m -> Map.new(m.bones, &{&1.name, &1}) end
 tail_names = fn m -> m.bones |> Enum.map(& &1.name) |> Enum.filter(&String.starts_with?(&1, "tail_")) end
-legs = ~w(front_upper_l front_lower_l front_foot_l hind_upper_l hind_lower_l hind_foot_l front_upper_r front_lower_r front_foot_r hind_upper_r hind_lower_r hind_foot_r)
+
+legs =
+  ~w(front_upper_l front_lower_l front_foot_l hind_upper_l hind_lower_l hind_foot_l front_upper_r front_lower_r front_foot_r hind_upper_r hind_lower_r hind_foot_r)
 
 # The root mean square of the distance to the axis of each bone, in x and
 # in z of the bone, of the points that the bone moves most.
@@ -81,20 +88,35 @@ mean = fn list -> Enum.sum(list) / length(list) end
 # from its head, of the points that it moves most.
 reach = fn m ->
   {o, _, y, _} = Shape.frame(by.(m)["head"])
-  m.points |> Enum.with_index() |> Enum.filter(fn {_, i} -> m.owner.(i) == "head" end) |> Enum.map(fn {p, _} -> Vec.dot(Vec.sub(p, o), y) end) |> Enum.max()
+
+  m.points
+  |> Enum.with_index()
+  |> Enum.filter(fn {_, i} -> m.owner.(i) == "head" end)
+  |> Enum.map(fn {p, _} -> Vec.dot(Vec.sub(p, o), y) end)
+  |> Enum.max()
 end
 
 muzzle = fn base, m -> reach.(m) / reach.(base) end
 
 # The angle of a bone over the level, to the front (degrees); of the tail
 # (from the root to the end of the last bone), to the back.
-angle = fn b -> {_, y, z} = Vec.sub(b.tail, b.head); :math.atan2(z, y) * 180 / :math.pi() end
+angle = fn b ->
+  {_, y, z} = Vec.sub(b.tail, b.head)
+  :math.atan2(z, y) * 180 / :math.pi()
+end
 
 # The angle of the line from the joint of the neck and the head to the tip
 # of the nose (the point of the head farthest to the front).
 nose_angle = fn m ->
   o = by.(m)["head"].head
-  nose = m.points |> Enum.with_index() |> Enum.filter(fn {_, i} -> m.owner.(i) == "head" end) |> Enum.map(&elem(&1, 0)) |> Enum.max_by(&elem(Vec.sub(&1, o), 1))
+
+  nose =
+    m.points
+    |> Enum.with_index()
+    |> Enum.filter(fn {_, i} -> m.owner.(i) == "head" end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.max_by(&elem(Vec.sub(&1, o), 1))
+
   {_, y, z} = Vec.sub(nose, o)
   :math.atan2(z, y) * 180 / :math.pi()
 end
@@ -113,7 +135,10 @@ fit = fn base, m ->
   ratio = fn names -> mean.(for n <- names, bm[n] && bb[n], do: len.(bm[n]) / len.(bb[n])) end
   chain = fn mm -> mm |> tail_names.() |> Enum.map(&len.(by.(mm)[&1])) |> Enum.sum() end
   across = fn names, k -> mean.(for n <- names, gm[n] && gb[n], do: elem(gm[n], k) / elem(gb[n], k)) end
-  tail_girth = mean.(for n <- tail_names.(m), gm[n], do: (elem(gm[n], 0) + elem(gm[n], 1)) / 2) / mean.(for n <- tail_names.(base), gb[n], do: (elem(gb[n], 0) + elem(gb[n], 1)) / 2)
+
+  tail_girth =
+    mean.(for n <- tail_names.(m), gm[n], do: (elem(gm[n], 0) + elem(gm[n], 1)) / 2) /
+      mean.(for n <- tail_names.(base), gb[n], do: (elem(gb[n], 0) + elem(gb[n], 1)) / 2)
 
   %{
     "body_length" => 1.0,
@@ -161,16 +186,61 @@ hit = fn from, dir, {a, b, c} ->
   end
 end
 
+# The point of a triangle nearest to a point (Ericson, Real-Time
+# Collision Detection 5.1.5).
+nearest = fn p, {a, b, c} ->
+  {ab, ac, ap} = {Vec.sub(b, a), Vec.sub(c, a), Vec.sub(p, a)}
+  {d1, d2} = {Vec.dot(ab, ap), Vec.dot(ac, ap)}
+  bp = Vec.sub(p, b)
+  {d3, d4} = {Vec.dot(ab, bp), Vec.dot(ac, bp)}
+  cp = Vec.sub(p, c)
+  {d5, d6} = {Vec.dot(ab, cp), Vec.dot(ac, cp)}
+  {va, vb, vc} = {d3 * d6 - d5 * d4, d5 * d2 - d1 * d6, d1 * d4 - d3 * d2}
+
+  cond do
+    d1 <= 0 and d2 <= 0 ->
+      a
+
+    d3 >= 0 and d4 <= d3 ->
+      b
+
+    d6 >= 0 and d5 <= d6 ->
+      c
+
+    vc <= 0 and d1 >= 0 and d3 <= 0 ->
+      Vec.add(a, Vec.scale(ab, d1 / (d1 - d3)))
+
+    vb <= 0 and d2 >= 0 and d6 <= 0 ->
+      Vec.add(a, Vec.scale(ac, d2 / (d2 - d6)))
+
+    va <= 0 and d4 - d3 >= 0 and d5 - d6 >= 0 ->
+      Vec.add(b, Vec.scale(Vec.sub(c, b), (d4 - d3) / (d4 - d3 + d5 - d6)))
+
+    true ->
+      k = 1 / (va + vb + vc)
+      a |> Vec.add(Vec.scale(ab, vb * k)) |> Vec.add(Vec.scale(ac, vc * k))
+  end
+end
+
 base = load.(base_name)
 base_tail = tail_names.(base)
-neighbors = for f <- base.faces, [a, b] <- Enum.chunk_every(f ++ [hd(f)], 2, 1, :discard), reduce: %{} do
-  acc -> acc |> Map.update(a, MapSet.new([b]), &MapSet.put(&1, b)) |> Map.update(b, MapSet.new([a]), &MapSet.put(&1, a))
-end
+
+neighbors =
+  for f <- base.faces, [a, b] <- Enum.chunk_every(f ++ [hd(f)], 2, 1, :discard), reduce: %{} do
+    acc ->
+      acc |> Map.update(a, MapSet.new([b]), &MapSet.put(&1, b)) |> Map.update(b, MapSet.new([a]), &MapSet.put(&1, a))
+  end
 
 moves = fn m ->
   # The template at the size of the base.
   k = (len.(by.(base)["pelvis"]) + len.(by.(base)["spine_01"])) / (len.(by.(m)["pelvis"]) + len.(by.(m)["spine_01"]))
-  m = %{m | points: Enum.map(m.points, &Vec.scale(&1, k)), bones: Enum.map(m.bones, &%{&1 | head: Vec.scale(&1.head, k), tail: Vec.scale(&1.tail, k)})}
+
+  m = %{
+    m
+    | points: Enum.map(m.points, &Vec.scale(&1, k)),
+      bones: Enum.map(m.bones, &%{&1 | head: Vec.scale(&1.head, k), tail: Vec.scale(&1.tail, k)})
+  }
+
   numbers = fit.(base, m)
   {fit_bones, fit_points} = Shape.apply(base.bones, base.points, base.weights, numbers, base.template)
   fb = Map.new(fit_bones, &{&1.name, &1})
@@ -183,7 +253,9 @@ moves = fn m ->
 
   tris =
     m.faces
-    |> Enum.group_by(fn f -> f |> Enum.map(m.owner) |> Enum.frequencies() |> Enum.max_by(fn {b, c} -> {c, b} end) |> elem(0) end)
+    |> Enum.group_by(fn f ->
+      f |> Enum.map(m.owner) |> Enum.frequencies() |> Enum.max_by(fn {b, c} -> {c, b} end) |> elem(0)
+    end)
     |> Map.new(fn {b, fs} -> {b, for([a, bb, c] <- fs, do: {elem(pts, a), elem(pts, bb), elem(pts, c)})} end)
 
   m_tail = tail_names.(m)
@@ -235,7 +307,7 @@ moves = fn m ->
       i = Enum.find_index(base_tail, &(&1 == b))
       s = (Enum.sum(Enum.take(fl, i)) + along) / Enum.sum(fl) * Enum.sum(ml)
       starts = Enum.scan([0.0 | Enum.drop(ml, -1)], &(&1 + &2))
-      j = Enum.count(starts, &(&1 <= s)) - 1 |> max(0)
+      j = (Enum.count(starts, &(&1 <= s)) - 1) |> max(0)
       {Enum.at(m_tail, j), s - Enum.at(starts, j)}
     else
       {b, along / length_of.(fit_axes, b) * length_of.(m_axes, b)}
@@ -261,13 +333,32 @@ moves = fn m ->
       dir = mx |> Vec.scale(a) |> Vec.add(Vec.scale(my, bb)) |> Vec.add(Vec.scale(mz, c))
       # A hit far from the length of the fit is another part of the body
       # (the neck under the head): no hit.
-      ts = for nb <- near.(mbone), t <- Map.get(tris, nb, []), h = hit.(from, dir, t), h != nil, h > 0.4 * e, h < 2.5 * e, do: h
+      faces = Enum.flat_map(near.(mbone), &Map.get(tris, &1, []))
+      ts = for t <- faces, h = hit.(from, dir, t), h != nil, h > 0.4 * e, h < 2.5 * e, do: h
 
-      if e > 1.0e-9 and ts != [] do
-        t = Enum.min_by(ts, &abs(&1 - e))
+      # The move in the template, in the axes of its bone: along the ray to
+      # the face that it meets; with no face, to the point of the faces
+      # nearest to the end of the ray, when it is nearer than the length
+      # of the fit.
+      along =
+        cond do
+          e <= 1.0e-9 or faces == [] ->
+            nil
+
+          ts != [] ->
+            Vec.scale({a, bb, c}, Enum.min_by(ts, &abs(&1 - e)) - e)
+
+          true ->
+            q = Vec.add(from, Vec.scale(dir, e))
+            d = faces |> Enum.map(&Vec.sub(nearest.(q, &1), q)) |> Enum.min_by(&Vec.len/1)
+            if Vec.len(d) < e, do: {Vec.dot(d, mx), Vec.dot(d, my), Vec.dot(d, mz)}
+        end
+
+      if along do
+        {ma, mm, mc} = along
         # The move in the fit, in the axes of the bone that moves the point
         # (as World.Animals.Shape keeps it), over the scale of the bone.
-        move = x |> Vec.scale(a * (t - e)) |> Vec.add(Vec.scale(y, bb * (t - e))) |> Vec.add(Vec.scale(z, c * (t - e)))
+        move = x |> Vec.scale(ma) |> Vec.add(Vec.scale(y, mm)) |> Vec.add(Vec.scale(z, mc))
         {_, ox, oy, oz} = Shape.frame(fb[own])
         {sx, sy, sz} = scales[own]
         {Vec.dot(move, ox) / sx, Vec.dot(move, oy) / sy, Vec.dot(move, oz) / sz}
@@ -290,11 +381,21 @@ moves = fn m ->
     |> Enum.map(&(&1 || {0.0, 0.0, 0.0}))
 
   missing = Enum.count(result, &is_nil/1)
-  IO.puts("#{m.name}: #{inspect(numbers)}; #{missing} of #{length(result)} points met no face")
+  IO.puts("#{m.name}: #{inspect(numbers)}; #{missing} of #{length(result)} points have no move")
   {numbers, filled}
 end
 
-samples = [{base.name, {%{}, List.duplicate({0.0, 0.0, 0.0}, length(base.points))}} | for(name <- names, do: (m = load.(name); {name, moves.(m)}))]
+samples = [
+  {base.name, {%{}, List.duplicate({0.0, 0.0, 0.0}, length(base.points))}}
+  | for(
+      name <- names,
+      do:
+        (
+          m = load.(name)
+          {name, moves.(m)}
+        )
+    )
+]
 
 # The principal components: the eigenvectors of the Gram matrix of the
 # moves around the mean (Jacobi turns), small for a few samples.
@@ -308,7 +409,10 @@ gram = for a <- centered, do: for(b <- centered, do: dot.(a, b))
 jacobi = fn a ->
   n = length(a)
   a = a |> Enum.map(&List.to_tuple/1) |> List.to_tuple()
-  v = for(i <- 0..(n - 1), do: List.to_tuple(for j <- 0..(n - 1), do: if(i == j, do: 1.0, else: 0.0))) |> List.to_tuple()
+
+  v =
+    for(i <- 0..(n - 1), do: List.to_tuple(for j <- 0..(n - 1), do: if(i == j, do: 1.0, else: 0.0))) |> List.to_tuple()
+
   get = fn m, i, j -> elem(elem(m, i), j) end
   set = fn m, i, j, x -> put_elem(m, i, put_elem(elem(m, i), j, x)) end
 
@@ -322,7 +426,7 @@ jacobi = fn a ->
             {a, v}
           else
             theta = (get.(a, q, q) - get.(a, p, p)) / (2 * apq)
-            t = (if theta >= 0, do: 1, else: -1) / (abs(theta) + :math.sqrt(theta * theta + 1))
+            t = if(theta >= 0, do: 1, else: -1) / (abs(theta) + :math.sqrt(theta * theta + 1))
             c = 1 / :math.sqrt(t * t + 1)
             s = t * c
 
@@ -352,23 +456,38 @@ jacobi = fn a ->
   for i <- 0..(n - 1), do: {get.(a, i, i), for(k <- 0..(n - 1), do: get.(v, k, i))}
 end
 
-pairs = gram |> jacobi.() |> Enum.sort_by(&(-elem(&1, 0))) |> Enum.filter(fn {l, _} -> l > 1.0e-9 * max(1.0, Enum.sum(Enum.map(gram, &Enum.sum/1))) end)
+pairs =
+  gram
+  |> jacobi.()
+  |> Enum.sort_by(&(-elem(&1, 0)))
+  |> Enum.filter(fn {l, _} -> l > 1.0e-9 * max(1.0, Enum.sum(Enum.map(gram, &Enum.sum/1))) end)
 
 components =
   for {l, w} <- pairs do
-    u = Enum.zip_with(centered, w, fn r, k -> Enum.map(r, &(&1 * k)) end) |> Enum.zip_with(&Enum.sum/1) |> Enum.map(&(&1 / :math.sqrt(l)))
+    u =
+      Enum.zip_with(centered, w, fn r, k -> Enum.map(r, &(&1 * k)) end)
+      |> Enum.zip_with(&Enum.sum/1)
+      |> Enum.map(&(&1 / :math.sqrt(l)))
+
     {:math.sqrt(l / max(count - 1, 1)), u}
   end
 
-coefficients = fn r -> for {sigma, u} <- components, do: Float.round(dot.(Enum.zip_with(r, mu, &(&1 - &2)), u) / sigma, 4) end
+coefficients = fn r ->
+  for {sigma, u} <- components, do: Float.round(dot.(Enum.zip_with(r, mu, &(&1 - &2)), u) / sigma, 4)
+end
+
 vectors = fn flat -> flat |> Enum.chunk_every(3) |> Enum.map(fn v -> Enum.map(v, &Float.round(&1 / 1, 5)) end) end
 
 data = %{
   "base" => base_name,
-  "source" => "The moves of the templates #{Enum.join([base_name | names], ", ")} on the base #{base_name} (scripts/shape_space.exs).",
+  "source" =>
+    "The moves of the templates #{Enum.join([base_name | names], ", ")} on the base #{base_name} (scripts/shape_space.exs).",
   "mean" => vectors.(mu),
   "components" => for({sigma, u} <- components, do: %{"sigma" => Float.round(sigma, 6), "vectors" => vectors.(u)}),
-  "animals" => Map.new(Enum.zip(samples, rows), fn {{name, {numbers, _}}, r} -> {name, %{"shape" => numbers, "space" => coefficients.(r)}} end)
+  "animals" =>
+    Map.new(Enum.zip(samples, rows), fn {{name, {numbers, _}}, r} ->
+      {name, %{"shape" => numbers, "space" => coefficients.(r)}}
+    end)
 }
 
 File.write!(output, JSON.encode!(data))

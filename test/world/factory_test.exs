@@ -308,7 +308,7 @@ defmodule World.FactoryTest do
       assert {:ok, <<"glTF", _::binary>>} = Orders.build(spaced, "far", "glb")
 
       assert {:error,
-              [%{"path" => "options.space", "message" => "a cat has no shape space; the species with one: wolf"}]} =
+              [%{"path" => "options.space", "message" => "a cat has no shape space; the species with one: hyena, wolf"}]} =
                Orders.check(%{"blueprint" => "animal", "options" => %{"species" => "cat", "space" => [1]}})
     end
 

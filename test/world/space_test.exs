@@ -11,10 +11,10 @@ defmodule World.Animals.SpaceTest do
     sp = Space.get("wolf")
     %{points: points} = Animals.template("wolf")
     assert length(sp["mean"]) == length(points)
-    assert length(sp["components"]) == 7
+    assert length(sp["components"]) == 10
     sigmas = Enum.map(sp["components"], & &1["sigma"])
     assert sigmas == Enum.sort(sigmas, :desc) and Enum.all?(sigmas, &(&1 > 0))
-    assert Map.keys(sp["animals"]) |> Enum.sort() == ~w(bull cow deer donkey fox horse shiba_inu wolf)
+    assert Map.keys(sp["animals"]) |> Enum.sort() == ~w(alpaca bull cow deer donkey fox horse husky shiba_inu stag wolf)
 
     # No coefficient: the mean; a coefficient: the mean and that many
     # sigmas of its component.

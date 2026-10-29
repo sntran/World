@@ -174,7 +174,7 @@ defmodule World.AnimalsTest do
     assert slow > 0.2 and fast > 2 * slow and jump_speed > slow
 
     assert Animals.species() ==
-             ~w(alpaca cat cow deer donkey fox goat horse husky macaque pig red_deer sheep street_dog water_buffalo wolf)
+             ~w(alpaca cat cow deer donkey fox goat horse husky hyena macaque pig red_deer sheep street_dog water_buffalo wolf)
 
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
@@ -248,7 +248,8 @@ defmodule World.AnimalsTest do
       {"alpaca", 0.9},
       {"husky", 0.55},
       {"red_deer", 1.22},
-      {"sheep", 0.74}
+      {"sheep", 0.74},
+      {"hyena", 0.8}
     ]
 
     for {name, h} <- heights do

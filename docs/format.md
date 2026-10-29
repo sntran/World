@@ -568,8 +568,12 @@ coefficients (`space`). The coefficients `c` of an animal give the moves
 `mean + c1 × sigma1 × vectors1 + c2 × sigma2 × vectors2 + ...`; with no
 `space`, the template has no move.
 
-Now the template `wolf` has a space, from the eight templates of four
-legs (the wolf too): 7 components. The numbers and the coefficients of
+Now the template `wolf` has a space, from the eleven templates of four
+legs on the rig of the Ultimate pack (the wolf too): 10 components. The
+pig and the sheep of the farm pack are not in it: their rig has other
+bones in the legs, and the rays meet other parts of the body. The
+species `hyena` comes from the space: its numbers, and 0.4 of the
+coefficients of the bull for a heavy front. The numbers and the coefficients of
 the horse on the wolf make a wolf with the shape of the horse (its
 outline, not its hooves or its mane, and the colors of the wolf), and a
 part of the way between two sets of numbers and coefficients is an
@@ -577,7 +581,7 @@ animal between the two.
 
 `scripts/shape_space.exs` makes a space:
 
-    mix run scripts/shape_space.exs wolf priv/animals/spaces/wolf.json shiba_inu fox deer horse donkey cow bull
+    mix run scripts/shape_space.exs wolf priv/animals/spaces/wolf.json shiba_inu fox deer horse donkey cow bull alpaca husky stag
 
 For each template:
 
@@ -599,9 +603,11 @@ For each template:
    for an ear of a template with no bones of the ears). The move of the
    point is along the ray, to the face that the ray meets nearest to the
    length of the fit (0.4 to 2.5 times it, on the same bone or a bone
-   next to it; only the head and the ears for the head). A point that
-   meets no face (10 % to 30 % of the points) takes the mean of the moves
-   of the points next to it.
+   next to it; only the head and the ears for the head). A ray that
+   meets no face goes to the point of those faces nearest to its end,
+   when that point is nearer than the length of the fit. A point with no
+   move then (0.5 % to 5 % of the points) takes the mean of the moves of
+   the points next to it.
 
 So a space holds shape, not pose: the moves are in the axes of the
 bones, and the angles are numbers.
@@ -646,6 +652,7 @@ The species now:
 | `cow` | quadruped | A cow of Việt Nam (bò vàng): about 1.1 m at the withers, yellow-brown. | The template `cow`, with a yellow-brown coat. |
 | `water_buffalo` | quadruped | A water buffalo of Việt Nam (trâu): about 1.3 m at the withers, dark gray, wide horns. | Numbers on the template `bull`, with wide horns of World in place of the horns of the file. |
 | `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | The template `pig`, with shorter legs and a deeper body. |
+| `hyena` | quadruped | A spotted hyena: about 80 cm at the shoulder, a wide head with a blunt muzzle, round ears, a strong neck and forequarters, a short tail, a pale grey-brown coat. | Numbers and the shape space on the template `wolf` (0.4 of the coefficients of the bull). No spots: the coat has no region for spots. |
 | `sheep` | quadruped | A Suffolk sheep: about 74 cm at the withers, white wool, a black face and black legs. | The template `sheep`. |
 | `alpaca` | quadruped | An alpaca: about 90 cm at the shoulder, a long neck, thick wool. | The template `alpaca`. |
 | `husky` | quadruped | A Siberian husky: about 55 cm at the withers, gray and white. | The template `husky`. |

@@ -30,7 +30,8 @@ defmodule World.Catalog do
 
   # The animals of four legs, with all the animations of their body plan.
   defp animals do
-    for name <- ~w(street_dog cat fox deer horse donkey cow water_buffalo wolf goat pig sheep alpaca husky red_deer),
+    for name <-
+          ~w(street_dog cat fox deer horse donkey cow water_buffalo wolf goat pig sheep alpaca husky red_deer hyena),
         do: {name, fn -> World.Animals.animal(name, animations: World.Animals.animations(name)) end}
   end
 

@@ -170,12 +170,14 @@ and no logo on them.
   ships at anchor (the far level only), a fast ferry, swim rings, beach
   umbrellas, canvas chairs, thatched huts.
 - **Animals (W11).** Next steps of the templates of four legs:
-  - The shape space (`priv/animals/spaces/`): more meshes in it (the
-    alpaca, the husky and the stag of the Ultimate pack, the farm pack,
-    CC0 scans); fewer points that meet no face (10 % to 30 % now); a
-    space for the primates; the hooves and the paws, the mane and the
-    horns of a template are not in the space of the wolf. Species from
-    the space (a hyena, a pig) with photos.
+  - The shape space (`priv/animals/spaces/`): the farm pig and sheep
+    (their rig has other bones in the legs: map the rays along the legs
+    by the height over the ground, not by the bone), CC0 scans; a space
+    for the primates; the hooves and the paws, the mane and the horns of
+    a template are not in the space of the wolf. A region of the coat
+    for spots (the hyena, a leopard), and a back that slopes down to the
+    hips (the hyena has longer front legs); round ears (the ears of the
+    wolf stay pointed with a larger `ear_width`).
   - The fur (`_FUR`, the UVs): more regions for its length (the mane
     and the tail of a horse, the tail of a macaque, which has short
     hair); fur on the dark legs of the fox (the material `dark` is also

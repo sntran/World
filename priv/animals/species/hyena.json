@@ -1,0 +1,81 @@
+{
+  "name": "hyena",
+  "plan": "quadruped",
+  "template": "wolf",
+  "height": 0.8,
+  "about": "A spotted hyena: about 80 cm at the shoulder, a wide head with a blunt muzzle, round ears, a strong neck and forequarters, a short tail, a pale grey-brown coat with dark spots.",
+  "shape": {
+    "head_size": 1.1,
+    "muzzle_length": 0.8,
+    "muzzle_width": 1.25,
+    "neck_length": 0.85,
+    "neck_girth": 1.25,
+    "body_depth": 1.1,
+    "leg_girth": 1.15,
+    "ear_size": 1.2,
+    "ear_width": 1.6,
+    "tail_length": 0.45,
+    "tail_girth": 1.0,
+    "tail_down": 40
+  },
+  "space": [
+    -0.315,
+    -0.727,
+    -0.087,
+    0.194,
+    -0.25,
+    -0.116,
+    -0.179,
+    -0.138,
+    -0.103,
+    0.803
+  ],
+  "colors": {
+    "fur": [
+      150,
+      132,
+      104
+    ],
+    "marking": [
+      176,
+      160,
+      132
+    ]
+  },
+  "markings": {
+    "legs": [
+      118,
+      104,
+      84
+    ],
+    "socks": [
+      86,
+      74,
+      60
+    ],
+    "face": [
+      62,
+      54,
+      46
+    ],
+    "tail_tip": [
+      40,
+      34,
+      30
+    ]
+  },
+  "gait": {
+    "wag": 0.4
+  },
+  "fur": {
+    "coat": 0.02,
+    "face": 0.006,
+    "socks": 0.008,
+    "ears": 0.006
+  },
+  "sources": [
+    "Wikipedia, Spotted hyena (https://en.wikipedia.org/wiki/Spotted_hyena): \"Adults measure 95–165.8 cm in body length, and have a shoulder height of 70–91.5 cm.\" \"The tail is relatively short, being 300–350 mm long.\" \"The spotted hyena has a strong and well-developed neck and forequarters, but relatively underdeveloped hindquarters.\" \"The head is wide and flat with a blunt muzzle and broad rhinarium.\" The ears \"are rounded rather than pointed\". \"The base colour generally is a pale greyish-brown or yellowish-grey.\"",
+    "The numbers of the shape and the coefficients of the shape space (0.4 of the coefficients of the bull: a heavy front): a guess from photos of iNaturalist (CC BY and CC0: observations 204761792, 103265782, 208631970). The coat has no spots: the coat has no region for spots.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
+  ]
+}

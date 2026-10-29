@@ -214,6 +214,8 @@ defmodule World.HumanTest do
     assert dz > 0.2
   end
 
+  # About 40 s in CI, near the limit of 60 s on a slower computer.
+  @tag timeout: 120_000
   test "a group at a morning of exercise: a leader in the mirror, and people in rows who face the leader" do
     # At far: a group at near takes four times as long to make.
     make = fn seed -> Detail.with(:far, fn -> World.People.exercise("tai_chi", count: 4, seed: seed) end) end

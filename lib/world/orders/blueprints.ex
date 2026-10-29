@@ -156,9 +156,10 @@ defmodule World.Orders.Blueprints do
         option("space", :list,
           default: [],
           item: option("item", :number, min: -4.0, max: 4.0),
-          max: 8,
+          # One for each component of the space.
+          max: length(World.Animals.space("wolf")["components"]),
           doc:
-            "The coefficients of the shape space of the template (World.Animals.Space), over the space of the species: only for a species on a template with a space (the wolf: wolf). The space file lists the coefficients of each template that it comes from: the horse, the cow, the deer and more."
+            "The coefficients of the shape space of the template (World.Animals.Space), over the space of the species: only for a species on a template with a space (the template wolf: the wolf and the hyena). The space file lists the coefficients of each template that it comes from: the horse, the cow, the deer and more."
         ),
         option("animations", :list,
           default: [],
