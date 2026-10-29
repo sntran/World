@@ -110,10 +110,27 @@ defmodule World.Animals.ShapeTest do
     assert_in_delta length(long, "upperarm_l"), 1.5 * length(b, "upperarm_l"), 1.0e-9
     assert_in_delta length(long, "thigh_l"), length(b, "thigh_l"), 1.0e-9
 
+    # Narrow hands: the same length and thickness, the width across the
+    # palm (the axis z of the bone) 0.6 of the rest.
+    {narrow, thin} = Shape.apply(b, p, w, %{"hand_width" => 0.6}, t)
+    assert_in_delta length(narrow, "hand_l"), length(b, "hand_l"), 1.0e-9
+    {_, rest} = Shape.apply(b, p, w, %{}, t)
+    hand = bone(b, "hand_l")
+    along = Vec.norm(Vec.sub(hand.tail, hand.head))
+    x = Vec.norm(Vec.sub({1.0, 0.0, 0.0}, Vec.scale(along, elem(along, 0))))
+    palm = for {i, k} <- w["hand_l"], k > 0.9, do: i
+
+    span = fn points, axis ->
+      {lo, hi} = palm |> Enum.map(&Vec.dot(Enum.at(points, &1), axis)) |> Enum.min_max()
+      hi - lo
+    end
+
+    assert_in_delta span.(thin, x), span.(rest, x), 1.0e-6
+    assert_in_delta span.(thin, Vec.cross(x, along)), 0.6 * span.(rest, Vec.cross(x, along)), 1.0e-6
+
     head = for {i, k} <- w["head"], k > 0.5, do: i
     top = fn points -> head |> Enum.map(&elem(Enum.at(points, &1), 2)) |> Enum.max() end
     front = fn points -> head |> Enum.map(&elem(Enum.at(points, &1), 1)) |> Enum.max() end
-    {_, rest} = Shape.apply(b, p, w, %{}, t)
     {_, low} = Shape.apply(b, p, w, %{"cranium" => 0.6}, t)
     {_, snout} = Shape.apply(b, p, w, %{"muzzle_length" => 1.8}, t)
     # The skull goes down; the muzzle goes to the front, and the top of

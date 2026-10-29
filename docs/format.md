@@ -473,8 +473,9 @@ nearest body, and its numbers change the rest.
 - The template of primates, `primate`, is the low-poly body of a man of
   MakeHuman (CC0), its skeleton `game_engine` (the bones of a person)
   and its eyes, with a tail of 8 bones (`scripts/primate_template.exs`,
-  below). Its numbers make the body of a monkey: shorter legs, longer
-  arms, a narrow chest, a low skull, a muzzle, a long tail.
+  below), with the eyes and the nose of a macaque. Its numbers make the
+  body of a monkey: shorter legs, longer arms, a narrow chest, a low
+  skull, a muzzle, a long tail.
 
 The species is `priv/animals/species/NAME.json`:
 
@@ -518,6 +519,7 @@ scales the animal.
 | `body_width`, `body_depth` | 0.6 to 1.8 | The width and the depth of the body (of a primate, its collarbones too). |
 | `leg_length`, `leg_girth` | 0.5 to 1.6, 0.5 to 1.8 | The legs. |
 | `arm_length`, `arm_girth` | 0.5 to 1.8 | The arms and the hands of a primate. |
+| `hand_width` | 0.5 to 1.5 | The width of the hands of a primate (the fingers nearer together). |
 | `neck_length`, `neck_girth` | 0.4 to 1.8 | The neck. |
 | `head_size` | 0.6 to 1.6 | All the head. |
 | `muzzle_length`, `muzzle_width` | 0.3 to 1.8, 0.6 to 1.8 | The front of the head, from the eyes to the nose (a primate: the front of the face under the eyes). |
@@ -551,7 +553,7 @@ The species now:
 | `cow` | quadruped | A cow of Việt Nam (bò vàng): about 1.1 m at the withers, yellow-brown. | The template `cow`, with a yellow-brown coat. |
 | `water_buffalo` | quadruped | A water buffalo of Việt Nam (trâu): about 1.3 m at the withers, dark gray, wide horns. | Numbers on the template `bull`, with wide horns of World in place of the horns of the file. |
 | `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | Numbers on the template `cow`, with no horns. |
-| `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, dark hands and feet, on four limbs. | Numbers on the template `primate`: the arms 0.9 of the legs, a narrow chest, a low skull, a muzzle, a long tail. |
+| `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, dark hands and feet, on four limbs. | Numbers on the template `primate`: the arms 0.9 of the legs, a narrow chest, a low skull, a muzzle, a long thin tail, narrow hands. The colors from photos: a golden olive back, gray limbs, a pale belly. |
 
 The numbers of the presets are a guess from the sizes in their
 `sources` and from photos, not measurements of the shape.
@@ -602,17 +604,21 @@ the hips, the feet, the reach of an arm and the look of a person
   back), `leg_l`, `leg_r` (the end is the ankle, the knee goes to the
   front), `tail` and `head` (chains).
 - Ports: `ground`, `grip_l`, `grip_r` (in the hands), `back` (a bag).
-- The pose: on four limbs. The hips go down to 0.85 of the length of
-  the legs and turn to the front, so the shoulders are at 0.85 of the
-  length of the arms; the ankles stay under the hips, the wrists go to
-  the ground under the shoulders, the hands lie flat with the fingers
-  to the front (`lay` of a limb, `World.People.Skeleton`), and the face
-  looks to the front.
+- The pose: on four limbs, as in photos of a macaque that walks. The
+  hips go down to 0.88 of the length of the legs (the knees a little
+  bent) and turn to the front, so the shoulders are at 0.93 of the
+  length of the arms (the arms near straight); the ankles stay under
+  the hips, the wrists go to the ground under the shoulders, the hands
+  lie flat with the fingers to the front (`lay` of a limb,
+  `World.People.Skeleton`), the neck goes up so the head is over the
+  line of the back, the face looks to the front, and the tail goes up
+  from its root and then down in a curve.
 - Animations: `walk` (on four limbs, in the order of a primate: hind
   left, front right, hind right, front left, a quarter of the step
   apart; each hand or foot is on the ground for 0.6 of the step; the
   speed is in `walk_speed` of the parts list) and `sit` (on the seat,
-  the knees up, the hands on the ground in front, the tail on the
+  the back bent to the front, the feet near the seat, the knees up and
+  out, the hands together in front of the feet, the tail on the
   ground; the head turns to look around, in 4 s).
 
 A new species: write `priv/animals/species/NAME.json` with the
@@ -681,7 +687,11 @@ hair), its skeleton `game_engine` and its weights, and the low-poly eyes
 on the bone `head`. It adds a tail: a tube from the back of the pelvis,
 down and a little to the back, 0.9 m long (about the height of the body
 from the seat to the top of the head), 4.5 cm thick at the root and
-1.2 cm at the tip, in 8 bones (`Tail1` to `Tail8`).
+1.2 cm at the tip, in 8 bones (`Tail1` to `Tail8`). It changes the
+face to the face of a macaque, from photos: the lids open more around
+each eye (more up and down than to the sides), the eyes are 1.15 times
+larger, and the bridge of the nose goes back to near the plane of the
+eyes.
 
 ## A drawing
 

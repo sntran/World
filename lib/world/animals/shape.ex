@@ -21,6 +21,7 @@ defmodule World.Animals.Shape do
   | `leg_length` | 0.5 to 1.6 | The length of the legs. |
   | `leg_girth` | 0.5 to 1.8 | The thickness of the legs. |
   | `arm_length`, `arm_girth` | 0.5 to 1.8 | The arms and the hands of a primate. |
+  | `hand_width` | 0.5 to 1.5 | The width of the hands of a primate (the fingers nearer together). |
   | `neck_length`, `neck_girth` | 0.4 to 1.8 | The neck. |
   | `head_size` | 0.6 to 1.6 | All the head. |
   | `muzzle_length` | 0.3 to 1.8 | The front of the head, from the eyes to the nose. |
@@ -48,6 +49,7 @@ defmodule World.Animals.Shape do
     "leg_girth" => {0.5, 1.8, 1.0},
     "arm_length" => {0.5, 1.8, 1.0},
     "arm_girth" => {0.5, 1.8, 1.0},
+    "hand_width" => {0.5, 1.5, 1.0},
     "neck_length" => {0.4, 1.8, 1.0},
     "neck_girth" => {0.4, 1.8, 1.0},
     "head_size" => {0.6, 1.6, 1.0},
@@ -186,7 +188,10 @@ defmodule World.Animals.Shape do
       String.starts_with?(name, "clavicle_") ->
         {n["body_depth"], n["body_width"], n["body_depth"]}
 
-      String.starts_with?(name, ~w(upperarm_ lowerarm_ hand_)) ->
+      String.starts_with?(name, "hand_") ->
+        {n["arm_girth"], n["arm_length"], n["arm_girth"] * n["hand_width"]}
+
+      String.starts_with?(name, ~w(upperarm_ lowerarm_)) ->
         {n["arm_girth"], n["arm_length"], n["arm_girth"]}
 
       name == "neck_01" ->

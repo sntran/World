@@ -82,6 +82,46 @@ eye_points =
     Vec.sub(Human.to_world(p), {0.0, 0.0, ground})
   end
 
+# The face of a macaque (photos: docs/format.md, "The macaque"): the eyes
+# are larger and rounder than the eyes of a person, and the nose is flat
+# between the eyes. The lids open around the center of each eye (more up
+# and down than to the sides), the eye is a little larger, and the bridge
+# of the nose goes back to near the plane of the eyes.
+smooth = fn a, b, v ->
+  t = ((v - a) / (b - a)) |> max(0.0) |> min(1.0)
+  t * t * (3 - 2 * t)
+end
+
+centers =
+  for side <- [-1, 1] do
+    e = Enum.filter(eye_points, &(elem(&1, 0) * side > 0))
+    Vec.scale(Enum.reduce(e, &Vec.add/2), 1 / length(e))
+  end
+
+{_, eye_y, eye_z} = hd(centers)
+nose_z = points |> Enum.filter(&(abs(elem(&1, 0)) < 0.01)) |> Enum.max_by(&elem(&1, 1)) |> elem(2)
+
+open = fn p ->
+  Enum.reduce(centers, p, fn c, {x, y, z} = p ->
+    {dx, dy, dz} = Vec.sub(p, c)
+    w = (1 - smooth.(0.014, 0.035, :math.sqrt(dx * dx + dz * dz))) * (1 - smooth.(0.01, 0.03, abs(dy)))
+    {x + 0.35 * dx * w, y, z + 1.0 * dz * w}
+  end)
+end
+
+flat = fn {x, y, z} ->
+  w = (1 - smooth.(0.012, 0.03, abs(x))) * smooth.(nose_z - 0.025, nose_z - 0.01, z) * (1 - smooth.(eye_z, eye_z + 0.03, z))
+  {x, y - 0.7 * w * max(0.0, y - eye_y - 0.008), z}
+end
+
+points = Enum.map(points, &(&1 |> flat.() |> open.()))
+
+eye_points =
+  Enum.map(eye_points, fn p ->
+    c = Enum.min_by(centers, &Vec.len(Vec.sub(p, &1)))
+    Vec.add(c, Vec.scale(Vec.sub(p, c), 1.15))
+  end)
+
 n0 = length(points)
 
 eye_faces =

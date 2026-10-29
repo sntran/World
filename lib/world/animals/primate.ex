@@ -20,11 +20,12 @@ defmodule World.Animals.Primate do
 
   The pose of the animal is on four limbs (`pose/2`): the back near
   level, the hands flat under the shoulders, the feet under the hips,
-  the face to the front. The animations: `walk` (on four limbs, in the
+  the head over the line of the back, the face to the front, the tail
+  up and then down in a curve. The animations: `walk` (on four limbs, in the
   order of a primate: hind left, front right, hind right, front left;
   each hand or foot is on the ground for 0.6 of the step) and `sit` (on
-  the seat, the hands on the ground in front, the head turns to look
-  around). The numbers of the gait of a species (`gait`): `period` (the
+  the seat, the back bent, the knees up, the hands together in front of
+  the feet, the head turns to look around). The numbers of the gait of a species (`gait`): `period` (the
   time of a step, s), `stride` and `lift` (parts of the length of the
   animal).
   """
@@ -149,11 +150,23 @@ defmodule World.Animals.Primate do
       grips ++ [{"back", "spine_02", Part.port("back", Vec.lerp(spine.head, spine.tail, 0.5), {0, -1, 0}, {0, 0, 1})}]
   end
 
+  # The neck goes up from the shoulders, so the head is over the line of
+  # the back; the tail goes up from its root and then down in a curve.
+  @carry %{
+    "neck_01" => [flex: 60],
+    "tail_03" => [flex: 15],
+    "tail_04" => [flex: 15],
+    "tail_05" => [flex: 15],
+    "tail_06" => [flex: 12],
+    "tail_07" => [flex: 10]
+  }
+
   @doc """
   The pose on four limbs: the hips go down and turn to the front, the
   ankles stay under the hips, the wrists go to the ground under the
-  shoulders, the hands lie flat with the fingers to the front, and the
-  face looks to the front. `moves` moves the hands and the feet from
+  shoulders, the hands lie flat with the fingers to the front, the neck
+  goes up, the face looks to the front, and the tail goes up and then
+  down in a curve. `moves` moves the hands and the feet from
   their places in the pose (`{:hand, side}` and `{:foot, side}` to a
   move).
   """
@@ -166,10 +179,12 @@ defmodule World.Animals.Primate do
     arms = span.("upperarm_l", "lowerarm_l") + span.("lowerarm_l", "hand_l")
     trunk = Vec.sub(Vec.lerp(r["upperarm_l"].at, r["upperarm_r"].at, 0.5), hip)
 
-    # The hips at 0.85 of the legs, the shoulders at 0.85 of the arms: the
-    # turn of the body from the height of the shoulders over the hips.
-    up = ground + 0.85 * legs
-    cos = ((ground + 0.85 * arms - up) / Vec.len(trunk)) |> max(-0.3) |> min(0.6)
+    # The hips at 0.88 of the legs (the knees a little bent), the shoulders
+    # at 0.93 of the arms (the arms near straight), as in photos of a
+    # macaque that walks: the turn of the body from the height of the
+    # shoulders over the hips.
+    up = ground + 0.88 * legs
+    cos = ((ground + 0.93 * arms - up) / Vec.len(trunk)) |> max(-0.3) |> min(0.6)
     t = :math.acos(cos)
     back = -0.5 * Vec.len(trunk) * :math.sin(t)
     pitch = fn {x, y, z} -> {x, y * cos + z * :math.sin(t), -y * :math.sin(t) + z * cos} end
@@ -200,6 +215,7 @@ defmodule World.Animals.Primate do
       end
 
     %{:hips => %{at: {0.0, back, up - elem(hip, 2)}, turn: [flex: t * 180 / :math.pi()]}, :look => {0.0, 1.0, -0.1}}
+    |> Map.merge(@carry)
     |> Map.merge(feet)
     |> Map.merge(hands)
     |> Map.merge(flat)
@@ -234,23 +250,30 @@ defmodule World.Animals.Primate do
     ground = elem(r["foot_l"].at, 2)
     span = fn a, b -> Vec.len(Vec.sub(r[b].at, r[a].at)) end
     legs = span.("thigh_l", "calf_l") + span.("calf_l", "foot_l")
-    arms = span.("upperarm_l", "lowerarm_l") + span.("lowerarm_l", "hand_l")
     # The seat on the ground: the hips as high as the lowest point of the
-    # pelvis is under them.
-    seat = 0.35 * legs
+    # pelvis is under them. The back bends to the front, the feet are near
+    # the seat and the knees go up and out, the hands are together in
+    # front of the feet.
+    seat = 0.3 * legs
 
     base =
-      %{:hips => %{at: {0.0, 0.0, seat - elem(hip, 2)}, turn: [flex: 25]}}
+      %{
+        :hips => %{at: {0.0, 0.0, seat - elem(hip, 2)}, turn: [flex: 20]},
+        "spine_02" => [flex: 30],
+        "spine_03" => [flex: 30]
+      }
       |> Map.merge(
         for side <- @sides, into: %{} do
           {x, _, _} = r["foot_#{side}"].at
-          {{:foot, String.to_atom(side)}, %{at: {x * 1.3, 0.55 * legs, ground}, flat: true}}
+
+          {{:foot, String.to_atom(side)},
+           %{at: {x * 1.2, 0.3 * legs, ground}, flat: true, pole: Vec.norm({4 * x, 0.3, 1.0})}}
         end
       )
       |> Map.merge(
         for side <- @sides, into: %{} do
           {x, _, _} = r["upperarm_#{side}"].at
-          {{:reach, String.to_atom(side)}, %{at: {x * 0.8, 0.45 * arms, ground}, pole: {0.0, -1.0, 0.0}}}
+          {{:reach, String.to_atom(side)}, %{at: {x * 0.3, 0.5 * legs, ground + 0.05 * legs}, pole: {0.0, -1.0, 0.0}}}
         end
       )
 
