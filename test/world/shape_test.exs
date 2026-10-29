@@ -103,4 +103,31 @@ defmodule World.Animals.ShapeTest do
 
     assert Enum.at(widths, 1) > Enum.at(widths, 0) + 0.5
   end
+
+  test "a primate: the arms, the skull, the muzzle to the front, and the coat" do
+    %{bones: b, points: p, weights: w, template: t} = Animals.template("primate")
+    {long, _} = Shape.apply(b, p, w, %{"arm_length" => 1.5}, t)
+    assert_in_delta length(long, "upperarm_l"), 1.5 * length(b, "upperarm_l"), 1.0e-9
+    assert_in_delta length(long, "thigh_l"), length(b, "thigh_l"), 1.0e-9
+
+    head = for {i, k} <- w["head"], k > 0.5, do: i
+    top = fn points -> head |> Enum.map(&elem(Enum.at(points, &1), 2)) |> Enum.max() end
+    front = fn points -> head |> Enum.map(&elem(Enum.at(points, &1), 1)) |> Enum.max() end
+    {_, rest} = Shape.apply(b, p, w, %{}, t)
+    {_, low} = Shape.apply(b, p, w, %{"cranium" => 0.6}, t)
+    {_, snout} = Shape.apply(b, p, w, %{"muzzle_length" => 1.8}, t)
+    # The skull goes down; the muzzle goes to the front, and the top of
+    # the head stays.
+    assert top.(low) < top.(rest) - 0.03
+    assert front.(snout) > front.(rest) + 0.03
+    assert_in_delta top.(snout), top.(rest), 1.0e-9
+
+    # The face is the front of the head; the hands and the feet are the
+    # socks.
+    regions = Shape.regions(b, p, w)
+    face = for {m, i} <- Enum.with_index(regions["face"]), m > 0.5, do: elem(Enum.at(p, i), 1)
+    assert face != [] and Enum.min(face) > elem(bone(b, "head").head, 1)
+    hand = for {i, k} <- w["hand_l"], k > 0.9, do: Enum.at(regions["socks"], i)
+    assert hand != [] and Enum.all?(hand, &(&1 > 0.9))
+  end
 end

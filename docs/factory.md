@@ -112,15 +112,15 @@ has its path.
 
 An `animal` is an animal of a species, from its bones: `species`
 (`street_dog`, `cat`, `wolf`, `fox`, `deer`, `goat`, `pig`, `horse`,
-`donkey`, `cow`, `water_buffalo`, `monkey`), `coat` (a
+`donkey`, `cow`, `water_buffalo`, `macaque`), `coat` (a
 color; the color of the species by default), `size` (0.6 to 1.4: a
-scale of the animal), `shape` (a four-legged species: numbers of the
+scale of the animal), `shape` (numbers of the
 shape over the numbers of the species, as `{"leg_length": 1.2,
-"ear_droop": 30}`), `markings` (a four-legged species: a region of the
+"ear_droop": 30}`), `markings` (a region of the
 coat to its color, as `{"socks": "#ffffff"}`) and `animations` (the
 animations of its body plan: `walk`, `run`, `idle`, `eat` and `wag` for
-four legs, `walk`, `wave` and `wag` for a monkey; the walk and the run
-of four legs are in place, and the parts list gives their speeds,
+four legs, `walk` (on four limbs) and `sit` for the macaque; the walk and
+the run are in place, and the parts list gives their speeds,
 `walk_speed` and `run_speed`, in m/s). Its joints and the ends of its limbs
 are in the order too (`"joints": {"tail.spread": 20}`, `"targets":
 {"front_r": [0.07, 0.3, 0.15]}`). A species is data of a body plan

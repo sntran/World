@@ -459,42 +459,47 @@ in the pose): a paw on the ground in a step.
 ### Species and body plans
 
 An animal is a species of a body plan (`World.Animals`). The body plan
-is code: it gives the bones of World, the joints, the limbs, the ports
-and the gaits. The species is data, in one of two ways:
+is code: it gives the bones of World, the joints, the limbs, the ports,
+the pose and the gaits. The species is data: a template is one mesh for
+a body plan (`priv/animals/templates/NAME.json`), and the species is
+only numbers (`World.Animals.Shape`): its shape, the colors of its coat,
+its height and its gait. A new species is one small file, and an order
+can change the numbers. A species starts from the template with the
+nearest body, and its numbers change the rest.
 
-- **On a template** (the way to prefer): a template is one mesh for a
-  body plan (`priv/animals/templates/NAME.json`), and the species is
-  only numbers (`World.Animals.Shape`): its shape, the colors of its
-  coat, its height and its gait. A new species is one small file, and
-  an order can change the numbers. The templates of four legs are the
-  eight animals of the Ultimate Animated Animal Pack of Quaternius
-  (CC0), on one rig: `shiba_inu`, `wolf`, `fox`, `deer`, `horse`,
-  `donkey`, `cow`, `bull`. A species starts from the template with the
-  nearest body, and its numbers change the rest.
-- **On its own mesh**: `priv/animals/meshes/NAME.json` from a file of a
-  model (`scripts/fbx_figure.exs` or `scripts/gltf_figure.exs`, below),
-  with the bone of the mesh for each bone of World. For a body that no
-  template has yet (the monkey).
+- The templates of four legs are the eight animals of the Ultimate
+  Animated Animal Pack of Quaternius (CC0), on one rig: `shiba_inu`,
+  `wolf`, `fox`, `deer`, `horse`, `donkey`, `cow`, `bull`.
+- The template of primates, `primate`, is the low-poly body of a man of
+  MakeHuman (CC0), its skeleton `game_engine` (the bones of a person)
+  and its eyes, with a tail of 8 bones (`scripts/primate_template.exs`,
+  below). Its numbers make the body of a monkey: shorter legs, longer
+  arms, a narrow chest, a low skull, a muzzle, a long tail.
 
 The species is `priv/animals/species/NAME.json`:
 
 | Key of a species | What it is |
 |---|---|
 | `name`, `about`, `sources` | The name (a to z, 0 to 9 and _), one sentence about the animal, and where its sizes come from. |
-| `plan` | `quadruped` (four legs and a tail) or `biped` (two legs, two arms and a tail). |
-| `template` | The name of the template, or no key for a species on its own mesh. |
-| `shape` | A template: the numbers of the shape (below); a number not given is its default (the template as it is). |
-| `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings` (a template): a region of the coat to its color; they paint the faces of `fur` and `marking`. The option `coat` of the order is the color of `fur`. |
-| `without` | A template: the roles whose faces go (`["horn"]`: the bull with no horns of the file, for horns of World). |
-| `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped, at the top of the head for a biped. The option `size` of the order scales it. |
-| `gait` | The numbers of the gaits of the body plan that are code: for four legs, `wag` (the time of a wag, s); for the monkey, the time of a step, the stride as a part of the height, and more (see the module of the body plan). |
-| `mesh`, `bones`, `materials`, `smooth` | A species on its own mesh, or a template: the name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
+| `plan` | `quadruped` (four legs and a tail) or `primate` (two arms with hands, two legs and a tail). |
+| `template` | The name of the template. |
+| `shape` | The numbers of the shape (below); a number not given is its default (the template as it is). |
+| `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings`: a region of the coat to its color; they paint the faces of `fur` and `marking`. The option `coat` of the order is the color of `fur`. |
+| `without` | The roles whose faces go (`["horn"]`: the bull with no horns of the file, for horns of World). |
+| `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped; the length of the head and the body (from the top of the head to the lowest point of the pelvis, when it stands) for a primate. The option `size` of the order scales it. |
+| `gait` | The numbers of the gaits of the body plan that are code: for four legs, `wag` (the time of a wag, s); for a primate, `period` (the time of a step, s), `stride` and `lift` (parts of the length of the animal). |
 
-A template also gives `parents` (a bone of World to its parent, when
-the rig of the file has another parent: the paw of the Ultimate rig is
-a target of inverse kinematics, and World puts it under the forearm)
-and `muzzle` (the part of the head, from its head, where the muzzle
-starts). The end of a bone of World is the head of the next bone of the
+The keys of a template:
+
+| Key of a template | What it is |
+|---|---|
+| `mesh`, `bones`, `materials`, `smooth` | The name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
+
+| `parents` | A bone of World to its parent, when the rig of the file has another parent: the paw of the Ultimate rig is a target of inverse kinematics, and World puts it under the forearm. |
+| `muzzle` | The part of the bone of the head, from its head, where the muzzle starts. |
+| `brow` | A template of an upright head (the primates): the part of the bone of the head at the brow. The muzzle is then the front of the face under the eyes, and the skull over the brow goes down by `cranium`. |
+
+ The end of a bone of World is the head of the next bone of the
 body plan; else the end of the bone of the file; else the head of a
 bone of the file under it that is part of the same bone of World; else
 the farthest point of its skin.
@@ -510,11 +515,13 @@ scales the animal.
 | Number | Range | What it changes |
 |---|---|---|
 | `body_length` | 0.6 to 1.8 | The length of the back. |
-| `body_width`, `body_depth` | 0.6 to 1.8 | The width and the depth of the body. |
+| `body_width`, `body_depth` | 0.6 to 1.8 | The width and the depth of the body (of a primate, its collarbones too). |
 | `leg_length`, `leg_girth` | 0.5 to 1.6, 0.5 to 1.8 | The legs. |
+| `arm_length`, `arm_girth` | 0.5 to 1.8 | The arms and the hands of a primate. |
 | `neck_length`, `neck_girth` | 0.4 to 1.8 | The neck. |
 | `head_size` | 0.6 to 1.6 | All the head. |
-| `muzzle_length`, `muzzle_width` | 0.3 to 1.8, 0.6 to 1.8 | The front of the head, from the eyes to the nose. |
+| `muzzle_length`, `muzzle_width` | 0.3 to 1.8, 0.6 to 1.8 | The front of the head, from the eyes to the nose (a primate: the front of the face under the eyes). |
+| `cranium` | 0.5 to 1.2 | A primate: the height of the skull over the brow. |
 | `ear_size`, `ear_width` | 0.5 to 2.0 | The length and the width of the ears. |
 | `ear_droop` | -40 to 120 | Degrees: more turns the ears down and to their sides (0: as the template). |
 | `tail_length`, `tail_girth` | 0.1 to 2.0, 0.4 to 3.0 | The tail. |
@@ -525,8 +532,9 @@ scales the animal.
 The coat is a base color and a color for each region, with soft edges
 (the colors of the points: `COLOR_0` in the GLB). The regions paint in
 this order, a later one over an earlier one: `back`, `belly`, `legs`,
-`socks` (the paws and the low part of the legs), `head`, `face` (the
-muzzle), `ears`, `tail_tip`.
+`socks` (the paws, the hands and the feet, and the low part of the
+legs), `head`, `face` (the muzzle; the face of a primate under the
+brow), `ears`, `tail_tip`.
 
 The species now:
 
@@ -543,7 +551,7 @@ The species now:
 | `cow` | quadruped | A cow of Việt Nam (bò vàng): about 1.1 m at the withers, yellow-brown. | The template `cow`, with a yellow-brown coat. |
 | `water_buffalo` | quadruped | A water buffalo of Việt Nam (trâu): about 1.3 m at the withers, dark gray, wide horns. | Numbers on the template `bull`, with wide horns of World in place of the horns of the file. |
 | `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | Numbers on the template `cow`, with no horns. |
-| `monkey` | biped | A monkey of a cartoon (khỉ): about 60 cm high when it stands, a brown coat, a light face, belly, hands and feet, a long tail. | Its own mesh: tomk, monkey 3d model rigged fbx (CC0), with the colors of its textures. |
+| `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, dark hands and feet, on four limbs. | Numbers on the template `primate`: the arms 0.9 of the legs, a narrow chest, a low skull, a muzzle, a long tail. |
 
 The numbers of the presets are a guess from the sizes in their
 `sources` and from photos, not measurements of the shape.
@@ -580,7 +588,12 @@ shape. The legs of a shape are not the legs of the file: when the
 lowest end of the feet goes below the lowest end at rest, all the
 animal goes up, so no foot goes into the ground.
 
-A biped (`World.Animals.Biped`):
+A primate (`World.Animals.Primate`): its bones have the names of the
+bones of a person (`pelvis`, `spine_01` to `spine_03`, `neck_01`,
+`head`, `clavicle_l`, `upperarm_l`, `lowerarm_l`, `hand_l`, `thigh_l`,
+`calf_l`, `foot_l`, `ball_l` and `_r`, and the tail `tail_01` ...), so
+the hips, the feet, the reach of an arm and the look of a person
+(`World.People.Skeleton`) work on it.
 
 - Joints: the hinges `elbow_l`, `wrist_l`, `knee_l`, `ankle_l` (and
   `_r`), the balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine`
@@ -589,59 +602,52 @@ A biped (`World.Animals.Biped`):
   back), `leg_l`, `leg_r` (the end is the ankle, the knee goes to the
   front), `tail` and `head` (chains).
 - Ports: `ground`, `grip_l`, `grip_r` (in the hands), `back` (a bag).
-- Animations: `walk` (on two legs, each foot flat; the arms swing
-  against the legs, the tail sways), `wave` (the right hand waves above
-  the shoulder) and `wag` (the tail swings).
+- The pose: on four limbs. The hips go down to 0.85 of the length of
+  the legs and turn to the front, so the shoulders are at 0.85 of the
+  length of the arms; the ankles stay under the hips, the wrists go to
+  the ground under the shoulders, the hands lie flat with the fingers
+  to the front (`lay` of a limb, `World.People.Skeleton`), and the face
+  looks to the front.
+- Animations: `walk` (on four limbs, in the order of a primate: hind
+  left, front right, hind right, front left, a quarter of the step
+  apart; each hand or foot is on the ground for 0.6 of the step; the
+  speed is in `walk_speed` of the parts list) and `sit` (on the seat,
+  the knees up, the hands on the ground in front, the tail on the
+  ground; the head turns to look around, in 4 s).
 
-A new species of four legs: write `priv/animals/species/NAME.json`
-with the template of the nearest body, the numbers of its shape, its colors,
+A new species: write `priv/animals/species/NAME.json` with the
+template of the nearest body, the numbers of its shape, its colors,
 its height, from the sizes of the animal and from photos.
 Build it (`mix world.build`), and look at it next to photos, at rest
 and in each animation. Add a model to the catalog (`World.Catalog`)
 and a test. An order can do the same with no file: the options `shape`
 and `markings` over a species.
 
-A new species of a body plan with no template:
-
-1. Find a model with bones and a skin, with a license that lets World
-   give it again (CC0, CC-BY). Add a row to `CREDITS.md`.
-2. Make its mesh: `mix run scripts/fbx_figure.exs IN.fbx
-   priv/animals/meshes/NAME.json "SOURCE" "LICENSE" [FRONT]` (or
-   `scripts/gltf_figure.exs` with a glTF file).
-3. Write `priv/animals/species/NAME.json`: the bones, the height, the
-   materials and colors, the gait. Look at the bones and
-   the materials of the mesh in its JSON.
-4. Build it, look at it, add it to the catalog and a test, as above.
+A new template of four legs: find a model with bones and a skin, with a
+license that lets World give it again (CC0, CC-BY), and add a row to
+`CREDITS.md`. Make its mesh with `scripts/gltf_figure.exs` (below), and
+write `priv/animals/templates/NAME.json`: a bone of World to the bones
+of the mesh, the materials and their roles. Look at the bones and the
+materials of the mesh in its JSON.
 
 A new body plan (a bird, a fish, a snake) is a module with the
 functions of `World.Animals.Quadruped`: `bones/0`, `next/1`, `hinge/2`,
-`height/2`, `animations/0`, `limbs/1`, `joints/1`, `ports/1` and
-`animation/4`, and its name in `World.Animals`.
+`height/2`, `animations/0`, `limbs/1`, `joints/1`, `ports/1`, `pose/1`,
+`speeds/2` and `animation/4` (and `feet/0` for a plan with clips), and
+its name in `World.Animals`.
 
 ### A base mesh from a file
 
-`scripts/fbx_figure.exs` reads a binary FBX file (version 7.4: the
-export of Blender 2.7 or of 3ds Max) and writes the data of its figure
-as JSON:
-
-    mix run scripts/fbx_figure.exs IN.fbx OUT.json "SOURCE" "LICENSE" [FRONT]
-
-FRONT is the axis of the file to the front of the animal (`x`, `-x`,
-`y`, `-y`, `z` or `-z`; `x` by default); the up axis comes from the
-settings of the file. The mesh and the bones are at the bind pose of
-the skin. The JSON has the points of the mesh at rest (in the axes of
-World, the ground at z = 0), its faces, its materials and the material
-of each face, its bones (`name`, `parent`, `head`, and `tail` for a
-bone with an end node), the weights of each bone (a list of `[point,
-weight]`), its `source` and its `license`. A bone with no weights and no
-bone with weights under it (a target of inverse kinematics of the file)
-stays out. A material with a texture (a PNG file next to the FBX file)
-gives three materials: the colors of the texture at the middles of its
-faces, in three groups of near colors (`NAME.0`, `NAME.1`, `NAME.2`,
-each with its `color`).
+The data of a mesh is JSON: the points of the mesh at rest (in the axes
+of World, the ground at z = 0), its faces, its materials (`name`,
+`color`) and the material of each face, its bones (`name`, `parent`,
+`head`, and `tail` when the file has it), the weights of each bone (a
+list of `[point, weight]`), its `source` and its `license`. A bone with
+no weights and no bone with weights under it (a target of inverse
+kinematics of the file) stays out.
 
 `scripts/gltf_figure.exs` reads a glTF file with one mesh and one skin
-(the buffers in the file or next to it) and writes the same JSON:
+(the buffers in the file or next to it) and writes this JSON:
 
     mix run scripts/gltf_figure.exs IN.gltf OUT.json "SOURCE" "LICENSE" [FRONT]
 
@@ -663,6 +669,19 @@ that give it their weights (each by its weights, from the mesh of the
 template); a bone with no weights has the turn of its own bone of the
 file. The speed is the middle value of the speeds to the back of the
 paws on the ground.
+
+`scripts/primate_template.exs` makes the mesh of the template of
+primates from the data of MakeHuman in `priv/makehuman/`:
+
+    mix run scripts/primate_template.exs priv/animals/meshes/primate.json
+
+It takes the low-poly body of a man (`male1591`, the mid level of
+`World.People.Human` with the numbers by default, no clothes and no
+hair), its skeleton `game_engine` and its weights, and the low-poly eyes
+on the bone `head`. It adds a tail: a tube from the back of the pelvis,
+down and a little to the back, 0.9 m long (about the height of the body
+from the seat to the top of the head), 4.5 cm thick at the root and
+1.2 cm at the tip, in 8 bones (`Tail1` to `Tail8`).
 
 ## A drawing
 

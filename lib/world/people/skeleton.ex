@@ -44,7 +44,9 @@ defmodule World.People.Skeleton do
     move`, from the end of the limb at rest): the end of the limb
     (`World.Limb`, `limbs/1`) goes to the point, by the solver of the
     limb. With `flat: true`, the bone after the end (a paw) keeps its turn
-    of the rest: flat on the ground. `{:reach,
+    of the rest: flat on the ground; with `lay: {y, x}` too, its axes y
+    and x go to these directions (a hand flat on the ground, the fingers
+    to the front). `{:reach,
     side}` and `{:foot, side}` are the arms and the legs with more: the
     collarbone that lifts, the flat foot.
   - `{:foot, side}` to `%{at: point, pole: dir, flat: true, toe: deg}`
@@ -316,16 +318,24 @@ defmodule World.People.Skeleton do
       limb = Map.get(s.limbs, name) || raise ArgumentError, "the skeleton has no limb #{inspect(name)}"
       at = Map.get_lazy(spec, :at, fn -> Vec.add(tip(s, s.rest, limb), spec.by) end)
       locals = solve(locals, s, limb, at, Map.get(spec, :pole, limb.pole), pose)
-      if Map.get(spec, :flat, false), do: flat(locals, s, List.last(limb.bones)), else: locals
+      if Map.get(spec, :flat, false), do: flat(locals, s, List.last(limb.bones), spec[:lay]), else: locals
     end)
   end
 
   # The bone after the end of a limb (a foot, a paw) keeps its turn of
-  # the rest: it stays flat on the ground.
-  defp flat(locals, s, last) do
+  # the rest: it stays flat on the ground. With `lay` (`{y, x}`), its axes
+  # y and x go to these directions of World (a hand flat on the ground).
+  defp flat(locals, s, last, lay) do
     child = Enum.find(s.bones, &(&1.parent == last)).name
     w = world(s, locals)
-    Map.put(locals, child, Frame.compose(Frame.invert(w[last]), %{s.rest[child] | at: w[child].at}))
+
+    want =
+      case lay do
+        nil -> %{s.rest[child] | at: w[child].at}
+        {y, x} -> %Frame{x: Vec.float(x), y: Vec.float(y), z: Vec.cross(Vec.float(x), Vec.float(y)), at: w[child].at}
+      end
+
+    Map.put(locals, child, Frame.compose(Frame.invert(w[last]), want))
   end
 
   # Two bones: the hinge bends, the first bone turns, the hinge goes to

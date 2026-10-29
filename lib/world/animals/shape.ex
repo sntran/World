@@ -1,7 +1,8 @@
 defmodule World.Animals.Shape do
   @moduledoc """
-  The shape of a four-legged animal from numbers: one template mesh (a
-  dog), and a species is its numbers. So a new species needs no mesh.
+  The shape of an animal from numbers: one template mesh for a body plan
+  (four legs, or a primate), and a species is its numbers. So a new
+  species needs no mesh.
 
   Each number changes the bones at rest and the skin around them. A
   bone has a scale along it (its length) and across it (its girth):
@@ -9,20 +10,22 @@ defmodule World.Animals.Shape do
   weights, so the skin stays smooth at the joints. A bone under another
   bone moves with the end of its parent. Some numbers change one part:
   the muzzle (the front of the head), the ears (turned down), the tail
-  (turned down), new horns. After the change, the
-  lowest point of the paws is on the ground. A body much deeper than
+  (turned down), new horns, the skull of a primate. After the change, the
+  lowest point of the feet is on the ground. A body much deeper than
   the legs are long can go below the ground: the presets do not.
 
   | Number | Range | What it changes |
   |---|---|---|
-  | `body_length` | 0.6 to 1.8 | The length of the back (the bones `pelvis` and `spine_01`). |
-  | `body_width`, `body_depth` | 0.6 to 1.8 | The width and the depth of the body. |
+  | `body_length` | 0.6 to 1.8 | The length of the back (the bones `pelvis` and `spine_01`, and `spine_02`, `spine_03` of a primate). |
+  | `body_width`, `body_depth` | 0.6 to 1.8 | The width and the depth of the body (and the collarbones of a primate). |
   | `leg_length` | 0.5 to 1.6 | The length of the legs. |
   | `leg_girth` | 0.5 to 1.8 | The thickness of the legs. |
+  | `arm_length`, `arm_girth` | 0.5 to 1.8 | The arms and the hands of a primate. |
   | `neck_length`, `neck_girth` | 0.4 to 1.8 | The neck. |
   | `head_size` | 0.6 to 1.6 | All the head. |
   | `muzzle_length` | 0.3 to 1.8 | The front of the head, from the eyes to the nose. |
   | `muzzle_width` | 0.6 to 1.8 | The width and the depth of the front of the head. |
+  | `cranium` | 0.5 to 1.2 | A primate: the height of the skull over the brow. |
   | `ear_size` | 0.5 to 2.0 | The ears (the bones `ear_l`, `ear_r`). |
   | `ear_width` | 0.5 to 2.0 | The width of the ears. |
   | `ear_droop` | -40 to 120 | Degrees: more turns the ears down to the sides. |
@@ -43,11 +46,14 @@ defmodule World.Animals.Shape do
     "body_depth" => {0.6, 1.8, 1.0},
     "leg_length" => {0.5, 1.6, 1.0},
     "leg_girth" => {0.5, 1.8, 1.0},
+    "arm_length" => {0.5, 1.8, 1.0},
+    "arm_girth" => {0.5, 1.8, 1.0},
     "neck_length" => {0.4, 1.8, 1.0},
     "neck_girth" => {0.4, 1.8, 1.0},
     "head_size" => {0.6, 1.6, 1.0},
     "muzzle_length" => {0.3, 1.8, 1.0},
     "muzzle_width" => {0.6, 1.8, 1.0},
+    "cranium" => {0.5, 1.2, 1.0},
     "ear_size" => {0.5, 2.0, 1.0},
     "ear_width" => {0.5, 2.0, 1.0},
     "ear_droop" => {-40.0, 120.0, 0.0},
@@ -147,7 +153,7 @@ defmodule World.Animals.Shape do
       end
 
     # The paws on the ground: the lowest point of the feet.
-    feet = for b <- bones, String.contains?(b.name, "_foot_"), {i, w} <- Map.get(weights, b.name, %{}), w >= 0.5, do: i
+    feet = for b <- bones, b.name =~ ~r/(^|_)foot_[lr]$/, {i, w} <- Map.get(weights, b.name, %{}), w >= 0.5, do: i
     ground = feet |> Enum.map(&elem(Enum.at(moved, &1), 2)) |> Enum.min()
     down = &Vec.sub(&1, {0.0, 0.0, ground})
     {Enum.map(bones, &%{&1 | head: down.(&1.head), tail: down.(&1.tail)}), Enum.map(moved, down)}
@@ -169,11 +175,19 @@ defmodule World.Animals.Shape do
   defp global({_, x, y, z}, o, {a, b, c}),
     do: o |> Vec.add(Vec.scale(x, a)) |> Vec.add(Vec.scale(y, b)) |> Vec.add(Vec.scale(z, c))
 
-  # The scale of a bone: {across in x, along, across in z}.
+  # The scale of a bone: {across in x, along, across in z}. The arms of a
+  # primate have their own numbers; its collarbones are the width of the
+  # body.
   defp scale(name, n) do
     cond do
-      name in ~w(pelvis spine_01) ->
+      name in ~w(pelvis spine_01 spine_02 spine_03) ->
         {n["body_width"], n["body_length"], n["body_depth"]}
+
+      String.starts_with?(name, "clavicle_") ->
+        {n["body_depth"], n["body_width"], n["body_depth"]}
+
+      String.starts_with?(name, ~w(upperarm_ lowerarm_ hand_)) ->
+        {n["arm_girth"], n["arm_length"], n["arm_girth"]}
 
       name == "neck_01" ->
         {n["neck_girth"], n["neck_length"], n["neck_girth"]}
@@ -198,18 +212,30 @@ defmodule World.Animals.Shape do
   defp move(name, p, frames, scales, heads, n, len, template) do
     {gx, l, gz} = scales[name]
     {x, y, z} = local(frames[name], p)
-
-    {x, y, z} =
-      if name == "head" do
-        y0 = template["muzzle"] * len
-        r = smooth(y0 - 0.15 * len, y0 + 0.15 * len, y)
-        w = 1 + (n["muzzle_width"] - 1) * r
-        {x * w, y + (n["muzzle_length"] - 1) * max(0.0, y - y0), z * w}
-      else
-        {x, y, z}
-      end
-
+    {x, y, z} = if name == "head", do: face({x, y, z}, n, len, template), else: {x, y, z}
     global(frames[name], heads[name], {x * gx, y * l, z * gz})
+  end
+
+  # The muzzle and the skull. The head of an animal on four legs is along
+  # its bone (from the neck to the nose): the muzzle is the front part of
+  # the bone. The head of a primate is up along its bone, and its face is
+  # to the front (-z): the template gives its `brow` (a part of the bone),
+  # the muzzle is the front of the face under the brow, and the skull over
+  # the brow goes down by `cranium`.
+  defp face({x, y, z}, n, len, template) do
+    f0 = template["muzzle"] * len
+
+    if template["brow"] == nil do
+      r = smooth(f0 - 0.15 * len, f0 + 0.15 * len, y)
+      w = 1 + (n["muzzle_width"] - 1) * r
+      {x * w, y + (n["muzzle_length"] - 1) * max(0.0, y - f0), z * w}
+    else
+      brow = template["brow"] * len
+      r = smooth(f0 - 0.15 * len, f0 + 0.15 * len, -z) * (1 - smooth(brow - 0.25 * len, brow - 0.1 * len, y))
+      w = 1 + (n["muzzle_width"] - 1) * r
+      y = if y > brow, do: brow + (y - brow) * n["cranium"], else: y
+      {x * w, y, z - (n["muzzle_length"] - 1) * r * max(0.0, -z - f0 + 0.15 * len)}
+    end
   end
 
   # A point turned by the angle t around the axis (a unit vector) through
@@ -252,10 +278,13 @@ defmodule World.Animals.Shape do
     w = fn bone, i -> weights |> Map.get(bone, %{}) |> Map.get(i, 0.0) end
     sum = fn names, i -> names |> Enum.map(&w.(&1, i)) |> Enum.sum() end
     names = Enum.map(bones, & &1.name)
-    legs = Enum.filter(names, &(String.starts_with?(&1, "front_") or String.starts_with?(&1, "hind_")))
-    feet = Enum.filter(legs, &String.contains?(&1, "_foot_"))
-    lower = Enum.filter(legs, &String.contains?(&1, "_lower_"))
-    trunk = ~w(pelvis spine_01 neck_01)
+
+    legs =
+      Enum.filter(names, &String.starts_with?(&1, ~w(front_ hind_ upperarm_ lowerarm_ hand_ thigh_ calf_ foot_ ball_)))
+
+    feet = Enum.filter(legs, &(&1 =~ ~r/_foot_|^hand_|^foot_|^ball_/))
+    lower = Enum.filter(legs, &(&1 =~ ~r/_lower_|^lowerarm_|^calf_/))
+    trunk = Enum.filter(~w(pelvis spine_01 spine_02 spine_03 neck_01), &Map.has_key?(by, &1))
     tail_tip = names |> Enum.filter(&String.starts_with?(&1, "tail_")) |> List.last()
 
     # The height of each point of the body over the bone that moves it
@@ -271,7 +300,7 @@ defmodule World.Animals.Shape do
       acc ->
         t = sum.(trunk, i)
         z = if t > 0, do: (elem(local(frames[Enum.max_by(trunk, &w.(&1, i))], p), 2) - lo) / (hi - lo), else: 0.5
-        {_, hy, _} = local(frames["head"], p)
+        {_, hy, hz} = local(frames["head"], p)
 
         low =
           Enum.sum(
@@ -285,7 +314,7 @@ defmodule World.Animals.Shape do
           "legs" => min(sum.(legs, i), 1.0),
           "socks" => min(sum.(feet, i) + low, 1.0),
           "head" => w.("head", i),
-          "face" => w.("head", i) * smooth(0.45 * len, 0.6 * len, hy),
+          "face" => w.("head", i) * face_part(Map.has_key?(by, "upperarm_l"), hy, hz, len),
           "ears" => min(w.("ear_l", i) + w.("ear_r", i), 1.0),
           "tail_tip" => w.(tail_tip, i)
         }
@@ -294,6 +323,11 @@ defmodule World.Animals.Shape do
     end
     |> Map.new(fn {r, list} -> {r, Enum.reverse(list)} end)
   end
+
+  # The face: the front part of the bone of the head of an animal on four
+  # legs, the front of the head of a primate under the brow (as `face/4`).
+  defp face_part(false, y, _z, len), do: smooth(0.45 * len, 0.6 * len, y)
+  defp face_part(true, y, z, len), do: smooth(0.35 * len, 0.5 * len, -z) * (1 - smooth(0.4 * len, 0.5 * len, y))
 
   @doc """
   The color of each point: the `base` color, and over it the color of

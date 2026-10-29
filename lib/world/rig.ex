@@ -44,13 +44,20 @@ defmodule World.Rig do
   `World.Blob`: the width of the blend of two bodies, and the step of
   its grid at near, in meters; with no blend, a tube around each bone),
   `materials` (a material role to
-  its spec), `pose`, `animations` (a list of functions of the skeleton to
+  its spec), `pose` (a pose, or a function of the skeleton to a pose), `animations` (a list of functions of the skeleton to
   an animation, as `clip/5`), `kind`, `params` and `sources`.
   """
   def figure(name, opts) do
     bones = Enum.map(Keyword.fetch!(opts, :bones), &frame/1)
     skeleton = Skeleton.new(bones, Keyword.get(opts, :limbs, []))
-    pose = Pose.expand(Keyword.get(opts, :pose, %{}))
+
+    pose =
+      case Keyword.get(opts, :pose, %{}) do
+        f when is_function(f, 1) -> f.(skeleton)
+        p -> p
+      end
+      |> Pose.expand()
+
     index = bones |> Enum.with_index() |> Map.new(fn {b, i} -> {b.name, i} end)
     locals = Skeleton.locals(skeleton, pose)
 

@@ -247,7 +247,7 @@ defmodule World.FactoryTest do
         %{"blueprint" => "animal", "options" => %{"species" => "cat", "animations" => ["wag"]}},
         %{
           "blueprint" => "animal",
-          "options" => %{"species" => "monkey", "animations" => ["wave"]},
+          "options" => %{"species" => "macaque", "animations" => ["sit"]},
           "joints" => %{"elbow_l" => 40},
           "targets" => %{"leg_r" => [0.1, 0.05, 0.1]}
         }
@@ -263,24 +263,18 @@ defmodule World.FactoryTest do
               [
                 %{
                   "path" => "options.animations.1",
-                  "message" => "a cat has no animation wave: walk, run, idle, eat, wag"
+                  "message" => "a cat has no animation sit: walk, run, idle, eat, wag"
                 }
               ]} =
                Orders.check(%{
                  "blueprint" => "animal",
-                 "options" => %{"species" => "cat", "animations" => ["walk", "wave"]}
+                 "options" => %{"species" => "cat", "animations" => ["walk", "sit"]}
                })
 
       assert {:ok, %{"options" => %{"coat" => nil}}} =
-               Orders.check(%{"blueprint" => "animal", "options" => %{"species" => "monkey"}})
+               Orders.check(%{"blueprint" => "animal", "options" => %{"species" => "macaque"}})
 
-      # Numbers of the shape and markings: only for a species of a
-      # template, each number in its range.
-      assert {:error, [%{"path" => "options.shape", "message" => "a monkey has no template: it has no shape"}]} =
-               Orders.check(%{
-                 "blueprint" => "animal",
-                 "options" => %{"species" => "monkey", "shape" => %{"ear_droop" => 10}}
-               })
+      # Numbers of the shape and markings: each number in its range.
 
       assert {:error, [%{"path" => "options.shape.leg_length"}]} =
                Orders.check(%{

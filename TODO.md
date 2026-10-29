@@ -185,10 +185,13 @@ and no logo on them.
     numbers do not give (PCA).
   - UV coordinates and a map of fur on the template, so an app can add
     fur (shells) that fits each species.
-  - A template of primates (from the base mesh of MakeHuman: the bones,
-    the joints and the hands of a person, with a tail and a muzzle),
-    and a long-tailed macaque in place of the monkey of a cartoon; a
-    walk on four legs.
+  - More primates on the template of primates: a rhesus macaque, a
+    pig-tailed macaque, a gibbon, a langur (douc). Hands that grip and
+    feet with a thumb that grips (the feet of the template are the feet
+    of a person); a climb; a jump.
+  - Fur on the template of primates: the body of MakeHuman is smooth,
+    so the macaque has the shape of its body with no fur. A crest of
+    hair on the head and long hair on the cheeks.
   - Chickens and ducks (a template of birds), fish; the gaits eat, sit
     and run.
 - **Plants for Vũng Tàu (W12).** The idea "Plants from rules" above,

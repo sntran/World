@@ -1,7 +1,7 @@
 # Make the data of a figure from a glTF file with a skin (one mesh, one
 # skin; the buffers in the file or next to it): its mesh at rest, its
 # bones and the weights of its skin, in one JSON file of priv/. The same
-# format as scripts/fbx_figure.exs.
+# format as scripts/primate_template.exs.
 #
 #     mix run scripts/gltf_figure.exs IN.gltf OUT.json "SOURCE" "LICENSE" [FRONT]
 #

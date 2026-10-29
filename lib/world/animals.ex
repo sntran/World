@@ -4,25 +4,26 @@ defmodule World.Animals do
   is a species of a body plan.
 
   - The body plan (code) gives the bones of World, the joints, the
-    limbs, the ports and the gaits: `World.Animals.Quadruped` (four legs
-    and a tail) and `World.Animals.Biped` (two legs, two arms and a
-    tail).
+    limbs, the ports, the pose and the gaits: `World.Animals.Quadruped`
+    (four legs and a tail) and `World.Animals.Primate` (two arms with
+    hands, two legs and a tail).
   - The species (data, `priv/animals/species/NAME.json`) is numbers on
     a template (`priv/animals/templates/NAME.json`: one mesh for a body
-    plan, and `World.Animals.Shape`; the templates of four legs are the
+    plan, and `World.Animals.Shape`). The templates of four legs are the
     animals of the Ultimate pack of Quaternius, on one rig, from
-    `scripts/gltf_figure.exs`), or a species on its own mesh
-    (`priv/animals/meshes/`, from `scripts/fbx_figure.exs`).
+    `scripts/gltf_figure.exs`, with their clips from
+    `scripts/gltf_clips.exs`; the template of primates is the body of
+    MakeHuman with a tail, from `scripts/primate_template.exs`.
 
   The keys of a species (`docs/format.md`, "An animal"): `name`,
-  `about`, `plan`, `sources`, `height` (in meters, at the withers for a
-  quadruped, at the top of the head for a biped), `colors` (a role to
-  its color; `fur` is the base color of the coat), `gait`; on a
-  template, `template`, `shape` (numbers), `markings` (a region of
-  the coat to its color) and `without` (roles whose faces go); on a
-  mesh or a template, `mesh`, `bones` (a bone of World to the bones of
-  the mesh), `materials` (a material of the mesh to a role) and
-  `smooth`; on a template, `parents` and `muzzle`.
+  `about`, `plan`, `template`, `sources`, `height` (in meters: at the
+  withers for a quadruped, the length of the head and the body for a
+  primate), `shape` (numbers), `colors` (a role to its color; `fur` is
+  the base color of the coat), `markings` (a region of the coat to its
+  color), `without` (roles whose faces go) and `gait`. The keys of a
+  template: `mesh`, `bones` (a bone of World to the bones of the mesh),
+  `materials` (a material of the mesh to a role), `smooth`, `parents`,
+  `muzzle` and `brow`.
   """
   alias World.{Frame, Rig, Vec}
   alias World.Animals.Shape
@@ -45,7 +46,7 @@ defmodule World.Animals do
   # The colors of the roles that no mesh, template or species gives.
   @colors %{"horn" => [172, 161, 117], "eye" => [24, 24, 24], "nose" => [40, 34, 32], "white" => [240, 240, 240]}
 
-  @plans %{"quadruped" => World.Animals.Quadruped, "biped" => World.Animals.Biped}
+  @plans %{"quadruped" => World.Animals.Quadruped, "primate" => World.Animals.Primate}
   @roles %{
     "fur" => :fur,
     "marking" => :marking,
@@ -91,9 +92,9 @@ defmodule World.Animals do
         a not in plan.animations(),
         do: raise(ArgumentError, "unknown animation of a #{name} #{inspect(a)}: #{Enum.join(plan.animations(), ", ")}")
 
-    # A species of a template takes the mesh, the bones and the materials
-    # of the template.
-    t = if s["template"], do: Map.merge(@templates[s["template"]], s), else: s
+    # A species takes the mesh, the bones and the materials of its
+    # template.
+    t = Map.merge(@templates[s["template"]], s)
 
     {data, bones, points, weights} = rest(t, plan)
 
@@ -117,20 +118,14 @@ defmodule World.Animals do
     coat = Keyword.get(opts, :coat) || get_in(s, ["colors", "fur"]) || mesh_colors["fur"]
     markings = Map.merge(Map.get(s, "markings", %{}), Keyword.get(opts, :markings, %{}))
 
-    {bones, points, colors, shape} =
-      if s["template"] do
-        shape = Map.merge(s["shape"], Keyword.get(opts, :shape, %{}))
-        regions = Shape.regions(bones, points, weights)
-        {bones, moved} = Shape.apply(bones, points, weights, shape, t)
-        colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
-        {bones, moved, colors, shape}
-      else
-        {bones, points, nil, %{}}
-      end
+    shape = Map.merge(s["shape"], Keyword.get(opts, :shape, %{}))
+    regions = Shape.regions(bones, points, weights)
+    {bones, points} = Shape.apply(bones, points, weights, shape, t)
+    colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
 
     scale = s["height"] * k / plan.height(points, weights)
     at = &Vec.scale(&1, scale)
-    clips = if s["template"], do: clips(t["mesh"]), else: %{}
+    clips = clips(t["mesh"])
 
     bones =
       for b <- bones do
@@ -197,8 +192,12 @@ defmodule World.Animals do
             do: &retarget(a, &1, clip, scale, plan.feet()),
             else: &plan.animation(a, &1, k * s["height"], Map.get(s, "gait", %{}))
         end,
+      pose: &plan.pose/1,
       kind: :animal,
-      params: Map.merge(%{"coat" => coat, "size" => k}, speeds(clips, scale)),
+      params:
+        %{"coat" => coat, "size" => k}
+        |> Map.merge(plan.speeds(k * s["height"], Map.get(s, "gait", %{})))
+        |> Map.merge(speeds(clips, scale)),
       sources: [data["source"] <> " " <> data["license"], s["about"] | s["sources"]]
     )
   end
@@ -243,12 +242,10 @@ defmodule World.Animals do
     {data, bones(plan, map, Map.get(t, "parents", %{}), file_bones, owner, points, weights), points, weights}
   end
 
-  # The clips of a template (`scripts/gltf_clips.exs`).
+  # The clips of a template (`scripts/gltf_clips.exs`), or none.
   defp clips(mesh) do
-    Path.join([:code.priv_dir(:world), "animals", "clips", mesh <> ".json"])
-    |> File.read!()
-    |> JSON.decode!()
-    |> Map.fetch!("clips")
+    path = Path.join([:code.priv_dir(:world), "animals", "clips", mesh <> ".json"])
+    if File.exists?(path), do: path |> File.read!() |> JSON.decode!() |> Map.fetch!("clips"), else: %{}
   end
 
   # The speeds of the clips that move the animal (m/s): an app moves the

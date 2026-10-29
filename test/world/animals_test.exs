@@ -123,7 +123,7 @@ defmodule World.AnimalsTest do
     %{"walk_speed" => slow, "run_speed" => fast} = all.params
     assert slow > 0.2 and fast > 2 * slow
 
-    assert Animals.species() == ~w(cat cow deer donkey fox goat horse monkey pig street_dog water_buffalo wolf)
+    assert Animals.species() == ~w(cat cow deer donkey fox goat horse macaque pig street_dog water_buffalo wolf)
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
 
@@ -244,37 +244,73 @@ defmodule World.AnimalsTest do
     assert Enum.any?(fur.colors, &(elem(&1, 0) > 200 and elem(&1, 2) > 200))
   end
 
-  test "a monkey: two legs, two arms and a tail" do
-    monkey = Animals.animal("monkey", animations: Animals.animations("monkey"))
-    scene = Build.scene(monkey)
-    [_, _, h] = scene.extras["size"]
-    assert_in_delta h, 0.6, 1.0e-6
-    assert Map.keys(scene.materials) |> Enum.sort() == [:dark, :fur, :skin, :white]
-    assert Figure.limbs(monkey) == ~w(arm_l arm_r head leg_l leg_r tail)
-    assert "elbow_l" in Figure.values(monkey) and "ankle_r" in Figure.values(monkey)
-    rest = monkey.skeleton.rest
+  test "a long-tailed macaque: the template of primates, on four limbs" do
+    m = Animals.animal("macaque", animations: Animals.animations("macaque"))
+    assert Animals.animations("macaque") == ~w(walk sit)
+    scene = Build.scene(m)
+    assert Map.keys(scene.materials) |> Enum.sort() == [:eye, :fur]
+    assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
+    assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
+    assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
+    assert m.params["walk_speed"] == 0.58
+    s = m.skeleton
+    rest = s.rest
 
-    # The left side is at -x; the toes go to the front; seven bones of
-    # the tail.
+    # The left side is at -x; eight bones of the tail; the arms are about
+    # 0.9 of the legs.
     assert elem(rest["hand_l"].at, 0) < 0 and elem(rest["hand_r"].at, 0) > 0
-    assert elem(rest["toes_l"].at, 1) > elem(rest["foot_l"].at, 1)
-    assert Enum.count(Map.keys(rest), &String.starts_with?(&1, "tail_")) == 7
+    assert Enum.count(Map.keys(rest), &String.starts_with?(&1, "tail_")) == 8
+    span = fn a, b -> Vec.len(Vec.sub(rest[b].at, rest[a].at)) end
 
-    # A hand to a point in front of the chest.
-    to = Vec.add(rest["upper_arm_r"].at, {0.0, 0.12, -0.05})
-    reach = Build.scene(monkey, targets: %{"arm_r" => to})
-    assert Vec.len(Vec.sub(world(reach, "hand_r").at, to)) < 1.0e-3
-    assert Figure.port!(monkey, "grip_r").bone == "hand_r"
-    assert Figure.port!(monkey, "back").bone == "spine_02"
+    index =
+      (span.("upperarm_l", "lowerarm_l") + span.("lowerarm_l", "hand_l")) /
+        (span.("thigh_l", "calf_l") + span.("calf_l", "foot_l"))
 
-    # A flat foot keeps its turn of the rest; the wave moves the right
-    # arm.
-    [walk, wave, wag] = monkey.animations
-    assert {walk.name, wave.name, wag.name} == {"walk", "wave", "wag"}
-    s = monkey.skeleton
-    w = Skeleton.world(s, Skeleton.locals(s, %{{:limb, "leg_l"} => %{by: {0.0, 0.03, 0.02}, flat: true}}))
-    assert Vec.len(Vec.sub(w["foot_l"].y, rest["foot_l"].y)) < 1.0e-6
-    hand = Enum.find_index(s.bones, &(&1.name == "upper_arm_r")) + 1
-    assert hand in MapSet.new(wave.channels, & &1.node)
+    assert_in_delta index, 0.9, 0.03
+
+    # The pose: the wrists and the ankles on the ground, the hands flat
+    # with the fingers to the front, the feet flat, the back near level.
+    w = Skeleton.world(s, Skeleton.locals(s, m.pose))
+    ground = elem(rest["foot_l"].at, 2)
+
+    for side <- ~w(l r) do
+      assert_in_delta elem(w["hand_#{side}"].at, 2), ground, 1.0e-3
+      assert_in_delta elem(w["foot_#{side}"].at, 2), ground, 1.0e-3
+      assert Vec.len(Vec.sub(w["hand_#{side}"].y, {0.0, 1.0, 0.0})) < 1.0e-9
+      assert Vec.len(Vec.sub(w["foot_#{side}"].y, rest["foot_#{side}"].y)) < 1.0e-9
+    end
+
+    # A flat foot with no `lay` keeps its turn of the rest.
+    lifted = Skeleton.world(s, Skeleton.locals(s, %{{:limb, "leg_l"} => %{by: {0.0, 0.03, 0.02}, flat: true}}))
+    assert Vec.len(Vec.sub(lifted["foot_l"].y, rest["foot_l"].y)) < 1.0e-9
+
+    assert Vec.dot(w["hand_l"].x, {0.0, 0.0, -1.0}) > 0.999 and Vec.dot(w["hand_r"].x, {0.0, 0.0, 1.0}) > 0.999
+    trunk = Vec.norm(Vec.sub(w["neck_01"].at, w["pelvis"].at))
+    assert abs(elem(trunk, 2)) < 0.5 and elem(trunk, 1) > 0.8
+
+    # The walk: the diagonal order of a primate (hind left, front right,
+    # hind right, front left), each limb a quarter of the step after the
+    # last; each hand or foot is on the ground for about 0.6 of the step.
+    [walk, sit] = m.animations
+    frames = frames(m, walk)
+    n = length(frames) - 1
+
+    tops =
+      for limb <- ~w(foot_l hand_r foot_r hand_l) do
+        zs = frames |> Enum.take(n) |> Enum.map(&elem(&1[limb].at, 2))
+        on = Enum.count(zs, &(&1 < ground + 1.0e-3)) / n
+        assert_in_delta on, 0.6, 0.08, limb
+        Enum.find_index(zs, &(&1 == Enum.max(zs)))
+      end
+
+    for [a, b] <- Enum.chunk_every(tops, 2, 1, :discard), do: assert(rem(b - a + n, n) in 3..5)
+
+    # The sit: the hips low, the tail on the ground and not under it, the
+    # head turns to look around.
+    [first | _] = sits = frames(m, sit)
+    assert elem(first["pelvis"].at, 2) < 0.5 * elem(w["pelvis"].at, 2)
+    for f <- sits, b <- s.bones, String.starts_with?(b.name, "tail_"), do: assert(elem(f[b.name].at, 2) > -0.01)
+    turned = for f <- sits, do: elem(f["head"].z, 0)
+    assert Enum.max(turned) - Enum.min(turned) > 0.5
   end
 end

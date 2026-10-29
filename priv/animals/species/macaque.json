@@ -1,0 +1,70 @@
+{
+  "name": "macaque",
+  "plan": "primate",
+  "template": "primate",
+  "height": 0.5,
+  "about": "A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): a male about 50 cm long without the tail, a tail longer than the body, a gray-brown coat with a lighter belly, a bare pink-brown face, dark hands and feet. It walks on four limbs.",
+  "shape": {
+    "leg_length": 0.6,
+    "arm_length": 0.88,
+    "body_length": 1.1,
+    "body_width": 0.7,
+    "neck_length": 0.6,
+    "head_size": 0.9,
+    "cranium": 0.6,
+    "muzzle_length": 1.8,
+    "tail_length": 1.0,
+    "tail_down": 30,
+    "tail_girth": 0.8,
+    "muzzle_width": 0.85
+  },
+  "colors": {
+    "fur": [
+      128,
+      108,
+      82
+    ],
+    "eye": [
+      70,
+      46,
+      26
+    ]
+  },
+  "markings": {
+    "belly": [
+      176,
+      164,
+      142
+    ],
+    "legs": [
+      118,
+      100,
+      78
+    ],
+    "socks": [
+      72,
+      62,
+      56
+    ],
+    "face": [
+      176,
+      140,
+      122
+    ],
+    "tail_tip": [
+      96,
+      82,
+      64
+    ]
+  },
+  "gait": {
+    "period": 0.65,
+    "stride": 0.45,
+    "lift": 0.1
+  },
+  "sources": [
+    "Macaca fascicularis: 38 to 55 cm long without the tail, a tail of 40 to 65 cm; a male 5 to 9 kg, a female 3 to 4 kg; the coat gray-brown to red-brown, the belly lighter (Wikipedia, Crab-eating macaque).",
+    "The arms are about 0.9 of the legs (the intermembral index of macaques): a guess from the index, not a measurement of this shape.",
+    "Primates walk on four limbs in the order hind left, front right, hind right, front left (diagonal sequence). The time of a step and the stride are a guess."
+  ]
+}

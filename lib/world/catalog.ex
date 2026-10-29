@@ -49,7 +49,7 @@ defmodule World.Catalog do
       {"wolf", fn -> World.Animals.animal("wolf", animations: ~w(walk run idle eat wag)) end},
       {"goat", fn -> World.Animals.animal("goat", animations: ~w(walk run idle eat wag)) end},
       {"pig", fn -> World.Animals.animal("pig", animations: ~w(walk run idle eat wag)) end},
-      {"monkey", fn -> World.Animals.animal("monkey", animations: ["walk", "wave", "wag"]) end},
+      {"macaque", fn -> World.Animals.animal("macaque", animations: ~w(walk sit)) end},
       {"banh_mi_cart", fn -> World.Drawing.file("banh_mi_cart") end},
       {"honda_vision_110_rider", &World.People.rider/0},
       {"fridge_lg_lrfxs2503s", &World.Appliances.fridge/0},

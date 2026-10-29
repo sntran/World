@@ -72,6 +72,12 @@ defmodule World.Animals.Quadruped do
   @doc "The bones of the feet: the paws or the hooves."
   def feet, do: for(side <- @sides, part <- ~w(front hind), do: "#{part}_foot_#{side}")
 
+  @doc "The pose of the animal: its rest."
+  def pose(_skeleton), do: %{}
+
+  @doc "The speeds of the gaits that are code: none (the walk and the run are clips)."
+  def speeds(_h, _gait), do: %{}
+
   @doc "The names of the animations."
   def animations, do: ~w(walk run idle eat wag)
 

@@ -146,12 +146,12 @@ defmodule World.Orders.Blueprints do
               do: option(name, :number, default: nil, min: min, max: max)
             ),
           doc:
-            "A species of a template (four legs): numbers of the shape over the numbers of the species (World.Animals.Shape): the lengths and the thickness of the body, the legs, the neck, the head, the muzzle, the ears, the tail; hooves and horns."
+            "Numbers of the shape over the numbers of the species (World.Animals.Shape): the lengths and the thickness of the body, the legs, the arms (a primate), the neck, the head, the skull (a primate), the muzzle, the ears, the tail; horns."
         ),
         option("markings", :object,
           default: %{},
           fields: for(r <- World.Animals.Shape.regions(), do: option(r, :color, default: nil)),
-          doc: "A species of a template: a region of the coat to its color, over the colors of the species."
+          doc: "A region of the coat to its color, over the colors of the species."
         ),
         option("animations", :list,
           default: [],
@@ -162,7 +162,7 @@ defmodule World.Orders.Blueprints do
             ),
           max: 5,
           doc:
-            "walk, run (a gallop), idle and eat: the clips of the template of a four-legged animal, in place (an app moves the animal at walk_speed or run_speed of the parts list, in m/s); walk of a monkey: a step on two legs; wag: the tail; wave: a hand (an animal with hands). Each species has the animations of its body plan."
+            "walk, run (a gallop), idle and eat: the clips of the template of a four-legged animal, in place (an app moves the animal at walk_speed or run_speed of the parts list, in m/s); walk and sit of a primate: a walk on four limbs (an app moves the animal at walk_speed) and a sit on the ground that looks around; wag: the tail of a four-legged animal. Each species has the animations of its body plan."
         )
       ],
       build: fn o ->
@@ -181,17 +181,10 @@ defmodule World.Orders.Blueprints do
 
   defp animal_check(o) do
     known = World.Animals.animations(o["species"])
-    template? = World.Animals.spec(o["species"])["template"] != nil
 
-    for(
-      {a, i} <- Enum.with_index(o["animations"]),
-      a not in known,
-      do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
-    ) ++
-      for key <- ~w(shape markings),
-          not template?,
-          Enum.any?(o[key], fn {_, v} -> v != nil end),
-          do: {"options.#{key}", "a #{o["species"]} has no template: it has no #{key}"}
+    for {a, i} <- Enum.with_index(o["animations"]),
+        a not in known,
+        do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
   end
 
   # --- A group at a morning of exercise ------------------------------------------------------
