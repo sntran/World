@@ -111,11 +111,12 @@ with its joints and clips, the list of the parts, the log. Each error
 has its path.
 
 An `animal` is an animal of a species, from its bones: `species`
-(`street_dog`, `cat`, `wolf`, `goat`, `pig`, `monkey`), `coat` (a
+(`street_dog`, `cat`, `wolf`, `fox`, `deer`, `goat`, `pig`, `horse`,
+`donkey`, `cow`, `water_buffalo`, `monkey`), `coat` (a
 color; the color of the species by default), `size` (0.6 to 1.4: a
 scale of the animal), `shape` (a four-legged species: numbers of the
 shape over the numbers of the species, as `{"leg_length": 1.2,
-"ear_up": 1}`), `markings` (a four-legged species: a region of the
+"ear_droop": 30}`), `markings` (a four-legged species: a region of the
 coat to its color, as `{"socks": "#ffffff"}`) and `animations` (the
 animations of its body plan: `walk` and `wag` for four legs, `walk`,
 `wave` and `wag` for a monkey). Its joints and the ends of its limbs

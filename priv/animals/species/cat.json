@@ -1,24 +1,19 @@
 {
   "name": "cat",
   "plan": "quadruped",
-  "template": "quadruped",
-  "about": "A cat of Việt Nam (mèo ta): a small short-haired cat, about 25 cm at the shoulder, gray with a white chest and white paws, a long tail up.",
+  "template": "fox",
   "height": 0.25,
+  "about": "A cat of Việt Nam (mèo ta): a small short-haired cat, about 25 cm at the shoulder, gray with a white chest and white paws, a long thin tail up.",
   "shape": {
-    "body_length": 1.2,
-    "body_width": 0.85,
-    "body_depth": 0.85,
-    "leg_girth": 0.75,
-    "neck_length": 0.6,
-    "head_size": 0.85,
-    "muzzle_length": 0.35,
-    "muzzle_width": 0.9,
-    "ear_up": 1,
-    "ear_point": 0.8,
-    "ear_size": 0.9,
-    "tail_length": 1.6,
-    "tail_girth": 0.7,
-    "leg_length": 1.05
+    "leg_length": 0.95,
+    "muzzle_length": 0.45,
+    "muzzle_width": 1.15,
+    "head_size": 1.1,
+    "ear_size": 0.8,
+    "ear_width": 1.1,
+    "tail_girth": 0.45,
+    "tail_down": -30,
+    "neck_length": 0.8
   },
   "colors": {
     "fur": [
@@ -26,24 +21,12 @@
       78,
       84
     ],
-    "eye": [
-      170,
-      160,
-      50
-    ],
-    "nose": [
-      210,
-      140,
-      150
-    ]
-  },
-  "markings": {
-    "belly": [
+    "marking": [
       236,
       233,
       226
     ],
-    "socks": [
+    "dark": [
       236,
       233,
       226
@@ -51,12 +34,13 @@
   },
   "gait": {
     "period": 0.6,
-    "stride": 0.4,
+    "stride": 0.28,
     "lift": 0.12,
-    "drop": 0.03,
+    "drop": 0.015,
     "wag": 0.6
   },
   "sources": [
-    "A domestic cat: about 23 to 25 cm at the shoulder, about 46 cm long without the tail, a tail of 25 to 30 cm, 3.5 to 4.5 kg. The numbers of the shape are a guess from these sizes and from photos."
-  ]
+    "A domestic cat: about 23 to 25 cm at the shoulder, about 46 cm long without the tail, 3.5 to 4.5 kg. The template is a fox; the numbers of the shape are a guess from photos."
+  ],
+  "markings": {}
 }

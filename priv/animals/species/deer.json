@@ -1,0 +1,20 @@
+{
+  "name": "deer",
+  "plan": "quadruped",
+  "template": "deer",
+  "height": 0.9,
+  "about": "A deer: about 90 cm at the shoulder, a brown coat, a light belly, long legs, large ears.",
+  "gait": {
+    "period": 1.0,
+    "stride": 0.3,
+    "lift": 0.08,
+    "drop": 0.02,
+    "wag": 0.8
+  },
+  "sources": [
+    "A deer of the size of a white-tailed deer: 80 to 100 cm at the shoulder. The deer of Việt Nam (nai, Rusa unicolor) are larger: 1.2 to 1.4 m (the option size)."
+  ],
+  "shape": {},
+  "markings": {},
+  "colors": {}
+}

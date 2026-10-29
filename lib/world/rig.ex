@@ -37,7 +37,8 @@ defmodule World.Rig do
   material, roles, colors}`, the weights a map of a bone to a list of
   `{point, weight}`, `roles` the material of each face, or one `material`
   for all, `colors` an `{r, g, b}` (0 to 255) for each point: the
-  colors of the vertices, that the color of the material multiplies),
+  colors of the vertices, that the color of the material multiplies;
+  `colored` the roles that have them, all by default),
   `parts` (a list of `{material, bone, points, triangles}`: a shape on
   one bone, each point `{position, normal}` at rest: horns), `blend` and `step` (a smooth skin,
   `World.Blob`: the width of the blend of two bodies, and the step of
@@ -269,7 +270,11 @@ defmodule World.Rig do
       |> Enum.map(fn {role, ts} ->
         used = ts |> List.flatten() |> Enum.uniq() |> Enum.sort()
         at = used |> Enum.with_index() |> Map.new()
-        join(role, [{Enum.map(used, &elem(verts, &1)), Enum.map(ts, fn t -> Enum.map(t, &at[&1]) end)}])
+        # The colors of the points only on the roles of `colored` (all by
+        # default).
+        keep? = role in Map.get(mesh, :colored, [role])
+        points = for i <- used, do: if(keep?, do: elem(verts, i), else: put_elem(elem(verts, i), 3, nil))
+        join(role, [{points, Enum.map(ts, fn t -> Enum.map(t, &at[&1]) end)}])
       end)
 
     triangles = for {[a, b, c], _} <- tris, do: {elem(places, a), elem(places, b), elem(places, c)}

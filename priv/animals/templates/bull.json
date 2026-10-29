@@ -1,0 +1,51 @@
+{
+  "name": "bull",
+  "plan": "quadruped",
+  "mesh": "bull",
+  "bones": {
+    "pelvis": "Back",
+    "spine_01": "Torso",
+    "neck_01": "Neck1",
+    "head": "Head",
+    "front_upper_l": "FrontUpperLeg.L",
+    "front_lower_l": "FrontLowerLeg.L",
+    "front_foot_l": "IKFrontLeg.L",
+    "hind_upper_l": "BackLeg.L",
+    "hind_lower_l": "BackUpperLeg.L",
+    "hind_foot_l": [
+      "BackLowerLeg.L",
+      "IKBackLeg.L"
+    ],
+    "front_upper_r": "FrontUpperLeg.R",
+    "front_lower_r": "FrontLowerLeg.R",
+    "front_foot_r": "IKFrontLeg.R",
+    "hind_upper_r": "BackLeg.R",
+    "hind_lower_r": "BackUpperLeg.R",
+    "hind_foot_r": [
+      "BackLowerLeg.R",
+      "IKBackLeg.R"
+    ],
+    "tail_01": "Tail1",
+    "tail_02": "Tail2",
+    "tail_03": "Tail3",
+    "tail_04": "Tail4",
+    "tail_05": "Tail5",
+    "tail_06": "Tail6",
+    "tail_07": "Tail7"
+  },
+  "parents": {
+    "front_foot_l": "front_lower_l",
+    "front_foot_r": "front_lower_r"
+  },
+  "materials": {
+    "Main": "fur",
+    "Main_Light": "marking",
+    "Hooves": "hoof",
+    "Muzzle": "muzzle",
+    "Eye_Black": "eye",
+    "Eye_White": "white",
+    "Horns": "horn"
+  },
+  "smooth": 1,
+  "muzzle": 0.5
+}

@@ -169,21 +169,24 @@ and no logo on them.
   bamboo with a dark coat, one oar), rows of fishing stakes with nets,
   ships at anchor (the far level only), a fast ferry, swim rings, beach
   umbrellas, canvas chairs, thatched huts.
-- **Animals (W11).** Next steps of the template of four legs:
-  - A shape space learned from meshes (part B): fit the CC0 meshes of
-    Quaternius (the Ultimate Animated Animal Pack: alpaca, bull, cow,
-    deer, donkey, fox, horse, husky, Shiba Inu, stag, wolf; the farm
-    pack; the download of Google Drive gave "quota exceeded" on
-    2026-10-29) and CC0 scans to the template, and keep the shape
-    changes that the numbers do not give (PCA).
+- **Animals (W11).** Next steps of the templates of four legs:
+  - The animations of the Ultimate pack (walk, gallop, idle, eat) on the
+    bones of World, in place of the walk of the code: the hind legs of
+    the dog and the cat fold in the walk of the code, because the hind
+    legs of the Ultimate rig are almost straight at rest.
+  - The other animals of the Ultimate pack (alpaca, husky, stag) and
+    the farm pack of Quaternius on poly.pizza (a pig, a sheep, a
+    chicken), as templates.
+  - A shape space learned from meshes (part B): fit the templates and
+    CC0 scans to one template, and keep the shape changes that the
+    numbers do not give (PCA).
   - UV coordinates and a map of fur on the template, so an app can add
     fur (shells) that fits each species.
   - A template of primates (from the base mesh of MakeHuman: the bones,
     the joints and the hands of a person, with a tail and a muzzle),
     and a long-tailed macaque in place of the monkey of a cartoon; a
     walk on four legs.
-  - More presets (a water buffalo, a cow, a horse, a deer, a fox),
-    chickens and ducks (a template of birds), fish; the gaits eat, sit
+  - Chickens and ducks (a template of birds), fish; the gaits eat, sit
     and run.
 - **Plants for Vũng Tàu (W12).** The idea "Plants from rules" above,
   first with the 14 tree types of Vung_Tau (`data/trees/types.json` there,

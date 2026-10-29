@@ -1,0 +1,26 @@
+{
+  "name": "cow",
+  "plan": "quadruped",
+  "template": "cow",
+  "height": 1.1,
+  "about": "A cow of Việt Nam (bò vàng): a small yellow-brown cow, about 1.1 m at the withers, short horns.",
+  "colors": {
+    "fur": [
+      176,
+      122,
+      64
+    ]
+  },
+  "gait": {
+    "period": 1.0,
+    "stride": 0.3,
+    "lift": 0.08,
+    "drop": 0.02,
+    "wag": 0.8
+  },
+  "sources": [
+    "The yellow cattle of Việt Nam (bò vàng): about 1.0 to 1.15 m at the withers, 160 to 200 kg."
+  ],
+  "shape": {},
+  "markings": {}
+}

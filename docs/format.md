@@ -466,11 +466,15 @@ and the gaits. The species is data, in one of two ways:
   body plan (`priv/animals/templates/NAME.json`), and the species is
   only numbers (`World.Animals.Shape`): its shape, the colors of its
   coat, its height and its gait. A new species is one small file, and
-  an order can change the numbers. The template `quadruped` is the
-  mesh of the dog: all the four-legged animals are numbers on it.
+  an order can change the numbers. The templates of four legs are the
+  eight animals of the Ultimate Animated Animal Pack of Quaternius
+  (CC0), on one rig: `shiba_inu`, `wolf`, `fox`, `deer`, `horse`,
+  `donkey`, `cow`, `bull`. A species starts from the template with the
+  nearest body, and its numbers change the rest.
 - **On its own mesh**: `priv/animals/meshes/NAME.json` from a file of a
-  model (`scripts/fbx_figure.exs`, below), with the bone of the mesh for
-  each bone of World. For a body that no template has yet (the monkey).
+  model (`scripts/fbx_figure.exs` or `scripts/gltf_figure.exs`, below),
+  with the bone of the mesh for each bone of World. For a body that no
+  template has yet (the monkey).
 
 The species is `priv/animals/species/NAME.json`:
 
@@ -479,16 +483,21 @@ The species is `priv/animals/species/NAME.json`:
 | `name`, `about`, `sources` | The name (a to z, 0 to 9 and _), one sentence about the animal, and where its sizes come from. |
 | `plan` | `quadruped` (four legs and a tail) or `biped` (two legs, two arms and a tail). |
 | `template` | The name of the template, or no key for a species on its own mesh. |
-| `shape` | A template: the numbers of the shape (below); a number not given is its default (the dog). |
-| `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `eye`, `nose`, `horn`). `markings` (a template): a region of the coat to its color. The option `coat` of the order is the color of `fur`. |
+| `shape` | A template: the numbers of the shape (below); a number not given is its default (the template as it is). |
+| `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings` (a template): a region of the coat to its color; they paint the faces of `fur` and `marking`. The option `coat` of the order is the color of `fur`. |
+| `without` | A template: the roles whose faces go (`["horn"]`: the bull with no horns of the file, for horns of World). |
 | `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped, at the top of the head for a biped. The option `size` of the order scales it. |
-| `spheres` | The eyes or a nose that the mesh does not have: on a ray from a point of a bone (`at`: a part of the bone from its head; `up`: above it) in the direction `dir`, with a `radius` and a `role`. On a template, `up` and `radius` are in lengths of the head of the template (times `head_size`); on a mesh, in meters. A template gives the eyes and the nose; a species can give its own. |
 | `gait` | The numbers of the gaits of the body plan (the time of a step, the stride as a part of the height, and more: see the module of the body plan). |
-| `mesh`, `bones`, `materials`, `smooth` | A species on its own mesh, or a template: the name of the file in `meshes/`; a bone of World to the bone of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `dark`, `white`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
+| `mesh`, `bones`, `materials`, `smooth` | A species on its own mesh, or a template: the name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
 
-A template also gives `muzzle` (the part of the head where the muzzle
-starts) and `ears` (`x`, `y`, `z`: where the ears are on the head, in
-lengths of the head).
+A template also gives `parents` (a bone of World to its parent, when
+the rig of the file has another parent: the paw of the Ultimate rig is
+a target of inverse kinematics, and World puts it under the forearm)
+and `muzzle` (the part of the head, from its head, where the muzzle
+starts). The end of a bone of World is the head of the next bone of the
+body plan; else the end of the bone of the file; else the head of a
+bone of the file under it that is part of the same bone of World; else
+the farthest point of its skin.
 
 The numbers of a shape change the bones at rest and the skin around
 them. A bone has a scale along it (its length) and across it (its
@@ -506,28 +515,34 @@ scales the animal.
 | `neck_length`, `neck_girth` | 0.4 to 1.8 | The neck. |
 | `head_size` | 0.6 to 1.6 | All the head. |
 | `muzzle_length`, `muzzle_width` | 0.3 to 1.8, 0.6 to 1.8 | The front of the head, from the eyes to the nose. |
-| `ear_size` | 0.5 to 2.0 | The ears. |
-| `ear_up`, `ear_point` | 0 to 1 | The ears: 0 folds them down to the sides (the dog), 1 up; 1 narrows them to a point. |
+| `ear_size`, `ear_width` | 0.5 to 2.0 | The length and the width of the ears. |
+| `ear_droop` | -40 to 120 | Degrees: more turns the ears down and to their sides (0: as the template). |
 | `tail_length`, `tail_girth` | 0.1 to 2.0, 0.4 to 3.0 | The tail. |
-| `tail_down` | -30 to 150 | Degrees: more turns the tail down (0: up, as the dog). |
-| `hooves` | 0 to 1 | 1: each paw is a narrow, short hoof. |
-| `horns` | 0 to 1.5 | The horns, in lengths of the head (0: no horns). |
+| `tail_down` | -30 to 150 | Degrees: more turns the tail down (0: as the template). |
+| `horns` | 0 to 1.5 | Horns of World, in lengths of the head (0: no horns of World; the horns of a template are part of its mesh). |
+| `horn_spread` | 0 to 1 | 0: the horns go up and to the back (the goat); 1: out to the sides and up (the buffalo). |
 
 The coat is a base color and a color for each region, with soft edges
 (the colors of the points: `COLOR_0` in the GLB). The regions paint in
 this order, a later one over an earlier one: `back`, `belly`, `legs`,
 `socks` (the paws and the low part of the legs), `head`, `face` (the
-muzzle), `ears`, `tail_tip`, `hooves`.
+muzzle), `ears`, `tail_tip`.
 
 The species now:
 
 | Species | Plan | The animal | Shape |
 |---|---|---|---|
-| `street_dog` | quadruped | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, a tail up. | The template: the dog of Quaternius, Animal Pack Vol.2 (CC0). |
-| `cat` | quadruped | A cat of Việt Nam (mèo ta): about 25 cm at the shoulder, gray with a white chest and white paws. | Numbers on the template. |
-| `wolf` | quadruped | A gray wolf: about 80 cm at the shoulder, long legs, a long muzzle, ears up, a thick tail that hangs down. | Numbers on the template. |
-| `goat` | quadruped | A goat of Việt Nam (dê cỏ): about 55 cm at the shoulder, hooves, small horns, a short tail up. | Numbers on the template. |
-| `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | Numbers on the template. |
+| `street_dog` | quadruped | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, ears up, a tail that curls up. | The template `shiba_inu`, with a tan coat. |
+| `cat` | quadruped | A cat of Việt Nam (mèo ta): about 25 cm at the shoulder, gray with a white chest and white paws. | Numbers on the template `fox`. |
+| `wolf` | quadruped | A gray wolf: about 80 cm at the shoulder. | The template `wolf`. |
+| `fox` | quadruped | A red fox: about 40 cm at the shoulder. | The template `fox`. |
+| `deer` | quadruped | A deer: about 90 cm at the shoulder. | The template `deer`. |
+| `goat` | quadruped | A goat of Việt Nam (dê cỏ): about 55 cm at the shoulder, small horns, ears to the sides. | Numbers and horns of World on the template `deer`. |
+| `horse` | quadruped | A horse of Việt Nam (ngựa): about 1.35 m at the withers. | The template `horse`. |
+| `donkey` | quadruped | A donkey (lừa): about 1.1 m at the withers. | The template `donkey`. |
+| `cow` | quadruped | A cow of Việt Nam (bò vàng): about 1.1 m at the withers, yellow-brown. | The template `cow`, with a yellow-brown coat. |
+| `water_buffalo` | quadruped | A water buffalo of Việt Nam (trâu): about 1.3 m at the withers, dark gray, wide horns. | Numbers on the template `bull`, with wide horns of World in place of the horns of the file. |
+| `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | Numbers on the template `cow`, with no horns. |
 | `monkey` | biped | A monkey of a cartoon (khỉ): about 60 cm high when it stands, a brown coat, a light face, belly, hands and feet, a long tail. | Its own mesh: tomk, monkey 3d model rigged fbx (CC0), with the colors of its textures. |
 
 The numbers of the presets are a guess from the sizes in their
@@ -541,15 +556,14 @@ A quadruped (`World.Animals.Quadruped`):
   balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine`, and `tail`
   (`flex` lifts the tail, `spread` wags it to the right side).
 - Limbs: `front_l`, `front_r` (two bones, the end is the wrist),
-  `hind_l`, `hind_r` (the end is the hock): the elbow and the knee go
-  to the front, to the side of the pole. `tail` and `head` are chains.
+  `hind_l`, `hind_r` (the end is the hock): the elbow goes to the
+  back, the knee to the front. `tail` and `head` are chains.
 - Ports: `ground`, `collar` (on the neck), `back` (on the spine, for a
   bag), `mouth` (on the muzzle, for a stick).
 - Animations: `walk` (the feet in the order hind left, front left, hind
   right, front right; each foot is on the ground for 0.6 of the step,
   flat, and folds back at the wrist in the air; the body is a little
-  lower than at rest. The dog: a step of 0.7 s with a stride of 16 cm,
-  about 0.23 m/s) and `wag` (the tail wags twice).
+  lower than at rest) and `wag` (the tail wags twice).
 
 A biped (`World.Animals.Biped`):
 
@@ -565,7 +579,7 @@ A biped (`World.Animals.Biped`):
   the shoulder) and `wag` (the tail swings).
 
 A new species of four legs: write `priv/animals/species/NAME.json`
-with `"template": "quadruped"`, the numbers of its shape, its colors,
+with the template of the nearest body, the numbers of its shape, its colors,
 its height and its gait, from the sizes of the animal and from photos.
 Build it (`mix world.build`), and look at it next to photos, at rest
 and in each animation. Add a model to the catalog (`World.Catalog`)
@@ -577,9 +591,10 @@ A new species of a body plan with no template:
 1. Find a model with bones and a skin, with a license that lets World
    give it again (CC0, CC-BY). Add a row to `CREDITS.md`.
 2. Make its mesh: `mix run scripts/fbx_figure.exs IN.fbx
-   priv/animals/meshes/NAME.json "SOURCE" "LICENSE" [FRONT]`.
+   priv/animals/meshes/NAME.json "SOURCE" "LICENSE" [FRONT]` (or
+   `scripts/gltf_figure.exs` with a glTF file).
 3. Write `priv/animals/species/NAME.json`: the bones, the height, the
-   materials and colors, the spheres, the gait. Look at the bones and
+   materials and colors, the gait. Look at the bones and
    the materials of the mesh in its JSON.
 4. Build it, look at it, add it to the catalog and a test, as above.
 
@@ -609,6 +624,17 @@ stays out. A material with a texture (a PNG file next to the FBX file)
 gives three materials: the colors of the texture at the middles of its
 faces, in three groups of near colors (`NAME.0`, `NAME.1`, `NAME.2`,
 each with its `color`).
+
+`scripts/gltf_figure.exs` reads a glTF file with one mesh and one skin
+(the buffers in the file or next to it) and writes the same JSON:
+
+    mix run scripts/gltf_figure.exs IN.gltf OUT.json "SOURCE" "LICENSE" [FRONT]
+
+FRONT is `z` by default (the front of glTF); up is `+y`. A bone is at
+the inverse of its inverse bind matrix. The same point in two
+primitives is one point. A material has the base color of the file.
+The templates of four legs come from the glTF files of the Ultimate
+Animated Animal Pack with this script.
 
 ## A drawing
 

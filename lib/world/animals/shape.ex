@@ -8,8 +8,8 @@ defmodule World.Animals.Shape do
   each point of the skin moves with the bones that move it, by its
   weights, so the skin stays smooth at the joints. A bone under another
   bone moves with the end of its parent. Some numbers change one part:
-  the muzzle (the front of the head), the ears (turned up and pointed),
-  the tail (turned down), the paws (hooves). After the change, the
+  the muzzle (the front of the head), the ears (turned down), the tail
+  (turned down), new horns. After the change, the
   lowest point of the paws is on the ground. A body much deeper than
   the legs are long can go below the ground: the presets do not.
 
@@ -23,14 +23,14 @@ defmodule World.Animals.Shape do
   | `head_size` | 0.6 to 1.6 | All the head. |
   | `muzzle_length` | 0.3 to 1.8 | The front of the head, from the eyes to the nose. |
   | `muzzle_width` | 0.6 to 1.8 | The width and the depth of the front of the head. |
-  | `ear_size` | 0.5 to 2.0 | The ears. |
-  | `ear_up` | 0 to 1 | 0: the ears fold down to the sides (the template); 1: up. |
-  | `ear_point` | 0 to 1 | 1: the ears narrow to a point. |
+  | `ear_size` | 0.5 to 2.0 | The ears (the bones `ear_l`, `ear_r`). |
+  | `ear_width` | 0.5 to 2.0 | The width of the ears. |
+  | `ear_droop` | -40 to 120 | Degrees: more turns the ears down to the sides. |
   | `tail_length` | 0.1 to 2.0 | The tail. |
   | `tail_girth` | 0.4 to 3.0 | The thickness of the tail. |
   | `tail_down` | -30 to 150 | Degrees: more turns the tail down (0: up as in the template). |
-  | `hooves` | 0 to 1 | 1: each paw is a narrow, short hoof. |
-  | `horns` | 0 to 1.5 | The length of the horns, in lengths of the head (0: no horns). |
+  | `horns` | 0 to 1.5 | The length of new horns, in lengths of the head (0: no new horns). |
+  | `horn_spread` | 0 to 1 | 0: the horns go up and to the back (a goat); 1: out to the sides (a water buffalo). |
 
   The coat: a color for each region of the skin, with soft edges between
   the regions (`regions/3`, `colors/3`).
@@ -49,16 +49,16 @@ defmodule World.Animals.Shape do
     "muzzle_length" => {0.3, 1.8, 1.0},
     "muzzle_width" => {0.6, 1.8, 1.0},
     "ear_size" => {0.5, 2.0, 1.0},
-    "ear_up" => {0.0, 1.0, 0.0},
-    "ear_point" => {0.0, 1.0, 0.0},
+    "ear_width" => {0.5, 2.0, 1.0},
+    "ear_droop" => {-40.0, 120.0, 0.0},
     "tail_length" => {0.1, 2.0, 1.0},
     "tail_girth" => {0.4, 3.0, 1.0},
     "tail_down" => {-30.0, 150.0, 0.0},
-    "hooves" => {0.0, 1.0, 0.0},
-    "horns" => {0.0, 1.5, 0.0}
+    "horns" => {0.0, 1.5, 0.0},
+    "horn_spread" => {0.0, 1.0, 0.0}
   }
 
-  @regions ~w(back belly legs socks head face ears tail_tip hooves)
+  @regions ~w(back belly legs socks head face ears tail_tip)
 
   @doc "The numbers of a shape: a name to `{min, max, default}`."
   def numbers, do: @numbers
@@ -72,10 +72,7 @@ defmodule World.Animals.Shape do
   bones are maps with `name`, `parent`, `head` and `tail`, parents
   first; `weights` is a bone to a map of a point to its weight. The
   template gives `muzzle` (the part of the head where the muzzle
-  starts) and `ears` (`x` and `z`: the ears are the points of the head
-  farther than `x` to the side and higher than `z` above the head; `y`:
-  the middle of the root of an ear along the head; in lengths of the
-  head). Gives `{bones, points}`.
+  starts). Gives `{bones, points}`.
   """
   def apply(bones, points, weights, n, template) do
     n = Map.merge(Map.new(@numbers, fn {k, {_, _, d}} -> {k, d} end), n)
@@ -84,9 +81,6 @@ defmodule World.Animals.Shape do
     scales = Map.new(bones, &{&1.name, scale(&1.name, n)})
     head = by["head"]
     len = Vec.len(Vec.sub(head.tail, head.head))
-
-    # The ears turn before the bones move them.
-    points = ears(points, frames["head"], len, n, template["ears"])
 
     # The new head of each bone: the end of its parent after the change.
     heads =
@@ -138,6 +132,20 @@ defmodule World.Animals.Shape do
         if b.name in tail_bones, do: %{b | head: turn.(h), tail: turn.(t)}, else: %{b | head: h, tail: t}
       end
 
+    # The ears turn down to the sides around their roots, on the axis
+    # along the head.
+    {bones, moved} =
+      for ear <- ~w(ear_l ear_r), Map.has_key?(by, ear), reduce: {bones, moved} do
+        {bones, moved} ->
+          b = Enum.find(bones, &(&1.name == ear))
+          side = if elem(local(frames["head"], by[ear].head), 0) < 0, do: -1, else: 1
+          axis = elem(frames["head"], 2)
+          spin = &turn(&1, b.head, axis, side * n["ear_droop"] * :math.pi() / 180)
+          ws = Map.get(weights, ear, %{})
+          moved = moved |> Enum.with_index() |> Enum.map(fn {p, i} -> Vec.lerp(p, spin.(p), Map.get(ws, i, 0.0)) end)
+          {Enum.map(bones, &if(&1.name == ear, do: %{&1 | tail: spin.(&1.tail)}, else: &1)), moved}
+      end
+
     # The paws on the ground: the lowest point of the feet.
     feet = for b <- bones, String.contains?(b.name, "_foot_"), {i, w} <- Map.get(weights, b.name, %{}), w >= 0.5, do: i
     ground = feet |> Enum.map(&elem(Enum.at(moved, &1), 2)) |> Enum.min()
@@ -176,8 +184,8 @@ defmodule World.Animals.Shape do
       String.starts_with?(name, "tail_") ->
         {n["tail_girth"], n["tail_length"], n["tail_girth"]}
 
-      String.contains?(name, "_foot_") ->
-        {n["leg_girth"] * (1 - 0.35 * n["hooves"]), 1 - 0.45 * n["hooves"], n["leg_girth"]}
+      String.starts_with?(name, "ear_") ->
+        {n["ear_size"] * n["ear_width"], n["ear_size"], n["ear_size"] * n["ear_width"]}
 
       true ->
         {n["leg_girth"], n["leg_length"], n["leg_girth"]}
@@ -204,31 +212,17 @@ defmodule World.Animals.Shape do
     global(frames[name], heads[name], {x * gx, y * l, z * gz})
   end
 
-  # The ears: turned up around their root (on the axis along the head) by
-  # `ear_up`, larger by `ear_size`, and narrower to the tip by
-  # `ear_point`. A point near the root moves less.
-  defp ears(points, head, len, n, rule) do
-    {x0, z0} = {rule["x"] * len, rule["z"] * len}
+  # A point turned by the angle t around the axis (a unit vector) through
+  # the point o (Rodrigues).
+  defp turn(p, o, axis, t) do
+    v = Vec.sub(p, o)
+    {c, s} = {:math.cos(t), :math.sin(t)}
 
-    Enum.map(points, fn p ->
-      {x, y, z} = local(head, p)
-      m = smooth(x0, x0 + 0.12 * len, abs(x)) * smooth(z0 - 0.1 * len, z0, z)
-
-      if m == 0 do
-        p
-      else
-        side = if x < 0, do: -1, else: 1
-        {a, b, c} = {abs(x) - x0, y, z - z0}
-        # Along the ear (a), its width (b, around the middle of the root),
-        # and its thickness (c).
-        k = n["ear_size"]
-        {a, c} = {a * k, c * k}
-        b = rule["y"] * len + (b - rule["y"] * len) * k * (1 - n["ear_point"] * min(a / (0.5 * len), 1.0))
-        t = n["ear_up"] * 80 * :math.pi() / 180
-        {a, c} = {a * :math.cos(t) - c * :math.sin(t), a * :math.sin(t) + c * :math.cos(t)}
-        Vec.lerp(p, global(head, elem(head, 0), {side * (x0 + a), b, z0 + c}), m)
-      end
-    end)
+    v
+    |> Vec.scale(c)
+    |> Vec.add(Vec.scale(Vec.cross(axis, v), s))
+    |> Vec.add(Vec.scale(axis, Vec.dot(axis, v) * (1 - c)))
+    |> Vec.add(o)
   end
 
   defp turn_x(p, o, t) do
@@ -247,11 +241,10 @@ defmodule World.Animals.Shape do
   before the numbers): a region to a list of the part (0 to 1) of each
   point in it. `back` and `belly` are the top and the bottom of the
   body and the neck; `legs` the legs; `socks` the paws and the low part
-  of the legs; `head` all the head; `face` the muzzle; `ears`; `tail_tip`; `hooves` the
-  paws when the animal has hooves.
+  of the legs; `head` all the head; `face` the muzzle; `ears` (the bones
+  of the ears); `tail_tip` (the last bone of the tail).
   """
-  def regions(bones, points, weights, template) do
-    ears = template["ears"]
+  def regions(bones, points, weights) do
     by = Map.new(bones, &{&1.name, &1})
     frames = Map.new(bones, &{&1.name, frame(&1)})
     head = by["head"]
@@ -263,6 +256,7 @@ defmodule World.Animals.Shape do
     feet = Enum.filter(legs, &String.contains?(&1, "_foot_"))
     lower = Enum.filter(legs, &String.contains?(&1, "_lower_"))
     trunk = ~w(pelvis spine_01 neck_01)
+    tail_tip = names |> Enum.filter(&String.starts_with?(&1, "tail_")) |> List.last()
 
     # The height of each point of the body over the bone that moves it
     # most, as a part of the range of the body there.
@@ -277,7 +271,7 @@ defmodule World.Animals.Shape do
       acc ->
         t = sum.(trunk, i)
         z = if t > 0, do: (elem(local(frames[Enum.max_by(trunk, &w.(&1, i))], p), 2) - lo) / (hi - lo), else: 0.5
-        {hx, hy, hz} = local(frames["head"], p)
+        {_, hy, _} = local(frames["head"], p)
 
         low =
           Enum.sum(
@@ -292,14 +286,11 @@ defmodule World.Animals.Shape do
           "socks" => min(sum.(feet, i) + low, 1.0),
           "head" => w.("head", i),
           "face" => w.("head", i) * smooth(0.45 * len, 0.6 * len, hy),
-          "ears" =>
-            w.("head", i) * smooth(ears["x"] * len, (ears["x"] + 0.06) * len, abs(hx)) *
-              smooth((ears["z"] - 0.1) * len, ears["z"] * len, hz),
-          "tail_tip" => w.("tail_04", i),
-          "hooves" => min(sum.(feet, i), 1.0)
+          "ears" => min(w.("ear_l", i) + w.("ear_r", i), 1.0),
+          "tail_tip" => w.(tail_tip, i)
         }
 
-        Map.new(acc, fn {r, list} -> {r, [parts[r] | list]} end)
+        Map.new(acc, fn {r, list} -> {r, [min(parts[r], 1.0) | list]} end)
     end
     |> Map.new(fn {r, list} -> {r, Enum.reverse(list)} end)
   end
@@ -322,13 +313,18 @@ defmodule World.Animals.Shape do
 
   @doc """
   The horns on the head: two curved cones from the top of the skull, up
-  and to the back, `length` long (m). `head` is the bone of the head
+  and to the back, or out to the sides by `spread` (0 to 1), `length`
+  long (m). `head` is the bone of the head
   after the change, `top` the highest points of the head (the roots of
   the horns are the highest point on each side). Gives `{points,
   triangles}` (points `{position, normal}`).
   """
-  def horns(head, length, top) do
-    {o, x, y, z} = frame(head)
+  def horns(head, length, spread, top) do
+    # The axes of the horns: to the side of the head, and level (the
+    # head can point down).
+    {o, x, _, _} = frame(head)
+    z = {0.0, 0.0, 1.0}
+    y = Vec.cross(z, x)
     n = 8
     steps = 8
 
@@ -340,12 +336,13 @@ defmodule World.Animals.Shape do
         rings =
           for s <- 0..steps do
             t = s / steps
-            # Up, then to the back and a little to the side.
+            # Up, then to the back and a little to the side; with a spread,
+            # out to the side and to the back, the tips in and up.
             c =
               root
-              |> Vec.add(Vec.scale(z, length * (0.75 * t - 0.15 * t * t)))
-              |> Vec.add(Vec.scale(y, -length * 0.6 * t * t))
-              |> Vec.add(Vec.scale(x, side * length * 0.15 * t))
+              |> Vec.add(Vec.scale(z, length * ((0.75 - 0.6 * spread) * t + (0.35 * spread - 0.15) * t * t)))
+              |> Vec.add(Vec.scale(y, -length * (0.6 + 0.3 * spread) * t * t))
+              |> Vec.add(Vec.scale(x, side * length * ((0.15 + 0.7 * spread) * t - 0.25 * spread * t * t)))
 
             r = r0 * :math.pow(1 - t, 0.8) + 0.002
 

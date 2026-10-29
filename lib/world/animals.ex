@@ -9,18 +9,20 @@ defmodule World.Animals do
     tail).
   - The species (data, `priv/animals/species/NAME.json`) is numbers on
     a template (`priv/animals/templates/NAME.json`: one mesh for a body
-    plan, and `World.Animals.Shape`), or a species on its own mesh
+    plan, and `World.Animals.Shape`; the templates of four legs are the
+    animals of the Ultimate pack of Quaternius, on one rig, from
+    `scripts/gltf_figure.exs`), or a species on its own mesh
     (`priv/animals/meshes/`, from `scripts/fbx_figure.exs`).
 
   The keys of a species (`docs/format.md`, "An animal"): `name`,
   `about`, `plan`, `sources`, `height` (in meters, at the withers for a
   quadruped, at the top of the head for a biped), `colors` (a role to
   its color; `fur` is the base color of the coat), `gait`; on a
-  template, `template`, `shape` (numbers) and `markings` (a region of
-  the coat to its color); on a mesh, `mesh`, `bones` (a bone of World to
-  the bone of the mesh), `materials` (a material of the mesh to a role)
-  and `smooth`. `spheres` (the eyes and a nose) come from the template
-  or the species.
+  template, `template`, `shape` (numbers), `markings` (a region of
+  the coat to its color) and `without` (roles whose faces go); on a
+  mesh or a template, `mesh`, `bones` (a bone of World to the bones of
+  the mesh), `materials` (a material of the mesh to a role) and
+  `smooth`; on a template, `parents` and `muzzle`.
   """
   alias World.{Rig, Vec}
   alias World.Animals.Shape
@@ -39,6 +41,9 @@ defmodule World.Animals do
   for f <- @template_files, do: @external_resource(f)
   @templates Map.new(@template_files, fn f -> {Path.basename(f, ".json"), f |> File.read!() |> JSON.decode!()} end)
 
+  # The colors of the roles that no mesh, template or species gives.
+  @colors %{"horn" => [172, 161, 117], "eye" => [24, 24, 24], "nose" => [40, 34, 32], "white" => [240, 240, 240]}
+
   @plans %{"quadruped" => World.Animals.Quadruped, "biped" => World.Animals.Biped}
   @roles %{
     "fur" => :fur,
@@ -48,7 +53,11 @@ defmodule World.Animals do
     "nose" => :nose,
     "dark" => :dark,
     "white" => :white,
-    "horn" => :horn
+    "horn" => :horn,
+    "hoof" => :hoof,
+    "muzzle" => :muzzle,
+    "iris" => :iris,
+    "mane" => :mane
   }
 
   @doc "The names of the species."
@@ -81,62 +90,42 @@ defmodule World.Animals do
         a not in plan.animations(),
         do: raise(ArgumentError, "unknown animation of a #{name} #{inspect(a)}: #{Enum.join(plan.animations(), ", ")}")
 
-    # A species of a template takes the mesh, the bones and the eyes of
-    # the template.
+    # A species of a template takes the mesh, the bones and the materials
+    # of the template.
     t = if s["template"], do: Map.merge(@templates[s["template"]], s), else: s
 
-    data =
-      Path.join([:code.priv_dir(:world), "animals", "meshes", t["mesh"] <> ".json"]) |> File.read!() |> JSON.decode!()
+    {data, bones, points, weights} = rest(t, plan)
 
-    to_world = Map.new(t["bones"], fn {world, file} -> {file, world} end)
-    file_bones = Map.new(data["bones"], &{&1["name"], &1})
-    # The bone of World of a bone of the mesh: its own, or of the nearest
-    # bone above it.
-    owner = fn file ->
-      Stream.iterate(file, &file_bones[&1]["parent"]) |> Enum.take_while(& &1) |> Enum.find_value(&to_world[&1])
-    end
+    # The faces that the species keeps (a pig has no horns of a cow), and
+    # the role of each.
+    without = Enum.map(Map.get(s, "without", []), &@roles[&1])
 
-    weights =
-      for {file, list} <- data["weights"], reduce: %{} do
-        acc ->
-          Map.update(acc, owner.(file), Map.new(list, &List.to_tuple/1), fn m ->
-            Enum.reduce(list, m, fn [i, w], m -> Map.update(m, i, w, &(&1 + w)) end)
-          end)
+    {faces, roles} =
+      data["faces"]
+      |> Enum.zip(Enum.map(data["face_materials"], &material_role(t, data, &1)))
+      |> Enum.reject(fn {_, role} -> role in without end)
+      |> Enum.unzip()
+
+    # The colors: of the materials of the mesh, of the template, of the
+    # species, and the coat of the order.
+    mesh_colors =
+      for m <- data["materials"], m["color"], reduce: %{} do
+        acc -> Map.put_new(acc, Map.get(t["materials"], m["name"], "fur"), m["color"])
       end
 
-    points = Enum.map(data["points"], &List.to_tuple/1)
-    bones = bones(plan, t["bones"], file_bones, owner)
-    coat = Keyword.get(opts, :coat) || s["colors"]["fur"]
-
-    # A template: the shape from the numbers, and the colors of the coat
-    # by region.
-    # The eyes and the nose start on a ray from a point of a bone. On a
-    # template, the point moves with the bone, as a point of the skin.
-    spheres = Map.get(t, "spheres", [])
-    by0 = Map.new(bones, &{&1.name, &1})
-    unit0 = Vec.len(Vec.sub(by0["head"].tail, by0["head"].head))
-    origins = if s["template"], do: for(sp <- spheres, do: origin(sp, by0, unit0)), else: []
+    coat = Keyword.get(opts, :coat) || get_in(s, ["colors", "fur"]) || mesh_colors["fur"]
+    markings = Map.merge(Map.get(s, "markings", %{}), Keyword.get(opts, :markings, %{}))
 
     {bones, points, colors, shape} =
       if s["template"] do
         shape = Map.merge(s["shape"], Keyword.get(opts, :shape, %{}))
-        regions = Shape.regions(bones, points, weights, t)
-        n = length(points)
-        on_bones = for {sp, j} <- Enum.with_index(spheres), into: %{}, do: {n + j, sp["bone"]}
-
-        all =
-          Enum.reduce(on_bones, weights, fn {i, bone}, acc ->
-            Map.update(acc, bone, %{i => 1.0}, &Map.put(&1, i, 1.0))
-          end)
-
-        {bones, moved} = Shape.apply(bones, points ++ origins, all, shape, t)
-        colors = Shape.colors(regions, coat, Map.merge(s["markings"], Keyword.get(opts, :markings, %{})))
+        regions = Shape.regions(bones, points, weights)
+        {bones, moved} = Shape.apply(bones, points, weights, shape, t)
+        colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
         {bones, moved, colors, shape}
       else
         {bones, points, nil, %{}}
       end
-
-    {points, origins} = Enum.split(points, length(points) - length(origins))
 
     scale = s["height"] * k / plan.height(points, weights)
     at = &Vec.scale(&1, scale)
@@ -150,48 +139,53 @@ defmodule World.Animals do
     points = Enum.map(points, at)
     by = Map.new(bones, &{&1.name, &1})
     head_length = Vec.len(Vec.sub(by["head"].tail, by["head"].head))
+    kept = faces |> List.flatten() |> MapSet.new()
 
-    # The unit of the sizes of the spheres: meters times the size, or the
-    # length of the head of the template times the scale of the head.
-    unit = if s["template"], do: unit0 * scale * Map.get(shape, "head_size", 1.0), else: k
-    origins = if s["template"], do: Enum.map(origins, at), else: for(sp <- spheres, do: origin(sp, by, k))
-    template_colors = if s["template"], do: @templates[s["template"]]["colors"], else: %{}
-    roles = Enum.map(data["face_materials"], &material_role(t, data, &1))
-    parts = horns(Map.get(shape, "horns", 0) * head_length, by["head"], points, weights)
+    parts =
+      horns(
+        Map.get(shape, "horns", 0) * head_length,
+        Map.get(shape, "horn_spread", 0),
+        by["head"],
+        points,
+        weights,
+        kept
+      )
 
-    # The colors of the roles that the animal uses.
-    used = MapSet.new(roles ++ Enum.map(spheres, &@roles[&1["role"]]) ++ Enum.map(parts, &elem(&1, 0)))
+    # The colors of the roles that the animal uses; with markings, the
+    # coat is in the colors of the points of the fur and of its lighter
+    # parts, on a white material.
+    used = MapSet.new(roles ++ Enum.map(parts, &elem(&1, 0)))
 
     colors_of =
-      Map.merge(template_colors, s["colors"])
+      @colors
+      |> Map.merge(mesh_colors)
+      |> Map.merge(Map.get(t, "colors", %{}))
+      |> Map.merge(Map.get(s, "colors", %{}))
       |> Map.put("fur", if(colors, do: [255, 255, 255], else: coat))
+      |> then(&if(colors, do: Map.put(&1, "marking", [255, 255, 255]), else: &1))
       |> Map.filter(fn {role, _} -> @roles[role] in used end)
 
     Rig.figure(plan.figure_name(name),
       bones: bones,
       mesh: %{
         points: points,
-        faces: data["faces"],
+        faces: faces,
         weights: Map.new(weights, fn {bone, m} -> {bone, Enum.sort(m)} end),
         smooth: Map.get(t, "smooth", 0),
         roles: roles,
-        colors: colors
+        colors: colors,
+        colored: [:fur, :marking]
       },
       limbs: plan.limbs(by),
       joints: plan.joints(by),
       ports: plan.ports(by),
-      spheres:
-        for(
-          {sp, o} <- Enum.zip(spheres, origins),
-          do: {{:on, o, List.to_tuple(sp["dir"])}, sp["radius"] * unit, sp["bone"], @roles[sp["role"]]}
-        ),
       parts: parts,
       materials:
         Map.new(colors_of, fn {role, color} ->
           {@roles[role],
            %{
              "color" => color,
-             "roughness" => if(role in ~w(eye dark nose horn), do: 0.3, else: 0.9),
+             "roughness" => if(role in ~w(eye dark nose horn hoof), do: 0.4, else: 0.9),
              "metalness" => 0.0
            }}
         end),
@@ -202,12 +196,52 @@ defmodule World.Animals do
     )
   end
 
-  # The horns: on the highest points of the head.
-  defp horns(length, _head, _points, _weights) when length == 0, do: []
+  @doc """
+  A template at rest, before the numbers of a shape: `%{template, bones,
+  points, weights}` (in the units of its mesh; the bones of World, the
+  weights of each bone of World).
+  """
+  def template(name) do
+    t = Map.fetch!(@templates, name)
+    {_, bones, points, weights} = rest(t, @plans[t["plan"]])
+    %{template: t, bones: bones, points: points, weights: weights}
+  end
 
-  defp horns(length, head, points, weights) do
-    top = for {i, w} <- weights["head"], w > 0.5, do: Enum.at(points, i)
-    {ps, tris} = Shape.horns(head, length, top)
+  # The mesh of a species or a template, its bones of World and the
+  # weights of each.
+  defp rest(t, plan) do
+    data =
+      Path.join([:code.priv_dir(:world), "animals", "meshes", t["mesh"] <> ".json"]) |> File.read!() |> JSON.decode!()
+
+    # A bone of World is one bone of the mesh, or a list: the first, and
+    # bones that give it their weights.
+    map = Map.new(t["bones"], fn {world, file} -> {world, List.wrap(file)} end)
+    to_world = for {world, files} <- map, file <- files, into: %{}, do: {file, world}
+    file_bones = Map.new(data["bones"], &{&1["name"], &1})
+    # The bone of World of a bone of the mesh: its own, or of the nearest
+    # bone above it.
+    owner = fn file ->
+      Stream.iterate(file, &file_bones[&1]["parent"]) |> Enum.take_while(& &1) |> Enum.find_value(&to_world[&1])
+    end
+
+    weights =
+      for {file, list} <- data["weights"], world = owner.(file), world != nil, reduce: %{} do
+        acc ->
+          Map.update(acc, world, Map.new(list, &List.to_tuple/1), fn m ->
+            Enum.reduce(list, m, fn [i, w], m -> Map.update(m, i, w, &(&1 + w)) end)
+          end)
+      end
+
+    points = Enum.map(data["points"], &List.to_tuple/1)
+    {data, bones(plan, map, Map.get(t, "parents", %{}), file_bones, owner, points, weights), points, weights}
+  end
+
+  # New horns: on the highest points of the head that the animal keeps.
+  defp horns(length, _spread, _head, _points, _weights, _kept) when length == 0, do: []
+
+  defp horns(length, spread, head, points, weights, kept) do
+    top = for {i, w} <- weights["head"], w > 0.5, i in kept, do: Enum.at(points, i)
+    {ps, tris} = Shape.horns(head, length, spread, top)
     [{:horn, "head", ps, tris}]
   end
 
@@ -218,34 +252,43 @@ defmodule World.Animals do
   end
 
   # The bones of World, parents first, in the units of the mesh: the head
-  # from the mesh; the tail at the head of the next bone of the body plan,
-  # else at the end of the bone of the mesh, else at the head of a bone
-  # under it, else as far again as from its parent.
-  defp bones(plan, map, file_bones, owner) do
-    for name <- plan.bones(), file = map[name], file != nil do
-      f = file_bones[file]
-      next = plan.next(name)
-      kid = Enum.find(Map.values(file_bones), &(&1["parent"] == file))
-      parent = f["parent"] && owner.(f["parent"])
+  # from the mesh; the parent from `parents`, else of the bone of the
+  # mesh; the tail at the head of the next bone of the body plan, else at
+  # the end of the bone of the mesh, else at the head of a bone under it
+  # with no bone of World of its own, else at the point of its skin
+  # farthest on, from its parent.
+  defp bones(plan, map, parents, file_bones, owner, points, weights) do
+    for name <- plan.bones(), [file | _] <- [Map.get(map, name, [nil])], f = file_bones[file], f != nil, reduce: [] do
+      acc ->
+        next = plan.next(name)
+        # A bone under it that gives it its weights (not the root of an
+        # ear under the head).
+        kid = Enum.find(Map.values(file_bones), &(&1["parent"] == file and owner.(&1["name"]) == name))
+        parent = parents[name] || (f["parent"] && owner.(f["parent"]))
+        head = List.to_tuple(f["head"])
 
-      tail =
-        cond do
-          next && map[next] -> file_bones[map[next]]["head"]
-          f["tail"] -> f["tail"]
-          kid -> kid["head"]
-          true -> Enum.zip_with(f["head"], file_bones[map[parent]]["head"], &(&1 + 0.5 * (&1 - &2)))
-        end
+        tail =
+          cond do
+            next && map[next] && file_bones[hd(map[next])] -> List.to_tuple(file_bones[hd(map[next])]["head"])
+            f["tail"] -> List.to_tuple(f["tail"])
+            kid -> List.to_tuple(kid["head"])
+            true -> farthest(head, Enum.find(acc, &(&1.name == parent)).head, Map.get(weights, name, %{}), points)
+          end
 
-      %{name: name, parent: parent, head: List.to_tuple(f["head"]), tail: List.to_tuple(tail), x: nil}
+        acc ++ [%{name: name, parent: parent, head: head, tail: tail, x: nil}]
     end
   end
 
-  # The start of the ray of an eye or a nose: `up` times `unit` above a
-  # part of the bone (a species of a mesh: meters times the size; a
-  # template: lengths of the head of the template, before the shape).
-  defp origin(sp, by, unit) do
-    b = by[sp["bone"]]
-    Vec.add(Vec.lerp(b.head, b.tail, sp["at"]), {0.0, 0.0, Map.get(sp, "up", 0.0) * unit})
+  # The point of the skin of a bone (weight 0.5 or more) farthest from
+  # its head in the direction from the head of its parent.
+  defp farthest(head, from, weights, points) do
+    dir = Vec.norm(Vec.sub(head, from))
+    points = List.to_tuple(points)
+
+    weights
+    |> Enum.filter(fn {_, w} -> w >= 0.5 end)
+    |> Enum.map(fn {i, _} -> elem(points, i) end)
+    |> Enum.max_by(&Vec.dot(Vec.sub(&1, head), dir))
   end
 
   @doc """

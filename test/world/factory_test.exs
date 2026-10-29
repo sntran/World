@@ -273,7 +273,7 @@ defmodule World.FactoryTest do
       assert {:error, [%{"path" => "options.shape", "message" => "a monkey has no template: it has no shape"}]} =
                Orders.check(%{
                  "blueprint" => "animal",
-                 "options" => %{"species" => "monkey", "shape" => %{"ear_up" => 1}}
+                 "options" => %{"species" => "monkey", "shape" => %{"ear_droop" => 10}}
                })
 
       assert {:error, [%{"path" => "options.shape.leg_length"}]} =
@@ -284,11 +284,13 @@ defmodule World.FactoryTest do
 
       order = %{
         "blueprint" => "animal",
-        "options" => %{"species" => "wolf", "shape" => %{"ear_up" => 0.5}, "markings" => %{"socks" => "#FFFFFF"}}
+        "options" => %{"species" => "wolf", "shape" => %{"ear_droop" => 30}, "markings" => %{"socks" => "#FFFFFF"}}
       }
 
       assert {:ok,
-              %{"options" => %{"shape" => %{"ear_up" => 0.5, "horns" => nil}, "markings" => %{"socks" => "#ffffff"}}}} =
+              %{
+                "options" => %{"shape" => %{"ear_droop" => 30.0, "horns" => nil}, "markings" => %{"socks" => "#ffffff"}}
+              }} =
                Orders.check(order)
 
       assert {:ok, <<"glTF", _::binary>>} = Orders.build(order, "far", "glb")

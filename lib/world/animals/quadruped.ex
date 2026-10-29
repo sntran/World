@@ -1,12 +1,14 @@
 defmodule World.Animals.Quadruped do
   @moduledoc """
-  The body plan of an animal on four legs with a tail: a dog, a cat.
+  The body plan of an animal on four legs with a tail: a dog, a cat, a
+  goat, a horse, a cow.
 
-  The bones of World: `pelvis`, `spine_01`, `neck_01`, `head`, the tail
-  (`tail_01` ...), and for each side (`_l`, `_r`) `front_upper`,
-  `front_lower`, `front_foot` (the shoulder blade and the upper arm, the
-  forearm, the paw) and `hind_upper`, `hind_lower`, `hind_foot` (the
-  thigh, the shin, the paw).
+  The bones of World: `pelvis`, `spine_01`, `neck_01`, `head`, `ear_l`
+  and `ear_r` (when the template has them), the tail (`tail_01` ...),
+  and for each side (`_l`, `_r`) `front_upper`, `front_lower`,
+  `front_foot` (the upper arm, the forearm, the paw or the hoof) and
+  `hind_upper`, `hind_lower`, `hind_foot` (the thigh, the shin, the
+  bones below the hock).
 
   The joints (the values add to the rest): the hinges `elbow_l`,
   `wrist_l`, `knee_l`, `hock_l` (and `_r`; more bends the elbow and the
@@ -14,8 +16,8 @@ defmodule World.Animals.Quadruped do
   the balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine` and `tail`
   (flex lifts the tail, spread wags it to the right side). The limbs:
   `front_l`, `front_r` (the end is the wrist), `hind_l`, `hind_r` (the
-  end is the hock): the elbow and the knee go to the front. `tail` and
-  `head` are chains. The ports: `ground`, `collar` (on the neck), `back`
+  end is the hock): the elbow goes to the back, the knee to the front.
+  `tail` and `head` are chains. The ports: `ground`, `collar` (on the neck), `back`
   (on the spine, for a bag), `mouth` (for a stick).
 
   The animations: `walk` (the feet in the order hind left, front left,
@@ -36,7 +38,7 @@ defmodule World.Animals.Quadruped do
 
   @doc "The bones of the body plan, parents first."
   def bones do
-    ~w(pelvis spine_01 neck_01 head) ++
+    ~w(pelvis spine_01 neck_01 head ear_l ear_r) ++
       for(i <- 1..9, do: "tail_0#{i}") ++
       for side <- @sides, part <- ~w(front hind), name <- ~w(upper lower foot), do: "#{part}_#{name}_#{side}"
   end
@@ -52,8 +54,12 @@ defmodule World.Animals.Quadruped do
   defp next_leg([part, "lower", side]), do: "#{part}_foot_#{side}"
   defp next_leg(_), do: nil
 
-  @doc "The hinge of a bone: a bend of a lower leg takes its end to the back."
-  def hinge(name, _dir), do: if(String.contains?(name, "_lower_"), do: {-1.0, 0.0, 0.0}, else: {1.0, 0.0, 0.0})
+  @doc """
+  The hinge of a bone: a bend of a hind lower leg takes the hock to the
+  back (the knee goes to the front); a bend of a front lower leg takes
+  the wrist to the front (the elbow goes to the back).
+  """
+  def hinge(name, _dir), do: if(String.starts_with?(name, "hind_lower_"), do: {-1.0, 0.0, 0.0}, else: {1.0, 0.0, 0.0})
 
   @doc "The height of the mesh at the withers: the highest point of the spine."
   def height(points, weights) do
@@ -78,7 +84,7 @@ defmodule World.Animals.Quadruped do
       do:
         Limb.new("#{part}_#{side}", ["#{part}_upper_#{side}", "#{part}_lower_#{side}"],
           role: :leg,
-          pole: {0.0, 1.0, 0.0}
+          pole: if(part == "front", do: {0.0, -1.0, 0.0}, else: {0.0, 1.0, 0.0})
         )
     ) ++
       [

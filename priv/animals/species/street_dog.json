@@ -1,26 +1,26 @@
 {
   "name": "street_dog",
   "plan": "quadruped",
-  "template": "quadruped",
-  "about": "A street dog of Việt Nam (chó cỏ): a medium dog of mixed breed with a short coat, about 50 cm at the shoulder, a tail that it holds up.",
+  "template": "shiba_inu",
   "height": 0.5,
-  "shape": {},
+  "about": "A street dog of Việt Nam (chó cỏ): a medium dog of mixed breed with a short tan coat, about 50 cm at the shoulder, ears up, a tail that curls up.",
   "colors": {
     "fur": [
-      200,
-      150,
-      90
+      196,
+      140,
+      78
     ]
   },
-  "markings": {},
   "gait": {
     "period": 0.7,
-    "stride": 0.32,
+    "stride": 0.22,
     "lift": 0.1,
-    "drop": 0.03,
+    "drop": 0.015,
     "wag": 0.4
   },
   "sources": [
-    "The size is a guess from photos and from the medium breeds of dogs (about 15 kg): no measurements. The gait is the walk of a dog: the feet in the order hind left, front left, hind right, front right."
-  ]
+    "The size is a guess from photos and from the medium breeds of dogs (about 15 kg): no measurements. The template is a Shiba Inu, a dog of the same shape (ears up, a curled tail)."
+  ],
+  "shape": {},
+  "markings": {}
 }
