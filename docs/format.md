@@ -655,34 +655,43 @@ A quadruped (`World.Animals.Quadruped`):
   back, the knee to the front. `tail` and `head` are chains.
 - Ports: `ground`, `collar` (on the neck), `back` (on the spine, for a
   bag), `mouth` (on the muzzle, for a stick).
-- Animations: `walk`, `run` (a gallop), `idle` and `eat` (the head down
-  to the ground) are the clips of the template, on the bones of the
-  shape (below); `wag` (the tail wags twice) is code. The clips are in
-  place: an app moves the animal at the speed of the clip
-  (`walk_speed` and `run_speed` in the `params` of the parts list, in
-  m/s), so the paws do not slide.
+- Animations: `walk`, `run` (a gallop), `idle`, `idle_low` (at rest
+  with the head low), `eat` (the head down to the ground), `attack` (a
+  bite, or a butt with the head for an animal with hooves), `jump` (a
+  jump in a gallop) and `death` (the animal falls on its side and stays
+  there) are the clips of the template, on the bones of the shape
+  (below); `wag` (the tail wags twice) is code. The clips are in place:
+  an app moves the animal at the speed of the clip (`walk_speed`,
+  `run_speed` and `jump_speed` in the `params` of the parts list, in
+  m/s), so the paws do not slide. The death plays once; the other clips
+  loop.
 
 The clips of a template are in `priv/animals/clips/NAME.json` (from
 `scripts/gltf_clips.exs`, below): for each clip its `length` and
 `times` (s), the turn of each bone of World at each time (a quaternion
 in the axes of World, from the pose at rest), the move of the pelvis
 (in the units of the mesh), the `speed` (in the units of the mesh for
-each second) and `feet`: for each foot, the height of its paw in the
-file over its height at rest at each time (in the units of the mesh;
-the paw is the IK bone of the file, the place that the artist gave to
-the paw). On an animal (`World.Animals.retarget/5`), each bone turns
+each second), `loop` (true when the last time is the first), `ground`
+(`feet` or `body`, below) and `feet`: for each foot, the height of its
+paw in the file over its height at rest at each time (in the units of
+the mesh; the paw is the IK bone of the file, the place that the artist
+gave to the paw). On an animal (`World.Animals.retarget/5`), each bone turns
 from its rest by the turn of the clip, the pelvis moves by the move of
 the clip times the scale of the animal, and the other bones keep their
 place on their parent: the bones keep the lengths of the shape. The
 legs of a shape are not the legs of the file, so the feet go into the
-ground or above it. Then:
+ground or above it. In the death (`"ground": "body"`), the animal falls:
+all the animal goes up or down so that the lowest point of its skin is
+on the ground at each time. In the other clips (`"ground": "feet"`),
+the paws carry the animal:
 
 1. A foot is on the ground at the times when its paw in the file is
    less than 1% of the height of the pelvis above its rest.
 2. The body goes down by the mean height of the feet on the ground over
    their paws (the lowest point of the skin of a foot, over that point
    at rest). At a time with no foot on the ground (in a gallop), this
-   move changes linearly in time. When a leg on the ground is too short
+   move changes linearly in time (in a clip that does not loop, the
+   first and the last moves stay at the ends). When a leg on the ground is too short
    for its place, the body goes down more, until the leg is straight.
 3. Each foot goes to the height of its paw (at the scale of the
    animal, never below the ground): the upper and the lower bone of the
@@ -768,15 +777,20 @@ animations of its glTF file:
 
     mix run scripts/gltf_clips.exs IN.gltf TEMPLATE.json OUT.json "SOURCE" "LICENSE" [FRONT]
 
-It reads the clips `Walk` (`walk`), `Gallop` (`run`), `Idle` (`idle`)
-and `Eating` (`eat`); a clip of more than 2 s keeps every second key.
+It reads the clips `Walk` (`walk`), `Gallop` (`run`), `Idle` (`idle`),
+`Idle_2_HeadLow` or `Idle_Headlow` (`idle_low`), `Eating` (`eat`),
+`Attack` or `Attack_Headbutt` (`attack`), `Gallop_Jump` (`jump`) and
+`Death` (`death`); a clip of more than 2 s keeps every second key.
 The turn of a bone of World is the mean turn of the bones of the file
 that give it their weights (each by its weights, from the mesh of the
 template); a bone with no weights has the turn of its own bone of the
-file. The speed is the middle value of the speeds to the back of the
-paws on the ground. The height of the paw of a foot is the height of
-the IK bone of the file in its list of bones (`IKFrontLeg.L`,
-`IKBackLeg.L`, ...), or of its first bone.
+file. The paw of a foot is the IK bone of the file in its list of bones
+(`IKFrontLeg.L`, `IKBackLeg.L`, ...), or its first bone. The speed (of
+the walk, the run and the jump) is the middle value of the speeds to the
+back of the paws on the ground (less than 2% of the height of the
+pelvis above their height at rest). In the walk of the file the hind
+paws move faster than the front paws, so no speed stops all the paws:
+the middle value is between the two.
 
 `scripts/primate_template.exs` makes the mesh of the template of
 primates from the data of MakeHuman in `priv/makehuman/`:

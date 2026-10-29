@@ -263,7 +263,7 @@ defmodule World.FactoryTest do
               [
                 %{
                   "path" => "options.animations.1",
-                  "message" => "a cat has no animation sit: walk, run, idle, eat, wag"
+                  "message" => "a cat has no animation sit: walk, run, idle, idle_low, eat, attack, jump, death, wag"
                 }
               ]} =
                Orders.check(%{

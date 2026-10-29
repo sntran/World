@@ -20,8 +20,9 @@ defmodule World.Animals.Quadruped do
   `tail` and `head` are chains. The ports: `ground`, `collar` (on the neck), `back`
   (on the spine, for a bag), `mouth` (for a stick).
 
-  The animations: `walk`, `run` (a gallop), `idle` and `eat` (the head
-  down to the ground) are the clips of the template
+  The animations: `walk`, `run` (a gallop), `idle`, `idle_low` (the
+  head low), `eat` (the head down to the ground), `attack`, `jump` (in a
+  gallop) and `death` are the clips of the template
   (`World.Animals.retarget/5`); `wag` (the tail wags twice) is code. The
   number of the gait of a species (`gait`): `wag` (the time of a wag,
   s).
@@ -79,7 +80,7 @@ defmodule World.Animals.Quadruped do
   def speeds(_h, _gait), do: %{}
 
   @doc "The names of the animations."
-  def animations, do: ~w(walk run idle eat wag)
+  def animations, do: ~w(walk run idle idle_low eat attack jump death wag)
 
   def limbs(by) do
     tail = Enum.filter(bones(), &(String.starts_with?(&1, "tail_") and Map.has_key?(by, &1)))

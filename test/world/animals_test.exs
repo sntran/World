@@ -80,30 +80,44 @@ defmodule World.AnimalsTest do
     end
   end
 
-  # The height of each foot over its height at rest (a part of the height
-  # of the pelvis) at each time of a clip: the lowest point of its skin
-  # (the points that the foot moves most).
-  defp feet(%{skeleton: s} = animal, clip) do
+  # The height of the lowest point of the skin of each of the bones (the
+  # points that the bone moves most) at each time of a clip, as a part of
+  # the height of the pelvis.
+  defp heights(%{skeleton: s} = animal, clip, bones) do
     index = s.bones |> Enum.with_index() |> Map.new(fn {b, i} -> {b.name, i} end)
     skin = for n <- Build.scene(animal).nodes, p <- n.primitives, p.joints, do: p
     h = elem(s.rest["pelvis"].at, 2)
+    worlds = [s.rest | frames(animal, clip)]
 
-    Map.new(World.Animals.Quadruped.feet(), fn f ->
-      points =
-        for p <- skin,
+    for b <- bones,
+        points =
+          for(
+            p <- skin,
             {at, {j, _, _, _}, {w, _, _, _}} <- Enum.zip([p.positions, p.joints, p.weights]),
-            j == index[f] and w > 0.5,
-            do: Frame.point(Frame.invert(s.rest[f]), at)
-
-      low = fn world -> points |> Enum.map(&elem(Frame.point(world[f], &1), 2)) |> Enum.min() end
-      {f, for(world <- frames(animal, clip), do: (low.(world) - low.(s.rest)) / h)}
-    end)
+            j == index[b] and w > 0.5,
+            do: Frame.point(Frame.invert(s.rest[b]), at)
+          ),
+        points != [],
+        into: %{} do
+      {b, for(world <- worlds, do: (points |> Enum.map(&elem(Frame.point(world[b], &1), 2)) |> Enum.min()) / h)}
+    end
   end
 
-  # No foot goes into the ground; in a walk and a run, each foot comes
-  # down to the ground.
+  # The paws carry the animal: no foot goes into the ground, and in a
+  # walk and a run each foot comes down to the ground. In a death, the
+  # lowest point of the skin is on the ground at each time.
+  defp on_ground(%{skeleton: s} = animal, %{name: "death"} = clip) do
+    # The skin is a little over the ground: it is smooth, and its points
+    # move with all their bones (the retarget moves each point with its
+    # main bone).
+    for time <- animal |> heights(clip, Enum.map(s.bones, & &1.name)) |> Map.values() |> Enum.zip(),
+        low = time |> Tuple.to_list() |> Enum.min(),
+        do: assert(low > -0.005 and low < 0.015, "death #{low}")
+  end
+
   defp on_ground(animal, clip) do
-    for {f, ups} <- feet(animal, clip) do
+    for {f, [rest | lows]} <- heights(animal, clip, World.Animals.Quadruped.feet()),
+        ups = Enum.map(lows, &(&1 - rest)) do
       assert Enum.min(ups) > -0.005, "#{clip.name} #{f}"
       if clip.name in ~w(walk run), do: assert(Enum.min(ups) < 0.005, "#{clip.name} #{f}")
     end
@@ -119,8 +133,10 @@ defmodule World.AnimalsTest do
     assert %{path: :translation} = Enum.find(walk.channels, &(&1.node == index.("pelvis") and &1.path == :translation))
     assert MapSet.new(wag.channels, & &1.node) == MapSet.new(~w(tail_01 tail_02 tail_03), index)
 
-    all = Animals.animal("street_dog", animations: ~w(walk run idle eat))
-    assert Enum.map(all.animations, & &1.name) == ~w(walk run idle eat)
+    clips = Animals.animations("street_dog") -- ["wag"]
+    assert clips == ~w(walk run idle idle_low eat attack jump death)
+    all = Animals.animal("street_dog", animations: clips)
+    assert Enum.map(all.animations, & &1.name) == clips
 
     for clip <- all.animations do
       # Each bone keeps its length: its head is on its parent where it is
@@ -133,18 +149,22 @@ defmodule World.AnimalsTest do
       on_ground(all, clip)
     end
 
-    # A walk and a run loop: the last time is the first. The head goes
-    # down to eat.
-    [walk, run, _, eat] = Enum.map(all.animations, &frames(all, &1))
+    # The loops: the last time is the first. The head goes down to eat
+    # and in the idle with the head low; the animal lies down at the end
+    # of a death.
+    [walk, run, _, low, eat, attack, jump, death] = Enum.map(all.animations, &frames(all, &1))
 
-    for clip <- [walk, run],
+    for clip <- [walk, run, low, attack, jump],
         do: assert(Vec.len(Vec.sub(List.last(clip)["head"].at, hd(clip)["head"].at)) < 1.0e-3)
 
-    assert eat |> Enum.map(&elem(&1["head"].at, 2)) |> Enum.min() < elem(s.rest["head"].at, 2) - 0.15
+    for {clip, down} <- [{eat, 0.15}, {low, 0.05}],
+        do: assert(clip |> Enum.map(&elem(&1["head"].at, 2)) |> Enum.min() < elem(s.rest["head"].at, 2) - down)
+
+    assert elem(List.last(death)["pelvis"].at, 2) < 0.6 * elem(s.rest["pelvis"].at, 2)
 
     # The speeds of the clips that move the animal: a run is faster.
-    %{"walk_speed" => slow, "run_speed" => fast} = all.params
-    assert slow > 0.2 and fast > 2 * slow
+    %{"walk_speed" => slow, "run_speed" => fast, "jump_speed" => jump_speed} = all.params
+    assert slow > 0.2 and fast > 2 * slow and jump_speed > slow
 
     assert Animals.species() == ~w(cat cow deer donkey fox goat horse macaque pig street_dog water_buffalo wolf)
     assert Animals.animal("street_dog", []).name == "dog"

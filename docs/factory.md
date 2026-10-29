@@ -122,10 +122,11 @@ coefficients of the shape space of the template, for the `wolf`: the
 space lists the numbers and the coefficients of the horse, the cow, the
 deer and more, so a wolf with the `shape` and the `space` of the horse
 has the shape of a horse; `docs/format.md`, "The shape space") and `animations` (the
-animations of its body plan: `walk`, `run`, `idle`, `eat` and `wag` for
-four legs, `walk` (on four limbs) and `sit` for the macaque; the walk and
-the run are in place, and the parts list gives their speeds,
-`walk_speed` and `run_speed`, in m/s). Its joints and the ends of its limbs
+animations of its body plan: `walk`, `run`, `idle`, `idle_low`, `eat`,
+`attack`, `jump`, `death` and `wag` for four legs, `walk` (on four
+limbs) and `sit` for the macaque; the walk, the run and the jump are in
+place, and the parts list gives their speeds, `walk_speed`, `run_speed`
+and `jump_speed`, in m/s). Its joints and the ends of its limbs
 are in the order too (`"joints": {"tail.spread": 20}`, `"targets":
 {"front_r": [0.07, 0.3, 0.15]}`). A species is data of a body plan
 (`docs/format.md`, "An animal"): an app can order a four-legged animal

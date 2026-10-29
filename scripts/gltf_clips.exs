@@ -8,8 +8,14 @@
 # the axis of the file to the front of the animal, as in
 # scripts/gltf_figure.exs (z by default).
 #
-# - The clips: Walk (walk), Gallop (run), Idle (idle) and Eating (eat).
-#   A clip of more than 2 s has every second key of the file.
+# - The clips: Walk (walk), Gallop (run), Idle (idle), Eating (eat),
+#   Idle_2_HeadLow or Idle_Headlow (idle_low), Attack or Attack_Headbutt
+#   (attack), Gallop_Jump (jump) and Death (death).
+#   A clip of more than 2 s has every second key of the file. A clip
+#   loops (`loop`) when its last turns and move are its first. The death
+#   has `"ground": "body"`: the animal falls, and the lowest point of its
+#   body is on the ground at each time; the other clips have
+#   `"ground": "feet"`: the paws carry the animal.
 # - The turn of a bone of World at a time is the mean turn of the bones of
 #   the file that give it their weights (each by its weights), from the
 #   pose at rest, in the axes of World (a quaternion: x, y, z, w); a bone
@@ -17,14 +23,15 @@
 #   mesh of the template (priv/animals/meshes/) gives the weights. The
 #   pelvis also has its move from its place at rest, in the units of the
 #   mesh.
-# - The speed (in the units of the mesh for each second): the mean speed
-#   to the back of the lowest paw, on the ground, when the animal moves
-#   in place. An app moves the animal at this speed so the paws do not
-#   slide.
+# - The paw of a foot is the IK bone of the file for the foot (its name
+#   starts with "IK": the place that the artist gave to the paw), or its
+#   first bone.
+# - The speed (in the units of the mesh for each second): the middle
+#   speed to the back of the paws on the ground, when the animal moves
+#   in place (walk, run, jump). An app moves the animal at this speed so
+#   the paws do not slide.
 # - The feet: for each foot of World, the height of its paw over its
-#   height at rest at each time, in the units of the mesh. The paw is the
-#   IK bone of the file for the foot (its name starts with "IK": the
-#   place that the artist gave to the paw), or its first bone.
+#   height at rest at each time, in the units of the mesh.
 Code.require_file("gltf.exs", __DIR__)
 
 [input, template, output, source, license | rest] = System.argv()
@@ -49,15 +56,17 @@ weighted =
 # own bone of the file.
 bones = Map.new(t["bones"], fn {world, file} -> {world, weighted[world] || [{names[hd(List.wrap(file))], 1.0}]} end)
 
-# The paw of each foot: the bone of the file with the most weight.
-paws = for side <- ~w(l r), part <- ~w(front hind), do: bones["#{part}_foot_#{side}"] |> Enum.max_by(&elem(&1, 1)) |> elem(0)
 pelvis = names[hd(List.wrap(t["bones"]["pelvis"]))]
 
+# The paw of each foot: the IK bone of the file for the foot (the place
+# that the artist gave to the paw), or its first bone.
 iks =
   for {world, files} <- t["bones"], world =~ ~r/_foot_[lr]$/, into: %{} do
     files = List.wrap(files)
     {world, names[Enum.find(files, hd(files), &String.starts_with?(&1, "IK"))]}
   end
+
+paws = Map.values(iks)
 
 # The mean of turns (quaternions), each with its weight.
 mean = fn list ->
@@ -95,8 +104,17 @@ round = fn values, n -> Enum.map(values, &Float.round(&1 / 1, n)) end
 rest_world = GLTF.world(gltf)
 
 clips =
-  for {world_name, file_name} <- [{"walk", "Walk"}, {"run", "Gallop"}, {"idle", "Idle"}, {"eat", "Eating"}],
-      a = Enum.find(gltf["animations"], &(&1["name"] == file_name)),
+  for {world_name, file_names} <- [
+        {"walk", ~w(Walk)},
+        {"run", ~w(Gallop)},
+        {"idle", ~w(Idle)},
+        {"eat", ~w(Eating)},
+        {"idle_low", ~w(Idle_2_HeadLow Idle_Headlow)},
+        {"attack", ~w(Attack Attack_Headbutt)},
+        {"jump", ~w(Gallop_Jump)},
+        {"death", ~w(Death)}
+      ],
+      a = Enum.find(gltf["animations"], &(&1["name"] in file_names)),
       into: %{} do
     times = GLTF.read(gltf, hd(a["samplers"])["input"])
     values = Enum.map(a["samplers"], &List.to_tuple(GLTF.read(gltf, &1["output"])))
@@ -129,26 +147,31 @@ clips =
     {p0, _, _} = rest_world[pelvis]
     moves = for w <- poses, {p, _, _} = w[pelvis], do: round.(Tuple.to_list(turn.(GLTF.sub(p, p0))), 4)
 
-    # The paw nearest the ground at each time, and its move to the back to
-    # the next time.
+    # A loop: the last turns (a quaternion or its negative) and the last
+    # move are the first.
+    apart = fn a, b -> a |> Enum.zip(b) |> Enum.map(fn {x, y} -> abs(x - y) end) |> Enum.max() end
+    same = &(apart.(&1, &2) < 1.0e-3 or apart.(&1, Enum.map(&2, fn x -> -x end)) < 1.0e-3)
+    loop = Enum.all?(turns, fn {_, qs} -> same.(hd(qs), List.last(qs)) end) and apart.(hd(moves), List.last(moves)) < 1.0e-3
+
+    # The height of a paw over its height at rest. A paw on the ground:
+    # less than 2% of the height of the pelvis above its height at rest;
+    # its move to the back to the next time.
     low = fn w, i -> elem(turn.(elem(w[i], 0)), 2) end
-    ground = for w <- poses, i <- paws, reduce: :infinity, do: (acc -> min(acc, low.(w, i)))
-    # A paw on the ground: less than 2% of the height of the pelvis above
-    # the lowest place of the paws.
+    up = fn w, i -> low.(w, i) - low.(rest_world, i) end
     near = 0.02 * elem(turn.(p0), 2)
 
     speeds =
       for [{w0, t0}, {w1, t1}] <- Enum.chunk_every(Enum.zip(poses, ts), 2, 1, :discard),
           i <- paws,
-          low.(w0, i) < ground + near and low.(w1, i) < ground + near,
+          up.(w0, i) < near and up.(w1, i) < near,
           do: -elem(turn.(GLTF.sub(elem(w1[i], 0), elem(w0[i], 0))), 1) / (t1 - t0)
 
     # The middle value: a paw that lands or lifts moves less.
     speed =
-      if world_name in ~w(walk run),
+      if world_name in ~w(walk run jump),
         do: speeds |> Enum.sort() |> Enum.at(div(length(speeds), 2)) |> Float.round(4),
         else: 0.0
-    feet = Map.new(iks, fn {foot, i} -> {foot, for(w <- poses, do: Float.round(low.(w, i) - low.(rest_world, i), 4) + 0.0)} end)
+    feet = Map.new(iks, fn {foot, i} -> {foot, for(w <- poses, do: Float.round(up.(w, i), 4) + 0.0)} end)
 
     {world_name,
      %{
@@ -157,6 +180,8 @@ clips =
        "bones" => turns,
        "pelvis" => moves,
        "speed" => speed,
+       "loop" => loop,
+       "ground" => if(world_name == "death", do: "body", else: "feet"),
        "feet" => feet
      }}
   end

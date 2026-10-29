@@ -23,9 +23,15 @@ defmodule World.Catalog do
         {"seat_van", fn -> World.Furniture.Seats.seat("seat_van", @van_seat ++ [track: 0.2, recline: [0, 40]]) end},
         {"bench_van_3",
          fn -> World.Furniture.Seats.bench("bench_van_3", 3, @van_seat ++ [place_width: 0.43, height: 0.45]) end}
-      ] ++ items(),
+      ] ++ items() ++ animals(),
       &elem(&1, 0)
     )
+  end
+
+  # The animals of four legs, with all the animations of their body plan.
+  defp animals do
+    for name <- ~w(street_dog cat fox deer horse donkey cow water_buffalo wolf goat pig),
+        do: {name, fn -> World.Animals.animal(name, animations: World.Animals.animations(name)) end}
   end
 
   defp items do
@@ -38,17 +44,6 @@ defmodule World.Catalog do
       {"traveler", &World.People.traveler/0},
       {"man", &World.People.man/0},
       {"woman", &World.People.woman/0},
-      {"street_dog", fn -> World.Animals.animal("street_dog", animations: ~w(walk run idle eat wag)) end},
-      {"cat", fn -> World.Animals.animal("cat", animations: ~w(walk run idle eat wag)) end},
-      {"fox", fn -> World.Animals.animal("fox", animations: ~w(walk run idle eat wag)) end},
-      {"deer", fn -> World.Animals.animal("deer", animations: ~w(walk run idle eat wag)) end},
-      {"horse", fn -> World.Animals.animal("horse", animations: ~w(walk run idle eat wag)) end},
-      {"donkey", fn -> World.Animals.animal("donkey", animations: ~w(walk run idle eat wag)) end},
-      {"cow", fn -> World.Animals.animal("cow", animations: ~w(walk run idle eat wag)) end},
-      {"water_buffalo", fn -> World.Animals.animal("water_buffalo", animations: ~w(walk run idle eat wag)) end},
-      {"wolf", fn -> World.Animals.animal("wolf", animations: ~w(walk run idle eat wag)) end},
-      {"goat", fn -> World.Animals.animal("goat", animations: ~w(walk run idle eat wag)) end},
-      {"pig", fn -> World.Animals.animal("pig", animations: ~w(walk run idle eat wag)) end},
       {"macaque", fn -> World.Animals.animal("macaque", animations: ~w(walk sit)) end},
       {"banh_mi_cart", fn -> World.Drawing.file("banh_mi_cart") end},
       {"honda_vision_110_rider", &World.People.rider/0},
