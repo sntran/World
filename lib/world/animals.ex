@@ -75,8 +75,16 @@ defmodule World.Animals do
     Map.get(@species, name) || raise ArgumentError, "unknown species #{inspect(name)}: #{Enum.join(species(), ", ")}"
   end
 
-  @doc "The names of the animations of a species (of its body plan)."
-  def animations(name), do: @plans[spec(name)["plan"]].animations()
+  @doc """
+  The names of the animations of a species: of its body plan, but a clip
+  only when the clips of its template have it.
+  """
+  def animations(name) do
+    s = spec(name)
+    plan = @plans[s["plan"]]
+    clips = clips(@templates[s["template"]]["mesh"])
+    Enum.reject(plan.animations(), &(&1 in plan.clips() and not Map.has_key?(clips, &1)))
+  end
 
   @doc """
   An animal of a species. The options: `coat` (`[r, g, b]`: the color
@@ -88,7 +96,7 @@ defmodule World.Animals do
   the space of the species; an `ArgumentError` for a template with no
   space), `size` (a scale of all the animal: 1 is the height of the
   species),
-  and `animations` (names of the animations of its body plan).
+  and `animations` (names of `animations/1`).
   """
   def animal(name, opts) do
     s = spec(name)
@@ -97,8 +105,8 @@ defmodule World.Animals do
     names = Keyword.get(opts, :animations, [])
 
     for a <- names,
-        a not in plan.animations(),
-        do: raise(ArgumentError, "unknown animation of a #{name} #{inspect(a)}: #{Enum.join(plan.animations(), ", ")}")
+        a not in animations(name),
+        do: raise(ArgumentError, "unknown animation of a #{name} #{inspect(a)}: #{Enum.join(animations(name), ", ")}")
 
     # A species takes the mesh, the bones and the materials of its
     # template.

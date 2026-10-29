@@ -134,7 +134,14 @@ defmodule World.AnimalsTest do
     assert MapSet.new(wag.channels, & &1.node) == MapSet.new(~w(tail_01 tail_02 tail_03), index)
 
     clips = Animals.animations("street_dog") -- ["wag"]
-    assert clips == ~w(walk run idle idle_low eat attack jump death)
+    # A dog has no kick (the files of the dogs have none); a cow has.
+    assert clips == ~w(walk run idle idle_low eat attack jump jump_stop hit_l hit_r death)
+    assert "kick" in Animals.animations("cow")
+
+    assert_raise ArgumentError, ~r/unknown animation of a wolf "kick"/, fn ->
+      Animals.animal("wolf", animations: ["kick"])
+    end
+
     all = Animals.animal("street_dog", animations: clips)
     assert Enum.map(all.animations, & &1.name) == clips
 
@@ -152,9 +159,9 @@ defmodule World.AnimalsTest do
     # The loops: the last time is the first. The head goes down to eat
     # and in the idle with the head low; the animal lies down at the end
     # of a death.
-    [walk, run, _, low, eat, attack, jump, death] = Enum.map(all.animations, &frames(all, &1))
+    [walk, run, _, low, eat, attack, jump, _, hit_l, hit_r, death] = Enum.map(all.animations, &frames(all, &1))
 
-    for clip <- [walk, run, low, attack, jump],
+    for clip <- [walk, run, low, attack, jump, hit_l, hit_r],
         do: assert(Vec.len(Vec.sub(List.last(clip)["head"].at, hd(clip)["head"].at)) < 1.0e-3)
 
     for {clip, down} <- [{eat, 0.15}, {low, 0.05}],

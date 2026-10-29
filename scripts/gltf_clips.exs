@@ -10,7 +10,10 @@
 #
 # - The clips: Walk (walk), Gallop (run), Idle (idle), Eating (eat),
 #   Idle_2_HeadLow or Idle_Headlow (idle_low), Attack or Attack_Headbutt
-#   (attack), Gallop_Jump (jump) and Death (death).
+#   (attack), Gallop_Jump (jump), Death (death), Attack_Kick (kick, only
+#   in the files of the animals with hooves), Jump_ToIdle or Jump_toIdle
+#   (jump_stop) and Idle_HitReact1 and 2 (hit_l and hit_r: a hit on the
+#   left side, the body moves to the right; and on the right side).
 #   A clip of more than 2 s has every second key of the file. A clip
 #   loops (`loop`) when its last turns and move are its first. The death
 #   has `"ground": "body"`: the animal falls, and the lowest point of its
@@ -112,7 +115,11 @@ clips =
         {"idle_low", ~w(Idle_2_HeadLow Idle_Headlow)},
         {"attack", ~w(Attack Attack_Headbutt)},
         {"jump", ~w(Gallop_Jump)},
-        {"death", ~w(Death)}
+        {"death", ~w(Death)},
+        {"kick", ~w(Attack_Kick)},
+        {"jump_stop", ~w(Jump_ToIdle Jump_toIdle)},
+        {"hit_l", ~w(Idle_HitReact1)},
+        {"hit_r", ~w(Idle_HitReact2)}
       ],
       a = Enum.find(gltf["animations"], &(&1["name"] in file_names)),
       into: %{} do

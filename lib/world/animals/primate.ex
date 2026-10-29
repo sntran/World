@@ -76,6 +76,9 @@ defmodule World.Animals.Primate do
   @doc "The names of the animations."
   def animations, do: ~w(walk sit)
 
+  @doc "The animations that are clips of the template: none."
+  def clips, do: []
+
   def limbs(by) do
     tail = Enum.filter(bones(), &(String.starts_with?(&1, "tail_") and Map.has_key?(by, &1)))
 

@@ -170,9 +170,6 @@ and no logo on them.
   ships at anchor (the far level only), a fast ferry, swim rings, beach
   umbrellas, canvas chairs, thatched huts.
 - **Animals (W11).** Next steps of the templates of four legs:
-  - The other clips of the Ultimate pack: the kick of the animals with
-    hooves (`Attack_Kick`, not in the files of the dogs), the jump to a
-    stop (`Jump_ToIdle`), the hit reactions (`Idle_HitReact1`, `2`).
   - The other animals of the Ultimate pack (alpaca, husky, stag) and
     the farm pack of Quaternius on poly.pizza (a pig, a sheep, a
     chicken), as templates.

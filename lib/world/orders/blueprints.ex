@@ -169,7 +169,7 @@ defmodule World.Orders.Blueprints do
             ),
           max: 5,
           doc:
-            "walk, run (a gallop), idle and eat: the clips of the template of a four-legged animal, in place (an app moves the animal at walk_speed or run_speed of the parts list, in m/s); walk and sit of a primate: a walk on four limbs (an app moves the animal at walk_speed) and a sit on the ground that looks around; wag: the tail of a four-legged animal. Each species has the animations of its body plan."
+            "walk, run (a gallop), idle, idle_low (the head low), eat, attack, kick (only the animals with hooves), jump (in a gallop), jump_stop, hit_l, hit_r (a hit on the left or the right side) and death: the clips of the template of a four-legged animal, in place (an app moves the animal at walk_speed, run_speed or jump_speed of the parts list, in m/s); walk and sit of a primate: a walk on four limbs (an app moves the animal at walk_speed) and a sit on the ground that looks around; wag: the tail of a four-legged animal. Each species has the animations of its body plan that the clips of its template have."
         )
       ],
       build: fn o ->

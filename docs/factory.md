@@ -123,7 +123,8 @@ space lists the numbers and the coefficients of the horse, the cow, the
 deer and more, so a wolf with the `shape` and the `space` of the horse
 has the shape of a horse; `docs/format.md`, "The shape space") and `animations` (the
 animations of its body plan: `walk`, `run`, `idle`, `idle_low`, `eat`,
-`attack`, `jump`, `death` and `wag` for four legs, `walk` (on four
+`attack`, `kick` (only the animals with hooves), `jump`, `jump_stop`,
+`hit_l`, `hit_r`, `death` and `wag` for four legs, `walk` (on four
 limbs) and `sit` for the macaque; the walk, the run and the jump are in
 place, and the parts list gives their speeds, `walk_speed`, `run_speed`
 and `jump_speed`, in m/s). Its joints and the ends of its limbs

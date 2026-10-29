@@ -657,14 +657,19 @@ A quadruped (`World.Animals.Quadruped`):
   bag), `mouth` (on the muzzle, for a stick).
 - Animations: `walk`, `run` (a gallop), `idle`, `idle_low` (at rest
   with the head low), `eat` (the head down to the ground), `attack` (a
-  bite, or a butt with the head for an animal with hooves), `jump` (a
-  jump in a gallop) and `death` (the animal falls on its side and stays
-  there) are the clips of the template, on the bones of the shape
-  (below); `wag` (the tail wags twice) is code. The clips are in place:
+  bite, or a butt with the head for an animal with hooves), `kick` (the
+  hind legs kick to the back: only an animal with hooves, the files of
+  the dogs have no kick), `jump` (a jump in a gallop), `jump_stop` (a
+  jump up, and a stop), `hit_l` and `hit_r` (a hit on the left side:
+  the body moves to the right; and on the right side) and `death` (the
+  animal falls on its side and stays there) are the clips of the
+  template, on the bones of the shape (below); `wag` (the tail wags
+  twice) is code. A species has a clip only when the clips of its
+  template have it (`World.Animals.animations/1`). The clips are in place:
   an app moves the animal at the speed of the clip (`walk_speed`,
   `run_speed` and `jump_speed` in the `params` of the parts list, in
-  m/s), so the paws do not slide. The death plays once; the other clips
-  loop.
+  m/s), so the paws do not slide. The death, the kick and the jump to a
+  stop play once; the other clips loop.
 
 The clips of a template are in `priv/animals/clips/NAME.json` (from
 `scripts/gltf_clips.exs`, below): for each clip its `length` and
@@ -779,8 +784,10 @@ animations of its glTF file:
 
 It reads the clips `Walk` (`walk`), `Gallop` (`run`), `Idle` (`idle`),
 `Idle_2_HeadLow` or `Idle_Headlow` (`idle_low`), `Eating` (`eat`),
-`Attack` or `Attack_Headbutt` (`attack`), `Gallop_Jump` (`jump`) and
-`Death` (`death`); a clip of more than 2 s keeps every second key.
+`Attack` or `Attack_Headbutt` (`attack`), `Attack_Kick` (`kick`),
+`Gallop_Jump` (`jump`), `Jump_ToIdle` or `Jump_toIdle` (`jump_stop`),
+`Idle_HitReact1` and `Idle_HitReact2` (`hit_l`, `hit_r`) and `Death`
+(`death`); a clip of more than 2 s keeps every second key.
 The turn of a bone of World is the mean turn of the bones of the file
 that give it their weights (each by its weights, from the mesh of the
 template); a bone with no weights has the turn of its own bone of the
