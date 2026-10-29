@@ -513,7 +513,10 @@ girth); each point of the skin moves with the bones that move it, by
 its weights, so the skin stays smooth at the joints. Some numbers
 change one part: the muzzle, the ears, the tail, the paws. After the
 change, the lowest point of the paws is on the ground, and the height
-scales the animal.
+scales the animal. The length of each leg is `leg_length`, then a
+little more or less, so that the lowest points of all the paws move up
+or down by one height (the mean of their moves): the body does not tilt
+when the front legs and the hind legs are not the same length.
 
 | Number | Range | What it changes |
 |---|---|---|

@@ -25,7 +25,8 @@ defmodule World.Animals.ShapeTest do
     for {a, b} <- Enum.zip(bones, c.bones), do: assert(Vec.len(Vec.sub(a.head, b.head)) < 1.0e-9)
   end
 
-  property "each number in its range: the bones stay joined, the lengths scale, the paws are on the ground", c do
+  property "each number in its range: the bones stay joined, the lengths scale, the paws move as one and are on the ground",
+           c do
     numbers = for {name, {lo, hi, _}} <- Shape.numbers(), do: {name, float(min: lo, max: hi)}
 
     check all n <- fixed_map(numbers), max_runs: 12 do
@@ -42,15 +43,32 @@ defmodule World.Animals.ShapeTest do
           ],
           do: assert(Vec.len(Vec.sub(by[a].tail, by[b].head)) < 1.0e-9)
 
-      assert_in_delta length(bones, "front_lower_l"), n["leg_length"] * length(c.bones, "front_lower_l"), 1.0e-9
       assert_in_delta length(bones, "spine_01"), n["body_length"] * length(c.bones, "spine_01"), 1.0e-9
       assert_in_delta length(bones, "tail_02"), n["tail_length"] * length(c.bones, "tail_02"), 1.0e-9
       assert_in_delta length(bones, "ear_l"), n["ear_size"] * length(c.bones, "ear_l"), 1.0e-9
 
-      feet =
-        for {b, m} <- c.weights, String.contains?(b, "_foot_"), {i, w} <- m, w >= 0.5, do: elem(Enum.at(points, i), 2)
+      # The bones of a leg have one length scale, near `leg_length`; the
+      # lowest points of the four feet move by one height, and the lowest
+      # is on the ground.
+      for part <- ~w(front hind) do
+        k = length(bones, "#{part}_upper_l") / length(c.bones, "#{part}_upper_l")
+        assert k > 0.5 * n["leg_length"] and k < 1.5 * n["leg_length"]
 
-      assert_in_delta Enum.min(feet), 0.0, 1.0e-9
+        for b <- ~w(upper_r lower_l lower_r foot_l foot_r),
+            do: assert_in_delta(length(bones, "#{part}_#{b}"), k * length(c.bones, "#{part}_#{b}"), 1.0e-9)
+      end
+
+      low = fn points, foot ->
+        for({i, w} <- c.weights[foot], w >= 0.5, do: elem(Enum.at(points, i), 2)) |> Enum.min()
+      end
+
+      moves = for f <- ~w(front_foot_l front_foot_r hind_foot_l hind_foot_r), do: low.(points, f) - low.(c.points, f)
+      assert Enum.max(moves) - Enum.min(moves) < 1.0e-9
+
+      assert_in_delta Enum.min(for f <- ~w(front_foot_l front_foot_r hind_foot_l hind_foot_r), do: low.(points, f)),
+                      0.0,
+                      1.0e-9
+
       assert Enum.all?(points, fn {x, y, z} -> is_float(x) and is_float(y) and is_float(z) end)
     end
   end

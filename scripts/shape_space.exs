@@ -176,6 +176,7 @@ moves = fn m ->
   fb = Map.new(fit_bones, &{&1.name, &1})
   mb = by.(m)
   n = Map.merge(Map.new(Shape.numbers(), fn {key, {_, _, d}} -> {key, d} end), numbers)
+  scales = Shape.scales(base.bones, base.points, base.weights, n, base.template)
 
   # The faces of the template by their bone, as triangles.
   pts = List.to_tuple(m.points)
@@ -268,7 +269,7 @@ moves = fn m ->
         # (as World.Animals.Shape keeps it), over the scale of the bone.
         move = x |> Vec.scale(a * (t - e)) |> Vec.add(Vec.scale(y, bb * (t - e))) |> Vec.add(Vec.scale(z, c * (t - e)))
         {_, ox, oy, oz} = Shape.frame(fb[own])
-        {sx, sy, sz} = Shape.bone_scale(own, n)
+        {sx, sy, sz} = scales[own]
         {Vec.dot(move, ox) / sx, Vec.dot(move, oy) / sy, Vec.dot(move, oz) / sz}
       end
     end

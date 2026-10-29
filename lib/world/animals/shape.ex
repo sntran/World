@@ -10,7 +10,8 @@ defmodule World.Animals.Shape do
   weights, so the skin stays smooth at the joints. A bone under another
   bone moves with the end of its parent. Some numbers change one part:
   the muzzle (the front of the head), the ears (turned down), the tail
-  (turned down), new horns, the skull of a primate. After the change, the
+  (turned down), new horns, the skull of a primate. The legs change by
+  `scales/5`, so that the body does not tilt. After the change, the
   lowest point of the feet is on the ground. A body much deeper than
   the legs are long can go below the ground: the presets do not.
 
@@ -72,6 +73,8 @@ defmodule World.Animals.Shape do
   }
 
   @regions ~w(back belly legs socks head face ears tail_tip)
+  @foot ~r/(^|_)foot_[lr]$/
+  @leg ~r/^(front_|hind_|thigh_|calf_|foot_)/
 
   @doc "The numbers of a shape: a name to `{min, max, default}`."
   def numbers, do: @numbers
@@ -94,35 +97,18 @@ defmodule World.Animals.Shape do
     n = Map.merge(Map.new(@numbers, fn {k, {_, _, d}} -> {k, d} end), n)
     by = Map.new(bones, &{&1.name, &1})
     frames = Map.new(bones, &{&1.name, frame(&1)})
-    scales = Map.new(bones, &{&1.name, bone_scale(&1.name, n)})
-    head = by["head"]
-    len = Vec.len(Vec.sub(head.tail, head.head))
-
-    # The new head of each bone: the end of its parent after the change.
-    heads =
-      Enum.reduce(bones, %{}, fn b, acc ->
-        h = if b.parent, do: move(b.parent, b.head, frames, scales, acc, n, len, template), else: b.head
-        Map.put(acc, b.name, h)
-      end)
+    scales = scales(bones, points, weights, n, template)
+    len = head_length(bones)
+    heads = heads(bones, frames, scales, n, template)
 
     tails = Map.new(bones, &{&1.name, move(&1.name, &1.tail, frames, scales, heads, n, len, template)})
-
-    by_point =
-      for {bone, m} <- weights,
-          {i, w} <- m,
-          reduce: %{},
-          do: (acc -> Map.update(acc, i, [{bone, w}], &[{bone, w} | &1]))
+    by_point = owners(weights)
 
     moved =
       points
       |> Enum.with_index()
       |> Enum.map(fn {p, i} ->
-        ws = Map.get(by_point, i, [{"pelvis", 1.0}])
-        sum = ws |> Enum.map(&elem(&1, 1)) |> Enum.sum()
-
-        Enum.reduce(ws, {0.0, 0.0, 0.0}, fn {b, w}, acc ->
-          Vec.add(acc, Vec.scale(move(b, p, frames, scales, heads, n, len, template), w / sum))
-        end)
+        place(p, Map.get(by_point, i, [{"pelvis", 1.0}]), {frames, scales, heads, n, len, template})
       end)
 
     # The moves of the shape space: in the axes of the bone that moves the
@@ -207,6 +193,101 @@ defmodule World.Animals.Shape do
     {for(b <- bones, do: if(b.name in names, do: %{b | head: turn.(b.head), tail: turn.(b.tail)}, else: b)), moved}
   end
 
+  # The bones that move each point, with their weights.
+  defp owners(weights) do
+    for {bone, m} <- weights, {i, w} <- m, reduce: %{} do
+      acc -> Map.update(acc, i, [{bone, w}], &[{bone, w} | &1])
+    end
+  end
+
+  # A point after the change: the mean of its moves with each bone that
+  # moves it, by the weights.
+  defp place(p, ws, {frames, scales, heads, n, len, template}) do
+    sum = ws |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+
+    Enum.reduce(ws, {0.0, 0.0, 0.0}, fn {b, w}, acc ->
+      Vec.add(acc, Vec.scale(move(b, p, frames, scales, heads, n, len, template), w / sum))
+    end)
+  end
+
+  defp head_length(bones) do
+    head = Enum.find(bones, &(&1.name == "head"))
+    Vec.len(Vec.sub(head.tail, head.head))
+  end
+
+  # The new head of each bone: the end of its parent after the change.
+  defp heads(bones, frames, scales, n, template) do
+    len = head_length(bones)
+
+    Enum.reduce(bones, %{}, fn b, acc ->
+      h = if b.parent, do: move(b.parent, b.head, frames, scales, acc, n, len, template), else: b.head
+      Map.put(acc, b.name, h)
+    end)
+  end
+
+  @doc """
+  The scale of each bone of a template (its bones, points and weights,
+  as `apply/6`) after the numbers `n` (all the numbers: `numbers/0`
+  gives the defaults): `{across in x, along, across in z}`. The length
+  of each leg (the bones from the body to the foot, and the bones under
+  them) is `leg_length`, then a little more or less, so that the lowest
+  points of all the feet (the points that the foot moves most) move up
+  or down by one height: the mean of their moves with `leg_length`. So
+  the body does not tilt when the front legs and the hind legs are not
+  the same length, or when the numbers of the body move the roots of
+  the legs by different heights.
+  """
+  def scales(bones, points, weights, n, template) do
+    scales = Map.new(bones, &{&1.name, bone_scale(&1.name, n)})
+    by = Map.new(bones, &{&1.name, &1})
+    frames = Map.new(bones, &{&1.name, frame(&1)})
+    by_point = owners(weights)
+    points = List.to_tuple(points)
+
+    # Each leg: its bones (from the body down), and the points of its
+    # foot (the points that the foot moves most).
+    legs =
+      for b <- bones, b.name =~ @foot do
+        root = b.name |> Stream.iterate(&by[&1].parent) |> Enum.take_while(&(&1 && &1 =~ @leg)) |> List.last()
+        {below(bones, root), for({i, w} <- weights[b.name], w >= 0.5, do: i)}
+      end
+
+    # The heights of the points with all the legs at the length k.
+    heights = fn k ->
+      s = for {leg, _} <- legs, bone <- leg, reduce: scales, do: (acc -> Map.update!(acc, bone, &put_elem(&1, 1, k)))
+      state = {frames, s, heads(bones, frames, s, n, template), n, head_length(bones), template}
+      fn i -> elem(place(elem(points, i), by_point[i], state), 2) end
+    end
+
+    # The height of a point after the change is linear in the length of
+    # its leg (c + a × k), and the lowest point of a foot is the lowest of
+    # these lines.
+    {h0, h1} = {heights.(0.0), heights.(1.0)}
+
+    feet =
+      for {leg, ids} <- legs do
+        rest = ids |> Enum.map(&elem(elem(points, &1), 2)) |> Enum.min()
+        {leg, rest, Enum.map(ids, &{h0.(&1), h1.(&1) - h0.(&1)})}
+      end
+
+    k = n["leg_length"]
+    low = fn lines, k -> lines |> Enum.map(fn {c, a} -> c + a * k end) |> Enum.min() end
+    up = (feet |> Enum.map(fn {_, rest, lines} -> low.(lines, k) - rest end) |> Enum.sum()) / length(feet)
+
+    # The length of a leg that moves its lowest point by `up`: the lines
+    # go down as the leg grows (a < 0).
+    for {leg, rest, lines} <- feet,
+        k = lines |> Enum.map(fn {c, a} -> (rest + up - c) / a end) |> Enum.min(),
+        bone <- leg,
+        reduce: scales,
+        do: (acc -> Map.update!(acc, bone, &put_elem(&1, 1, k)))
+  end
+
+  # A bone and all the bones under it.
+  defp below(bones, root) do
+    Enum.reduce(bones, [root], fn b, acc -> if b.parent in acc, do: [b.name | acc], else: acc end)
+  end
+
   @doc """
   The frame of a bone (a map with `head` and `tail`): its head, and its
   axes x (to the side), y (along the bone) and z.
@@ -225,13 +306,10 @@ defmodule World.Animals.Shape do
   defp global({_, x, y, z}, o, {a, b, c}),
     do: o |> Vec.add(Vec.scale(x, a)) |> Vec.add(Vec.scale(y, b)) |> Vec.add(Vec.scale(z, c))
 
-  @doc """
-  The scale of a bone after the numbers `n` (all the numbers: `numbers/0`
-  gives the defaults): `{across in x, along, across in z}`. The arms of
-  a primate have their own numbers; its collarbones are the width of the
-  body.
-  """
-  def bone_scale(name, n) do
+  # The scale of a bone after the numbers `n`: `{across in x, along,
+  # across in z}`. The arms of a primate have their own numbers; its
+  # collarbones are the width of the body.
+  defp bone_scale(name, n) do
     cond do
       name in ~w(pelvis spine_01 spine_02 spine_03) ->
         {n["body_width"], n["body_length"], n["body_depth"]}
