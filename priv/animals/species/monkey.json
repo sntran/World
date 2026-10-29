@@ -1,0 +1,85 @@
+{
+  "name": "monkey",
+  "plan": "biped",
+  "mesh": "monkey",
+  "about": "A monkey of a cartoon (khỉ): about 60 cm high when it stands, a brown coat, a light face, belly, hands and feet, a long tail.",
+  "height": 0.6,
+  "bones": {
+    "pelvis": "b_Hip",
+    "spine_01": "b_Spine01",
+    "spine_02": "b_Spine02",
+    "spine_03": "b_Spine03",
+    "neck_01": "b_Neck",
+    "head": "b_Head",
+    "tail_01": "b_Tail01",
+    "tail_02": "b_Tail02",
+    "tail_03": "b_Tail03",
+    "tail_04": "b_Tail04",
+    "tail_05": "b_Tail05",
+    "tail_06": "b_Tail06",
+    "tail_07": "b_Tail07",
+    "clavicle_l": "b_Left_Shoulder",
+    "upper_arm_l": "b_Left_UpperArm",
+    "forearm_l": "b_Left_ForeArm",
+    "hand_l": "b_Left_Hand",
+    "thigh_l": "b_Left_Leg01",
+    "shin_l": "b_Left_Leg02",
+    "foot_l": "b_Left_Foot01",
+    "toes_l": "b_Left_Foot02",
+    "clavicle_r": "b_Right_Shoulder",
+    "upper_arm_r": "b_Right_UpperArm",
+    "forearm_r": "b_Right_ForeArm",
+    "hand_r": "b_Right_Hand",
+    "thigh_r": "b_Right_Leg01",
+    "shin_r": "b_Right_Leg02",
+    "foot_r": "b_Right_Foot01",
+    "toes_r": "b_Right_Foot02"
+  },
+  "materials": {
+    "ee.0": "dark",
+    "ee.1": "white",
+    "ee.2": "white",
+    "tail2.0": "fur",
+    "tail2.1": "fur",
+    "tail2.2": "skin",
+    "matd.0": "fur",
+    "matd.1": "fur",
+    "matd.2": "skin",
+    "monkey_head.0": "dark",
+    "monkey_head.1": "fur",
+    "monkey_head.2": "skin"
+  },
+  "colors": {
+    "fur": [
+      126,
+      82,
+      28
+    ],
+    "skin": [
+      198,
+      148,
+      86
+    ],
+    "dark": [
+      22,
+      16,
+      14
+    ],
+    "white": [
+      244,
+      244,
+      238
+    ]
+  },
+  "smooth": 0,
+  "gait": {
+    "period": 0.8,
+    "stride": 0.25,
+    "lift": 0.06,
+    "drop": 0.02,
+    "swing": 20
+  },
+  "sources": [
+    "The model is a monkey of a game, not of one real species. The height is a guess: a macaque is about 50 to 60 cm high when it stands."
+  ]
+}

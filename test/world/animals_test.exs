@@ -7,7 +7,7 @@ defmodule World.AnimalsTest do
   # A figure in a module attribute is a literal in the code of the test:
   # slow to compile. The dog is made once for the tests.
   setup_all do
-    {:ok, dog: Animals.dog(animations: ["walk", "wag"])}
+    {:ok, dog: Animals.animal("street_dog", animations: ["walk", "wag"])}
   end
 
   defp world(scene, name) do
@@ -30,9 +30,9 @@ defmodule World.AnimalsTest do
       assert_in_delta Enum.sum(Tuple.to_list(w)), 1.0, 1.0e-9
     end
 
-    big = Build.scene(Animals.dog(size: 1.2))
+    big = Build.scene(Animals.animal("street_dog", size: 1.2))
     assert_in_delta Enum.at(big.extras["size"], 2), 1.2 * h, 0.01
-    assert Animals.dog(coat: [10, 20, 30]).materials.fur["color"] == [10, 20, 30]
+    assert Animals.animal("street_dog", coat: [10, 20, 30]).materials.fur["color"] == [10, 20, 30]
   end
 
   test "the joints, the limbs and the ports of the dog", %{dog: dog} do
@@ -71,10 +71,15 @@ defmodule World.AnimalsTest do
     index = fn bone -> 1 + Enum.find_index(s.bones, &(&1.name == bone)) end
     assert index.("front_lower_l") in nodes and index.("tail_01") in nodes
     assert MapSet.new(wag.channels, & &1.node) == MapSet.new(~w(tail_01 tail_02 tail_03), index)
-    assert Animals.species() == ["street_dog"]
+    assert Animals.species() == ~w(cat monkey street_dog)
     assert Animals.animal("street_dog", []).name == "dog"
-    assert_raise ArgumentError, ~r/unknown species "cat"/, fn -> Animals.animal("cat", []) end
-    assert_raise ArgumentError, ~r/unknown animation of a dog "run"/, fn -> Animals.dog(animations: ["run"]) end
+    assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
+
+    assert_raise ArgumentError, ~r/unknown animation of a street_dog "run"/, fn ->
+      Animals.animal("street_dog", animations: ["run"])
+    end
+
+    refute Animals.__mix_recompile__?()
   end
 
   test "a rig: bones with no body, a root with a body, a port on no bone" do
@@ -106,5 +111,55 @@ defmodule World.AnimalsTest do
     assert Figure.port_frame(f, "hand").at == Frame.point(Figure.bone_frame(f, "arm"), Figure.port!(f, "hand").at)
     assert Figure.port!(f, "top").bone == nil
     assert Build.scene(f, pose: %{"arm" => 30}).nodes |> Enum.at(3) |> Map.get(:frame) != Enum.at(f.nodes, 2).frame
+  end
+
+  test "a cat: the same body plan as the dog, with its own mesh, colors and gait" do
+    cat = Animals.animal("cat", animations: ["walk", "wag"])
+    scene = Build.scene(cat)
+    assert cat.name == "cat"
+    # 25 cm at the withers (the tail is up, above it).
+    assert Enum.at(scene.extras["size"], 2) > 0.25
+    assert Map.keys(scene.materials) |> Enum.sort() == [:dark, :eye, :fur, :marking, :skin]
+    assert cat.materials.marking["color"] == [236, 233, 226]
+    assert Figure.limbs(cat) == ~w(front_l front_r head hind_l hind_r tail)
+    assert Enum.map(cat.animations, & &1.name) == ~w(walk wag)
+
+    for p <- Enum.flat_map(scene.nodes, & &1.primitives), w <- p.weights do
+      assert_in_delta Enum.sum(Tuple.to_list(w)), 1.0, 1.0e-9
+    end
+  end
+
+  test "a monkey: two legs, two arms and a tail" do
+    monkey = Animals.animal("monkey", animations: Animals.animations("monkey"))
+    scene = Build.scene(monkey)
+    [_, _, h] = scene.extras["size"]
+    assert_in_delta h, 0.6, 1.0e-6
+    assert Map.keys(scene.materials) |> Enum.sort() == [:dark, :fur, :skin, :white]
+    assert Figure.limbs(monkey) == ~w(arm_l arm_r head leg_l leg_r tail)
+    assert "elbow_l" in Figure.values(monkey) and "ankle_r" in Figure.values(monkey)
+    rest = monkey.skeleton.rest
+
+    # The left side is at -x; the toes go to the front; seven bones of
+    # the tail.
+    assert elem(rest["hand_l"].at, 0) < 0 and elem(rest["hand_r"].at, 0) > 0
+    assert elem(rest["toes_l"].at, 1) > elem(rest["foot_l"].at, 1)
+    assert Enum.count(Map.keys(rest), &String.starts_with?(&1, "tail_")) == 7
+
+    # A hand to a point in front of the chest.
+    to = Vec.add(rest["upper_arm_r"].at, {0.0, 0.12, -0.05})
+    reach = Build.scene(monkey, targets: %{"arm_r" => to})
+    assert Vec.len(Vec.sub(world(reach, "hand_r").at, to)) < 1.0e-3
+    assert Figure.port!(monkey, "grip_r").bone == "hand_r"
+    assert Figure.port!(monkey, "back").bone == "spine_02"
+
+    # A flat foot keeps its turn of the rest; the wave moves the right
+    # arm.
+    [walk, wave, wag] = monkey.animations
+    assert {walk.name, wave.name, wag.name} == {"walk", "wave", "wag"}
+    s = monkey.skeleton
+    w = Skeleton.world(s, Skeleton.locals(s, %{{:limb, "leg_l"} => %{by: {0.0, 0.03, 0.02}, flat: true}}))
+    assert Vec.len(Vec.sub(w["foot_l"].y, rest["foot_l"].y)) < 1.0e-6
+    hand = Enum.find_index(s.bones, &(&1.name == "upper_arm_r")) + 1
+    assert hand in MapSet.new(wave.channels, & &1.node)
   end
 end

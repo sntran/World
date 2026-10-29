@@ -34,8 +34,9 @@ defmodule World.Rig do
   bone, material}`: the eyes, a nose; a center `{:on, from, dir}` is on
   the skin, on the ray from `from`), `mesh` (a base mesh in place of a
   skin that the build makes: `%{points, faces, weights, smooth,
-  material}`, the weights a map of a bone to a list of `{point,
-  weight}`), `blend` and `step` (a smooth skin,
+  material, roles}`, the weights a map of a bone to a list of `{point,
+  weight}`, `roles` the material of each face, or one `material` for
+  all), `blend` and `step` (a smooth skin,
   `World.Blob`: the width of the blend of two bodies, and the step of
   its grid at near, in meters; with no blend, a tube around each bone),
   `materials` (a material role to
@@ -208,18 +209,24 @@ defmodule World.Rig do
 
     start = points |> Enum.with_index() |> Enum.map(fn {p, i} -> {Vec.float(p), Map.get(by_point, i, %{})} end)
     steps = max(Map.get(mesh, :smooth, 0) - %{near: 0, mid: 1, far: 2}[Detail.level()], 0)
-    {points, faces} = World.Subdivision.smooth(start, faces, steps)
-    places = points |> Enum.map(&elem(&1, 0)) |> List.to_tuple()
+    roles = Map.get(mesh, :roles) || List.duplicate(Map.get(mesh, :material, :fur), length(faces))
 
-    tris =
-      Enum.flat_map(faces, fn [a | rest] ->
-        rest |> Enum.chunk_every(2, 1, :discard) |> Enum.map(fn [b, c] -> [a, b, c] end)
+    # Each step makes a face of n sides into n faces, in the order of the
+    # faces: each new face keeps the role of its face.
+    {points, faces, roles} =
+      Enum.reduce(List.duplicate(1, steps), {start, faces, roles}, fn 1, {points, faces, roles} ->
+        {points, new} = World.Subdivision.smooth(points, faces, 1)
+        {points, new, Enum.flat_map(Enum.zip(faces, roles), fn {f, r} -> List.duplicate(r, length(f)) end)}
       end)
+
+    places = points |> Enum.map(&elem(&1, 0)) |> List.to_tuple()
+    fan = fn [a | rest] -> rest |> Enum.chunk_every(2, 1, :discard) |> Enum.map(fn [b, c] -> [a, b, c] end) end
+    tris = faces |> Enum.zip(roles) |> Enum.flat_map(fn {f, r} -> Enum.map(fan.(f), &{&1, r}) end)
 
     # The normal of a point: the sum of the normals of its faces (each as
     # large as its face).
     normals =
-      Enum.reduce(tris, %{}, fn [a, b, c] = t, acc ->
+      Enum.reduce(tris, %{}, fn {[a, b, c] = t, _}, acc ->
         n = Vec.cross(Vec.sub(elem(places, b), elem(places, a)), Vec.sub(elem(places, c), elem(places, a)))
         Enum.reduce(t, acc, &Map.update(&2, &1, n, fn m -> Vec.add(m, n) end))
       end)
@@ -234,9 +241,21 @@ defmodule World.Rig do
         {p, Vec.norm(Map.get(normals, i, {0.0, 0.0, 1.0})),
          {List.to_tuple(Enum.map(top, &elem(&1, 0))), List.to_tuple(Enum.map(top, &elem(&1, 1)))}}
       end
+      |> List.to_tuple()
 
-    triangles = for [a, b, c] <- tris, do: {elem(places, a), elem(places, b), elem(places, c)}
-    {[join(Map.get(mesh, :material, :fur), [{verts, tris}])], &hit(triangles, &1, &2)}
+    # One primitive for each role, with the points of its faces only.
+    prims =
+      tris
+      |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+      |> Enum.sort()
+      |> Enum.map(fn {role, ts} ->
+        used = ts |> List.flatten() |> Enum.uniq() |> Enum.sort()
+        at = used |> Enum.with_index() |> Map.new()
+        join(role, [{Enum.map(used, &elem(verts, &1)), Enum.map(ts, fn t -> Enum.map(t, &at[&1]) end)}])
+      end)
+
+    triangles = for {[a, b, c], _} <- tris, do: {elem(places, a), elem(places, b), elem(places, c)}
+    {prims, &hit(triangles, &1, &2)}
   end
 
   # The nearest point of the triangles on a ray (Möller and Trumbore), or

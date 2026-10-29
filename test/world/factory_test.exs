@@ -243,12 +243,30 @@ defmodule World.FactoryTest do
           "options" => %{"coat" => "#2b2018", "size" => 0.8, "animations" => ["walk"]},
           "joints" => %{"tail.spread" => 20},
           "targets" => %{"front_r" => [0.07, 0.3, 0.15]}
+        },
+        %{"blueprint" => "animal", "options" => %{"species" => "cat", "animations" => ["wag"]}},
+        %{
+          "blueprint" => "animal",
+          "options" => %{"species" => "monkey", "animations" => ["wave"]},
+          "joints" => %{"elbow_l" => 40},
+          "targets" => %{"leg_r" => [0.1, 0.05, 0.1]}
         }
       ]
 
       for order <- orders do
         assert {:ok, <<"glTF", _::binary>>} = Orders.build(order, "far", "glb"), inspect(order)
       end
+    end
+
+    test "an animal: each species has the animations of its body plan" do
+      assert {:error, [%{"path" => "options.animations.1", "message" => "a cat has no animation wave: walk, wag"}]} =
+               Orders.check(%{
+                 "blueprint" => "animal",
+                 "options" => %{"species" => "cat", "animations" => ["walk", "wave"]}
+               })
+
+      assert {:ok, %{"options" => %{"coat" => nil}}} =
+               Orders.check(%{"blueprint" => "animal", "options" => %{"species" => "monkey"}})
     end
 
     test "a person with the colors of the hair and of the clothes" do

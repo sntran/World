@@ -169,8 +169,12 @@ and no logo on them.
   bamboo with a dark coat, one oar), rows of fishing stakes with nets,
   ships at anchor (the far level only), a fast ferry, swim rings, beach
   umbrellas, canvas chairs, thatched huts.
-- **Animals (W11).** After the street dog: chickens, pigs, cats,
-  long-tailed macaques, fish, birds in cages, with walk, eat and sit.
+- **Animals (W11).** After the street dog, the cat and the monkey:
+  chickens, pigs, long-tailed macaques (a real species in place of the
+  monkey of a cartoon), fish, birds in cages; the gaits eat, sit and
+  run; a body plan for a bird and one for a fish (the wolf and the
+  eagle of the same CC0 pack are ready to use). A monkey that walks on
+  four legs.
 - **Plants for Vũng Tàu (W12).** The idea "Plants from rules" above,
   first with the 14 tree types of Vung_Tau (`data/trees/types.json` there,
   plan 0020): the same look as the sheets of its report 0020, with the

@@ -1,0 +1,98 @@
+{
+  "name": "cat",
+  "plan": "quadruped",
+  "mesh": "cat",
+  "about": "A cat of Việt Nam (mèo ta): a small short-haired cat, about 25 cm at the shoulder, gray with a white chest and white paws, a tail up.",
+  "height": 0.25,
+  "bones": {
+    "pelvis": "Bone",
+    "spine_01": "Bone.001",
+    "neck_01": "Bone.002",
+    "head": "Bone.003",
+    "tail_01": "Bone.004",
+    "tail_02": "Bone.005",
+    "tail_03": "Bone.006",
+    "tail_04": "Bone.007",
+    "hind_upper_l": "Bone.008",
+    "hind_lower_l": "Bone.009",
+    "hind_foot_l": "Bone.010",
+    "front_upper_l": "Bone.017",
+    "front_lower_l": "Bone.018",
+    "front_foot_l": "Bone.019",
+    "hind_upper_r": "Bone.011",
+    "hind_lower_r": "Bone.012",
+    "hind_foot_r": "Bone.013",
+    "front_upper_r": "Bone.014",
+    "front_lower_r": "Bone.015",
+    "front_foot_r": "Bone.016"
+  },
+  "materials": {
+    "Grey": "fur",
+    "White": "marking",
+    "Pink": "skin"
+  },
+  "colors": {
+    "fur": [
+      78,
+      78,
+      84
+    ],
+    "marking": [
+      236,
+      233,
+      226
+    ],
+    "skin": [
+      226,
+      150,
+      160
+    ],
+    "eye": [
+      170,
+      160,
+      50
+    ],
+    "dark": [
+      20,
+      18,
+      16
+    ]
+  },
+  "smooth": 2,
+  "spheres": [
+    {
+      "bone": "head",
+      "at": 0.3,
+      "up": 0.012,
+      "dir": [
+        -0.6,
+        1.0,
+        0.25
+      ],
+      "radius": 0.009,
+      "role": "eye"
+    },
+    {
+      "bone": "head",
+      "at": 0.3,
+      "up": 0.012,
+      "dir": [
+        0.6,
+        1.0,
+        0.25
+      ],
+      "radius": 0.009,
+      "role": "eye"
+    }
+  ],
+  "gait": {
+    "period": 0.6,
+    "stride": 0.4,
+    "lift": 0.12,
+    "drop": 0.03,
+    "wag": 0.6
+  },
+  "sources": [
+    "The size of a domestic cat: about 23 to 25 cm at the shoulder, 3.5 to 4.5 kg. The gait is the walk of a cat (the same order of the feet as a dog)."
+  ]
+}

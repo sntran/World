@@ -131,23 +131,43 @@ defmodule World.Orders.Blueprints do
     %Blueprint{
       name: "animal",
       doc:
-        "An animal from its bones (World.Animals): a species of a body plan. Now: street_dog, a street dog of Việt Nam (chó cỏ), about 50 cm at the shoulder, a short coat, a tail up. Its joints and limbs are in the order too.",
+        "An animal from its bones (World.Animals): a species of a body plan, on a base mesh. The species: " <>
+          Enum.map_join(World.Animals.species(), " ", &"#{&1}: #{World.Animals.spec(&1)["about"]}") <>
+          " Its joints and limbs are in the order too.",
       options: [
         option("species", :choice, default: "street_dog", values: World.Animals.species()),
-        option("coat", :color, default: "#c8965a", doc: "The color of the coat."),
+        option("coat", :color, default: nil, doc: "The color of the coat (the color of the species by default)."),
         option("size", :number, default: 1.0, min: 0.6, max: 1.4, doc: "A scale of the animal: 1 is its common size."),
         option("animations", :list,
           default: [],
-          item: option("item", :choice, values: ["wag", "walk"]),
-          max: 2,
-          doc: "walk: a step of the gait (the dog: 0.7 s at about 0.23 m/s; an app moves the animal); wag: the tail."
+          item:
+            option("item", :choice,
+              values:
+                World.Animals.species() |> Enum.flat_map(&World.Animals.animations/1) |> Enum.uniq() |> Enum.sort()
+            ),
+          max: 3,
+          doc:
+            "walk: a step of the gait (the dog: 0.7 s at about 0.23 m/s; an app moves the animal); wag: the tail; wave: a hand (an animal with hands). Each species has the animations of its body plan."
         )
       ],
       build: fn o ->
-        World.Animals.animal(o["species"], coat: rgb(o["coat"]), size: o["size"], animations: o["animations"])
+        World.Animals.animal(o["species"],
+          coat: o["coat"] && rgb(o["coat"]),
+          size: o["size"],
+          animations: o["animations"]
+        )
       end,
+      check: &animal_check/1,
       sources: ["The sizes of each species are in its sources: a guess from photos when there are no measurements."]
     }
+  end
+
+  defp animal_check(o) do
+    known = World.Animals.animations(o["species"])
+
+    for {a, i} <- Enum.with_index(o["animations"]),
+        a not in known,
+        do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
   end
 
   # --- A group at a morning of exercise ------------------------------------------------------

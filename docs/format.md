@@ -456,35 +456,37 @@ ray from a point inside, a third of its radius in the skin.
 A limb can keep the bone after its end flat on the ground (`flat: true`
 in the pose): a paw on the ground in a step.
 
+### Species and body plans
+
 An animal is a species of a body plan (`World.Animals`). The body plan
-gives the bones, the joints, the limbs, the ports and the gaits; the
-species gives its sizes, its colors and its sources. The body plans now:
-a quadruped with a tail. A cat or a water buffalo is the same plan with
-other sizes; a bird is another plan.
+is code: it gives the bones of World, the joints, the limbs, the ports
+and the gaits. The species is data: two files, and no code.
+
+- `priv/animals/meshes/NAME.json`: the base mesh, its bones and its
+  weights, from a file of a model (`scripts/fbx_figure.exs`, below).
+- `priv/animals/species/NAME.json`: the species.
+
+| Key of a species | What it is |
+|---|---|
+| `name`, `about`, `sources` | The name (a to z, 0 to 9 and _), one sentence about the animal, and where its sizes come from. |
+| `plan` | `quadruped` (four legs and a tail) or `biped` (two legs, two arms and a tail). |
+| `mesh` | The name of the file in `meshes/`. |
+| `bones` | A bone of World to the bone of the mesh. A bone of the mesh with no bone of World gives its weights to the nearest bone above it with a bone of World (the fingers go to the hand, the eyes to the head). The bones of the tail are `tail_01`, `tail_02` ..., as many as the mesh has. |
+| `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped, at the top of the head for a biped. The option `size` of the order scales it. |
+| `materials`, `colors` | A material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `dark`, `white`), and a role to its color. The option `coat` of the order is the color of `fur`. |
+| `smooth` | The smooth steps of the mesh at near: 2 for a mesh of a few hundred faces, 0 for a mesh of thousands. |
+| `spheres` | The eyes or a nose that the mesh does not have: on a ray from a point of a bone (`at`: a part of the bone from its head; `up`: meters above it) in the direction `dir`, with a `radius` (m) and a `role`. |
+| `gait` | The numbers of the gaits of the body plan (the time of a step, the stride as a part of the height, and more: see the module of the body plan). |
 
 The species now:
 
-| Species | The animal | Sources |
-|---|---|---|
-| `street_dog` | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, a tail up. | The base mesh of a dog of Quaternius (CC0, `priv/animals/dog.json`). The size is a guess from photos and from the medium breeds (about 15 kg): no measurements. |
+| Species | Plan | The animal | Mesh |
+|---|---|---|---|
+| `street_dog` | quadruped | A street dog of Việt Nam (chó cỏ): about 50 cm at the shoulder, a short tan coat, a tail up. | Quaternius, Animal Pack Vol.2 (CC0): `Dog.fbx`. |
+| `cat` | quadruped | A cat of Việt Nam (mèo ta): about 25 cm at the shoulder, gray with a white chest and white paws. | Quaternius, Animal Pack Vol.2 (CC0): `Cat.fbx`. |
+| `monkey` | biped | A monkey of a cartoon (khỉ): about 60 cm high when it stands, a brown coat, a light face, belly, hands and feet, a long tail. | tomk, monkey 3d model rigged fbx (CC0): `monkey.FBX`, with the colors of its textures. |
 
-### A base mesh from a file
-
-`scripts/fbx_figure.exs` reads a binary FBX file (version 7.4, the
-export of Blender 2.7) and writes the data of its figure as JSON:
-
-    mix run scripts/fbx_figure.exs IN.fbx OUT.json "SOURCE" "LICENSE"
-
-The JSON has the points of the mesh at rest (in the axes of World, in
-meters, the ground at z = 0), its faces, its bones (`name`, `parent`,
-`head`, and `tail` for a bone with an end node), the weights of each
-bone (a list of `[point, weight]`), its `source` and its `license`. A
-bone with no weights and no bone with weights under it (a target of
-inverse kinematics of the file) stays out. The species maps each bone
-of the file to a bone of World. Use only a file with a license that
-lets World give it again (CC0, CC-BY), and add a row to `CREDITS.md`.
-
-The dog:
+A quadruped (`World.Animals.Quadruped`):
 
 - Joints: the hinges `elbow_l`, `wrist_l`, `knee_l`, `hock_l` (and
   `_r`): the value adds to the rest; more bends the elbow and the knee,
@@ -496,13 +498,63 @@ The dog:
   to the front, to the side of the pole. `tail` and `head` are chains.
 - Ports: `ground`, `collar` (on the neck), `back` (on the spine, for a
   bag), `mouth` (on the muzzle, for a stick).
-- Skin: the base mesh with 2 smooth steps at near. The eyes and the
-  nose are on the mesh, on rays from the inside of the head.
-- Animations: `walk` (a step of 0.7 s with a stride of 16 cm, about
-  0.23 m/s; the feet in the order hind left, front left, hind right,
-  front right; each foot is on the ground for 0.6 of the step, flat, and
-  folds back at the wrist in the air; the body is 1.5 cm lower than at
-  rest) and `wag` (the tail wags twice in 0.8 s).
+- Animations: `walk` (the feet in the order hind left, front left, hind
+  right, front right; each foot is on the ground for 0.6 of the step,
+  flat, and folds back at the wrist in the air; the body is a little
+  lower than at rest. The dog: a step of 0.7 s with a stride of 16 cm,
+  about 0.23 m/s) and `wag` (the tail wags twice).
+
+A biped (`World.Animals.Biped`):
+
+- Joints: the hinges `elbow_l`, `wrist_l`, `knee_l`, `ankle_l` (and
+  `_r`), the balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine`
+  and `tail`.
+- Limbs: `arm_l`, `arm_r` (the end is the wrist, the elbow goes to the
+  back), `leg_l`, `leg_r` (the end is the ankle, the knee goes to the
+  front), `tail` and `head` (chains).
+- Ports: `ground`, `grip_l`, `grip_r` (in the hands), `back` (a bag).
+- Animations: `walk` (on two legs, each foot flat; the arms swing
+  against the legs, the tail sways), `wave` (the right hand waves above
+  the shoulder) and `wag` (the tail swings).
+
+A new species of a known body plan:
+
+1. Find a model with bones and a skin, with a license that lets World
+   give it again (CC0, CC-BY). Add a row to `CREDITS.md`.
+2. Make its mesh: `mix run scripts/fbx_figure.exs IN.fbx
+   priv/animals/meshes/NAME.json "SOURCE" "LICENSE" [FRONT]`.
+3. Write `priv/animals/species/NAME.json`: the bones, the height, the
+   materials and colors, the spheres, the gait. Look at the bones and
+   the materials of the mesh in its JSON.
+4. Build it (`mix world.build`) and look at it at rest and in each
+   animation. Add a model to the catalog (`World.Catalog`) and a test.
+
+A new body plan (a bird, a fish, a snake) is a module with the
+functions of `World.Animals.Quadruped`: `bones/0`, `next/1`, `hinge/2`,
+`height/2`, `animations/0`, `limbs/1`, `joints/1`, `ports/1` and
+`animation/4`, and its name in `World.Animals`.
+
+### A base mesh from a file
+
+`scripts/fbx_figure.exs` reads a binary FBX file (version 7.4: the
+export of Blender 2.7 or of 3ds Max) and writes the data of its figure
+as JSON:
+
+    mix run scripts/fbx_figure.exs IN.fbx OUT.json "SOURCE" "LICENSE" [FRONT]
+
+FRONT is the axis of the file to the front of the animal (`x`, `-x`,
+`y`, `-y`, `z` or `-z`; `x` by default); the up axis comes from the
+settings of the file. The mesh and the bones are at the bind pose of
+the skin. The JSON has the points of the mesh at rest (in the axes of
+World, the ground at z = 0), its faces, its materials and the material
+of each face, its bones (`name`, `parent`, `head`, and `tail` for a
+bone with an end node), the weights of each bone (a list of `[point,
+weight]`), its `source` and its `license`. A bone with no weights and no
+bone with weights under it (a target of inverse kinematics of the file)
+stays out. A material with a texture (a PNG file next to the FBX file)
+gives three materials: the colors of the texture at the middles of its
+faces, in three groups of near colors (`NAME.0`, `NAME.1`, `NAME.2`,
+each with its `color`).
 
 ## A drawing
 
