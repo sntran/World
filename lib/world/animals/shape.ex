@@ -171,9 +171,13 @@ defmodule World.Animals.Shape do
     {bones, moved} = bend({bones, moved}, by_point, ~w(neck_01 head ear_l ear_r), "neck_01", n["neck_up"])
     {bones, moved} = bend({bones, moved}, by_point, ~w(head ear_l ear_r), "head", -n["head_down"])
 
-    # The paws on the ground: the lowest point of the feet.
+    # The paws on the ground: the lowest point of the feet (with no feet,
+    # of the body).
     feet = for b <- bones, b.name =~ ~r/(^|_)foot_[lr]$/, {i, w} <- Map.get(weights, b.name, %{}), w >= 0.5, do: i
-    ground = feet |> Enum.map(&elem(Enum.at(moved, &1), 2)) |> Enum.min()
+
+    ground =
+      if(feet == [], do: moved, else: Enum.map(feet, &Enum.at(moved, &1))) |> Enum.map(&elem(&1, 2)) |> Enum.min()
+
     down = &Vec.sub(&1, {0.0, 0.0, ground})
     {Enum.map(bones, &%{&1 | head: down.(&1.head), tail: down.(&1.tail)}), Enum.map(moved, down)}
   end
@@ -273,7 +277,8 @@ defmodule World.Animals.Shape do
 
     k = n["leg_length"]
     low = fn lines, k -> lines |> Enum.map(fn {c, a} -> c + a * k end) |> Enum.min() end
-    up = (feet |> Enum.map(fn {_, rest, lines} -> low.(lines, k) - rest end) |> Enum.sum()) / length(feet)
+    # A body with no feet (a fish) does not move up or down.
+    up = (feet |> Enum.map(fn {_, rest, lines} -> low.(lines, k) - rest end) |> Enum.sum()) / max(length(feet), 1)
 
     # The length of a leg that moves its lowest point by `up`: the lines
     # go down as the leg grows (a < 0).

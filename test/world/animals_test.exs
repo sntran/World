@@ -174,7 +174,7 @@ defmodule World.AnimalsTest do
     assert slow > 0.2 and fast > 2 * slow and jump_speed > slow
 
     assert Animals.species() ==
-             ~w(alpaca cat cow deer donkey douc fox gibbon goat horse husky hyena macaque pig pig_tailed_macaque red_deer rhesus_macaque sheep street_dog water_buffalo wolf)
+             ~w(alpaca carp cat cow deer donkey douc fox gibbon goat horse husky hyena macaque pig pig_tailed_macaque red_deer rhesus_macaque sheep street_dog tilapia water_buffalo wolf)
 
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
@@ -451,5 +451,36 @@ defmodule World.AnimalsTest do
       assert elem(f["hand_l"].at, 2) > elem(f["neck_01"].at, 2)
       assert min(elem(f["foot_l"].at, 2), elem(f["foot_r"].at, 2)) < elem(s.rest["foot_l"].at, 2) + 1.0e-3
     end
+  end
+
+  test "a fish: the carp and the tilapia, a body from the bones, fins, a swim" do
+    for {name, length} <- [{"carp", 0.5}, {"tilapia", 0.3}] do
+      a = Animals.animal(name, animations: ~w(swim idle))
+      assert Animals.animations(name) == ~w(swim idle)
+      assert a.params["swim_speed"] > 0.2
+
+      # The length of the fish is the size of its species, its belly on
+      # the ground; the fins have their own material.
+      [_, l, _] = Build.scene(a).extras["size"]
+      assert_in_delta l, length, 0.02
+      assert Map.has_key?(a.materials, :fin) and Map.has_key?(a.materials, :eye)
+
+      # The swim: a wave to the sides, larger at the tail fin than at the
+      # head; the idle is smaller.
+      [swim, idle] = a.animations
+      side = fn clip, bone -> clip |> then(&frames(a, &1)) |> Enum.map(&elem(&1[bone].at, 0)) |> Enum.min_max() end
+      width = fn {lo, hi} -> hi - lo end
+      assert width.(side.(swim, "tail_04")) > 0.1 * length
+      assert width.(side.(swim, "tail_04")) > 3 * width.(side.(swim, "head"))
+      assert width.(side.(idle, "tail_04")) < width.(side.(swim, "tail_04"))
+    end
+
+    # The tilapia is deeper than the carp, for its length.
+    depth = fn name ->
+      [_, l, h] = Build.scene(Animals.animal(name, [])).extras["size"]
+      h / l
+    end
+
+    assert depth.("tilapia") > depth.("carp") + 0.05
   end
 end

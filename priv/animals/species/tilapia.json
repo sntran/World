@@ -1,0 +1,50 @@
+{
+  "name": "tilapia",
+  "plan": "fish",
+  "template": "fish",
+  "height": 0.3,
+  "about": "A Nile tilapia (cá rô phi, Oreochromis niloticus): about 30 cm long, a deep body, gray with a darker back and a pale belly, a gray dorsal fin.",
+  "shape": {
+    "body_depth": 1.4,
+    "body_width": 0.95,
+    "head_size": 1.05,
+    "tail_length": 0.9
+  },
+  "colors": {
+    "fur": [
+      122,
+      124,
+      112
+    ],
+    "fin": [
+      86,
+      88,
+      84
+    ],
+    "eye": [
+      150,
+      110,
+      40
+    ]
+  },
+  "markings": {
+    "back": [
+      76,
+      80,
+      70
+    ],
+    "belly": [
+      196,
+      196,
+      184
+    ]
+  },
+  "gait": {
+    "period": 0.6,
+    "stride": 0.45
+  },
+  "sources": [
+    "Wikipedia, Nile tilapia (https://en.wikipedia.org/wiki/Nile_tilapia): \"The Nile tilapia reaches up to 60 cm (24 in) in length\"; \"Wild, natural-type Nile tilapias are brownish or grayish overall, often with indistinct banding on their body\"; \"the tail is vertically striped\"; the edge of the dorsal fin \"is gray or black in Nile tilapia\".",
+    "The length (30 cm, a fish of a farm pond), the deep body (body_depth 1.4) and the colors: a guess from photos of iNaturalist: https://www.inaturalist.org/photos/494958758, https://www.inaturalist.org/photos/444066694. The tail fin of the template is forked; the tail fin of a tilapia is not. No bands: the coat has no region for them."
+  ]
+}

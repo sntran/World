@@ -503,7 +503,7 @@ The keys of a template:
 
 | Key of a template | What it is |
 |---|---|
-| `mesh`, `bones`, `materials`, `smooth` | The name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
+| `mesh`, `bones`, `materials`, `smooth` | The name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`, `fin`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
 
 | `parents` | A bone of World to its parent, when the rig of the file has another parent: the paw of the Ultimate rig is a target of inverse kinematics, and World puts it under the forearm. |
 | `clips` | The template whose clips it takes (its own file has none for a walk). The moves of the pelvis, the heights of the paws and the speeds go to the units of its mesh, by the heights of the two hips (the head of `hind_upper_l`). |
@@ -673,6 +673,8 @@ The species now:
 | `rhesus_macaque` | primate | A rhesus macaque (khỉ vàng, Macaca mulatta): about 53 cm long without the tail, a tail of about 22 cm, a brown or gray coat with a more orange back and hips, a bare pink face, on four limbs. | Numbers on the template `primate`, as the macaque with a shorter tail; the regions `back` and `legs` for the orange back and hips. |
 | `pig_tailed_macaque` | primate | A northern pig-tailed macaque (khỉ đuôi lợn, Macaca leonina): about 55 cm long without the tail, a short thin tail of about 20 cm that curves up, a brown coat with a dark crown and a dark tail, on four limbs. | Numbers on the template `primate`, with a short tail that goes up (`tail_down` -40); the regions `head` and `tail`. |
 | `douc` | primate | A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus): about 62 cm long without the tail, a white tail as long as the body, a silver-gray coat, black thighs, red lower legs, a yellow-brown face, on four limbs. | Numbers on the template `primate`; the regions `legs`, `socks`, `face` and `tail`. The socks also color the hands: the hands are red, not black, and the white forearms are not there. |
+| `carp` | fish | A common carp (cá chép, Cyprinus carpio): about 50 cm long, a robust body, a long dorsal fin, a forked tail fin, dark gold with a darker back and a pale belly, bronze fins. | The template `fish`, a little slimmer (`body_depth` 0.9). No barbels. |
+| `tilapia` | fish | A Nile tilapia (cá rô phi, Oreochromis niloticus): about 30 cm long, a deep body, gray with a darker back and a pale belly. | The template `fish`, deeper (`body_depth` 1.4). The tail fin of the template is forked, the tail fin of a tilapia is not; no bands. |
 | `gibbon` | primate | A northern white-cheeked gibbon (vượn đen má trắng, Nomascus leucogenys), a male: about 55 cm long, no tail, black with white cheeks, very long arms. On the ground it walks on two legs with its arms up (`"upright": true` in its gait). | Numbers on the template `primate`: the arms 1.3 times the legs. The template has a tail: the gibbon has the shortest, thin. The face region is white, not only the cheeks. |
 
 The numbers of the presets are a guess from the sizes in their
@@ -780,6 +782,23 @@ of a person (`World.People.Skeleton`) work on it.
   on the two legs, with the arms up. The climb, the hang and the jump
   are in place: the parts list has no speed for them.
 
+A fish (`World.Animals.Fish`): its bones, from the front to the back,
+are `head`, `spine_01`, `pelvis` (the root, the middle of the body),
+`tail_01` to `tail_03` (the back of the body and the stalk of the tail)
+and `tail_04` (the tail fin). The size of a fish (its `height`) is its
+length, from the snout to the end of the tail fin; its belly is on the
+ground.
+
+- Joints: the balls `spine` and `tail`.
+- Limbs: `body` (a chain from the pelvis to the head) and `tail` (a
+  chain from `tail_01` to the tail fin).
+- Ports: `ground`, `mouth`.
+- Animations: `swim` (a wave goes along the body to the tail, larger at
+  the back; each bone turns to the side an eighth of the period after
+  the bone in front of it; the speed is in `swim_speed` of the parts
+  list, from `period` and `stride` of the gait) and `idle` (smaller and
+  slower waves of the tail, in place).
+
 A new species: write `priv/animals/species/NAME.json` with the
 template of the nearest body, the numbers of its shape, its colors,
 its height, from the sizes of the animal and from photos.
@@ -796,7 +815,7 @@ write `priv/animals/templates/NAME.json`: a bone of World to the bones
 of the mesh, the materials and their roles. Look at the bones and the
 materials of the mesh in its JSON.
 
-A new body plan (a bird, a fish, a snake) is a module with the
+A new body plan (a bird, a snake) is a module with the
 functions of `World.Animals.Quadruped`: `bones/0`, `next/1`, `hinge/2`,
 `height/2`, `animations/0`, `limbs/1`, `joints/1`, `ports/1`, `stance/2`
 (the pose at rest, from the skeleton and the gait),
@@ -862,6 +881,21 @@ face to the face of a macaque, from photos: the lids open more around
 each eye (more up and down than to the sides), the eyes are 1.15 times
 larger, and the bridge of the nose goes back to near the plane of the
 eyes.
+
+`scripts/fish_template.exs` makes the mesh of the template of fish
+from the bones of World, with no file from outside:
+
+    mix run scripts/fish_template.exs priv/animals/meshes/fish.json
+
+The fish is 1 m long, with the body of a carp: a smooth skin
+(`World.Blob`) around the chain of bones, all in one group (no bumps
+at the joints), the deepest part 0.27 of the length. The fins are plates
+4 mm thick: a dorsal fin (high at its front, then long and low), a
+forked tail fin, an anal fin, and a pair of pectoral and of pelvic fins;
+each point of a fin follows the two bones nearest to it along the body.
+The eyes are spheres on the bone `head`. The materials: `body` (the
+role `fur`, with the colors of the coat), `fins` (the role `fin`) and
+`eye`.
 
 ## A drawing
 

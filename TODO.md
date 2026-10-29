@@ -194,8 +194,11 @@ and no logo on them.
   - The face of the macaque: next to photos, the bridge of the nose and
     the lips still have the shape of a person (the low-poly face of
     MakeHuman has few points there), and the eyes are farther apart.
-  - Chickens and ducks (a template of birds), fish; the gaits eat, sit
-    and run.
+  - Chickens and ducks (a template of birds); the gaits eat, sit and
+    run.
+  - The fish: scales and the gill cover; the barbels of the carp; a tail
+    fin that is not forked (the tilapia) and the bands of the tilapia; a
+    koi (a region for spots); more fish of Việt Nam (cá trê, cá lóc).
 - **Plants for Vũng Tàu (W12).** The idea "Plants from rules" above,
   first with the 14 tree types of Vung_Tau (`data/trees/types.json` there,
   plan 0020): the same look as the sheets of its report 0020, with the

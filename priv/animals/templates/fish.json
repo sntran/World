@@ -1,0 +1,21 @@
+{
+  "name": "fish",
+  "plan": "fish",
+  "mesh": "fish",
+  "bones": {
+    "pelvis": "pelvis",
+    "spine_01": "spine_01",
+    "head": "head",
+    "tail_01": "tail_01",
+    "tail_02": "tail_02",
+    "tail_03": "tail_03",
+    "tail_04": "tail_04"
+  },
+  "materials": {
+    "body": "fur",
+    "fins": "fin",
+    "eye": "eye"
+  },
+  "smooth": 1,
+  "muzzle": 0.6
+}

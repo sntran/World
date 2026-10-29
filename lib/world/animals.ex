@@ -53,7 +53,7 @@ defmodule World.Animals do
   # The colors of the roles that no mesh, template or species gives.
   @colors %{"horn" => [172, 161, 117], "eye" => [24, 24, 24], "nose" => [40, 34, 32], "white" => [240, 240, 240]}
 
-  @plans %{"quadruped" => World.Animals.Quadruped, "primate" => World.Animals.Primate}
+  @plans %{"quadruped" => World.Animals.Quadruped, "primate" => World.Animals.Primate, "fish" => World.Animals.Fish}
   @roles %{
     "fur" => :fur,
     "marking" => :marking,
@@ -66,7 +66,8 @@ defmodule World.Animals do
     "hoof" => :hoof,
     "muzzle" => :muzzle,
     "iris" => :iris,
-    "mane" => :mane
+    "mane" => :mane,
+    "fin" => :fin
   }
 
   @doc "The names of the species."
