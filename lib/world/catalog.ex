@@ -28,10 +28,11 @@ defmodule World.Catalog do
     )
   end
 
-  # The animals of four legs, with all the animations of their body plan.
+  # The animals, with all the animations of their body plan.
   defp animals do
     for name <-
-          ~w(street_dog cat fox deer horse donkey cow water_buffalo wolf goat pig sheep alpaca husky red_deer hyena),
+          ~w(street_dog cat fox deer horse donkey cow water_buffalo wolf goat pig sheep alpaca husky red_deer hyena) ++
+            ~w(macaque rhesus_macaque pig_tailed_macaque douc gibbon),
         do: {name, fn -> World.Animals.animal(name, animations: World.Animals.animations(name)) end}
   end
 
@@ -45,7 +46,6 @@ defmodule World.Catalog do
       {"traveler", &World.People.traveler/0},
       {"man", &World.People.man/0},
       {"woman", &World.People.woman/0},
-      {"macaque", fn -> World.Animals.animal("macaque", animations: ~w(walk sit)) end},
       {"banh_mi_cart", fn -> World.Drawing.file("banh_mi_cart") end},
       {"honda_vision_110_rider", &World.People.rider/0},
       {"fridge_lg_lrfxs2503s", &World.Appliances.fridge/0},

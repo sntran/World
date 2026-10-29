@@ -100,7 +100,7 @@ defmodule World.Rig do
       sources: Keyword.get(opts, :sources, []),
       nodes: [%Scene.Node{name: name} | bone_nodes] ++ [mesh],
       skins: [skin],
-      animations: for(a <- Keyword.get(opts, :animations, []), do: a.(skeleton)),
+      animations: for(a <- Keyword.get(opts, :animations, []), do: at_rest(a.(skeleton), bones, skeleton, locals)),
       materials: Keyword.get(opts, :materials, %{}),
       ports:
         Map.new(Keyword.get(opts, :ports, []), fn
@@ -111,6 +111,26 @@ defmodule World.Rig do
       pose: pose,
       joints: Keyword.get(opts, :joints, [])
     }
+  end
+
+  # The nodes of the bones are in the pose of the figure, and a clip has
+  # channels only for the bones that move from the rest: a bone with no
+  # channel that the pose moves gets one, with its frame at rest.
+  defp at_rest(%{channels: channels} = clip, bones, skeleton, posed) do
+    rest = Skeleton.locals(skeleton, %{})
+    [%{times: times} | _] = channels
+    has = MapSet.new(channels, &{&1.node, &1.path})
+
+    extra =
+      for {b, i} <- Enum.with_index(bones, 1),
+          {path, value, moved?} <- [
+            {:rotation, rest[b.name], posed[b.name].z != rest[b.name].z or posed[b.name].y != rest[b.name].y},
+            {:translation, rest[b.name].at, posed[b.name].at != rest[b.name].at}
+          ],
+          moved? and not MapSet.member?(has, {i, path}),
+          do: %{node: i, path: path, times: times, values: List.duplicate(value, length(times))}
+
+    %{clip | channels: channels ++ extra}
   end
 
   @doc """

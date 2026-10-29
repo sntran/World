@@ -152,8 +152,11 @@ defmodule World.Animals.ShapeTest do
       hi - lo
     end
 
-    assert_in_delta span.(thin, x), span.(rest, x), 1.0e-6
-    assert_in_delta span.(thin, Vec.cross(x, along)), 0.6 * span.(rest, Vec.cross(x, along)), 1.0e-6
+    # The palm points have a small weight on the fingers, which scale
+    # across their own frames: these turn a little from the frame of the
+    # hand.
+    assert_in_delta span.(thin, x), span.(rest, x), 5.0e-4
+    assert_in_delta span.(thin, Vec.cross(x, along)), 0.6 * span.(rest, Vec.cross(x, along)), 5.0e-4
 
     head = for {i, k} <- w["head"], k > 0.5, do: i
     top = fn points -> head |> Enum.map(&elem(Enum.at(points, &1), 2)) |> Enum.max() end

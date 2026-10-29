@@ -182,18 +182,19 @@ and no logo on them.
     measurements, not from photos; whorls and partings in the direction
     of the fur (now only along the bones); the fur in the apps (Phượt,
     Vũng Tàu).
-  - More primates on the template of primates: a rhesus macaque, a
-    pig-tailed macaque, a gibbon, a langur (douc). Hands that grip and
-    feet with a thumb that grips (the feet of the template are the feet
-    of a person); a climb; a jump.
+  - The primates: feet with a thumb that grips (the feet of the
+    template are the feet of a person); the thumb of the hand does not
+    fold well in `"grip"`; a speed for the climb; a template with no
+    tail for the gibbon; a region for the hands of the douc (now the
+    socks color them) and its white forearms; the white cheeks of the
+    gibbon (now the full face).
   - Fur on the template of primates: the body of MakeHuman is smooth,
     so the macaque with no fur shells has the shape of its body only. A
     crest of hair on the head and long hair on the cheeks.
   - The face of the macaque: next to photos, the nose and the lips still
     have the shape of a person, and the muzzle is not a block with the
     nose at its top. The pale upper lids of a macaque need a region of
-    the coat. The fingers of the template have no bones, so the hands
-    cannot close on the ground.
+    the coat.
   - Chickens and ducks (a template of birds), fish; the gaits eat, sit
     and run.
 - **Plants for Vũng Tàu (W12).** The idea "Plants from rules" above,

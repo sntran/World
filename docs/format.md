@@ -669,6 +669,10 @@ The species now:
 | `husky` | quadruped | A Siberian husky: about 55 cm at the withers, gray and white. | The template `husky`. |
 | `red_deer` | quadruped | A red deer stag: about 1.22 m at the shoulder, reddish-brown, large antlers. | The template `stag`. |
 | `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, dark hands and feet, on four limbs. | Numbers on the template `primate`: the arms 0.9 of the legs, a narrow chest, a low skull, a muzzle, a long thin tail, narrow hands. The colors from photos: a golden olive back, gray limbs, a pale belly. |
+| `rhesus_macaque` | primate | A rhesus macaque (khỉ vàng, Macaca mulatta): about 53 cm long without the tail, a tail of about 22 cm, a brown or gray coat with a more orange back and hips, a bare pink face, on four limbs. | Numbers on the template `primate`, as the macaque with a shorter tail; the regions `back` and `legs` for the orange back and hips. |
+| `pig_tailed_macaque` | primate | A northern pig-tailed macaque (khỉ đuôi lợn, Macaca leonina): about 55 cm long without the tail, a short thin tail of about 20 cm that curves up, a brown coat with a dark crown and a dark tail, on four limbs. | Numbers on the template `primate`, with a short tail that goes up (`tail_down` -40); the regions `head` and `tail`. |
+| `douc` | primate | A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus): about 62 cm long without the tail, a white tail as long as the body, a silver-gray coat, black thighs, red lower legs, a yellow-brown face, on four limbs. | Numbers on the template `primate`; the regions `legs`, `socks`, `face` and `tail`. The socks also color the hands: the hands are red, not black, and the white forearms are not there. |
+| `gibbon` | primate | A northern white-cheeked gibbon (vượn đen má trắng, Nomascus leucogenys), a male: about 55 cm long, no tail, black with white cheeks, very long arms. On the ground it walks on two legs with its arms up (`"upright": true` in its gait). | Numbers on the template `primate`: the arms 1.3 times the legs. The template has a tail: the gibbon has the shortest, thin. The face region is white, not only the cheeks. |
 
 The numbers of the presets are a guess from the sizes in their
 `sources` and from photos, not measurements of the shape.
@@ -736,9 +740,10 @@ the paws carry the animal:
 A primate (`World.Animals.Primate`): its bones have the names of the
 bones of a person (`pelvis`, `spine_01` to `spine_03`, `neck_01`,
 `head`, `clavicle_l`, `upperarm_l`, `lowerarm_l`, `hand_l`, `thigh_l`,
-`calf_l`, `foot_l`, `ball_l` and `_r`, and the tail `tail_01` ...), so
-the hips, the feet, the reach of an arm and the look of a person
-(`World.People.Skeleton`) work on it.
+`calf_l`, `foot_l`, `ball_l`, the fingers `thumb_01_l` to
+`pinky_03_l` and `_r`, and the tail `tail_01` ...), so the hips, the
+feet, the reach of an arm, the shapes of a hand (`"grip"`) and the look
+of a person (`World.People.Skeleton`) work on it.
 
 - Joints: the hinges `elbow_l`, `wrist_l`, `knee_l`, `ankle_l` (and
   `_r`), the balls `shoulder_l`, `hip_l` (and `_r`), `neck`, `spine`
@@ -755,14 +760,24 @@ the hips, the feet, the reach of an arm and the look of a person
   lie flat with the fingers to the front (`lay` of a limb,
   `World.People.Skeleton`), the neck goes up so the head is over the
   line of the back, the face looks to the front, and the tail goes up
-  from its root and then down in a curve.
+  from its root and then down in a curve. A species with
+  `"upright": true` in its gait (the gibbon) stands on two legs, with
+  the arms up and out and the hands open.
 - Animations: `walk` (on four limbs, in the order of a primate: hind
   left, front right, hind right, front left, a quarter of the step
   apart; each hand or foot is on the ground for 0.6 of the step; the
   speed is in `walk_speed` of the parts list) and `sit` (on the seat,
   the back bent to the front, the feet near the seat, the knees up and
   out, the hands together in front of the feet, the tail on the
-  ground; the head turns to look around, in 4 s).
+  ground; the head turns to look around, in 4 s), `climb` (up a
+  vertical trunk in front of the animal: the body upright, a hand and
+  the other foot move together, the hands grip, in one step), `hang`
+  (from a branch over the head by the two hands that grip, the body
+  swings and the head turns, in 3 s) and `jump` (a crouch, a flight of
+  0.5 of the length of the legs up with all the limbs off the ground,
+  and a landing, in 1.4 s, in place). With `"upright": true`, `walk` is
+  on the two legs, with the arms up. The climb, the hang and the jump
+  are in place: the parts list has no speed for them.
 
 A new species: write `priv/animals/species/NAME.json` with the
 template of the nearest body, the numbers of its shape, its colors,
@@ -782,7 +797,8 @@ materials of the mesh in its JSON.
 
 A new body plan (a bird, a fish, a snake) is a module with the
 functions of `World.Animals.Quadruped`: `bones/0`, `next/1`, `hinge/2`,
-`height/2`, `animations/0`, `limbs/1`, `joints/1`, `ports/1`, `pose/1`,
+`height/2`, `animations/0`, `limbs/1`, `joints/1`, `ports/1`, `stance/2`
+(the pose at rest, from the skeleton and the gait),
 `speeds/2` and `animation/4` (and `feet/0` for a plan with clips), and
 its name in `World.Animals`.
 

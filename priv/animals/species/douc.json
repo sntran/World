@@ -1,0 +1,83 @@
+{
+  "name": "douc",
+  "plan": "primate",
+  "template": "primate",
+  "height": 0.62,
+  "about": "A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus), a male: about 62 cm long without the tail, a white tail as long as the body, a silver-grey coat, black thighs, red lower legs, black hands and feet, a yellow-brown face with white cheeks. It walks on four limbs.",
+  "shape": {
+    "leg_length": 0.66,
+    "arm_length": 0.95,
+    "body_length": 1.1,
+    "body_width": 0.85,
+    "neck_length": 0.8,
+    "head_size": 1.05,
+    "cranium": 0.75,
+    "muzzle_length": 1.0,
+    "tail_length": 0.9,
+    "tail_down": 40,
+    "tail_girth": 0.55,
+    "muzzle_width": 0.9,
+    "neck_girth": 1.35,
+    "leg_girth": 1.1,
+    "arm_girth": 1.0,
+    "hand_width": 0.6
+  },
+  "colors": {
+    "fur": [
+      150,
+      150,
+      146
+    ],
+    "eye": [
+      110,
+      80,
+      40
+    ]
+  },
+  "markings": {
+    "belly": [
+      176,
+      176,
+      170
+    ],
+    "legs": [
+      34,
+      32,
+      32
+    ],
+    "socks": [
+      150,
+      52,
+      38
+    ],
+    "face": [
+      206,
+      160,
+      96
+    ],
+    "tail": [
+      232,
+      230,
+      224
+    ]
+  },
+  "gait": {
+    "period": 0.7,
+    "stride": 0.45,
+    "lift": 0.1
+  },
+  "fur": {
+    "coat": 0.025,
+    "belly": 0.02,
+    "legs": 0.02,
+    "socks": 0.008,
+    "head": 0.015,
+    "face": 0.0,
+    "tail": 0.02
+  },
+  "sources": [
+    "Wikipedia, Red-shanked douc (https://en.wikipedia.org/wiki/Red-shanked_douc): \"The male has a head and body length of 55–82 centimetres\" and \"a tail that measures 56–74 centimetres\"; \"Their abdomen and back are silver\"; \"Their face is a yellow-brown color\"; \"Their inner arms and inner, lateral and back thighs are black while their lower legs are a vibrant red.\" \"Both feet and hands are black\"; \"Their tails are white\".",
+    "The regions of the coat paint the lower legs and the hands in one color (socks): the hands are red, not black, and the forearms are not white. The numbers of the shape: a guess from photos of iNaturalist.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
+  ]
+}

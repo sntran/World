@@ -238,7 +238,7 @@ defmodule World.Animals do
             do: &retarget(a, &1, clip, scale, skin(points, weights)),
             else: &plan.animation(a, &1, k * s["height"], Map.get(s, "gait", %{}))
         end,
-      pose: &plan.pose/1,
+      pose: &plan.stance(&1, Map.get(s, "gait", %{})),
       kind: :animal,
       params:
         %{"coat" => coat, "size" => k, "uv_size" => Float.round(UV.size(points, faces, uvs), 3)}

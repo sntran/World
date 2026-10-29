@@ -308,8 +308,8 @@ defmodule World.Animals.Shape do
     do: o |> Vec.add(Vec.scale(x, a)) |> Vec.add(Vec.scale(y, b)) |> Vec.add(Vec.scale(z, c))
 
   # The scale of a bone after the numbers `n`: `{across in x, along,
-  # across in z}`. The arms of a primate have their own numbers; its
-  # collarbones are the width of the body.
+  # across in z}`. The arms of a primate have their own numbers (the
+  # fingers as the hand); its collarbones are the width of the body.
   defp bone_scale(name, n) do
     cond do
       name in ~w(pelvis spine_01 spine_02 spine_03) ->
@@ -318,7 +318,7 @@ defmodule World.Animals.Shape do
       String.starts_with?(name, "clavicle_") ->
         {n["body_depth"], n["body_width"], n["body_depth"]}
 
-      String.starts_with?(name, "hand_") ->
+      String.starts_with?(name, ~w(hand_ thumb_ index_ middle_ ring_ pinky_)) ->
         {n["arm_girth"], n["arm_length"], n["arm_girth"] * n["hand_width"]}
 
       String.starts_with?(name, ~w(upperarm_ lowerarm_)) ->
@@ -417,9 +417,15 @@ defmodule World.Animals.Shape do
     names = Enum.map(bones, & &1.name)
 
     legs =
-      Enum.filter(names, &String.starts_with?(&1, ~w(front_ hind_ upperarm_ lowerarm_ hand_ thigh_ calf_ foot_ ball_)))
+      Enum.filter(
+        names,
+        &String.starts_with?(
+          &1,
+          ~w(front_ hind_ upperarm_ lowerarm_ hand_ thigh_ calf_ foot_ ball_ thumb_ index_ middle_ ring_ pinky_)
+        )
+      )
 
-    feet = Enum.filter(legs, &(&1 =~ ~r/_foot_|^hand_|^foot_|^ball_/))
+    feet = Enum.filter(legs, &(&1 =~ ~r/_foot_|^hand_|^foot_|^ball_|^thumb_|^index_|^middle_|^ring_|^pinky_/))
     lower = Enum.filter(legs, &(&1 =~ ~r/_lower_|^lowerarm_|^calf_/))
     trunk = Enum.filter(~w(pelvis spine_01 spine_02 spine_03 neck_01), &Map.has_key?(by, &1))
     tail = Enum.filter(names, &String.starts_with?(&1, "tail_"))

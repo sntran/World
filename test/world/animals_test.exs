@@ -174,7 +174,7 @@ defmodule World.AnimalsTest do
     assert slow > 0.2 and fast > 2 * slow and jump_speed > slow
 
     assert Animals.species() ==
-             ~w(alpaca cat cow deer donkey fox goat horse husky hyena macaque pig red_deer sheep street_dog water_buffalo wolf)
+             ~w(alpaca cat cow deer donkey douc fox gibbon goat horse husky hyena macaque pig pig_tailed_macaque red_deer rhesus_macaque sheep street_dog water_buffalo wolf)
 
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
@@ -312,7 +312,7 @@ defmodule World.AnimalsTest do
 
   test "a long-tailed macaque: the template of primates, on four limbs" do
     m = Animals.animal("macaque", animations: Animals.animations("macaque"))
-    assert Animals.animations("macaque") == ~w(walk sit)
+    assert Animals.animations("macaque") == ~w(walk sit climb hang jump)
     scene = Build.scene(m)
     assert Map.keys(scene.materials) |> Enum.sort() == [:eye, :fur]
     assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
@@ -378,7 +378,7 @@ defmodule World.AnimalsTest do
     # The walk: the diagonal order of a primate (hind left, front right,
     # hind right, front left), each limb a quarter of the step after the
     # last; each hand or foot is on the ground for about 0.6 of the step.
-    [walk, sit] = m.animations
+    [walk, sit, climb, hang, jump] = m.animations
     frames = frames(m, walk)
     n = length(frames) - 1
 
@@ -399,5 +399,57 @@ defmodule World.AnimalsTest do
     for f <- sits, b <- s.bones, String.starts_with?(b.name, "tail_"), do: assert(elem(f[b.name].at, 2) > -0.01)
     turned = for f <- sits, do: elem(f["head"].z, 0)
     assert Enum.max(turned) - Enum.min(turned) > 0.5
+
+    # The climb: the body upright off the ground, the hands over the
+    # shoulders on the trunk in front, the fingers closed on it; each hand
+    # goes up and down by a step.
+    climbs = frames(m, climb)
+
+    for f <- climbs do
+      assert elem(Vec.norm(Vec.sub(f["neck_01"].at, f["pelvis"].at)), 2) > 0.8
+      assert elem(f["foot_l"].at, 2) > ground + 0.01
+      for side <- ~w(l r), do: assert(elem(f["hand_#{side}"].at, 2) > elem(f["upperarm_#{side}"].at, 2))
+    end
+
+    assert Vec.dot(hd(climbs)["index_02_l"].y, hd(climbs)["hand_l"].y) < 0.9
+    hand = Enum.map(climbs, &elem(&1["hand_l"].at, 2))
+    assert Enum.max(hand) - Enum.min(hand) > 0.05
+
+    # The hang: the hands over the head, the feet off the ground.
+    for f <- frames(m, hang) do
+      assert elem(f["hand_l"].at, 2) > elem(f["head"].at, 2) and elem(f["foot_r"].at, 2) > ground + 0.05
+    end
+
+    # The jump: the hips go down, then all the animal is in the air.
+    jumps = frames(m, jump)
+    hips = Enum.map(jumps, &elem(&1["pelvis"].at, 2))
+    assert Enum.min(hips) < elem(w["pelvis"].at, 2) - 0.02
+
+    assert Enum.any?(jumps, fn f -> Enum.all?(~w(foot_l foot_r hand_l hand_r), &(elem(f[&1].at, 2) > ground + 0.05)) end)
+  end
+
+  test "more primates: the rhesus, the pig-tailed macaque, the douc, and the gibbon upright" do
+    for name <- ~w(rhesus_macaque pig_tailed_macaque douc gibbon) do
+      a = Animals.animal(name, [])
+      assert a.params["walk_speed"] > 0.3, name
+      assert Animals.animations(name) == ~w(walk sit climb hang jump)
+    end
+
+    # The gibbon stands and walks on two legs with its arms up; its arms
+    # are about 1.3 times its legs.
+    g = Animals.animal("gibbon", animations: ~w(walk))
+    s = g.skeleton
+    span = fn a, b -> Vec.len(Vec.sub(s.rest[b].at, s.rest[a].at)) end
+    arms = span.("upperarm_l", "lowerarm_l") + span.("lowerarm_l", "hand_l")
+    legs = span.("thigh_l", "calf_l") + span.("calf_l", "foot_l")
+    assert_in_delta arms / legs, 1.3, 0.1
+    w = Skeleton.world(s, Skeleton.locals(s, g.pose))
+    assert elem(Vec.norm(Vec.sub(w["neck_01"].at, w["pelvis"].at)), 2) > 0.9
+    assert elem(w["hand_r"].at, 2) > elem(w["head"].at, 2)
+
+    for f <- frames(g, hd(g.animations)) do
+      assert elem(f["hand_l"].at, 2) > elem(f["neck_01"].at, 2)
+      assert min(elem(f["foot_l"].at, 2), elem(f["foot_r"].at, 2)) < elem(s.rest["foot_l"].at, 2) + 1.0e-3
+    end
   end
 end
