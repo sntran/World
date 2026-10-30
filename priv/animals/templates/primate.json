@@ -63,7 +63,8 @@
   },
   "materials": {
     "body": "fur",
-    "eye": "eye"
+    "eye": "eye",
+    "iris": "iris"
   },
   "smooth": 1,
   "muzzle": 1.45,

@@ -19,10 +19,10 @@
       114,
       84
     ],
-    "eye": [
-      125,
-      95,
-      50
+    "iris": [
+      135,
+      88,
+      38
     ]
   },
   "markings": {
@@ -55,6 +55,16 @@
       200,
       190,
       194
+    ],
+    "muzzle": [
+      146,
+      108,
+      98
+    ],
+    "ears": [
+      150,
+      124,
+      116
     ]
   },
   "gait": {
@@ -68,15 +78,18 @@
     "The shape, the stance, the sit, the tail and the colors from photos, side by side with renders: https://www.inaturalist.org/photos/178920422 (walk, Fábio Olmos, CC BY), https://www.inaturalist.org/photos/676657297 (stand, Óscar Sampedro, CC BY), https://www.inaturalist.org/photos/310110541 (stand, Lawrence Hylton, CC BY), https://www.inaturalist.org/photos/255353023 (sit, CC0), https://commons.wikimedia.org/wiki/File:Macaca_fascicularis_Ao_Nang_5.jpg (sit), https://commons.wikimedia.org/wiki/File:Long-tailed_macaque_(Macaca_fascicularis)_male_head_Angkor.jpg (face).",
     "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
     "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh).",
-    "Wikipedia, Intermembral index (https://en.wikipedia.org/wiki/Intermembral_index): the arms over the legs, times 100: 93 for Macaca fascicularis, so the arms 93 / 88 = 1.06 of the template (arm_length 1.06). The tail of the species is as long as the body or longer: tail_length 2.0, the most of the number (0.94 of the body). The narrower body and the thinner limbs and tail: a guess from photos."
+    "Wikipedia, Intermembral index (https://en.wikipedia.org/wiki/Intermembral_index): the arms over the legs, times 100: 93 for Macaca fascicularis, so the arms 93 / 88 = 1.06 of the template (arm_length 1.06). The tail of the species is as long as the body or longer: tail_length 2.0, the most of the number (0.94 of the body). The narrower body and the thinner limbs and tail: a guess from photos.",
+    "The bare skin (no fur on the face, the muzzle, the ears, the hands and the feet) and its colors: a guess from photos of the animal, not a measurement."
   ],
   "fur": {
     "coat": 0.025,
     "belly": 0.018,
     "legs": 0.02,
-    "socks": 0.004,
+    "socks": 0.0,
     "head": 0.012,
     "face": 0.0,
-    "tail": 0.006
+    "tail": 0.006,
+    "ears": 0.0,
+    "muzzle": 0.0
   }
 }

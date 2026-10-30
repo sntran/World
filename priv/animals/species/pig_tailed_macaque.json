@@ -18,10 +18,10 @@
       112,
       80
     ],
-    "eye": [
-      125,
-      95,
-      50
+    "iris": [
+      135,
+      88,
+      38
     ]
   },
   "markings": {
@@ -49,6 +49,16 @@
       70,
       58,
       48
+    ],
+    "muzzle": [
+      168,
+      122,
+      106
+    ],
+    "ears": [
+      168,
+      132,
+      118
     ]
   },
   "gait": {
@@ -60,10 +70,12 @@
     "coat": 0.025,
     "belly": 0.018,
     "legs": 0.02,
-    "socks": 0.004,
+    "socks": 0.0,
     "head": 0.012,
     "face": 0.0,
-    "tail": 0.008
+    "tail": 0.008,
+    "ears": 0.0,
+    "muzzle": 0.0
   },
   "sources": [
     "Wikipedia, Northern pig-tailed macaque (https://en.wikipedia.org/wiki/Northern_pig-tailed_macaque): its tails \"are shorter and skinnier than southern pig-tailed macaques\", with \"a thin pelage in a dark blackish hue\"; \"A brown pelage patch is found on the centre of their crowns\"; the range includes Vietnam.",
@@ -71,6 +83,7 @@
     "The numbers of the shape: the tail 0.78 as long (20 cm of 55 cm is 0.36 of the body: 0.36 / 0.47), and it curves up; a longer muzzle and a lower crown: a guess from photos of iNaturalist.",
     "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
     "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh).",
-    "Wikipedia, Intermembral index (https://en.wikipedia.org/wiki/Intermembral_index): the arms over the legs, times 100: 98 for Macaca nemestrina (the southern pig-tailed macaque; the table has no Macaca leonina), so the arms 98 / 88 = 1.1 of the template (arm_length 1.1)."
+    "Wikipedia, Intermembral index (https://en.wikipedia.org/wiki/Intermembral_index): the arms over the legs, times 100: 98 for Macaca nemestrina (the southern pig-tailed macaque; the table has no Macaca leonina), so the arms 98 / 88 = 1.1 of the template (arm_length 1.1).",
+    "The bare skin (no fur on the face, the muzzle, the ears, the hands and the feet) and its colors: a guess from photos of the animal, not a measurement."
   ]
 }

@@ -75,7 +75,7 @@ defmodule World.Animals.Shape do
     "horn_spread" => {0.0, 1.0, 0.0}
   }
 
-  @regions ~w(back belly mane legs socks head face cheeks lids ears tail tail_tip)
+  @regions ~w(back belly mane legs socks head face muzzle cheeks lids ears tail tail_tip)
   @foot ~r/(^|_)foot_[lr]$/
   @leg ~r/^(front_|hind_|thigh_|calf_|foot_)/
 
@@ -416,11 +416,11 @@ defmodule World.Animals.Shape do
   point in it. `back` and `belly` are the top and the bottom of the
   body and the neck; `mane` the top of the neck (the crest, where a horse
   has its mane); `legs` the legs; `socks` the paws and the low part of
-  the legs; `head` all the head; `face` the muzzle; `cheeks` the sides of the
-  head behind the face; `lids` the upper
-  lids, over the points of `eyes`; `ears` (the bones of
-  the ears); `tail` all the tail; `tail_tip` (the last bone of the
-  tail).
+  the legs; `head` all the head; `face` the front of the head; `muzzle`
+  the front of the face; `cheeks` the sides of the head behind the
+  face; `lids` the upper lids, over the points of `eyes`; `ears` (the
+  bones of the ears, or the sides of the head of a primate); `tail` all
+  the tail; `tail_tip` (the last bone of the tail).
   """
   def regions(bones, points, weights, eyes \\ []) do
     by = Map.new(bones, &{&1.name, &1})
@@ -478,9 +478,10 @@ defmodule World.Animals.Shape do
           "socks" => min(sum.(feet, i) + low, 1.0),
           "head" => w.("head", i),
           "face" => w.("head", i) * face,
+          "muzzle" => w.("head", i) * muzzle(primate, abs(hx), hy, hz, len),
           "cheeks" => w.("head", i) * cheeks(primate, abs(hx), hy, hz, len) * (1 - face),
           "lids" => w.("head", i) * lids.(p),
-          "ears" => min(w.("ear_l", i) + w.("ear_r", i), 1.0),
+          "ears" => min(w.("ear_l", i) + w.("ear_r", i) + w.("head", i) * ears(primate, abs(hx), hy, hz, len), 1.0),
           "tail" => min(sum.(tail, i), 1.0),
           "tail_tip" => w.(tail_tip, i)
         }
@@ -526,6 +527,22 @@ defmodule World.Animals.Shape do
     do:
       smooth(0.7 * len, 0.95 * len, -z) * (1 - smooth(0.62 * len, 0.72 * len, y)) *
         (1 - smooth(0.55 * len, 0.75 * len, x))
+
+  # The muzzle: the front of the face, around the nose and the mouth. Of
+  # an animal on four legs: the front end of the bone of the head; of a
+  # primate: the front of the face under the eyes.
+  defp muzzle(false, _x, y, _z, len), do: smooth(0.75 * len, 0.9 * len, y)
+  defp muzzle(true, _x, y, z, len), do: smooth(1.3 * len, 1.5 * len, -z) * (1 - smooth(0.15 * len, 0.3 * len, y))
+
+  # The ears of a primate (no bones of the ears): the points far out on
+  # the two sides of the head, at the height of the eyes and behind them.
+  # An animal on four legs has the bones of its ears.
+  defp ears(false, _x, _y, _z, _len), do: 0.0
+
+  defp ears(true, x, y, z, len),
+    do:
+      smooth(0.86 * len, 0.95 * len, x) * smooth(0.3 * len, 0.4 * len, y) * (1 - smooth(0.8 * len, 0.9 * len, y)) *
+        (1 - smooth(0.1 * len, 0.25 * len, -z))
 
   # The cheeks: the sides of the head, behind the face. Of a primate:
   # from the outer corners of the eyes to the sides, from the temples

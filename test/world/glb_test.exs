@@ -88,6 +88,17 @@ defmodule World.GLBTest do
     assert [%{"pbrMetallicRoughness" => %{"baseColorTexture" => %{"index" => 0}}}] = json["materials"]
     assert %{"JOINTS_0" => _, "WEIGHTS_0" => _, "TEXCOORD_0" => _} = hd(hd(json["meshes"])["primitives"])["attributes"]
     refute Map.has_key?(Enum.at(json["nodes"], 0), "mesh")
+    refute Map.has_key?(json, "extensionsUsed")
+
+    # A texture that repeats: 3 times in one unit of UV.
+    tiled = put_in(scene.materials.skin["image_scale"], 3.0)
+    json = GLBHelper.json(GLB.encode(tiled))
+    assert json["extensionsUsed"] == ["KHR_texture_transform"]
+
+    assert [%{"pbrMetallicRoughness" => %{"baseColorTexture" => %{"extensions" => %{"KHR_texture_transform" => t}}}}] =
+             json["materials"]
+
+    assert t == %{"scale" => [3.0, 3.0]}
   end
 
   test "a material with no role in the palette is grey, and a scene with no mesh" do

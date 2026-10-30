@@ -33,7 +33,7 @@ defmodule World.Animals do
   `muzzle` and `brow`.
   """
   alias World.{Frame, Rig, Vec}
-  alias World.Animals.{Shape, Space, UV}
+  alias World.Animals.{Coat, Shape, Space, UV}
   alias World.People.{Pose, Skeleton}
 
   @root Path.join([__DIR__, "..", "..", "priv", "animals"])
@@ -63,6 +63,7 @@ defmodule World.Animals do
     "fur" => :fur,
     "marking" => :marking,
     "skin" => :skin,
+    "bare" => :bare,
     "eye" => :eye,
     "nose" => :nose,
     "dark" => :dark,
@@ -170,6 +171,12 @@ defmodule World.Animals do
     colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
     fur = if f = s["fur"], do: Shape.fur(regions, f["coat"], Map.delete(f, "coat"))
 
+    # The bare skin (the face of a monkey): a face of the coat with a
+    # mean length of fur on its points of less than 0.1 of the coat has
+    # no strands of hair (the role `bare`, in the colors of the points,
+    # on the mean gray of the texture).
+    roles = if fur, do: bare(faces, roles, List.to_tuple(fur), s["fur"]["coat"]), else: roles
+
     # The size of the animal from the points of the faces that it keeps
     # (a duck has no comb).
     kept = faces |> List.flatten() |> MapSet.new()
@@ -202,6 +209,12 @@ defmodule World.Animals do
         kept
       )
 
+    # The length of skin of one unit of UV (m). A mammal (four legs, a
+    # primate) has hair: its coat has the texture of strands of hair
+    # (`World.Animals.Coat`), one tile for each `Coat.tile/0` of skin.
+    uv_size = UV.size(points, faces, uvs)
+    hair? = s["plan"] in ~w(quadruped primate)
+
     # The colors of the roles that the animal uses; with markings, the
     # coat is in the colors of the points of the fur and of its lighter
     # parts, on a white material.
@@ -213,6 +226,7 @@ defmodule World.Animals do
       |> Map.merge(Map.get(t, "colors", %{}))
       |> Map.merge(Map.get(s, "colors", %{}))
       |> Map.put("fur", if(colors, do: [255, 255, 255], else: coat))
+      |> Map.put("bare", Enum.map(if(colors, do: [255, 255, 255], else: coat), &round(&1 * Coat.mean())))
       |> then(&if(colors, do: Map.put(&1, "marking", [255, 255, 255]), else: &1))
       |> Map.filter(fn {role, _} -> @roles[role] in used end)
 
@@ -228,10 +242,10 @@ defmodule World.Animals do
         fur: fur && Enum.map(fur, &(&1 * k)),
         fur_dirs: fur && Shape.fur_dirs(bones, points, weights),
         uvs: uvs,
-        # The colors of the coat on the fur and its lighter parts; the fur
-        # also on the mane (of a horse) and the dark parts (the legs of a
-        # fox).
-        colored: [:fur, :marking],
+        # The colors of the coat on the fur, its lighter parts and the bare
+        # skin; the fur also on the mane (of a horse) and the dark parts
+        # (the legs of a fox).
+        colored: [:fur, :marking, :bare],
         furred: [:fur, :marking, :mane, :dark]
       },
       limbs: plan.limbs(by),
@@ -243,9 +257,10 @@ defmodule World.Animals do
           {@roles[role],
            %{
              "color" => color,
-             "roughness" => if(role in ~w(eye dark nose horn hoof), do: 0.4, else: 0.9),
+             "roughness" => if(role in ~w(eye iris dark nose horn hoof), do: 0.4, else: 0.9),
              "metalness" => 0.0
-           }}
+           }
+           |> Map.merge(if(hair? and role in ~w(fur marking mane dark), do: coat_texture(uv_size), else: %{}))}
         end),
       animations:
         for a <- names do
@@ -256,7 +271,7 @@ defmodule World.Animals do
       pose: &plan.stance(&1, Map.get(s, "gait", %{})),
       kind: :animal,
       params:
-        %{"coat" => coat, "size" => k, "uv_size" => Float.round(UV.size(points, faces, uvs), 3)}
+        %{"coat" => coat, "size" => k, "uv_size" => Float.round(uv_size, 3)}
         |> Map.merge(plan.speeds(k * s["height"], Map.get(s, "gait", %{})))
         |> Map.merge(speeds(clips, scale)),
       sources:
@@ -279,10 +294,10 @@ defmodule World.Animals do
     %{template: t, bones: bones, points: points, weights: weights, eyes: eyes(t, data)}
   end
 
-  # The points of the eyes of a mesh.
+  # The points of the eyes of a mesh (the pupils and the irises).
   defp eyes(t, data) do
     for {f, m} <- Enum.zip(data["faces"], data["face_materials"]),
-        material_role(t, data, m) == :eye,
+        material_role(t, data, m) in [:eye, :iris],
         i <- f,
         uniq: true,
         do: i
@@ -316,6 +331,14 @@ defmodule World.Animals do
     points = Enum.map(data["points"], &List.to_tuple/1)
     {data, bones(plan, map, Map.get(t, "parents", %{}), file_bones, owner, points, weights), points, weights}
   end
+
+  defp bare(faces, roles, fur, coat) do
+    for {face, role} <- Enum.zip(faces, roles) do
+      if role == :fur and Enum.sum(Enum.map(face, &elem(fur, &1))) < 0.1 * coat * length(face), do: :bare, else: role
+    end
+  end
+
+  defp coat_texture(uv_size), do: %{"image" => Coat.texture(), "image_scale" => Float.round(uv_size / Coat.tile(), 3)}
 
   # The clips of a template (`scripts/gltf_clips.exs`), or none. A
   # template with `clips` (a file with no clips for a walk) has the clips

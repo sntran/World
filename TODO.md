@@ -202,9 +202,12 @@ and no logo on them.
     licenses (MF3D used 23 rhesus macaques); expressions as shapes of
     World on the head of BigMaQ (an open mouth, a threat, a fear grimace,
     a lip-smack). The images of MF3D are CC BY-NC: not for World.
-  - The head of the macaque: the eyes have one color (no iris and no
-    pupil), and the ears have the color of the fur (the ears of a
-    macaque are bare and dark gray).
+  - The skin and the hair of mammals: the edge of the bare skin follows
+    the faces of the mesh (a step line, not a soft edge); the inside of
+    the ears of a macaque is lighter than the outside (one region now);
+    one texture of hair for all the mammals (no texture for each length
+    of the fur, for short hair, for a curl, for wool); a pupil of one size
+    (no pupil that gets small in the sun).
   - The birds: a rooster (a larger comb and tail, hackles); feet with
     webs for the duck, a bill deeper at its root, smaller eyes, the body
     of a duck at 40º; feathers (a pattern, the direction); a bird that

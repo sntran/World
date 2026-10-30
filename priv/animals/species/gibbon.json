@@ -23,7 +23,7 @@
       28,
       28
     ],
-    "eye": [
+    "iris": [
       90,
       64,
       40
@@ -55,7 +55,7 @@
   "fur": {
     "coat": 0.04,
     "belly": 0.03,
-    "socks": 0.006,
+    "socks": 0.0,
     "head": 0.03,
     "face": 0.0,
     "cheeks": 0.03
@@ -66,6 +66,7 @@
     "Wikipedia, Gibbon (https://en.wikipedia.org/wiki/Gibbon): \"Like all of the apes, gibbons are tailless.\" They \"walk bipedally with their arms raised for balance\".",
     "The template of primates has a tail: the gibbon has the shortest tail of the numbers (0.1), thin. The arms 1.3 and the legs 0.88 of the template: the arms 1.3 / 0.88 x 0.88 = 1.3 times the legs (the middle of 1.2 to 1.4). The slim body, the round head and the flat face: a guess from photos.",
     "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
-    "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh)."
+    "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh).",
+    "The bare skin of the hands and the feet: a guess from photos of the animal, not a measurement."
   ]
 }

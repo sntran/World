@@ -14,10 +14,10 @@
       124,
       92
     ],
-    "eye": [
-      125,
-      95,
-      50
+    "iris": [
+      135,
+      88,
+      38
     ]
   },
   "markings": {
@@ -45,6 +45,16 @@
       214,
       150,
       140
+    ],
+    "muzzle": [
+      186,
+      122,
+      116
+    ],
+    "ears": [
+      204,
+      156,
+      146
     ]
   },
   "gait": {
@@ -56,15 +66,18 @@
     "coat": 0.025,
     "belly": 0.018,
     "legs": 0.02,
-    "socks": 0.004,
+    "socks": 0.0,
     "head": 0.012,
     "face": 0.0,
-    "tail": 0.015
+    "tail": 0.015,
+    "ears": 0.0,
+    "muzzle": 0.0
   },
   "sources": [
     "Wikipedia, Rhesus macaque (https://en.wikipedia.org/wiki/Rhesus_macaque): \"The rhesus macaque is brown or grey in color and has a pink face, which is bereft of fur.\" \"Its tail averages between 20.7 and 22.9 cm.\" \"Adult males measure about 53 cm on average and weigh about 7.7 kg.\"",
     "The numbers of the shape: the template, with the tail 0.9 as long (22 cm of 53 cm is 0.42 of the body: 0.42 / 0.47); the colors: a guess from photos of iNaturalist.",
     "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
-    "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh)."
+    "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh).",
+    "The bare skin (no fur on the face, the muzzle, the ears, the hands and the feet) and its colors: a guess from photos of the animal, not a measurement."
   ]
 }

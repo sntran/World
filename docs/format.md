@@ -491,7 +491,7 @@ The species is `priv/animals/species/NAME.json`:
 | `plan` | `quadruped` (four legs, and a tail when the template has one) or `primate` (two arms with hands, two legs and a tail). |
 | `template` | The name of the template. |
 | `shape` | The numbers of the shape (below); a number not given is its default (the template as it is). |
-| `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings`: a region of the coat to its color; they paint the faces of `fur` and `marking`. The option `coat` of the order is the color of `fur`. |
+| `colors`, `markings` | `colors`: a role to its color (`fur` is the base color of the coat; `marking` the light parts of the template; `eye` (of a primate: the pupil), `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`). With no color, a role keeps the color of the material of the template. `markings`: a region of the coat to its color; they paint the faces of `fur`, `marking` and `bare`. The option `coat` of the order is the color of `fur`. |
 | `without` | The roles whose faces go (`["horn"]`: the bull with no horns of the file, for horns of World). |
 | `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped; the length of the head and the body (from the top of the head to the lowest point of the pelvis, when it stands) for a primate. The option `size` of the order scales it. |
 | `space` | The coefficients of the shape space of the template (below), for a species on a template with a space. The option `space` of the order is over it. |
@@ -551,11 +551,15 @@ The coat is a base color and a color for each region, with soft edges
 this order, a later one over an earlier one: `back`, `belly`, `mane`
 (the top of the neck), `legs`, `socks` (the paws, the hands and the
 feet, and the low part of the legs), `head`, `face` (the muzzle; the
-face of a primate under the brow), `cheeks` (the sides of the head
-behind the face; of a primate: from the outer corners of the eyes to
-the sides, from the temples down to the jaw), `lids` (the upper lids: over each
-eye, in front of it, as wide as the eye, from the faces of the role
-`eye`), `ears`, `tail` (all the tail), `tail_tip`.
+face of a primate under the brow), `muzzle` (the front end of the
+bone of the head; of a primate: the front of the face under the eyes),
+`cheeks` (the sides of the head behind the face; of a primate: from the
+outer corners of the eyes to the sides, from the temples down to the
+jaw), `lids` (the upper lids: over each eye, in front of it, as wide as
+the eye, from the faces of the roles `eye` and `iris`), `ears` (the bones of the
+ears; of a primate, with no bones of the ears: the points far out on
+the two sides of the head, at the height of the eyes), `tail` (all the
+tail), `tail_tip`.
 
 #### The shape space
 
@@ -650,6 +654,20 @@ normal by a part of `_FUR`, that keep the strands of a noise in UV (a
 strand of 1.5 mm is `uv_size / 0.0015` cells for each unit of UV); the
 outer shells lean along `_FUR_DIR`. The review page does this with its
 switch "Fur" (`&fur=1`).
+
+A mammal (the plans `quadruped` and `primate`) has a texture of hair
+on the materials `fur`, `marking`, `mane` and `dark`
+(`World.Animals.Coat`): gray strands along +v, from 0.72 to 1, that
+multiply the colors of the points. The texture is a PNG of 128 by 128
+texels that World makes with no file and no random state, and it
+repeats: one tile for each 4 cm of skin (the transform
+`KHR_texture_transform` of the texture, `scale` = `uv_size / 0.04`; the
+GLB names it in `extensionsUsed`). The bare skin has no strands: a face
+of `fur` with a mean length of fur on its points of less than 0.1 of
+the coat has the role `bare` (the face of a monkey: `fur` of the
+region 0). The faces of `bare` have the colors of the points and no
+`_FUR`, on a material of the mean gray of the texture, so the bare skin
+is as light as the fur next to it.
 
 The species now:
 
@@ -954,10 +972,12 @@ https://github.com/martinivis/BigMaQ, commit a92d2d0):
   point of the file (the inverse of the blend of the turns of its
   bones). So the animal on four limbs has the shape of the file, with
   no thin joints.
-- The eyes (the material `eye`): the lids of the file are closed. A
-  sphere at the center of each eye of the file, 1.1 times the distance
-  to the nearest point of the skin, moves to the front until it goes out
-  of the skin by 0.35 of its radius.
+- The eyes: the lids of the file are closed. A sphere at the center of
+  each eye of the file, 1.1 times the distance to the nearest point of
+  the skin, moves to the front until it goes out of the skin by 0.35 of
+  its radius. Its pole is to the front: the faces to 15 degrees from the
+  pole are the pupil (the material `eye`), the other faces are the iris
+  (the material `iris`; the eye of a macaque shows almost no white).
 - The size: the head and the body 0.5 m long, on the ground.
 
 `scripts/fish_template.exs` makes the mesh of the template of fish

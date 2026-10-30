@@ -99,6 +99,7 @@ defmodule World.GLB do
       |> put_some("meshes", nonempty(Enum.reverse(meshes)))
       |> put_some("skins", nonempty(skins))
       |> put_some("animations", nonempty(animations))
+      |> put_some("extensionsUsed", if(Enum.any?(materials, &transform?/1), do: ["KHR_texture_transform"]))
       |> put_some("images", nonempty(Enum.reverse(buf.images)))
       |> put_some("textures", nonempty(for {_, i} <- Enum.with_index(buf.images), do: %{"source" => i, "sampler" => 0}))
       |> put_some("samplers", if(buf.images == [], do: nil, else: [%{"magFilter" => 9729, "minFilter" => 9987}]))
@@ -185,6 +186,8 @@ defmodule World.GLB do
     {%{"name" => name, "samplers" => Enum.map(pairs, &elem(&1, 0)), "channels" => Enum.map(pairs, &elem(&1, 1))}, buf}
   end
 
+  defp transform?(material), do: get_in(material, ["pbrMetallicRoughness", "baseColorTexture", "extensions"]) != nil
+
   defp material(role, buf, overrides) do
     spec =
       Map.get(overrides, role) || Map.get(@palette, Atom.to_string(role)) ||
@@ -213,8 +216,17 @@ defmodule World.GLB do
           image = length(buf.images)
 
           # The color of the spec is a factor of the texture: white by
-          # default, the color of a hair, or a tint of clothes.
-          {Map.put(pbr, "baseColorTexture", %{"index" => image}),
+          # default, the color of a hair, or a tint of clothes. A texture
+          # that repeats (`image_scale`: the times in one unit of UV)
+          # has a transform (KHR_texture_transform).
+          texture = %{"index" => image}
+
+          texture =
+            if scale = spec["image_scale"],
+              do: Map.put(texture, "extensions", %{"KHR_texture_transform" => %{"scale" => [scale, scale]}}),
+              else: texture
+
+          {Map.put(pbr, "baseColorTexture", texture),
            %{buf | images: [%{"bufferView" => view, "mimeType" => mime} | buf.images]}}
       end
 

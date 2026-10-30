@@ -202,5 +202,14 @@ defmodule World.Animals.ShapeTest do
     cheeks = for {m, i} <- Enum.with_index(regions["cheeks"]), m > 0.5, do: Enum.at(p, i)
     assert Enum.any?(cheeks, &(elem(&1, 0) > 0.03)) and Enum.any?(cheeks, &(elem(&1, 0) < -0.03))
     assert Enum.all?(Enum.zip(regions["cheeks"], regions["face"]), fn {c, f} -> c + f <= 1.0 + 1.0e-9 end)
+
+    # The muzzle: at the front of the face, in front of the eyes. The ears
+    # (a primate has no bones of the ears): far out on the two sides of
+    # the head.
+    muzzle = for {m, i} <- Enum.with_index(regions["muzzle"]), m > 0.5, do: Enum.at(p, i)
+    assert muzzle != [] and Enum.all?(muzzle, &(elem(&1, 1) > eye_back))
+    ears = for {m, i} <- Enum.with_index(regions["ears"]), m > 0.5, do: Enum.at(p, i)
+    assert Enum.any?(ears, &(elem(&1, 0) > 0.8 * len)) and Enum.any?(ears, &(elem(&1, 0) < -0.8 * len))
+    assert Enum.all?(ears, &(abs(elem(&1, 0)) > 0.8 * len))
   end
 end

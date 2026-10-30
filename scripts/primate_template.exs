@@ -23,7 +23,8 @@
 #   blend skinning) must start, so that the same turns back give the
 #   point of the file. So the animal on four limbs has the shape of the
 #   file, with no thin joints.
-# - The eyes: a sphere at each eye of the file (the material eye).
+# - The eyes: a sphere at each eye of the file, a pupil (the material
+#   eye) and an iris (the material iris).
 # - The size: the head and the body 0.5 m long.
 alias World.People.Human
 alias World.Vec
@@ -248,18 +249,28 @@ k = 0.5 / (top - seat)
 ground = rest |> Enum.map(&elem(&1, 2)) |> Enum.min()
 fit = fn {x, y, z} -> {x * k, y * k, (z - ground) * k} end
 
-# The eyes: a sphere in each socket of the file.
+# The eyes: a sphere in each socket of the file, with its pole to the
+# front (y). The faces of the first ring (to 15 degrees from the pole)
+# are the pupil (the material eye), the other faces are the iris (the
+# material iris): the eye of a macaque shows almost no white.
 eye = fn {c, r} ->
-  {rings, segs} = {6, 10}
+  {rings, segs} = {12, 10}
 
   ps =
     for i <- 0..rings, j <- 0..(segs - 1) do
       {a, b} = {:math.pi() * i / rings, 2 * :math.pi() * j / segs}
-      Vec.add(c, Vec.scale({:math.sin(a) * :math.cos(b), :math.sin(a) * :math.sin(b), :math.cos(a)}, r))
+      Vec.add(c, Vec.scale({:math.sin(a) * :math.sin(b), :math.cos(a), :math.sin(a) * :math.cos(b)}, r))
     end
 
   ix = fn i, j -> i * segs + rem(j, segs) end
-  {ps, for(i <- 0..(rings - 1), j <- 0..(segs - 1), t <- [[ix.(i, j), ix.(i + 1, j), ix.(i + 1, j + 1)], [ix.(i, j), ix.(i + 1, j + 1), ix.(i, j + 1)]], do: t)}
+
+  {ps,
+   for(
+     i <- 0..(rings - 1),
+     j <- 0..(segs - 1),
+     t <- [[ix.(i, j), ix.(i + 1, j), ix.(i + 1, j + 1)], [ix.(i, j), ix.(i + 1, j + 1), ix.(i, j + 1)]],
+     do: {t, if(i == 0, do: 1, else: 2)}
+   )}
 end
 
 # The lids of the file are closed: the eye moves to the front, so a part
@@ -309,7 +320,7 @@ n0 = length(rest)
   Enum.reduce(~w(LeftEye RightEye), {[], []}, fn name, {ps, fs} ->
     {p, f} = eye.(socket.(name))
     n = n0 + length(ps)
-    {ps ++ p, fs ++ Enum.map(f, fn t -> Enum.map(t, &(&1 + n)) end)}
+    {ps ++ p, fs ++ Enum.map(f, fn {t, m} -> {Enum.map(t, &(&1 + n)), m} end)}
   end)
 
 faces = Enum.flat_map(file["F"], fn [a, b, c, d] -> [[a, b, c], [a, c, d]] end)
@@ -348,9 +359,13 @@ data = %{
     "BigMaQ (https://github.com/martinivis/BigMaQ, commit a92d2d0): the low-poly template mesh of a rhesus macaque, its 115 bones and its weights; the template mesh came from the Max Planck Institute for Intelligent Systems and M. J. Black. World turns it to the pose at rest of the body plan and adds the eyes.",
   "license" => "MIT (the license of the repository of BigMaQ): https://github.com/martinivis/BigMaQ/blob/main/LICENSE",
   "points" => Enum.map(all, round),
-  "faces" => faces ++ eye_faces,
-  "materials" => [%{"name" => "body", "color" => [170, 140, 110]}, %{"name" => "eye", "color" => [40, 28, 18]}],
-  "face_materials" => List.duplicate(0, length(faces)) ++ List.duplicate(1, length(eye_faces)),
+  "faces" => faces ++ Enum.map(eye_faces, &elem(&1, 0)),
+  "materials" => [
+    %{"name" => "body", "color" => [170, 140, 110]},
+    %{"name" => "eye", "color" => [20, 16, 14]},
+    %{"name" => "iris", "color" => [155, 100, 40]}
+  ],
+  "face_materials" => List.duplicate(0, length(faces)) ++ Enum.map(eye_faces, &elem(&1, 1)),
   "bones" =>
     for b <- bones do
       %{"name" => b.name, "parent" => b.parent, "head" => round.(fit.(heads[b.name]))}

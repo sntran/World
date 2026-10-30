@@ -2,6 +2,7 @@ defmodule World.AnimalsTest do
   use ExUnit.Case, async: true
 
   alias World.{Animals, Build, Figure, Frame, Joint, Limb, Part, Rig, Scene, Vec}
+  alias World.Animals.Coat
   alias World.People.Skeleton
 
   # A figure in a module attribute is a literal in the code of the test:
@@ -314,7 +315,7 @@ defmodule World.AnimalsTest do
     m = Animals.animal("macaque", animations: Animals.animations("macaque"))
     assert Animals.animations("macaque") == ~w(walk sit climb hang jump)
     scene = Build.scene(m)
-    assert Map.keys(scene.materials) |> Enum.sort() == [:eye, :fur]
+    assert Map.keys(scene.materials) |> Enum.sort() == [:bare, :eye, :fur, :iris]
     assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
     assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
     assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
@@ -327,13 +328,31 @@ defmodule World.AnimalsTest do
     [fur] = for n <- scene.nodes, p <- n.primitives, p.material == :fur, do: p
     assert eye.fur == nil and length(eye.uvs) == length(eye.positions)
     assert length(fur.fur) == length(fur.positions) and length(fur.uvs) == length(fur.positions)
-    assert Enum.min(fur.fur) == 0.0
+    assert Enum.min(fur.fur) < 0.1 * 0.025
     assert_in_delta Enum.max(fur.fur), 0.025, 1.0e-9
     # The tail has short hair.
     tail = for {b, k} <- Enum.with_index(m.skeleton.bones), String.starts_with?(b.name, "tail_"), do: k
     on_tail = for {f, j, w} <- Enum.zip([fur.fur, fur.joints, fur.weights]), elem(j, 0) in tail, elem(w, 0) > 0.9, do: f
     assert on_tail != [] and Enum.max(on_tail) < 0.01
     assert m.params["uv_size"] > 1.0 and m.params["uv_size"] < 1.6
+
+    # The coat has the strands of hair of `World.Animals.Coat`, one tile
+    # for each 4 cm of skin. The bare skin (the face, the muzzle, the ears,
+    # the hands and the feet) has no texture and no fur: the colors of
+    # its points on the mean gray of the texture.
+    assert m.materials.fur["image"] == Coat.texture()
+    assert_in_delta m.materials.fur["image_scale"], m.params["uv_size"] / Coat.tile(), 0.1
+    [bare] = for n <- scene.nodes, p <- n.primitives, p.material == :bare, do: p
+    assert bare.fur == nil and length(bare.colors) == length(bare.positions)
+    assert m.materials.bare["color"] == List.duplicate(round(255 * Coat.mean()), 3)
+    refute Map.has_key?(m.materials.bare, "image")
+
+    # The eyes: a dark pupil at the front of an amber iris.
+    [iris] = for n <- scene.nodes, p <- n.primitives, p.material == :iris, do: p
+    assert m.materials.iris["color"] == [135, 88, 38] and m.materials.eye["color"] == [20, 16, 14]
+    assert length(iris.positions) > length(eye.positions)
+    front = fn p -> p.positions |> Enum.map(&elem(&1, 1)) |> Enum.max() end
+    assert front.(eye) > front.(iris) - 1.0e-9
     big = Animals.animal("macaque", size: 2.0)
 
     assert_in_delta Enum.max(hd(for n <- Build.scene(big).nodes, p <- n.primitives, p.material == :fur, do: p).fur),
@@ -483,6 +502,8 @@ defmodule World.AnimalsTest do
       [_, l, _] = Build.scene(a).extras["size"]
       assert_in_delta l, length, 0.02
       assert Map.has_key?(a.materials, :fin) and Map.has_key?(a.materials, :eye)
+      # A fish has no hair: no texture of a coat.
+      refute Enum.any?(Map.values(a.materials), &Map.has_key?(&1, "image"))
 
       # The swim: a wave to the sides, larger at the tail fin than at the
       # head; the idle is smaller.
