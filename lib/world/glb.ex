@@ -57,8 +57,17 @@ defmodule World.GLB do
           acc
 
         {node, i}, {meshes, map, buf} ->
-          {prims, buf} = Enum.map_reduce(node.primitives, buf, &primitive(&1, &2, mat_index))
-          {[%{"name" => node.name, "primitives" => prims} | meshes], Map.put(map, i, length(meshes)), buf}
+          # The morph targets: each primitive of a mesh has all of them (a
+          # primitive with no move for a target has a target of zeros).
+          names = Enum.find_value(node.primitives, & &1.targets) |> then(&(&1 && Enum.map(&1, fn t -> elem(t, 0) end)))
+          {prims, buf} = Enum.map_reduce(node.primitives, buf, &primitive(&1, &2, mat_index, names))
+
+          mesh =
+            %{"name" => node.name, "primitives" => prims}
+            |> put_some("weights", names && Enum.map(names, fn _ -> 0.0 end))
+            |> put_some("extras", names && %{"targetNames" => names})
+
+          {[mesh | meshes], Map.put(map, i, length(meshes)), buf}
       end)
 
     {skins, buf} = Enum.map_reduce(scene.skins, buf, &skin/2)
@@ -110,7 +119,7 @@ defmodule World.GLB do
     {json, buf.bin}
   end
 
-  defp primitive(%Scene.Primitive{} = p, buf, mat_index) do
+  defp primitive(%Scene.Primitive{} = p, buf, mat_index, names) do
     {pos, buf} = floats(buf, Enum.map(p.positions, &gl/1), "VEC3", 34962, true)
     {nor, buf} = floats(buf, Enum.map(p.normals, &gl/1), "VEC3", 34962, false)
     attrs = %{"POSITION" => pos, "NORMAL" => nor}
@@ -160,7 +169,62 @@ defmodule World.GLB do
         else: {attrs, buf}
 
     {ind, buf} = indices(buf, p.indices, length(p.positions))
-    {%{"attributes" => attrs, "indices" => ind, "material" => Map.fetch!(mat_index, p.material)}, buf}
+
+    {targets, buf} =
+      Enum.map_reduce(names || [], buf, fn name, buf ->
+        moves = p.targets |> List.wrap() |> Enum.find_value(fn {n, m} -> if n == name, do: m end)
+        {acc, buf} = target(buf, moves, length(p.positions))
+        {%{"POSITION" => acc}, buf}
+      end)
+
+    {%{"attributes" => attrs, "indices" => ind, "material" => Map.fetch!(mat_index, p.material)}
+     |> put_some("targets", names && targets), buf}
+  end
+
+  # A morph target: the moves of the points that move (sparse: their
+  # indices and their moves), the others zero. A target with no move has
+  # no data.
+  defp target(buf, moves, count) do
+    moved = for {m, i} <- Enum.with_index(moves || []), Vec.len(m) > 1.0e-7, do: {i, gl(Vec.float(m))}
+    vals = [{0.0, 0.0, 0.0} | Enum.map(moved, &elem(&1, 1))]
+    bound = fn f -> for k <- 0..2, do: vals |> Enum.map(&f32(elem(&1, k))) |> f.() end
+
+    acc = %{
+      "componentType" => 5126,
+      "count" => count,
+      "type" => "VEC3",
+      "min" => bound.(&Enum.min/1),
+      "max" => bound.(&Enum.max/1)
+    }
+
+    case moved do
+      [] ->
+        {length(buf.accessors), %{buf | accessors: [acc | buf.accessors]}}
+
+      _ ->
+        iv = length(buf.views)
+        buf = add_view(buf, for({i, _} <- moved, into: <<>>, do: <<i::little-32>>), nil)
+        vv = length(buf.views)
+
+        buf =
+          add_view(
+            buf,
+            for(
+              {_, {x, y, z}} <- moved,
+              into: <<>>,
+              do: <<x::little-float-32, y::little-float-32, z::little-float-32>>
+            ),
+            nil
+          )
+
+        sparse = %{
+          "count" => length(moved),
+          "indices" => %{"bufferView" => iv, "componentType" => 5125},
+          "values" => %{"bufferView" => vv}
+        }
+
+        {length(buf.accessors), %{buf | accessors: [Map.put(acc, "sparse", sparse) | buf.accessors]}}
+    end
   end
 
   defp with_attr(attrs, key, {acc, buf}), do: {Map.put(attrs, key, acc), buf}
@@ -174,8 +238,9 @@ defmodule World.GLB do
      |> put_some("name", Map.get(s, :name)), buf}
   end
 
-  # An animation: channels of rotations (frames) or translations (points)
-  # of nodes, at times in seconds.
+  # An animation: channels of rotations (frames), translations (points) or
+  # the weights of the morph targets (a list for each time) of nodes, at
+  # times in seconds.
   defp animation(%{name: name, channels: channels}, buf) do
     {pairs, buf} =
       channels
@@ -187,6 +252,7 @@ defmodule World.GLB do
           case path do
             :rotation -> floats(buf, for(f <- values, do: Frame.quaternion(gl_frame(f))), "VEC4", nil, false)
             :translation -> floats(buf, Enum.map(values, &gl/1), "VEC3", nil, false)
+            :weights -> floats(buf, for(ws <- values, w <- ws, do: {w / 1}), "SCALAR", nil, false)
           end
 
         {{%{"input" => input, "output" => output, "interpolation" => "LINEAR"},

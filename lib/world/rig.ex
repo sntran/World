@@ -48,6 +48,8 @@ defmodule World.Rig do
   along their normals (a layer over the faces of another role);
   `fringe` `{from, under, over}`: a face of `from` with no fade is of
   `under`, and a face with some fade is of `under` and of `over`;
+  `shapes` a list of `{name, moves}`, a move for each point (m, at rest):
+  the morph targets of the mesh (`World.Scene.Primitive`);
   `uvs` a list for each face of a `{u, v}` for each corner),
   `parts` (a list of `{material, bone, points, triangles}`: a shape on
   one bone, each point `{position, normal}` at rest: horns), `blend` and `step` (a smooth skin,
@@ -283,13 +285,30 @@ defmodule World.Rig do
     # faces: each new face keeps the role of its face, and the UVs of its
     # corners are means of the UVs of the corners of its face (the corner,
     # the middles of its two edges, the center).
-    {points, faces, roles, uvs} =
+    {points, new_faces, roles, uvs} =
       Enum.reduce(List.duplicate(1, steps), {start, faces, roles, uvs}, fn 1, {points, faces, roles, uvs} ->
         {points, new} = World.Subdivision.smooth(points, faces, 1)
 
         {points, new, Enum.flat_map(Enum.zip(faces, roles), fn {f, r} -> List.duplicate(r, length(f)) end),
          split_uvs(uvs)}
       end)
+
+    # The moves of the shapes after the smooth steps: a step is linear in
+    # the points, so the move of a new point is its place with the moves
+    # less its place with none.
+    shapes =
+      for {name, moves} <- Map.get(mesh, :shapes, []) do
+        moved = Enum.zip_with(start, moves, fn {p, ws}, m -> {Vec.add(p, Vec.float(m)), ws} end)
+
+        {after_steps, _} =
+          Enum.reduce(List.duplicate(1, steps), {moved, faces}, fn 1, {ps, fs} ->
+            World.Subdivision.smooth(ps, fs, 1)
+          end)
+
+        {name, Enum.zip_with(after_steps, points, fn {a, _}, {b, _} -> Vec.sub(a, b) end) |> List.to_tuple()}
+      end
+
+    faces = new_faces
 
     {faces, roles, uvs} = fringe(Map.get(mesh, :fringe), points, faces, roles, uvs)
     places = points |> Enum.map(&elem(&1, 0)) |> List.to_tuple()
@@ -360,7 +379,9 @@ defmodule World.Rig do
             if fur?, do: v, else: v |> put_elem(5, nil) |> put_elem(6, nil)
           end
 
-        join(role, [{points, Enum.map(ts, fn t -> Enum.map(t, &at[&1]) end)}])
+        prim = join(role, [{points, Enum.map(ts, fn t -> Enum.map(t, &at[&1]) end)}])
+        targets = for {name, moves} <- shapes, do: {name, for({i, _} <- used, do: elem(moves, i))}
+        %{prim | targets: if(targets == [], do: nil, else: targets)}
       end)
 
     triangles = for {[{a, _}, {b, _}, {c, _}], _} <- tris, do: {elem(places, a), elem(places, b), elem(places, c)}

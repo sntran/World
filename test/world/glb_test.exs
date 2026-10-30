@@ -101,6 +101,31 @@ defmodule World.GLBTest do
     assert t == %{"scale" => [3.0, 3.0]}
   end
 
+  test "an animation of the weights of the morph targets" do
+    p = Scene.primitive(:paint, Mesh.triangles(Shape.box({0, 0, 0}, {1, 1, 1}, :paint)))
+    p = %{p | targets: [{"open", Enum.map(p.positions, fn _ -> {0.0, 0.0, 0.1} end)}]}
+
+    scene = %Scene{
+      nodes: [%Scene.Node{name: "face", primitives: [p]}],
+      animations: [
+        %{name: "talk", channels: [%{node: 0, path: :weights, times: [0, 0.5, 1], values: [[0.0], [1.0], [0.0]]}]}
+      ]
+    }
+
+    json = GLBHelper.json(GLB.encode(scene))
+
+    [%{"channels" => [%{"target" => %{"path" => "weights", "node" => 0}}], "samplers" => [%{"output" => out}]}] =
+      json["animations"]
+
+    assert Enum.at(json["accessors"], out)["count"] == 3
+    # All the points move up (z of World is y of glTF).
+    [%{"primitives" => [%{"targets" => [%{"POSITION" => t}]}]}] = json["meshes"]
+
+    [x, y, z] = Enum.at(json["accessors"], t)["max"]
+    assert x == 0.0 and z == 0.0
+    assert_in_delta y, 0.1, 1.0e-6
+  end
+
   test "a material with no role in the palette is grey, and a scene with no mesh" do
     json = GLBHelper.json(GLB.encode(%Scene{nodes: [%Scene.Node{}]}))
     refute Map.has_key?(json, "buffers")

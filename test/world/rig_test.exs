@@ -170,6 +170,47 @@ defmodule World.RigTest do
     assert Enum.sort(types) == ["VEC3", "VEC3", "VEC4"]
   end
 
+  test "shapes: morph targets after the smooth steps; a part has a target of zeros" do
+    up = for {_, _, z} <- @cube_points, do: if(z > 0, do: {0.0, 0.0, 0.1}, else: {0.0, 0.0, 0.0})
+    horn = [{{0.0, 0.0, 0.5}, {0.0, 0.0, 1.0}}, {{0.1, 0.0, 0.5}, {0.0, 0.0, 1.0}}, {{0.0, 0.1, 0.6}, {0.0, 0.0, 1.0}}]
+
+    f =
+      Rig.figure("box",
+        bones: bones(),
+        mesh: %{
+          points: @cube_points,
+          faces: @cube_faces,
+          weights: %{"low" => for(i <- 0..7, do: {i, 1.0})},
+          smooth: 1,
+          shapes: [{"up", up}]
+        },
+        parts: [{:horn, "high", horn, [[0, 1, 2]]}]
+      )
+
+    [mesh] = for n <- f.nodes, n.primitives != [], do: n
+    [skin, part] = mesh.primitives
+    [{"up", moves}] = skin.targets
+    assert length(moves) == length(skin.positions) and part.targets == nil
+
+    # The new points of the smooth step move as the mean of the points
+    # around them: some all the way up, some in part, some not.
+    zs = Enum.map(moves, &elem(&1, 2))
+    assert Enum.max(zs) <= 0.1 + 1.0e-9 and Enum.min(zs) >= -1.0e-9
+    assert Enum.any?(zs, &(&1 > 0.01 and &1 < 0.09)) and Enum.any?(zs, &(&1 < 1.0e-9))
+
+    json = World.GLBHelper.json(World.GLB.encode(World.Build.scene(f)))
+    m = Enum.find(json["meshes"], &(length(&1["primitives"]) == 2))
+    assert m["extras"] == %{"targetNames" => ["up"]} and m["weights"] == [0.0]
+    [%{"targets" => [%{"POSITION" => a}]}, %{"targets" => [%{"POSITION" => b}]}] = m["primitives"]
+    sparse = Enum.at(json["accessors"], a)
+    assert sparse["sparse"]["count"] == Enum.count(zs, &(&1 > 1.0e-7)) and sparse["max"] |> Enum.at(1) > 0.0
+
+    assert Enum.at(json["accessors"], b) |> Map.take(["min", "max", "bufferView", "sparse"]) == %{
+             "min" => [0.0, 0.0, 0.0],
+             "max" => [0.0, 0.0, 0.0]
+           }
+  end
+
   test "a base mesh with UVs and fur: a seam splits a point, a smooth step makes the UVs of each face" do
     # Each face of the cube has its own square of UV: each edge is a seam.
     uvs =

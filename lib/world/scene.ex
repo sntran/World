@@ -25,7 +25,8 @@ defmodule World.Scene do
     optional UV, joints (4 for each point), weights (4 for each point),
     colors (`{r, g, b}`, 0 to 255, for each point), the length of the
     fur of each point (m) and the direction of the fur of each point (a
-    unit vector along the skin, at rest).
+    unit vector along the skin, at rest), and the morph targets (a list of
+    `{name, moves}`, a move for each point: the shapes of a face).
     """
     defstruct material: :paint,
               positions: [],
@@ -36,7 +37,8 @@ defmodule World.Scene do
               weights: nil,
               colors: nil,
               fur: nil,
-              fur_dirs: nil
+              fur_dirs: nil,
+              targets: nil
   end
 
   @doc """
