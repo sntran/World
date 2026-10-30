@@ -13,6 +13,11 @@ defmodule World.Animals.Coat do
     of its column, its layer and its number, softer at its two ends.
   - The value of a texel: from 0.72 (a dark strand) to 1 (white: the
     color of the region).
+  - The alpha of a texel: from 0.5 to 1, a hash of its column and the
+    strand of the first layer. A layer of the coat over the bare skin
+    (alpha mode MASK, a cutoff of 0.5) keeps the strands where the alpha
+    of the texel times the alpha of the point is 0.5 or more: with less
+    hair at the point (an alpha from 1 to 0.5), fewer strands.
   """
 
   @size 128
@@ -34,7 +39,8 @@ defmodule World.Animals.Coat do
     case :persistent_term.get({__MODULE__, :made}, nil) do
       nil ->
         values = for y <- 0..(@size - 1), do: for(x <- 0..(@size - 1), do: round(255 * value(x, y)))
-        made = {{"image/png", png(values)}, Enum.sum(List.flatten(values)) / (255 * @size * @size)}
+        alphas = for y <- 0..(@size - 1), do: for(x <- 0..(@size - 1), do: round(255 * alpha(x, y)))
+        made = {{"image/png", png(values, alphas)}, Enum.sum(List.flatten(values)) / (255 * @size * @size)}
         :persistent_term.put({__MODULE__, :made}, made)
         made
 
@@ -61,12 +67,20 @@ defmodule World.Animals.Coat do
     0.72 + 0.28 * (((v - 0.5) * 2.2 + 0.5) |> max(0.0) |> min(1.0))
   end
 
-  # A PNG file: 8 bits of red, green and blue, rows with no filter.
-  defp png(values) do
-    rows = for row <- values, into: <<>>, do: <<0>> <> for(g <- row, into: <<>>, do: <<g, g, g>>)
+  defp alpha(x, y) do
+    at = rem(y + round(hash(x, 100) * @strand), @size)
+    0.5 + 0.5 * hash(x * 37 + 5, div(at, @strand) + 1000)
+  end
+
+  # A PNG file: 8 bits of red, green, blue and alpha, rows with no filter.
+  defp png(values, alphas) do
+    rows =
+      for {row, arow} <- Enum.zip(values, alphas),
+          into: <<>>,
+          do: <<0>> <> for({g, a} <- Enum.zip(row, arow), into: <<>>, do: <<g, g, g, a>>)
 
     <<137, 80, 78, 71, 13, 10, 26, 10>> <>
-      chunk("IHDR", <<@size::32, @size::32, 8, 2, 0, 0, 0>>) <>
+      chunk("IHDR", <<@size::32, @size::32, 8, 6, 0, 0, 0>>) <>
       chunk("IDAT", :zlib.compress(rows)) <> chunk("IEND", <<>>)
   end
 

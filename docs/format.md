@@ -662,12 +662,19 @@ multiply the colors of the points. The texture is a PNG of 128 by 128
 texels that World makes with no file and no random state, and it
 repeats: one tile for each 4 cm of skin (the transform
 `KHR_texture_transform` of the texture, `scale` = `uv_size / 0.04`; the
-GLB names it in `extensionsUsed`). The bare skin has no strands: a face
-of `fur` with a mean length of fur on its points of less than 0.1 of
-the coat has the role `bare` (the face of a monkey: `fur` of the
-region 0). The faces of `bare` have the colors of the points and no
-`_FUR`, on a material of the mean gray of the texture, so the bare skin
-is as light as the fur next to it.
+GLB names it in `extensionsUsed`). The bare skin has no strands. The
+hair of a point is from 0 (no fur: the face of a monkey, `fur` of the
+region 0) to 1 (3 mm of fur or more). After the smooth steps, a face of
+`fur` with no hair at its points has the role `bare`: the colors of the
+points and no `_FUR`, on a material of the mean gray of the texture, so
+the bare skin is as light as the fur next to it. A face with some hair
+at its points is `bare`, and again `fringe` 0.5 mm out along the
+normals: the coat texture in the alpha mode `MASK`, with the hair of each
+point as the alpha of its color (`COLOR_0` with four numbers). The alpha
+of the texture is from 0.5 to 1, one value for each strand, so with
+less hair fewer strands stay, and the edge of the bare skin is soft, as
+a hairline. The fur, the fringe and the other materials share one
+image.
 
 The species now:
 

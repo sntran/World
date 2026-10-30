@@ -47,7 +47,7 @@ defmodule World.GLB do
   defp gltf(%Scene{nodes: nodes} = scene) do
     roles = nodes |> Enum.flat_map(& &1.primitives) |> Enum.map(& &1.material) |> Enum.uniq() |> Enum.sort()
     mat_index = roles |> Enum.with_index() |> Map.new()
-    buf = %{bin: <<>>, views: [], accessors: [], images: []}
+    buf = %{bin: <<>>, views: [], accessors: [], images: [], image_of: %{}}
 
     {meshes, node_mesh, buf} =
       nodes
@@ -124,15 +124,25 @@ defmodule World.GLB do
     {attrs, buf} =
       if p.weights, do: with_attr(attrs, "WEIGHTS_0", floats(buf, p.weights, "VEC4", 34962, false)), else: {attrs, buf}
 
-    # The colors of the vertices: sRGB 0 to 255 in, linear 0 to 1 out.
+    # The colors of the vertices: sRGB 0 to 255 in, linear 0 to 1 out;
+    # with a fourth number, the alpha (0 to 1) of each vertex.
     {attrs, buf} =
-      if p.colors do
-        linear =
-          for {r, g, b} <- p.colors, do: {srgb_to_linear(r / 255), srgb_to_linear(g / 255), srgb_to_linear(b / 255)}
+      case p.colors do
+        nil ->
+          {attrs, buf}
 
-        with_attr(attrs, "COLOR_0", floats(buf, linear, "VEC3", 34962, false))
-      else
-        {attrs, buf}
+        [{_, _, _, _} | _] ->
+          linear =
+            for {r, g, b, a} <- p.colors,
+                do: {srgb_to_linear(r / 255), srgb_to_linear(g / 255), srgb_to_linear(b / 255), a / 1}
+
+          with_attr(attrs, "COLOR_0", floats(buf, linear, "VEC4", 34962, false))
+
+        _ ->
+          linear =
+            for {r, g, b} <- p.colors, do: {srgb_to_linear(r / 255), srgb_to_linear(g / 255), srgb_to_linear(b / 255)}
+
+          with_attr(attrs, "COLOR_0", floats(buf, linear, "VEC3", 34962, false))
       end
 
     # The length of the fur of each point (m), for an app that draws fur:
@@ -210,10 +220,25 @@ defmodule World.GLB do
         nil ->
           {pbr, buf}
 
-        {mime, data} ->
-          view = length(buf.views)
-          buf = add_view(buf, data, nil)
-          image = length(buf.images)
+        {mime, data} = file ->
+          # Two materials with the same image share it.
+          {image, buf} =
+            case buf.image_of do
+              %{^file => image} ->
+                {image, buf}
+
+              _ ->
+                view = length(buf.views)
+                buf = add_view(buf, data, nil)
+                image = length(buf.images)
+
+                {image,
+                 %{
+                   buf
+                   | images: [%{"bufferView" => view, "mimeType" => mime} | buf.images],
+                     image_of: Map.put(buf.image_of, file, image)
+                 }}
+            end
 
           # The color of the spec is a factor of the texture: white by
           # default, the color of a hair, or a tint of clothes. A texture
@@ -226,8 +251,7 @@ defmodule World.GLB do
               do: Map.put(texture, "extensions", %{"KHR_texture_transform" => %{"scale" => [scale, scale]}}),
               else: texture
 
-          {Map.put(pbr, "baseColorTexture", texture),
-           %{buf | images: [%{"bufferView" => view, "mimeType" => mime} | buf.images]}}
+          {Map.put(pbr, "baseColorTexture", texture), buf}
       end
 
     material = %{

@@ -64,6 +64,7 @@ defmodule World.Animals do
     "marking" => :marking,
     "skin" => :skin,
     "bare" => :bare,
+    "fringe" => :fringe,
     "eye" => :eye,
     "nose" => :nose,
     "dark" => :dark,
@@ -171,11 +172,14 @@ defmodule World.Animals do
     colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
     fur = if f = s["fur"], do: Shape.fur(regions, f["coat"], Map.delete(f, "coat"))
 
-    # The bare skin (the face of a monkey): a face of the coat with a
-    # mean length of fur on its points of less than 0.1 of the coat has
-    # no strands of hair (the role `bare`, in the colors of the points,
-    # on the mean gray of the texture).
-    roles = if fur, do: bare(faces, roles, List.to_tuple(fur), s["fur"]["coat"]), else: roles
+    # The hair at each point, from 0 (no fur) to 1 (3 mm of fur or more).
+    # A face of the coat with no hair is bare skin (the face of a monkey:
+    # the role `bare`, no strands, the colors of the points on the mean
+    # gray of the texture). A face with some hair is bare skin under a
+    # layer of the coat (the role `fringe`, 0.5 mm out) that keeps fewer
+    # strands where the points have less hair (`World.Animals.Coat`): so
+    # the edge of the bare skin is soft.
+    hair = fur && Enum.map(fur, &min(&1 / 0.003, 1.0))
 
     # The size of the animal from the points of the faces that it keeps
     # (a duck has no comb).
@@ -218,7 +222,10 @@ defmodule World.Animals do
     # The colors of the roles that the animal uses; with markings, the
     # coat is in the colors of the points of the fur and of its lighter
     # parts, on a white material.
-    used = MapSet.new(roles ++ Enum.map(parts, &elem(&1, 0)))
+    used =
+      MapSet.new(
+        roles ++ Enum.map(parts, &elem(&1, 0)) ++ if(bare?(faces, roles, hair), do: [:bare, :fringe], else: [])
+      )
 
     colors_of =
       @colors
@@ -227,6 +234,7 @@ defmodule World.Animals do
       |> Map.merge(Map.get(s, "colors", %{}))
       |> Map.put("fur", if(colors, do: [255, 255, 255], else: coat))
       |> Map.put("bare", Enum.map(if(colors, do: [255, 255, 255], else: coat), &round(&1 * Coat.mean())))
+      |> Map.put("fringe", if(colors, do: [255, 255, 255], else: coat))
       |> then(&if(colors, do: Map.put(&1, "marking", [255, 255, 255]), else: &1))
       |> Map.filter(fn {role, _} -> @roles[role] in used end)
 
@@ -244,9 +252,13 @@ defmodule World.Animals do
         uvs: uvs,
         # The colors of the coat on the fur, its lighter parts and the bare
         # skin; the fur also on the mane (of a horse) and the dark parts
-        # (the legs of a fox).
-        colored: [:fur, :marking, :bare],
-        furred: [:fur, :marking, :mane, :dark]
+        # (the legs of a fox). The hair is the alpha of the fringe.
+        colored: [:fur, :marking, :bare, :fringe],
+        furred: [:fur, :marking, :mane, :dark, :fringe],
+        fade: hair,
+        fringe: hair && {:fur, :bare, :fringe},
+        faded: [:fringe],
+        lift: %{fringe: 0.0005}
       },
       limbs: plan.limbs(by),
       joints: plan.joints(by),
@@ -260,7 +272,8 @@ defmodule World.Animals do
              "roughness" => if(role in ~w(eye iris dark nose horn hoof), do: 0.4, else: 0.9),
              "metalness" => 0.0
            }
-           |> Map.merge(if(hair? and role in ~w(fur marking mane dark), do: coat_texture(uv_size), else: %{}))}
+           |> Map.merge(if(hair? and role in ~w(fur marking mane dark fringe), do: coat_texture(uv_size), else: %{}))
+           |> Map.merge(if(role == "fringe", do: %{"alpha_mode" => "MASK"}, else: %{}))}
         end),
       animations:
         for a <- names do
@@ -332,10 +345,12 @@ defmodule World.Animals do
     {data, bones(plan, map, Map.get(t, "parents", %{}), file_bones, owner, points, weights), points, weights}
   end
 
-  defp bare(faces, roles, fur, coat) do
-    for {face, role} <- Enum.zip(faces, roles) do
-      if role == :fur and Enum.sum(Enum.map(face, &elem(fur, &1))) < 0.1 * coat * length(face), do: :bare, else: role
-    end
+  # A face of the fur with less hair than all at a point.
+  defp bare?(_faces, _roles, nil), do: false
+
+  defp bare?(faces, roles, hair) do
+    hair = List.to_tuple(hair)
+    Enum.any?(Enum.zip(faces, roles), fn {face, role} -> role == :fur and Enum.any?(face, &(elem(hair, &1) < 1.0)) end)
   end
 
   defp coat_texture(uv_size), do: %{"image" => Coat.texture(), "image_scale" => Float.round(uv_size / Coat.tile(), 3)}

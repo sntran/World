@@ -131,6 +131,45 @@ defmodule World.RigTest do
     assert Map.has_key?(prim["attributes"], "COLOR_0")
   end
 
+  test "a fringe: the faces with no fade are under, the faces with some fade are under and over, lifted" do
+    fade = for {_, _, z} <- @cube_points, do: if(z < 0, do: 0.0, else: 1.0)
+
+    f =
+      Rig.figure("box",
+        bones: bones(),
+        mesh: %{
+          points: @cube_points,
+          faces: @cube_faces,
+          weights: %{"low" => for(i <- 0..7, do: {i, 1.0})},
+          colors: List.duplicate({200, 100, 50}, 8),
+          fade: fade,
+          fringe: {:fur, :bare, :fringe},
+          faded: [:fringe],
+          lift: %{fringe: 0.01}
+        }
+      )
+
+    [mesh] = for n <- f.nodes, n.primitives != [], do: n
+    by = Map.new(mesh.primitives, &{&1.material, &1})
+    # The bottom is bare; the four sides are bare under a fringe; the top
+    # is fur.
+    assert Map.keys(by) |> Enum.sort() == [:bare, :fringe, :fur]
+    assert length(by.fur.positions) == 4 and length(by.bare.positions) == 8 and length(by.fringe.positions) == 8
+
+    # The fringe has the fade as the alpha of its colors, 1 cm out.
+    assert Enum.sort(Enum.uniq(by.fringe.colors)) == [{200, 100, 50, 0.0}, {200, 100, 50, 1.0}]
+    assert Enum.uniq(by.bare.colors) == [{200, 100, 50}]
+    out = fn p -> p.positions |> Enum.map(&Vec.len/1) |> Enum.max() end
+    assert_in_delta out.(by.fringe), out.(by.bare) + 0.01, 1.0e-6
+
+    json = World.GLBHelper.json(World.GLB.encode(World.Build.scene(f)))
+
+    types =
+      for p <- hd(json["meshes"])["primitives"], do: Enum.at(json["accessors"], p["attributes"]["COLOR_0"])["type"]
+
+    assert Enum.sort(types) == ["VEC3", "VEC3", "VEC4"]
+  end
+
   test "a base mesh with UVs and fur: a seam splits a point, a smooth step makes the UVs of each face" do
     # Each face of the cube has its own square of UV: each edge is a seam.
     uvs =

@@ -315,7 +315,7 @@ defmodule World.AnimalsTest do
     m = Animals.animal("macaque", animations: Animals.animations("macaque"))
     assert Animals.animations("macaque") == ~w(walk sit climb hang jump)
     scene = Build.scene(m)
-    assert Map.keys(scene.materials) |> Enum.sort() == [:bare, :eye, :fur, :iris]
+    assert Map.keys(scene.materials) |> Enum.sort() == [:bare, :eye, :fringe, :fur, :iris]
     assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
     assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
     assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
@@ -328,7 +328,9 @@ defmodule World.AnimalsTest do
     [fur] = for n <- scene.nodes, p <- n.primitives, p.material == :fur, do: p
     assert eye.fur == nil and length(eye.uvs) == length(eye.positions)
     assert length(fur.fur) == length(fur.positions) and length(fur.uvs) == length(fur.positions)
-    assert Enum.min(fur.fur) < 0.1 * 0.025
+    # The fur has 3 mm of hair or more; less is the bare skin and its
+    # fringe.
+    assert Enum.min(fur.fur) > 0.003 - 1.0e-6
     assert_in_delta Enum.max(fur.fur), 0.025, 1.0e-9
     # The tail has short hair.
     tail = for {b, k} <- Enum.with_index(m.skeleton.bones), String.starts_with?(b.name, "tail_"), do: k
@@ -346,6 +348,17 @@ defmodule World.AnimalsTest do
     assert bare.fur == nil and length(bare.colors) == length(bare.positions)
     assert m.materials.bare["color"] == List.duplicate(round(255 * Coat.mean()), 3)
     refute Map.has_key?(m.materials.bare, "image")
+
+    # The edge of the bare skin: a fringe of the coat over it (MASK), with
+    # the hair of each point (0 to 1) as the alpha of its colors. The fur
+    # and the fringe share one image in the GLB.
+    [fringe] = for n <- scene.nodes, p <- n.primitives, p.material == :fringe, do: p
+    alphas = Enum.map(fringe.colors, &elem(&1, 3))
+    assert Enum.min(alphas) < 0.5 and Enum.max(alphas) > 0.5 and Enum.all?(alphas, &(&1 >= 0 and &1 <= 1))
+    assert m.materials.fringe["alpha_mode"] == "MASK" and m.materials.fringe["image"] == Coat.texture()
+    json = World.GLBHelper.json(World.GLB.encode(scene))
+    assert length(json["images"]) == 1
+    assert Enum.find(json["materials"], &(&1["name"] == "fringe"))["alphaMode"] == "MASK"
 
     # The eyes: a dark pupil at the front of an amber iris.
     [iris] = for n <- scene.nodes, p <- n.primitives, p.material == :iris, do: p
