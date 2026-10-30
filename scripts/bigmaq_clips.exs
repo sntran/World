@@ -35,11 +35,33 @@
 alias World.Vec
 
 # The clips: a clip of World from frames of an action of BigMaQ (its row
-# in dataset_overview.csv, the individual, the first and the last frame).
-# The walk: the cleanest straight cycle of a walk on the ground in the
-# file (from one step of the left foot to the next; all four paws on the
-# ground for 0.58 to 0.77 of the cycle).
-clips = [%{name: "walk", action: 458, individual: "G", from: 157, to: 183, loop: true}]
+# in dataset_overview.csv, the individual, the first and the last frame,
+# each `step` frame), with the ground on the feet or on the body (the
+# lowest point of the skin), and its turn around z from its move or (with
+# `face`) from its head. The environment variable CLIPS (names with
+# commas) makes only those clips.
+# - The walk: the cleanest straight cycle of a walk on the ground in the
+#   file (from one step of the left foot to the next; all four paws on
+#   the ground for 0.58 to 0.77 of the cycle).
+# - The run: the fastest straight cycle (1.5 m/s in the file, a turn of
+#   9 degrees; the paws on the ground for 0.06 to 0.44 of the cycle).
+# - The sit: 4 s of an animal that rests, labelled "Resting" only: the
+#   back up, the hips still and 16 cm over the paws, the tail on the
+#   ground (in other sits of the file the tail goes down through the
+#   floor).
+# The file has no clean jump: the animals in the room hop and turn by 60
+# to 180 degrees, onto and off things. The jump stays the jump of the
+# body plan.
+clips =
+  Enum.map(
+    [
+      %{name: "walk", action: 458, individual: "G", from: 157, to: 183, loop: true},
+      %{name: "run", action: 203, individual: "L", from: 58, to: 76, loop: true},
+      %{name: "sit", action: 415, individual: "G", from: 40, to: 200, loop: true, ground: "body", step: 2, face: true}
+    ]
+    |> Enum.filter(&(System.get_env("CLIPS") in [nil, ""] or &1.name in String.split(System.get_env("CLIPS"), ","))),
+    &Map.merge(%{ground: "feet", step: 1, face: false}, &1)
+  )
 
 # A strict reader of the pickle of PyTorch: dictionaries, tuples,
 # strings, numbers, and the tensors of torch._utils._rebuild_tensor_v2.
@@ -240,7 +262,7 @@ made =
   for spec <- clips, into: %{} do
     data = entry.(spec.action, spec.individual)
     n = spec.to - spec.from
-    frames = spec.from..spec.to
+    frames = spec.from..spec.to//spec.step
     at = fn name, f -> data[name] |> elem(1) |> Enum.slice(f * 3, 3) |> List.to_tuple() end
     body = fn f -> data["body_pose"] |> elem(1) |> Enum.slice(f * 81, 81) |> Enum.chunk_every(3) |> Enum.map(&List.to_tuple/1) end
 
@@ -256,13 +278,18 @@ made =
         pose.(turns, global, at.("t", f))
       end
 
-    # The turn around z: the walk to y.
+    # The turn around z: the walk to y (a clip that does not move: the
+    # head to y).
     hips = Enum.map(posed, fn {_, p} -> p[0] end)
-    {dx, dy, _} = Vec.sub(List.last(hips), hd(hips))
+    {_, first} = hd(posed)
+
+    {dx, dy, _} =
+      if spec.face, do: Vec.sub(first[index["Head"]], first[0]), else: Vec.sub(List.last(hips), hd(hips))
+
     yaw = :math.atan2(dx, dy)
     y = {{:math.cos(yaw), -:math.sin(yaw), 0.0}, {:math.sin(yaw), :math.cos(yaw), 0.0}, {0.0, 0.0, 1.0}}
-    distance = Vec.len({dx, dy, 0.0})
-    speed = if spec.loop, do: distance / (n / fps), else: 0.0
+    distance = Vec.len(Vec.sub(List.last(hips), hd(hips)) |> then(fn {x, y, _} -> {x, y, 0.0} end))
+    speed = if spec.loop and not spec.face, do: distance / (n / fps), else: 0.0
 
     # The ground of each paw: in a walk a paw is on the ground for more
     # than half of the step, and it rolls on the ground (its root moves up
@@ -312,23 +339,23 @@ made =
     # The move of the pelvis: on the ground of World, in place (the walk
     # to the front taken away), its height over the ground of the clip.
     pelvis =
-      for {{_, p}, i} <- Enum.with_index(posed) do
+      for {{_, p}, f} <- Enum.zip(posed, frames) do
         {x, yy, _} = Vec.scale(mat.(y, Vec.sub(p[0], hd(hips))), k)
         z = (elem(p[0], 2) - ground) * k
-        [round.(x), round.(yy - speed * k * i / fps), round.(z - elem(pelvis_rest, 2))]
+        [round.(x), round.(yy - speed * k * (f - spec.from) / fps), round.(z - elem(pelvis_rest, 2))]
       end
 
     feet = Map.new(paws, fn {b, j} -> {b, for({_, p} <- posed, do: round.(max(elem(p[index[j]], 2) - lowest[b], 0.0) * k))} end)
 
     {spec.name,
      %{
-       "times" => for(i <- 0..n, do: round.(i / fps)),
+       "times" => for(f <- frames, do: round.((f - spec.from) / fps)),
        "length" => round.(n / fps),
        "bones" => bones,
        "pelvis" => pelvis,
        "speed" => round.(speed * k),
        "loop" => spec.loop,
-       "ground" => "feet",
+       "ground" => spec.ground,
        "feet_from" => "ground",
        "feet" => feet
      }}
@@ -338,7 +365,7 @@ File.write!(
   output,
   JSON.encode!(%{
     "source" =>
-      "BigMaQ (L. Martini and others), pose reconstructions (https://zenodo.org/records/20663410): rhesus macaques, 40 frames each second; the walk is action 458, individual G, frames 157 to 183. Changed by World (scripts/bigmaq_clips.exs): on the bones of World, the loop closed, the fingers and the toes level.",
+      "BigMaQ (L. Martini and others), pose reconstructions (https://zenodo.org/records/20663410): rhesus macaques, 40 frames each second; the walk is action 458, individual G, frames 157 to 183; the run is action 203, individual L, frames 58 to 76; the sit is action 415, individual G, frames 40 to 200 (each second frame). Changed by World (scripts/bigmaq_clips.exs): on the bones of World, the loops closed, the fingers and the toes level.",
     "license" => "CC BY 4.0: https://creativecommons.org/licenses/by/4.0/",
     "clips" => made
   })

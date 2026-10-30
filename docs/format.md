@@ -802,18 +802,21 @@ of a person (`World.People.Skeleton`) work on it.
   of BigMaQ, `priv/animals/clips/primate.json`, a cycle of 0.65 s, the
   hands and the feet in the order of a primate: hind left, front right,
   hind right, front left; the speed is in `walk_speed` of the parts
-  list) and `sit` (on the seat,
-  the back bent to the front, the feet near the seat, the knees up and
-  out, the hands together in front of the feet, the tail on the
-  ground; the head turns to look around, in 4 s), `climb` (up a
+  list), `run` (a clip of BigMaQ only: a bound, a cycle of 0.45 s, in
+  `run_speed`), `sit` (the clip of BigMaQ of a macaque that rests, 4 s:
+  the back up, the hips low and still, the hands on the ground in
+  front, the tail on the ground; with no clip, the sit of the plan: on
+  the seat, the back bent to the front, the feet near the seat, the
+  knees up and out, the hands together in front of the feet, the tail
+  on the ground, the head turns to look around, in 4 s), `climb` (up a
   vertical trunk in front of the animal: the body upright, a hand and
   the other foot move together, the hands grip, in one step), `hang`
   (from a branch over the head by the two hands that grip, the body
   swings and the head turns, in 3 s) and `jump` (a crouch, a flight of
   0.5 of the length of the legs up with all the limbs off the ground,
   and a landing, in 1.4 s, in place). With `"upright": true` (the gibbon),
-  a species takes no clip of its template, and `walk` is on the two
-  legs, with the arms up. The climb, the hang and the jump
+  a species takes no clip of its template (so it has no `run`), and
+  `walk` is on the two legs, with the arms up. The climb, the hang and the jump
   are in place: the parts list has no speed for them.
 
 A fish (`World.Animals.Fish`): its bones, from the front to the back,
@@ -951,6 +954,18 @@ from the pose reconstructions of BigMaQ (real rhesus macaques, CC BY
   cleanest straight step of a walk in the file (all four paws on the
   ground for 0.58 to 0.77 of the step, 0.39 m/s for a macaque of
   0.67 m).
+- The run: action 203, individual L, frames 58 to 76 (0.45 s): the
+  fastest straight cycle of a run in the file (1.5 m/s in the room, a
+  turn of 9 degrees; each paw on the ground for 0.06 to 0.44 of the
+  cycle).
+- The sit: action 415, individual G, frames 40 to 200, each second
+  frame (4 s): an animal with only the label "Resting", the back up,
+  the hips 16 cm over the paws and still, the tail on the floor (in
+  other sits of the file the tail goes down through the floor). It does
+  not move, so it turns so the head is to y (`face`), and the lowest
+  point of the skin is on the ground (`"ground": "body"`).
+- No jump: the jumps of the file are short hops that turn by 60 to 180
+  degrees, onto and off things. The jump is the jump of the body plan.
 
 `scripts/primate_template.exs` makes the mesh of the template of
 primates from the low-poly template mesh of BigMaQ (a rhesus macaque,

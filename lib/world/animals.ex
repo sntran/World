@@ -96,7 +96,7 @@ defmodule World.Animals do
     s = spec(name)
     plan = @plans[s["plan"]]
     t = @templates[s["template"]]
-    clips = clips(t)
+    clips = clips(s, t)
 
     plan.animations()
     |> Enum.reject(&(&1 in plan.clips() and not Map.has_key?(clips, &1)))
@@ -189,9 +189,7 @@ defmodule World.Animals do
       s["height"] * k / plan.height(points, Map.new(weights, fn {b, m} -> {b, Map.take(m, MapSet.to_list(kept))} end))
 
     at = &Vec.scale(&1, scale)
-    # The clips of a template are on four limbs: a species that walks
-    # upright (the gibbon) has the animations of its body plan.
-    clips = if get_in(s, ["gait", "upright"]), do: %{}, else: clips(t)
+    clips = clips(s, t)
 
     bones =
       for b <- bones do
@@ -354,6 +352,10 @@ defmodule World.Animals do
   end
 
   defp coat_texture(uv_size), do: %{"image" => Coat.texture(), "image_scale" => Float.round(uv_size / Coat.tile(), 3)}
+
+  # The clips of a template are on four limbs: a species that walks
+  # upright (the gibbon) has the animations of its body plan.
+  defp clips(s, t), do: if(get_in(s, ["gait", "upright"]), do: %{}, else: clips(t))
 
   # The clips of a template (`scripts/gltf_clips.exs`), or none. A
   # template with `clips` (a file with no clips for a walk) has the clips

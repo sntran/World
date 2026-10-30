@@ -25,7 +25,8 @@ defmodule World.Animals.Primate do
   up and then down in a curve. With `"upright"` in the gait (`stance/2`),
   the animal stands on two legs with the arms up and out (`upright/2`).
   The animations: `walk` (on four limbs, the clip of the template, a
-  real macaque: `World.Animals`; upright, on the two legs), `sit` (on the
+  real macaque: `World.Animals`; upright, on the two legs), `run` (only
+  the clip of the template), `sit` (the clip of the template, or on the
   seat, the back bent, the knees up, the hands together in front of the
   feet, the head turns to look around), `climb` (up a trunk in front of
   the animal, the hands grip), `hang` (from a branch by the two hands)
@@ -82,10 +83,10 @@ defmodule World.Animals.Primate do
   end
 
   @doc "The names of the animations."
-  def animations, do: ~w(walk sit climb hang jump)
+  def animations, do: ~w(walk run sit climb hang jump)
 
-  @doc "The animations that are clips of the template: none."
-  def clips, do: []
+  @doc "The animations that only a clip of the template gives: the run."
+  def clips, do: ~w(run)
 
   def limbs(by) do
     tail = Enum.filter(bones(), &(String.starts_with?(&1, "tail_") and Map.has_key?(by, &1)))

@@ -313,13 +313,13 @@ defmodule World.AnimalsTest do
 
   test "a long-tailed macaque: the template of primates, on four limbs" do
     m = Animals.animal("macaque", animations: Animals.animations("macaque"))
-    assert Animals.animations("macaque") == ~w(walk sit climb hang jump)
+    assert Animals.animations("macaque") == ~w(walk run sit climb hang jump)
     scene = Build.scene(m)
     assert Map.keys(scene.materials) |> Enum.sort() == [:bare, :eye, :fringe, :fur, :iris]
     assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
     assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
     assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
-    assert m.params["walk_speed"] == 0.29
+    assert m.params["walk_speed"] == 0.29 and m.params["run_speed"] == 1.14
 
     # The UVs and the fur: the fur from the species (no fur on the face,
     # 2.5 cm on the coat), on the fur only (not on the eyes); one unit of
@@ -413,7 +413,7 @@ defmodule World.AnimalsTest do
     # finger, of the foot and its toes, in parts of the height of the
     # pelvis), and they lift in the diagonal order of a primate (hind left,
     # front right, hind right, front left).
-    [walk, sit, climb, hang, jump] = m.animations
+    [walk, run, sit, climb, hang, jump] = m.animations
 
     paws = %{
       "foot_l" => ~w(foot_l ball_l),
@@ -422,34 +422,54 @@ defmodule World.AnimalsTest do
       "hand_r" => ~w(hand_r middle_01_r middle_02_r)
     }
 
-    each = heights(m, walk, paws |> Map.values() |> List.flatten())
-    lows = Map.new(paws, fn {p, bones} -> {p, bones |> Enum.map(&each[&1]) |> Enum.zip_with(&Enum.min/1)} end)
+    lows = fn clip ->
+      each = heights(m, clip, paws |> Map.values() |> List.flatten())
+      Map.new(paws, fn {p, bones} -> {p, bones |> Enum.map(&each[&1]) |> Enum.zip_with(&Enum.min/1)} end)
+    end
 
     # The ground: the lowest foot at rest (the smooth skin is a little
-    # over the points of the mesh).
-    ground = min(hd(lows["foot_l"]), hd(lows["foot_r"]))
+    # over the points of the mesh). For each paw: its heights in the
+    # clip, and the part of the clip that it is on the ground.
+    walking = lows.(walk)
+    ground = min(hd(walking["foot_l"]), hd(walking["foot_r"]))
+
+    steps = fn lows, limb ->
+      [_rest | zs] = lows[limb]
+      zs = zs |> Enum.drop(-1) |> Enum.map(&(&1 - ground))
+      assert Enum.min(zs) > -0.01 and Enum.min(zs) < 0.02, "#{limb} #{Enum.min(zs)}"
+      {zs, Enum.count(zs, &(&1 < Enum.min(zs) + 0.03)) / length(zs)}
+    end
 
     tops =
       for limb <- ~w(foot_l hand_r foot_r hand_l) do
-        [_rest | zs] = lows[limb]
-        zs = zs |> Enum.drop(-1) |> Enum.map(&(&1 - ground))
-        assert Enum.min(zs) > -0.01 and Enum.min(zs) < 0.02, "#{limb} #{Enum.min(zs)}"
-        on = Enum.count(zs, &(&1 < Enum.min(zs) + 0.03)) / length(zs)
+        {zs, on} = steps.(walking, limb)
         assert on > 0.3 and on < 0.9, "#{limb} #{on}"
         Enum.find_index(zs, &(&1 == Enum.max(zs)))
       end
 
-    n = length(hd(Map.values(lows))) - 2
-    steps = for [a, b] <- Enum.chunk_every(tops ++ [hd(tops)], 2, 1, :discard), do: rem(b - a + n, n)
-    assert Enum.sum(steps) == n, inspect(steps)
+    n = length(hd(Map.values(walking))) - 2
+    gaps = for [a, b] <- Enum.chunk_every(tops ++ [hd(tops)], 2, 1, :discard), do: rem(b - a + n, n)
+    assert Enum.sum(gaps) == n, inspect(gaps)
 
-    # The sit: the hips low, the tail on the ground and not under it, the
-    # head turns to look around.
+    # The run: the clip of BigMaQ, a bound. Each paw comes down to the
+    # ground, and is on it for less of the cycle than in the walk.
+    running = lows.(run)
+
+    for limb <- ~w(foot_l hand_r foot_r hand_l) do
+      {_, on} = steps.(running, limb)
+      assert on > 0.0 and on < 0.6, "#{limb} #{on}"
+    end
+
+    # The sit: the clip of BigMaQ (an animal that rests): the hips low and
+    # still, the back up, the tail on the ground and not under it.
     [first | _] = sits = frames(m, sit)
-    assert elem(first["pelvis"].at, 2) < 0.5 * elem(w["pelvis"].at, 2)
-    for f <- sits, b <- s.bones, String.starts_with?(b.name, "tail_"), do: assert(elem(f[b.name].at, 2) > -0.01)
-    turned = for f <- sits, do: elem(f["head"].z, 0)
-    assert Enum.max(turned) - Enum.min(turned) > 0.5
+
+    for f <- sits do
+      assert elem(f["pelvis"].at, 2) < 0.6 * elem(w["pelvis"].at, 2)
+      assert elem(Vec.norm(Vec.sub(f["neck_01"].at, f["pelvis"].at)), 2) > 0.6
+      assert Vec.len(Vec.sub(f["pelvis"].at, first["pelvis"].at)) < 0.03
+      for b <- s.bones, String.starts_with?(b.name, "tail_"), do: assert(elem(f[b.name].at, 2) > -0.01)
+    end
 
     # The climb: the body upright off the ground, the hands over the
     # shoulders on the trunk in front, the fingers closed on it; each hand
@@ -483,12 +503,14 @@ defmodule World.AnimalsTest do
     for name <- ~w(rhesus_macaque pig_tailed_macaque douc gibbon) do
       a = Animals.animal(name, [])
       assert a.params["walk_speed"] > 0.3, name
-      assert Animals.animations(name) == ~w(walk sit climb hang jump)
+      # The clips of the template are on four limbs: the gibbon has no run.
+      assert Animals.animations(name) ==
+               if(name == "gibbon", do: ~w(walk sit climb hang jump), else: ~w(walk run sit climb hang jump))
     end
 
     # The gibbon stands and walks on two legs with its arms up; its arms
     # are about 1.3 times its legs.
-    g = Animals.animal("gibbon", animations: ~w(walk))
+    g = Animals.animal("gibbon", animations: ~w(walk sit))
     s = g.skeleton
     span = fn a, b -> Vec.len(Vec.sub(s.rest[b].at, s.rest[a].at)) end
     arms = span.("upperarm_l", "lowerarm_l") + span.("lowerarm_l", "hand_l")
@@ -498,10 +520,20 @@ defmodule World.AnimalsTest do
     assert elem(Vec.norm(Vec.sub(w["neck_01"].at, w["pelvis"].at)), 2) > 0.9
     assert elem(w["hand_r"].at, 2) > elem(w["head"].at, 2)
 
-    for f <- frames(g, hd(g.animations)) do
+    [walk, sit] = g.animations
+
+    for f <- frames(g, walk) do
       assert elem(f["hand_l"].at, 2) > elem(f["neck_01"].at, 2)
       assert min(elem(f["foot_l"].at, 2), elem(f["foot_r"].at, 2)) < elem(s.rest["foot_l"].at, 2) + 1.0e-3
     end
+
+    # The sit of the body plan: the hips low, the tail on the ground and
+    # not under it, the head turns to look around.
+    [first | _] = sits = frames(g, sit)
+    assert elem(first["pelvis"].at, 2) < 0.5 * elem(s.rest["pelvis"].at, 2)
+    for f <- sits, b <- s.bones, String.starts_with?(b.name, "tail_"), do: assert(elem(f[b.name].at, 2) > -0.01)
+    turned = for f <- sits, do: elem(f["head"].z, 0)
+    assert Enum.max(turned) - Enum.min(turned) > 0.5
   end
 
   test "a fish: the carp and the tilapia, a body from the bones, fins, a swim" do
