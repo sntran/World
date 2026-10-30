@@ -318,7 +318,7 @@ defmodule World.AnimalsTest do
     assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
     assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
     assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
-    assert m.params["walk_speed"] == 0.58
+    assert m.params["walk_speed"] == 0.29
 
     # The UVs and the fur: the fur from the species (no fur on the face,
     # 2.5 cm on the coat), on the fur only (not on the eyes); one unit of
@@ -375,22 +375,41 @@ defmodule World.AnimalsTest do
     trunk = Vec.norm(Vec.sub(w["neck_01"].at, w["pelvis"].at))
     assert abs(elem(trunk, 2)) < 0.5 and elem(trunk, 1) > 0.8
 
-    # The walk: the diagonal order of a primate (hind left, front right,
-    # hind right, front left), each limb a quarter of the step after the
-    # last; each hand or foot is on the ground for about 0.6 of the step.
+    # The walk: the clip of BigMaQ (a real rhesus macaque). No hand or foot
+    # goes into the ground, each comes down to it and is on it for a part
+    # of the step (the lowest point of the skin of the hand and its middle
+    # finger, of the foot and its toes, in parts of the height of the
+    # pelvis), and they lift in the diagonal order of a primate (hind left,
+    # front right, hind right, front left).
     [walk, sit, climb, hang, jump] = m.animations
-    frames = frames(m, walk)
-    n = length(frames) - 1
+
+    paws = %{
+      "foot_l" => ~w(foot_l ball_l),
+      "foot_r" => ~w(foot_r ball_r),
+      "hand_l" => ~w(hand_l middle_01_l middle_02_l),
+      "hand_r" => ~w(hand_r middle_01_r middle_02_r)
+    }
+
+    each = heights(m, walk, paws |> Map.values() |> List.flatten())
+    lows = Map.new(paws, fn {p, bones} -> {p, bones |> Enum.map(&each[&1]) |> Enum.zip_with(&Enum.min/1)} end)
+
+    # The ground: the lowest foot at rest (the smooth skin is a little
+    # over the points of the mesh).
+    ground = min(hd(lows["foot_l"]), hd(lows["foot_r"]))
 
     tops =
       for limb <- ~w(foot_l hand_r foot_r hand_l) do
-        zs = frames |> Enum.take(n) |> Enum.map(&elem(&1[limb].at, 2))
-        on = Enum.count(zs, &(&1 < ground + 1.0e-3)) / n
-        assert_in_delta on, 0.6, 0.08, limb
+        [_rest | zs] = lows[limb]
+        zs = zs |> Enum.drop(-1) |> Enum.map(&(&1 - ground))
+        assert Enum.min(zs) > -0.01 and Enum.min(zs) < 0.02, "#{limb} #{Enum.min(zs)}"
+        on = Enum.count(zs, &(&1 < Enum.min(zs) + 0.03)) / length(zs)
+        assert on > 0.3 and on < 0.9, "#{limb} #{on}"
         Enum.find_index(zs, &(&1 == Enum.max(zs)))
       end
 
-    for [a, b] <- Enum.chunk_every(tops, 2, 1, :discard), do: assert(rem(b - a + n, n) in 3..5)
+    n = length(hd(Map.values(lows))) - 2
+    steps = for [a, b] <- Enum.chunk_every(tops ++ [hd(tops)], 2, 1, :discard), do: rem(b - a + n, n)
+    assert Enum.sum(steps) == n, inspect(steps)
 
     # The sit: the hips low, the tail on the ground and not under it, the
     # head turns to look around.

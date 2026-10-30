@@ -24,9 +24,8 @@ defmodule World.Animals.Primate do
   the head in line with the back, the face to the front, the tail
   up and then down in a curve. With `"upright"` in the gait (`stance/2`),
   the animal stands on two legs with the arms up and out (`upright/2`).
-  The animations: `walk` (on four limbs, in the order of a primate: hind
-  left, front right, hind right, front left; each hand or foot is on the
-  ground for 0.6 of the step; upright, on the two legs), `sit` (on the
+  The animations: `walk` (on four limbs, the clip of the template, a
+  real macaque: `World.Animals`; upright, on the two legs), `sit` (on the
   seat, the back bent, the knees up, the hands together in front of the
   feet, the head turns to look around), `climb` (up a trunk in front of
   the animal, the hands grip), `hang` (from a branch by the two hands)
@@ -307,22 +306,6 @@ defmodule World.Animals.Primate do
       # reach the ground under hips that go up.
       bob = 0.015 * legs * (:math.cos(4 * :math.pi() * u) - 1)
       upright(skeleton, Map.put(moves, :hips, {0.0, 0.0, bob}))
-    end)
-  end
-
-  def animation("walk", skeleton, h, gait) do
-    {period, stride, lift} = {period(gait), stride(h, gait), Map.get(gait, "lift", 0.1) * h}
-    # A limb lands at the part 1 - phase of the step.
-    phases = %{{:foot, "l"} => 0.0, {:hand, "r"} => 0.75, {:foot, "r"} => 0.5, {:hand, "l"} => 0.25}
-
-    Rig.clip("walk", skeleton, period, 16, fn t ->
-      moves =
-        Map.new(phases, fn {key, phase} ->
-          {key, Animals.foot(:math.fmod(t / period + phase, 1.0), stride, lift, 0.6).by}
-        end)
-
-      wave = :math.sin(2 * :math.pi() * t / period)
-      Map.merge(pose(skeleton, moves), %{"tail_01" => [spread: 8 * wave], "tail_02" => [spread: 6 * wave]})
     end)
   end
 

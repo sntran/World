@@ -184,9 +184,10 @@ and no logo on them.
     Vũng Tàu).
   - The primates: the template is the mesh of BigMaQ (MIT, but the
     paper says the mesh came from MPI-IS and M. J. Black): ask its
-    owners to confirm the license. The clips of BigMaQ (Zenodo, CC BY
-    4.0, real macaques on the same 115 bones) for a real walk, sit and
-    climb. The feet of the mesh grip, but the plan has no bones for the
+    owners to confirm the license. More clips of BigMaQ (now only the
+    walk; the file has 750 actions: a sit, a climb, a jump, a run); a
+    faster walk (the clip is 0.39 m/s, a slow walk: few straight walks
+    in the file, the animals are in a room). The feet of the mesh grip, but the plan has no bones for the
     toes; the thumb of the hand does not fold well in `"grip"`; a speed
     for the climb; a template with no tail for the gibbon (and the gibbon
     has the body of a macaque); a region for the hands of the douc (now

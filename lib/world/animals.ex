@@ -178,7 +178,9 @@ defmodule World.Animals do
       s["height"] * k / plan.height(points, Map.new(weights, fn {b, m} -> {b, Map.take(m, MapSet.to_list(kept))} end))
 
     at = &Vec.scale(&1, scale)
-    clips = clips(t)
+    # The clips of a template are on four limbs: a species that walks
+    # upright (the gibbon) has the animations of its body plan.
+    clips = if get_in(s, ["gait", "upright"]), do: %{}, else: clips(t)
 
     bones =
       for b <- bones do
@@ -257,7 +259,9 @@ defmodule World.Animals do
         %{"coat" => coat, "size" => k, "uv_size" => Float.round(UV.size(points, faces, uvs), 3)}
         |> Map.merge(plan.speeds(k * s["height"], Map.get(s, "gait", %{})))
         |> Map.merge(speeds(clips, scale)),
-      sources: [data["source"] <> " " <> data["license"], s["about"] | s["sources"]]
+      sources:
+        [data["source"] <> " " <> data["license"]] ++
+          if(Enum.any?(names, &Map.has_key?(clips, &1)), do: [clips_credit(t)], else: []) ++ [s["about"] | s["sources"]]
     )
   end
 
@@ -334,9 +338,20 @@ defmodule World.Animals do
   end
 
   defp clips(t) do
-    path = Path.join([:code.priv_dir(:world), "animals", "clips", t["mesh"] <> ".json"])
+    path = clips_path(t)
     if File.exists?(path), do: path |> File.read!() |> JSON.decode!() |> Map.fetch!("clips"), else: %{}
   end
+
+  # The source and the license of the clips of a template (an animal with
+  # a clip names them: the clips of BigMaQ are CC BY).
+  defp clips_credit(%{"clips" => from}), do: clips_credit(@templates[from])
+
+  defp clips_credit(t) do
+    data = clips_path(t) |> File.read!() |> JSON.decode!()
+    data["source"] <> " " <> data["license"]
+  end
+
+  defp clips_path(t), do: Path.join([:code.priv_dir(:world), "animals", "clips", t["mesh"] <> ".json"])
 
   defp hip(t) do
     name = hd(List.wrap(t["bones"]["hind_upper_l"]))
@@ -366,7 +381,9 @@ defmodule World.Animals do
   moves all the animal up or down, so that the lowest point of its skin
   is on the ground at each time. In a clip with `"ground": "feet"` the
   paws carry the animal. The height of a foot is the lowest point of its
-  skin, over that point at rest, and the steps are:
+  skin, over that point at rest (with `"feet_from": "ground"`, over the
+  lowest foot at rest: the hands of a primate are up at rest), and the
+  steps are:
 
   1. The clip gives the height of the paw of each foot in the file over
      its height at rest (`feet`). A foot is on the ground at the times
@@ -442,10 +459,14 @@ defmodule World.Animals do
     h = elem(s.rest["pelvis"].at, 2)
     cycle = clip["loop"]
 
-    # The height of each foot over its height at rest (in the clip, and of
-    # its paw in the file, never below the ground), and the times when its
-    # paw is on the ground.
-    up = Map.new(feet, fn f -> {f, Enum.map(times, &(low.(&1, f) - low.(s.rest, f)))} end)
+    # The height of each foot over its height at rest (or over the lowest
+    # foot at rest, with `"feet_from": "ground"`: a primate stands with
+    # its hands up at rest), in the clip, and of its paw in the file
+    # (never below the ground), and the times when its paw is on the
+    # ground.
+    ground = feet |> Enum.map(&low.(s.rest, &1)) |> Enum.min()
+    base = fn f -> if clip["feet_from"] == "ground", do: ground, else: low.(s.rest, f) end
+    up = Map.new(feet, fn f -> {f, Enum.map(times, &(low.(&1, f) - base.(f)))} end)
 
     lift =
       Map.new(feet, fn f -> {f, clip["feet"][f] |> Enum.take(length(times)) |> Enum.map(&max(&1 * scale, 0.0))} end)

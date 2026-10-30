@@ -316,6 +316,29 @@ faces = Enum.flat_map(file["F"], fn [a, b, c, d] -> [[a, b, c], [a, c, d]] end)
 all = Enum.map(rest ++ eye_points, fit)
 round = fn {x, y, z} -> Enum.map([x, y, z], &Float.round(&1 / 1, 5)) end
 
+# A rotation matrix as a quaternion [x, y, z, w].
+quaternion = fn {{m00, m01, m02}, {m10, m11, m12}, {m20, m21, m22}} ->
+  tr = m00 + m11 + m22
+
+  cond do
+    tr > 0 ->
+      s = :math.sqrt(tr + 1.0) * 2
+      [(m21 - m12) / s, (m02 - m20) / s, (m10 - m01) / s, 0.25 * s]
+
+    m00 > m11 and m00 > m22 ->
+      s = :math.sqrt(1.0 + m00 - m11 - m22) * 2
+      [0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s]
+
+    m11 > m22 ->
+      s = :math.sqrt(1.0 + m11 - m00 - m22) * 2
+      [(m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s]
+
+    true ->
+      s = :math.sqrt(1.0 + m22 - m00 - m11) * 2
+      [(m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s]
+  end
+end
+
 weights =
   (for {i, ws} <- point_weights, {b, w} <- ws, w2 = Float.round(w / 1, 5), w2 > 0, do: {b, [i, w2]}) ++
     for(i <- n0..(length(all) - 1)//1, do: {"head", [i, 1.0]})
@@ -333,7 +356,16 @@ data = %{
       %{"name" => b.name, "parent" => b.parent, "head" => round.(fit.(heads[b.name]))}
       |> then(&if(ends[b.name], do: Map.put(&1, "tail", round.(fit.(ends[b.name]))), else: &1))
     end,
-  "weights" => weights |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> Map.new(fn {b, l} -> {b, Enum.sort(l)} end)
+  "weights" => weights |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> Map.new(fn {b, l} -> {b, Enum.sort(l)} end),
+  # For the clips of BigMaQ (scripts/bigmaq_clips.exs): the bone of the
+  # file of each bone, its turn from the file to the pose at rest (a
+  # quaternion x, y, z, w, in the axes of World), and the units of the
+  # mesh for each unit of the file.
+  "file" => %{
+    "bones" => Map.new(bones, &{&1.name, &1.file}),
+    "turns" => Map.new(bones, fn b -> {b.name, turns[b.name] |> elem(0) |> quaternion.() |> Enum.map(&Float.round(&1, 6))} end),
+    "scale" => Float.round(k, 8)
+  }
 }
 
 File.write!(output, JSON.encode!(data))

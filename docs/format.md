@@ -721,7 +721,10 @@ each second), `loop` (true when the last time is the first), `ground`
 (`feet` or `body`, below) and `feet`: for each foot, the height of its
 paw in the file over its height at rest at each time (in the units of
 the mesh; the paw is the IK bone of the file, the place that the artist
-gave to the paw). On an animal (`World.Animals.retarget/5`), each bone turns
+gave to the paw), or, with `"feet_from": "ground"`, over the ground (the
+clips of the primates: at rest a primate stands with its hands up). An
+animal that plays a clip has the source and the license of the clips in
+its sources. On an animal (`World.Animals.retarget/5`), each bone turns
 from its rest by the turn of the clip, the pelvis moves by the move of
 the clip times the scale of the animal, and the other bones keep their
 place on their parent: the bones keep the lengths of the shape. The
@@ -770,10 +773,11 @@ of a person (`World.People.Skeleton`) work on it.
   from its root and then down in a curve. A species with
   `"upright": true` in its gait (the gibbon) stands on two legs, with
   the arms up and out and the hands open.
-- Animations: `walk` (on four limbs, in the order of a primate: hind
-  left, front right, hind right, front left, a quarter of the step
-  apart; each hand or foot is on the ground for 0.6 of the step; the
-  speed is in `walk_speed` of the parts list) and `sit` (on the seat,
+- Animations: `walk` (on four limbs: the clip of a real rhesus macaque
+  of BigMaQ, `priv/animals/clips/primate.json`, a cycle of 0.65 s, the
+  hands and the feet in the order of a primate: hind left, front right,
+  hind right, front left; the speed is in `walk_speed` of the parts
+  list) and `sit` (on the seat,
   the back bent to the front, the feet near the seat, the knees up and
   out, the hands together in front of the feet, the tail on the
   ground; the head turns to look around, in 4 s), `climb` (up a
@@ -782,8 +786,9 @@ of a person (`World.People.Skeleton`) work on it.
   (from a branch over the head by the two hands that grip, the body
   swings and the head turns, in 3 s) and `jump` (a crouch, a flight of
   0.5 of the length of the legs up with all the limbs off the ground,
-  and a landing, in 1.4 s, in place). With `"upright": true`, `walk` is
-  on the two legs, with the arms up. The climb, the hang and the jump
+  and a landing, in 1.4 s, in place). With `"upright": true` (the gibbon),
+  a species takes no clip of its template, and `walk` is on the two
+  legs, with the arms up. The climb, the hang and the jump
   are in place: the parts list has no speed for them.
 
 A fish (`World.Animals.Fish`): its bones, from the front to the back,
@@ -889,6 +894,38 @@ back of the paws on the ground (less than 2% of the height of the
 pelvis above their height at rest). In the walk of the file the hind
 paws move faster than the front paws, so no speed stops all the paws:
 the middle value is between the two.
+
+`scripts/bigmaq_clips.exs` makes the clips of the template of primates
+from the pose reconstructions of BigMaQ (real rhesus macaques, CC BY
+4.0, https://zenodo.org/records/20663410):
+
+    mix run scripts/bigmaq_clips.exs reconstructions.zip macaque_LOWPOLY.json priv/animals/clips/primate.json
+
+- The files of the poses are files of PyTorch (a pickle and the data of
+  its tensors). A small reader takes only the tensors and the
+  dictionaries, and stops at any other thing: a pickle can run code.
+- The poses: at 40 frames each second, the turn of 27 bones of the file
+  (each after the turn of its parent, as SMPL), and the turn and the
+  move of all the body, in meters. The room has z up; the clip turns
+  around z so the animal walks to y.
+- The turn of a bone of World: the turn of its bone of the file, from
+  the pose at rest of the template (`scripts/primate_template.exs`
+  writes the turn of each bone from the file to the rest, in `file` of
+  the mesh). The pelvis has its move from its place at rest, with the
+  move to the front at the speed of the clip taken away.
+- BigMaQ does not turn the fingers and the toes: they go on along the
+  hand and the foot, down to the ground. All the fingers of a hand (the
+  toes of a foot) turn at their roots so the middle finger (the toes)
+  is level.
+- A clip that loops: its last pose goes to its first, linearly over the
+  clip. The feet: the height of the root of the middle finger or toe
+  over its ground (the height under which it is for 0.3 of the clip: a
+  paw is on the ground for more than half of a step, and rolls on it);
+  the clip has `"feet_from": "ground"`.
+- The walk: action 458, individual G, frames 157 to 183 (0.65 s): the
+  cleanest straight step of a walk in the file (all four paws on the
+  ground for 0.58 to 0.77 of the step, 0.39 m/s for a macaque of
+  0.67 m).
 
 `scripts/primate_template.exs` makes the mesh of the template of
 primates from the low-poly template mesh of BigMaQ (a rhesus macaque,
