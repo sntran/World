@@ -29,12 +29,14 @@
       60
     ]
   },
+  "hair": "short",
   "gait": {
     "wag": 0.25
   },
   "sources": [
     "A goat of Việt Nam (dê cỏ): a small local goat, 50 to 60 cm at the shoulder, 25 to 40 kg. The template is a deer; the numbers of the shape are a guess from photos.",
-    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
+    "The kind of hair (hair): a guess from photos of the animal."
   ],
   "markings": {},
   "fur": {

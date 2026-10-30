@@ -4,13 +4,15 @@
   "template": "alpaca",
   "height": 0.9,
   "about": "An alpaca: about 90 cm at the shoulder, a long neck, a small head with long ears, thick wool on the body and the neck.",
+  "hair": "curly",
   "gait": {
     "wag": 0.8
   },
   "sources": [
     "An adult alpaca is 81 to 99 cm high at the shoulders (withers) and weighs 48 to 90 kg (https://en.wikipedia.org/wiki/Alpaca).",
     "The colors and the thick wool of the body, the neck and the legs (shape): from photos of a brown alpaca (https://commons.wikimedia.org/wiki/File:Berlin_Tierpark_Friedrichsfelde_12-2015_img01_Alpaca.jpg), not a measurement.",
-    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
+    "The kind of hair (hair): a guess from photos of the animal."
   ],
   "shape": {
     "body_width": 1.25,

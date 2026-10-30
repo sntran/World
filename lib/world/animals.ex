@@ -26,7 +26,10 @@ defmodule World.Animals do
   the UVs of its template (`World.Animals.UV`), `_FUR` and `_FUR_DIR` on
   its fur, its mane and its dark parts (`World.Animals.Shape.fur/3`,
   `fur_dirs/3`), and
-  `uv_size` in its params (the length of one unit of UV on the skin, m).
+  `uv_size` in its params (the length of one unit of UV on the skin, m),
+  and a mammal its `hair` (the kind of hair of its coat texture,
+  `World.Animals.Coat`: the `hair` of the species, or `short` for a coat
+  under 2 cm and `long` for a longer one).
   The keys of a
   template: `mesh`, `bones` (a bone of World to the bones of the mesh),
   `materials` (a material of the mesh to a role), `smooth`, `parents`,
@@ -221,6 +224,7 @@ defmodule World.Animals do
     # (`World.Animals.Coat`), one tile for each `Coat.tile/0` of skin.
     uv_size = UV.size(points, faces, uvs)
     hair? = s["plan"] in ~w(quadruped primate)
+    kind = hair(s)
 
     # The colors of the roles that the animal uses; with markings, the
     # coat is in the colors of the points of the fur and of its lighter
@@ -236,7 +240,7 @@ defmodule World.Animals do
       |> Map.merge(Map.get(t, "colors", %{}))
       |> Map.merge(Map.get(s, "colors", %{}))
       |> Map.put("fur", if(colors, do: [255, 255, 255], else: coat))
-      |> Map.put("bare", Enum.map(if(colors, do: [255, 255, 255], else: coat), &round(&1 * Coat.mean())))
+      |> Map.put("bare", Enum.map(if(colors, do: [255, 255, 255], else: coat), &round(&1 * Coat.mean(kind))))
       |> Map.put("fringe", if(colors, do: [255, 255, 255], else: coat))
       |> then(&if(colors, do: Map.put(&1, "marking", [255, 255, 255]), else: &1))
       |> Map.filter(fn {role, _} -> @roles[role] in used end)
@@ -276,7 +280,9 @@ defmodule World.Animals do
              "roughness" => if(role in ~w(eye iris dark nose horn hoof), do: 0.4, else: 0.9),
              "metalness" => 0.0
            }
-           |> Map.merge(if(hair? and role in ~w(fur marking mane dark fringe), do: coat_texture(uv_size), else: %{}))
+           |> Map.merge(
+             if(hair? and role in ~w(fur marking mane dark fringe), do: coat_texture(uv_size, kind), else: %{})
+           )
            |> Map.merge(if(role == "fringe", do: %{"alpha_mode" => "MASK"}, else: %{}))}
         end),
       animations:
@@ -289,6 +295,7 @@ defmodule World.Animals do
       kind: :animal,
       params:
         %{"coat" => coat, "size" => k, "uv_size" => Float.round(uv_size, 3)}
+        |> Map.merge(if(hair?, do: %{"hair" => kind}, else: %{}))
         |> Map.merge(plan.speeds(k * s["height"], Map.get(s, "gait", %{})))
         |> Map.merge(speeds(clips, scale)),
       sources:
@@ -375,7 +382,12 @@ defmodule World.Animals do
     Enum.any?(Enum.zip(faces, roles), fn {face, role} -> role == :fur and Enum.any?(face, &(elem(hair, &1) < 1.0)) end)
   end
 
-  defp coat_texture(uv_size), do: %{"image" => Coat.texture(), "image_scale" => Float.round(uv_size / Coat.tile(), 3)}
+  defp coat_texture(uv_size, kind),
+    do: %{"image" => Coat.texture(kind), "image_scale" => Float.round(uv_size / Coat.tile(kind), 3)}
+
+  # The kind of hair of a species (`World.Animals.Coat`): its `hair`, or
+  # from the length of its coat (short under 2 cm).
+  defp hair(s), do: s["hair"] || if((get_in(s, ["fur", "coat"]) || 0) < 0.02, do: "short", else: "long")
 
   # The clips of a template are on four limbs: a species that walks
   # upright (the gibbon) has the animations of its body plan.

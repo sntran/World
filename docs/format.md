@@ -509,6 +509,7 @@ The species is `priv/animals/species/NAME.json`:
 | `without` | The roles whose faces go (`["horn"]`: the bull with no horns of the file, for horns of World). |
 | `height` | In meters: at the withers (the highest point of `spine_01`) for a quadruped; the length of the head and the body (from the top of the head to the lowest point of the pelvis, when it stands) for a primate. The option `size` of the order scales it. |
 | `space` | The coefficients of the shape space of the template (below), for a species on a template with a space. The option `space` of the order is over it. |
+| `hair` | The kind of hair of the coat texture of a mammal: `short`, `long`, `curly` or `wool` (below, "The UVs and the fur"). With no `hair`: `short` for a `coat` of `fur` under 2 cm, else `long`. |
 | `fur` | The length of the fur, in meters: `coat` for all the coat, and a region of the coat to its length (`"face": 0` for a bare face), mixed as the colors of `markings`. The option `size` of the order scales it. With no `fur`, the GLB has no `_FUR`. |
 | `gait` | The numbers of the gaits of the body plan that are code: for four legs, `wag` (the time of a wag, s); for a primate, `period` (the time of a step, s), `stride` and `lift` (parts of the length of the animal). |
 
@@ -677,12 +678,22 @@ switch "Fur" (`&fur=1`).
 
 A mammal (the plans `quadruped` and `primate`) has a texture of hair
 on the materials `fur`, `marking`, `mane` and `dark`
-(`World.Animals.Coat`): gray strands along +v, from 0.72 to 1, that
-multiply the colors of the points. The texture is a PNG of 128 by 128
+(`World.Animals.Coat`): gray hair along +v, from 0.72 to 1, that
+multiplies the colors of the points. The texture is a PNG of 128 by 128
 texels that World makes with no file and no random state, and it
-repeats: one tile for each 4 cm of skin (the transform
-`KHR_texture_transform` of the texture, `scale` = `uv_size / 0.04`; the
-GLB names it in `extensionsUsed`). The bare skin has no strands. The
+repeats: one tile for each `tile` of skin (the transform
+`KHR_texture_transform` of the texture, `scale` = `uv_size / tile`; the
+GLB names it in `extensionsUsed`). There are four kinds of hair (the
+`hair` of the species, else `short` for a coat under 2 cm and `long` for
+a longer one; the parts list has it in `params`):
+
+| `hair` | `tile` | The texture |
+|---|---|---|
+| `short` | 2 cm | Straight strands of 2.5 mm. |
+| `long` | 4 cm | Straight strands of 1 cm. |
+| `curly` | 4 cm | Strands of 1 cm that bend 1 mm each way, a wave each 1 cm. |
+| `wool` | 9 cm | Round locks of about 1.1 cm with crimped fibers, dark between the locks. |
+ The bare skin has no strands. The
 hair of a point is from 0 (no fur: the face of a monkey, `fur` of the
 region 0) to 1 (3 mm of fur or more). After the smooth steps, a face of
 `fur` with no hair at its points has the role `bare`: the colors of the

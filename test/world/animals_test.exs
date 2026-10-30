@@ -269,6 +269,18 @@ defmodule World.AnimalsTest do
     assert cat.materials.fur["color"] == [78, 78, 84]
     assert cat.materials.marking["color"] == [236, 233, 226] and cat.materials.dark["color"] == [236, 233, 226]
 
+    # The kind of hair of the coat texture: of the species (the wool of
+    # the sheep, the curls of the alpaca), else from the length of the
+    # coat (the cow: 8 mm, short; the wolf: 5 cm, long). One tile of the
+    # texture is `Coat.tile/1` of skin.
+    for {name, kind} <- [{"sheep", "wool"}, {"alpaca", "curly"}, {"cow", "short"}, {"wolf", "long"}] do
+      a = Animals.animal(name, [])
+      assert a.params["hair"] == kind and a.materials.fur["image"] == Coat.texture(kind), name
+      assert_in_delta a.materials.fur["image_scale"], a.params["uv_size"] / Coat.tile(kind), 0.05, name
+    end
+
+    refute Map.has_key?(Animals.animal("carp", []).params, "hair")
+
     # A pig on the pig of the farm pack: the clips of the cow (its file
     # has no walk), and no wag (no bones of a tail). Its black head and
     # back are in the colors of the points of the fur.
