@@ -154,10 +154,15 @@ defmodule World.Animals do
       end
 
     coat = Keyword.get(opts, :coat) || get_in(s, ["colors", "fur"]) || mesh_colors["fur"]
-    markings = Map.merge(Map.get(s, "markings", %{}), Keyword.get(opts, :markings, %{}))
+    # A mesh that marks the teeth and the inside of the mouth has their
+    # colors, under the markings of the species.
+    markings =
+      if(data["marks"], do: %{"teeth" => [228, 220, 196], "mouth" => [52, 28, 30]}, else: %{})
+      |> Map.merge(Map.get(s, "markings", %{}))
+      |> Map.merge(Keyword.get(opts, :markings, %{}))
 
     shape = Map.merge(s["shape"], Keyword.get(opts, :shape, %{}))
-    regions = Shape.regions(bones, points, weights, eyes(t, data))
+    regions = Shape.regions(bones, points, weights, eyes(t, data), marks(data))
     # The coefficients of the shape space of the template.
     moves =
       case Keyword.get(opts, :space) || s["space"] do
@@ -247,6 +252,7 @@ defmodule World.Animals do
         colors: colors,
         fur: fur && Enum.map(fur, &(&1 * k)),
         fur_dirs: fur && Shape.fur_dirs(bones, points, weights),
+        shapes: shapes(data, length(points), scale),
         uvs: uvs,
         # The colors of the coat on the fur, its lighter parts and the bare
         # skin; the fur also on the mane (of a horse) and the dark parts
@@ -306,6 +312,23 @@ defmodule World.Animals do
   end
 
   # The points of the eyes of a mesh (the pupils and the irises).
+  # The shapes of the face of a mesh (`scripts/primate_template.exs`):
+  # for each, a move of each point, in meters (the units of the mesh
+  # times `scale`).
+  defp shapes(data, n, scale) do
+    for {name, list} <- Enum.sort(Map.get(data, "shapes", %{})) do
+      moved = Map.new(list, fn [i, x, y, z] -> {i, {x * scale, y * scale, z * scale}} end)
+      {name, for(i <- 0..(n - 1), do: Map.get(moved, i, {0.0, 0.0, 0.0}))}
+    end
+  end
+
+  # The parts of the mouth that a mesh marks (the teeth and the inside of
+  # the mouth: `scripts/primate_template.exs`): a part to a map of a point
+  # to its weight.
+  defp marks(data) do
+    Map.new(Map.get(data, "marks", %{}), fn {part, list} -> {part, Map.new(list, fn [i, w] -> {i, w} end)} end)
+  end
+
   defp eyes(t, data) do
     for {f, m} <- Enum.zip(data["faces"], data["face_materials"]),
         material_role(t, data, m) in [:eye, :iris],

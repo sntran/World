@@ -360,6 +360,21 @@ defmodule World.AnimalsTest do
     assert length(json["images"]) == 1
     assert Enum.find(json["materials"], &(&1["name"] == "fringe"))["alphaMode"] == "MASK"
 
+    # The face: four morph targets on all the parts of the mesh. The jaw
+    # opens (the chin goes down, the body stays), the lips go to the
+    # front for a lip-smack; the inside of the mouth is dark.
+    names = ~w(brows_up jaw_open lips_back lips_forward)
+    assert Enum.map(bare.targets, &elem(&1, 0)) == names and Enum.map(fur.targets, &elem(&1, 0)) == names
+    move = fn prim, name -> prim.targets |> Enum.find(&(elem(&1, 0) == name)) |> elem(1) end
+    assert move.(bare, "jaw_open") |> Enum.map(&elem(&1, 2)) |> Enum.min() < -0.01
+    assert move.(bare, "lips_forward") |> Enum.map(&elem(&1, 1)) |> Enum.max() > 0.003
+
+    assert move.(fur, "jaw_open")
+           |> Enum.zip(fur.joints)
+           |> Enum.all?(fn {d, j} -> elem(j, 0) != 0 or Vec.len(d) == 0 end)
+
+    assert Enum.any?(bare.colors, &(elem(&1, 0) < 60))
+
     # The eyes: a dark pupil at the front of an amber iris.
     [iris] = for n <- scene.nodes, p <- n.primitives, p.material == :iris, do: p
     assert m.materials.iris["color"] == [135, 88, 38] and m.materials.eye["color"] == [20, 16, 14]

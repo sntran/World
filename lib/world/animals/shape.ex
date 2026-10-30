@@ -75,7 +75,7 @@ defmodule World.Animals.Shape do
     "horn_spread" => {0.0, 1.0, 0.0}
   }
 
-  @regions ~w(back belly mane legs socks shins forearms hands head face muzzle cheeks lids ears tail tail_tip)
+  @regions ~w(back belly mane legs socks shins forearms hands head face muzzle cheeks lids ears tail tail_tip teeth mouth)
   @foot ~r/(^|_)foot_[lr]$/
   @leg ~r/^(front_|hind_|thigh_|calf_|foot_)/
 
@@ -422,9 +422,11 @@ defmodule World.Animals.Shape do
   the front of the face; `cheeks` the sides of the head behind the
   face; `lids` the upper lids, over the points of `eyes`; `ears` (the
   bones of the ears, or the sides of the head of a primate); `tail` all
-  the tail; `tail_tip` (the last bone of the tail).
+  the tail; `tail_tip` (the last bone of the tail); `teeth` and `mouth`
+  (the parts of the mouth that the template marks: `marks`, a part to a
+  map of a point to its weight).
   """
-  def regions(bones, points, weights, eyes \\ []) do
+  def regions(bones, points, weights, eyes \\ [], marks \\ %{}) do
     by = Map.new(bones, &{&1.name, &1})
     frames = Map.new(bones, &{&1.name, frame(&1)})
     head = by["head"]
@@ -490,7 +492,9 @@ defmodule World.Animals.Shape do
           "lids" => w.("head", i) * lids.(p),
           "ears" => min(w.("ear_l", i) + w.("ear_r", i) + w.("head", i) * ears(primate, abs(hx), hy, hz, len), 1.0),
           "tail" => min(sum.(tail, i), 1.0),
-          "tail_tip" => w.(tail_tip, i)
+          "tail_tip" => w.(tail_tip, i),
+          "teeth" => get_in(marks, ["teeth", i]) || 0.0,
+          "mouth" => get_in(marks, ["mouth", i]) || 0.0
         }
 
         Map.new(acc, fn {r, list} -> {r, [min(parts[r], 1.0) | list]} end)

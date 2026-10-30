@@ -197,11 +197,17 @@ and no logo on them.
     ground).
   - Fur on the template of primates: a crest of hair on the head and
     long hair on the cheeks.
+  - The face of the macaque: the lips have no real opening (the fold
+    opens when the jaw turns, and its inside is dark), the teeth are a
+    color, not a shape, and the targets do not move the normals (the
+    inside of the open mouth has the light of the shut mouth). The
+    shapes are in the units of the template: the gibbon (a flat face)
+    has the shapes of the macaque.
   - Faces of primates (the method of MF3D, Murphy and Leopold 2019): a
     shape space of the face from the head surfaces of CT scans with open
-    licenses (MF3D used 23 rhesus macaques); expressions as shapes of
-    World on the head of BigMaQ (an open mouth, a threat, a fear grimace,
-    a lip-smack). The images of MF3D are CC BY-NC: not for World.
+    licenses (MF3D used 23 rhesus macaques), and expressions from it in
+    place of the four shapes of World. The images of MF3D are CC BY-NC:
+    not for World.
   - The skin and the hair of mammals: the inside of the ears of a
     macaque is lighter than the outside (one region now); one texture
     of hair for all the mammals (no texture for each length of the fur,

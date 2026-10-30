@@ -563,7 +563,9 @@ jaw), `lids` (the upper lids: over each eye, in front of it, as wide as
 the eye, from the faces of the roles `eye` and `iris`), `ears` (the bones of the
 ears; of a primate, with no bones of the ears: the points far out on
 the two sides of the head, at the height of the eyes), `tail` (all the
-tail), `tail_tip`.
+tail), `tail_tip`, `teeth` and `mouth` (the inside of the lips, only on
+a template that marks them: the primates; with no color of the species,
+`teeth` is ivory and `mouth` is dark).
 
 #### The shape space
 
@@ -679,6 +681,14 @@ of the texture is from 0.5 to 1, one value for each strand, so with
 less hair fewer strands stay, and the edge of the bare skin is soft, as
 a hairline. The fur, the fringe and the other materials share one
 image.
+
+A template with `shapes` (the primates) gives the animal morph targets
+(the meshes have `targets`, sparse: only the points that move, and the
+names in `extras.targetNames`; the weights are 0). An app mixes them for
+the expressions of a macaque: the open-mouth threat (`jaw_open` 0.6,
+`brows_up` 1), the fear grimace (`lips_back` 1, `jaw_open` 0.2) and the
+lip-smack (`lips_forward` from 0 to 1 and back, about 4 times each
+second). The targets move the points, not the normals.
 
 The species now:
 
@@ -1015,6 +1025,20 @@ https://github.com/martinivis/BigMaQ, commit a92d2d0):
   pole are the pupil (the material `eye`), the other faces are the iris
   (the material `iris`; the eye of a macaque shows almost no white).
 - The size: the head and the body 0.5 m long, on the ground.
+- The face. The lips of the file meet in a fold about 1.5 cm deep, with
+  no opening. The line of the bottom of the fold goes from the middle
+  (z 0.606 at rest) down to 1.5 cm to the side (0.594) and up to the
+  corner of the mouth (2.6 cm, 0.615). `marks` of the mesh: inside the
+  fold (a point that faces up or down, inside the corners), the upper
+  teeth 2 to 5 mm in from the front of the upper lip, and the mouth
+  deeper (from 2.5 mm in under the line). `shapes` of the mesh: the
+  moves of the points (in the units of the mesh) for four morph targets:
+  `jaw_open` (the points under the line and in front of the jaw joint,
+  y 0.02 and z 0.625, turn down by 18º around it, by their weight on the
+  head: the fold opens, and its dark inside shows), `lips_back` (the
+  corners go back 6 mm, the upper lip up 3 mm, the lower lip down 4 mm),
+  `lips_forward` (the lips go 6 mm to the front, the corners in) and
+  `brows_up` (the brows go up 4 mm).
 
 `scripts/fish_template.exs` makes the mesh of the template of fish
 from the bones of World, with no file from outside:

@@ -403,11 +403,116 @@ weights =
 tris = faces ++ Enum.map(eye_faces, &elem(&1, 0))
 mats = List.duplicate(0, length(faces)) ++ Enum.map(eye_faces, &elem(&1, 1))
 
+# The face (in the units of the mesh at rest, on the head of the file):
+# the lips meet in a fold about 1.5 cm deep. The line of the bottom of
+# the fold goes down from the middle (z 0.606) to 1.5 cm to the side
+# (0.594), then up to the corner of the mouth (2.6 cm, 0.615); the jaw
+# turns around a line across the head in front of the ears (y 0.02, z
+# 0.625); the brows are over the eyes (z 0.669 to 0.69).
+head_w = for {i, ws} <- point_weights, {"head", w} <- ws, into: %{}, do: {i, w}
+pts = List.to_tuple(all)
+smooth = fn a, b, x -> t = min(max((x - a) / (b - a), 0.0), 1.0); t * t * (3 - 2 * t) end
+
+line =
+  fn x ->
+    xs = [{0.0, 0.6061}, {0.0043, 0.603}, {0.0092, 0.5999}, {0.015, 0.594}, {0.0189, 0.5944}, {0.0227, 0.6048}, {0.0262, 0.615}]
+    x = min(abs(x), 0.0262)
+    [{x0, z0}, {x1, z1}] = xs |> Enum.chunk_every(2, 1, :discard) |> Enum.find(fn [{a, _}, {b, _}] -> x >= a and x <= b end)
+    z0 + (z1 - z0) * (x - x0) / (x1 - x0)
+  end
+
+# The line between the jaw and the face: the lip line to the corner of
+# the mouth (y 0.076), then back to the hinge.
+cut = fn {x, y, _} ->
+  edge = line.(x)
+  if y >= 0.076, do: edge, else: 0.625 + (edge - 0.625) * smooth.(0.02, 0.076, y)
+end
+
+front = fn x ->
+  for(i <- Map.keys(head_w), {px, py, pz} = elem(pts, i), abs(abs(px) - abs(x)) < 0.003, abs(pz - line.(px)) < 0.012, do: py)
+  |> Enum.max(fn -> 0.0 end)
+end
+
+# The normal of each point of the skin (the sum of the normals of its
+# faces): the inside of the fold of the lips faces up or down, the crease
+# of the cheek faces to the side.
+normal =
+  Enum.zip(tris, mats)
+  |> Enum.filter(fn {_, m} -> m == 0 end)
+  |> Enum.reduce(%{}, fn {[a, b, c], _}, acc ->
+    n = Vec.cross(Vec.sub(elem(pts, b), elem(pts, a)), Vec.sub(elem(pts, c), elem(pts, a)))
+    Enum.reduce([a, b, c], acc, fn i, acc -> Map.update(acc, i, n, &Vec.add(&1, n)) end)
+  end)
+
+face =
+  for {i, hw} <- head_w, hw > 0.0, into: %{} do
+    {x, y, z} = elem(pts, i)
+    {_, _, nz} = Vec.norm(Map.get(normal, i, {0.0, 0.0, 1.0}))
+    inside? = abs(x) < 0.024 and abs(z - line.(x)) < 0.012 and abs(nz) > 0.5
+    {i, %{hw: hw, x: x, y: y, z: z, lip: z - line.(x), depth: if(inside?, do: front.(x) - y, else: 0.0)}}
+  end
+
+turn_jaw = fn {_, y, z}, deg ->
+  {dy, dz} = {y - 0.02, z - 0.625}
+  a = deg * :math.pi() / 180
+  {0.0, dy * :math.cos(a) + dz * :math.sin(a) - dy, dz * :math.cos(a) - dy * :math.sin(a) - dz}
+end
+
+near_lips = fn f -> f.hw * (1 - smooth.(0.006, 0.016, abs(f.lip))) * (1 - smooth.(0.024, 0.03, abs(f.x))) * smooth.(0.05, 0.07, f.y) end
+
+shapes = %{
+  # The jaw opens 18 degrees: the points under the line, in front of the
+  # hinge, by their weight on the head (the throat stays).
+  "jaw_open" =>
+    for {i, f} <- face, w = f.hw * smooth.(-0.001, 0.003, cut.({f.x, f.y, f.z}) - f.z) * smooth.(0.0, 0.02, f.y), w > 0, into: %{} do
+      {i, Vec.scale(turn_jaw.({f.x, f.y, f.z}, 18), w)}
+    end,
+  # The fear grimace: the corners of the mouth go back 6 mm, the upper lip
+  # up 3 mm and the lower lip down 4 mm.
+  "lips_back" =>
+    for {i, f} <- face, w = near_lips.(f), w > 0, into: %{} do
+      {i, Vec.scale({0.0, -0.006 * smooth.(0.008, 0.026, abs(f.x)), if(f.lip >= 0, do: 0.003, else: -0.004)}, w)}
+    end,
+  # The lip-smack: the lips go 6 mm to the front, the corners in.
+  "lips_forward" =>
+    for {i, f} <- face, w = near_lips.(f), w > 0, into: %{} do
+      {i, Vec.scale({-0.25 * f.x, 0.006, 0.0}, w)}
+    end,
+  # The threat: the brows go up 4 mm.
+  "brows_up" =>
+    for {i, f} <- face, w = f.hw * smooth.(0.666, 0.672, f.z) * (1 - smooth.(0.684, 0.694, f.z)) * smooth.(0.04, 0.06, f.y), w > 0, into: %{} do
+      {i, Vec.scale({0.0, 0.0, 0.004}, w)}
+    end
+}
+
+# Inside the fold of the lips (a point that faces up or down, inside the
+# corners of the mouth): the upper teeth (2 to 5 mm in from the front of
+# the upper lip), and the mouth deeper (from 2.5 mm in under the line of
+# the lips: the lower lip faces up, and shows when the mouth is shut).
+marks = %{
+  "teeth" =>
+    for(
+      {i, f} <- face,
+      w = smooth.(0.0015, 0.0025, f.depth) * (1 - smooth.(0.004, 0.0055, f.depth)) * smooth.(-0.001, 0.0005, f.lip),
+      w > 0,
+      into: %{},
+      do: {i, w}
+    ),
+  "mouth" =>
+    for(
+      {i, f} <- face,
+      w = if(f.lip >= 0, do: smooth.(0.004, 0.0055, f.depth), else: smooth.(0.0015, 0.0025, f.depth)),
+      w > 0,
+      into: %{},
+      do: {i, w}
+    )
+}
+
 # With TAIL=no: the faces with a mean weight of the tail bones of the
 # file of more than 0.5 go. Each new hole has a cap: a fan of faces to
 # the mean of its points (with their mean weights). The points on no
 # face go.
-{all, tris, mats, weights} =
+{all, tris, mats, weights, shapes, marks} =
   if no_tail? do
     tail =
       for %{"vertex_index" => i, "weights" => ws} <- file["deform_weights"], into: %{} do
@@ -451,11 +556,14 @@ mats = List.duplicate(0, length(faces)) ++ Enum.map(eye_faces, &elem(&1, 1))
     used = tris |> List.flatten() |> Enum.uniq() |> Enum.sort()
     new = used |> Enum.with_index() |> Map.new()
 
+    remap = fn m -> for {i, v} <- m, Map.has_key?(new, i), into: %{}, do: {new[i], v} end
+
     {Enum.map(used, &Enum.at(all, &1)), Enum.map(tris, fn t -> Enum.map(t, &new[&1]) end),
      kept_mats ++ List.duplicate(0, length(caps)),
-     for({b, [i, w]} <- weights ++ cap_weights, Map.has_key?(new, i), do: {b, [new[i], w]})}
+     for({b, [i, w]} <- weights ++ cap_weights, Map.has_key?(new, i), do: {b, [new[i], w]}),
+     Map.new(shapes, fn {n, m} -> {n, remap.(m)} end), Map.new(marks, fn {n, m} -> {n, remap.(m)} end)}
   else
-    {all, tris, mats, weights}
+    {all, tris, mats, weights, shapes, marks}
   end
 
 data = %{
@@ -476,6 +584,13 @@ data = %{
       |> then(&if(ends[b.name], do: Map.put(&1, "tail", round.(fit.(ends[b.name]))), else: &1))
     end,
   "weights" => weights |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> Map.new(fn {b, l} -> {b, Enum.sort(l)} end),
+  # The shapes of the face (the moves of the points, in the units of the
+  # mesh) and the parts of the mouth (the weight of each point).
+  "shapes" =>
+    Map.new(shapes, fn {n, m} ->
+      {n, for({i, d} <- Enum.sort(m), [x, y, z] = round.(d), [x, y, z] != [0.0, 0.0, 0.0], do: [i, x, y, z])}
+    end),
+  "marks" => Map.new(marks, fn {n, m} -> {n, for({i, w} <- Enum.sort(m), w >= 0.01, do: [i, Float.round(w, 3)])} end),
   # For the clips of BigMaQ (scripts/bigmaq_clips.exs): the bone of the
   # file of each bone, its turn from the file to the pose at rest (a
   # quaternion x, y, z, w, in the axes of World), and the units of the

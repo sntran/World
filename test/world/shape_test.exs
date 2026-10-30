@@ -94,10 +94,12 @@ defmodule World.Animals.ShapeTest do
     regions = Shape.regions(c.bones, c.points, c.weights, c.eyes)
     assert Map.keys(regions) |> Enum.sort() == Enum.sort(Shape.regions())
 
+    # The wolf has each region but the parts of the mouth that only a
+    # template that marks them has (the primates).
     for {r, list} <- regions do
       assert length(list) == length(c.points)
       assert Enum.all?(list, &(&1 >= 0 and &1 <= 1.0 + 1.0e-9)), r
-      assert Enum.any?(list, &(&1 >= 0.5)), r
+      assert Enum.any?(list, &(&1 >= 0.5)) == r not in ~w(teeth mouth), r
     end
 
     # The fur lies to the back on the body, down on the legs, to the end
