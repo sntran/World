@@ -99,7 +99,7 @@ defmodule World.Animals.ShapeTest do
     for {r, list} <- regions do
       assert length(list) == length(c.points)
       assert Enum.all?(list, &(&1 >= 0 and &1 <= 1.0 + 1.0e-9)), r
-      assert Enum.any?(list, &(&1 >= 0.5)) == r not in ~w(teeth mouth), r
+      assert Enum.any?(list, &(&1 >= 0.5)) == r not in ~w(ears_inner teeth mouth), r
     end
 
     # The fur lies to the back on the body, down on the legs, to the end
@@ -134,7 +134,7 @@ defmodule World.Animals.ShapeTest do
   end
 
   test "a primate: the arms, the skull, the muzzle to the front, and the coat" do
-    %{bones: b, points: p, weights: w, template: t, eyes: eyes} = Animals.template("primate")
+    %{bones: b, points: p, weights: w, template: t, eyes: eyes, marks: marks} = Animals.template("primate")
     {long, _} = Shape.apply(b, p, w, %{"arm_length" => 1.5}, t)
     assert_in_delta length(long, "upperarm_l"), 1.5 * length(b, "upperarm_l"), 1.0e-9
     assert_in_delta length(long, "thigh_l"), length(b, "thigh_l"), 1.0e-9
@@ -224,5 +224,13 @@ defmodule World.Animals.ShapeTest do
     ears = for {m, i} <- Enum.with_index(regions["ears"]), m > 0.5, do: Enum.at(p, i)
     assert Enum.any?(ears, &(elem(&1, 0) > 0.8 * len)) and Enum.any?(ears, &(elem(&1, 0) < -0.8 * len))
     assert Enum.all?(ears, &(abs(elem(&1, 0)) > 0.8 * len))
+
+    # The inside of the ears (a mark of the mesh): on the ears, on the two
+    # sides; with no marks, none.
+    assert Enum.all?(regions["ears_inner"], &(&1 == 0.0))
+    inner = Shape.regions(b, p, w, eyes, marks)["ears_inner"]
+    on = for {m, i} <- Enum.with_index(inner), m > 0.5, do: i
+    assert Enum.any?(on, &(elem(Enum.at(p, &1), 0) > 0)) and Enum.any?(on, &(elem(Enum.at(p, &1), 0) < 0))
+    assert Enum.all?(on, &(Enum.at(regions["ears"], &1) > 0.5))
   end
 end

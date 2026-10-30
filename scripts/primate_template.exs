@@ -447,9 +447,9 @@ normal =
 face =
   for {i, hw} <- head_w, hw > 0.0, into: %{} do
     {x, y, z} = elem(pts, i)
-    {_, _, nz} = Vec.norm(Map.get(normal, i, {0.0, 0.0, 1.0}))
+    {_, ny, nz} = Vec.norm(Map.get(normal, i, {0.0, 0.0, 1.0}))
     inside? = abs(x) < 0.024 and abs(z - line.(x)) < 0.012 and abs(nz) > 0.5
-    {i, %{hw: hw, x: x, y: y, z: z, lip: z - line.(x), depth: if(inside?, do: front.(x) - y, else: 0.0)}}
+    {i, %{hw: hw, x: x, y: y, z: z, ny: ny, lip: z - line.(x), depth: if(inside?, do: front.(x) - y, else: 0.0)}}
   end
 
 turn_jaw = fn {_, y, z}, deg ->
@@ -505,7 +505,11 @@ marks = %{
       w > 0,
       into: %{},
       do: {i, w}
-    )
+    ),
+  # The inside of the ears: far out on the side of the head (5.1 cm and
+  # more), the side that faces the front.
+  "ears_inner" =>
+    for({i, f} <- face, w = f.hw * smooth.(0.051, 0.054, abs(f.x)) * smooth.(0.1, 0.3, f.ny), w > 0, into: %{}, do: {i, w})
 }
 
 # With TAIL=no: the faces with a mean weight of the tail bones of the

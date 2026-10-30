@@ -574,10 +574,12 @@ outer corners of the eyes to the sides, from the temples down to the
 jaw), `lids` (the upper lids: over each eye, in front of it, as wide as
 the eye, from the faces of the roles `eye` and `iris`), `ears` (the bones of the
 ears; of a primate, with no bones of the ears: the points far out on
-the two sides of the head, at the height of the eyes), `tail` (all the
-tail), `tail_tip`, `teeth` and `mouth` (the inside of the lips, only on
-a template that marks them: the primates; with no color of the species,
-`teeth` is ivory and `mouth` is dark).
+the two sides of the head, at the height of the eyes), `ears_inner`
+(the inside of the ears: the side that faces the front), `tail` (all the
+tail), `tail_tip`, `teeth` and `mouth` (the inside of the lips).
+`ears_inner`, `teeth` and `mouth` are only on a template that marks
+them: the primates; with no color of the species, `ears_inner` has the
+color of the ears, `teeth` is ivory and `mouth` is dark.
 
 #### The shape space
 

@@ -302,13 +302,14 @@ defmodule World.Animals do
 
   @doc """
   A template at rest, before the numbers of a shape: `%{template, bones,
-  points, weights, eyes}` (in the units of its mesh; the bones of World,
-  the weights of each bone of World, the points of the eyes).
+  points, weights, eyes, marks}` (in the units of its mesh; the bones of
+  World, the weights of each bone of World, the points of the eyes, the
+  parts that the mesh marks).
   """
   def template(name) do
     t = Map.fetch!(@templates, name)
     {data, bones, points, weights} = rest(t, @plans[t["plan"]])
-    %{template: t, bones: bones, points: points, weights: weights, eyes: eyes(t, data)}
+    %{template: t, bones: bones, points: points, weights: weights, eyes: eyes(t, data), marks: marks(data)}
   end
 
   # The points of the eyes of a mesh (the pupils and the irises).

@@ -213,8 +213,7 @@ and no logo on them.
     licenses (MF3D used 23 rhesus macaques), and expressions from it in
     place of the four shapes of World. The images of MF3D are CC BY-NC:
     not for World.
-  - The skin and the hair of mammals: the inside of the ears of a
-    macaque is lighter than the outside (one region now); one texture
+  - The skin and the hair of mammals: one texture
     of hair for all the mammals (no texture for each length of the fur,
     for short hair, for a curl, for wool); a pupil of one size (no pupil
     that gets small in the sun).
