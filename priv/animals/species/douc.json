@@ -3,7 +3,7 @@
   "plan": "primate",
   "template": "primate",
   "height": 0.62,
-  "about": "A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus), a male: about 62 cm long without the tail, a white tail as long as the body, a silver-grey coat, black thighs, red lower legs, black hands and feet, a yellow-brown face with white cheeks. It walks on four limbs.",
+  "about": "A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus), a male: about 62 cm long without the tail, a white tail as long as the body, a silver-grey coat, black thighs, red lower legs, white forearms, black hands and feet, a yellow-brown face with white cheeks and light blue lids. It walks on four limbs.",
   "shape": {
     "arm_length": 1.15,
     "leg_length": 1.08,
@@ -37,17 +37,37 @@
       32,
       32
     ],
-    "socks": [
-      150,
-      52,
-      38
-    ],
     "face": [
       206,
       160,
       96
     ],
     "tail": [
+      232,
+      230,
+      224
+    ],
+    "forearms": [
+      226,
+      224,
+      218
+    ],
+    "hands": [
+      30,
+      28,
+      28
+    ],
+    "lids": [
+      150,
+      172,
+      196
+    ],
+    "shins": [
+      150,
+      52,
+      38
+    ],
+    "cheeks": [
       232,
       230,
       224
@@ -62,16 +82,19 @@
     "coat": 0.025,
     "belly": 0.02,
     "legs": 0.02,
-    "socks": 0.008,
     "head": 0.015,
     "face": 0.0,
-    "tail": 0.02
+    "tail": 0.02,
+    "hands": 0.0,
+    "shins": 0.008,
+    "cheeks": 0.03
   },
   "sources": [
     "Wikipedia, Red-shanked douc (https://en.wikipedia.org/wiki/Red-shanked_douc): \"The male has a head and body length of 55–82 centimetres\" and \"a tail that measures 56–74 centimetres\"; \"Their abdomen and back are silver\"; \"Their face is a yellow-brown color\"; \"Their inner arms and inner, lateral and back thighs are black while their lower legs are a vibrant red.\" \"Both feet and hands are black\"; \"Their tails are white\".",
     "The regions of the coat paint the lower legs and the hands in one color (socks): the hands are red, not black, and the forearms are not white. The flat face, the longer limbs and the narrower body: a guess from photos of iNaturalist.",
     "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
     "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh).",
-    "Wikipedia, Intermembral index (https://en.wikipedia.org/wiki/Intermembral_index): the arms over the legs, times 100: 94 for Pygathrix nemaeus, so the arms 1.15 and the legs 1.08 of the template (1.15 / 1.08 x 88 = 94). The tail is as long as the body: tail_length 2.0, the most of the number."
+    "Wikipedia, Intermembral index (https://en.wikipedia.org/wiki/Intermembral_index): the arms over the legs, times 100: 94 for Pygathrix nemaeus, so the arms 1.15 and the legs 1.08 of the template (1.15 / 1.08 x 88 = 94). The tail is as long as the body: tail_length 2.0, the most of the number.",
+    "Wikipedia, Red-shanked douc (https://en.wikipedia.org/wiki/Red-shanked_douc): \"Both feet and hands are black\", \"their lower legs are a vibrant red\", \"Their face is a yellow-brown color and they have light blue eyelids.\" The white forearms and the colors: a guess from photos, not a measurement; the hands bare."
   ]
 }

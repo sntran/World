@@ -188,6 +188,17 @@ defmodule World.Animals.ShapeTest do
     hand = for {i, k} <- w["hand_l"], k > 0.9, do: Enum.at(regions["socks"], i)
     assert hand != [] and Enum.all?(hand, &(&1 > 0.9))
 
+    # The hands, the shins and the forearms: on their bones only (the
+    # douc has black hands, red shins and white forearms).
+    for {region, bone} <- [{"hands", "hand_l"}, {"shins", "calf_r"}, {"forearms", "lowerarm_l"}] do
+      on = for {i, k} <- w[bone], k > 0.9, do: Enum.at(regions[region], i)
+      assert on != [] and Enum.all?(on, &(&1 > 0.9)), region
+    end
+
+    for {region, bone} <- [{"hands", "lowerarm_l"}, {"shins", "thigh_r"}, {"forearms", "upperarm_l"}] do
+      assert Enum.all?(for({i, k} <- w[bone], k > 0.9, do: Enum.at(regions[region], i)), &(&1 < 0.1)), region
+    end
+
     # The upper lids: over the eyes and in front of them, on the two
     # sides. With no eyes, no lids.
     assert Enum.all?(regions["lids"], &(&1 == 0.0))

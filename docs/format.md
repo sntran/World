@@ -550,7 +550,9 @@ The coat is a base color and a color for each region, with soft edges
 (the colors of the points: `COLOR_0` in the GLB). The regions paint in
 this order, a later one over an earlier one: `back`, `belly`, `mane`
 (the top of the neck), `legs`, `socks` (the paws, the hands and the
-feet, and the low part of the legs), `head`, `face` (the muzzle; the
+feet, and the low part of the legs), `shins` and `forearms` (the lower bones of
+the legs and of the arms, or of the hind legs and the front legs), `hands` (only the hands, the feet and the
+paws), `head`, `face` (the muzzle; the
 face of a primate under the brow), `muzzle` (the front end of the
 bone of the head; of a primate: the front of the face under the eyes),
 `cheeks` (the sides of the head behind the face; of a primate: from the

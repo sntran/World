@@ -75,7 +75,7 @@ defmodule World.Animals.Shape do
     "horn_spread" => {0.0, 1.0, 0.0}
   }
 
-  @regions ~w(back belly mane legs socks head face muzzle cheeks lids ears tail tail_tip)
+  @regions ~w(back belly mane legs socks shins forearms hands head face muzzle cheeks lids ears tail tail_tip)
   @foot ~r/(^|_)foot_[lr]$/
   @leg ~r/^(front_|hind_|thigh_|calf_|foot_)/
 
@@ -415,8 +415,10 @@ defmodule World.Animals.Shape do
   before the numbers): a region to a list of the part (0 to 1) of each
   point in it. `back` and `belly` are the top and the bottom of the
   body and the neck; `mane` the top of the neck (the crest, where a horse
-  has its mane); `legs` the legs; `socks` the paws and the low part of
-  the legs; `head` all the head; `face` the front of the head; `muzzle`
+  has its mane); `legs` the legs; `socks` the paws and the low part of the
+  legs; `shins` and `forearms` the lower bones of the legs and of the
+  arms (the hind legs and the front legs);
+  `hands` only the hands, the feet and the paws; `head` all the head; `face` the front of the head; `muzzle`
   the front of the face; `cheeks` the sides of the head behind the
   face; `lids` the upper lids, over the points of `eyes`; `ears` (the
   bones of the ears, or the sides of the head of a primate); `tail` all
@@ -442,6 +444,8 @@ defmodule World.Animals.Shape do
 
     feet = Enum.filter(legs, &(&1 =~ ~r/_foot_|^hand_|^foot_|^ball_|^thumb_|^index_|^middle_|^ring_|^pinky_/))
     lower = Enum.filter(legs, &(&1 =~ ~r/_lower_|^lowerarm_|^calf_/))
+    forearms = Enum.filter(legs, &(&1 =~ ~r/^front_lower_|^lowerarm_/))
+    shins = Enum.filter(legs, &(&1 =~ ~r/^hind_lower_|^calf_/))
     trunk = Enum.filter(~w(pelvis spine_01 spine_02 spine_03 neck_01), &Map.has_key?(by, &1))
     tail = Enum.filter(names, &String.starts_with?(&1, "tail_"))
     tail_tip = List.last(tail)
@@ -475,7 +479,10 @@ defmodule World.Animals.Shape do
           "belly" => t * (1 - smooth(0.2, 0.4, z)),
           "mane" => w.("neck_01", i) * smooth(0.65, 0.85, z),
           "legs" => min(sum.(legs, i), 1.0),
+          "shins" => min(sum.(shins, i), 1.0),
+          "forearms" => min(sum.(forearms, i), 1.0),
           "socks" => min(sum.(feet, i) + low, 1.0),
+          "hands" => min(sum.(feet, i), 1.0),
           "head" => w.("head", i),
           "face" => w.("head", i) * face,
           "muzzle" => w.("head", i) * muzzle(primate, abs(hx), hy, hz, len),
