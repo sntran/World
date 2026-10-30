@@ -240,7 +240,19 @@ The GLB of a person has:
   eyebrows and eyelashes have the alpha mode `MASK`;
 - the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
   2.6 s, to play once, from the pose "stand" back to it). The channels
-  of a clip are the bones that move in it.
+  of a clip are the bones that move in it;
+- with the option `speech` (at near): the teeth and the tongue (the
+  helper groups of the base mesh, the materials `teeth` and `tongue`),
+  and the 15 visemes of the standard of Meta as morph targets of the
+  skin, the teeth and the tongue (`viseme_sil`, `viseme_PP`,
+  `viseme_FF`, `viseme_TH`, `viseme_DD`, `viseme_kk`, `viseme_CH`,
+  `viseme_SS`, `viseme_nn`, `viseme_RR`, `viseme_aa`, `viseme_E`,
+  `viseme_I`, `viseme_O`, `viseme_U`, in `extras.targetNames`; the
+  weights are 0, and `viseme_sil` moves nothing). Each viseme is a mix
+  of the units of the expressions of the mouth of MakeHuman
+  (`priv/makehuman/expressions.bin.gz`, `World.People.Face`), each unit
+  a mix of its targets for the origins of the person. An app that has
+  the visemes of a voice (from a tool of lip sync) sets their weights.
 
 ### The skeleton and the poses
 

@@ -13,7 +13,7 @@ defmodule World.People.Human do
   - `:far`: a body of 730 faces, with the colors of the clothes on it.
   """
   alias World.{Detail, Figure, Frame, Part, Port, Scene, Vec}
-  alias World.People.{Data, Joints, Pose, Skeleton}
+  alias World.People.{Data, Face, Joints, Pose, Skeleton}
 
   @defaults [
     gender: 1.0,
@@ -32,7 +32,8 @@ defmodule World.People.Human do
     head: 1.0,
     helmet: nil,
     pose: %{},
-    hold: []
+    hold: [],
+    speech: false
   ]
 
   @doc """
@@ -52,7 +53,10 @@ defmodule World.People.Human do
   list of `{port, item}`: a prop on a port of a bone, as
   `World.Figure.hold/4`, by the port of the prop with the name of the
   port of the person with no side (`grip` for `grip_r`); a hand that
-  holds a prop closes on it, in the pose and in each animation).
+  holds a prop closes on it, in the pose and in each animation), and
+  `speech` (true: at near, the teeth and the tongue, and the 15 visemes of
+  `World.People.Face` as morph targets of the skin, the teeth and the
+  tongue, for an app that moves the mouth with the voice).
   """
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
@@ -310,7 +314,23 @@ defmodule World.People.Human do
     faces =
       for f <- Map.fetch!(base.groups, "body"), not Enum.any?(f, fn {v, _} -> MapSet.member?(hidden, v) end), do: f
 
-    body = mesh(:skin, faces, &elem(points, &1), &elem(base.uvs, &1), &Map.get(weights, &1, [{0, 1.0}]), o.ground)
+    # With speech: the moves of the visemes, for each point of the base
+    # mesh, and the teeth and the tongue (helper groups of the base mesh,
+    # which the targets of the mouth move).
+    shapes =
+      if o.speech, do: for({n, moves} <- Face.visemes(o.race), do: {n, &Map.get(moves, &1, {0.0, 0.0, 0.0})}), else: []
+
+    part = fn role, group ->
+      mesh(role, base.groups[group], &elem(points, &1), nil, &Map.get(weights, &1, [{0, 1.0}]), o.ground, shapes)
+    end
+
+    body =
+      mesh(:skin, faces, &elem(points, &1), &elem(base.uvs, &1), &Map.get(weights, &1, [{0, 1.0}]), o.ground, shapes)
+
+    mouth =
+      if o.speech,
+        do: [part.(:teeth, "helper-upper-teeth"), part.(:teeth, "helper-lower-teeth"), part.(:tongue, "helper-tongue")],
+        else: []
 
     assets =
       [
@@ -321,11 +341,18 @@ defmodule World.People.Human do
         if(o.hair, do: [{:hair, Data.asset("hair", o.hair), nil}], else: []) ++
         for(c <- clothes, do: {String.to_atom("clothes_" <> c.name), c, nil})
 
-    prims = [body | for({role, a, _} <- assets, do: fitted(role, a, points, weights, o.ground))]
+    prims = [body | mouth] ++ for({role, a, _} <- assets, do: fitted(role, a, points, weights, o.ground))
 
     materials =
       Map.new(
         [{:skin, textured(Data.asset("skins", o.skin).texture, false)}] ++
+          if(o.speech,
+            do: [
+              {:teeth, %{"color" => [236, 230, 214], "roughness" => 0.3, "metalness" => 0.0}},
+              {:tongue, %{"color" => [178, 86, 92], "roughness" => 0.5, "metalness" => 0.0}}
+            ],
+            else: []
+          ) ++
           for(
             {role, a, mat} <- assets,
             do:
@@ -516,7 +543,9 @@ defmodule World.People.Human do
 
   # A primitive from faces of `{point, uv}`: one vertex for each pair, the
   # normal of each point from its faces, and the 4 weights.
-  defp mesh(role, faces, pos, uv, wts, ground) do
+  # `shapes`: a list of `{name, move}`, the move of a point of the base
+  # mesh (in the units of MakeHuman): the morph targets of the mesh.
+  defp mesh(role, faces, pos, uv, wts, ground, shapes \\ []) do
     tris = Enum.flat_map(faces, fn [a, b, c | rest] -> fan(a, [b, c | rest]) end)
     p = fn v -> Vec.sub(to_world(pos.(v)), {0.0, 0.0, ground}) end
 
@@ -549,7 +578,8 @@ defmodule World.People.Human do
       uvs: if(uv, do: for({_, t} <- verts, do: flip_v(uv.(t)))),
       joints: for(js <- joints, do: List.to_tuple(Enum.map(js, &elem(&1, 0)))),
       weights: for(js <- joints, do: List.to_tuple(Enum.map(js, &(elem(&1, 1) / 1)))),
-      indices: indices
+      indices: indices,
+      targets: if(shapes != [], do: for({n, move} <- shapes, do: {n, for({v, _} <- verts, do: to_world(move.(v)))}))
     }
   end
 

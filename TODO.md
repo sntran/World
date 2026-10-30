@@ -136,10 +136,15 @@ and no logo on them.
   shoes). Hair: a bun, hair tied back. Hats: the half-shell helmet and a
   cap, with the nón lá. Ages from 18 (students, drivers), and children
   (the idea "More people" above).
-- **Faces for speech (W6).** The face shapes of the ARKit standard that
-  Vung_Tau uses (plan 0006, R10) and the 15 visemes of the Meta
-  standard, as morph targets on a separate head mesh. The game moves the
-  mouth from the voice files.
+- **Faces for speech (W6).** The 15 visemes of the Meta standard are
+  morph targets of a person with `speech` (`World.People.Face`). Still
+  to do: the face shapes of the ARKit standard that Vung_Tau uses (plan
+  0006, R10: the eyes, the brows, the cheeks, a blink with the
+  eyelashes, which follow the skin by their fit), the visemes at mid and
+  far, a head mesh of its own (now the targets are on the skin of all
+  the body, sparse), mixes of the visemes from measured faces (now a
+  guess), and teeth of the shape of teeth (the helper of MakeHuman is a
+  strip).
 - **Animations of daily life (W7).** The idea "More animations of
   people" above, with: talk with gestures, sit on a low stool, squat
   with flat feet (ngồi chồm hổm), eat with chopsticks and a spoon, drink

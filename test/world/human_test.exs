@@ -251,6 +251,50 @@ defmodule World.HumanTest do
     if i in roots, do: i, else: owner(scene, Enum.at(scene.nodes, i).parent, roots)
   end
 
+  test "speech: the teeth, the tongue and the 15 visemes as morph targets" do
+    p = Human.person("talker", speech: true, hair: nil, clothes: [])
+    prims = for n <- p.nodes, pr <- n.primitives, do: pr
+    names = World.People.Face.names()
+    assert length(names) == 15 and hd(names) == "viseme_sil" and List.last(names) == "viseme_U"
+
+    # The skin, the teeth and the tongue have the targets; the eyes have
+    # none (the GLB gives them zeros).
+    for role <- [:skin, :teeth, :tongue] do
+      for pr <- Enum.filter(prims, &(&1.material == role)), do: assert(Enum.map(pr.targets, &elem(&1, 0)) == names)
+    end
+
+    assert Enum.find(prims, &(&1.material == :eyes)).targets == nil
+    assert Map.has_key?(p.materials, :teeth) and Map.has_key?(p.materials, :tongue)
+
+    # The silence moves nothing; "aa" opens the mouth: the chin goes down
+    # by a centimeter or more, and the lower teeth with it.
+    skin = Enum.find(prims, &(&1.material == :skin))
+    move = fn pr, name -> pr.targets |> Enum.find(&(elem(&1, 0) == name)) |> elem(1) end
+    assert Enum.all?(move.(skin, "viseme_sil"), &(&1 == {0.0, 0.0, 0.0}))
+    assert move.(skin, "viseme_aa") |> Enum.map(&elem(&1, 2)) |> Enum.min() < -0.01
+
+    teeth =
+      prims
+      |> Enum.filter(&(&1.material == :teeth))
+      |> Enum.map(&(move.(&1, "viseme_aa") |> Enum.map(fn d -> elem(d, 2) end) |> Enum.min()))
+
+    assert Enum.min(teeth) < -0.005
+
+    json = World.GLBHelper.json(World.GLB.encode(Build.scene(p)))
+    [mesh] = for m <- json["meshes"], m["extras"], do: m
+    assert mesh["extras"]["targetNames"] == names and length(mesh["weights"]) == 15
+
+    # A person with no speech has no teeth and no targets; two origins
+    # mix the units of each.
+    plain = Human.person("quiet", hair: nil, clothes: [])
+    assert Enum.all?(for(n <- plain.nodes, pr <- n.primitives, do: pr), &(&1.targets == nil and &1.material != :teeth))
+
+    mean = fn race -> race |> World.People.Face.visemes() |> Enum.find(&(elem(&1, 0) == "viseme_aa")) |> elem(1) end
+    {a, b, both} = {mean.(%{"asian" => 1.0}), mean.(%{"african" => 1.0}), mean.(%{"asian" => 1.0, "african" => 1.0})}
+    {i, {x, _, _}} = Enum.find(both, fn {_, {x, _, _}} -> abs(x) > 0.01 end)
+    assert_in_delta x, (elem(Map.get(a, i, {0.0, 0.0, 0.0}), 0) + elem(Map.get(b, i, {0.0, 0.0, 0.0}), 0)) / 2, 1.0e-9
+  end
+
   test "the numbers of a person give the weights of the targets" do
     o = %{gender: 0.25, age: 90, muscle: 0.25, weight: 0.75, height: 0.25, race: %{"asian" => 2.0, "african" => 2.0}}
     weights = Map.new(Human.target_weights(o))

@@ -28,6 +28,9 @@ defmodule World.People.Data do
   @doc "The targets, by name (see `parse_targets/1` and `target/1`)."
   def targets, do: cached(:targets, fn -> parse_targets(read_gz("targets.bin.gz")) end)
 
+  @doc "The units of the expressions of the mouth (`expressions.bin.gz`), as `targets/0`."
+  def expressions, do: cached(:expressions, fn -> parse_targets(read_gz("expressions.bin.gz")) end)
+
   @doc "The list of the assets (`assets.json`)."
   def assets, do: cached(:assets, fn -> File.read!(Path.join(dir(), "assets.json")) |> JSON.decode!() end)
 
@@ -186,9 +189,14 @@ defmodule World.People.Data do
   end
 
   @doc "A target by its name: a list of `{point, {dx, dy, dz}}`, in decimeters."
-  def target(name) do
-    cached({:target, name}, fn ->
-      {idx, dx, dy, dz} = Map.fetch!(targets(), name)
+  def target(name), do: decode(:target, targets(), name)
+
+  @doc "A unit of an expression by its name (`units/ORIGIN/mouth-UNIT`), as `target/1`."
+  def expression(name), do: decode(:expression, expressions(), name)
+
+  defp decode(kind, table, name) do
+    cached({kind, name}, fn ->
+      {idx, dx, dy, dz} = Map.fetch!(table, name)
       indices = Enum.scan(for(<<d::little-16 <- idx>>, do: d), &(&1 + &2))
       [xs, ys, zs] = for b <- [dx, dy, dz], do: for(<<v::little-signed-16 <- b>>, do: v * 0.0025)
       Enum.zip_with([indices, xs, ys, zs], fn [i, x, y, z] -> {i, {x, y, z}} end)

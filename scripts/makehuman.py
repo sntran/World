@@ -1,6 +1,7 @@
 """Make priv/makehuman/ from the CC0 data of MakeHuman.
 
     python3 scripts/makehuman.py MPFB_DATA PACKS_DIR
+    python3 scripts/makehuman.py MPFB_DATA --expressions
 
 MPFB_DATA is src/mpfb/data of makehumancommunity/mpfb2 at the commit in
 priv/makehuman/README.md. PACKS_DIR has the asset packs of the release
@@ -13,6 +14,10 @@ The script writes:
   "game_engine" and its weights.
 - targets.bin.gz: the targets of the body of an adult, in a small binary
   format (see World.People.Data).
+- expressions.bin.gz: the units of the expressions of the mouth, for
+  each of the three origins (the targets of targets/expression/units),
+  in the same format. With --expressions, the script writes only this
+  file (no packs).
 - one folder for each kind of asset: the mesh (.obj.gz), its fit to the
   body (.mhclo.gz or .proxy.gz), and its texture, smaller. The texture
   of a hair is gray (bright_gray), so the hair can have any color.
@@ -28,6 +33,11 @@ import sys
 from PIL import Image
 
 MPFB, PACKS = sys.argv[1], sys.argv[2]
+
+# The units of the expressions of the mouth (the visemes of
+# World.People.Face mix them).
+MOUTH = ["compression", "corner-puller", "depression", "depression-retraction", "elevation", "eversion", "open",
+         "parling", "part-later", "protusion", "pursing", "retraction", "upward-retraction"]
 OUT = os.path.join(os.path.dirname(__file__), "..", "priv", "makehuman")
 
 # The skeleton and the targets of an adult (young to old), with no
@@ -108,17 +118,17 @@ def target_names():
     return names
 
 
-def write_targets(dest):
+def write_targets(dest, folder="macrodetails", names=None):
     """The binary format "XTG2", little-endian: the count of targets; for
     each target the name (u16 length, UTF-8), the count of points n, then
     n indices of points (u16, each the difference from the index before),
     n dx, n dy and n dz (i16, in steps of 0.0025 units of MakeHuman: 0.25
     mm). The columns make the gzip smaller."""
     out = [b"XTG2"]
-    names = target_names()
+    names = names or target_names()
     out.append(struct.pack("<I", len(names)))
     for name in names:
-        path = os.path.join(MPFB, "targets", "macrodetails", name + ".target.gz")
+        path = os.path.join(MPFB, "targets", folder, name + ".target.gz")
         points = []
         for line in gzip.open(path, "rt"):
             parts = line.split()
@@ -191,6 +201,11 @@ def mhmat(folder):
     return props
 
 
+def expressions():
+    names = [f"units/{race}/mouth-{unit}" for race in RACES for unit in MOUTH]
+    write_targets(os.path.join(OUT, "expressions.bin.gz"), "expression", names)
+
+
 def main():
     if os.path.exists(OUT):
         for entry in os.listdir(OUT):
@@ -202,6 +217,7 @@ def main():
     minify_json(os.path.join(MPFB, "rigs", "standard", "rig.game_engine.json"), os.path.join(OUT, "rig.json.gz"))
     minify_json(os.path.join(MPFB, "rigs", "standard", "weights.game_engine.json"), os.path.join(OUT, "weights.json.gz"))
     write_targets(os.path.join(OUT, "targets.bin.gz"))
+    expressions()
 
     manifest = {}
     for kind, name, pack, folder, size in ASSETS:
@@ -235,4 +251,4 @@ def main():
         f.write("\n")
 
 
-main()
+expressions() if PACKS == "--expressions" else main()
