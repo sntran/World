@@ -182,19 +182,28 @@ and no logo on them.
     measurements, not from photos; whorls and partings in the direction
     of the fur (now only along the bones); the fur in the apps (Phượt,
     Vũng Tàu).
-  - The primates: feet with a thumb that grips (the feet of the
-    template are the feet of a person); the thumb of the hand does not
-    fold well in `"grip"`; a speed for the climb; a template with no
-    tail for the gibbon; a region for the hands of the douc (now the
-    socks color them) and its white forearms.
-  - Fur on the template of primates: the body of MakeHuman is smooth,
-    so the macaque with no fur shells has the shape of its body only. A
-    crest of hair on the head and long hair on the cheeks.
+  - The primates: the template is the mesh of BigMaQ (MIT, but the
+    paper says the mesh came from MPI-IS and M. J. Black): ask its
+    owners to confirm the license. The clips of BigMaQ (Zenodo, CC BY
+    4.0, real macaques on the same 115 bones) for a real walk, sit and
+    climb. The feet of the mesh grip, but the plan has no bones for the
+    toes; the thumb of the hand does not fold well in `"grip"`; a speed
+    for the climb; a template with no tail for the gibbon (and the gibbon
+    has the body of a macaque); a region for the hands of the douc (now
+    the socks color them) and its white forearms; the sit of the
+    animals with a long tail (the end of the tail is near the ground); the
+    gibbon with its arms up (the skin of the shoulders and the chest folds:
+    the mesh is on four limbs, with the arms down).
+  - Fur on the template of primates: a crest of hair on the head and
+    long hair on the cheeks.
+  - Faces of primates (the method of MF3D, Murphy and Leopold 2019): a
+    shape space of the face from the head surfaces of CT scans with open
+    licenses (MF3D used 23 rhesus macaques); expressions as shapes of
+    World on the head of BigMaQ (an open mouth, a threat, a fear grimace,
+    a lip-smack). The images of MF3D are CC BY-NC: not for World.
   - The head of the macaque: the eyes have one color (no iris and no
-    pupil), there is no line of the mouth, and the ears have the color
-    of the fur (the ears of a macaque are bare and dark gray). On four
-    limbs the neck is long and the head is high over the line of the
-    back; in photos the head is lower and more to the front.
+    pupil), and the ears have the color of the fur (the ears of a
+    macaque are bare and dark gray).
   - The birds: a rooster (a larger comb and tail, hackles); feet with
     webs for the duck, a bill deeper at its root, smaller eyes, the body
     of a duck at 40º; feathers (a pattern, the direction); a bird that

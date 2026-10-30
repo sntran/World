@@ -477,12 +477,11 @@ nearest body, and its numbers change the rest.
   bones and the skin). The farm rig has no bones of the ears or the
   tail, and its files have no walk: the pig has the clips of the cow,
   the sheep the clips of the deer (`clips`).
-- The template of primates, `primate`, is the low-poly body of a man of
-  MakeHuman (CC0) and its skeleton `game_engine` (the bones of a
-  person), with the head of a macaque and a tail of 8 bones that World
-  makes (`scripts/primate_template.exs`, below). Its numbers make the
-  body of a monkey: shorter legs, longer arms, a narrow chest, a long
-  tail.
+- The template of primates, `primate`, is the low-poly mesh of a rhesus
+  macaque of BigMaQ (MIT; the mesh came from MPI-IS, see `CREDITS.md`),
+  on the bones of a person, with eyes that World adds
+  (`scripts/primate_template.exs`, below). Its numbers change it to the
+  other primates.
 
 The species is `priv/animals/species/NAME.json`:
 
@@ -507,8 +506,8 @@ The keys of a template:
 
 | `parents` | A bone of World to its parent, when the rig of the file has another parent: the paw of the Ultimate rig is a target of inverse kinematics, and World puts it under the forearm. |
 | `clips` | The template whose clips it takes (its own file has none for a walk). The moves of the pelvis, the heights of the paws and the speeds go to the units of its mesh, by the heights of the two hips (the head of `hind_upper_l`). |
-| `muzzle` | The part of the bone of the head, from its head, where the muzzle starts. |
-| `brow` | A template of an upright head (the primates): the part of the bone of the head at the brow. The muzzle is then the front of the face under the eyes, and the skull over the brow goes down by `cranium`. A longer muzzle moves the front of the face to the front as a block, so the nose and the lips keep their depth. |
+| `muzzle` | The part of the bone of the head, from its head, where the muzzle starts (a primate: the distance to the front, in lengths of the bone of the head). |
+| `brow` | A template of an upright head (the primates): the height of the brow over the head of the bone of the head, in lengths of that bone. The muzzle is then the front of the face under the eyes, and the skull over the brow goes down by `cranium`. A longer muzzle moves the front of the face to the front as a block, so the nose and the lips keep their depth. |
 
  The end of a bone of World is the head of the next bone of the
 body plan; else the end of the bone of the file; else the head of a
@@ -672,15 +671,15 @@ The species now:
 | `alpaca` | quadruped | An alpaca: about 90 cm at the shoulder, a long neck, thick wool. | The template `alpaca`. |
 | `husky` | quadruped | A Siberian husky: about 55 cm at the withers, gray and white. | The template `husky`. |
 | `red_deer` | quadruped | A red deer stag: about 1.22 m at the shoulder, reddish-brown, large antlers. | The template `stag`. |
-| `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, pale upper lids, dark hands and feet, on four limbs. | Numbers on the template `primate` (its head is the head of this macaque): the arms 0.9 of the legs, a narrow chest, a long thin tail, narrow hands. The colors from photos: a golden olive back, gray limbs, a pale belly, pale lids. |
-| `rhesus_macaque` | primate | A rhesus macaque (khỉ vàng, Macaca mulatta): about 53 cm long without the tail, a tail of about 22 cm, a brown or gray coat with a more orange back and hips, a bare pink face, on four limbs. | Numbers on the template `primate`, as the macaque with a shorter tail and a muzzle 1.2 times longer (a guess from photos); the regions `back` and `legs` for the orange back and hips. |
-| `pig_tailed_macaque` | primate | A northern pig-tailed macaque (khỉ đuôi lợn, Macaca leonina): about 55 cm long without the tail, a short thin tail of about 20 cm that curves up, a brown coat with a dark crown and a dark tail, on four limbs. | Numbers on the template `primate`, with a short tail that goes up (`tail_down` -40), a muzzle 1.4 times longer and a lower crown (guesses from photos); the regions `head` and `tail`. |
-| `douc` | primate | A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus): about 62 cm long without the tail, a white tail as long as the body, a silver-gray coat, black thighs, red lower legs, a yellow-brown face, on four limbs. | Numbers on the template `primate`, with a flat face (the muzzle 0.6, a guess from photos); the regions `legs`, `socks`, `face` and `tail`. The socks also color the hands: the hands are red, not black, and the white forearms are not there. |
+| `macaque` | primate | A long-tailed macaque (khỉ đuôi dài, Macaca fascicularis): about 50 cm long without the tail, a tail of about 55 cm, a gray-brown coat with a lighter belly, a bare pink-brown face, pale upper lids, dark hands and feet, on four limbs. | Numbers on the template `primate` (a rhesus macaque): the arms 1.06 times longer (the intermembral index of 93 of this species, 88 for the template), a body 0.9 as wide, thinner limbs (guesses from photos), a tail as long as the body (2.0, the most of the number; the tail of the template is 0.47 of the head and the body). The colors from photos: a golden olive back, gray limbs, a pale belly, pale lids. |
+| `rhesus_macaque` | primate | A rhesus macaque (khỉ vàng, Macaca mulatta): about 53 cm long without the tail, a tail of about 22 cm, a brown or gray coat with a more orange back and hips, a bare pink face, on four limbs. | The template `primate` (the mesh is a rhesus macaque of BigMaQ), with a tail 0.9 as long (22 cm of 53 cm); the regions `back` and `legs` for the orange back and hips. |
+| `pig_tailed_macaque` | primate | A northern pig-tailed macaque (khỉ đuôi lợn, Macaca leonina): about 55 cm long without the tail, a short thin tail of about 20 cm that curves up, a brown coat with a dark crown and a dark tail, on four limbs. | Numbers on the template `primate`, with a short tail that goes up (`tail_length` 0.78 for 20 cm of 55 cm, `tail_down` -40), arms 1.1 times longer (the intermembral index of 98 of M. nemestrina), a muzzle 1.15 times longer and a lower crown (guesses from photos); the regions `head` and `tail`. |
+| `douc` | primate | A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus): about 62 cm long without the tail, a white tail as long as the body, a silver-gray coat, black thighs, red lower legs, a yellow-brown face, on four limbs. | Numbers on the template `primate`, with arms 1.15 and legs 1.08 (the intermembral index of 94), a flat face (the muzzle 0.55) and a narrower body (guesses from photos), a tail as long as the body (2.0, the most of the number); the regions `legs`, `socks`, `face` and `tail`. The socks also color the hands: the hands are red, not black, and the white forearms are not there. |
 | `chicken` | bird | A hen of Việt Nam (gà ta): about 45 cm high at the top of the comb, red-brown feathers, a dark tail, a small red comb and wattles, yellow legs. | The template `bird`. |
 | `duck` | bird | A white domestic duck (vịt, a Pekin duck): about 50 cm high, creamy white feathers, a long wide yellow-orange bill, short yellow-orange legs. | The template `bird` with no comb (`without`), a beak 1.7 times longer and 2 times wider, shorter legs, a longer neck, a larger head. The body is more level than the 40º of a Pekin duck, the feet have no webs, and the eyes are a little large. |
 | `carp` | fish | A common carp (cá chép, Cyprinus carpio): about 50 cm long, a robust body, a long dorsal fin, a forked tail fin, dark gold with a darker back and a pale belly, bronze fins. | The template `fish`, a little slimmer (`body_depth` 0.9). No barbels. |
 | `tilapia` | fish | A Nile tilapia (cá rô phi, Oreochromis niloticus): about 30 cm long, a deep body, gray with a darker back and a pale belly. | The template `fish`, deeper (`body_depth` 1.4). The tail fin of the template is forked, the tail fin of a tilapia is not; no bands. |
-| `gibbon` | primate | A northern white-cheeked gibbon (vượn đen má trắng, Nomascus leucogenys), a male: about 55 cm long, no tail, black with white cheeks, very long arms. On the ground it walks on two legs with its arms up (`"upright": true` in its gait). | Numbers on the template `primate`: the arms 1.3 times the legs. A round head and a flat face (the muzzle 0.45, guesses from photos), a black face and white `cheeks`. The template has a tail: the gibbon has the shortest, thin. |
+| `gibbon` | primate | A northern white-cheeked gibbon (vượn đen má trắng, Nomascus leucogenys), a male: about 55 cm long, no tail, black with white cheeks, very long arms. On the ground it walks on two legs with its arms up (`"upright": true` in its gait). | Numbers on the template `primate`: the arms 1.3 and the legs 0.88, so the arms are 1.3 times the legs (0.88 on the template); a slim body, a round head and a flat face (the muzzle 0.45, guesses from photos), a black face and white `cheeks`. The template has a tail: the gibbon has the shortest, thin. |
 
 The numbers of the presets are a guess from the sizes in their
 `sources` and from photos, not measurements of the shape.
@@ -766,8 +765,8 @@ of a person (`World.People.Skeleton`) work on it.
   length of the arms (the arms near straight); the ankles stay under
   the hips, the wrists go to the ground under the shoulders, the hands
   lie flat with the fingers to the front (`lay` of a limb,
-  `World.People.Skeleton`), the neck goes up so the head is over the
-  line of the back, the face looks to the front, and the tail goes up
+  `World.People.Skeleton`), the neck goes up so the head is in line
+  with the back, the face looks to the front, and the tail goes up
   from its root and then down in a curve. A species with
   `"upright": true` in its gait (the gibbon) stands on two legs, with
   the arms up and out and the hands open.
@@ -892,29 +891,37 @@ paws move faster than the front paws, so no speed stops all the paws:
 the middle value is between the two.
 
 `scripts/primate_template.exs` makes the mesh of the template of
-primates from the data of MakeHuman in `priv/makehuman/`:
+primates from the low-poly template mesh of BigMaQ (a rhesus macaque,
+`pose_reconstruction/data/Mesh/macaque_LOWPOLY.json` of
+https://github.com/martinivis/BigMaQ, commit a92d2d0):
 
-    mix run scripts/primate_template.exs priv/animals/meshes/primate.json
+    mix run scripts/primate_template.exs macaque_LOWPOLY.json priv/animals/meshes/primate.json
 
-It takes the low-poly body of a man (`male1591`, the mid level of
-`World.People.Human` with the numbers by default, no clothes and no
-hair), its skeleton `game_engine` and its weights. The head of the
-person goes (the faces with a weight of 0.2 or more on the bone `head`,
-and the faces over the base of the neck, 1.395 m), and World makes the
-head of a macaque in its place: a smooth skin (`World.Blob`) of a round
-skull, a brow ridge over the eyes, the cheeks, a muzzle under the eyes,
-a jaw with no chin, small ears that stand out to the sides and a short
-neck. Each point of the new head takes the weights of the 4 nearest
-points of the head and the neck of the person (on the bones `spine_03`,
-`neck_01` and `head`), so it moves as the head of the person. The eyes
-(the material `eye`) are spheres near together under the brow; the
-nostrils (the material `nose`) are two small dark spheres at the front
-of the muzzle. The parts and their places come from photos of
-long-tailed macaques; their sizes are guesses from the photos. It adds
-a tail: a tube from the back of the pelvis,
-down and a little to the back, 0.9 m long (about the height of the body
-from the seat to the top of the head), 4.5 cm thick at the root and
-1.2 cm at the tip, in 8 bones (`Tail1` to `Tail8`).
+- The axes: the file has y up and z to the front; World has z up, y to
+  the front, and the left side at -x.
+- The bones: the 115 bones of the file go to the bones of
+  `World.Animals.Primate` (the bones of a person: `Hips` to `pelvis`,
+  `Spine1` and `Spine2` to `spine_02`, `LeftArm` to `upperarm_l`, the
+  first three bones of each finger to `thumb_01_l` ...). A bone of the
+  file with no bone of World (the eyes, the nose, the last bone of a
+  finger, the toes, the last bone of the tail, which has almost no
+  weights) gives its weights to the bone of World above it.
+- The pose at rest: the file is on four limbs, and the body plan needs a
+  body that stands as a person. The pelvis turns the body up by 90º, the
+  legs and the arms turn back down by 90º, the neck turns to the front
+  by 20º and the head by 40º (the face looks to the front: in the file
+  it looks 30º down), and each hand turns down along the arm with the
+  palm to the body, as the hands of a person.
+- The points at rest: each point is where the skin of World (linear
+  blend skinning) must start, so that the same turns back give the
+  point of the file (the inverse of the blend of the turns of its
+  bones). So the animal on four limbs has the shape of the file, with
+  no thin joints.
+- The eyes (the material `eye`): the lids of the file are closed. A
+  sphere at the center of each eye of the file, 1.1 times the distance
+  to the nearest point of the skin, moves to the front until it goes out
+  of the skin by 0.35 of its radius.
+- The size: the head and the body 0.5 m long, on the ground.
 
 `scripts/fish_template.exs` makes the mesh of the template of fish
 from the bones of World, with no file from outside:

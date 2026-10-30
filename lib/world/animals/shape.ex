@@ -462,7 +462,7 @@ defmodule World.Animals.Shape do
         z = if t > 0, do: (elem(local(frames[Enum.max_by(trunk, &w.(&1, i))], p), 2) - lo) / (hi - lo), else: 0.5
         {hx, hy, hz} = local(frames["head"], p)
         primate = Map.has_key?(by, "upperarm_l")
-        face = face_part(primate, hy, hz, len)
+        face = face_part(primate, abs(hx), hy, hz, len)
 
         low =
           Enum.sum(
@@ -517,9 +517,15 @@ defmodule World.Animals.Shape do
   end
 
   # The face: the front part of the bone of the head of an animal on four
-  # legs, the front of the head of a primate under the brow (as `face/4`).
-  defp face_part(false, y, _z, len), do: smooth(0.45 * len, 0.6 * len, y)
-  defp face_part(true, y, z, len), do: smooth(0.25 * len, 0.38 * len, -z) * (1 - smooth(0.4 * len, 0.47 * len, y))
+  # legs; the front of the head of a primate under the brow and between
+  # the outer corners of the eyes (in lengths of the bone of the head,
+  # from the head of BigMaQ).
+  defp face_part(false, _x, y, _z, len), do: smooth(0.45 * len, 0.6 * len, y)
+
+  defp face_part(true, x, y, z, len),
+    do:
+      smooth(0.7 * len, 0.95 * len, -z) * (1 - smooth(0.62 * len, 0.72 * len, y)) *
+        (1 - smooth(0.55 * len, 0.75 * len, x))
 
   # The cheeks: the sides of the head, behind the face. Of a primate:
   # from the outer corners of the eyes to the sides, from the temples
@@ -528,8 +534,8 @@ defmodule World.Animals.Shape do
 
   defp cheeks(true, x, y, z, len),
     do:
-      smooth(0.15 * len, 0.25 * len, x) * smooth(-0.25 * len, -0.1 * len, y) * (1 - smooth(0.3 * len, 0.4 * len, y)) *
-        smooth(-0.15 * len, 0.0, -z)
+      smooth(0.45 * len, 0.6 * len, x) * smooth(-0.7 * len, -0.5 * len, y) * (1 - smooth(0.5 * len, 0.65 * len, y)) *
+        smooth(0.1 * len, 0.4 * len, -z)
 
   @doc """
   The color of each point: the `base` color, and over it the color of

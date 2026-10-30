@@ -5,22 +5,12 @@
   "height": 0.55,
   "about": "A northern pig-tailed macaque (khỉ đuôi lợn, Macaca leonina): a male about 55 cm long without the tail, a short thin tail of about 20 cm that curves up, a brown coat with a dark crown and a dark tail. It walks on four limbs.",
   "shape": {
-    "leg_length": 0.62,
-    "arm_length": 0.9,
-    "body_length": 1.1,
-    "body_width": 0.9,
-    "neck_length": 0.8,
-    "head_size": 1.05,
+    "muzzle_length": 1.15,
     "cranium": 0.9,
-    "muzzle_length": 1.4,
-    "tail_length": 0.32,
+    "tail_length": 0.78,
+    "tail_girth": 0.8,
     "tail_down": -40,
-    "tail_girth": 0.45,
-    "muzzle_width": 0.95,
-    "neck_girth": 1.45,
-    "leg_girth": 1.2,
-    "arm_girth": 1.15,
-    "hand_width": 0.6
+    "arm_length": 1.1
   },
   "colors": {
     "fur": [
@@ -78,7 +68,9 @@
   "sources": [
     "Wikipedia, Northern pig-tailed macaque (https://en.wikipedia.org/wiki/Northern_pig-tailed_macaque): its tails \"are shorter and skinnier than southern pig-tailed macaques\", with \"a thin pelage in a dark blackish hue\"; \"A brown pelage patch is found on the centre of their crowns\"; the range includes Vietnam.",
     "Ecology Asia, Northern pig-tailed macaque (https://www.ecologyasia.com/verts/mammals/northern-pig-tailed-macaque.htm) and other sources: a male 50 to 59.5 cm long without the tail, a tail of 18 to 25 cm.",
-    "The numbers of the shape and the colors: from the long-tailed macaque, with a short tail that curves up; a guess from photos of iNaturalist.",
-    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
+    "The numbers of the shape: the tail 0.78 as long (20 cm of 55 cm is 0.36 of the body: 0.36 / 0.47), and it curves up; a longer muzzle and a lower crown: a guess from photos of iNaturalist.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
+    "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh).",
+    "Wikipedia, Intermembral index (https://en.wikipedia.org/wiki/Intermembral_index): the arms over the legs, times 100: 98 for Macaca nemestrina (the southern pig-tailed macaque; the table has no Macaca leonina), so the arms 98 / 88 = 1.1 of the template (arm_length 1.1)."
   ]
 }

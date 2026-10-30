@@ -163,10 +163,13 @@ defmodule World.Animals.ShapeTest do
     front = fn points -> head |> Enum.map(&elem(Enum.at(points, &1), 1)) |> Enum.max() end
     {_, low} = Shape.apply(b, p, w, %{"cranium" => 0.6}, t)
     {_, snout} = Shape.apply(b, p, w, %{"muzzle_length" => 1.8}, t)
-    # The skull goes down; the muzzle goes to the front, and the top of
-    # the head stays.
-    assert top.(low) < top.(rest) - 0.015
-    assert front.(snout) > front.(rest) + 0.03
+    # The skull goes down (by 0.4 of its height over the brow); the
+    # muzzle goes to the front, and the top of the head stays.
+    bone_head = bone(b, "head")
+    len = Vec.len(Vec.sub(bone_head.tail, bone_head.head))
+    over = top.(rest) - (elem(bone_head.head, 2) + t["brow"] * len)
+    assert_in_delta top.(low), top.(rest) - 0.4 * over, 0.1 * over
+    assert front.(snout) > front.(rest) + 0.2 * len
     assert_in_delta top.(snout), top.(rest), 1.0e-9
 
     # The face is the front of the head; the hands and the feet are the

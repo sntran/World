@@ -5,22 +5,14 @@
   "height": 0.62,
   "about": "A red-shanked douc (voọc chà vá chân nâu, Pygathrix nemaeus), a male: about 62 cm long without the tail, a white tail as long as the body, a silver-grey coat, black thighs, red lower legs, black hands and feet, a yellow-brown face with white cheeks. It walks on four limbs.",
   "shape": {
-    "leg_length": 0.66,
-    "arm_length": 0.95,
-    "body_length": 1.1,
-    "body_width": 0.85,
-    "neck_length": 0.8,
-    "head_size": 1.0,
-    "cranium": 1.0,
-    "muzzle_length": 0.6,
-    "tail_length": 0.9,
-    "tail_down": 40,
-    "tail_girth": 0.55,
+    "arm_length": 1.15,
+    "leg_length": 1.08,
+    "body_width": 0.9,
+    "muzzle_length": 0.55,
     "muzzle_width": 0.9,
-    "neck_girth": 1.35,
-    "leg_girth": 1.1,
-    "arm_girth": 1.0,
-    "hand_width": 0.6
+    "tail_length": 2.0,
+    "tail_girth": 0.9,
+    "tail_down": -10
   },
   "colors": {
     "fur": [
@@ -77,7 +69,9 @@
   },
   "sources": [
     "Wikipedia, Red-shanked douc (https://en.wikipedia.org/wiki/Red-shanked_douc): \"The male has a head and body length of 55–82 centimetres\" and \"a tail that measures 56–74 centimetres\"; \"Their abdomen and back are silver\"; \"Their face is a yellow-brown color\"; \"Their inner arms and inner, lateral and back thighs are black while their lower legs are a vibrant red.\" \"Both feet and hands are black\"; \"Their tails are white\".",
-    "The regions of the coat paint the lower legs and the hands in one color (socks): the hands are red, not black, and the forearms are not white. The numbers of the shape: a guess from photos of iNaturalist.",
-    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
+    "The regions of the coat paint the lower legs and the hands in one color (socks): the hands are red, not black, and the forearms are not white. The flat face, the longer limbs and the narrower body: a guess from photos of iNaturalist.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
+    "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh).",
+    "Wikipedia, Intermembral index (https://en.wikipedia.org/wiki/Intermembral_index): the arms over the legs, times 100: 94 for Pygathrix nemaeus, so the arms 1.15 and the legs 1.08 of the template (1.15 / 1.08 x 88 = 94). The tail is as long as the body: tail_length 2.0, the most of the number."
   ]
 }

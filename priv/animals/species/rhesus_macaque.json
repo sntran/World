@@ -5,22 +5,8 @@
   "height": 0.53,
   "about": "A rhesus macaque (khỉ vàng, Macaca mulatta): a male about 53 cm long without the tail, a tail of about 22 cm, a brown or grey coat with a more orange back and hips, a bare pink face. It walks on four limbs.",
   "shape": {
-    "leg_length": 0.62,
-    "arm_length": 0.88,
-    "body_length": 1.1,
-    "body_width": 0.9,
-    "neck_length": 0.8,
-    "head_size": 1.0,
-    "cranium": 1.0,
-    "muzzle_length": 1.2,
-    "tail_length": 0.38,
-    "tail_down": 20,
-    "tail_girth": 0.6,
-    "muzzle_width": 0.95,
-    "neck_girth": 1.45,
-    "leg_girth": 1.2,
-    "arm_girth": 1.15,
-    "hand_width": 0.6
+    "tail_length": 0.9,
+    "tail_down": 20
   },
   "colors": {
     "fur": [
@@ -77,7 +63,8 @@
   },
   "sources": [
     "Wikipedia, Rhesus macaque (https://en.wikipedia.org/wiki/Rhesus_macaque): \"The rhesus macaque is brown or grey in color and has a pink face, which is bereft of fur.\" \"Its tail averages between 20.7 and 22.9 cm.\" \"Adult males measure about 53 cm on average and weigh about 7.7 kg.\"",
-    "The numbers of the shape and the colors: from the long-tailed macaque, with a short tail; a guess from photos of iNaturalist.",
-    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement."
+    "The numbers of the shape: the template, with the tail 0.9 as long (22 cm of 53 cm is 0.42 of the body: 0.42 / 0.47); the colors: a guess from photos of iNaturalist.",
+    "The lengths of the fur (fur): a guess from photos of the animal, not a measurement.",
+    "The template of primates is the mesh of a rhesus macaque of BigMaQ: on it the arms (the upper arm and the forearm) are 0.88 of the legs (the thigh and the shin), and the tail is 0.47 of the head and the body (measured on the mesh)."
   ]
 }

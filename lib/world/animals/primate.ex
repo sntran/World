@@ -21,7 +21,7 @@ defmodule World.Animals.Primate do
 
   The pose of the animal is on four limbs (`pose/2`): the back near
   level, the hands flat under the shoulders, the feet under the hips,
-  the head over the line of the back, the face to the front, the tail
+  the head in line with the back, the face to the front, the tail
   up and then down in a curve. With `"upright"` in the gait (`stance/2`),
   the animal stands on two legs with the arms up and out (`upright/2`).
   The animations: `walk` (on four limbs, in the order of a primate: hind
@@ -162,10 +162,10 @@ defmodule World.Animals.Primate do
       grips ++ [{"back", "spine_02", Part.port("back", Vec.lerp(spine.head, spine.tail, 0.5), {0, -1, 0}, {0, 0, 1})}]
   end
 
-  # The neck goes up from the shoulders, so the head is over the line of
-  # the back; the tail goes up from its root and then down in a curve.
+  # The neck goes up from the shoulders, so the head is in line with the
+  # back; the tail goes up from its root and then down in a curve.
   @carry %{
-    "neck_01" => [flex: 60],
+    "neck_01" => [flex: 40],
     "tail_03" => [flex: 15],
     "tail_04" => [flex: 15],
     "tail_05" => [flex: 15],
@@ -336,13 +336,13 @@ defmodule World.Animals.Primate do
     # pelvis is under them. The back bends to the front, the feet are near
     # the seat and the knees go up and out, the hands are together in
     # front of the feet.
-    seat = 0.3 * legs
+    seat = 0.17 * legs
 
     base =
       %{
-        :hips => %{at: {0.0, 0.0, seat - elem(hip, 2)}, turn: [flex: 20]},
-        "spine_02" => [flex: 30],
-        "spine_03" => [flex: 30]
+        :hips => %{at: {0.0, 0.0, seat - elem(hip, 2)}, turn: [flex: 10]},
+        "spine_02" => [flex: 5],
+        "spine_03" => [flex: 10]
       }
       |> Map.merge(
         for side <- @sides, into: %{} do
@@ -360,7 +360,13 @@ defmodule World.Animals.Primate do
       )
 
     # The tail lies on the ground to the back, and curls a little.
-    tail = %{"tail_01" => [{{1.0, 0.0, 0.0}, -85}], "tail_04" => [spread: 25], "tail_06" => [spread: 25]}
+    tail = %{
+      "tail_01" => [{{1.0, 0.0, 0.0}, -125}],
+      "tail_02" => [flex: -15],
+      "tail_03" => [flex: -15],
+      "tail_04" => [flex: -10, spread: 25],
+      "tail_05" => [flex: -10, spread: 25]
+    }
 
     Rig.clip("sit", skeleton, 4.0, 24, fn t ->
       a = 0.9 * :math.sin(2 * :math.pi() * t / 4.0)

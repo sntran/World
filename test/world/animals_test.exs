@@ -314,7 +314,7 @@ defmodule World.AnimalsTest do
     m = Animals.animal("macaque", animations: Animals.animations("macaque"))
     assert Animals.animations("macaque") == ~w(walk sit climb hang jump)
     scene = Build.scene(m)
-    assert Map.keys(scene.materials) |> Enum.sort() == [:eye, :fur, :nose]
+    assert Map.keys(scene.materials) |> Enum.sort() == [:eye, :fur]
     assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
     assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
     assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
@@ -343,10 +343,10 @@ defmodule World.AnimalsTest do
     s = m.skeleton
     rest = s.rest
 
-    # The left side is at -x; eight bones of the tail; the arms are about
-    # 0.9 of the legs.
+    # The left side is at -x; five bones of the tail (of the mesh of
+    # BigMaQ); the arms are about 0.9 of the legs.
     assert elem(rest["hand_l"].at, 0) < 0 and elem(rest["hand_r"].at, 0) > 0
-    assert Enum.count(Map.keys(rest), &String.starts_with?(&1, "tail_")) == 8
+    assert Enum.count(Map.keys(rest), &String.starts_with?(&1, "tail_")) == 5
     span = fn a, b -> Vec.len(Vec.sub(rest[b].at, rest[a].at)) end
 
     index =
