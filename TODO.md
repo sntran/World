@@ -192,12 +192,9 @@ and no logo on them.
     (the clip is 0.39 m/s, a slow walk: few straight walks in the file,
     the animals are in a room). The feet of the mesh grip, but the plan has no bones for the
     toes; the thumb of the hand does not fold well in `"grip"`; a speed
-    for the climb; a template with no tail for the gibbon (and the gibbon
-    has the body of a macaque); a region for the hands of the douc (now
-    the socks color them) and its white forearms; the sit of the
-    animals with a long tail (the end of the tail is near the ground); the
-    gibbon with its arms up (the skin of the shoulders and the chest folds:
-    the mesh is on four limbs, with the arms down).
+    for the climb; the gibbon has the body of a macaque (no mesh of a
+    gibbon); the sit of the animals with a long tail (the end of the tail is near the
+    ground).
   - Fur on the template of primates: a crest of hair on the head and
     long hair on the cheeks.
   - Faces of primates (the method of MF3D, Murphy and Leopold 2019): a

@@ -23,7 +23,8 @@ defmodule World.Animals.Primate do
   level, the hands flat under the shoulders, the feet under the hips,
   the head in line with the back, the face to the front, the tail
   up and then down in a curve. With `"upright"` in the gait (`stance/2`),
-  the animal stands on two legs with the arms up and out (`upright/2`).
+  the animal stands on two legs with the arms up over the head
+  (`upright/2`).
   The animations: `walk` (on four limbs, the clip of the template, a
   real macaque: `World.Animals`; upright, on the two legs), `run` (only
   the clip of the template), `sit` (the clip of the template, or on the
@@ -75,11 +76,12 @@ defmodule World.Animals.Primate do
 
   @doc """
   The length of the head and the body (at rest, when it stands): from the
-  top of the head to the lowest point of the pelvis.
+  top of the head to the lowest point of the pelvis (the hands of a
+  template with the arms up are higher than the head).
   """
   def height(points, weights) do
-    seat = for {i, w} <- weights["pelvis"], w >= 0.5, do: elem(Enum.at(points, i), 2)
-    (points |> Enum.map(&elem(&1, 2)) |> Enum.max()) - Enum.min(seat)
+    z = fn bone -> for {i, w} <- weights[bone], w >= 0.5, do: elem(Enum.at(points, i), 2) end
+    Enum.max(z.("head")) - Enum.min(z.("pelvis"))
   end
 
   @doc "The names of the animations."
@@ -99,10 +101,8 @@ defmodule World.Animals.Primate do
         side <- @sides,
         do: Limb.new("leg_#{side}", ["thigh_#{side}", "calf_#{side}"], role: :leg, pole: {0.0, 1.0, 0.0})
       ) ++
-      [
-        Limb.new("tail", tail, role: :tail, solver: :chain),
-        Limb.new("head", ~w(neck_01 head), role: :neck, solver: :chain)
-      ]
+      if(tail == [], do: [], else: [Limb.new("tail", tail, role: :tail, solver: :chain)]) ++
+      [Limb.new("head", ~w(neck_01 head), role: :neck, solver: :chain)]
   end
 
   def joints(_by) do
@@ -248,8 +248,9 @@ defmodule World.Animals.Primate do
 
   @doc """
   The pose upright, as a gibbon on the ground: the body up over the
-  feet, the knees a little bent, the arms up and out for balance, the
-  hands relaxed. `moves` moves the feet (`{:foot, side}` to a move) and
+  feet, the knees a little bent, the arms up over the head for balance
+  (a little out, almost straight: near the pose at rest of the template
+  `primate_upright`), the hands relaxed. `moves` moves the feet (`{:foot, side}` to a move) and
   the hips (`:hips` to a move).
   """
   def upright(skeleton, moves \\ %{}) do
@@ -268,7 +269,7 @@ defmodule World.Animals.Primate do
            flat: true
          },
          {:limb, "arm_#{side}"} => %{
-           at: {x + sign * 0.6 * arms, 0.1 * legs, shoulder + 0.55 * arms},
+           at: {x + sign * 0.4 * arms, 0.1 * legs, shoulder + 0.85 * arms},
            pole: {sign, -0.5, 0.0}
          },
          {:hand, String.to_atom(side)} => "relaxed"

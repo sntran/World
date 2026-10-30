@@ -3,6 +3,7 @@
 # mesh came from MPI-IS, see CREDITS.md):
 #
 #     mix run scripts/primate_template.exs macaque_LOWPOLY.json OUT.json
+#     ARMS=up TAIL=no mix run scripts/primate_template.exs macaque_LOWPOLY.json OUT.json
 #
 # The file is pose_reconstruction/data/Mesh/macaque_LOWPOLY.json of
 # https://github.com/martinivis/BigMaQ (commit a92d2d0, SHA-256
@@ -26,10 +27,17 @@
 # - The eyes: a sphere at each eye of the file, a pupil (the material
 #   eye) and an iris (the material iris).
 # - The size: the head and the body 0.5 m long.
+# - With ARMS=up, the arms at rest go up, not down (a primate that walks
+#   upright with its arms up, the gibbon: the skin of the shoulders does
+#   not fold, as the arms turn little from the rest). With TAIL=no, the
+#   faces of the tail go, the hole at its root has a cap, and the tail
+#   has no bones (its weights go to the pelvis).
 alias World.People.Human
 alias World.Vec
 
 [input, output] = System.argv()
+up? = System.get_env("ARMS") == "up"
+no_tail? = System.get_env("TAIL") == "no"
 file = input |> File.read!() |> JSON.decode!()
 
 # A point of the file in the axes of World.
@@ -77,7 +85,9 @@ file_bones = Map.new(file["bones"], &{&1["name"], &1})
 most = for %{"weights" => ws} <- file["deform_weights"], {b, w} <- ws, reduce: %{}, do: (acc -> Map.update(acc, b, w, &max(&1, w)))
 kids = Enum.group_by(file["bones"], & &1["parent"], & &1["name"])
 light = fn name -> Map.get(most, name, 0.0) < 0.05 and Map.get(kids, name, []) == [] end
-world_bone = fn name -> if light.(name), do: nil, else: world_bone.(name) end
+world_bone = fn name ->
+  if light.(name) or (no_tail? and String.starts_with?(name, "Tail")), do: nil, else: world_bone.(name)
+end
 
 owner = fn name ->
   Stream.iterate(name, &file_bones[&1]["parent"]) |> Enum.take_while(& &1) |> Enum.find_value(world_bone)
@@ -147,15 +157,17 @@ end
 now = fn turns, name, p -> apply_turn.(turns[name], p) end
 turns = Map.new(bones, &{&1.name, id})
 
-# The body up, the legs and the arms down again, the neck and the head
-# to the front.
+# The body up, the legs and the arms down again (the arms up with
+# ARMS=up), the neck and the head to the front.
 turns = turn.(turns, "pelvis", {1.0, 0.0, 0.0}, 90)
-turns = Enum.reduce(~w(thigh_l thigh_r upperarm_l upperarm_r), turns, &turn.(&2, &1, {1.0, 0.0, 0.0}, -90))
+turns = Enum.reduce(~w(thigh_l thigh_r), turns, &turn.(&2, &1, {1.0, 0.0, 0.0}, -90))
+turns = Enum.reduce(~w(upperarm_l upperarm_r), turns, &turn.(&2, &1, {1.0, 0.0, 0.0}, if(up?, do: 90, else: -90)))
 turns = turns |> turn.("neck_01", {1.0, 0.0, 0.0}, -20) |> turn.("head", {1.0, 0.0, 0.0}, -40)
 
 # The hands of a person (the pose at rest of the body plan): along the
-# hand from the wrist to the root of the middle finger, and across from
-# the root of the little finger to the root of the index finger.
+# hand from the wrist to the root of the middle finger (with the arms up:
+# along the forearm), and across from the root of the little finger to
+# the root of the index finger.
 person = World.Detail.with(:mid, fn -> Human.person("primate", clothes: [], hair: nil) end)
 human = Map.new(person.skeleton.bones, &{&1.name, &1})
 
@@ -165,7 +177,11 @@ turns =
     {fs, ss} = if s == "l", do: {"Left", "l"}, else: {"Right", "r"}
     wrist = now.(turns, hand, by[hand].head)
     along = Vec.norm(Vec.sub(now.(turns, hand, at.("#{fs}HandMiddle1")), wrist))
-    want = Vec.norm(Vec.sub(human["middle_01_#{ss}"].head, human[hand].head))
+    want =
+      if up?,
+        do: Vec.norm(Vec.sub(wrist, now.(turns, "lowerarm_#{s}", by["lowerarm_#{s}"].head))),
+        else: Vec.norm(Vec.sub(human["middle_01_#{ss}"].head, human[hand].head))
+
     axis = Vec.cross(along, want)
     deg = :math.acos(Vec.dot(along, want) |> max(-1.0) |> min(1.0)) * 180 / :math.pi()
     turns = if Vec.len(axis) > 1.0e-9, do: turn.(turns, hand, axis, deg), else: turns
@@ -209,6 +225,36 @@ rest =
     mat.(inverse.(a), Vec.add(q, c))
   end
 
+# With ARMS=up, the points between the trunk and an arm (a weight on the
+# upper arm from 0.02 to 0.98) fold where the arm turns up: 30 steps of
+# smoothing (each point to the mean of the points next to it on the
+# faces) make the skin of the armpit smooth. The other points stay.
+rest =
+  if up? do
+    near =
+      Enum.reduce(file["F"], %{}, fn face, acc ->
+        Enum.reduce(Enum.zip(face, tl(face) ++ [hd(face)]), acc, fn {a, b}, acc ->
+          acc |> Map.update(a, MapSet.new([b]), &MapSet.put(&1, b)) |> Map.update(b, MapSet.new([a]), &MapSet.put(&1, a))
+        end)
+      end)
+
+    loose =
+      for {i, ws} <- point_weights,
+          arm = ws |> Enum.filter(fn {b, _} -> String.starts_with?(b, "upperarm_") end) |> Enum.map(&elem(&1, 1)) |> Enum.sum(),
+          arm > 0.02 and arm < 0.98,
+          do: i
+
+    Enum.reduce(1..30, List.to_tuple(rest), fn _, ps ->
+      Enum.reduce(loose, ps, fn i, acc ->
+        ns = Enum.map(near[i], &elem(ps, &1))
+        put_elem(acc, i, ns |> Enum.reduce(&Vec.add/2) |> Vec.scale(1 / length(ns)))
+      end)
+    end)
+    |> Tuple.to_list()
+  else
+    rest
+  end
+
 # The bones at rest. The tail of a bone with no next bone of the plan:
 # the end of the middle finger for a hand, the tip of the toes for a
 # ball, the end of the finger for the last bone of a finger, the end of
@@ -244,7 +290,7 @@ ends =
 # The size: the head and the body 0.5 m long (from the top of the head to
 # the lowest point of the pelvis), on the ground at z = 0.
 seat = weights_of.("pelvis", 0.5) |> Enum.map(&elem(&1, 2)) |> Enum.min()
-top = rest |> Enum.map(&elem(&1, 2)) |> Enum.max()
+top = "head" |> weights_of.(0.5) |> Enum.map(&elem(&1, 2)) |> Enum.max()
 k = 0.5 / (top - seat)
 ground = rest |> Enum.map(&elem(&1, 2)) |> Enum.min()
 fit = fn {x, y, z} -> {x * k, y * k, (z - ground) * k} end
@@ -354,18 +400,76 @@ weights =
   (for {i, ws} <- point_weights, {b, w} <- ws, w2 = Float.round(w / 1, 5), w2 > 0, do: {b, [i, w2]}) ++
     for(i <- n0..(length(all) - 1)//1, do: {"head", [i, 1.0]})
 
+tris = faces ++ Enum.map(eye_faces, &elem(&1, 0))
+mats = List.duplicate(0, length(faces)) ++ Enum.map(eye_faces, &elem(&1, 1))
+
+# With TAIL=no: the faces with a mean weight of the tail bones of the
+# file of more than 0.5 go. Each new hole has a cap: a fan of faces to
+# the mean of its points (with their mean weights). The points on no
+# face go.
+{all, tris, mats, weights} =
+  if no_tail? do
+    tail =
+      for %{"vertex_index" => i, "weights" => ws} <- file["deform_weights"], into: %{} do
+        {i, ws |> Enum.filter(fn {b, _} -> String.starts_with?(b, "Tail") end) |> Enum.map(&elem(&1, 1)) |> Enum.sum()}
+      end
+
+    edges = fn ts -> MapSet.new(for [a, b, c] <- ts, e <- [{a, b}, {b, c}, {c, a}], do: e) end
+    open = fn ts -> ts |> edges.() |> then(fn es -> Enum.reject(es, fn {a, b} -> MapSet.member?(es, {b, a}) end) end) end
+
+    {kept, kept_mats} =
+      Enum.zip(tris, mats) |> Enum.reject(fn {t, _} -> Enum.sum(Enum.map(t, &Map.get(tail, &1, 0.0))) / 3 > 0.5 end) |> Enum.unzip()
+
+    holes = MapSet.difference(MapSet.new(open.(kept)), MapSet.new(open.(tris)))
+    next = Map.new(holes)
+
+    loops =
+      Enum.reduce(holes, {[], MapSet.new()}, fn {a, _}, {loops, seen} ->
+        if MapSet.member?(seen, a) do
+          {loops, seen}
+        else
+          loop = Stream.iterate(a, &next[&1]) |> Enum.reduce_while([], fn p, acc -> if p in acc, do: {:halt, acc}, else: {:cont, [p | acc]} end) |> Enum.reverse()
+          {[loop | loops], MapSet.union(seen, MapSet.new(loop))}
+        end
+      end)
+      |> elem(0)
+
+    by_point = Enum.group_by(weights, fn {_, [i, _]} -> i end, fn {b, [_, w]} -> {b, w} end)
+    pts = List.to_tuple(all)
+
+    {all, caps, cap_weights} =
+      Enum.reduce(loops, {all, [], []}, fn loop, {all, caps, ws} ->
+        c = length(all)
+        center = loop |> Enum.map(&elem(pts, &1)) |> Enum.reduce(&Vec.add/2) |> Vec.scale(1 / length(loop))
+        mean = loop |> Enum.flat_map(&by_point[&1]) |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+        mean = for {b, l} <- mean, do: {b, [c, Float.round(Enum.sum(l) / length(loop), 5)]}
+        fan = for [a, b] <- Enum.chunk_every(loop ++ [hd(loop)], 2, 1, :discard), do: [b, a, c]
+        {all ++ [center], caps ++ fan, ws ++ mean}
+      end)
+
+    tris = kept ++ caps
+    used = tris |> List.flatten() |> Enum.uniq() |> Enum.sort()
+    new = used |> Enum.with_index() |> Map.new()
+
+    {Enum.map(used, &Enum.at(all, &1)), Enum.map(tris, fn t -> Enum.map(t, &new[&1]) end),
+     kept_mats ++ List.duplicate(0, length(caps)),
+     for({b, [i, w]} <- weights ++ cap_weights, Map.has_key?(new, i), do: {b, [new[i], w]})}
+  else
+    {all, tris, mats, weights}
+  end
+
 data = %{
   "source" =>
     "BigMaQ (https://github.com/martinivis/BigMaQ, commit a92d2d0): the low-poly template mesh of a rhesus macaque, its 115 bones and its weights; the template mesh came from the Max Planck Institute for Intelligent Systems and M. J. Black. World turns it to the pose at rest of the body plan and adds the eyes.",
   "license" => "MIT (the license of the repository of BigMaQ): https://github.com/martinivis/BigMaQ/blob/main/LICENSE",
   "points" => Enum.map(all, round),
-  "faces" => faces ++ Enum.map(eye_faces, &elem(&1, 0)),
+  "faces" => tris,
   "materials" => [
     %{"name" => "body", "color" => [170, 140, 110]},
     %{"name" => "eye", "color" => [20, 16, 14]},
     %{"name" => "iris", "color" => [155, 100, 40]}
   ],
-  "face_materials" => List.duplicate(0, length(faces)) ++ Enum.map(eye_faces, &elem(&1, 1)),
+  "face_materials" => mats,
   "bones" =>
     for b <- bones do
       %{"name" => b.name, "parent" => b.parent, "head" => round.(fit.(heads[b.name]))}

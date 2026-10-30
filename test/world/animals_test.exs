@@ -520,6 +520,19 @@ defmodule World.AnimalsTest do
     assert elem(Vec.norm(Vec.sub(w["neck_01"].at, w["pelvis"].at)), 2) > 0.9
     assert elem(w["hand_r"].at, 2) > elem(w["head"].at, 2)
 
+    # The template `primate_upright`: no tail, the arms up at rest (the
+    # hands over the head), and the stance near the rest (the arms turn
+    # by less than 45 degrees; from the rest with the arms down they turn
+    # by about 150).
+    refute Enum.any?(s.bones, &String.starts_with?(&1.name, "tail_"))
+    assert Figure.limbs(g) == ~w(arm_l arm_r head leg_l leg_r)
+    assert elem(s.rest["hand_l"].at, 2) > elem(s.rest["head"].at, 2)
+
+    for side <- ~w(l r) do
+      dir = fn f -> Vec.norm(Vec.sub(f["lowerarm_#{side}"].at, f["upperarm_#{side}"].at)) end
+      assert Vec.dot(dir.(w), dir.(s.rest)) > :math.cos(45 * :math.pi() / 180)
+    end
+
     [walk, sit] = g.animations
 
     for f <- frames(g, walk) do

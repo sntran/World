@@ -481,7 +481,9 @@ nearest body, and its numbers change the rest.
   macaque of BigMaQ (MIT; the mesh came from MPI-IS, see `CREDITS.md`),
   on the bones of a person, with eyes that World adds
   (`scripts/primate_template.exs`, below). Its numbers change it to the
-  other primates.
+  other primates. The template `primate_upright` is the same mesh with
+  the arms up at rest and no tail, for a primate that walks upright
+  with its arms up (the gibbon).
 
 The species is `priv/animals/species/NAME.json`:
 
@@ -706,7 +708,7 @@ The species now:
 | `duck` | bird | A white domestic duck (vịt, a Pekin duck): about 50 cm high, creamy white feathers, a long wide yellow-orange bill, short yellow-orange legs. | The template `bird` with no comb (`without`), a beak 1.7 times longer and 2 times wider, shorter legs, a longer neck, a larger head. The body is more level than the 40º of a Pekin duck, the feet have no webs, and the eyes are a little large. |
 | `carp` | fish | A common carp (cá chép, Cyprinus carpio): about 50 cm long, a robust body, a long dorsal fin, a forked tail fin, dark gold with a darker back and a pale belly, bronze fins. | The template `fish`, a little slimmer (`body_depth` 0.9). No barbels. |
 | `tilapia` | fish | A Nile tilapia (cá rô phi, Oreochromis niloticus): about 30 cm long, a deep body, gray with a darker back and a pale belly. | The template `fish`, deeper (`body_depth` 1.4). The tail fin of the template is forked, the tail fin of a tilapia is not; no bands. |
-| `gibbon` | primate | A northern white-cheeked gibbon (vượn đen má trắng, Nomascus leucogenys), a male: about 55 cm long, no tail, black with white cheeks, very long arms. On the ground it walks on two legs with its arms up (`"upright": true` in its gait). | Numbers on the template `primate`: the arms 1.3 and the legs 0.88, so the arms are 1.3 times the legs (0.88 on the template); a slim body, a round head and a flat face (the muzzle 0.45, guesses from photos), a black face and white `cheeks`. The template has a tail: the gibbon has the shortest, thin. |
+| `gibbon` | primate | A northern white-cheeked gibbon (vượn đen má trắng, Nomascus leucogenys), a male: about 55 cm long, no tail, black with white cheeks, very long arms. On the ground it walks on two legs with its arms up (`"upright": true` in its gait). | Numbers on the template `primate_upright` (no tail, the arms up at rest): the arms 1.3 and the legs 0.88, so the arms are 1.3 times the legs (0.88 on the template); a slim body, a round head and a flat face (the muzzle 0.45, guesses from photos), a black face and white `cheeks`. |
 
 The numbers of the presets are a guess from the sizes in their
 `sources` and from photos, not measurements of the shape.
@@ -799,7 +801,8 @@ of a person (`World.People.Skeleton`) work on it.
   with the back, the face looks to the front, and the tail goes up
   from its root and then down in a curve. A species with
   `"upright": true` in its gait (the gibbon) stands on two legs, with
-  the arms up and out and the hands open.
+  the arms up over the head, a little out and almost straight, and the
+  hands open.
 - Animations: `walk` (on four limbs: the clip of a real rhesus macaque
   of BigMaQ, `priv/animals/clips/primate.json`, a cycle of 0.65 s, the
   hands and the feet in the order of a primate: hind left, front right,
@@ -975,6 +978,7 @@ primates from the low-poly template mesh of BigMaQ (a rhesus macaque,
 https://github.com/martinivis/BigMaQ, commit a92d2d0):
 
     mix run scripts/primate_template.exs macaque_LOWPOLY.json priv/animals/meshes/primate.json
+    ARMS=up TAIL=no mix run scripts/primate_template.exs macaque_LOWPOLY.json priv/animals/meshes/primate_upright.json
 
 - The axes: the file has y up and z to the front; World has z up, y to
   the front, and the left side at -x.
@@ -990,12 +994,20 @@ https://github.com/martinivis/BigMaQ, commit a92d2d0):
   legs and the arms turn back down by 90º, the neck turns to the front
   by 20º and the head by 40º (the face looks to the front: in the file
   it looks 30º down), and each hand turns down along the arm with the
-  palm to the body, as the hands of a person.
+  palm to the body, as the hands of a person. With `ARMS=up` the arms
+  turn up by 90º, and each hand turns along its forearm.
 - The points at rest: each point is where the skin of World (linear
   blend skinning) must start, so that the same turns back give the
   point of the file (the inverse of the blend of the turns of its
   bones). So the animal on four limbs has the shape of the file, with
-  no thin joints.
+  no thin joints. With `ARMS=up`, the points between the trunk and an
+  arm (a weight on the upper arm from 0.02 to 0.98) fold where the arm
+  turns up: 30 steps of smoothing (each to the mean of the points next to
+  it) make the armpits smooth.
+- With `TAIL=no`, the faces with a mean weight of the tail of more than
+  0.5 go, the hole at the root of the tail has a cap (a fan to the mean
+  of its points), and the tail has no bones (its weights go to the
+  pelvis).
 - The eyes: the lids of the file are closed. A sphere at the center of
   each eye of the file, 1.1 times the distance to the nearest point of
   the skin, moves to the front until it goes out of the skin by 0.35 of
