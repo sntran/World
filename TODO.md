@@ -146,6 +146,11 @@ and no logo on them.
   mesh of its own (now the
   targets are on the skin of all the body, sparse), and mixes of the
   visemes and the shapes from measured faces (now a guess).
+- **Skin (W6).** The skin is less like plastic (`World.People.Skin`: a
+  sheen, less reflection, pores, darker creases). Still to do: a
+  texture of the skin in more detail (MakeHuman has 1024 pixels), a real
+  subsurface scatter in the app (glTF has no standard extension for
+  it), the marks of age, and values from measured skin (now a guess).
 - **Animations of daily life (W7).** The idea "More animations of
   people" above, with: talk with gestures, sit on a low stool, squat
   with flat feet (ngồi chồm hổm), eat with chopsticks and a spoon, drink

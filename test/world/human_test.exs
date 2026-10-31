@@ -345,6 +345,33 @@ defmodule World.HumanTest do
     assert lid.(still).targets == nil and still.animations == []
   end
 
+  test "the skin: pores near, a sheen and less reflection at each level, darker and warmer creases" do
+    p = Human.person("a", hair: nil, clothes: [])
+    [skin] = for n <- p.nodes, pr <- n.primitives, pr.material == :skin, do: pr
+    near = p.materials.skin
+    assert {"image/png", <<137, 80, 78, 71, _::binary>>} = near["normal_image"]
+    assert near["normal_image_scale"] == 60 and near["sheen"] == [170, 104, 97] and near["specular"] == 0.5
+
+    for level <- [:mid, :far] do
+      spec =
+        Build.scene(Detail.with(level, fn -> Human.person("a", hair: nil, clothes: []) end), level: level).materials.skin
+
+      assert spec["sheen"] == [170, 104, 97] and not Map.has_key?(spec, "normal_image")
+    end
+
+    # Each point has a color: white on most of the skin; in a crease
+    # less green and blue than red (warm), and never darker than 0.75.
+    assert length(skin.colors) == length(skin.positions)
+    white = Enum.count(skin.colors, &(&1 == {255, 255, 255}))
+    assert white > length(skin.colors) / 2
+    dark = Enum.reject(skin.colors, &(&1 == {255, 255, 255}))
+    assert dark != [] and Enum.all?(dark, fn {r, g, b} -> r >= b and b >= g and g >= round(255 * 0.75) end)
+
+    # The texture of the pores: 128 pixels, the same bytes each time.
+    assert World.People.Skin.pores() == near["normal_image"] |> elem(1)
+    assert <<_::binary-size(16), 128::32, 128::32, 8, 2, _::binary>> = World.People.Skin.pores()
+  end
+
   test "speech and expressions at mid and far: the body moves by its fit" do
     names = World.People.Face.names() ++ World.People.Face.shape_names()
 

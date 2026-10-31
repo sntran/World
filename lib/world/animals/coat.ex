@@ -135,17 +135,12 @@ defmodule World.Animals.Coat do
     smooth(0.0, 1.0, 1 - d1 / 13) * smooth(0.0, 1.0, (d2 - d1) / 5)
   end
 
-  # A PNG file: 8 bits of red, green, blue and alpha, rows with no filter.
+  # A PNG file: 8 bits of red, green, blue and alpha.
   defp png(values, alphas) do
     rows =
       for {row, arow} <- Enum.zip(values, alphas),
-          into: <<>>,
-          do: <<0>> <> for({g, a} <- Enum.zip(row, arow), into: <<>>, do: <<g, g, g, a>>)
+          do: for({g, a} <- Enum.zip(row, arow), into: <<>>, do: <<g, g, g, a>>)
 
-    <<137, 80, 78, 71, 13, 10, 26, 10>> <>
-      chunk("IHDR", <<@size::32, @size::32, 8, 6, 0, 0, 0>>) <>
-      chunk("IDAT", :zlib.compress(rows)) <> chunk("IEND", <<>>)
+    World.PNG.encode(rows, 4)
   end
-
-  defp chunk(type, data), do: <<byte_size(data)::32, type::binary, data::binary, :erlang.crc32(type <> data)::32>>
 end

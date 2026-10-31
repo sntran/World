@@ -13,7 +13,7 @@ defmodule World.People.Human do
   - `:far`: a body of 730 faces, with the colors of the clothes on it.
   """
   alias World.{Detail, Figure, Frame, Part, Port, Scene, Vec}
-  alias World.People.{Data, Face, Joints, Pose, Skeleton}
+  alias World.People.{Data, Face, Joints, Pose, Skeleton, Skin}
 
   @blink ~w(eyeBlinkLeft eyeBlinkRight)
 
@@ -335,8 +335,10 @@ defmodule World.People.Human do
     # which the targets of the mouth move.
     shapes = shapes(o)
 
+    # The creases of the skin are darker and warmer (World.People.Skin).
     body =
       mesh(:skin, faces, &elem(points, &1), &elem(base.uvs, &1), &Map.get(weights, &1, [{0, 1.0}]), o.ground, shapes)
+      |> Skin.creases()
 
     mouth =
       if o.speech or o.expressions,
@@ -359,7 +361,7 @@ defmodule World.People.Human do
 
     materials =
       Map.new(
-        [{:skin, textured(Data.asset("skins", o.skin).texture, false)}] ++
+        [{:skin, Map.merge(textured(Data.asset("skins", o.skin).texture, false), Skin.material(:near))}] ++
           for({role, a} <- mouth, do: {role, Map.put(textured(a.texture, false), "roughness", 0.3)}) ++
           for(
             {role, a, mat} <- assets,
@@ -426,7 +428,7 @@ defmodule World.People.Human do
 
     materials =
       Map.new([
-        {:skin, textured(Data.asset("skins", o.skin).texture, false)},
+        {:skin, Map.merge(textured(Data.asset("skins", o.skin).texture, false), Skin.material(level))},
         {:eyes, textured(Data.asset("eye_materials", o.eyes).texture, false)},
         {:eyebrows, textured(Data.asset("eyebrows", o.eyebrows).texture, :blend)},
         {:hole, %{"color" => [40, 22, 24], "roughness" => 0.9, "metalness" => 0.0}} | colors

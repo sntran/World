@@ -245,6 +245,15 @@ The GLB of a person has:
   their soft strands stay). The eyes are dark brown by default
   (`darkbrown`: the iris of `brown` of MakeHuman, red-brown, made dark
   brown by `scripts/makehuman.py`);
+- a skin that is not like plastic (`World.People.Skin`): roughness
+  0.55, less reflection (`KHR_materials_specular`, 0.5), a red glow at
+  the edges, where light goes into the skin and comes out
+  (`KHR_materials_sheen`), and at near the pores: a normal texture of
+  128 pixels that World makes, 60 times in one unit of UV, at the scale
+  0.5. At near each point of the skin has a color: white, or in a
+  crease (the corners of the eyes, the sides of the nose, the lips) a
+  darker and warmer color, as in a soft shadow (at most 25% darker in
+  green). The values are a guess, from renders;
 - the face at rest (the option `face`): `relaxed` by default (the
   eyelids 0.25 closed and a hint of a smile: the face shapes
   `eyeBlink…` 0.25 and `mouthSmile…` 0.15), `neutral` (the face of
@@ -1276,7 +1285,13 @@ The build gives the same bytes for the same model.
   face (a hard edge) has the normal of its face; a smooth part has the
   normal of each vertex.
 - **The materials.** One glTF material for each role, with the values of
-  the palette. Its name is its role.
+  the palette. Its name is its role. A material can have a color
+  texture and a normal texture (each can repeat, with
+  `KHR_texture_transform`), a sheen (`KHR_materials_sheen`) and a
+  specular factor (`KHR_materials_specular`); `extensionsUsed` lists the
+  extensions that the materials use. A primitive of a material with a
+  normal texture has a tangent for each point (`TANGENT`: the direction
+  of +u, and the sign of +v), from its UVs.
 - **`extras` of the root.** `name`, `kind`, `size` (the box), `sources`,
   `level` (`near`, `mid` or `far`).
 - **The check.** The Khronos glTF validator checks each file in CI: no

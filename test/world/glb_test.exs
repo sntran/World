@@ -99,6 +99,57 @@ defmodule World.GLBTest do
              json["materials"]
 
     assert t == %{"scale" => [3.0, 3.0]}
+
+    # Skin: a normal texture that repeats, a sheen and less reflection.
+    skin =
+      Map.merge(scene.materials.skin, %{
+        "normal_image" => {"image/png", <<137, 80, 78, 71, 1>>},
+        "normal_scale" => 0.5,
+        "normal_image_scale" => 60,
+        "sheen" => [255, 255, 255],
+        "specular" => 0.5
+      })
+
+    json = GLBHelper.json(GLB.encode(%{scene | materials: %{skin: skin}}))
+    assert json["extensionsUsed"] == ["KHR_materials_sheen", "KHR_materials_specular", "KHR_texture_transform"]
+    assert [m] = json["materials"]
+
+    assert %{"index" => 1, "scale" => 0.5, "extensions" => %{"KHR_texture_transform" => %{"scale" => [60, 60]}}} =
+             m["normalTexture"]
+
+    assert m["extensions"] == %{
+             "KHR_materials_sheen" => %{"sheenColorFactor" => [1.0, 1.0, 1.0], "sheenRoughnessFactor" => 0.5},
+             "KHR_materials_specular" => %{"specularFactor" => 0.5}
+           }
+
+    # The same normal texture with no repeat and the default scale.
+    skin = Map.drop(skin, ["normal_scale", "normal_image_scale", "sheen", "specular"])
+    json = GLBHelper.json(GLB.encode(%{scene | materials: %{skin: skin}}))
+    assert json["materials"] |> hd() |> Map.fetch!("normalTexture") == %{"index" => 1, "scale" => 1.0}
+    refute Map.has_key?(json, "extensionsUsed")
+  end
+
+  test "the tangents of a primitive with a normal texture" do
+    # Two triangles of a square in the plane z = 0, the normal +z; the
+    # second has its UVs in a mirror (u to the left).
+    p = %Scene.Primitive{
+      material: :skin,
+      positions: [{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {2, 0, 0}, {3, 0, 0}, {2, 1, 0}],
+      normals: List.duplicate({0.0, 0.0, 1.0}, 6),
+      uvs: [{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {0.0, 0.0}, {1.0, 1.0}],
+      indices: [0, 1, 2, 3, 4, 5]
+    }
+
+    spec = %{"color" => [255, 255, 255], "roughness" => 0.5, "metalness" => 0.0, "normal_image" => {"image/png", <<1>>}}
+    scene = %Scene{name: "t", nodes: [%Scene.Node{name: "square", primitives: [p]}], materials: %{skin: spec}}
+    glb = GLB.encode(scene)
+    [prim] = hd(GLBHelper.json(glb)["meshes"])["primitives"]
+    tangents = GLBHelper.floats(glb, prim["attributes"]["TANGENT"])
+
+    # +u is +x of World (-x of glTF) on the first triangle, with the sign
+    # 1; on the mirror, -x of World, with the sign -1.
+    assert Enum.take(tangents, 3) == List.duplicate({-1.0, 0.0, 0.0, 1.0}, 3)
+    assert Enum.drop(tangents, 3) == List.duplicate({1.0, 0.0, 0.0, -1.0}, 3)
   end
 
   test "an animation of the weights of the morph targets" do

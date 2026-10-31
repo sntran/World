@@ -49,6 +49,13 @@ defmodule World.GLB do
     mat_index = roles |> Enum.with_index() |> Map.new()
     buf = %{bin: <<>>, views: [], accessors: [], images: [], image_of: %{}}
 
+    # The roles with a normal texture: their primitives have tangents.
+    bumpy =
+      for {role, spec} <- scene.materials,
+          Enum.any?(spec, &(to_string(elem(&1, 0)) == "normal_image")),
+          into: MapSet.new(),
+          do: role
+
     {meshes, node_mesh, buf} =
       nodes
       |> Enum.with_index()
@@ -63,7 +70,7 @@ defmodule World.GLB do
           # each primitive has its normals.
           names = Enum.find_value(node.primitives, & &1.targets) |> then(&(&1 && Enum.map(&1, fn t -> elem(t, 0) end)))
           normals? = Enum.any?(node.primitives, fn p -> Enum.any?(List.wrap(p.targets), &(tuple_size(&1) == 3)) end)
-          {prims, buf} = Enum.map_reduce(node.primitives, buf, &primitive(&1, &2, mat_index, {names, normals?}))
+          {prims, buf} = Enum.map_reduce(node.primitives, buf, &primitive(&1, &2, mat_index, {names, normals?}, bumpy))
 
           mesh =
             %{"name" => node.name, "primitives" => prims}
@@ -111,7 +118,7 @@ defmodule World.GLB do
       |> put_some("meshes", nonempty(Enum.reverse(meshes)))
       |> put_some("skins", nonempty(skins))
       |> put_some("animations", nonempty(animations))
-      |> put_some("extensionsUsed", if(Enum.any?(materials, &transform?/1), do: ["KHR_texture_transform"]))
+      |> put_some("extensionsUsed", extensions(materials))
       |> put_some("images", nonempty(Enum.reverse(buf.images)))
       |> put_some("textures", nonempty(for {_, i} <- Enum.with_index(buf.images), do: %{"source" => i, "sampler" => 0}))
       |> put_some("samplers", if(buf.images == [], do: nil, else: [%{"magFilter" => 9729, "minFilter" => 9987}]))
@@ -122,13 +129,18 @@ defmodule World.GLB do
     {json, buf.bin}
   end
 
-  defp primitive(%Scene.Primitive{} = p, buf, mat_index, {names, normals?}) do
+  defp primitive(%Scene.Primitive{} = p, buf, mat_index, {names, normals?}, bumpy) do
     {pos, buf} = floats(buf, Enum.map(p.positions, &gl/1), "VEC3", 34962, true)
     {nor, buf} = floats(buf, Enum.map(p.normals, &gl/1), "VEC3", 34962, false)
     attrs = %{"POSITION" => pos, "NORMAL" => nor}
 
     {attrs, buf} =
       if p.uvs, do: with_attr(attrs, "TEXCOORD_0", floats(buf, p.uvs, "VEC2", 34962, false)), else: {attrs, buf}
+
+    {attrs, buf} =
+      if p.uvs && MapSet.member?(bumpy, p.material),
+        do: with_attr(attrs, "TANGENT", floats(buf, tangents(p), "VEC4", 34962, false)),
+        else: {attrs, buf}
 
     {attrs, buf} =
       if p.joints, do: with_attr(attrs, "JOINTS_0", ushorts(buf, p.joints)), else: {attrs, buf}
@@ -188,6 +200,50 @@ defmodule World.GLB do
 
     {%{"attributes" => attrs, "indices" => ind, "material" => Map.fetch!(mat_index, p.material)}
      |> put_some("targets", names && targets), buf}
+  end
+
+  # The tangent of each point, in the axes of glTF, for a normal texture:
+  # the direction of +u on the surface, at a right angle to the normal,
+  # and the sign of the direction of +v (1 or -1). A point with no
+  # direction of u (no area of UV) takes a direction at a right angle to
+  # its normal.
+  defp tangents(%Scene.Primitive{} = p) do
+    pos = p.positions |> Enum.map(&gl/1) |> List.to_tuple()
+    uv = List.to_tuple(p.uvs)
+
+    sums =
+      p.indices
+      |> Enum.chunk_every(3)
+      |> Enum.reduce(%{}, fn [i, j, k], acc ->
+        {e1, e2} = {Vec.sub(elem(pos, j), elem(pos, i)), Vec.sub(elem(pos, k), elem(pos, i))}
+        {{u0, v0}, {u1, v1}, {u2, v2}} = {elem(uv, i), elem(uv, j), elem(uv, k)}
+        {du1, dv1, du2, dv2} = {u1 - u0, v1 - v0, u2 - u0, v2 - v0}
+        det = du1 * dv2 - du2 * dv1
+
+        if abs(det) < 1.0e-12 do
+          acc
+        else
+          t = Vec.scale(Vec.sub(Vec.scale(e1, dv2), Vec.scale(e2, dv1)), 1 / det)
+          b = Vec.scale(Vec.sub(Vec.scale(e2, du1), Vec.scale(e1, du2)), 1 / det)
+
+          Enum.reduce([i, j, k], acc, fn v, acc ->
+            Map.update(acc, v, {t, b}, fn {t0, b0} -> {Vec.add(t0, t), Vec.add(b0, b)} end)
+          end)
+        end
+      end)
+
+    for {n, i} <- Enum.with_index(Enum.map(p.normals, &gl/1)) do
+      {t, b} = Map.get(sums, i, {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}})
+      t = Vec.sub(t, Vec.scale(n, Vec.dot(n, t)))
+
+      t =
+        if Vec.len(t) > 1.0e-9,
+          do: Vec.norm(t),
+          else: Vec.norm(Vec.cross(n, if(abs(elem(n, 0)) < 0.9, do: {1.0, 0.0, 0.0}, else: {0.0, 1.0, 0.0})))
+
+      {x, y, z} = t
+      {x, y, z, if(Vec.dot(Vec.cross(n, t), b) < 0, do: -1.0, else: 1.0)}
+    end
   end
 
   # A morph target: the moves of the points (or of the normals) that move
@@ -271,7 +327,49 @@ defmodule World.GLB do
     {%{"name" => name, "samplers" => Enum.map(pairs, &elem(&1, 0)), "channels" => Enum.map(pairs, &elem(&1, 1))}, buf}
   end
 
-  defp transform?(material), do: get_in(material, ["pbrMetallicRoughness", "baseColorTexture", "extensions"]) != nil
+  # The extensions that the materials use.
+  defp extensions(materials) do
+    transform? =
+      Enum.any?(materials, fn m ->
+        get_in(m, ["pbrMetallicRoughness", "baseColorTexture", "extensions"]) ||
+          get_in(m, ["normalTexture", "extensions"])
+      end)
+
+    names = for m <- materials, {name, _} <- Map.get(m, "extensions", %{}), uniq: true, do: name
+    nonempty(Enum.sort(if(transform?, do: ["KHR_texture_transform" | names], else: names)))
+  end
+
+  # A texture of an image. Two materials with the same image share it. A
+  # texture that repeats (`scale`: the times in one unit of UV) has a
+  # transform (KHR_texture_transform).
+  defp texture(buf, {mime, data} = file, scale) do
+    {image, buf} =
+      case buf.image_of do
+        %{^file => image} ->
+          {image, buf}
+
+        _ ->
+          view = length(buf.views)
+          buf = add_view(buf, data, nil)
+          image = length(buf.images)
+
+          {image,
+           %{
+             buf
+             | images: [%{"bufferView" => view, "mimeType" => mime} | buf.images],
+               image_of: Map.put(buf.image_of, file, image)
+           }}
+      end
+
+    texture = %{"index" => image}
+
+    texture =
+      if scale,
+        do: Map.put(texture, "extensions", %{"KHR_texture_transform" => %{"scale" => [scale, scale]}}),
+        else: texture
+
+    {texture, buf}
+  end
 
   defp material(role, buf, overrides) do
     spec =
@@ -290,42 +388,15 @@ defmodule World.GLB do
       "metallicFactor" => spec["metalness"] / 1
     }
 
+    # The color of the spec is a factor of the texture: white by
+    # default, the color of a hair, or a tint of clothes.
     {pbr, buf} =
       case spec["image"] do
         nil ->
           {pbr, buf}
 
-        {mime, data} = file ->
-          # Two materials with the same image share it.
-          {image, buf} =
-            case buf.image_of do
-              %{^file => image} ->
-                {image, buf}
-
-              _ ->
-                view = length(buf.views)
-                buf = add_view(buf, data, nil)
-                image = length(buf.images)
-
-                {image,
-                 %{
-                   buf
-                   | images: [%{"bufferView" => view, "mimeType" => mime} | buf.images],
-                     image_of: Map.put(buf.image_of, file, image)
-                 }}
-            end
-
-          # The color of the spec is a factor of the texture: white by
-          # default, the color of a hair, or a tint of clothes. A texture
-          # that repeats (`image_scale`: the times in one unit of UV)
-          # has a transform (KHR_texture_transform).
-          texture = %{"index" => image}
-
-          texture =
-            if scale = spec["image_scale"],
-              do: Map.put(texture, "extensions", %{"KHR_texture_transform" => %{"scale" => [scale, scale]}}),
-              else: texture
-
+        file ->
+          {texture, buf} = texture(buf, file, spec["image_scale"])
           {Map.put(pbr, "baseColorTexture", texture), buf}
       end
 
@@ -334,6 +405,35 @@ defmodule World.GLB do
       "pbrMetallicRoughness" => pbr,
       "doubleSided" => Map.get(spec, "double_sided", false)
     }
+
+    # Small bumps (the pores of the skin) are a normal texture.
+    {material, buf} =
+      case spec["normal_image"] do
+        nil ->
+          {material, buf}
+
+        file ->
+          {texture, buf} = texture(buf, file, spec["normal_image_scale"])
+          {Map.put(material, "normalTexture", Map.put(texture, "scale", Map.get(spec, "normal_scale", 1.0) / 1)), buf}
+      end
+
+    # Skin is not plastic: light goes in and comes out red at the edges
+    # (sheen, KHR_materials_sheen), and its reflection is less strong
+    # (KHR_materials_specular).
+    extensions =
+      %{}
+      |> put_some(
+        "KHR_materials_sheen",
+        if(sheen = spec["sheen"],
+          do: %{
+            "sheenColorFactor" => for(c <- sheen, do: Float.round(srgb_to_linear(c / 255), 5)),
+            "sheenRoughnessFactor" => Map.get(spec, "sheen_roughness", 0.5) / 1
+          }
+        )
+      )
+      |> put_some("KHR_materials_specular", if(f = spec["specular"], do: %{"specularFactor" => f / 1}))
+
+    material = if extensions == %{}, do: material, else: Map.put(material, "extensions", extensions)
 
     # Glass shows what is behind it; hair has holes (MASK); the eyebrows
     # and the eyelashes have soft strands (BLEND).
