@@ -15,6 +15,8 @@ defmodule World.People.Human do
   alias World.{Detail, Figure, Frame, Part, Port, Scene, Vec}
   alias World.People.{Data, Face, Joints, Pose, Skeleton}
 
+  @blink ~w(eyeBlinkLeft eyeBlinkRight)
+
   @defaults [
     gender: 1.0,
     age: 30,
@@ -34,7 +36,9 @@ defmodule World.People.Human do
     pose: %{},
     hold: [],
     speech: false,
-    expressions: false
+    expressions: false,
+    face: "relaxed",
+    blink: true
   ]
 
   @doc """
@@ -61,13 +65,18 @@ defmodule World.People.Human do
   shapes of ARKit of `World.People.Face` as morph targets of the skin,
   and at near of the teeth, the tongue, the eyebrows and the eyelashes:
   a blink closes the eyelashes). At mid and far the body moves by its
-  fit to the base mesh.
+  fit to the base mesh. `face`: the face at rest (`World.People.Face.rest/1`:
+  `"relaxed"`, `"neutral"` or a map of the face shapes to their weights;
+  each target of a shape of it moves only the rest of the way, so 1 is
+  the full shape). `blink` (true: the shapes `eyeBlinkLeft` and
+  `eyeBlinkRight` as morph targets, and the animation `blink`).
   """
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
     o = Map.put(o, :colors, chosen_colors(o))
     base = Data.base()
-    points = morph(base.points, o)
+    o = Map.put(o, :rest, Face.rest(o.face))
+    points = base.points |> morph(o) |> rest_face(o)
     clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
     o = Map.put(o, :ground, ground(base, points, clothes))
     bones = skeleton(points, o.ground)
@@ -120,7 +129,7 @@ defmodule World.People.Human do
               do: Pose.animation(elem(a, 0), bones, [hands: hands] ++ elem(a, 1)),
               else: Pose.animation(a, bones, hands: hands)
             )
-        ),
+        ) ++ blink(o, prims, length(nodes) - 1),
       materials: materials,
       ports: ports(bones, points, weights, o.ground),
       skeleton: skeleton,
@@ -139,7 +148,8 @@ defmodule World.People.Human do
   def skeleton(opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
     base = Data.base()
-    points = morph(base.points, o)
+    o = Map.put(o, :rest, Face.rest(o.face))
+    points = base.points |> morph(o) |> rest_face(o)
     clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
     Skeleton.new(skeleton(points, ground(base, points, clothes)))
   end
@@ -329,7 +339,7 @@ defmodule World.People.Human do
       mesh(:skin, faces, &elem(points, &1), &elem(base.uvs, &1), &Map.get(weights, &1, [{0, 1.0}]), o.ground, shapes)
 
     mouth =
-      if shapes != [],
+      if o.speech or o.expressions,
         do: [{:teeth, Data.asset("teeth", "teeth_base")}, {:tongue, Data.asset("tongue", "tongue01")}],
         else: []
 
@@ -595,11 +605,61 @@ defmodule World.People.Human do
 
   # The morph targets of a person: with speech, the moves of the visemes,
   # for each point of the base mesh; with expressions, the moves of the
-  # face shapes.
+  # face shapes; with blink, the shapes of a blink. A shape of the face at
+  # rest moves only the rest of the way.
   defp shapes(o) do
-    for {n, moves} <-
-          if(o.speech, do: Face.visemes(o.race), else: []) ++ if(o.expressions, do: Face.shapes(o.race), else: []),
-        do: {n, &Map.get(moves, &1, {0.0, 0.0, 0.0})}
+    faces =
+      cond do
+        o.expressions -> Face.shapes(o.race)
+        o.blink -> Face.shapes(o.race, @blink)
+        true -> []
+      end
+
+    for {n, moves} <- if(o.speech, do: Face.visemes(o.race), else: []) ++ faces do
+      k = 1.0 - Map.get(o.rest, n, 0.0)
+      {n, &Vec.scale(Map.get(moves, &1, {0.0, 0.0, 0.0}), k)}
+    end
+  end
+
+  # The animation "blink": a loop of 4 s with one blink at its start, as
+  # the weights of the targets of the mesh (the mesh node `node`): the
+  # eyelids close in 0.07 s, stay closed 0.05 s, and open in 0.15 s.
+  defp blink(%{blink: false}, _prims, _node), do: []
+
+  defp blink(_o, prims, node) do
+    names = prims |> Enum.find_value(& &1.targets) |> Enum.map(&elem(&1, 0))
+    closed = fn w -> for n <- names, do: if(n in @blink, do: w, else: 0.0) end
+
+    [
+      %{
+        name: "blink",
+        channels: [
+          %{
+            node: node,
+            path: :weights,
+            times: [0.0, 0.07, 0.12, 0.27, 4.0],
+            values: Enum.map([0.0, 1.0, 1.0, 0.0, 0.0], closed)
+          }
+        ]
+      }
+    ]
+  end
+
+  # The face at rest: the points of the body with the shapes of the face at
+  # rest by their weights.
+  defp rest_face(points, %{rest: rest}) when rest == %{}, do: points
+
+  defp rest_face(points, o) do
+    moves =
+      for {n, moves} <- Face.shapes(o.race, Map.keys(o.rest)), {i, d} <- moves, reduce: %{} do
+        acc -> Map.update(acc, i, Vec.scale(d, o.rest[n]), &Vec.add(&1, Vec.scale(d, o.rest[n])))
+      end
+
+    points
+    |> Tuple.to_list()
+    |> Enum.with_index()
+    |> Enum.map(fn {p, i} -> Vec.add(p, Map.get(moves, i, {0.0, 0.0, 0.0})) end)
+    |> List.to_tuple()
   end
 
   # The moves of the shapes for the points of an asset (or of a body at

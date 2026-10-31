@@ -110,9 +110,22 @@ defmodule World.People.Face do
 
   @doc """
   The face shapes of ARKit of a person of the origins `race` (as
-  `visemes/1`): a list of `{name, moves}`.
+  `visemes/1`): a list of `{name, moves}`; with `names`, only these.
   """
-  def shapes(race), do: for({name, mix} <- shape_mixes(), do: {name, mix(race, mix)})
+  def shapes(race, names \\ nil),
+    do: for({name, mix} <- shape_mixes(), names == nil or name in names, do: {name, mix(race, mix)})
+
+  @doc """
+  The face of a person at rest (`World.People.Human`): `"relaxed"` (the
+  eyelids 0.25 closed and a hint of a smile, 0.15 of each side),
+  `"neutral"` (the face of MakeHuman), or a map of the names of the face
+  shapes to their weights. A map of a shape to its weight.
+  """
+  def rest("relaxed"),
+    do: %{"eyeBlinkLeft" => 0.25, "eyeBlinkRight" => 0.25, "mouthSmileLeft" => 0.15, "mouthSmileRight" => 0.15}
+
+  def rest("neutral"), do: %{}
+  def rest(%{} = mix), do: mix
 
   @doc """
   The visemes of a person of the origins `race` (a map of "african",

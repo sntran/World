@@ -119,7 +119,7 @@ defmodule World.DrawingTest do
     scene = Build.scene(cart, level: :far)
     assert ~w(wheel_l wheel_r door) -- scene.extras["joints"] == []
     assert "seller/elbow_r" in scene.extras["joints"] and "seller/arm_r" in scene.extras["limbs"]
-    assert Enum.map(scene.animations, & &1.name) == ["wag", "open", "roll"]
+    assert Enum.map(scene.animations, & &1.name) == ["blink", "wag", "open", "roll"]
     assert "tai_chi_fan" not in Enum.map(Build.parts(cart), & &1["name"])
     assert "non_la" in Enum.map(Build.parts(cart), & &1["name"])
     {{_, _, ground}, _} = Scene.bounds(scene)

@@ -62,7 +62,7 @@ defmodule World.HumanTest do
 
   test "a traveler walks" do
     scene = Build.scene(Detail.with(:far, &World.People.traveler/0), level: :far)
-    [walk] = scene.animations
+    [walk, %{name: "blink"}] = scene.animations
     assert walk.name == "walk"
     assert length(walk.channels) == 8
 
@@ -76,7 +76,7 @@ defmodule World.HumanTest do
     end
 
     glb = World.GLB.encode(scene)
-    assert %{"animations" => [_], "skins" => [_]} = World.GLBHelper.json(glb)
+    assert %{"animations" => [_, _], "skins" => [_]} = World.GLBHelper.json(glb)
   end
 
   test "a rider sits on the scooter with the hands on the grips" do
@@ -159,13 +159,13 @@ defmodule World.HumanTest do
 
       # The person stands out of the vehicle, at its right side.
       if v != "foot", do: assert(w > 0.9), else: assert(scene.extras["kind"] == "person")
-      assert Enum.map(scene.animations, & &1.name) == ["wave", "point"]
+      assert Enum.map(scene.animations, & &1.name) == ["wave", "point", "blink"]
     end
   end
 
   test "the parked traveler waves to the viewer and points to the front of the vehicle" do
     scene = Build.scene(Detail.with(:far, fn -> World.People.traveler("motorbike", [], "parked") end), level: :far)
-    [wave, point] = scene.animations
+    [wave, point, _blink] = scene.animations
     names = fn a -> Enum.map(a.channels, &Enum.at(scene.nodes, &1.node).name) |> Enum.sort() end
     # The wave: the right arm, the open hand and the head; the left side
     # does not move.
@@ -225,8 +225,8 @@ defmodule World.HumanTest do
     assert Enum.map(group.nodes, &elem(&1, 0)) == ~w(leader person_1 person_2 person_3 person_4)
 
     scene = Build.scene(group, level: :far)
-    # One animation: the routine of the five people.
-    [clip] = scene.animations
+    # One animation: the routine of the five people (and their blinks).
+    [clip, %{name: "blink"}] = scene.animations
     assert clip.name == "tai_chi"
     roots = for {n, i} <- Enum.with_index(scene.nodes), n.name in ~w(leader person_1 person_2 person_3 person_4), do: i
     owners = clip.channels |> Enum.map(&owner(scene, &1.node, roots)) |> Enum.uniq() |> Enum.sort()
@@ -252,7 +252,7 @@ defmodule World.HumanTest do
   end
 
   test "speech: the teeth, the tongue and the 15 visemes as morph targets" do
-    p = Human.person("talker", speech: true, hair: nil, clothes: [])
+    p = Human.person("talker", speech: true, blink: false, hair: nil, clothes: [])
     prims = for n <- p.nodes, pr <- n.primitives, do: pr
     names = World.People.Face.names()
     assert length(names) == 15 and hd(names) == "viseme_sil" and List.last(names) == "viseme_U"
@@ -297,13 +297,52 @@ defmodule World.HumanTest do
 
     # A person with no speech has no teeth and no targets; two origins
     # mix the units of each.
-    plain = Human.person("quiet", hair: nil, clothes: [])
+    plain = Human.person("quiet", blink: false, hair: nil, clothes: [])
     assert Enum.all?(for(n <- plain.nodes, pr <- n.primitives, do: pr), &(&1.targets == nil and &1.material != :teeth))
 
     mean = fn race -> race |> World.People.Face.visemes() |> Enum.find(&(elem(&1, 0) == "viseme_aa")) |> elem(1) end
     {a, b, both} = {mean.(%{"asian" => 1.0}), mean.(%{"african" => 1.0}), mean.(%{"asian" => 1.0, "african" => 1.0})}
     {i, {x, _, _}} = Enum.find(both, fn {_, {x, _, _}} -> abs(x) > 0.01 end)
     assert_in_delta x, (elem(Map.get(a, i, {0.0, 0.0, 0.0}), 0) + elem(Map.get(b, i, {0.0, 0.0, 0.0}), 0)) / 2, 1.0e-9
+  end
+
+  test "the face at rest (relaxed by default, neutral, or a mix) and the blink" do
+    lid = fn p ->
+      [skin] = for n <- p.nodes, pr <- n.primitives, pr.material == :skin, do: pr
+      skin
+    end
+
+    relaxed = Human.person("a", hair: nil, clothes: [])
+    neutral = Human.person("b", face: "neutral", hair: nil, clothes: [])
+    mix = Human.person("c", face: %{"eyeBlinkLeft" => 0.5}, hair: nil, clothes: [])
+
+    # The relaxed face moves points of the face (the eyelids, the mouth);
+    # a mix of the application moves them as it says.
+    moved = fn a, b ->
+      Enum.count(Enum.zip(lid.(a).positions, lid.(b).positions), fn {p, q} ->
+        World.Vec.len(World.Vec.sub(p, q)) > 1.0e-4
+      end)
+    end
+
+    assert moved.(relaxed, neutral) > 50 and moved.(mix, neutral) > 20
+
+    # The blink: two targets, and each closes the eye of its side all the
+    # way from the face at rest (the relaxed eyelids are 0.25 closed, so
+    # the target moves 0.75 of the neutral one).
+    names = Enum.map(lid.(relaxed).targets, &elem(&1, 0))
+    assert names == ~w(eyeBlinkLeft eyeBlinkRight)
+    size = fn p -> lid.(p).targets |> hd() |> elem(1) |> Enum.map(&World.Vec.len/1) |> Enum.max() end
+    assert_in_delta size.(relaxed), 0.75 * size.(neutral), 1.0e-6
+
+    # The animation blink: the weights of the targets of the mesh, closed
+    # at 0.07 s to 0.12 s, open again at 0.27 s, a loop of 4 s.
+    [%{name: "blink", channels: [c]}] = relaxed.animations
+    assert Enum.at(relaxed.nodes, c.node).primitives != [] and c.path == :weights
+    assert c.times == [0.0, 0.07, 0.12, 0.27, 4.0] and Enum.at(c.values, 1) == [1.0, 1.0] and hd(c.values) == [0.0, 0.0]
+
+    # With no blink, no targets and no animation.
+    still = Human.person("d", blink: false, hair: nil, clothes: [])
+    assert lid.(still).targets == nil and still.animations == []
   end
 
   test "speech and expressions at mid and far: the body moves by its fit" do

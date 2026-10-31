@@ -245,6 +245,19 @@ The GLB of a person has:
   their soft strands stay). The eyes are dark brown by default
   (`darkbrown`: the iris of `brown` of MakeHuman, red-brown, made dark
   brown by `scripts/makehuman.py`);
+- the face at rest (the option `face`): `relaxed` by default (the
+  eyelids 0.25 closed and a hint of a smile: the face shapes
+  `eyeBlink…` 0.25 and `mouthSmile…` 0.15), `neutral` (the face of
+  MakeHuman), or the map of an application of the face shapes of ARKit
+  (below) to their weights. The face at rest is in the points of the
+  mesh; a morph target of a shape of it moves only the rest of the way,
+  so the weight 1 is the full shape;
+- with the option `blink` (true by default): the morph targets
+  `eyeBlinkLeft` and `eyeBlinkRight` (the eyelashes move with the
+  eyelids), and the animation `blink`: a loop of 4 s with one blink at
+  its start (the eyelids close in 0.07 s, stay closed 0.05 s, and open
+  in 0.15 s), as the weights of the targets. An app plays it in a loop,
+  or at times of its own;
 - the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
   2.6 s, to play once, from the pose "stand" back to it). The channels
   of a clip are the bones that move in it;

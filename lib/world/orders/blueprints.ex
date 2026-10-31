@@ -296,6 +296,15 @@ defmodule World.Orders.Blueprints do
         max: 6,
         doc:
           "A color for each item of the clothes, in their order: at mid and far its color, at near a tint of its texture."
+      ),
+      option("face", :choice,
+        default: "relaxed",
+        values: ["relaxed", "neutral"],
+        doc: "The face at rest: relaxed (the eyelids a little lower, a hint of a smile) or neutral."
+      ),
+      option("blink", :boolean,
+        default: true,
+        doc: "The shapes of a blink as morph targets, and the animation blink (a loop of 4 s)."
       )
     ]
   end
@@ -316,7 +325,9 @@ defmodule World.Orders.Blueprints do
       hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
       hair_color: o["hair_color"] && rgb(o["hair_color"]),
       clothes: o["clothes"],
-      clothes_colors: Enum.map(o["clothes_colors"], &rgb/1)
+      clothes_colors: Enum.map(o["clothes_colors"], &rgb/1),
+      face: o["face"],
+      blink: o["blink"]
     ]
   end
 
