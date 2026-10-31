@@ -204,7 +204,9 @@ defmodule World.GLB do
 
   # The tangent of each point, in the axes of glTF, for a normal texture:
   # the direction of +u on the surface, at a right angle to the normal,
-  # and the sign of the direction of +v (1 or -1). A point with no
+  # and a sign (1 or -1): the cross product of the normal and the tangent,
+  # times the sign, points to -v (up in the image: green is up in a
+  # normal texture of glTF). A point with no
   # direction of u (no area of UV) takes a direction at a right angle to
   # its normal.
   defp tangents(%Scene.Primitive{} = p) do
@@ -242,7 +244,7 @@ defmodule World.GLB do
           else: Vec.norm(Vec.cross(n, if(abs(elem(n, 0)) < 0.9, do: {1.0, 0.0, 0.0}, else: {0.0, 1.0, 0.0})))
 
       {x, y, z} = t
-      {x, y, z, if(Vec.dot(Vec.cross(n, t), b) < 0, do: -1.0, else: 1.0)}
+      {x, y, z, if(Vec.dot(Vec.cross(n, t), b) > 0, do: -1.0, else: 1.0)}
     end
   end
 

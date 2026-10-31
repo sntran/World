@@ -6,7 +6,9 @@ defmodule World.People.Face do
   mouth of MakeHuman (CC0, `World.People.Data.expressions/0`), and each unit a
   mix of its targets for the three origins, by the origin of the person.
   The mixes are a guess from the shapes of the mouth for each sound, not
-  a measurement.
+  a measurement, checked as motion in renders of a sentence (a mix of
+  the full open and the upper lip up tears the skin at the cheeks: `aa`
+  opens 0.8).
 
   | Viseme | Sounds | The mix |
   |---|---|---|
@@ -15,14 +17,14 @@ defmodule World.People.Face do
   | `FF` | f, v | the lower lip up to the upper teeth |
   | `TH` | th | the mouth a little open, the lips apart |
   | `DD` | t, d | a little open, the lips back a little |
-  | `kk` | k, g | more open |
+  | `kk` | k, g | more open, the upper lip up a little |
   | `CH` | ch, j, sh | the lips forward, a little open |
   | `SS` | s, z | the lips back, the teeth close |
   | `nn` | n, l | a little open |
   | `RR` | r | the lips forward and round |
-  | `aa` | a | open wide |
-  | `E` | e | half open, the lips back |
-  | `I` | i | a little open, the lips back wide |
+  | `aa` | a | open wide, the upper lip up a little |
+  | `E` | e | half open, the lips back, the upper lip up |
+  | `I` | i | a little open, the lips back wide, the upper lip up |
   | `O` | o | open, the lips round |
   | `U` | u | the lips round and forward |
 
@@ -56,14 +58,14 @@ defmodule World.People.Face do
     {"FF", %{"open" => 0.1, "elevation" => 0.4, "depression-retraction" => 0.4}},
     {"TH", %{"open" => 0.25, "parling" => 0.4}},
     {"DD", %{"open" => 0.3, "retraction" => 0.2, "parling" => 0.2}},
-    {"kk", %{"open" => 0.45, "retraction" => 0.15}},
+    {"kk", %{"open" => 0.45, "retraction" => 0.15, "upward-retraction" => 0.15}},
     {"CH", %{"protusion" => 0.6, "open" => 0.2, "parling" => 0.3}},
     {"SS", %{"retraction" => 0.6, "open" => 0.1, "parling" => 0.3}},
     {"nn", %{"open" => 0.25, "retraction" => 0.1}},
     {"RR", %{"protusion" => 0.4, "pursing" => 0.3, "open" => 0.2}},
-    {"aa", %{"open" => 1.0, "parling" => 0.3}},
-    {"E", %{"open" => 0.5, "retraction" => 0.5}},
-    {"I", %{"open" => 0.3, "retraction" => 0.7, "parling" => 0.2}},
+    {"aa", %{"open" => 0.8, "parling" => 0.3, "upward-retraction" => 0.15}},
+    {"E", %{"open" => 0.5, "retraction" => 0.5, "upward-retraction" => 0.3}},
+    {"I", %{"open" => 0.3, "retraction" => 0.7, "parling" => 0.2, "upward-retraction" => 0.25}},
     {"O", %{"open" => 0.6, "pursing" => 0.6}},
     {"U", %{"pursing" => 0.9, "protusion" => 0.3}}
   ]
@@ -114,6 +116,44 @@ defmodule World.People.Face do
   """
   def shapes(race, names \\ nil),
     do: for({name, mix} <- shape_mixes(), names == nil or name in names, do: {name, mix(race, mix)})
+
+  @doc """
+  The weights of the visemes for speech, from `cues`: a list of
+  `{viseme, start, stop}` in order (the short name of the viseme, as
+  `"aa"`, or its full name; the times in seconds), as a voice service
+  gives them with the sound. A list of `{time, weights}`, the weights a
+  map of the full names of the visemes to their weights (no name is 0).
+
+  Each viseme has the weight `strength` at the middle of its cue, and 0
+  at the middles of the cues before and after it: the mouth goes from
+  one viseme to the next with no stop, as in real speech. The mouth is
+  closed (`sil`) 0.1 s before the first cue, 0.1 s after the last, and
+  in a gap of more than 0.1 s between two cues.
+  """
+  def talk(cues, strength \\ 1.0)
+  def talk([], _strength), do: []
+
+  def talk(cues, strength) do
+    cues = Enum.map(cues, fn {v, a, b} -> {String.replace_prefix(v, "viseme_", ""), a / 1, b / 1} end)
+    {_, first, _} = hd(cues)
+    {_, _, last} = List.last(cues)
+
+    gaps =
+      cues
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.flat_map(fn [{_, _, stop}, {_, start, _}] ->
+        if start - stop > 0.1, do: [{stop + 0.05, %{}}, {start - 0.05, %{}}], else: []
+      end)
+
+    middles =
+      for {v, a, b} <- cues do
+        {(a + b) / 2, if(v == "sil", do: %{}, else: %{("viseme_" <> v) => strength})}
+      end
+
+    ([{max(first - 0.1, 0.0), %{}} | middles] ++ gaps ++ [{last + 0.1, %{}}])
+    |> Enum.map(fn {t, w} -> {Float.round(t, 4), w} end)
+    |> Enum.sort_by(&elem(&1, 0))
+  end
 
   @doc """
   The face of a person at rest (`World.People.Human`): `"relaxed"` (the

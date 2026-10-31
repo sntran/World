@@ -33,7 +33,7 @@ defmodule World.People.Skin do
 
     if level == :near,
       do:
-        Map.merge(spec, %{"normal_image" => {"image/png", pores()}, "normal_scale" => 0.5, "normal_image_scale" => 60}),
+        Map.merge(spec, %{"normal_image" => {"image/png", pores()}, "normal_scale" => 0.3, "normal_image_scale" => 60}),
       else: spec
   end
 
@@ -91,8 +91,9 @@ defmodule World.People.Skin do
   end
 
   @doc """
-  The PNG of the pores: a normal texture (red is x, green is y, blue is
-  z) that repeats with no seam. A small round pit in each cell of 8
+  The PNG of the pores: a normal texture of glTF (red is to the right,
+  green is up in the image, blue is out of the skin) that repeats with
+  no seam. A small round pit in each cell of 8
   pixels, at a random place in the cell, with a random size and depth,
   on fine noise.
   """
@@ -140,7 +141,7 @@ defmodule World.People.Skin do
       for y <- 0..(@size - 1) do
         for x <- 0..(@size - 1), into: <<>> do
           {nx, ny, nz} =
-            Vec.norm({-1.5 * (h.(x + 1, y) - h.(x - 1, y)) / 2, -1.5 * (h.(x, y + 1) - h.(x, y - 1)) / 2, 1.0})
+            Vec.norm({-1.5 * (h.(x + 1, y) - h.(x - 1, y)) / 2, 1.5 * (h.(x, y + 1) - h.(x, y - 1)) / 2, 1.0})
 
           <<byte(nx), byte(ny), byte(nz)>>
         end

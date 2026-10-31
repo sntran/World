@@ -291,6 +291,22 @@ defmodule World.HumanTest do
     assert tx0 > x0 and tx1 < x1
     assert match?({"image/png", _}, p.materials.teeth["image"])
 
+    # The tongue goes down with the jaw (the units of MakeHuman do not
+    # move it), the tip more than the back; the upper teeth go down a
+    # little (their tips show under the upper lip), less than the lower.
+    down = fn pr -> pr |> move.("viseme_aa") |> Enum.map(&elem(&1, 2)) end
+    assert Enum.max(down.(tongue)) < -0.003 and Enum.min(down.(tongue)) < Enum.max(down.(tongue)) - 0.001
+    {_, {_, _, top}} = World.Vec.bounds(tp.positions)
+    upper = for {{_, _, z}, d} <- Enum.zip(tp.positions, down.(tp)), z > top - 0.004, do: d
+    assert Enum.max(upper) < -0.001 and Enum.max(upper) > Enum.min(down.(tp)) / 2
+
+    # The shadow in the mouth: the front teeth are white in the colors of
+    # the points, the back teeth dark; the teeth are ivory.
+    {{_, back, _}, {_, front, _}} = World.Vec.bounds(tp.positions)
+    shade = fn y -> for {{_, py, _}, {c, c, c}} <- Enum.zip(tp.positions, tp.colors), abs(py - y) < 0.002, do: c end
+    assert Enum.max(shade.(front)) > 240 and Enum.max(shade.(back)) < 100
+    assert p.materials.teeth["color"] == [232, 224, 208]
+
     json = World.GLBHelper.json(World.GLB.encode(Build.scene(p)))
     [mesh] = for m <- json["meshes"], m["extras"], do: m
     assert mesh["extras"]["targetNames"] == names and length(mesh["weights"]) == 15
@@ -304,6 +320,41 @@ defmodule World.HumanTest do
     {a, b, both} = {mean.(%{"asian" => 1.0}), mean.(%{"african" => 1.0}), mean.(%{"asian" => 1.0, "african" => 1.0})}
     {i, {x, _, _}} = Enum.find(both, fn {_, {x, _, _}} -> abs(x) > 0.01 end)
     assert_in_delta x, (elem(Map.get(a, i, {0.0, 0.0, 0.0}), 0) + elem(Map.get(b, i, {0.0, 0.0, 0.0}), 0)) / 2, 1.0e-9
+  end
+
+  test "the weights of the visemes for cues: the middle of each cue, silence at the ends and in a gap" do
+    alias World.People.Face
+    assert Face.talk([]) == []
+
+    keys = Face.talk([{"PP", 0.0, 0.1}, {"aa", 0.1, 0.3}, {"sil", 0.3, 0.32}, {"O", 0.6, 0.8}], 0.8)
+
+    assert keys == [
+             {0.0, %{}},
+             {0.05, %{"viseme_PP" => 0.8}},
+             {0.2, %{"viseme_aa" => 0.8}},
+             {0.31, %{}},
+             {0.37, %{}},
+             {0.55, %{}},
+             {0.7, %{"viseme_O" => 0.8}},
+             {0.9, %{}}
+           ]
+  end
+
+  test "talk: the animation of the visemes for the cues of a voice" do
+    cues = [{"PP", 0.1, 0.2}, {"aa", 0.2, 0.4}, {"sil", 0.4, 0.45}, {"viseme_O", 0.8, 1.0}]
+    p = Human.person("talker", speech: true, blink: false, hair: nil, clothes: [], talk: cues)
+    [%{name: "talk", channels: [c]}] = p.animations
+    assert c.path == :weights and c.times == Enum.map(World.People.Face.talk(cues), &elem(&1, 0))
+
+    # The weights of the targets of the mesh, in their order: "PP" at the
+    # middle of its cue, 0 for the others.
+    [skin] = for n <- p.nodes, pr <- n.primitives, pr.material == :skin, do: pr
+    names = Enum.map(skin.targets, &elem(&1, 0))
+    at = fn t -> Enum.zip(names, Enum.at(c.values, Enum.find_index(c.times, &(&1 == t)))) |> Map.new() end
+    assert at.(0.15)["viseme_PP"] == 1.0 and at.(0.15)["viseme_aa"] == 0.0
+
+    # With no speech, no animation talk.
+    assert Human.person("quiet", blink: false, hair: nil, clothes: [], talk: cues).animations == []
   end
 
   test "the face at rest (relaxed by default, neutral, or a mix) and the blink" do

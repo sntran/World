@@ -146,10 +146,11 @@ defmodule World.GLBTest do
     [prim] = hd(GLBHelper.json(glb)["meshes"])["primitives"]
     tangents = GLBHelper.floats(glb, prim["attributes"]["TANGENT"])
 
-    # +u is +x of World (-x of glTF) on the first triangle, with the sign
-    # 1; on the mirror, -x of World, with the sign -1.
-    assert Enum.take(tangents, 3) == List.duplicate({-1.0, 0.0, 0.0, 1.0}, 3)
-    assert Enum.drop(tangents, 3) == List.duplicate({1.0, 0.0, 0.0, -1.0}, 3)
+    # +u is +x of World (-x of glTF) on the first triangle; +v is +y of
+    # World, so the sign is -1 (the normal times the tangent is +v, and
+    # the sign makes it -v). On the mirror, -x of World, with the sign 1.
+    assert Enum.take(tangents, 3) == List.duplicate({-1.0, 0.0, 0.0, -1.0}, 3)
+    assert Enum.drop(tangents, 3) == List.duplicate({1.0, 0.0, 0.0, 1.0}, 3)
   end
 
   test "an animation of the weights of the morph targets" do

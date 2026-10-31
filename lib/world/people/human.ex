@@ -38,7 +38,8 @@ defmodule World.People.Human do
     speech: false,
     expressions: false,
     face: "relaxed",
-    blink: true
+    blink: true,
+    talk: nil
   ]
 
   @doc """
@@ -69,7 +70,9 @@ defmodule World.People.Human do
   `"relaxed"`, `"neutral"` or a map of the face shapes to their weights;
   each target of a shape of it moves only the rest of the way, so 1 is
   the full shape). `blink` (true: the shapes `eyeBlinkLeft` and
-  `eyeBlinkRight` as morph targets, and the animation `blink`).
+  `eyeBlinkRight` as morph targets, and the animation `blink`). `talk`
+  (with `speech`: a list of cues of visemes, as `World.People.Face.talk/2`):
+  the animation `talk`, the weights of the visemes for those cues.
   """
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
@@ -129,7 +132,7 @@ defmodule World.People.Human do
               do: Pose.animation(elem(a, 0), bones, [hands: hands] ++ elem(a, 1)),
               else: Pose.animation(a, bones, hands: hands)
             )
-        ) ++ blink(o, prims, length(nodes) - 1),
+        ) ++ blink(o, prims, length(nodes) - 1) ++ talk(o, prims, length(nodes) - 1),
       materials: materials,
       ports: ports(bones, points, weights, o.ground),
       skeleton: skeleton,
@@ -356,13 +359,16 @@ defmodule World.People.Human do
 
     prims =
       [body] ++
-        for({role, a} <- mouth, do: fitted(role, a, points, weights, o.ground, shapes)) ++
+        for(
+          {role, a} <- mouth,
+          do: shade(fitted(role, a, points, weights, o.ground, mouth_shapes(role, a, mouth, points, shapes)))
+        ) ++
         for({role, a, _} <- assets, do: fitted(role, a, points, weights, o.ground, face(role, shapes)))
 
     materials =
       Map.new(
         [{:skin, Map.merge(textured(Data.asset("skins", o.skin).texture, false), Skin.material(:near))}] ++
-          for({role, a} <- mouth, do: {role, Map.put(textured(a.texture, false), "roughness", 0.3)}) ++
+          for({role, a} <- mouth, do: {role, Map.merge(textured(a.texture, false), mouth_color(role))}) ++
           for(
             {role, a, mat} <- assets,
             do: {role, tint(textured((mat || a).texture, alpha(role, a)), a, o)}
@@ -647,6 +653,29 @@ defmodule World.People.Human do
     ]
   end
 
+  # The animation "talk": the weights of the visemes for the cues of the
+  # option talk (World.People.Face.talk/2), with the other targets at 0.
+  defp talk(%{speech: true, talk: [_ | _] = cues}, prims, node) do
+    names = prims |> Enum.find_value(& &1.targets) |> Enum.map(&elem(&1, 0))
+    keys = Face.talk(cues)
+
+    [
+      %{
+        name: "talk",
+        channels: [
+          %{
+            node: node,
+            path: :weights,
+            times: Enum.map(keys, &elem(&1, 0)),
+            values: for({_, w} <- keys, do: for(n <- names, do: Map.get(w, n, 0.0)))
+          }
+        ]
+      }
+    ]
+  end
+
+  defp talk(_o, _prims, _node), do: []
+
   # The face at rest: the points of the body with the shapes of the face at
   # rest by their weights.
   defp rest_face(points, %{rest: rest}) when rest == %{}, do: points
@@ -693,12 +722,78 @@ defmodule World.People.Human do
 
   # An asset on the body: its points from the points of the body, its
   # weights from theirs; the moves of its shapes from the moves of the
-  # points of the body (by the weights of the fit).
+  # points of the body (by the weights of the fit), or `{:own, shapes}`:
+  # the moves of the points of the asset.
   defp fitted(role, a, points, weights, ground, shapes \\ []) do
     {pts, wts} = fit_points(a, points, weights)
     faces = a.mesh.groups |> Map.values() |> Enum.concat() |> Enum.reject(&(role == :eyes and cornea?(a, &1)))
     uv = fn i -> if i, do: elem(a.mesh.uvs, i), else: {0.0, 0.0} end
-    mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground, fit_shapes(a, shapes))
+    shapes = with {:own, own} <- shapes, do: own, else: (base -> fit_shapes(a, base))
+    mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground, shapes)
+  end
+
+  # The teeth are ivory, not white, and the tongue less bright (a factor
+  # of the texture); both are wet (roughness 0.3).
+  defp mouth_color(:teeth), do: %{"color" => [232, 224, 208], "roughness" => 0.3}
+  defp mouth_color(:tongue), do: %{"color" => [220, 200, 200], "roughness" => 0.3}
+
+  # The shadow in the mouth: the colors of the points of the teeth and the
+  # tongue, from 1 at the front to 0.3 at the back (+y of World is the
+  # front). With no shadow, the teeth at the back and the sides are as
+  # bright as the front teeth, and show white at the corners of the lips.
+  defp shade(%Scene.Primitive{positions: ps} = p) do
+    {back, front} = ps |> Enum.map(&elem(&1, 1)) |> Enum.min_max()
+
+    colors =
+      for {_, y, _} <- ps do
+        c = round(255 * (0.3 + 0.7 * :math.pow((y - back) / (front - back), 1.5)))
+        {c, c, c}
+      end
+
+    %{p | colors: colors}
+  end
+
+  # The shapes of the teeth and the tongue. The units of MakeHuman move
+  # the points of the teeth with the mouth, but not the points of the
+  # tongue: the tongue moves with the lower teeth (the half of the teeth
+  # below their middle, their mean move), all of it at the tip and 0.7
+  # of it at the back, as on a jaw that turns. The upper teeth go down
+  # 0.25 of the drop of the lower teeth: with the fit, the upper lip
+  # hides all of the upper teeth when the mouth opens, and in a real
+  # mouth 2 to 4 mm of them show.
+  defp mouth_shapes(role, a, mouth, points, shapes) do
+    teeth = Keyword.fetch!(mouth, :teeth)
+    ys = for p <- Tuple.to_list(fit_positions(teeth, points)), do: elem(p, 1)
+    middle = (Enum.min(ys) + Enum.max(ys)) / 2
+    lower = for {y, i} <- Enum.with_index(ys), y < middle, do: i
+    upper = ys |> Enum.map(&(&1 >= middle)) |> List.to_tuple()
+
+    jaw = fn move -> lower |> Enum.map(move) |> Enum.reduce(&Vec.add/2) |> Vec.scale(1 / length(lower)) end
+
+    case role do
+      :teeth ->
+        own =
+          for {n, move} <- fit_shapes(teeth, shapes) do
+            {_, drop, _} = jaw.(move)
+            down = {0.0, 0.25 * min(drop, 0.0), 0.0}
+            {n, fn i -> if elem(upper, i), do: Vec.add(move.(i), down), else: move.(i) end}
+          end
+
+        {:own, own}
+
+      :tongue ->
+        tip = a |> fit_positions(points) |> Tuple.to_list() |> Enum.map(&elem(&1, 2))
+        {back, front} = Enum.min_max(tip)
+        tip = List.to_tuple(for z <- tip, do: 1.0 + 0.4 * (z - back) / (front - back))
+
+        own =
+          for {n, move} <- fit_shapes(teeth, shapes) do
+            drop = jaw.(move)
+            {n, &Vec.scale(drop, elem(tip, &1))}
+          end
+
+        {:own, own}
+    end
   end
 
   defp fit_points(%{fit: fit} = a, points, weights) do

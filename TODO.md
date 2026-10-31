@@ -145,7 +145,15 @@ and no logo on them.
   `mouthClose`, `mouthLowerDown`, `cheekPuff`, `tongueOut`), a head
   mesh of its own (now the
   targets are on the skin of all the body, sparse), and mixes of the
-  visemes and the shapes from measured faces (now a guess).
+  visemes and the shapes from measured faces (now a guess). The check
+  of lip sync (renders of "Chào anh, đi đâu đó?" and "Hello, where are
+  you going?" from cues, the option `talk`) found: the tongue did not
+  move with the jaw, the upper lip hid the upper teeth, and the teeth
+  were too bright in the mouth (fixed). Still to do: the cues from a
+  real voice (a voice service gives them; there is none in CI), the
+  weight of a viseme by its sound (a closed `PP` must reach 1; a vowel
+  less), and the corners of the lips at rest, where the relaxed face
+  shows a little of the side teeth.
 - **Skin (W6).** The skin is less like plastic (`World.People.Skin`: a
   sheen, less reflection, pores, darker creases). Still to do: a
   texture of the skin in more detail (MakeHuman has 1024 pixels), a real

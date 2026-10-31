@@ -250,7 +250,7 @@ The GLB of a person has:
   the edges, where light goes into the skin and comes out
   (`KHR_materials_sheen`), and at near the pores: a normal texture of
   128 pixels that World makes, 60 times in one unit of UV, at the scale
-  0.5. At near each point of the skin has a color: white, or in a
+  0.3. At near each point of the skin has a color: white, or in a
   crease (the corners of the eyes, the sides of the nose, the lips) a
   darker and warmer color, as in a soft shadow (at most 25% darker in
   green). The values are a guess, from renders;
@@ -293,12 +293,29 @@ The GLB of a person has:
   `viseme_SS`, `viseme_nn`, `viseme_RR`, `viseme_aa`, `viseme_E`,
   `viseme_I`, `viseme_O`, `viseme_U`, in `extras.targetNames`; the
   weights are 0, and `viseme_sil` moves nothing; the move of a point of
-  the teeth or the tongue is the mix of the moves of the points of the
-  body that it fits to). Each viseme is a mix
+  the teeth is the mix of the moves of the points of the body that it
+  fits to). The units of MakeHuman do not move the tongue: it moves
+  with the lower teeth (1.4 times their move at the tip, 1 time at the
+  back, so it lies low in an open mouth). The upper teeth go down 0.25
+  of the drop of the lower teeth, so 2 to 4 mm of them show under the
+  upper lip when the mouth opens, as in a real mouth. The colors of the
+  points of the teeth and the tongue are a shadow: 1 at the front, 0.3
+  at the back. The teeth are ivory (the color factor `[232, 224,
+  208]`). Each viseme is a mix
   of the units of the expressions of the mouth of MakeHuman
   (`priv/makehuman/expressions.bin.gz`, `World.People.Face`), each unit
   a mix of its targets for the origins of the person. An app that has
-  the visemes of a voice (from a tool of lip sync) sets their weights.
+  the visemes of a voice (from a tool of lip sync) sets their weights;
+- with the options `speech` and `talk` (a list of cues `{viseme, start,
+  stop}` in seconds, as a voice service gives them): the animation
+  `talk`, the weights of the visemes for those cues
+  (`World.People.Face.talk/2`). Each viseme has the weight 1 at the
+  middle of its cue and 0 at the middles of the cues before and after
+  it, so the mouth goes from one viseme to the next with no stop; the
+  mouth is closed 0.1 s before the first cue, 0.1 s after the last, and
+  in a gap of more than 0.1 s. The animations `blink` and `talk` both
+  set all the weights of the mesh: an app plays one of them at a time,
+  or sets the weights itself.
 
 ### The skeleton and the poses
 
