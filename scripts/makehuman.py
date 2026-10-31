@@ -27,6 +27,7 @@ The script writes:
 With KIND... (for example teeth tongue), the script writes only the
 assets of these kinds, and puts them in assets.json with the others.
 """
+import colorsys
 import gzip
 import json
 import os
@@ -71,7 +72,7 @@ ASSETS = [
     ("eyes", "low-poly", "makehuman_system_assets", "eyes/low-poly", None),
 ] + [
     ("eye_materials", name, "makehuman_system_assets", "eyes/materials", 256)
-    for name in ["blue", "bluegreen", "brown", "brownlight", "deepblue", "green", "grey", "ice", "lightblue"]
+    for name in ["blue", "bluegreen", "brown", "brownlight", "darkbrown", "deepblue", "green", "grey", "ice", "lightblue"]
 ] + [
     ("eyebrows", f"eyebrow{n:03}", "makehuman_system_assets", f"eyebrows/eyebrow{n:03}", 256) for n in range(1, 13)
 ] + [
@@ -165,8 +166,10 @@ def write_targets(dest, folder="macrodetails", names=None):
         g.write(b"".join(out))
 
 
-def texture(src, dest_base, size, gray=False):
+def texture(src, dest_base, size, gray=False, recolor=None):
     im = Image.open(src)
+    if recolor:
+        im = recolor(im)
     # glTF wants images with no color profile.
     im.info.pop("icc_profile", None)
     if im.size[0] > size:
@@ -183,6 +186,24 @@ def texture(src, dest_base, size, gray=False):
 
 
 GRAY_MEAN = 200
+
+
+def dark_iris(im):
+    """The iris of "brown" (red-brown) as a dark brown, the usual color of
+    the eyes in Viet Nam: a pixel with a saturation of 0.3 or more (the
+    iris, not the white of the eye) goes to a hue of 27 degrees, with 0.55
+    of its saturation and 0.5 of its value (fully at a saturation of 0.5)."""
+    im = im.convert("RGBA")
+    px = im.load()
+    for y in range(im.size[1]):
+        for x in range(im.size[0]):
+            r, g, b, a = px[x, y]
+            h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            if s > 0.3:
+                k = min((s - 0.3) / 0.2, 1.0)
+                h, s, v = h + (0.075 - h) * k, s + (s * 0.55 - s) * k, v + (v * 0.5 - v) * k
+                px[x, y] = tuple(round(c * 255) for c in colorsys.hsv_to_rgb(h, s, v)) + (a,)
+    return im
 
 
 def bright_gray(im):
@@ -242,7 +263,9 @@ def assets(manifest, chosen):
         dest = os.path.join(OUT, kind)
         os.makedirs(dest, exist_ok=True)
         entry = {"pack": pack, "license": "CC0"}
-        if kind == "eye_materials":
+        if kind == "eye_materials" and name == "darkbrown":
+            entry["texture"] = texture(os.path.join(src, "brown_eye.png"), os.path.join(dest, name), size, recolor=dark_iris)
+        elif kind == "eye_materials":
             entry["texture"] = texture(os.path.join(src, f"{name}_eye.png"), os.path.join(dest, name), size)
         else:
             props = mhmat(src)

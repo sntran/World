@@ -308,6 +308,11 @@
       "pack": "makehuman_system_assets",
       "texture": "brownlight.png"
     },
+    "darkbrown": {
+      "license": "CC0",
+      "pack": "makehuman_system_assets",
+      "texture": "darkbrown.png"
+    },
     "deepblue": {
       "license": "CC0",
       "pack": "makehuman_system_assets",

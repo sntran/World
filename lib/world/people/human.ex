@@ -23,7 +23,7 @@ defmodule World.People.Human do
     height: 0.5,
     race: %{"asian" => 1.0},
     skin: "young_asian_male",
-    eyes: "brown",
+    eyes: "darkbrown",
     eyebrows: "eyebrow001",
     hair: "short02",
     clothes: ["male_casualsuit01", "shoes01"],
@@ -81,6 +81,7 @@ defmodule World.People.Human do
       end
 
     {prims, materials} = helmet({prims, materials}, points, weights, bones, o)
+    {prims, materials} = if level == :near, do: soft_hair({prims, materials}), else: {prims, materials}
 
     skeleton = Skeleton.new(bones)
     hands = for {"grip_" <> side, _} <- o.hold, into: %{}, do: {String.to_existing_atom(side), "grip"}
@@ -352,8 +353,7 @@ defmodule World.People.Human do
           for({role, a} <- mouth, do: {role, Map.put(textured(a.texture, false), "roughness", 0.3)}) ++
           for(
             {role, a, mat} <- assets,
-            do:
-              {role, tint(textured((mat || a).texture, a.transparent or role in [:eyebrows, :eyelashes, :hair]), a, o)}
+            do: {role, tint(textured((mat || a).texture, alpha(role, a)), a, o)}
           )
       )
 
@@ -397,10 +397,15 @@ defmodule World.People.Human do
       for {c, faces} <- groups,
           do: mesh(role.(c), faces, &elem(pts, &1), if(c, do: nil, else: uv), &elem(wts, &1), o.ground, shapes)
 
-    # The eyes of few faces, and the mouth closed behind.
+    # The eyes of few faces, the eyebrows at mid, and the mouth closed
+    # behind.
+    eyebrows =
+      if level == :mid, do: [fitted(:eyebrows, Data.asset("eyebrows", o.eyebrows), points, weights, o.ground)], else: []
+
     prims =
       prims ++
-        [fitted(:eyes, Data.asset("eyes", "low-poly"), points, weights, o.ground), holes(p, pts, wts, shapes, o.ground)]
+        [fitted(:eyes, Data.asset("eyes", "low-poly"), points, weights, o.ground), holes(p, pts, wts, shapes, o.ground)] ++
+        eyebrows
 
     hair =
       if level == :mid and o.hair, do: [fitted(:hair, Data.asset("hair", o.hair), points, weights, o.ground)], else: []
@@ -413,6 +418,7 @@ defmodule World.People.Human do
       Map.new([
         {:skin, textured(Data.asset("skins", o.skin).texture, false)},
         {:eyes, textured(Data.asset("eye_materials", o.eyes).texture, false)},
+        {:eyebrows, textured(Data.asset("eyebrows", o.eyebrows).texture, :blend)},
         {:hole, %{"color" => [40, 22, 24], "roughness" => 0.9, "metalness" => 0.0}} | colors
       ])
 
@@ -428,6 +434,17 @@ defmodule World.People.Human do
 
     {Enum.sort_by(prims, & &1.material) ++ hair, materials}
   end
+
+  # The hair at near in two passes: with a cut of its alpha at 0.5 (it
+  # hides what is behind it), then again with a blend (`hair_edge`), which
+  # adds the soft ends of the strands at its edge, so the edge is not a
+  # hard line.
+  defp soft_hair({prims, %{hair: hair} = materials}) do
+    edges = for %{material: :hair} = p <- prims, do: %{p | material: :hair_edge}
+    {prims ++ edges, Map.put(materials, :hair_edge, Map.put(hair, "alpha_mode", "BLEND"))}
+  end
+
+  defp soft_hair(prims_materials), do: prims_materials
 
   # The holes of a low-poly body at the mouth (not the holes of the eyes,
   # 1 cm or more to the side): a dark fan from the edge of each hole to a
@@ -716,10 +733,21 @@ defmodule World.People.Human do
     end
   end
 
+  # The alpha of an asset: the eyebrows and the eyelashes have soft
+  # strands (a blend: with a cut at 0.5 only black specks of them stay);
+  # the hair and a transparent item have holes.
+  defp alpha(role, _a) when role in [:eyebrows, :eyelashes], do: :blend
+  defp alpha(role, a), do: a.transparent or role == :hair
+
   defp textured(path, alpha) do
     mime = if String.ends_with?(path, ".png"), do: "image/png", else: "image/jpeg"
     spec = %{"color" => [255, 255, 255], "roughness" => 0.75, "metalness" => 0.0, "image" => {mime, File.read!(path)}}
-    if alpha, do: Map.merge(spec, %{"alpha_mode" => "MASK", "double_sided" => true}), else: spec
+
+    case alpha do
+      :blend -> Map.merge(spec, %{"alpha_mode" => "BLEND", "double_sided" => true})
+      true -> Map.merge(spec, %{"alpha_mode" => "MASK", "double_sided" => true})
+      false -> spec
+    end
   end
 
   # --- The nodes of the figure ---------------------------------------------------

@@ -281,7 +281,7 @@ defmodule World.Orders.Blueprints do
         doc: "The weight of each origin of the shape of the body."
       ),
       option("skin", :choice, default: "young_asian_male", values: names.("skins")),
-      option("eyes", :choice, default: "brown", values: names.("eye_materials")),
+      option("eyes", :choice, default: "darkbrown", values: names.("eye_materials")),
       option("eyebrows", :choice, default: "eyebrow001", values: names.("eyebrows")),
       option("hair", :choice, default: "short02", values: ["none" | names.("hair")]),
       option("hair_color", :color, default: nil, doc: "The color of the hair. None: the color of its texture."),

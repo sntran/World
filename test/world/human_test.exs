@@ -323,8 +323,11 @@ defmodule World.HumanTest do
       assert aa |> Enum.map(&elem(&1, 2)) |> Enum.min() < -0.005, "#{level}"
       assert Enum.find(prims, &(&1.material == :color_shoes01)).targets != nil
 
-      # The eyes of few faces, with the texture of the eyes.
+      # The eyes of few faces, with the texture of the eyes (dark brown by
+      # default), and the eyebrows at mid.
       assert Enum.any?(prims, &(&1.material == :eyes)) and match?({_, _}, p.materials.eyes["image"])
+      assert p.materials.eyes["image"] == {"image/png", File.read!(Data.asset("eye_materials", "darkbrown").texture)}
+      assert Enum.any?(prims, &(&1.material == :eyebrows)) == (level == :mid)
 
       # The hole of the mouth of the low-poly body is closed by a dark
       # fan, which moves with the edge of the hole.
@@ -337,7 +340,7 @@ defmodule World.HumanTest do
   end
 
   test "expressions: the face shapes of ARKit; a blink closes the eyelashes of its side" do
-    p = Human.person("face", expressions: true, hair: nil, clothes: [])
+    p = Human.person("face", expressions: true, clothes: [])
     prims = for n <- p.nodes, pr <- n.primitives, do: pr
     names = World.People.Face.shape_names()
     assert length(names) == 30 and "eyeBlinkLeft" in names and "mouthSmileRight" in names and "jawOpen" in names
@@ -347,6 +350,16 @@ defmodule World.HumanTest do
     end
 
     assert Enum.find(prims, &(&1.material == :eyes)).targets == nil
+
+    # The eyebrows and the eyelashes have soft strands (a blend); the hair
+    # is in two passes: with a cut of its alpha, then with a blend.
+    for role <- [:eyebrows, :eyelashes], do: assert(p.materials[role]["alpha_mode"] == "BLEND")
+    assert p.materials.hair["alpha_mode"] == "MASK" and p.materials.hair_edge["alpha_mode"] == "BLEND"
+    [hair] = Enum.filter(prims, &(&1.material == :hair))
+    [edge] = Enum.filter(prims, &(&1.material == :hair_edge))
+    assert edge.positions == hair.positions and edge.targets == hair.targets
+    json = World.GLBHelper.json(World.GLB.encode(Build.scene(p)))
+    assert Enum.find(json["materials"], &(&1["name"] == "eyebrows"))["alphaMode"] == "BLEND"
 
     # The eyes have no cornea (MakeHuman draws it clear; it maps to a black
     # disk in the corner of the texture): the iris shows.

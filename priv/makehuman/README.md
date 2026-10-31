@@ -27,6 +27,9 @@ each with the license CC0.
   `python3 scripts/makehuman.py MPFB_DATA --expressions`).
 - The teeth and the tongue came later, with no change to the other
   files: `python3 scripts/makehuman.py MPFB_DATA PACKS_DIR teeth tongue`.
+- The eye color `darkbrown` is not in MakeHuman: the script makes it
+  from `brown` (its iris is red-brown) with a dark brown iris
+  (`python3 scripts/makehuman.py MPFB_DATA PACKS_DIR eye_materials`).
 - The textures are smaller (1024, 512 or 256 pixels), with no color
   profile.
 - The textures of the hair are gray, made bright, so a hair can have

@@ -237,8 +237,14 @@ The GLB of a person has:
 - one mesh node with a skin. It is a root node of the scene: glTF does
   not use the frame of a skinned mesh, and the bones place it;
 - 4 joints and 4 weights for each point, with the sum 1;
-- textures in the GLB (the skin, the eyes, the hair, the clothes). Hair,
-  eyebrows and eyelashes have the alpha mode `MASK`;
+- textures in the GLB (the skin, the eyes, the hair, the clothes). The
+  hair has the alpha mode `MASK`, and at near a second pass of the same
+  hair (`hair_edge`) has the alpha mode `BLEND`: it adds the soft ends of
+  the strands at the edge of the hair. The eyebrows and the eyelashes
+  have the alpha mode `BLEND` (with a cut at 0.5 only black specks of
+  their soft strands stay). The eyes are dark brown by default
+  (`darkbrown`: the iris of `brown` of MakeHuman, red-brown, made dark
+  brown by `scripts/makehuman.py`);
 - the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
   2.6 s, to play once, from the pose "stand" back to it). The channels
   of a clip are the bones that move in it;
@@ -437,7 +443,7 @@ a body of about 1,600 faces with the hair; far is a body of 730 faces.
 At mid and far, the faces under clothes have the mean color of the
 clothes, and at far the scalp has the color of the hair. The low-poly
 bodies have the low-poly eyes of MakeHuman (`eyes`, with the texture of
-the eyes), and a dark fan (`hole`) closes the hole of the mouth, from its
+the eyes), the eyebrows at mid, and a dark fan (`hole`) closes the hole of the mouth, from its
 edge to a point 2 cm behind its middle. The eyes at near have no cornea:
 MakeHuman draws it clear, and on the texture it is a black disk. With `speech` or
 `expressions`, the body at mid and far has the same morph targets as at

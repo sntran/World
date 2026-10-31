@@ -335,10 +335,12 @@ defmodule World.GLB do
       "doubleSided" => Map.get(spec, "double_sided", false)
     }
 
-    # Glass shows what is behind it; hair and eyelashes have holes (MASK).
+    # Glass shows what is behind it; hair has holes (MASK); the eyebrows
+    # and the eyelashes have soft strands (BLEND).
     material =
       cond do
         spec["alpha_mode"] == "MASK" -> Map.merge(material, %{"alphaMode" => "MASK", "alphaCutoff" => 0.5})
+        spec["alpha_mode"] == "BLEND" -> Map.put(material, "alphaMode", "BLEND")
         alpha < 1.0 -> Map.put(material, "alphaMode", "BLEND")
         true -> material
       end
