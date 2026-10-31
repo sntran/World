@@ -1,6 +1,7 @@
 """Make priv/makehuman/ from the CC0 data of MakeHuman.
 
     python3 scripts/makehuman.py MPFB_DATA PACKS_DIR
+    python3 scripts/makehuman.py MPFB_DATA PACKS_DIR KIND...
     python3 scripts/makehuman.py MPFB_DATA --expressions
 
 MPFB_DATA is src/mpfb/data of makehumancommunity/mpfb2 at the commit in
@@ -22,6 +23,9 @@ The script writes:
   body (.mhclo.gz or .proxy.gz), and its texture, smaller. The texture
   of a hair is gray (bright_gray), so the hair can have any color.
 - assets.json: the list of the assets.
+
+With KIND... (for example teeth tongue), the script writes only the
+assets of these kinds, and puts them in assets.json with the others.
 """
 import gzip
 import json
@@ -88,6 +92,11 @@ ASSETS = [
     ("proxies", "proxy741", "makehuman_system_assets", "proxymeshes/proxy741", None),
     ("proxies", "male1591", "makehuman_system_assets", "proxymeshes/male1591", None),
     ("proxies", "female1605", "makehuman_system_assets", "proxymeshes/female1605", None),
+    # The teeth (with the gums) and the tongue: they fit to the helper
+    # meshes of the mouth of the base mesh, which the targets of the mouth
+    # move.
+    ("teeth", "teeth_base", "makehuman_system_assets", "teeth/teeth_base", 256),
+    ("tongue", "tongue01", "makehuman_system_assets", "tongue/tongue01", 256),
 ]
 
 
@@ -218,9 +227,11 @@ def main():
     minify_json(os.path.join(MPFB, "rigs", "standard", "weights.game_engine.json"), os.path.join(OUT, "weights.json.gz"))
     write_targets(os.path.join(OUT, "targets.bin.gz"))
     expressions()
+    assets({}, ASSETS)
 
-    manifest = {}
-    for kind, name, pack, folder, size in ASSETS:
+
+def assets(manifest, chosen):
+    for kind, name, pack, folder, size in chosen:
         src = os.path.join(PACKS, pack, folder)
         dest = os.path.join(OUT, kind)
         os.makedirs(dest, exist_ok=True)
@@ -251,4 +262,10 @@ def main():
         f.write("\n")
 
 
-expressions() if PACKS == "--expressions" else main()
+if PACKS == "--expressions":
+    expressions()
+elif len(sys.argv) > 3:
+    kinds = sys.argv[3:]
+    assets(json.load(open(os.path.join(OUT, "assets.json"))), [a for a in ASSETS if a[0] in kinds])
+else:
+    main()

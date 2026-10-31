@@ -887,5 +887,35 @@
       "texture": "young_caucasian_male.jpg",
       "transparent": false
     }
+  },
+  "teeth": {
+    "teeth_base": {
+      "color": [
+        130,
+        87,
+        89
+      ],
+      "fit": "teeth_base.mhclo.gz",
+      "license": "CC0",
+      "obj": "teeth_base.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "teeth_base.png",
+      "transparent": false
+    }
+  },
+  "tongue": {
+    "tongue01": {
+      "color": [
+        220,
+        134,
+        134
+      ],
+      "fit": "tongue01.mhclo.gz",
+      "license": "CC0",
+      "obj": "tongue01.obj.gz",
+      "pack": "makehuman_system_assets",
+      "texture": "tongue01.jpg",
+      "transparent": false
+    }
   }
 }

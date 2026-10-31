@@ -280,6 +280,17 @@ defmodule World.HumanTest do
 
     assert Enum.min(teeth) < -0.005
 
+    # The teeth of MakeHuman (with the gums), fit to the mouth: a shape,
+    # not a flat strip (an arch more than 3 cm wide and 2 cm deep), with
+    # a texture; the tongue in the arch.
+    [tp] = Enum.filter(prims, &(&1.material == :teeth))
+    [tongue] = Enum.filter(prims, &(&1.material == :tongue))
+    {{x0, y0, z0}, {x1, y1, z1}} = World.Vec.bounds(tp.positions)
+    assert x1 - x0 > 0.03 and y1 - y0 > 0.02 and z1 - z0 > 0.01 and length(tp.positions) > 1000
+    {{tx0, _, _}, {tx1, _, _}} = World.Vec.bounds(tongue.positions)
+    assert tx0 > x0 and tx1 < x1
+    assert match?({"image/png", _}, p.materials.teeth["image"])
+
     json = World.GLBHelper.json(World.GLB.encode(Build.scene(p)))
     [mesh] = for m <- json["meshes"], m["extras"], do: m
     assert mesh["extras"]["targetNames"] == names and length(mesh["weights"]) == 15

@@ -142,9 +142,8 @@ and no logo on them.
   0006, R10: the eyes, the brows, the cheeks, a blink with the
   eyelashes, which follow the skin by their fit), the visemes at mid and
   far, a head mesh of its own (now the targets are on the skin of all
-  the body, sparse), mixes of the visemes from measured faces (now a
-  guess), and teeth of the shape of teeth (the helper of MakeHuman is a
-  strip).
+  the body, sparse), and mixes of the visemes from measured faces (now
+  a guess).
 - **Animations of daily life (W7).** The idea "More animations of
   people" above, with: talk with gestures, sit on a low stool, squat
   with flat feet (ngồi chồm hổm), eat with chopsticks and a spoon, drink

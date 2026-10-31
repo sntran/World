@@ -315,21 +315,18 @@ defmodule World.People.Human do
       for f <- Map.fetch!(base.groups, "body"), not Enum.any?(f, fn {v, _} -> MapSet.member?(hidden, v) end), do: f
 
     # With speech: the moves of the visemes, for each point of the base
-    # mesh, and the teeth and the tongue (helper groups of the base mesh,
-    # which the targets of the mouth move).
+    # mesh, and the teeth (with the gums) and the tongue, fit to the helper
+    # meshes of the mouth of the base mesh, which the targets of the mouth
+    # move.
     shapes =
       if o.speech, do: for({n, moves} <- Face.visemes(o.race), do: {n, &Map.get(moves, &1, {0.0, 0.0, 0.0})}), else: []
-
-    part = fn role, group ->
-      mesh(role, base.groups[group], &elem(points, &1), nil, &Map.get(weights, &1, [{0, 1.0}]), o.ground, shapes)
-    end
 
     body =
       mesh(:skin, faces, &elem(points, &1), &elem(base.uvs, &1), &Map.get(weights, &1, [{0, 1.0}]), o.ground, shapes)
 
     mouth =
       if o.speech,
-        do: [part.(:teeth, "helper-upper-teeth"), part.(:teeth, "helper-lower-teeth"), part.(:tongue, "helper-tongue")],
+        do: [{:teeth, Data.asset("teeth", "teeth_base")}, {:tongue, Data.asset("tongue", "tongue01")}],
         else: []
 
     assets =
@@ -341,18 +338,15 @@ defmodule World.People.Human do
         if(o.hair, do: [{:hair, Data.asset("hair", o.hair), nil}], else: []) ++
         for(c <- clothes, do: {String.to_atom("clothes_" <> c.name), c, nil})
 
-    prims = [body | mouth] ++ for({role, a, _} <- assets, do: fitted(role, a, points, weights, o.ground))
+    prims =
+      [body] ++
+        for({role, a} <- mouth, do: fitted(role, a, points, weights, o.ground, shapes)) ++
+        for({role, a, _} <- assets, do: fitted(role, a, points, weights, o.ground))
 
     materials =
       Map.new(
         [{:skin, textured(Data.asset("skins", o.skin).texture, false)}] ++
-          if(o.speech,
-            do: [
-              {:teeth, %{"color" => [236, 230, 214], "roughness" => 0.3, "metalness" => 0.0}},
-              {:tongue, %{"color" => [178, 86, 92], "roughness" => 0.5, "metalness" => 0.0}}
-            ],
-            else: []
-          ) ++
+          for({role, a} <- mouth, do: {role, Map.put(textured(a.texture, false), "roughness", 0.3)}) ++
           for(
             {role, a, mat} <- assets,
             do:
@@ -507,12 +501,23 @@ defmodule World.People.Human do
   end
 
   # An asset on the body: its points from the points of the body, its
-  # weights from theirs.
-  defp fitted(role, a, points, weights, ground) do
+  # weights from theirs; the moves of its shapes from the moves of the
+  # points of the body (by the weights of the fit).
+  defp fitted(role, a, points, weights, ground, shapes \\ []) do
     {pts, wts} = fit_points(a, points, weights)
     faces = a.mesh.groups |> Map.values() |> Enum.concat()
     uv = fn i -> if i, do: elem(a.mesh.uvs, i), else: {0.0, 0.0} end
-    mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground)
+
+    shapes =
+      for {n, move} <- shapes do
+        {n,
+         fn i ->
+           {vs, ws, _} = elem(a.fit.refs, i)
+           Enum.zip(vs, ws) |> Enum.map(fn {v, w} -> Vec.scale(move.(v), w) end) |> Enum.reduce(&Vec.add/2)
+         end}
+      end
+
+    mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground, shapes)
   end
 
   defp fit_points(%{fit: fit} = a, points, weights) do
