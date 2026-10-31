@@ -205,8 +205,15 @@ and no logo on them.
     paper says the mesh came from MPI-IS and M. J. Black): ask its
     owners to confirm the license. More clips of motion data: the
     file of BigMaQ gives the walk, the run and the sit; its jumps are
-    short hops that turn, and its 74 climbs are not checked yet (the
-    climb, the hang and the jump are the poses of the body plan); a
+    short hops that turn. Its climbs are not cycles: of the 69 tracks
+    with the label "Climbing", 18 have no file, and only 3 have the
+    hips up by 25 cm or more with the back up; they are a leap up to a
+    ledge (row 637, G: 65 cm in 1.9 s, then a sit) and pull-ups with
+    the legs free (rows 106, L and 603, G). The animals climb onto the
+    things in the room, not up a trunk. So the climb, the hang and the
+    jump stay the poses of the body plan. The leap could be a clip
+    "jump up" (it moves the animal up: a clip needs a speed up for
+    it); a
     faster walk
     (the clip is 0.39 m/s, a slow walk: few straight walks in the file,
     the animals are in a room). The feet of the mesh grip, but the plan has no bones for the

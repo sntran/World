@@ -51,7 +51,12 @@ alias World.Vec
 #   floor).
 # The file has no clean jump: the animals in the room hop and turn by 60
 # to 180 degrees, onto and off things. The jump stays the jump of the
-# body plan.
+# body plan. It has no climb cycle: the tracks with the label
+# "Climbing" are leaps up to a ledge and pull-ups (TODO.md). The climb
+# stays the climb of the body plan.
+#
+# The folder of an action in the zip is the number of its row in
+# dataset_overview.csv from 0 (not the first column of the file).
 clips =
   Enum.map(
     [
