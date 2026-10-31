@@ -26,7 +26,8 @@ defmodule World.Scene do
     colors (`{r, g, b}`, 0 to 255, for each point), the length of the
     fur of each point (m) and the direction of the fur of each point (a
     unit vector along the skin, at rest), and the morph targets (a list of
-    `{name, moves}`, a move for each point: the shapes of a face).
+    `{name, moves}` or `{name, moves, normals}`, a move for each point and
+    a change of each normal: the shapes of a face).
     """
     defstruct material: :paint,
               positions: [],

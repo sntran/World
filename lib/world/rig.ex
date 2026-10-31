@@ -49,7 +49,8 @@ defmodule World.Rig do
   `fringe` `{from, under, over}`: a face of `from` with no fade is of
   `under`, and a face with some fade is of `under` and of `over`;
   `shapes` a list of `{name, moves}`, a move for each point (m, at rest):
-  the morph targets of the mesh (`World.Scene.Primitive`);
+  the morph targets of the mesh, with the change of the normals that the
+  moves give (`World.Scene.Primitive`);
   `uvs` a list for each face of a `{u, v}` for each corner),
   `parts` (a list of `{material, bone, points, triangles}`: a shape on
   one bone, each point `{position, normal}` at rest: horns), `blend` and `step` (a smooth skin,
@@ -328,6 +329,32 @@ defmodule World.Rig do
         Enum.reduce(t, acc, fn {i, _}, acc -> Map.update(acc, i, n, &Vec.add(&1, n)) end)
       end)
 
+    # The change of the normals in each shape (the normals of the faces
+    # that a shape moves, with the moves less the normals at rest).
+    shapes =
+      for {name, moves} <- shapes do
+        moved = fn i -> Vec.add(elem(places, i), elem(moves, i)) end
+        face_n = fn at, [a, b, c] -> Vec.cross(Vec.sub(at.(b), at.(a)), Vec.sub(at.(c), at.(a))) end
+
+        sums =
+          for {t, _} <- tris,
+              ids = Enum.map(t, &elem(&1, 0)),
+              Enum.any?(ids, &(Vec.len(elem(moves, &1)) > 1.0e-9)),
+              d = Vec.sub(face_n.(moved, ids), face_n.(&elem(places, &1), ids)),
+              i <- ids,
+              reduce: %{} do
+            acc -> Map.update(acc, i, d, &Vec.add(&1, d))
+          end
+
+        changes =
+          Map.new(sums, fn {i, d} ->
+            n = Map.get(normals, i, {0.0, 0.0, 1.0})
+            {i, Vec.sub(Vec.norm(Vec.add(n, d)), Vec.norm(n))}
+          end)
+
+        {name, moves, changes}
+      end
+
     verts =
       for {{p, ws}, i} <- Enum.with_index(points) do
         top = ws |> Enum.filter(&is_integer(elem(&1, 0))) |> Enum.sort_by(fn {b, w} -> {-w, b} end) |> Enum.take(4)
@@ -380,7 +407,13 @@ defmodule World.Rig do
           end
 
         prim = join(role, [{points, Enum.map(ts, fn t -> Enum.map(t, &at[&1]) end)}])
-        targets = for {name, moves} <- shapes, do: {name, for({i, _} <- used, do: elem(moves, i))}
+
+        targets =
+          for {name, moves, changes} <- shapes,
+              do:
+                {name, for({i, _} <- used, do: elem(moves, i)),
+                 for({i, _} <- used, do: Map.get(changes, i, {0.0, 0.0, 0.0}))}
+
         %{prim | targets: if(targets == [], do: nil, else: targets)}
       end)
 

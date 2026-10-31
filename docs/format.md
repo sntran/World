@@ -517,7 +517,7 @@ The keys of a template:
 
 | Key of a template | What it is |
 |---|---|
-| `mesh`, `bones`, `materials`, `smooth` | The name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`, `fin`, `beak`, `comb`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
+| `mesh`, `bones`, `materials`, `smooth` | The name of the file in `meshes/`; a bone of World to the bone of the mesh, or to a list of bones of the mesh (a bone of the mesh with no bone of World gives its weights to the nearest bone above it: the fingers go to the hand); a material of the mesh to a role (`fur`, `marking`, `skin`, `eye`, `iris`, `nose`, `muzzle`, `hoof`, `horn`, `mane`, `dark`, `white`, `fin`, `beak`, `comb`, `teeth`); the smooth steps of the mesh at near (2 for a mesh of a few hundred faces, 0 for a mesh of thousands). |
 
 | `parents` | A bone of World to its parent, when the rig of the file has another parent: the paw of the Ultimate rig is a target of inverse kinematics, and World puts it under the forearm. |
 | `clips` | The template whose clips it takes (its own file has none for a walk). The moves of the pelvis, the heights of the paws and the speeds go to the units of its mesh, by the heights of the two hips (the head of `hind_upper_l`). |
@@ -577,10 +577,10 @@ the eye, from the faces of the roles `eye` and `iris`), `ears` (the bones of the
 ears; of a primate, with no bones of the ears: the points far out on
 the two sides of the head, at the height of the eyes), `ears_inner`
 (the inside of the ears: the side that faces the front), `tail` (all the
-tail), `tail_tip`, `teeth` and `mouth` (the inside of the lips).
-`ears_inner`, `teeth` and `mouth` are only on a template that marks
-them: the primates; with no color of the species, `ears_inner` has the
-color of the ears, `teeth` is ivory and `mouth` is dark.
+tail), `tail_tip` and `mouth` (the inside of the lips and of the mouth).
+`ears_inner` and `mouth` are only on a template that marks them: the
+primates; with no color of the species, `ears_inner` has the color of
+the ears and `mouth` is dark.
 
 #### The shape space
 
@@ -713,7 +713,18 @@ names in `extras.targetNames`; the weights are 0). An app mixes them for
 the expressions of a macaque: the open-mouth threat (`jaw_open` 0.6,
 `brows_up` 1), the fear grimace (`lips_back` 1, `jaw_open` 0.2) and the
 lip-smack (`lips_forward` from 0 to 1 and back, about 4 times each
-second). The targets move the points, not the normals.
+second). The targets move the points and the normals (`NORMAL` in each
+target: the change of the normal of each point, from the faces that the
+target moves).
+
+The mouth of the primate template opens: the mesh is cut between the
+lips (the points at the bottom of the fold of the lips are two points,
+one on the faces of the head and one on the faces of the jaw), and a bag
+behind the cut closes the head (dark, the region `mouth`, no fur). The
+teeth (the role `teeth`, ivory) are strips in the bag, 1.5 to 4 mm
+long (the canines), at the front of the mouth; at rest they have almost
+no height (the lips are thin), and `jaw_open` makes them grow to their
+length (the lower teeth turn with the jaw).
 
 The species now:
 
@@ -1053,17 +1064,27 @@ https://github.com/martinivis/BigMaQ, commit a92d2d0):
 - The face. The lips of the file meet in a fold about 1.5 cm deep, with
   no opening. The line of the bottom of the fold goes from the middle
   (z 0.606 at rest) down to 1.5 cm to the side (0.594) and up to the
-  corner of the mouth (2.6 cm, 0.615). `marks` of the mesh: inside the
-  fold (a point that faces up or down, inside the corners), the upper
-  teeth 2 to 5 mm in from the front of the upper lip, and the mouth
-  deeper (from 2.5 mm in under the line). `shapes` of the mesh: the
-  moves of the points (in the units of the mesh) for four morph targets:
-  `jaw_open` (the points under the line and in front of the jaw joint,
-  y 0.02 and z 0.625, turn down by 18º around it, by their weight on the
-  head: the fold opens, and its dark inside shows), `lips_back` (the
+  corner of the mouth (2.6 cm, 0.615). `marks` of the mesh: `mouth`,
+  inside the fold (a point that faces up or down, inside the corners;
+  from 2.5 mm in under the line and 5.5 mm in over it), and
+  `ears_inner`. `shapes` of the mesh: the moves of the points (in the
+  units of the mesh) for four morph targets: `jaw_open` (the points
+  under the line and in front of the jaw joint, y 0.02 and z 0.625, turn
+  down by 18º around it, by their weight on the head), `lips_back` (the
   corners go back 6 mm, the upper lip up 3 mm, the lower lip down 4 mm),
   `lips_forward` (the lips go 6 mm to the front, the corners in) and
   `brows_up` (the brows go up 4 mm).
+- The cut of the mouth. Each face of the skin at the lips (2.35 cm to
+  the side or less, 7.4 cm to the front or more, 6 mm from the line or
+  less) goes to the jaw or to the head by the mean jaw weight of its
+  points; a point that faces of the two sides share is two points (the
+  copy turns with all the jaw). A bag closes the cut: a face from each
+  edge of the cut to a point 1.2 cm behind the middle of the cut (in
+  `mouth`; `jaw_open` turns it by half). The teeth (the material
+  `teeth`): a strip for each edge of the head (down) and of the jaw (up),
+  0.15 of the way to the back of the bag; 1.5 to 2.5 mm, 4 mm at the
+  canines (7 to 11 mm to the side), to 1.3 cm to the side. At rest 0.02
+  of that; `jaw_open` makes them grow.
 
 `scripts/fish_template.exs` makes the mesh of the template of fish
 from the bones of World, with no file from outside:

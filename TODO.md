@@ -202,12 +202,12 @@ and no logo on them.
     ground).
   - Fur on the template of primates: a crest of hair on the head and
     long hair on the cheeks.
-  - The face of the macaque: the lips have no real opening (the fold
-    opens when the jaw turns, and its inside is dark), the teeth are a
-    color, not a shape, and the targets do not move the normals (the
-    inside of the open mouth has the light of the shut mouth). The
-    shapes are in the units of the template: the gibbon (a flat face)
-    has the shapes of the macaque.
+  - The face of the macaque: the teeth are flat strips (one row, no
+    molars, no tongue), and they show only when the jaw opens (the fear
+    grimace shows no teeth: the lips meet); the cut of the mouth stops
+    1.3 cm in front of the corners of the mouth (the fold of the low-poly
+    mesh goes back along the jaw). The shapes are in the units of the
+    template: the gibbon (a flat face) has the shapes of the macaque.
   - Faces of primates (the method of MF3D, Murphy and Leopold 2019): a
     shape space of the face from the head surfaces of CT scans with open
     licenses (MF3D used 23 rhesus macaques), and expressions from it in

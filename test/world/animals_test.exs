@@ -327,7 +327,7 @@ defmodule World.AnimalsTest do
     m = Animals.animal("macaque", animations: Animals.animations("macaque"))
     assert Animals.animations("macaque") == ~w(walk run sit climb hang jump)
     scene = Build.scene(m)
-    assert Map.keys(scene.materials) |> Enum.sort() == [:bare, :eye, :fringe, :fur, :iris]
+    assert Map.keys(scene.materials) |> Enum.sort() == [:bare, :eye, :fringe, :fur, :iris, :teeth]
     assert Figure.limbs(m) == ~w(arm_l arm_r head leg_l leg_r tail)
     assert "elbow_l" in Figure.values(m) and "ankle_r" in Figure.values(m) and "tail.flex" in Figure.values(m)
     assert Figure.port!(m, "grip_r").bone == "hand_r" and Figure.port!(m, "back").bone == "spine_02"
@@ -386,6 +386,16 @@ defmodule World.AnimalsTest do
            |> Enum.all?(fn {d, j} -> elem(j, 0) != 0 or Vec.len(d) == 0 end)
 
     assert Enum.any?(bare.colors, &(elem(&1, 0) < 60))
+
+    # The mouth opens between the lips: the teeth grow from their roots,
+    # the lower teeth turn down with the jaw, the roots of the upper teeth
+    # stay. The targets turn the normals of the faces that they move.
+    [teeth] = for n <- scene.nodes, p <- n.primitives, p.material == :teeth, do: p
+    assert m.materials.teeth["color"] == [228, 220, 196]
+    drops = teeth |> move.("jaw_open") |> Enum.map(&elem(&1, 2))
+    assert Enum.min(drops) < -0.005 and Enum.count(drops, &(&1 == 0.0)) > 0
+    {_, _, turns} = Enum.find(bare.targets, &(elem(&1, 0) == "jaw_open"))
+    assert Enum.any?(turns, &(Vec.len(&1) > 0.1))
 
     # The eyes: a dark pupil at the front of an amber iris.
     [iris] = for n <- scene.nodes, p <- n.primitives, p.material == :iris, do: p

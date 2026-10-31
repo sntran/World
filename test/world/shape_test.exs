@@ -99,7 +99,7 @@ defmodule World.Animals.ShapeTest do
     for {r, list} <- regions do
       assert length(list) == length(c.points)
       assert Enum.all?(list, &(&1 >= 0 and &1 <= 1.0 + 1.0e-9)), r
-      assert Enum.any?(list, &(&1 >= 0.5)) == r not in ~w(ears_inner teeth mouth), r
+      assert Enum.any?(list, &(&1 >= 0.5)) == r not in ~w(ears_inner mouth), r
     end
 
     # The fur lies to the back on the body, down on the legs, to the end

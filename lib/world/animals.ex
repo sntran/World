@@ -79,7 +79,8 @@ defmodule World.Animals do
     "mane" => :mane,
     "fin" => :fin,
     "beak" => :beak,
-    "comb" => :comb
+    "comb" => :comb,
+    "teeth" => :teeth
   }
 
   @doc "The names of the species."
@@ -157,10 +158,10 @@ defmodule World.Animals do
       end
 
     coat = Keyword.get(opts, :coat) || get_in(s, ["colors", "fur"]) || mesh_colors["fur"]
-    # A mesh that marks the teeth and the inside of the mouth has their
-    # colors, under the markings of the species.
+    # A mesh that marks the inside of the mouth has its color, under the
+    # markings of the species.
     markings =
-      if(data["marks"], do: %{"teeth" => [228, 220, 196], "mouth" => [52, 28, 30]}, else: %{})
+      if(data["marks"], do: %{"mouth" => [52, 28, 30]}, else: %{})
       |> Map.merge(Map.get(s, "markings", %{}))
       |> Map.merge(Keyword.get(opts, :markings, %{}))
 
@@ -178,7 +179,8 @@ defmodule World.Animals do
 
     {bones, points} = Shape.apply(bones, points, weights, shape, t, moves)
     colors = if markings != %{}, do: Shape.colors(regions, coat, markings)
-    fur = if f = s["fur"], do: Shape.fur(regions, f["coat"], Map.delete(f, "coat"))
+    # No fur in the mouth.
+    fur = if f = s["fur"], do: Shape.fur(regions, f["coat"], f |> Map.delete("coat") |> Map.put("mouth", 0.0))
 
     # The hair at each point, from 0 (no fur) to 1 (3 mm of fur or more).
     # A face of the coat with no hair is bare skin (the face of a monkey:
@@ -277,7 +279,7 @@ defmodule World.Animals do
           {@roles[role],
            %{
              "color" => color,
-             "roughness" => if(role in ~w(eye iris dark nose horn hoof), do: 0.4, else: 0.9),
+             "roughness" => if(role in ~w(eye iris dark nose horn hoof teeth), do: 0.4, else: 0.9),
              "metalness" => 0.0
            }
            |> Map.merge(

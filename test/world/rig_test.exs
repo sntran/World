@@ -189,8 +189,8 @@ defmodule World.RigTest do
 
     [mesh] = for n <- f.nodes, n.primitives != [], do: n
     [skin, part] = mesh.primitives
-    [{"up", moves}] = skin.targets
-    assert length(moves) == length(skin.positions) and part.targets == nil
+    [{"up", moves, turns}] = skin.targets
+    assert length(moves) == length(skin.positions) and length(turns) == length(skin.positions) and part.targets == nil
 
     # The new points of the smooth step move as the mean of the points
     # around them: some all the way up, some in part, some not.
@@ -198,10 +198,24 @@ defmodule World.RigTest do
     assert Enum.max(zs) <= 0.1 + 1.0e-9 and Enum.min(zs) >= -1.0e-9
     assert Enum.any?(zs, &(&1 > 0.01 and &1 < 0.09)) and Enum.any?(zs, &(&1 < 1.0e-9))
 
+    # The normals turn where the faces stretch (the sides), and each
+    # normal with its change is a unit vector; the bottom of the box does
+    # not move, and its normals do not turn.
+    assert Enum.any?(turns, &(Vec.len(&1) > 0.02))
+
+    for {n, t, p} <- Enum.zip([skin.normals, turns, skin.positions]) do
+      assert_in_delta Vec.len(Vec.add(n, t)), 1.0, 1.0e-9
+      if elem(p, 2) < -0.49, do: assert(Vec.len(t) < 1.0e-9)
+    end
+
     json = World.GLBHelper.json(World.GLB.encode(World.Build.scene(f)))
     m = Enum.find(json["meshes"], &(length(&1["primitives"]) == 2))
     assert m["extras"] == %{"targetNames" => ["up"]} and m["weights"] == [0.0]
-    [%{"targets" => [%{"POSITION" => a}]}, %{"targets" => [%{"POSITION" => b}]}] = m["primitives"]
+
+    [%{"targets" => [%{"POSITION" => a, "NORMAL" => na}]}, %{"targets" => [%{"POSITION" => b, "NORMAL" => nb}]}] =
+      m["primitives"]
+
+    assert Enum.at(json["accessors"], na)["sparse"]["count"] > 0 and Enum.at(json["accessors"], nb)["count"] == 3
     sparse = Enum.at(json["accessors"], a)
     assert sparse["sparse"]["count"] == Enum.count(zs, &(&1 > 1.0e-7)) and sparse["max"] |> Enum.at(1) > 0.0
 

@@ -486,18 +486,10 @@ shapes = %{
 }
 
 # Inside the fold of the lips (a point that faces up or down, inside the
-# corners of the mouth): the upper teeth (2 to 5 mm in from the front of
-# the upper lip), and the mouth deeper (from 2.5 mm in under the line of
-# the lips: the lower lip faces up, and shows when the mouth is shut).
+# corners of the mouth): the mouth is dark from 2.5 mm in under the line
+# of the lips (the lower lip faces up, and shows when the mouth is shut)
+# and from 5.5 mm in over it (the upper lip).
 marks = %{
-  "teeth" =>
-    for(
-      {i, f} <- face,
-      w = smooth.(0.0015, 0.0025, f.depth) * (1 - smooth.(0.004, 0.0055, f.depth)) * smooth.(-0.001, 0.0005, f.lip),
-      w > 0,
-      into: %{},
-      do: {i, w}
-    ),
   "mouth" =>
     for(
       {i, f} <- face,
@@ -511,6 +503,148 @@ marks = %{
   "ears_inner" =>
     for({i, f} <- face, w = f.hw * smooth.(0.051, 0.054, abs(f.x)) * smooth.(0.1, 0.3, f.ny), w > 0, into: %{}, do: {i, w})
 }
+
+# The cut of the mouth: each face of the skin at the lips goes to the jaw
+# or to the head by the mean of the jaw weights of its points (the
+# weights of "jaw_open"). A point inside the lips that a face of each
+# side shares becomes two points: the copy is on the faces of the jaw and
+# turns with all the jaw, the first point stays with the head. So the
+# mouth opens between the lips (the bottom of their fold), with no skin
+# across it.
+jaw_w = fn i ->
+  case face[i] do
+    nil -> 0.0
+    f -> f.hw * smooth.(-0.001, 0.003, cut.({f.x, f.y, f.z}) - f.z) * smooth.(0.0, 0.02, f.y)
+  end
+end
+
+lips? = fn i -> f = face[i]; f != nil and abs(f.x) < 0.0235 and abs(f.lip) < 0.006 and f.y > 0.074 end
+
+sides =
+  for {t, m} <- Enum.zip(tris, mats) do
+    cond do
+      m != 0 or not Enum.any?(t, lips?) -> nil
+      Enum.sum(Enum.map(t, jaw_w)) / 3 >= 0.5 -> :jaw
+      true -> :head
+    end
+  end
+
+on = fn side -> for({t, ^side} <- Enum.zip(tris, sides), i <- t, into: MapSet.new(), do: i) end
+split = MapSet.intersection(on.(:jaw), on.(:head)) |> Enum.filter(lips?) |> Enum.sort()
+copy = split |> Enum.with_index(length(all)) |> Map.new()
+copies = MapSet.new(Map.values(copy))
+skin_before = for {t, 0} <- Enum.zip(tris, mats), do: t
+
+tris = for {t, side} <- Enum.zip(tris, sides), do: if(side == :jaw, do: Enum.map(t, &Map.get(copy, &1, &1)), else: t)
+all = all ++ Enum.map(split, &elem(pts, &1))
+weights = weights ++ for({b, [i, w]} <- weights, c = copy[i], do: {b, [c, w]})
+
+shapes =
+  Map.new(shapes, fn
+    {"jaw_open", m} ->
+      {"jaw_open",
+       Map.merge(Map.drop(m, split), Map.new(copy, fn {i, c} -> {c, Vec.scale(turn_jaw.(elem(pts, i), 18), face[i].hw)} end))}
+
+    {n, m} ->
+      {n, Map.merge(m, for({i, c} <- copy, d = m[i], into: %{}, do: {c, d}))}
+  end)
+
+marks = Map.new(marks, fn {n, m} -> {n, Map.merge(m, for({i, c} <- copy, w = m[i], into: %{}, do: {c, w}))} end)
+
+# The edge of the opening: the edges of one face only that the cut made
+# (each in the order of its face).
+open_edges = fn ts ->
+  es = MapSet.new(for [a, b, c] <- ts, e <- [{a, b}, {b, c}, {c, a}], do: e)
+  Enum.reject(es, fn {a, b} -> MapSet.member?(es, {b, a}) end)
+end
+
+skin_after = for {t, 0} <- Enum.zip(tris, mats), do: t
+edges = MapSet.difference(MapSet.new(open_edges.(skin_after)), MapSet.new(open_edges.(skin_before))) |> Enum.sort()
+edge_points = edges |> Enum.flat_map(&Tuple.to_list/1) |> Enum.uniq() |> Enum.sort()
+
+# The bag of the mouth behind the opening: from each edge a face to the
+# back of the bag (1.2 cm behind the middle of the edge), along the edge
+# the other way (so it faces the opening, as the skin faces out); dark.
+# The teeth (the material "teeth"): a strip 0.15 of the way to the back,
+# along the edges of the head (down from them) and of the jaw (up from
+# them), 1.5 to 2.5 mm (a tooth each 4 mm), 4 mm at the canines (7 to 11
+# mm to the side), only at the front (to 1.3 cm to the side, where the
+# fold of the lips ends at the cut; 7 cm and more to the front). The
+# lips are thin, so at rest a tooth is 0.02 of its length (it does not go
+# through them); as the mouth opens the teeth grow to their length, and
+# the lower teeth turn with the jaw.
+at = List.to_tuple(all)
+by_point = Enum.group_by(weights, fn {_, [i, _]} -> i end, fn {b, [_, w]} -> {b, w} end)
+jaw? = fn i -> MapSet.member?(copies, i) or (not Map.has_key?(copy, i) and jaw_w.(i) >= 0.5) end
+head_of = fn i -> Map.get(Map.new(by_point[i]), "head", 0.0) end
+count = length(edge_points)
+mid = edge_points |> Enum.map(&elem(at, &1)) |> Enum.reduce(&Vec.add/2) |> Vec.scale(1 / count)
+back = Vec.add(mid, {0.0, -0.012, 0.0})
+n = length(all)
+center = n
+
+teeth_of =
+  Map.new(edge_points, fn i ->
+    {x, y, _} = elem(at, i)
+    size = if abs(x) > 0.007 and abs(x) < 0.011, do: 1.6, else: 0.8 + 0.2 * :math.cos(2 * :math.pi() * x / 0.004)
+    {i, 0.0025 * size * (1 - smooth.(0.01, 0.013, abs(x))) * smooth.(0.07, 0.08, y)}
+  end)
+
+bag = for {a, b} <- edges, do: [b, a, center]
+
+# The edges of each side with teeth: a root and a tip at each of its two
+# points (four new points for each edge).
+toothed = for {a, b} <- edges, jaw?.(a) == jaw?.(b), max(teeth_of[a], teeth_of[b]) > 5.0e-4, do: {a, b}
+
+{tooth_points, tooth_faces} =
+  toothed
+  |> Enum.with_index()
+  |> Enum.map(fn {{a, b}, j} ->
+    base = n + 1 + 4 * j
+    sign = if jaw?.(a), do: 1.0, else: -1.0
+    root = fn i -> Vec.add(elem(at, i), Vec.scale(Vec.sub(back, elem(at, i)), 0.15)) end
+    tip = fn i -> Vec.add(root.(i), {0.0, 0.0, 0.02 * sign * teeth_of[i]}) end
+    quad = [base, base + 1, base + 3, base + 2]
+    nv = Vec.cross(Vec.sub(tip.(b), root.(a)), Vec.sub(tip.(a), root.(b)))
+    quad = if Vec.dot(nv, Vec.sub(mid, back)) >= 0, do: quad, else: Enum.reverse(quad)
+    [q0, q1, q2, q3] = quad
+    {[{a, root.(a)}, {b, root.(b)}, {a, tip.(a)}, {b, tip.(b)}], [[q0, q1, q2], [q0, q2, q3]]}
+  end)
+  |> Enum.unzip()
+
+tooth_points = List.flatten(tooth_points)
+
+# The weights of a new point: of its point on the edge; of the back of
+# the bag: the mean of the edge. The jaw turns the teeth of the jaw, and
+# the back of the bag by half.
+mean =
+  edge_points
+  |> Enum.flat_map(&by_point[&1])
+  |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  |> Enum.map(fn {b, l} -> {b, [center, Float.round(Enum.sum(l) / count, 5)]} end)
+
+new_points = Enum.with_index(tooth_points, n + 1)
+
+# The teeth grow to their length as the mouth opens (the tips: the last
+# two of the four points of an edge).
+grow = fn i -> {0.0, 0.0, 0.98 * if(jaw?.(i), do: teeth_of[i], else: -teeth_of[i])} end
+
+jaw_moves =
+  new_points
+  |> Enum.with_index()
+  |> Map.new(fn {{{i, p}, r}, k} ->
+    out = if rem(k, 4) >= 2, do: grow.(i), else: {0.0, 0.0, 0.0}
+    turn = if jaw?.(i), do: Vec.scale(turn_jaw.(Vec.add(p, out), 18), head_of.(i)), else: {0.0, 0.0, 0.0}
+    {r, Vec.add(turn, out)}
+  end)
+  |> Map.put(center, Vec.scale(turn_jaw.(back, 18), 0.5))
+
+all = all ++ [back] ++ Enum.map(tooth_points, &elem(&1, 1))
+tris = tris ++ bag ++ Enum.concat(tooth_faces)
+mats = mats ++ List.duplicate(0, length(bag)) ++ List.duplicate(3, 2 * length(toothed))
+weights = weights ++ mean ++ for({{i, _}, r} <- new_points, {b, w} <- by_point[i], do: {b, [r, w]})
+shapes = Map.update!(shapes, "jaw_open", &Map.merge(&1, jaw_moves))
+marks = Map.update!(marks, "mouth", &Map.put(&1, center, 1.0))
 
 # With TAIL=no: the faces with a mean weight of the tail bones of the
 # file of more than 0.5 go. Each new hole has a cap: a fan of faces to
@@ -579,7 +713,8 @@ data = %{
   "materials" => [
     %{"name" => "body", "color" => [170, 140, 110]},
     %{"name" => "eye", "color" => [20, 16, 14]},
-    %{"name" => "iris", "color" => [155, 100, 40]}
+    %{"name" => "iris", "color" => [155, 100, 40]},
+    %{"name" => "teeth", "color" => [228, 220, 196]}
   ],
   "face_materials" => mats,
   "bones" =>

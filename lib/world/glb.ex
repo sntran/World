@@ -58,9 +58,12 @@ defmodule World.GLB do
 
         {node, i}, {meshes, map, buf} ->
           # The morph targets: each primitive of a mesh has all of them (a
-          # primitive with no move for a target has a target of zeros).
+          # primitive with no move for a target has a target of zeros);
+          # when a target of the mesh moves the normals, each target of
+          # each primitive has its normals.
           names = Enum.find_value(node.primitives, & &1.targets) |> then(&(&1 && Enum.map(&1, fn t -> elem(t, 0) end)))
-          {prims, buf} = Enum.map_reduce(node.primitives, buf, &primitive(&1, &2, mat_index, names))
+          normals? = Enum.any?(node.primitives, fn p -> Enum.any?(List.wrap(p.targets), &(tuple_size(&1) == 3)) end)
+          {prims, buf} = Enum.map_reduce(node.primitives, buf, &primitive(&1, &2, mat_index, {names, normals?}))
 
           mesh =
             %{"name" => node.name, "primitives" => prims}
@@ -119,7 +122,7 @@ defmodule World.GLB do
     {json, buf.bin}
   end
 
-  defp primitive(%Scene.Primitive{} = p, buf, mat_index, names) do
+  defp primitive(%Scene.Primitive{} = p, buf, mat_index, {names, normals?}) do
     {pos, buf} = floats(buf, Enum.map(p.positions, &gl/1), "VEC3", 34962, true)
     {nor, buf} = floats(buf, Enum.map(p.normals, &gl/1), "VEC3", 34962, false)
     attrs = %{"POSITION" => pos, "NORMAL" => nor}
@@ -172,18 +175,24 @@ defmodule World.GLB do
 
     {targets, buf} =
       Enum.map_reduce(names || [], buf, fn name, buf ->
-        moves = p.targets |> List.wrap() |> Enum.find_value(fn {n, m} -> if n == name, do: m end)
-        {acc, buf} = target(buf, moves, length(p.positions))
-        {%{"POSITION" => acc}, buf}
+        t = p.targets |> List.wrap() |> Enum.find(&(elem(&1, 0) == name))
+        {acc, buf} = target(buf, t && elem(t, 1), length(p.positions))
+
+        if normals? do
+          {normal, buf} = target(buf, t && tuple_size(t) == 3 && elem(t, 2), length(p.positions))
+          {%{"POSITION" => acc, "NORMAL" => normal}, buf}
+        else
+          {%{"POSITION" => acc}, buf}
+        end
       end)
 
     {%{"attributes" => attrs, "indices" => ind, "material" => Map.fetch!(mat_index, p.material)}
      |> put_some("targets", names && targets), buf}
   end
 
-  # A morph target: the moves of the points that move (sparse: their
-  # indices and their moves), the others zero. A target with no move has
-  # no data.
+  # A morph target: the moves of the points (or of the normals) that move
+  # (sparse: their indices and their moves), the others zero. A target
+  # with no move has no data.
   defp target(buf, moves, count) do
     moved = for {m, i} <- Enum.with_index(moves || []), Vec.len(m) > 1.0e-7, do: {i, gl(Vec.float(m))}
     vals = [{0.0, 0.0, 0.0} | Enum.map(moved, &elem(&1, 1))]
