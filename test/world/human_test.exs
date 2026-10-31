@@ -306,6 +306,33 @@ defmodule World.HumanTest do
     assert_in_delta x, (elem(Map.get(a, i, {0.0, 0.0, 0.0}), 0) + elem(Map.get(b, i, {0.0, 0.0, 0.0}), 0)) / 2, 1.0e-9
   end
 
+  test "expressions: the face shapes of ARKit; a blink closes the eyelashes of its side" do
+    p = Human.person("face", expressions: true, hair: nil, clothes: [])
+    prims = for n <- p.nodes, pr <- n.primitives, do: pr
+    names = World.People.Face.shape_names()
+    assert length(names) == 30 and "eyeBlinkLeft" in names and "mouthSmileRight" in names and "jawOpen" in names
+
+    for role <- [:skin, :teeth, :tongue, :eyebrows, :eyelashes] do
+      for pr <- Enum.filter(prims, &(&1.material == role)), do: assert(Enum.map(pr.targets, &elem(&1, 0)) == names)
+    end
+
+    assert Enum.find(prims, &(&1.material == :eyes)).targets == nil
+
+    # The left eye of the person is at -x in World: its blink moves its
+    # eyelashes down (2 mm or more), and not the eyelashes of the right eye.
+    lashes = Enum.find(prims, &(&1.material == :eyelashes))
+    {_, blink} = Enum.find(lashes.targets, &(elem(&1, 0) == "eyeBlinkLeft"))
+    moved = for {{x, _, _}, {_, _, dz}} <- Enum.zip(lashes.positions, blink), do: {x, dz}
+    assert Enum.any?(moved, fn {x, dz} -> x < 0 and dz < -0.002 end)
+    assert Enum.all?(moved, fn {x, dz} -> x < 0 or dz == 0.0 end)
+
+    # A smile of one side moves the corner of the mouth of that side up.
+    skin = Enum.find(prims, &(&1.material == :skin))
+    {_, smile} = Enum.find(skin.targets, &(elem(&1, 0) == "mouthSmileRight"))
+    ups = for {{x, _, _}, {_, _, dz}} <- Enum.zip(skin.positions, smile), dz > 0.001, do: x
+    assert ups != [] and Enum.all?(ups, &(&1 > -0.005))
+  end
+
   test "the numbers of a person give the weights of the targets" do
     o = %{gender: 0.25, age: 90, muscle: 0.25, weight: 0.75, height: 0.25, race: %{"asian" => 2.0, "african" => 2.0}}
     weights = Map.new(Human.target_weights(o))

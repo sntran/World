@@ -33,7 +33,8 @@ defmodule World.People.Human do
     helmet: nil,
     pose: %{},
     hold: [],
-    speech: false
+    speech: false,
+    expressions: false
   ]
 
   @doc """
@@ -56,7 +57,10 @@ defmodule World.People.Human do
   holds a prop closes on it, in the pose and in each animation), and
   `speech` (true: at near, the teeth and the tongue, and the 15 visemes of
   `World.People.Face` as morph targets of the skin, the teeth and the
-  tongue, for an app that moves the mouth with the voice).
+  tongue, for an app that moves the mouth with the voice), and
+  `expressions` (true: at near, the teeth and the tongue, and the face
+  shapes of ARKit of `World.People.Face` as morph targets; the eyebrows
+  and the eyelashes move with the skin: a blink closes the eyelashes).
   """
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
@@ -315,17 +319,20 @@ defmodule World.People.Human do
       for f <- Map.fetch!(base.groups, "body"), not Enum.any?(f, fn {v, _} -> MapSet.member?(hidden, v) end), do: f
 
     # With speech: the moves of the visemes, for each point of the base
-    # mesh, and the teeth (with the gums) and the tongue, fit to the helper
+    # mesh; with expressions, the moves of the face shapes. With one of
+    # them, the teeth (with the gums) and the tongue, fit to the helper
     # meshes of the mouth of the base mesh, which the targets of the mouth
     # move.
     shapes =
-      if o.speech, do: for({n, moves} <- Face.visemes(o.race), do: {n, &Map.get(moves, &1, {0.0, 0.0, 0.0})}), else: []
+      for {n, moves} <-
+            if(o.speech, do: Face.visemes(o.race), else: []) ++ if(o.expressions, do: Face.shapes(o.race), else: []),
+          do: {n, &Map.get(moves, &1, {0.0, 0.0, 0.0})}
 
     body =
       mesh(:skin, faces, &elem(points, &1), &elem(base.uvs, &1), &Map.get(weights, &1, [{0, 1.0}]), o.ground, shapes)
 
     mouth =
-      if o.speech,
+      if shapes != [],
         do: [{:teeth, Data.asset("teeth", "teeth_base")}, {:tongue, Data.asset("tongue", "tongue01")}],
         else: []
 
@@ -341,7 +348,7 @@ defmodule World.People.Human do
     prims =
       [body] ++
         for({role, a} <- mouth, do: fitted(role, a, points, weights, o.ground, shapes)) ++
-        for({role, a, _} <- assets, do: fitted(role, a, points, weights, o.ground))
+        for({role, a, _} <- assets, do: fitted(role, a, points, weights, o.ground, face(role, shapes)))
 
     materials =
       Map.new(
@@ -499,6 +506,10 @@ defmodule World.People.Human do
   defp cover(%{fit: fit}) do
     fit.refs |> Tuple.to_list() |> Enum.flat_map(&elem(&1, 0)) |> MapSet.new() |> MapSet.union(fit.delete)
   end
+
+  # The eyebrows and the eyelashes move with the skin of the face.
+  defp face(role, shapes) when role in [:eyebrows, :eyelashes], do: shapes
+  defp face(_role, _shapes), do: []
 
   # An asset on the body: its points from the points of the body, its
   # weights from theirs; the moves of its shapes from the moves of the

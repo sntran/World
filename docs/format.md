@@ -241,6 +241,19 @@ The GLB of a person has:
 - the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
   2.6 s, to play once, from the pose "stand" back to it). The channels
   of a clip are the bones that move in it;
+- with the option `expressions` (at near): the teeth and the tongue (as
+  with `speech`), and 30 face shapes of the standard of Apple ARKit as
+  morph targets of the skin, the teeth, the tongue, the eyebrows and
+  the eyelashes (`eyeBlinkLeft`, `eyeBlinkRight`, `eyeSquint…`,
+  `eyeWide…`, `browDown…`, `browOuterUp…`, `browInnerUp`,
+  `cheekSquint…`, `noseSneer…`, `jawOpen`, `mouthFunnel`, `mouthPucker`,
+  `mouthSmile…`, `mouthFrown…`, `mouthStretch…`, `mouthDimple…`,
+  `mouthPress…`, `mouthUpperUp…`; `World.People.Face`): mixes of the
+  units of the face of MakeHuman (the eyes, the brows, the nose and the
+  mouth), a unit of the mouth on one side for a shape of one side. The
+  left is the left of the person (-x). The eyebrows and the eyelashes
+  move by their fit: a blink closes the eyelashes. With `speech` too, the
+  meshes have the visemes, then the shapes;
 - with the option `speech` (at near): the teeth with the gums and the
   tongue (the assets `teeth_base` and `tongue01` of MakeHuman, the
   materials `teeth` and `tongue`, with their textures; they fit to the

@@ -15,9 +15,9 @@ The script writes:
   "game_engine" and its weights.
 - targets.bin.gz: the targets of the body of an adult, in a small binary
   format (see World.People.Data).
-- expressions.bin.gz: the units of the expressions of the mouth, for
-  each of the three origins (the targets of targets/expression/units),
-  in the same format. With --expressions, the script writes only this
+- expressions.bin.gz: the units of the expressions of the face (the
+  mouth, the eyes, the brows, the nose), for each of the three origins
+  (the targets of targets/expression/units), in the same format. With --expressions, the script writes only this
   file (no packs).
 - one folder for each kind of asset: the mesh (.obj.gz), its fit to the
   body (.mhclo.gz or .proxy.gz), and its texture, smaller. The texture
@@ -38,10 +38,16 @@ from PIL import Image
 
 MPFB, PACKS = sys.argv[1], sys.argv[2]
 
-# The units of the expressions of the mouth (the visemes of
-# World.People.Face mix them).
-MOUTH = ["compression", "corner-puller", "depression", "depression-retraction", "elevation", "eversion", "open",
-         "parling", "part-later", "protusion", "pursing", "retraction", "upward-retraction"]
+# The units of the expressions of the face (the visemes and the face
+# shapes of World.People.Face mix them): the mouth, the eyes, the brows
+# and the nose.
+UNITS = [f"mouth-{u}" for u in ["compression", "corner-puller", "depression", "depression-retraction", "elevation",
+                                "eversion", "open", "parling", "part-later", "protusion", "pursing", "retraction",
+                                "upward-retraction"]] + \
+    [f"eye-{side}-{u}" for side in ["left", "right"] for u in ["closure", "opened-up", "slit"]] + \
+    [f"eyebrows-{side}-{u}" for side in ["left", "right"] for u in ["down", "extern-up", "inner-up", "up"]] + \
+    ["nose-compression", "nose-depression"] + \
+    [f"nose-{side}-{u}" for side in ["left", "right"] for u in ["dilatation", "elevation"]]
 OUT = os.path.join(os.path.dirname(__file__), "..", "priv", "makehuman")
 
 # The skeleton and the targets of an adult (young to old), with no
@@ -211,7 +217,7 @@ def mhmat(folder):
 
 
 def expressions():
-    names = [f"units/{race}/mouth-{unit}" for race in RACES for unit in MOUTH]
+    names = [f"units/{race}/{unit}" for race in RACES for unit in UNITS]
     write_targets(os.path.join(OUT, "expressions.bin.gz"), "expression", names)
 
 

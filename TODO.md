@@ -137,13 +137,15 @@ and no logo on them.
   cap, with the nón lá. Ages from 18 (students, drivers), and children
   (the idea "More people" above).
 - **Faces for speech (W6).** The 15 visemes of the Meta standard are
-  morph targets of a person with `speech` (`World.People.Face`). Still
-  to do: the face shapes of the ARKit standard that Vung_Tau uses (plan
-  0006, R10: the eyes, the brows, the cheeks, a blink with the
-  eyelashes, which follow the skin by their fit), the visemes at mid and
-  far, a head mesh of its own (now the targets are on the skin of all
-  the body, sparse), and mixes of the visemes from measured faces (now
-  a guess).
+  morph targets of a person with `speech`, and 30 face shapes of the
+  ARKit standard (Vung_Tau, plan 0006, R10) with `expressions`
+  (`World.People.Face`). Still to do: the other 22 shapes of ARKit (no
+  unit of MakeHuman: the looks of the eyes as turns of the eyes, the
+  jaw and the mouth to the sides, the rolls and the shrugs of the lips,
+  `mouthClose`, `mouthLowerDown`, `cheekPuff`, `tongueOut`), the visemes
+  at mid and far, a head mesh of its own (now the targets are on the
+  skin of all the body, sparse), and mixes of the visemes and the
+  shapes from measured faces (now a guess).
 - **Animations of daily life (W7).** The idea "More animations of
   people" above, with: talk with gestures, sit on a low stool, squat
   with flat feet (ngồi chồm hổm), eat with chopsticks and a spoon, drink
