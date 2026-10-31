@@ -142,10 +142,10 @@ and no logo on them.
   (`World.People.Face`). Still to do: the other 22 shapes of ARKit (no
   unit of MakeHuman: the looks of the eyes as turns of the eyes, the
   jaw and the mouth to the sides, the rolls and the shrugs of the lips,
-  `mouthClose`, `mouthLowerDown`, `cheekPuff`, `tongueOut`), the visemes
-  at mid and far, a head mesh of its own (now the targets are on the
-  skin of all the body, sparse), and mixes of the visemes and the
-  shapes from measured faces (now a guess).
+  `mouthClose`, `mouthLowerDown`, `cheekPuff`, `tongueOut`), a head
+  mesh of its own (now the
+  targets are on the skin of all the body, sparse), and mixes of the
+  visemes and the shapes from measured faces (now a guess).
 - **Animations of daily life (W7).** The idea "More animations of
   people" above, with: talk with gestures, sit on a low stool, squat
   with flat feet (ngồi chồm hổm), eat with chopsticks and a spoon, drink

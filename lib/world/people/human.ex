@@ -55,12 +55,13 @@ defmodule World.People.Human do
   `World.Figure.hold/4`, by the port of the prop with the name of the
   port of the person with no side (`grip` for `grip_r`); a hand that
   holds a prop closes on it, in the pose and in each animation), and
-  `speech` (true: at near, the teeth and the tongue, and the 15 visemes of
-  `World.People.Face` as morph targets of the skin, the teeth and the
-  tongue, for an app that moves the mouth with the voice), and
-  `expressions` (true: at near, the teeth and the tongue, and the face
-  shapes of ARKit of `World.People.Face` as morph targets; the eyebrows
-  and the eyelashes move with the skin: a blink closes the eyelashes).
+  `speech` (true: the 15 visemes of `World.People.Face` as morph targets
+  of the skin, and at near of the teeth and the tongue, for an app that
+  moves the mouth with the voice), and `expressions` (true: the face
+  shapes of ARKit of `World.People.Face` as morph targets of the skin,
+  and at near of the teeth, the tongue, the eyebrows and the eyelashes:
+  a blink closes the eyelashes). At mid and far the body moves by its
+  fit to the base mesh.
   """
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
@@ -318,15 +319,10 @@ defmodule World.People.Human do
     faces =
       for f <- Map.fetch!(base.groups, "body"), not Enum.any?(f, fn {v, _} -> MapSet.member?(hidden, v) end), do: f
 
-    # With speech: the moves of the visemes, for each point of the base
-    # mesh; with expressions, the moves of the face shapes. With one of
-    # them, the teeth (with the gums) and the tongue, fit to the helper
-    # meshes of the mouth of the base mesh, which the targets of the mouth
-    # move.
-    shapes =
-      for {n, moves} <-
-            if(o.speech, do: Face.visemes(o.race), else: []) ++ if(o.expressions, do: Face.shapes(o.race), else: []),
-          do: {n, &Map.get(moves, &1, {0.0, 0.0, 0.0})}
+    # With one of speech and expressions, the teeth (with the gums) and
+    # the tongue, fit to the helper meshes of the mouth of the base mesh,
+    # which the targets of the mouth move.
+    shapes = shapes(o)
 
     body =
       mesh(:skin, faces, &elem(points, &1), &elem(base.uvs, &1), &Map.get(weights, &1, [{0, 1.0}]), o.ground, shapes)
@@ -393,9 +389,18 @@ defmodule World.People.Human do
     groups = p.mesh.groups |> Map.values() |> Enum.concat() |> Enum.group_by(owner)
     role = fn c -> if c, do: String.to_atom("color_" <> c.name), else: :skin end
 
+    # The visemes and the face shapes move the body by its fit (the hair
+    # at mid has no targets: the GLB gives it zeros).
+    shapes = fit_shapes(p, shapes(o))
+
     prims =
       for {c, faces} <- groups,
-          do: mesh(role.(c), faces, &elem(pts, &1), if(c, do: nil, else: uv), &elem(wts, &1), o.ground)
+          do: mesh(role.(c), faces, &elem(pts, &1), if(c, do: nil, else: uv), &elem(wts, &1), o.ground, shapes)
+
+    # The eyes of few faces, and the mouth closed behind.
+    prims =
+      prims ++
+        [fitted(:eyes, Data.asset("eyes", "low-poly"), points, weights, o.ground), holes(p, pts, wts, shapes, o.ground)]
 
     hair =
       if level == :mid and o.hair, do: [fitted(:hair, Data.asset("hair", o.hair), points, weights, o.ground)], else: []
@@ -404,7 +409,12 @@ defmodule World.People.Human do
       for {c, _} <- covers,
           do: {role.(c), %{"color" => Map.get(o.colors, c.name, c.color), "roughness" => 0.9, "metalness" => 0.0}}
 
-    materials = Map.new([{:skin, textured(Data.asset("skins", o.skin).texture, false)} | colors])
+    materials =
+      Map.new([
+        {:skin, textured(Data.asset("skins", o.skin).texture, false)},
+        {:eyes, textured(Data.asset("eye_materials", o.eyes).texture, false)},
+        {:hole, %{"color" => [40, 22, 24], "roughness" => 0.9, "metalness" => 0.0}} | colors
+      ])
 
     materials =
       if hair == [],
@@ -417,6 +427,65 @@ defmodule World.People.Human do
           )
 
     {Enum.sort_by(prims, & &1.material) ++ hair, materials}
+  end
+
+  # The holes of a low-poly body at the mouth (not the holes of the eyes,
+  # 1 cm or more to the side): a dark fan from the edge of each hole to a
+  # point 2 cm behind its middle, so an open mouth shows no background.
+  # The point behind has the mean weights and the mean moves (`shapes`, of
+  # the points of the body) of its edge.
+  defp holes(p, pts, wts, shapes, ground) do
+    faces = p.mesh.groups |> Map.values() |> Enum.concat() |> Enum.map(fn f -> Enum.map(f, &elem(&1, 0)) end)
+    edges = for f <- faces, [a, b] <- Enum.chunk_every(f ++ [hd(f)], 2, 1, :discard), do: {a, b}
+    set = MapSet.new(edges)
+    open = edges |> Enum.reject(fn {a, b} -> MapSet.member?(set, {b, a}) end) |> Enum.sort()
+    next = Map.new(open)
+
+    loops =
+      open
+      |> Enum.reduce({[], MapSet.new()}, fn {a, _}, {loops, seen} ->
+        if MapSet.member?(seen, a) do
+          {loops, seen}
+        else
+          loop =
+            a
+            |> Stream.iterate(&next[&1])
+            |> Enum.reduce_while([], &if(&1 in &2, do: {:halt, &2}, else: {:cont, [&1 | &2]}))
+
+          {[Enum.reverse(loop) | loops], MapSet.union(seen, MapSet.new(loop))}
+        end
+      end)
+      |> elem(0)
+      |> Enum.reverse()
+      |> Enum.filter(fn loop -> abs(Enum.sum(Enum.map(loop, &elem(elem(pts, &1), 0))) / length(loop)) < 0.1 end)
+
+    n = tuple_size(pts)
+    mean = fn loop, f -> loop |> Enum.map(f) |> Enum.reduce(&Vec.add/2) |> Vec.scale(1 / length(loop)) end
+    backs = for loop <- loops, do: Vec.sub(mean.(loop, &elem(pts, &1)), {0.0, 0.0, 0.2})
+    pos = fn v -> if v < n, do: elem(pts, v), else: Enum.at(backs, v - n) end
+
+    weights = fn v ->
+      if v < n,
+        do: elem(wts, v),
+        else:
+          Enum.at(loops, v - n)
+          |> Enum.flat_map(&elem(wts, &1))
+          |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+          |> Enum.map(fn {b, ws} -> {b, Enum.sum(ws)} end)
+          |> top4()
+    end
+
+    moves =
+      for {name, move} <- shapes do
+        {name, fn v -> if v < n, do: move.(v), else: mean.(Enum.at(loops, v - n), move) end}
+      end
+
+    fans =
+      for {loop, k} <- Enum.with_index(loops),
+          [a, b] <- Enum.chunk_every(loop ++ [hd(loop)], 2, 1, :discard),
+          do: [{b, nil}, {a, nil}, {n + k, nil}]
+
+    mesh(:hole, fans, pos, nil, weights, ground, moves)
   end
 
   # --- The helmet ----------------------------------------------------------------
@@ -507,6 +576,38 @@ defmodule World.People.Human do
     fit.refs |> Tuple.to_list() |> Enum.flat_map(&elem(&1, 0)) |> MapSet.new() |> MapSet.union(fit.delete)
   end
 
+  # The morph targets of a person: with speech, the moves of the visemes,
+  # for each point of the base mesh; with expressions, the moves of the
+  # face shapes.
+  defp shapes(o) do
+    for {n, moves} <-
+          if(o.speech, do: Face.visemes(o.race), else: []) ++ if(o.expressions, do: Face.shapes(o.race), else: []),
+        do: {n, &Map.get(moves, &1, {0.0, 0.0, 0.0})}
+  end
+
+  # The moves of the shapes for the points of an asset (or of a body at
+  # mid and far): the moves of the points of the body that it fits to, by
+  # the weights of the fit.
+  defp fit_shapes(a, shapes) do
+    for {n, move} <- shapes do
+      {n,
+       fn i ->
+         {vs, ws, _} = elem(a.fit.refs, i)
+         Enum.zip(vs, ws) |> Enum.map(fn {v, w} -> Vec.scale(move.(v), w) end) |> Enum.reduce(&Vec.add/2)
+       end}
+    end
+  end
+
+  # A face of the cornea of the eyes of MakeHuman (its UVs in the corner of
+  # the texture, a black disk): MakeHuman draws it clear; it goes, so the
+  # iris shows.
+  defp cornea?(a, face),
+    do:
+      Enum.all?(face, fn {_, t} ->
+        {u, v} = elem(a.mesh.uvs, t)
+        u > 0.85 and v < 0.15
+      end)
+
   # The eyebrows and the eyelashes move with the skin of the face.
   defp face(role, shapes) when role in [:eyebrows, :eyelashes], do: shapes
   defp face(_role, _shapes), do: []
@@ -516,19 +617,9 @@ defmodule World.People.Human do
   # points of the body (by the weights of the fit).
   defp fitted(role, a, points, weights, ground, shapes \\ []) do
     {pts, wts} = fit_points(a, points, weights)
-    faces = a.mesh.groups |> Map.values() |> Enum.concat()
+    faces = a.mesh.groups |> Map.values() |> Enum.concat() |> Enum.reject(&(role == :eyes and cornea?(a, &1)))
     uv = fn i -> if i, do: elem(a.mesh.uvs, i), else: {0.0, 0.0} end
-
-    shapes =
-      for {n, move} <- shapes do
-        {n,
-         fn i ->
-           {vs, ws, _} = elem(a.fit.refs, i)
-           Enum.zip(vs, ws) |> Enum.map(fn {v, w} -> Vec.scale(move.(v), w) end) |> Enum.reduce(&Vec.add/2)
-         end}
-      end
-
-    mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground, shapes)
+    mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground, fit_shapes(a, shapes))
   end
 
   defp fit_points(%{fit: fit} = a, points, weights) do
@@ -561,7 +652,7 @@ defmodule World.People.Human do
   # normal of each point from its faces, and the 4 weights.
   # `shapes`: a list of `{name, move}`, the move of a point of the base
   # mesh (in the units of MakeHuman): the morph targets of the mesh.
-  defp mesh(role, faces, pos, uv, wts, ground, shapes \\ []) do
+  defp mesh(role, faces, pos, uv, wts, ground, shapes) do
     tris = Enum.flat_map(faces, fn [a, b, c | rest] -> fan(a, [b, c | rest]) end)
     p = fn v -> Vec.sub(to_world(pos.(v)), {0.0, 0.0, ground}) end
 

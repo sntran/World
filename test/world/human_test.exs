@@ -306,6 +306,36 @@ defmodule World.HumanTest do
     assert_in_delta x, (elem(Map.get(a, i, {0.0, 0.0, 0.0}), 0) + elem(Map.get(b, i, {0.0, 0.0, 0.0}), 0)) / 2, 1.0e-9
   end
 
+  test "speech and expressions at mid and far: the body moves by its fit" do
+    names = World.People.Face.names() ++ World.People.Face.shape_names()
+
+    for level <- [:mid, :far] do
+      p = Detail.with(level, fn -> Human.person("t", speech: true, expressions: true, clothes: ["shoes01"]) end)
+      prims = for n <- p.nodes, pr <- n.primitives, do: pr
+      [skin] = Enum.filter(prims, &(&1.material == :skin))
+      assert Enum.map(skin.targets, &elem(&1, 0)) == names, "#{level}"
+      refute Enum.any?(prims, &(&1.material == :teeth))
+
+      # "aa" opens the mouth (the chin down by 5 mm or more). The colored
+      # parts of the body (the shoes) have the targets too; the hair at
+      # mid has none.
+      {_, aa} = Enum.find(skin.targets, &(elem(&1, 0) == "viseme_aa"))
+      assert aa |> Enum.map(&elem(&1, 2)) |> Enum.min() < -0.005, "#{level}"
+      assert Enum.find(prims, &(&1.material == :color_shoes01)).targets != nil
+
+      # The eyes of few faces, with the texture of the eyes.
+      assert Enum.any?(prims, &(&1.material == :eyes)) and match?({_, _}, p.materials.eyes["image"])
+
+      # The hole of the mouth of the low-poly body is closed by a dark
+      # fan, which moves with the edge of the hole.
+      hole = Enum.find(prims, &(&1.material == :hole))
+      assert p.materials.hole["color"] == [40, 22, 24] and Enum.map(hole.targets, &elem(&1, 0)) == names
+      {_, open} = Enum.find(hole.targets, &(elem(&1, 0) == "viseme_aa"))
+      assert open |> Enum.map(&elem(&1, 2)) |> Enum.min() < -0.005
+      assert Enum.all?(Enum.filter(prims, &(&1.material == :hair)), &(&1.targets == nil)), "#{level}"
+    end
+  end
+
   test "expressions: the face shapes of ARKit; a blink closes the eyelashes of its side" do
     p = Human.person("face", expressions: true, hair: nil, clothes: [])
     prims = for n <- p.nodes, pr <- n.primitives, do: pr
@@ -317,6 +347,11 @@ defmodule World.HumanTest do
     end
 
     assert Enum.find(prims, &(&1.material == :eyes)).targets == nil
+
+    # The eyes have no cornea (MakeHuman draws it clear; it maps to a black
+    # disk in the corner of the texture): the iris shows.
+    eyes = Enum.find(prims, &(&1.material == :eyes))
+    refute Enum.any?(eyes.uvs, fn {u, v} -> u > 0.85 and v > 0.85 end)
 
     # The left eye of the person is at -x in World: its blink moves its
     # eyelashes down (2 mm or more), and not the eyelashes of the right eye.

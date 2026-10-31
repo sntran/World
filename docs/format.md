@@ -210,8 +210,9 @@ strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `gray`, `rubber`, `copper`, `stainless`, `screen`, `blue`, `orange`,
 `red`, `plywood`, `solar_cell`. A person
 has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
-`clothes_NAME`, and `color_NAME` (the mean color of an asset at mid and
-far).
+`clothes_NAME`, `color_NAME` (the mean color of an asset at mid and
+far), `hole` (the dark inside of the mouth at mid and far),
+and with `speech` or `expressions` `teeth` and `tongue`.
 
 `priv/palette.json` gives each role a color, a roughness and a
 metalness. Glass also has an alpha (0.35 for `glass`, 0.85 for
@@ -241,7 +242,7 @@ The GLB of a person has:
 - the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
   2.6 s, to play once, from the pose "stand" back to it). The channels
   of a clip are the bones that move in it;
-- with the option `expressions` (at near): the teeth and the tongue (as
+- with the option `expressions`: at near the teeth and the tongue (as
   with `speech`), and 30 face shapes of the standard of Apple ARKit as
   morph targets of the skin, the teeth, the tongue, the eyebrows and
   the eyelashes (`eyeBlinkLeft`, `eyeBlinkRight`, `eyeSquint…`,
@@ -254,7 +255,7 @@ The GLB of a person has:
   left is the left of the person (-x). The eyebrows and the eyelashes
   move by their fit: a blink closes the eyelashes. With `speech` too, the
   meshes have the visemes, then the shapes;
-- with the option `speech` (at near): the teeth with the gums and the
+- with the option `speech`: at near the teeth with the gums and the
   tongue (the assets `teeth_base` and `tongue01` of MakeHuman, the
   materials `teeth` and `tongue`, with their textures; they fit to the
   helper meshes of the mouth of the base mesh, as the clothes fit to the
@@ -434,7 +435,15 @@ to the right side, y to the front, z up).
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair; far is a body of 730 faces.
 At mid and far, the faces under clothes have the mean color of the
-clothes, and at far the scalp has the color of the hair.
+clothes, and at far the scalp has the color of the hair. The low-poly
+bodies have the low-poly eyes of MakeHuman (`eyes`, with the texture of
+the eyes), and a dark fan (`hole`) closes the hole of the mouth, from its
+edge to a point 2 cm behind its middle. The eyes at near have no cornea:
+MakeHuman draws it clear, and on the texture it is a black disk. With `speech` or
+`expressions`, the body at mid and far has the same morph targets as at
+near: the move of a point is the mix of the moves of the points of the
+base mesh that it fits to (no teeth, no tongue; the fans move with the
+edges of the holes).
 
 The colors of a person (`hair_color`, `clothes_colors`):
 
