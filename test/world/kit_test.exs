@@ -6,6 +6,7 @@ defmodule World.KitTest do
 
   doctest World.People.Human, only: [kit_targets: 1]
   doctest World.People, only: [place: 2]
+  doctest World.People.Kit
 
   test "the targets of a kit: each group has the same moves, and no group is empty" do
     for g <- [0, 1] do
@@ -122,5 +123,22 @@ defmodule World.KitTest do
     # The place of the default camper is the place of the camper of World.
     {x, y} = World.People.place("camper")
     assert m["vans"]["transit_148"] == Tuple.to_list(GLB.gl({x, y, 0.0}))
+    assert m["vehicles"]["car"] == "vehicles/car.glb"
+    assert m["vehicles"]["camper"]["transit_148"] == "vehicles/camper-transit_148.glb"
+    refute Map.has_key?(m["vehicles"], "foot")
+    assert map_size(m["vehicles"]["camper"]) == length(World.Vehicles.Van.models())
+  end
+
+  test "a vehicle of the kit is the file of the order of its URL" do
+    {"vehicles/car.glb", options} = Enum.find(Kit.vehicles(), &(elem(&1, 0) == "vehicles/car.glb"))
+
+    {:ok, bin} =
+      World.Orders.build(
+        %{"blueprint" => "traveler", "options" => %{"vehicle" => "car", "scene" => "parked", "part" => "vehicle"}},
+        "mid",
+        "glb"
+      )
+
+    assert Kit.vehicle_glb(options) == bin
   end
 end

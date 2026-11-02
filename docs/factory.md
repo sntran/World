@@ -281,10 +281,11 @@ kit is the parked traveler of the blueprint `traveler` at mid:
 
 | File | What it has |
 |---|---|
-| `kit.json` | The names of the other files, the clothes, and the place of a parked person (a translation and a rotation in the axes of glTF) next to each vehicle and each van of the camper. |
+| `kit.json` | The names of the other files (`vehicles`: the file of each vehicle, and of each van of the camper), the clothes, and the place of a parked person (a translation and a rotation in the axes of glTF) next to each vehicle and each van of the camper. |
 | `person/woman.glb`, `person/man.glb` | The body of each sex: all its faces in one primitive (the material `skin`), the eyes, the eyebrows, the mouth closed behind, the skeleton in the pose "stand", and the animations "wave", "point" and "blink". The shape targets of the body are morph targets (`World.People.Human.kit/3`). |
 | `person/SEX-hair-NAME.glb` | Each hair, with the same skeleton and the same targets. |
 | `skins/NAME.jpg`, `eyes/NAME.png` | The textures of the skins and the eyes. |
+| `vehicles/NAME.glb`, `vehicles/camper-VAN.glb` | Each vehicle alone, parked: the same file as the URL `/m/traveler.mid.glb?vehicle=NAME&scene=parked&part=vehicle` (with `&van=VAN` for the camper). The cache of the URLs is for each version of World (`urls/COMMIT/...`), so after a new version the first view of a URL is a build of some seconds; the file of the kit is always ready. |
 
 The extras `kit` of the mesh of a body have the data of the viewer:
 

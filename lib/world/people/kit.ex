@@ -12,6 +12,11 @@ defmodule World.People.Kit do
   - `person/SEX-hair-NAME.glb`: each hair on the skeleton of each sex;
   - `skins/NAME.jpg`, `eyes/NAME.png`: the textures of the skins and the
     eyes;
+  - `vehicles/NAME.glb`, `vehicles/camper-VAN.glb`: each vehicle alone,
+    parked, the same file as the URL
+    `/m/traveler.mid.glb?vehicle=NAME&scene=parked&part=vehicle` (and
+    `&van=VAN` for the camper), so a change of the vehicle needs no
+    build after a new version of World;
   - `kit.json`: the names of the files, the clothes, and the place of the
     person next to each vehicle (and each van of the camper).
 
@@ -42,7 +47,36 @@ defmodule World.People.Kit do
       for({name, path} <- textures("skins"), do: {"skins/#{name}#{Path.extname(path)}", File.read!(path)}) ++
         for {name, path} <- textures("eye_materials"), do: {"eyes/#{name}#{Path.extname(path)}", File.read!(path)}
 
-    [{"kit.json", JSON.encode!(manifest())} | bodies ++ hair ++ textures]
+    vehicles = for {path, options} <- vehicles(), do: {path, vehicle_glb(options)}
+
+    [{"kit.json", JSON.encode!(manifest())} | bodies ++ hair ++ textures ++ vehicles]
+  end
+
+  @doc """
+  The vehicles alone of the kit: `{path, options}` for each vehicle and
+  each van of the camper, with the options of the order `traveler` of
+  the file.
+
+      iex> {path, options} = hd(World.People.Kit.vehicles())
+      iex> {path, options}
+      {"vehicles/bicycle.glb", %{"vehicle" => "bicycle", "scene" => "parked", "part" => "vehicle"}}
+  """
+  def vehicles do
+    options = &Map.merge(%{"vehicle" => &1, "scene" => "parked", "part" => "vehicle"}, &2)
+
+    Enum.flat_map(Enum.sort(People.vehicles() -- ["foot"]), fn
+      "camper" ->
+        for van <- World.Vehicles.Van.models(), do: {"vehicles/camper-#{van}.glb", options.("camper", %{"van" => van})}
+
+      vehicle ->
+        [{"vehicles/#{vehicle}.glb", options.(vehicle, %{})}]
+    end)
+  end
+
+  @doc "The file of a vehicle alone: the order `traveler` with the options, at mid."
+  def vehicle_glb(options) do
+    {:ok, bin} = World.Orders.build(%{"blueprint" => "traveler", "options" => options}, "mid", "glb")
+    bin
   end
 
   @doc """
@@ -67,7 +101,12 @@ defmodule World.People.Kit do
       "clothes" => Data.assets()["clothes"] |> Map.keys() |> Enum.sort(),
       "rotation" => @turn,
       "places" => Map.new(People.vehicles() -- ["camper"], &{&1, place(&1, nil)}),
-      "vans" => Map.new(vans, &{&1, place("camper", &1)})
+      "vans" => Map.new(vans, &{&1, place("camper", &1)}),
+      "vehicles" =>
+        Enum.reduce(vehicles(), %{}, fn
+          {path, %{"van" => van}}, acc -> Map.update(acc, "camper", %{van => path}, &Map.put(&1, van, path))
+          {path, %{"vehicle" => vehicle}}, acc -> Map.put(acc, vehicle, path)
+        end)
     }
   end
 
