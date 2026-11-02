@@ -36,6 +36,9 @@ defmodule World.ServiceTest do
     assert glb.status == 200
     assert <<"glTF", _::binary>> = glb.resp_body
     assert Plug.Conn.get_resp_header(glb, "content-type") == ["model/gltf-binary"]
+    # The hash of the full order, as /check gives it.
+    hash = json(call(:post, "/check", @strut))["hash"]
+    assert Plug.Conn.get_resp_header(glb, "x-world-order") == [hash]
 
     receipt = call(:post, "/build?level=far&file=receipt", @strut)
     assert json(receipt)["level"] == "far"

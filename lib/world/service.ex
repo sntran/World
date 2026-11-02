@@ -17,7 +17,8 @@ defmodule World.Service do
     (`World.Orders.files/0`: `glb`, `log`, `replay`, `parts` or
     `receipt`), or 422 with `{"errors"}`. The header `server-timing`
     has the time of the build in the VM (`build;dur=MS`), with no wait
-    for the build before it.
+    for the build before it, and the header `x-world-order` the hash of
+    the full order (the Worker keeps the file of a URL `/m/` by it).
   - `POST /mcp`: the MCP server (`World.MCP`). The other methods give
     405.
 
@@ -106,8 +107,11 @@ defmodule World.Service do
     with_order(conn, fn order ->
       case one_at_a_time(fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end) do
         {ms, {:ok, out}} ->
+          {:ok, full} = Orders.check(order)
+
           conn
           |> put_resp_header("server-timing", "build;dur=#{ms}")
+          |> put_resp_header("x-world-order", Orders.hash(full))
           |> put_resp_content_type(Map.fetch!(@types, file), nil)
           |> send_resp(200, out)
 

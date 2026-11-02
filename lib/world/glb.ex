@@ -406,11 +406,15 @@ defmodule World.GLB do
           {Map.put(pbr, "baseColorTexture", texture), buf}
       end
 
-    material = %{
-      "name" => Atom.to_string(role),
-      "pbrMetallicRoughness" => pbr,
-      "doubleSided" => Map.get(spec, "double_sided", false)
-    }
+    material =
+      %{
+        "name" => Atom.to_string(role),
+        "pbrMetallicRoughness" => pbr,
+        "doubleSided" => Map.get(spec, "double_sided", false)
+      }
+      # The base of a tint of a texture (World.People.Human): a viewer
+      # can show another color at once, as factor = color * 255 / base.
+      |> put_some("extras", if(base = spec["tint_base"], do: %{"tintBase" => base}))
 
     # Small bumps (the pores of the skin) are a normal texture.
     {material, buf} =

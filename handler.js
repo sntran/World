@@ -7,8 +7,11 @@
 // - vm(request, hash): the VM of World. The hash of the order, when there
 //   is one, chooses the builder;
 // - env.ORDERS: the R2 bucket. builds/COMMIT/FILE is a file that the VM
-//   built at the commit COMMIT. The VM keeps the full orders in the same
-//   bucket (orders/HASH.json, World.Orders.Store);
+//   built at the commit COMMIT, and urls/COMMIT/SHA is the hash of the
+//   order of a URL /m/ (SHA: the SHA-256 of its path and its query), so
+//   that a URL that the factory knows needs no VM, and a new URL needs
+//   one request to the VM (the check of the order and the build). The VM keeps the full
+//   orders in the same bucket (orders/HASH.json, World.Orders.Store);
 // - commit: the commit of the deploy (site/version.json). A new deploy
 //   builds each file again at its first request, so a correction of
 //   World reaches each order.
@@ -87,11 +90,6 @@ export function orderOf(blueprint, params) {
   return order;
 }
 
-async function check(vm, order) {
-  const r = await vm(new Request('http://vm/check', { method: 'POST', body: JSON.stringify(order) }));
-  return { status: r.status, body: await r.json() };
-}
-
 // A request of the client to the VM, with its method, its body, the
 // headers that the VM reads, and the origin of the URLs.
 async function forward(request, vm, origin, path) {
@@ -104,19 +102,55 @@ async function forward(request, vm, origin, path) {
   return new Response(r.status === 202 ? null : r.body, { status: r.status, headers: headers(extra) });
 }
 
-// A file of an order: from R2, else from the VM (then into R2). order is
-// the full order, or null for an order of POST /orders, which the VM
-// reads from its store by the hash.
-async function file(request, env, vm, commit, hash, order, [, level, kind, type]) {
-  const key = `builds/${commit}/${hash}.${level}.${kind}`;
+const buildKey = (commit, hash, level, kind) => `builds/${commit}/${hash}.${level}.${kind}`;
+
+// The key of the hash of the order of a URL /m/ (its path and its query).
+export async function urlKey(commit, url) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(url.pathname + url.search));
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `urls/${commit}/${hex}`;
+}
+
+const failure = (r) => new Response(r.body, { status: r.status, headers: headers({ 'content-type': 'application/json' }) });
+
+// A file of an order of POST /orders: from R2, else from the VM, which
+// reads the order from its store by the hash (then into R2).
+async function file(request, env, vm, commit, hash, [, level, kind, type]) {
+  const key = buildKey(commit, hash, level, kind);
   let object = await env.ORDERS.get(key);
   if (!object) {
-    const url = `http://vm/build?level=${level}&file=${kind}${order ? '' : `&hash=${hash}`}`;
-    const r = await vm(new Request(url, { method: 'POST', body: order ? JSON.stringify(order) : undefined }), hash);
-    if (r.status !== 200) return new Response(r.body, { status: r.status, headers: headers({ 'content-type': 'application/json' }) });
+    const r = await vm(new Request(`http://vm/build?level=${level}&file=${kind}&hash=${hash}`, { method: 'POST' }), hash);
+    if (r.status !== 200) return failure(r);
     await env.ORDERS.put(key, await r.arrayBuffer(), { httpMetadata: { contentType: type } });
     object = await env.ORDERS.get(key);
   }
+  return send(request, object, commit, hash, type);
+}
+
+// A file of a URL /m/: from R2 when the factory knows the URL (no VM),
+// else one request to the VM, which checks the order of the URL and
+// builds the file, and gives the hash of the order (x-world-order). The
+// file and the hash of the URL go into R2.
+async function model(request, env, vm, commit, url, blueprint, [, level, kind, type]) {
+  const key = await urlKey(commit, url);
+  const known = await env.ORDERS.get(key);
+  if (known) {
+    const { hash } = await known.json();
+    const object = await env.ORDERS.get(buildKey(commit, hash, level, kind));
+    if (object) return send(request, object, commit, hash, type);
+  }
+  const body = JSON.stringify(orderOf(blueprint, url.searchParams));
+  // The builder of the URL: the first digit of its SHA.
+  const r = await vm(new Request(`http://vm/build?level=${level}&file=${kind}`, { method: 'POST', body }), key.slice(-64));
+  if (r.status !== 200) return failure(r);
+  const hash = r.headers.get('x-world-order');
+  await env.ORDERS.put(buildKey(commit, hash, level, kind), await r.arrayBuffer(), { httpMetadata: { contentType: type } });
+  if (!known) await env.ORDERS.put(key, JSON.stringify({ hash }), { httpMetadata: { contentType: 'application/json' } });
+  return send(request, await env.ORDERS.get(buildKey(commit, hash, level, kind)), commit, hash, type);
+}
+
+// A file of R2, with its ETag (304 for the same ETag).
+function send(request, object, commit, hash, type) {
   const etag = object.httpEtag;
   const extra = { etag, 'cache-control': CACHE, 'x-world-commit': commit, 'x-world-order': hash };
   if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers: headers(extra) });
@@ -151,15 +185,13 @@ async function route(request, env, { vm, commit }) {
   if (path.startsWith('/o/')) {
     const parts = split(path.slice(3));
     if (!parts || !HASH.test(parts[0])) return errors(404, 'no such file');
-    return file(request, env, vm, commit, parts[0], null, parts[1]);
+    return file(request, env, vm, commit, parts[0], parts[1]);
   }
 
   if (path.startsWith('/m/')) {
     const parts = split(path.slice(3));
     if (!parts) return errors(404, 'no such file');
-    const { status, body } = await check(vm, orderOf(parts[0], url.searchParams));
-    if (status !== 200) return json(status, body);
-    return file(request, env, vm, commit, body.hash, body.order, parts[1]);
+    return model(request, env, vm, commit, url, parts[0], parts[1]);
   }
 
   return errors(404, 'no such page');

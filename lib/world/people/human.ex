@@ -897,11 +897,18 @@ defmodule World.People.Human do
   # The factor of a textured material. A gray texture (a hair) takes the
   # color of the order, or the mean color of the texture before it was
   # gray. Another texture takes the ratio of the color of the order to its
-  # mean color: a tint, which can only make it darker.
+  # mean color: a tint, which can only make it darker. The base of the
+  # tint (`tint_base`, in the extras of the material of the GLB) lets a
+  # viewer show another color at once: factor = color * 255 / base.
   defp tint(spec, %{gray: gray} = a, o) when is_number(gray),
-    do: Map.put(spec, "color", Enum.map(Map.get(o.colors, a.name, a.color), &min(255, round(&1 * 255 / gray))))
+    do:
+      spec
+      |> Map.put("color", Enum.map(Map.get(o.colors, a.name, a.color), &min(255, round(&1 * 255 / gray))))
+      |> Map.put("tint_base", [gray, gray, gray])
 
   defp tint(spec, a, o) do
+    spec = Map.put(spec, "tint_base", a.color)
+
     case Map.fetch(o.colors, a.name) do
       {:ok, c} -> Map.put(spec, "color", Enum.zip_with(c, a.color, &min(255, round(&1 * 255 / max(&2, 1)))))
       :error -> spec

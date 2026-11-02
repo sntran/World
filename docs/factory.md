@@ -321,6 +321,13 @@ asks the VM to build it: `POST /build?hash=HASH` for an order of
 `POST /orders` (the VM reads the order from its store), or the order in
 the body for `/m/`.
 
+A URL of `/m/` needs the VM for the check of its order (about 2 s at
+the edge, also for a file that R2 has). So the Worker keeps the hash of
+the order of each URL that the VM checked (`urls/COMMIT/SHA` in R2, SHA:
+the SHA-256 of the path and the query of the URL). The next request of
+the same URL reads the hash and the file from R2, with no VM. A new
+deploy checks each URL again.
+
 The VM at the edge, measured with Node.js 25 and the runtime of
 beam.com 0.1.0-rc.6 (the time of one build, and the peak of the memory
 of the VM):

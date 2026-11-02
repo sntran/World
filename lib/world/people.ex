@@ -141,7 +141,10 @@ defmodule World.People do
 
   A moving vehicle has its driver in a safe pose: the eyes on the road,
   the hands on the bars or on the wheel. The option `van` is the van of
-  the camper (`camper/1`).
+  the camper (`camper/1`). The option `part` is `"all"` (by default),
+  `"person"` (the person alone, at the same place: a change of the person
+  needs no new vehicle) or `"vehicle"` (the vehicle alone). A traveler on
+  foot is always the person.
   """
   def traveler(vehicle, opts \\ [], scene \\ "ride")
 
@@ -149,7 +152,7 @@ defmodule World.People do
     do:
       Human.person(
         "traveler",
-        Keyword.merge(Keyword.delete(opts, :van), pose: "stand", animations: ["walk"], helmet: nil)
+        Keyword.merge(Keyword.drop(opts, [:van, :part]), pose: "stand", animations: ["walk"], helmet: nil)
       )
 
   def traveler("foot", opts, "parked"),
@@ -157,40 +160,61 @@ defmodule World.People do
       facing(
         Human.person(
           "traveler",
-          Keyword.merge(Keyword.delete(opts, :van), pose: "stand", animations: @moments, helmet: nil)
+          Keyword.merge(Keyword.drop(opts, [:van, :part]), pose: "stand", animations: @moments, helmet: nil)
         )
       )
 
   def traveler(vehicle, opts, "ride") do
     {model, hips, pose, _} = vehicle(vehicle, opts)
-    opts = Keyword.delete(opts, :van)
+    {part, opts} = Keyword.pop(Keyword.delete(opts, :van), :part, "all")
     helmet = if vehicle in @two_wheels, do: Keyword.get(opts, :helmet) || @helmet
-    person = Human.person("traveler", Keyword.merge(opts, pose: pose, helmet: helmet))
-    m = model.()
+    m = only(part, model)
     glass = if vehicle in ["car", "camper"], do: %{glass_dark: GLB.palette()["glass"]}, else: %{}
 
     Assembly.new("traveler_" <> vehicle, m,
       root: "vehicle",
       kind: :vehicle,
-      materials: Map.merge(m.materials, glass),
+      materials: Map.merge(materials(m), glass),
       sources: ["The #{m.name} of World, and a person of World in the pose \"#{pose}\"."]
     )
-    |> Assembly.add("traveler", person, at: Part.port("seat", hips, {0, 0, 1}, {0, 1, 0}), port: "hips")
+    |> with_person(part, fn ->
+      {Human.person("traveler", Keyword.merge(opts, pose: pose, helmet: helmet)),
+       Part.port("seat", hips, {0, 0, 1}, {0, 1, 0}), "hips"}
+    end)
   end
 
   def traveler(vehicle, opts, "parked") do
     {model, _, _, {x, y}} = vehicle(vehicle, opts)
-    opts = Keyword.delete(opts, :van)
-    person = Human.person("traveler", Keyword.merge(opts, pose: "stand", animations: @moments, helmet: nil))
-    m = model.()
+    {part, opts} = Keyword.pop(Keyword.delete(opts, :van), :part, "all")
+    m = only(part, model)
 
     Assembly.new("traveler_" <> vehicle <> "_parked", m,
       root: "vehicle",
       kind: :vehicle,
-      materials: m.materials,
+      materials: materials(m),
       sources: ["The #{m.name} of World, parked, and a person of World next to it."]
     )
-    |> Assembly.add("traveler", person, at: Part.port("stand", {x, y, 0.0}, {0, 0, 1}, {1, 0, 0}), port: "ground")
+    |> with_person(part, fn ->
+      {Human.person("traveler", Keyword.merge(opts, pose: "stand", animations: @moments, helmet: nil)),
+       Part.port("stand", {x, y, 0.0}, {0, 0, 1}, {1, 0, 0}), "ground"}
+    end)
+  end
+
+  # The vehicle of a part of a traveler: the model, or a part with no
+  # shape at its place for the person alone (`part` "person").
+  defp only("person", _model), do: Part.new("vehicle", :vehicle, [], [])
+  defp only(_part, model), do: model.()
+
+  defp materials(%Part{}), do: %{}
+  defp materials(m), do: m.materials
+
+  # The person of a traveler, at its port, but for the vehicle alone
+  # (`part` "vehicle").
+  defp with_person(a, "vehicle", _person), do: a
+
+  defp with_person(a, _part, person) do
+    {p, at, port} = person.()
+    Assembly.add(a, "traveler", p, at: at, port: port)
   end
 
   # The people of a morning of exercise: their ages by the routine, their

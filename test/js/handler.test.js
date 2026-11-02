@@ -1,7 +1,7 @@
 // The tests of handler.js, with a fake VM and a fake R2 bucket.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { handler, orderOf, split } from '../../handler.js';
+import { handler, orderOf, split, urlKey } from '../../handler.js';
 import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
 
 const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
@@ -120,6 +120,52 @@ test('GET /m/ checks the order of the URL, then builds it', async () => {
   const joint = await handler(req('/m/box.glb?joint.bad=1'), env, { vm: vm(), commit: 'c1' });
   assert.equal(joint.status, 422);
   assert.equal((await handler(req('/m/box'), env, { vm: vm(), commit: 'c1' })).status, 404);
+});
+
+test('GET /m/ of a URL that the factory knows needs no VM', async () => {
+  const env = { ORDERS: bucket() };
+  const v = vm();
+  const first = await handler(req('/m/box.mid.glb?size=2'), env, { vm: v, commit: 'c1' });
+  assert.equal(await first.text(), 'mid glb');
+  const key = await urlKey('c1', new URL('https://world.mkfifo.com/m/box.mid.glb?size=2'));
+  assert.match(key, /^urls\/c1\/[0-9a-f]{64}$/);
+  assert.deepEqual(JSON.parse(new TextDecoder().decode(env.ORDERS.items.get(key))), { hash: HASH });
+  // One request to the VM: it checks the order and builds the file.
+  assert.deepEqual(v.calls, ['/build?level=mid&file=glb']);
+
+  // The same URL: the file of R2, with no call of the VM.
+  const second = await handler(req('/m/box.mid.glb?size=2'), env, { vm: v, commit: 'c1' });
+  assert.equal(second.status, 200);
+  assert.equal(second.headers.get('x-world-order'), HASH);
+  assert.equal(await second.text(), 'mid glb');
+  const etag = second.headers.get('etag');
+  const same = await handler(req('/m/box.mid.glb?size=2', { headers: { 'if-none-match': etag } }), env, { vm: v, commit: 'c1' });
+  assert.equal(same.status, 304);
+  assert.equal(v.calls.length, 1);
+
+  // Another file: the VM builds it, and the key of the URL stays.
+  const far = await handler(req('/m/box.far.glb?size=2'), env, { vm: v, commit: 'c1' });
+  assert.equal(await far.text(), 'far glb');
+  const known = await handler(req('/m/box.mid.glb?size=2'), env, { vm: v, commit: 'c1' });
+  assert.equal(await known.text(), 'mid glb');
+  const keyFar = await urlKey('c1', new URL('https://world.mkfifo.com/m/box.far.glb?size=2'));
+  assert.ok(env.ORDERS.items.has(keyFar));
+
+  // A known URL with no file in R2 (a file that the bucket lost): the VM.
+  env.ORDERS.items.delete(`builds/c1/${HASH}.mid.glb`);
+  const again = await handler(req('/m/box.mid.glb?size=2'), env, { vm: v, commit: 'c1' });
+  assert.equal(await again.text(), 'mid glb');
+  assert.equal(v.calls.filter((c) => c.startsWith('/build')).length, 3);
+
+  // A known URL with a file of the same level, and the key of the URL
+  // stays.
+  const known2 = await urlKey('c1', new URL('https://world.mkfifo.com/m/box.mid.glb?size=2'));
+  assert.deepEqual(JSON.parse(new TextDecoder().decode(env.ORDERS.items.get(known2))), { hash: HASH });
+
+  // A new deploy builds the URL again.
+  const calls = v.calls.length;
+  await handler(req('/m/box.mid.glb?size=2'), env, { vm: v, commit: 'c2' });
+  assert.equal(v.calls.length, calls + 1);
 });
 
 test('the other routes', async () => {

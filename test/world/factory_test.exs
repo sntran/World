@@ -356,6 +356,34 @@ defmodule World.FactoryTest do
                Orders.check(%{"blueprint" => "animal", "options" => %{"species" => "cat", "space" => [1]}})
     end
 
+    test "a part of a traveler: the person alone or the vehicle alone, at the same place" do
+      build = fn options ->
+        {:ok, glb} = Orders.build(%{"blueprint" => "traveler", "options" => options}, "far", "glb")
+        World.GLBHelper.json(glb)
+      end
+
+      names = fn json -> MapSet.new(json["nodes"], & &1["name"]) end
+      place = fn json, name -> Enum.find(json["nodes"], &(&1["name"] == name))["translation"] end
+
+      for scene <- ["parked", "ride"] do
+        all = build.(%{"vehicle" => "car", "scene" => scene})
+        person = build.(%{"vehicle" => "car", "scene" => scene, "part" => "person"})
+        vehicle = build.(%{"vehicle" => "car", "scene" => scene, "part" => "vehicle"})
+        assert "traveler" in names.(all) and "traveler" in names.(person)
+        refute "traveler" in names.(vehicle)
+        assert "front_left_wheel" in names.(all) and "front_left_wheel" in names.(vehicle)
+        refute "front_left_wheel" in names.(person)
+        assert place.(person, "traveler") == place.(all, "traveler")
+        assert length(person["meshes"]) < length(all["meshes"])
+      end
+
+      # On foot: the person, and no vehicle.
+      assert "traveler" in names.(build.(%{"vehicle" => "foot", "part" => "person"}))
+
+      assert {:error, [%{"path" => "options.part"}]} =
+               Orders.check(%{"blueprint" => "traveler", "options" => %{"vehicle" => "foot", "part" => "vehicle"}})
+    end
+
     test "a person with the colors of the hair and of the clothes" do
       order = %{
         "blueprint" => "person",
@@ -390,6 +418,12 @@ defmodule World.FactoryTest do
       assert hr > hg and hg > hb
       {:ok, own} = Orders.build(natural, "mid", "glb")
       assert factor.(own, "hair") != factor.(mid, "hair")
+
+      # The base of the tint of the gray hair: a viewer shows another
+      # color at once (factor = color * 255 / base).
+      hair = Enum.find(World.GLBHelper.json(mid)["materials"], &(&1["name"] == "hair"))
+      assert [gray, gray, gray] = hair["extras"]["tintBase"]
+      assert gray > 0
 
       # At near, the color of the clothes is a tint of the texture; an item
       # with no color has no tint.

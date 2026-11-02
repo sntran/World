@@ -35,7 +35,9 @@ export function vm() {
     const url = new URL(request.url);
     calls.push(url.pathname + url.search);
     fn.last = request;
-    if (url.pathname === '/build') assert.equal(hash, HASH);
+    // The builder of an order of /orders is its hash; of a URL /m/, the
+    // SHA of the URL.
+    if (url.pathname === '/build') assert.match(hash, url.searchParams.has('hash') ? new RegExp(`^${HASH}$`) : /^[0-9a-f]{64}$/);
     if (url.pathname === '/blueprints') return Response.json(BLUEPRINTS);
     if (url.pathname === '/mcp') {
       if (request.method !== 'POST') return Response.json({ jsonrpc: '2.0', id: null, error: { code: -32000 } }, { status: 405, headers: { allow: 'POST' } });
@@ -61,7 +63,7 @@ export function vm() {
       return Response.json({ hash: HASH, order, files: { glb: `${origin}/o/${HASH}.glb` }, replay: `${origin}/replay.html?order=${HASH}` });
     }
     if (order.joints?.bad) return Response.json({ errors: [{ path: 'joints.bad', message: 'no' }] }, { status: 422 });
-    return new Response(`${url.searchParams.get('level')} ${url.searchParams.get('file')}`);
+    return new Response(`${url.searchParams.get('level')} ${url.searchParams.get('file')}`, { headers: { 'x-world-order': HASH } });
   };
   fn.calls = calls;
   fn.orders = orders;

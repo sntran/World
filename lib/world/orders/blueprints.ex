@@ -252,13 +252,29 @@ defmodule World.Orders.Blueprints do
             values: Van.models(),
             doc:
               "The van of the camper (the blueprint van): transit_148 is the Ford Transit of DIY, with the items in its engine bay. Only for the vehicle camper."
+          ),
+          option("part", :choice,
+            default: "all",
+            values: ["all", "person", "vehicle"],
+            doc:
+              "all: the person and the vehicle; person: the person alone, at the same place (a change of the person needs no new vehicle); vehicle: the vehicle alone. A traveler on foot has no vehicle."
           )
         ] ++ person_options(),
       build: fn o ->
-        opts = person_opts(o) ++ [helmet: o["helmet_color"] && rgb(o["helmet_color"]), van: o["van"]]
+        opts =
+          person_opts(o) ++
+            [helmet: o["helmet_color"] && rgb(o["helmet_color"]), van: o["van"], part: o["part"]]
+
         World.People.traveler(o["vehicle"], opts, o["scene"])
       end,
-      check: &origin_check/1,
+      check: fn o ->
+        foot =
+          if o["vehicle"] == "foot" and o["part"] == "vehicle",
+            do: [{"options.part", "a traveler on foot has no vehicle"}],
+            else: []
+
+        origin_check(o) ++ foot
+      end,
       sources: ["The vehicles of World, and a person from the data of MakeHuman (CC0)."]
     }
   end
