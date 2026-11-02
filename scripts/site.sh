@@ -7,6 +7,8 @@
 # - /replay.html: the replay of an order (review/replay.html).
 # - /models/: the files of the catalog (priv/models), which CI checks
 #   against the build of the code.
+# - /kit/: the kit of a person (priv/kit, World.People.Kit), which CI
+#   checks with the catalog.
 # - /palette.json, /version.json (the commit of the build).
 # - /_headers: CORS and the cache of each file.
 set -eu
@@ -16,6 +18,7 @@ cd "$ROOT"
 rm -rf site
 mkdir -p site/models
 cp priv/models/* site/models/
+cp -R priv/kit site/kit
 cp priv/palette.json site/palette.json
 
 # The review page reads the models at ../priv/models/ in the repository,

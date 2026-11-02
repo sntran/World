@@ -271,6 +271,45 @@ The server is `World.MCP` in the VM, at `POST /mcp` of `World.Service`.
 The Worker sends each request of `/mcp` to the VM with no change, and
 gives it the start of the URLs (the header `x-world-origin`).
 
+## The kit of a person
+
+A viewer that changes a person often (the profile page of Phượt) asks
+for no build: it joins the parts of the kit of a person, which are
+static files at `/kit/` (`World.People.Kit`, in `priv/kit`; `mix
+world.build` writes them with the catalog, and CI checks them). The
+kit is the parked traveler of the blueprint `traveler` at mid:
+
+| File | What it has |
+|---|---|
+| `kit.json` | The names of the other files, the clothes, and the place of a parked person (a translation and a rotation in the axes of glTF) next to each vehicle and each van of the camper. |
+| `person/woman.glb`, `person/man.glb` | The body of each sex: all its faces in one primitive (the material `skin`), the eyes, the eyebrows, the mouth closed behind, the skeleton in the pose "stand", and the animations "wave", "point" and "blink". The shape targets of the body are morph targets (`World.People.Human.kit/3`). |
+| `person/SEX-hair-NAME.glb` | Each hair, with the same skeleton and the same targets. |
+| `skins/NAME.jpg`, `eyes/NAME.png` | The textures of the skins and the eyes. |
+
+The extras `kit` of the mesh of a body have the data of the viewer:
+
+- `targets`: the morph targets, each a group of targets of MakeHuman
+  with the same moves. The weight of a group is the sum of the weights
+  of its targets for the numbers of the person (sex, age, weight,
+  height, origin; `World.People.Human.target_weights/1` with the mean
+  muscle).
+- `bones`: the move of the head of each bone for each target (glTF
+  axes). The viewer moves the bones by the weights; a morph target has
+  only the rest of the move of a point (the move less the moves of its
+  bones), so the mesh follows the bones.
+- `ground`: the lowest point under each pair of shoes (and with no
+  shoes), and its move for each target. The viewer puts the person down
+  by it.
+- `covers` and `colors`: the faces of the body that each item of clothes
+  covers (as triangles `[first, count, n]`) and the color of the item.
+  At mid, the clothes are colors on the body: a triangle has the color
+  of the worn item with the most points of the body under it (`n`), as
+  `World.People.Human.person/2`.
+
+Joined for the numbers of a person, the kit is the person of World
+within 1 mm (the body) and 3 mm (the hair) at rest
+(`test/world/kit_test.exs`).
+
 ## The line of a van
 
 A van of the blueprint `van` is built as the maker builds it, station

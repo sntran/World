@@ -7,6 +7,9 @@ defmodule Mix.Tasks.World.Build do
   - `NAME.parts.json`: the list of the parts;
   - `list.json`: the names of the models, for the review page.
 
+  With no names, it also writes the kit of a person in `priv/kit`
+  (`World.People.Kit`).
+
       mix world.build            # all the models
       mix world.build NAME ...   # some models
       mix world.build --check    # build again and compare, with no write
@@ -20,7 +23,7 @@ defmodule Mix.Tasks.World.Build do
 
   @impl true
   def run(args) do
-    {opts, names} = OptionParser.parse!(args, strict: [check: :boolean, dir: :string])
+    {opts, names} = OptionParser.parse!(args, strict: [check: :boolean, dir: :string, kit: :string])
     Mix.Task.run("compile")
     dir = Keyword.get(opts, :dir, "priv/models")
     models = World.Catalog.models()
@@ -41,10 +44,15 @@ defmodule Mix.Tasks.World.Build do
 
     files =
       if names == [],
-        do: [{Path.join(dir, "list.json"), JSON.encode!(Enum.map(models, &elem(&1, 0)))} | files],
+        do: [{Path.join(dir, "list.json"), JSON.encode!(Enum.map(models, &elem(&1, 0)))} | files] ++ kit(opts),
         else: files
 
     if opts[:check], do: check(files), else: write(files)
+  end
+
+  defp kit(opts) do
+    dir = Keyword.get(opts, :kit, "priv/kit")
+    for {path, bin} <- World.People.Kit.files(), do: {Path.join(dir, path), bin}
   end
 
   defp fetch!(name) do

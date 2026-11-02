@@ -1025,4 +1025,276 @@ defmodule World.People.Human do
     f = Frame.compose(Frame.invert(bone.frame), Port.frame(port))
     %{Port.new(port.name, f.at, f.z, f.y) | bone: bone.name}
   end
+
+  # --- The kit: the parts of a person for a viewer -------------------------------
+
+  @races ~w(african asian caucasian)
+
+  @doc """
+  The names of the shape targets of a kit (`kit/3`) of a sex (0: a woman,
+  1: a man): the targets of `target_weights/1` with the mean muscle, for
+  each age, weight, height and origin, in a fixed order.
+
+      iex> length(World.People.Human.kit_targets(1))
+      24
+      iex> hd(World.People.Human.kit_targets(0))
+      "african-female-young"
+  """
+  def kit_targets(gender) do
+    g = if gender < 0.5, do: "female", else: "male"
+    ages = ~w(young old)
+    weights = ~w(minweight averageweight maxweight)
+
+    for(r <- @races, a <- ages, do: "#{r}-#{g}-#{a}") ++
+      for(a <- ages, w <- weights, do: "universal-#{g}-#{a}-averagemuscle-#{w}") ++
+      for a <- ages, w <- weights, h <- ~w(minheight maxheight), do: "height/#{g}-#{a}-averagemuscle-#{w}-#{h}"
+  end
+
+  @doc """
+  The targets of a kit, in groups: the targets of `kit_targets/1` with
+  the same moves are one group (MakeHuman has copies), and a target with
+  no move goes. The weight of a group is the sum of the weights of its
+  targets.
+  """
+  def kit_groups(gender) do
+    gender
+    |> kit_targets()
+    |> Enum.map(&{&1, Map.new(Data.target(&1))})
+    |> Enum.reject(fn {_, moves} -> moves == %{} end)
+    |> Enum.reduce([], fn {name, moves}, groups ->
+      case Enum.find_index(groups, fn {m, _} -> m == moves end) do
+        nil -> groups ++ [{moves, [name]}]
+        i -> List.update_at(groups, i, fn {m, ns} -> {m, ns ++ [name]} end)
+      end
+    end)
+    |> Enum.map(&elem(&1, 1))
+  end
+
+  @doc """
+  A part of the kit of a person (at mid), for a viewer that changes the
+  body at once, with no new build: the shape is the weights of the
+  targets of `kit_targets/1` (`target_weights/1`), and the viewer moves
+  the bones and sets the weights of the morph targets.
+
+  - `:body`: the body of a sex (0 or 1) with all the faces in one
+    primitive of the material `skin`, the eyes, the eyebrows (`eyebrow010`
+    for a woman, `eyebrow001` for a man) and the mouth closed behind; the
+    skeleton in the pose "stand", and the animations "wave", "point" and
+    "blink". The extras of the mesh node (`"kit"`) have the targets, the
+    move of the head of each bone for each target, the ground under each
+    pair of shoes, the faces that each item of clothes covers (the viewer
+    gives a face the color of the item that covers the most of it, as
+    `person/2` at mid) and the color of each item.
+  - `{:hair, name}`: the hair, with the same skeleton (its mesh goes on
+    the skeleton of the body).
+
+  A morph target has the move of a point less the moves of its bones:
+  the viewer moves the bones, so the mesh follows them, and the target
+  adds the rest of the change of the shape. The ground is at z = 0 of
+  the base mesh (the viewer puts the person down by the ground of its
+  shoes). The head has its own size (the viewer can scale the bone).
+  """
+  def kit(gender, part, opts \\ []) do
+    g = if gender < 0.5, do: 0.0, else: 1.0
+    hair = with {:hair, h} <- part, do: h, else: (_ -> nil)
+
+    o =
+      Map.new(
+        Keyword.merge(
+          @defaults,
+          [
+            gender: g,
+            eyebrows: if(g == 0.0, do: "eyebrow010", else: "eyebrow001"),
+            hair: hair,
+            clothes: [],
+            pose: "stand"
+          ] ++
+            opts
+        )
+      )
+
+    o = o |> Map.put(:colors, %{}) |> Map.put(:rest, Face.rest(o.face)) |> Map.put(:ground, 0.0)
+    base = Data.base()
+    points = rest_face(base.points, o)
+    groups = kit_groups(g)
+    names = Enum.map(groups, &hd/1)
+    shaped = Map.new(names, fn t -> {t, add_target(points, t)} end)
+    bones = skeleton(points, 0.0)
+    weights = Detail.collect(vertex_weights(Enum.map(bones, & &1.name)))
+    heads = fn bs -> List.to_tuple(Enum.map(bs, & &1.head)) end
+    h0 = heads.(bones)
+
+    moves =
+      Map.new(names, fn t ->
+        ht = heads.(skeleton(shaped[t], 0.0))
+        {t, List.to_tuple(for i <- 0..(tuple_size(h0) - 1), do: Vec.sub(elem(ht, i), elem(h0, i)))}
+      end)
+
+    k = %{points: points, shaped: shaped, names: names, groups: groups, moves: moves, weights: weights}
+
+    {prims, materials, extras} =
+      Detail.with(:mid, fn ->
+        case part do
+          :body -> kit_body(base, o, k, bones)
+          {:hair, _} -> kit_hair(o, k)
+        end
+      end)
+
+    skeleton = Skeleton.new(bones)
+    pose = Pose.expand(Pose.resolve(o.pose))
+    {nodes, skin} = nodes("traveler", skeleton, prims, pose, 1.0)
+    {mesh, rest} = List.pop_at(nodes, -1)
+    nodes = rest ++ [%{mesh | extras: %{"kit" => extras}}]
+
+    animations =
+      if part == :body,
+        do: for(a <- ~w(wave point), do: Pose.animation(a, bones, hands: %{})) ++ blink(o, prims, length(nodes) - 1),
+        else: []
+
+    %Figure{
+      name: "traveler",
+      kind: :person,
+      params: %{"gender" => g, "part" => if(hair, do: "hair " <> hair, else: "body")},
+      sources: ["MakeHuman (CC0): the base mesh, the targets, the skeleton game_engine, and the assets."],
+      nodes: nodes,
+      skins: [skin],
+      animations: animations,
+      materials: materials,
+      ports: %{},
+      skeleton: skeleton,
+      pose: pose,
+      joints: Joints.all()
+    }
+  end
+
+  defp add_target(points, name) do
+    moves = Map.new(Data.target(name))
+
+    points
+    |> Tuple.to_list()
+    |> Enum.with_index()
+    |> Enum.map(fn {p, i} -> Vec.add(p, Map.get(moves, i, {0.0, 0.0, 0.0})) end)
+    |> List.to_tuple()
+  end
+
+  # A point of World in the axes of MakeHuman (the inverse of to_world/1).
+  defp from_world({x, y, z}), do: {-x * 10, z * 10, y * 10}
+
+  # The targets of an asset (or of the body at mid): the move of each point
+  # less the moves of its bones (in the units of MakeHuman).
+  defp kit_shapes(a, wts, k) do
+    p0 = fit_positions(a, k.points)
+
+    for t <- k.names do
+      pt = fit_positions(a, k.shaped[t])
+      d = k.moves[t]
+
+      {t,
+       fn i ->
+         rigid = elem(wts, i) |> Enum.map(fn {b, w} -> Vec.scale(elem(d, b), w) end) |> Enum.reduce(&Vec.add/2)
+         move = Vec.sub(Vec.sub(elem(pt, i), elem(p0, i)), from_world(rigid))
+         # A move of less than 0.2 mm goes (MakeHuman: dm).
+         if Vec.len(move) < 0.002, do: {0.0, 0.0, 0.0}, else: move
+       end}
+    end
+  end
+
+  defp kit_body(base, o, k, bones) do
+    name = if o.gender >= 0.5, do: "male1591", else: "female1605"
+    p = Data.asset("proxies", name)
+    {pts, wts} = fit_points(p, k.points, k.weights)
+    shapes = kit_shapes(p, wts, k) ++ fit_shapes(p, shapes(o))
+    faces = p.mesh.groups |> Map.values() |> Enum.concat()
+    uv = fn i -> if i, do: elem(p.mesh.uvs, i), else: {0.0, 0.0} end
+    skin = mesh(:skin, faces, &elem(pts, &1), uv, &elem(wts, &1), 0.0, shapes)
+
+    {eyes_pts, eyes_wts} = fit_points(Data.asset("eyes", "low-poly"), k.points, k.weights)
+    eyes = Data.asset("eyes", "low-poly")
+    eyes_faces = eyes.mesh.groups |> Map.values() |> Enum.concat() |> Enum.reject(&cornea?(eyes, &1))
+    eyes_uv = fn i -> if i, do: elem(eyes.mesh.uvs, i), else: {0.0, 0.0} end
+
+    eyes_prim =
+      mesh(:eyes, eyes_faces, &elem(eyes_pts, &1), eyes_uv, &elem(eyes_wts, &1), 0.0, kit_shapes(eyes, eyes_wts, k))
+
+    brows = Data.asset("eyebrows", o.eyebrows)
+    {brow_pts, brow_wts} = fit_points(brows, k.points, k.weights)
+    brow_faces = brows.mesh.groups |> Map.values() |> Enum.concat()
+    brow_uv = fn i -> if i, do: elem(brows.mesh.uvs, i), else: {0.0, 0.0} end
+    brow_shapes = kit_shapes(brows, brow_wts, k) ++ fit_shapes(brows, shapes(o))
+    brow_prim = mesh(:eyebrows, brow_faces, &elem(brow_pts, &1), brow_uv, &elem(brow_wts, &1), 0.0, brow_shapes)
+
+    holes = holes(p, pts, wts, shapes, 0.0)
+
+    materials = %{
+      skin: Map.merge(textured(Data.asset("skins", o.skin).texture, false), Skin.material(:mid)),
+      eyes: textured(Data.asset("eye_materials", o.eyes).texture, false),
+      eyebrows: textured(brows.texture, :blend),
+      hole: %{"color" => [40, 22, 24], "roughness" => 0.9, "metalness" => 0.0}
+    }
+
+    {[skin, eyes_prim, holes, brow_prim], materials, body_extras(base, p, faces, bones, k, o)}
+  end
+
+  defp kit_hair(o, k) do
+    a = Data.asset("hair", o.hair)
+    {pts, wts} = fit_points(a, k.points, k.weights)
+    faces = a.mesh.groups |> Map.values() |> Enum.concat()
+    uv = fn i -> if i, do: elem(a.mesh.uvs, i), else: {0.0, 0.0} end
+    prim = mesh(:hair, faces, &elem(pts, &1), uv, &elem(wts, &1), 0.0, kit_shapes(a, wts, k))
+    {[prim], %{hair: tint(textured(a.texture, true), a, o)}, %{"targets" => k.groups}}
+  end
+
+  # The data of the viewer: the targets, the moves of the bones (glTF
+  # axes), the ground under each pair of shoes (and with no shoes), the
+  # faces of each item of clothes, and the color of each item.
+  defp body_extras(base, p, faces, bones, k, o) do
+    round3 = fn {x, y, z} -> [Float.round(x, 5), Float.round(y, 5), Float.round(z, 5)] end
+
+    bone_moves =
+      bones
+      |> Enum.with_index()
+      |> Map.new(fn {b, i} -> {b.name, for(t <- k.names, do: round3.(World.GLB.gl(elem(k.moves[t], i))))} end)
+
+    ground = fn clothes ->
+      g0 = ground(base, k.points, clothes)
+      [Float.round(g0, 5), for(t <- k.names, do: Float.round(ground(base, k.shaped[t], clothes) - g0, 5))]
+    end
+
+    clothes = Data.assets()["clothes"] |> Map.keys() |> Enum.sort()
+
+    shoes =
+      for name <- clothes,
+          String.starts_with?(name, "shoes"),
+          into: %{"none" => ground.([])},
+          do: {name, ground.([Data.asset("clothes", name)])}
+
+    ring = neighbors(base)
+    refs = Enum.map(faces, fn face -> Enum.flat_map(face, fn {v, _} -> elem(elem(p.fit.refs, v), 0) end) end)
+    counts = Enum.map(faces, &(length(&1) - 2))
+    starts = Enum.scan([0 | counts], &+/2) |> Enum.drop(-1)
+    rows = Enum.zip([refs, starts, counts])
+
+    covers =
+      Map.new(clothes, fn name ->
+        set = grow(cover(Data.asset("clothes", name)), ring)
+
+        faces =
+          for {body, start, count} <- rows,
+              n = Enum.count(body, &MapSet.member?(set, &1)),
+              n * 2 > length(body),
+              do: [start, count, n]
+
+        {name, faces}
+      end)
+
+    %{
+      "targets" => k.groups,
+      "bones" => bone_moves,
+      "ground" => shoes,
+      "covers" => covers,
+      "colors" => Map.new(clothes, &{&1, Data.asset("clothes", &1).color}),
+      "skin" => o.skin,
+      "eyes" => o.eyes
+    }
+  end
 end

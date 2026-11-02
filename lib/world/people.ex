@@ -122,6 +122,20 @@ defmodule World.People do
     {model, hips, "drive", {m["width"] / 2 + @from_side, -1.0}}
   end
 
+  @doc """
+  The place of a parked traveler next to a vehicle (`vehicles/0`; the
+  camper with its van): `{x, y}` in the axes of the vehicle (the ground
+  under the middle of the vehicle is the origin). On foot, the origin.
+
+      iex> World.People.place("car")
+      {1.3, -0.6}
+      iex> World.People.place("foot")
+      {0.0, 0.0}
+  """
+  def place(vehicle, van \\ nil)
+  def place("foot", _van), do: {0.0, 0.0}
+  def place(vehicle, van), do: vehicle |> vehicle(van: van) |> elem(3)
+
   defp vehicle("camper", opts), do: camper(Keyword.get(opts, :van))
   defp vehicle(name, _opts), do: Map.fetch!(@vehicles, name)
 
