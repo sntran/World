@@ -554,8 +554,11 @@ The owner does this one time:
 3. Make the R2 bucket of the orders before the first deploy:
    `npx wrangler r2 bucket create world`. It needs no public
    access: the Worker reads it.
-4. The Worker needs the Workers Paid plan: `edge.com` is about 31 MB (with no files of the catalog: the site serves them), and
-   a build takes more CPU time than the Free plan gives.
+4. The Worker needs the Workers Paid plan: `edge.com` is about 44 MB (with no files of the catalog and of the kit: the site serves them), and
+   a build takes more CPU time than the Free plan gives. Cloudflare
+   refuses a Worker of more than 64 MiB (before compression), and then
+   the deploy does not reach the site with no error in CI:
+   `scripts/edge.sh` stops when `edge.com` is more than 60 MiB.
 
 To try it on this computer: `npm install && npm run build && npx
 wrangler dev` (Wrangler makes a local R2). `BEAM_COM=PATH` uses a

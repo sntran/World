@@ -24,3 +24,13 @@ beam mix compile
 rm -rf _build/prod/rel/world
 RELEASE_ERTS=false beam mix release --overwrite
 beam _build/prod/rel/world -o edge.com --target wasm32
+
+# Cloudflare refuses a Worker of more than 64 MiB (before compression):
+# the deploy then does not reach the site, and the dry run of CI does not
+# see it. edge.com is most of the Worker, so stop at 60 MiB.
+size=$(wc -c < edge.com)
+limit=$((60 * 1024 * 1024))
+if [ "$size" -gt "$limit" ]; then
+    echo "edge.com is $size bytes, more than $limit: the Worker can be more than 64 MiB" >&2
+    exit 1
+fi

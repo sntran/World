@@ -16,10 +16,11 @@ defmodule World.MixProject do
       deps: deps(),
       # The release for the Worker (scripts/edge.sh): the WebAssembly
       # runtime of beam.com has its own ERTS.
-      # The files of the catalog (priv/models) are static files of the
-      # site: the VM does not read them, so the release has none.
+      # The files of the catalog (priv/models) and the kit of a person
+      # (priv/kit) are static files of the site: the VM does not read
+      # them, so the release has none.
       releases: [
-        world: [include_erts: System.get_env("RELEASE_ERTS") != "false", steps: [:assemble, &no_models/1]]
+        world: [include_erts: System.get_env("RELEASE_ERTS") != "false", steps: [:assemble, &no_site_files/1]]
       ],
       aliases: aliases(),
       test_coverage: [
@@ -51,8 +52,10 @@ defmodule World.MixProject do
     [precommit: ["compile --warnings-as-errors", "format", "test --cover"]]
   end
 
-  defp no_models(release) do
-    File.rm_rf!(Path.join([release.path, "lib", "world-#{release.version}", "priv", "models"]))
+  defp no_site_files(release) do
+    for dir <- ~w(models kit),
+        do: File.rm_rf!(Path.join([release.path, "lib", "world-#{release.version}", "priv", dir]))
+
     release
   end
 end
