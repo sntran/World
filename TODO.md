@@ -54,10 +54,10 @@ into the steps of `AGENTS.md`.
   its mass for each meter. The holes of the dép tổ ong as hexagons
   (now diamonds), and its heel ring on the footbed; the knot of the
   hanao of a geta from a photo of its back.
-- **More of the mold shop.** A seat (a pan and a back along a bent
-  spine, an open shell), a hull of glass fiber with its plies (the
-  thickness and the density of a laminate from the mass of the glass and
-  the resin), and the body of a scooter.
+- **More of the mold shop.** A hull of glass fiber with its plies (a
+  composite thúng chai), a seat for a bus or a stadium (EN 13200-4), and
+  the body of a scooter. The laminate has no ply schedule from a maker
+  for a seat shell: 3 plies of mat is an estimate.
 - **The ghe of Vũng Tàu, more real.** The lines from a drawing (now by
   eye, with the stern, the stem head, the wale, the propeller and the
   paint from the photos of the owner); the engine and its bed (QCVN 91,
@@ -69,12 +69,17 @@ into the steps of `AGENTS.md`.
   The strakes of the hull (the garboard, the bilge strake, the wale and
   the sheer strake of Bảng 14/2-B) as boards of their own sizes.
 
-- **The mass of the tires and the van.** A tire is a solid ring now: it
-  must be a skin of rubber and cord (about 10 mm on a car). The van has
-  29 parts with no mass: its body, hood and doors are panels of steel
-  (0.8 mm), its seats foam, its engine and its bay parts of colors; the
-  drivetrain (the block, the axles, the tank) is not there, so the check
-  of step P4 against the curb weight waits.
+- **The mass of the van, 19 % under the curb weight.** Each part of the
+  van has a mass now (1967 kg at near), but Ford gives 2418 kg. The body
+  is one steel sheet of 0.8 mm (an estimate): a real body has rails,
+  crossmembers, pillars and floors of thicker gauges, and the van has no
+  air conditioner, no wires and no insulation. A source of the gauges
+  and of the rails of the body (the body in white of a Transit) closes
+  the gap. The masses of the axle, the suspension, the shaft and the
+  exhaust are estimates; a data sheet of each makes them true.
+- **The mass of the other tires.** The skin of a tire is 7.5 % of the
+  height of its side: a fit to two tires. The tires of the motorcycles
+  and of the scooter need a data sheet with a mass.
 - **The cage of a smooth mesh.** `World.Mass` and `World.Check` use the
   cage of a mesh, before its smooth steps; the smooth surface is a bit
   inside the cage.
@@ -161,12 +166,13 @@ into the steps of `AGENTS.md`.
   state in the cells (16 states in 2D; 36 for voxels) and needs no stack
   or queue: in the 128 MB of the edge, a grid in `:atomics` or in one
   binary is the only memory.
-- **Godot import.** A script for Vung_Tau that reads the joint nodes and
-  the levels of detail of a GLB of World, and the nodes with
-  `EXT_mesh_gpu_instancing` (a `GLTFDocumentExtension` that makes a
-  `MultiMeshInstance3D`): Godot 4 does not read that extension yet
-  (godot-proposals 8787). Until then, a model for Vung_Tau is a build
-  with `instances: false` (`World.Build.scene/2`).
+- **Godot import.** Godot 4 does not read `EXT_mesh_gpu_instancing`
+  (godot-proposals 8787): Vung_Tau has an import script for it,
+  `addons/gpu_instancing/` (`GltfGpuInstancing`, a
+  `GLTFDocumentExtension` that makes a `MultiMeshInstance3D`), on its
+  branch `feat/0023-gpu-instancing`. Still to do there: the joint nodes
+  and the levels of detail of a GLB of World. A model with no instances
+  is a build with `instances: false` (`World.Build.scene/2`).
 
 ## For Vũng Tàu
 

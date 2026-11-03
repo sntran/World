@@ -213,11 +213,19 @@ strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `wood`, `fabric`, `skin`, `hair`, `cloth`, `white`, `dark`, `black`,
 `gray`, `rubber`, `copper`, `stainless`, `screen`, `blue`, `orange`,
 `red`, `plywood`, `solar_cell`, `porcelain`, `glass_amber`,
-`terracotta`, `eps` (expanded polystyrene, the core of a door). A person
+`terracotta`, `eps` (expanded polystyrene, the core of a door),
+`bamboo`. A person
 has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
 `clothes_NAME`, `color_NAME` (the mean color of an asset at mid and
 far), `hole` (the dark inside of the mouth at mid and far),
 and with `speech` or `expressions` `teeth` and `tongue`.
+
+The mass (`World.Mass`): a mesh has the density of its role, or of its
+`matter`, or a number (a density of its own: the laminate of a mold
+shell, `World.Materials.Laminate`); a skin has its area times its
+thickness. A part that a shop buys (an engine, a battery) has its mass in
+its params (`mass`, kg, from its data sheet). A part with no meshes has
+a mass of 0.
 
 The standards (`priv/standards/*.json`, `World.Standards`): each file
 has its tables; each table has its `source`, its `unit` (`mm` or `in`),
@@ -1254,13 +1262,17 @@ the catalog: `banh_mi_cart`).
 |---|---|
 | `name`, `kind`, `sources` | The name of the model (a to z, 0 to 9 and _), its kind (`appliance`, `building`, `electrical`, `furniture`, `item`, `prop`, `vehicle`; `item` by default), and where its data comes from. |
 | `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model. A drawing makes no new role. |
-| `parts` | A name to a part: its `shapes`, its `ports` (a name to `at`, `axis`, `up`), its `sources`. |
+| `parts` | A name to a part: its `shapes`, its `ports` (a name to `at`, `axis`, `up`), its `sources`; or a standard part: `standard` (`"bolt M8x40"`, `"cap_screw M6x20"`, `"nut M8"`, `"washer M8"`, `"bearing 6204"`), with the ports of the standard part (a bolt has `head` and `tip`). |
 | `nodes` | The tree of the model, the root first. |
 | `clips` | The animations of the joints. |
 
 A shape has one of these keys, with its `material` (a role of the
 palette, `gray` by default) and its frame: `at` (its origin), `axis`
-(its z), `up` (its y).
+(its z), `up` (its y). For its mass (`World.Mass`): `matter`, a material
+with a density, when the material is a color (`paint` of steel), and
+`skin`, the thickness of a wall (m, 0.0001 to 0.1): the shape is then a
+skin of that thickness, not a solid (a culm of bamboo, a tube of steel, a
+panel).
 
 | Shape | Its data |
 |---|---|
