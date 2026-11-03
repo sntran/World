@@ -195,7 +195,7 @@ defmodule World.People.Human do
   point from its point of the body). The checks of the layers
   (`World.Sewing`) use it.
   """
-  def dressed(opts \\ []) do
+  def dressed(opts) do
     o = Map.new(Keyword.merge(@defaults, opts))
     o = Map.put(o, :rest, Face.rest(o.face))
     clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
@@ -978,8 +978,6 @@ defmodule World.People.Human do
     Enum.map(ws, &(&1 / sum))
   end
 
-  defp uv_mid(nil, b), do: b
-  defp uv_mid(a, nil), do: a
   defp uv_mid({u1, v1}, {u2, v2}), do: {(u1 + u2) / 2, (v1 + v2) / 2}
 
   defp grow(set, ring), do: set |> Enum.flat_map(&Map.get(ring, &1, [])) |> MapSet.new() |> MapSet.union(set)
@@ -1469,15 +1467,16 @@ defmodule World.People.Human do
   @doc """
   The names of the shape targets of a kit (`kit/3`) of a sex (0: a woman,
   1: a man): the targets of `target_weights/1` with the mean muscle, for
-  each age, weight, height and origin, the breasts of a woman, and the
+  each age, weight, height and origin, the breasts of a woman, the
   sliders of the short names of the shape (`shapes/0`; not all the
-  sliders: each target makes the body of the kit bigger), in a fixed
-  order.
+  sliders: each target makes the body of the kit bigger), and for a woman
+  the targets of the shape that the clothes give (the cups of the bra of
+  `World.Sewing`), in a fixed order.
 
       iex> length(World.People.Human.kit_targets(1))
       48
       iex> length(World.People.Human.kit_targets(0))
-      96
+      99
       iex> hd(World.People.Human.kit_targets(0))
       "african-female-young"
   """
@@ -1504,7 +1503,19 @@ defmodule World.People.Human do
     for(r <- @races, a <- ages, do: "#{r}-#{g}-#{a}") ++
       for(a <- ages, w <- weights, do: "universal-#{g}-#{a}-averagemuscle-#{w}") ++
       for(a <- ages, w <- weights, h <- ~w(minheight maxheight), do: "height/#{g}-#{a}-averagemuscle-#{w}-#{h}") ++
-      breasts ++ for({_, {_, names}} <- @shape, s <- names, t <- sliders[s].decr ++ sliders[s].incr, do: t)
+      breasts ++
+      for({_, {_, names}} <- @shape, s <- names, t <- sliders[s].decr ++ sliders[s].incr, do: t) ++
+      if(g == "female", do: worn_targets(), else: [])
+  end
+
+  # The targets of the shapes that the clothes give to the body, once each.
+  defp worn_targets do
+    Data.assets()["clothes"]
+    |> Map.keys()
+    |> Enum.sort()
+    |> Enum.flat_map(&Data.asset("clothes", &1).shape)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.uniq()
   end
 
   @doc """

@@ -41,9 +41,6 @@ into the steps of `AGENTS.md`.
   the body and its skirt. Next: a skirt and a coat (wide pieces on the
   skirt), shorts, a polo collar, sleeves to the elbow, and the colors of
   two fabrics in one garment (the cups and the band of a bra).
-- **The bra in the kit.** The kit has no shape of the bra: the browser
-  joins a body with no bra shape. The kit can carry the targets of the
-  shape of each item, as `shapes`.
 - **The edge of the cut faces at mid.** The faces on the breasts of the
   body of mid are cut in sixteen; the faces around them take the new
   points of their edges as polygons, and show small creases under the

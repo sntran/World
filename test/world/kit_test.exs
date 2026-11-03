@@ -150,12 +150,13 @@ defmodule World.KitTest do
 
   test "the data of a body: the ground under each pair of shoes, the faces of each item, and its color" do
     extras = mesh(Human.kit(0, :body)).extras["kit"]
-    assert length(extras["targets"]) == 75
+    # With the 3 targets of the cups of the bra (World.Sewing).
+    assert length(extras["targets"]) == 78
     assert map_size(extras["bones"]) == 53
     assert [g0, moves] = extras["ground"]["shoes01"]
     # The soles of the shoes are under the feet.
     assert g0 < hd(extras["ground"]["none"])
-    assert length(moves) == 75
+    assert length(moves) == 78
     assert [[_first, count, n] | _] = extras["covers"]["female_casualsuit01"]
     assert count >= 1 and n > 0
     assert [_, _, _] = extras["colors"]["shoes01"]
@@ -189,6 +190,11 @@ defmodule World.KitTest do
              "decr" => ["torso/measure-waist-circ-decr"],
              "incr" => ["torso/measure-waist-circ-incr"]
            }
+
+    # The layer of each item, and the shape that the bra gives to the body.
+    assert m["layers"]["world_bra"] == 0 and m["layers"]["world_ao_dai"] == 2 and m["layers"]["shoes01"] == 1
+    assert ["breast/breast-trans-up", 1.0] in m["wear"]["world_bra"]
+    assert Map.keys(m["wear"]) == ["world_bra"]
 
     assert m["credits"] |> Map.keys() |> Enum.all?(&(&1 in m["clothes"]))
     assert m["vehicles"]["car"] == "vehicles/car.glb"

@@ -84,7 +84,11 @@ defmodule World.People.Kit do
   @doc """
   The data of `kit.json`: the files of the bodies and of the hair, the
   textures of the skins and the eyes, the clothes, the targets of the
-  short names of the shape (`World.People.Human.shape_targets/0`), and the place of a
+  short names of the shape (`World.People.Human.shape_targets/0`), the
+  layer of each item of the clothes (`layers`: 0 next to the skin to 3 a
+  jacket; at mid a face takes the color of the outer item), the shape
+  that an item gives to the body (`wear`: `[[target, weight]]`, the cups of
+  a bra; the viewer adds these weights when the item is worn), and the place of a
   parked person (`translation` in the axes of glTF, and `rotation`, a
   quaternion) next to each vehicle and each van of the camper.
   """
@@ -104,6 +108,15 @@ defmodule World.People.Kit do
       "clothes" => Data.assets()["clothes"] |> Map.keys() |> Enum.sort(),
       "credits" => credits(),
       "shapes" => World.People.Human.shape_targets(),
+      "layers" => Map.new(Data.assets()["clothes"], fn {name, _} -> {name, Data.asset("clothes", name).layer} end),
+      "wear" =>
+        for(
+          {name, _} <- Data.assets()["clothes"],
+          shape = Data.asset("clothes", name).shape,
+          shape != [],
+          into: %{},
+          do: {name, Enum.map(shape, fn {t, w} -> [t, w] end)}
+        ),
       "rotation" => @turn,
       "places" => Map.new(People.vehicles() -- ["camper"], &{&1, place(&1, nil)}),
       "vans" => Map.new(vans, &{&1, place("camper", &1)}),
