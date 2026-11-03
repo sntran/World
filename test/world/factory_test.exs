@@ -235,6 +235,9 @@ defmodule World.FactoryTest do
       assert Enum.sort(for(n <- nodes, id = n["extras"]["task"], do: id)) == Enum.sort(tasks)
     end
 
+    # A run of each blueprint: it can take more than 60 s beside the other
+    # async tests (the checks of the catalog).
+    @tag timeout: 300_000
     test "each blueprint builds its default, or a small order" do
       orders = [
         %{

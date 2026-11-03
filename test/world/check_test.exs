@@ -107,11 +107,9 @@ defmodule World.CheckTest do
       solid = part("solid", Shape.box({0.1, 0.1, 0.1}, {0.9, 0.9, 0.9}, :steel))
       skin = part("skin", Mesh.skin(Shape.box({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, :paint), 0.001, :steel))
 
-      open =
-        part("open", %Mesh{
-          points: [{0.0, 0.0, 0.5}, {1.0, 0.0, 0.5}, {1.0, 1.0, 0.5}, {0.0, 1.0, 0.5}],
-          faces: [[0, 1, 2, 3]]
-        })
+      # A box with no top: an open mesh around the solid.
+      box = Shape.box({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, :steel)
+      open = part("open", %{box | faces: Enum.drop(box.faces, -1)})
 
       assert Check.overlaps(model([{"solid", solid}, {"skin", skin}, {"open", open}])) == :ok
     end
