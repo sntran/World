@@ -1,0 +1,45 @@
+{
+  "note": "A laminate of glass fiber and polyester resin, laid up by hand in a mold. The thickness of a ply of a glass mass w (g/m2) at a glass fraction psi (by mass) is t = w / 1000 (1 / rho_glass + (1 - psi) / (psi rho_resin)) mm, with the densities in g/cm3: the formula of ISO 12215-5 with its constants for E-glass (2.56) and polyester (1.2), t = w / 3072 (2.56 / psi - 1.36) (as quoted on boatdesign.net, posts 28048 and 677371). A ply of chopped strand mat of 450 g/m2 at 0.30 is 1.05 mm thick: TAP Plastics gives 1.04 mm for one ply of 1.5 oz mat (Laminate Construction Guide, page 3).",
+  "plies": {
+    "source": "The masses of the plies on the market: R&G (chopped strand mat 225, 300, 450 and 600 g/m2, https://www.r-g.de/en/art/190170), East Coast Fibreglass (woven roving 300, 600 and 800 g/m2). The glass fractions of hand lay-up: chopped strand mat 2.5 parts of resin to 1 of glass (0.29; East Coast Fibreglass, Laminating guide, https://ecfibreglasssupplies.co.uk/laminating), woven roving about 1 to 1 (0.50; East Coast Fibreglass, 600 g twill weave woven roving). The model takes 0.30 and 0.50.",
+    "unit": "g/m2",
+    "fields": [
+      "glass",
+      "fraction"
+    ],
+    "sizes": {
+      "csm_300": [
+        300,
+        0.3
+      ],
+      "csm_450": [
+        450,
+        0.3
+      ],
+      "csm_600": [
+        600,
+        0.3
+      ],
+      "wr_600": [
+        600,
+        0.5
+      ],
+      "wr_800": [
+        800,
+        0.5
+      ]
+    }
+  },
+  "matrix": {
+    "source": "E-glass 2.56 and polyester 1.20: the constants of the formula of ISO 12215-5 (boatdesign.net, post 28048); cured polyester has a specific gravity of 1.20 (Scott Bader, Crystic 406PA data sheet, page 2). The gel coat: 0.4 to 0.5 mm, about 500 g/m2, specific gravity 1.22 (Nord Composites, NORESTER GL195 data sheet, page 1); the model takes 0.5 mm.",
+    "unit": "g/cm3",
+    "fields": [
+      "density"
+    ],
+    "sizes": {
+      "glass": 2.56,
+      "resin": 1.2,
+      "gel_coat": 1.22
+    }
+  }
+}

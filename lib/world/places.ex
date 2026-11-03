@@ -55,6 +55,7 @@ defmodule World.Places do
     boat: :boats,
     enclosure: :sheets,
     helmet: :molds,
+    chair: :molds,
     sandal: :footwear,
     clog: :footwear
   }

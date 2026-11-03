@@ -9,7 +9,10 @@ defmodule World.StandardsTest do
   test "each table has its source, its unit, its fields and its sizes" do
     for {file, t} <- Standards.tables() do
       table = Standards.table(file, t)
-      assert is_binary(table["source"]) and table["unit"] in ["mm", "in", "kg/m3", "cm", "cm2", "kg", "deg"]
+
+      assert is_binary(table["source"]) and
+               table["unit"] in ["mm", "in", "kg/m3", "cm", "cm2", "kg", "deg", "g/m2", "g/cm3"]
+
       assert [_ | _] = table["fields"]
       assert map_size(table["sizes"]) > 2, "#{file}/#{t}"
     end

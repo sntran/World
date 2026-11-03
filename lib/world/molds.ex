@@ -10,9 +10,12 @@ defmodule World.Molds do
     of its own: the shell, the liner, the comfort pad, the edge trim, the
     rivets, the straps of webbing and the buckle
     (`World.Materials.Webbing`), and the peak (an optional part, 3.2.2).
+  - `shell_chair/1`: a chair with a seat shell of glass fiber, laid up by
+    hand in a mold (`World.Materials.Laminate`): the pan and the back of
+    one open shell along a bent spine, on four legs of steel tube.
   """
   alias World.{Assembly, Frame, Loft, Part, Shape, Standards, Vec}
-  alias World.Materials.Webbing
+  alias World.Materials.{Laminate, Webbing}
 
   @o Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
 
@@ -31,7 +34,7 @@ defmodule World.Molds do
   @rivet {0.005, 0.0015}
 
   @doc "The models of the mold shop, as `{name, fun}`."
-  def models, do: [{"helmet_half_vn", fn -> half_helmet() end}]
+  def models, do: [{"helmet_half_vn", fn -> half_helmet() end}, {"chair_shell_frp", fn -> shell_chair() end}]
 
   @doc "The sizes of a headform: \"1\" to \"9\"."
   def sizes, do: @sizes
@@ -273,4 +276,75 @@ defmodule World.Molds do
   end
 
   defp mm(m), do: round(m * 1000)
+
+  # --- The shell chair ----------------------------------------------------------------------
+
+  # The spine of the shell, from the front of the pan to the top of the
+  # back ({y, z}, m), and the section at each point: {the depth of the
+  # dish, its half width, its power}. The sizes are those of a molded
+  # shell chair on four legs: 0.81 m high, 0.48 m wide, 0.55 m deep, the
+  # seat at 0.445 m (Herman Miller, the data sheet of a molded fiberglass
+  # side chair); the shape of the pan and of the back is by eye.
+  @spine [{0.26, 0.44}, {0.05, 0.425}, {-0.15, 0.43}, {-0.2, 0.46}, {-0.23, 0.53}, {-0.26, 0.65}, {-0.29, 0.8}]
+  @dish [
+    {0.02, 0.22, 2.5},
+    {0.05, 0.235, 2.5},
+    {0.06, 0.225, 2.5},
+    {0.06, 0.21, 2.5},
+    {0.06, 0.205, 2.5},
+    {0.05, 0.22, 2.5},
+    {0.03, 0.235, 2.5}
+  ]
+
+  # The legs: steel tube of 19 mm with a wall of 1.9 mm (14 gauge; MooreCo,
+  # the data sheet of the Seed chair on four legs), from the pan to the
+  # floor, a little out at the floor.
+  @leg {0.0095, 0.0019}
+
+  @doc """
+  A chair with a seat shell of glass fiber (the kind `:chair`, the mold
+  shop): the pan and the back of one open shell (`World.Loft`) along a
+  bent spine, of a laminate laid up by hand (the gel coat and 3 plies of
+  chopped strand mat of 450 g/m2 by default: the option `plies`), on four
+  legs of steel tube. The option `color`: the color of the gel coat.
+  """
+  def shell_chair(opts \\ []) do
+    laminate = Laminate.new(Keyword.get(opts, :plies, ~w(csm_450 csm_450 csm_450)))
+    t = Laminate.thickness(laminate)
+    spine = for {y, z} <- @spine, do: {0.0, y, z}
+    loft = Loft.new(spine, @dish, arc: {90, 270}, up: {0, 0, 1}, sides: 24)
+
+    shell =
+      Loft.part(loft, "shell_chair_frp", :shell, [@o], t, :paint,
+        matter: Laminate.density(laminate),
+        sources: [
+          "The shell: #{Enum.join(laminate.plies, ", ")} with a gel coat, #{Float.round(t * 1000, 2)} mm and #{round(Laminate.density(laminate))} kg/m3 (World.Materials.Laminate, priv/standards/laminate.json)."
+        ]
+      )
+
+    legs =
+      for sx <- [1, -1], sy <- [1, -1] do
+        top = {sx * 0.17, sy * 0.15 - 0.02, 0.37}
+        foot = {sx * 0.22, sy * 0.24 - 0.02, 0.0}
+        Shape.sweep([foot, top], elem(@leg, 0), :steel, sides: 10) |> World.Mesh.skin(elem(@leg, 1), :steel)
+      end
+
+    base =
+      Part.new("legs_chair_frp", :legs, legs, [@o],
+        sources: ["Four legs of steel tube, 19 mm with a wall of 1.9 mm (MooreCo, Seed chair, the data sheet)."]
+      )
+
+    color = Keyword.get(opts, :color, [212, 208, 196])
+
+    Assembly.new("chair_shell_frp", base,
+      root: "legs_chair_frp",
+      kind: :chair,
+      materials: %{paint: %{"color" => color, "roughness" => 0.4, "metalness" => 0.0}},
+      sources: [
+        "A chair with a seat shell of glass fiber and polyester resin, laid up by hand in a mold, on four legs of steel tube: the sizes of a molded shell chair (Herman Miller, the data sheet of a molded fiberglass side chair: 806 by 476 by 552 mm, the seat at 445 mm)."
+      ],
+      extras: %{"laminate" => laminate.plies, "thickness" => Float.round(t, 5)}
+    )
+    |> Assembly.add("shell_chair_frp", shell, at: "o", port: "o")
+  end
 end
