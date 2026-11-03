@@ -4,8 +4,8 @@ defmodule World.Run do
   through the places and the people of a yard. The yard has one warehouse
   with its storekeeper and the driver of its truck, an annex (a second
   warehouse, for the models that the warehouse refuses) with its
-  storekeeper, the catalog of a release when it is given, four factories (the
-  vehicles, the wheels, the seats and the houses), each with its foreman,
+  storekeeper, the catalog of a release when it is given, the factories (the
+  vehicles, the wheels, the seats, the openings, the houses and the turnery), each with its foreman,
   its workers and (the wheels and the seats) the driver of its truck, a
   supplier, and the site of the customer. The people are processes. Each
   act is an event of the log, at its real time.
@@ -45,7 +45,10 @@ defmodule World.Run do
       workers: ["xuan"],
       out: {"yen", "opening_truck"}
     },
-    %{place: "houses", family: :houses, at: {-300, -300}, foreman: "oanh", workers: ["phuc", "quang"]}
+    %{place: "houses", family: :houses, at: {-300, -300}, foreman: "oanh", workers: ["phuc", "quang"]},
+    # The turnery: its lathe turns the parts of World.Lathe (cups, bowls,
+    # bottles, posts, pots).
+    %{place: "turnery", family: :turned, at: {-600, 0}, foreman: "hoa", workers: ["kim"]}
   ]
 
   @doc """
@@ -96,6 +99,7 @@ defmodule World.Run do
     |> Yard.road("seats", "vehicles")
     |> Yard.road("openings", "vehicles")
     |> Yard.road("openings", "houses")
+    |> Yard.road("turnery", "customer")
   end
 
   defp warehouse(name, at, limit, store),

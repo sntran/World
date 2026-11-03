@@ -208,7 +208,8 @@ strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `steel`, `aluminum`, `light_front`, `light_back`, `seat`, `plastic`,
 `wood`, `fabric`, `skin`, `hair`, `cloth`, `white`, `dark`, `black`,
 `gray`, `rubber`, `copper`, `stainless`, `screen`, `blue`, `orange`,
-`red`, `plywood`, `solar_cell`. A person
+`red`, `plywood`, `solar_cell`, `porcelain`, `glass_amber`,
+`terracotta`. A person
 has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
 `clothes_NAME`, `color_NAME` (the mean color of an asset at mid and
 far), `hole` (the dark inside of the mouth at mid and far),

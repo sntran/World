@@ -23,7 +23,10 @@ defmodule World.Catalog do
         {"seat_van", fn -> World.Furniture.Seats.seat("seat_van", @van_seat ++ [track: 0.2, recline: [0, 40]]) end},
         {"bench_van_3",
          fn -> World.Furniture.Seats.bench("bench_van_3", 3, @van_seat ++ [place_width: 0.43, height: 0.45]) end}
-      ] ++ items() ++ animals() ++ for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
+      ] ++
+        items() ++
+        animals() ++
+        World.Turned.models() ++ for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
       &elem(&1, 0)
     )
   end
