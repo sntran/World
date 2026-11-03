@@ -138,7 +138,7 @@ defmodule World.Lathe do
   points of each span of the curve near; 8 by default), `sides` (48 by
   default near), `sources`.
   """
-  def turn(name, profile, material, opts \\ []) do
+  def turn(name, profile, material, opts) do
     steps = max(round(Keyword.get(opts, :steps, 8) * Detail.sides(48) / 48), 1)
     outside = curve(profile, steps)
     section = section(outside, opts)
