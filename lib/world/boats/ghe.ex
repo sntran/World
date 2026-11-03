@@ -11,8 +11,13 @@ defmodule World.Boats.Ghe do
     Hải (Bà Rịa - Vũng Tàu) built in 2002: a length of 20.70 m (Lmax), a
     breadth of 6.80 m (Bmax) and a depth of 3.60 m (D), from the notice of
     its sale (thads.moj.gov.vn, 2026).
-  - The lines (the plan, the sheer, the sections, the stem, the transom)
-    and the draft (62% of D) are by eye: no drawing of the boat is open.
+  - The lines (the plan, the sheer, the sections) and the draft (62% of
+    D) are by eye: no drawing of the boat is open. The photos of the
+    owner of the boats of Vũng Tàu on their blocks give the shape of the
+    stern (a deep deadwood aft, a flat transom over the rudder), the head
+    of the stem over the bow, the wale, the propeller and the paint: red
+    under the waterline and 0.1 m over it, blue on the side, a red band
+    at the top of the side, red caps on the bulwark.
   - The rules give each size from the length L at the waterline, the
     breadth B at the waterline, D, and the wood group (TCVN 12619:2019).
     The model takes group III, the largest sizes of groups I to III, so
@@ -24,9 +29,10 @@ defmodule World.Boats.Ghe do
     each frame spacing (L + 20 cm or less) with its floor in the middle
     body, the keelson, the bilge and side stringers, the deck beams on
     each second frame with the clamp and the shelf, the planks of the hull
-    (a skin), the transom, the deck, the bulwark, the rudder on its
-    hinge, and the wheelhouse. Not yet: the engine and its bed, the
-    propeller, the fish holds, the mast and the eyes on the bow.
+    (a slab on each side, in the bands of the paint), the transom, the
+    wale, the deck, the bulwark, the rudder on its hinge, the propeller of
+    four blades, and the wheelhouse. Not yet: the engine and its bed, the
+    shaft, the fish holds, the mast and the eyes on the bow.
 
   The axes: x across (to starboard), y along (from the transom to the
   bow), z up from the bottom of the keel.
@@ -48,6 +54,9 @@ defmodule World.Boats.Ghe do
   # and the points of each half section.
   @stations 40
   @k 8
+  # The points across a band of the planks: enough that the chord of the
+  # inside of a plank does not cut into a frame.
+  @band 10
 
   @doc "The ghe of BV-92479-TS."
   def ghe, do: ghe(@lmax, @bmax, @depth)
@@ -66,8 +75,11 @@ defmodule World.Boats.Ghe do
     Assembly.new("ghe_vung_tau", keel(h),
       root: "keel",
       kind: :boat,
+      # The blue of the sides of the boats of Vũng Tàu (by eye, from the
+      # photos of the owner).
+      materials: %{paint: %{"color" => [30, 136, 204], "roughness" => 0.5, "metalness" => 0.0}},
       sources: [
-        "A ghe of Vũng Tàu: the sizes of BV-92479-TS (Lmax 20.70 m, Bmax 6.80 m, D 3.60 m, a wooden fishing boat of Long Hải, 2002); its members to QCVN 91:2025/BNNMT (Chương II.II-B, wood group III), sawn to the sizes of TCVN 1075:1971; the lines by eye."
+        "A ghe of Vũng Tàu: the sizes of BV-92479-TS (Lmax 20.70 m, Bmax 6.80 m, D 3.60 m, a wooden fishing boat of Long Hải, 2002); its members to QCVN 91:2025/BNNMT (Chương II.II-B, wood group III), sawn to the sizes of TCVN 1075:1971; the lines by eye; the stern, the stem head, the wale, the propeller and the paint by the photos of the owner of the boats of Vũng Tàu."
       ],
       extras: %{
         "length" => Float.round(l, 2),
@@ -84,8 +96,15 @@ defmodule World.Boats.Ghe do
     |> Assembly.add("planks", planks(h), at: @o, port: @o)
     |> Assembly.add("deck", deck(h), to: "deck_frame", at: @o, port: @o)
     |> Assembly.add("wheelhouse", wheelhouse(h), to: "deck", at: @o, port: @o)
+    |> Assembly.add("propeller", propeller(),
+      to: "sternpost",
+      at: Part.port("shaft", {0.0, y_post(h), 0.58}, {0, 1, 0}, {0, 0, 1}),
+      port: "shaft",
+      kind: :hinge,
+      role: :spin
+    )
     |> Assembly.add("rudder", rudder(h),
-      at: Part.port("rudder", {0.0, y_post(h) - 0.2, 0.0}, {0, 0, 1}, {0, 1, 0}),
+      at: Part.port("rudder", {0.0, y_post(h) - 0.9, 0.0}, {0, 0, 1}, {0, 1, 0}),
       port: "stock",
       kind: :hinge,
       role: :rudder,
@@ -111,10 +130,11 @@ defmodule World.Boats.Ghe do
   defp sheer(%{depth: d}, s), do: d + 0.5 * ((0.4 - s) / 0.4) ** 2
 
   # The height of the bottom of the planks (the rabbet line) over the
-  # rabbet of the middle: up to the stem in the fore body, up to the
-  # transom in the after body.
+  # rabbet of the middle: up to the stem in the fore body, and steeply up
+  # to the transom in the after body, over the deadwood and the aperture
+  # of the propeller (the photos of the boats of Vũng Tàu on their blocks).
   defp bottom(h, s) when s > 0.72, do: (sheer(h, 1.0) - 0.3) * ((s - 0.72) / 0.28) ** 1.8
-  defp bottom(%{depth: d}, s) when s < 0.12, do: 0.55 * d * ((0.12 - s) / 0.12) ** 2
+  defp bottom(%{depth: d}, s) when s < 0.25, do: 0.55 * d * ((0.25 - s) / 0.25) ** 1.5
   defp bottom(_h, _s), do: 0.0
 
   # The power of a section: full in the middle, a V at the ends.
@@ -134,29 +154,32 @@ defmodule World.Boats.Ghe do
 
   # A half section at s, from the keel (i = 0) to the sheer (i = k - 1),
   # `inset` inside the outside of the planks: points {x, z}.
-  defp section(h, s, inset) do
+  defp section(h, s, inset), do: for(i <- 0..(@k - 1), do: at(h, s, :math.pi() / 2 * i / (@k - 1), inset))
+
+  # The point of the outside of a half section at the angle t (0 at the
+  # keel, pi/2 at the sheer).
+  defp curve(h, s, t) do
     {hb, zb, zs, p} = {half(h, s), h.zr + bottom(h, s), h.zr + sheer(h, s), power(s)}
     xk = h.s.keel_w / 2
-
-    pts =
-      for i <- 0..(@k - 1) do
-        t = :math.pi() / 2 * i / (@k - 1)
-        {xk + (hb - xk) * :math.sin(t) ** (2 / p), zb + (zs - zb) * (1 - :math.cos(t) ** (2 / p))}
-      end
-
-    pts |> Enum.with_index() |> Enum.map(fn {pt, i} -> inside(pt, normal(pts, i), inset) end)
+    {xk + (hb - xk) * :math.sin(t) ** (2 / p), zb + (zs - zb) * (1 - :math.cos(t) ** (2 / p))}
   end
 
-  # The normal to the outside of a half section at a point (the curve goes
-  # from the keel to the sheer).
-  defp normal(pts, i) do
-    {x0, z0} = Enum.at(pts, max(i - 1, 0))
-    {x1, z1} = Enum.at(pts, min(i + 1, @k - 1))
+  # A point `inset` inside the outside, along the normal of the curve (a
+  # negative inset is outside).
+  defp at(h, s, t, inset) do
+    {x0, z0} = curve(h, s, max(t - 1.0e-3, 0.0))
+    {x1, z1} = curve(h, s, min(t + 1.0e-3, :math.pi() / 2))
+    {x, z} = curve(h, s, t)
     l = :math.sqrt((x1 - x0) ** 2 + (z1 - z0) ** 2)
-    {(z1 - z0) / l, -(x1 - x0) / l}
+    {x - (z1 - z0) / l * inset, z + (x1 - x0) / l * inset}
   end
 
-  defp inside({x, z}, {nx, nz}, d), do: {x - nx * d, z - nz * d}
+  # The angle t of a section at the height z of its outside.
+  defp t_at(h, s, z) do
+    {zb, zs, p} = {h.zr + bottom(h, s), h.zr + sheer(h, s), power(s)}
+    r = min(max((z - zb) / (zs - zb), 0.0), 1.0)
+    :math.acos((1 - r) ** (p / 2))
+  end
 
   defp ys(h, s), do: s * h.lmax
 
@@ -256,7 +279,22 @@ defmodule World.Boats.Ghe do
   defp keel(h) do
     {w, kh} = {h.s.keel_w, h.s.keel_h}
     box = Shape.box({-w / 2, y_post(h), 0.0}, {w / 2, ys(h, 0.72), kh}, :wood) |> Mesh.matter(:sao)
-    part("keel_ghe", :keel, [box], "The keel: #{mm(w)} by #{mm(kh)} mm (QCVN 91, Bảng 2/2-B).")
+
+    # The deadwood: over the keel, up to the rabbet where the bottom
+    # rises aft (s from 0.12 to where the rabbet meets the top of the keel).
+    sd = 0.25 - 0.25 * ((kh - h.zr) / (0.55 * h.depth)) ** (1 / 1.5)
+    rise = for j <- 0..8, sv = sd * 0.97 - (sd * 0.97 - 0.12) * j / 8, do: {ys(h, sv), h.zr + bottom(h, sv)}
+    loop = [{y_post(h), kh}, {ys(h, sd), kh} | rise]
+
+    deadwood =
+      Shape.prism(loop, w, :wood, frame: World.Frame.new({-w / 2, 0.0, 0.0}, {1, 0, 0}, {0, 0, 1})) |> Mesh.matter(:sao)
+
+    part(
+      "keel_ghe",
+      :keel,
+      [box, deadwood],
+      "The keel: #{mm(w)} by #{mm(kh)} mm (QCVN 91, Bảng 2/2-B), and the deadwood over it aft."
+    )
   end
 
   defp y_post(h), do: ys(h, 0.12)
@@ -269,8 +307,17 @@ defmodule World.Boats.Ghe do
       for s <- [0.72, 0.78, 0.84, 0.9, 0.95, 1.0],
           do: {0.0, ys(h, s) - a / 2, max(h.zr + bottom(h, s) - h.s.keel_h * 0.3, h.s.keel_h / 2)}
 
-    sweep = line |> Shape.sweep(a / :math.sqrt(2), :wood, sides: 4) |> Mesh.matter(:sao)
-    part("stem_ghe", :stem, [sweep], "The stem: #{mm(a)} mm square (QCVN 91, Bảng 8/2-B).")
+    # The head of the stem stands 1 m over the sheer at the bow, red, as on
+    # the boats of Vũng Tàu (the photos of the owner).
+    head = {0.0, ys(h, 1.0) - a / 2 + 0.12, h.zr + sheer(h, 1.0) + 1.0}
+    sweep = (line ++ [head]) |> Shape.sweep(a / :math.sqrt(2), :red, sides: 4) |> Mesh.matter(:sao)
+
+    part(
+      "stem_ghe",
+      :stem,
+      [sweep],
+      "The stem: #{mm(a)} mm square (QCVN 91, Bảng 8/2-B); its head over the bow, by the photos."
+    )
   end
 
   # The sternpost: up from the after end of the keel to the deck.
@@ -282,7 +329,7 @@ defmodule World.Boats.Ghe do
   end
 
   # A frame at each spacing, from the transom to the stem, with a floor
-  # over the keel in the middle body (s from 0.12 to 0.72).
+  # over the keel where the bottom is flat (s from 0.25 to 0.72).
   defp framing(h) do
     sp = h.s.spacing
 
@@ -312,7 +359,7 @@ defmodule World.Boats.Ghe do
       end
 
     floor =
-      if s >= 0.12 and s <= 0.72 do
+      if s >= 0.25 and s <= 0.72 do
         {x, _} = section(h, s, inset.(f3)) |> Enum.at(2)
         [Shape.box({-x, y - f3 / 2, h.s.keel_h}, {x, y + f3 / 2, h.s.keel_h + h.s.floor_h}, :wood) |> Mesh.matter(:sao)]
       else
@@ -327,11 +374,11 @@ defmodule World.Boats.Ghe do
     )
   end
 
-  # The keelson: on the floors, from s = 0.14 to 0.70.
+  # The keelson: on the floors, from s = 0.26 to 0.70.
   defp keelson(h) do
     a = h.s.keelson
     z = h.s.keel_h + h.s.floor_h
-    box = Shape.box({-a / 2, ys(h, 0.14), z}, {a / 2, ys(h, 0.7), z + a}, :wood) |> Mesh.matter(:sao)
+    box = Shape.box({-a / 2, ys(h, 0.26), z}, {a / 2, ys(h, 0.7), z + a}, :wood) |> Mesh.matter(:sao)
     part("keelson_ghe", :keelson, [box], "The keelson: #{mm(a)} mm square (QCVN 91, Bảng 2/2-B).")
   end
 
@@ -342,12 +389,20 @@ defmodule World.Boats.Ghe do
     {f1, f2, _} = h.s.frame
     {bt, st} = {board(h.s.bilge_stringer), board(h.s.side_stringer)}
     ss = for j <- 0..16, do: 0.1 + 0.8 * j / 16
+    {_, bh} = h.s.beam
+    c = board(h.s.clamp)
+    under = fn s -> h.zr + sheer(h, s) - h.s.deck - bh - 2 * reach(c) - reach(st) - 0.1 end
 
     meshes =
       for {i, f, t} <- [{3, f2, bt}, {4, f2, bt}, {5, f2, bt}, {6, f1, st}], sign <- [1, -1] do
         ss
         |> Enum.map(fn s ->
-          {x, z} = section(h, s, h.s.plank + 2 * reach(f) + reach(t)) |> Enum.at(i)
+          inset = h.s.plank + 2 * reach(f) + reach(t)
+          {x, z} = section(h, s, inset) |> Enum.at(i)
+
+          # In a shallow hull, the side stringer goes down to 0.1 m under
+          # the clamp.
+          {x, z} = if i == 6 and z > under.(s), do: at(h, s, t_at(h, s, under.(s)), inset), else: {x, z}
           {sign * x, ys(h, s), z}
         end)
         |> Shape.sweep(t / :math.sqrt(2), :wood, sides: 4)
@@ -401,13 +456,36 @@ defmodule World.Boats.Ghe do
   end
 
   # The planks of the hull, a slab of their thickness from the outside of
-  # the hull to the inside, and the transom.
+  # the hull to the inside, on each side, in the bands of the paint of the
+  # boats of Vũng Tàu (the photos of the owner): red under the waterline
+  # and 0.1 m over it, blue (the paint), and a red band of 0.35 m at the
+  # top of the side. The transom, and the wale along the side.
   defp planks(h) do
     t = h.s.plank
-    ring = fn s, inset -> ring(section(h, s, inset), ys(h, s)) end
+    boot = h.zr + @draft * h.depth + 0.1
+    band = fn s -> h.zr + sheer(h, s) - 0.35 end
 
-    hull =
-      slab(for(s <- stations(), do: ring.(s, 0.0)), for(s <- stations(), do: ring.(s, t)), :paint) |> Mesh.matter(:sao)
+    bands = [
+      {:red, fn _ -> 0.0 end, fn s -> t_at(h, s, boot) end},
+      {:paint, fn s -> t_at(h, s, boot) end, fn s -> t_at(h, s, band.(s)) end},
+      {:red, fn s -> t_at(h, s, band.(s)) end, fn _ -> :math.pi() / 2 end}
+    ]
+
+    sides =
+      for {material, t0, t1} <- bands, sign <- [1, -1] do
+        ss = Enum.filter(stations(), fn s -> t1.(s) - t0.(s) > 0.03 end)
+
+        grid = fn inset ->
+          for s <- ss do
+            for i <- 0..@band,
+                tt = t0.(s) + (t1.(s) - t0.(s)) * i / @band,
+                {x, z} = at(h, s, tt, inset),
+                do: {sign * max(x, 0.005), ys(h, s), z}
+          end
+        end
+
+        slab(grid.(0.0), grid.(t), material) |> Mesh.matter(:sao)
+      end
 
     # The transom: the section at the stern, closed at the deck, t thick.
     loop = section(h, 0.0, 0.0)
@@ -416,19 +494,26 @@ defmodule World.Boats.Ghe do
     transom =
       Shape.prism(loop, t, :paint, frame: World.Frame.new({0.0, 0.0, 0.0}, {0, 1, 0}, {0, 0, 1})) |> Mesh.matter(:sao)
 
+    # The wale (chống va): a round strake of 120 mm (by eye) outside the
+    # side, 0.15 m under the sheer.
+    wales =
+      for sign <- [1, -1] do
+        for(
+          j <- 0..20,
+          s = 0.03 + 0.95 * j / 20,
+          {x, z} = at(h, s, t_at(h, s, h.zr + sheer(h, s) - 0.15), -0.06),
+          do: {sign * x, ys(h, s), z}
+        )
+        |> Shape.sweep(0.06, :red, sides: 8)
+        |> Mesh.matter(:sao)
+      end
+
     part(
       "planks_ghe",
       :planks,
-      [hull, transom],
-      "The planks of the hull: #{mm(t)} mm (QCVN 91, Bảng 14/2-B); the lines by eye."
+      sides ++ [transom | wales],
+      "The planks of the hull: #{mm(t)} mm (QCVN 91, Bảng 14/2-B); the lines, the paint and the wale by the photos of the boats of Vũng Tàu."
     )
-  end
-
-  # A ring of a section: the starboard half from the sheer to the keel,
-  # then the port half to the sheer. An inner point keeps to its side.
-  defp ring(half, y) do
-    half = Enum.map(half, fn {x, z} -> {max(x, 0.005), z} end)
-    Enum.map(Enum.reverse(half), fn {x, z} -> {x, y, z} end) ++ Enum.map(half, fn {x, z} -> {-x, y, z} end)
   end
 
   # The deck (with a camber of B/50), and the bulwark of 0.8 m (by eye).
@@ -457,11 +542,23 @@ defmodule World.Boats.Ghe do
         slab(grid.(0.0), grid.(0.04), :paint) |> Mesh.matter(:sao)
       end
 
+    # The red cap of the rail on the top of each bulwark.
+    caps =
+      for sign <- [1, -1] do
+        for(
+          s <- Enum.drop(stations(), 1),
+          {x, z} = section(h, s, 0.02) |> List.last(),
+          do: {sign * x, ys(h, s), z + 0.8}
+        )
+        |> Shape.sweep(0.04, :red, sides: 6)
+        |> Mesh.matter(:sao)
+      end
+
     part(
       "deck_ghe",
       :deck,
-      [deck | bulwarks],
-      "The deck: #{mm(t)} mm (QCVN 91, Bảng 14/2-B); the bulwark of 40 mm and 0.8 m, by eye."
+      [deck | bulwarks ++ caps],
+      "The deck: #{mm(t)} mm (QCVN 91, Bảng 14/2-B); the bulwark of 40 mm and 0.8 m with a red cap, by the photos."
     )
   end
 
@@ -483,14 +580,45 @@ defmodule World.Boats.Ghe do
   # deck. It turns around the stock (+-35 degrees).
   defp rudder(h) do
     a = h.s.stem
-    blade = Shape.box({-0.045, -1.1, 0.15}, {0.045, -0.05, 0.15 + 0.4 * h.depth}, :wood) |> Mesh.matter(:sao)
+    blade = Shape.box({-0.045, -0.85, 0.15}, {0.045, -0.05, 1.4}, :wood) |> Mesh.matter(:sao)
 
+    # The stock goes up in its trunk to under the deck beams.
     stock =
-      Shape.sweep([{0.0, 0.0, 0.15}, {0.0, 0.0, h.zr + h.depth}], a / :math.sqrt(2), :wood, sides: 4)
+      Shape.sweep([{0.0, 0.0, 0.15}, {0.0, 0.0, h.zr + h.depth - 0.5}], a / :math.sqrt(2), :wood, sides: 4)
       |> Mesh.matter(:sao)
 
     Part.new("rudder_ghe", :rudder, [blade, stock], [Part.port("stock", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})],
-      sources: ["The rudder: its stock of wood, as the stem (QCVN 91, Bảng 8/2-B, trục bánh lái); the blade by eye."]
+      sources: [
+        "The rudder: its stock of wood, as the stem (QCVN 91, Bảng 8/2-B, trục bánh lái); the blade by eye, aft of the propeller as in the photos."
+      ]
+    )
+  end
+
+  # The propeller: four blades of bronze (the photos of a boat of Vũng
+  # Tàu on its blocks), 0.9 m across (by eye), on a stub of its shaft out
+  # of the sternpost. It turns around its shaft (y).
+  defp propeller do
+    r = 0.45
+
+    blades =
+      for k <- 0..3 do
+        a = :math.pi() / 2 * k
+
+        Shape.box({0.07, -0.13, -0.012}, {r, 0.13, 0.012}, :copper,
+          frame:
+            World.Frame.compose(
+              World.Frame.new({0.0, 0.0, 0.0}, {0, 1, 0}, {-:math.sin(a), 0.0, :math.cos(a)}),
+              World.Frame.turn({1, 0, 0}, 25)
+            )
+        )
+      end
+
+    hub = Shape.cylinder(0.08, 0.2, :copper, sides: 12, frame: World.Frame.new({0.0, -0.1, 0.0}, {0, 1, 0}, {0, 0, 1}))
+    shaft = Shape.cylinder(0.05, 0.25, :steel, sides: 12, frame: World.Frame.new({0.0, 0.1, 0.0}, {0, 1, 0}, {0, 0, 1}))
+    meshes = Enum.map([hub | blades], &Mesh.matter(&1, :copper)) ++ [shaft]
+
+    Part.new("propeller_ghe", :propeller, meshes, [Part.port("shaft", {0.0, 0.35, 0.0}, {0, 1, 0}, {0, 0, 1})],
+      sources: ["A propeller of four blades of bronze (as copper for its mass), 0.9 m across, by the photos."]
     )
   end
 

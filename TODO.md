@@ -41,11 +41,13 @@ into the steps of `AGENTS.md`.
   degrees, a joggle), holes in a flange (knockouts), and a gasket for a
   box of NEMA Type 4. The gauge of the A-16N126 from its datasheet (16
   gauge now, the gauge of the A12N128).
-- **The ghe of Vũng Tàu, more real.** The lines from a drawing or
-  photos (now by eye); the engine and its bed (QCVN 91, Bảng 4/2-B), the
-  shaft and the propeller, the fish holds and their hatches (Bảng 10/2-B
-  and 11/2-B), the mast, the eyes on the bow, and the paint of the boats
-  of Vũng Tàu. Its stability: the center of buoyancy and the metacenter
+- **The ghe of Vũng Tàu, more real.** The lines from a drawing (now by
+  eye, with the stern, the stem head, the wale, the propeller and the
+  paint from the photos of the owner); the engine and its bed (QCVN 91,
+  Bảng 4/2-B), the shaft, the fish holds and their hatches (Bảng 10/2-B
+  and 11/2-B), the mast, the eyes on the bow, and the blue and white
+  lines on the bow of the photos. A ghe of Hội An from the model on
+  Sketchfab of the owner (CC BY, with its credit in `CREDITS.md`). Its stability: the center of buoyancy and the metacenter
   at its draft, in place of the stand check of a thing on the ground.
   The strakes of the hull (the garboard, the bilge strake, the wale and
   the sheer strake of Bảng 14/2-B) as boards of their own sizes.
