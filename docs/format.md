@@ -477,6 +477,13 @@ meaning on the two sides, so `Pose.mirror/1` makes the pose of the other
 side. The directions are in the axes of World of the person at rest (x
 to the right side, y to the front, z up).
 
+The clothes fit to a body with no nipples: the two targets of MakeHuman
+that make the nipples small (`breast/nipple-point-decr`,
+`breast/nipple-size-decr`), at twice the full weight. So no nipples show
+through a top. The body at near stays as MakeHuman makes it. The body at
+mid and far, and the kit, have the points with these targets, because
+there the clothes are the colors of the body.
+
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair; far is a body of 730 faces.
 At mid and far, the faces under clothes have the mean color of the

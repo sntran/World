@@ -3,6 +3,7 @@
     python3 scripts/makehuman.py MPFB_DATA PACKS_DIR
     python3 scripts/makehuman.py MPFB_DATA PACKS_DIR KIND...
     python3 scripts/makehuman.py MPFB_DATA --expressions
+    python3 scripts/makehuman.py MPFB_DATA --targets
 
 MPFB_DATA is src/mpfb/data of makehumancommunity/mpfb2 at the commit in
 priv/makehuman/README.md. PACKS_DIR has the asset packs of the release
@@ -13,8 +14,11 @@ needs Pillow.
 The script writes:
 - base.obj.gz, rig.json.gz, weights.json.gz: the base mesh, the skeleton
   "game_engine" and its weights.
-- targets.bin.gz: the targets of the body of an adult, in a small binary
-  format (see World.People.Data).
+- targets.bin.gz: the targets of the body of an adult, and the two
+  targets of the chest that World.People.Human gives to the body under
+  the clothes (no nipples show through), in a small binary format (see
+  World.People.Data). With --targets, the script writes only this file
+  (no packs).
 - expressions.bin.gz: the units of the expressions of the face (the
   mouth, the eyes, the brows, the nose), for each of the three origins
   (the targets of targets/expression/units), in the same format. With --expressions, the script writes only this
@@ -55,6 +59,9 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "priv", "makehuman")
 # The skeleton and the targets of an adult (young to old), with no
 # proportions targets.
 RACES = ["african", "asian", "caucasian"]
+# The targets that make the nipples small: the clothes fit to the body
+# with them (World.People.Human), so no nipples show through.
+CHEST = ["breast/nipple-point-decr", "breast/nipple-size-decr"]
 GENDERS = ["female", "male"]
 AGES = ["young", "old"]
 LEVELS = {"muscle": ["minmuscle", "averagemuscle", "maxmuscle"], "weight": ["minweight", "averageweight", "maxweight"]}
@@ -198,17 +205,18 @@ def target_names():
     return names
 
 
-def write_targets(dest, folder="macrodetails", names=None):
+def write_targets(dest, folder="macrodetails", names=None, extra=()):
     """The binary format "XTG2", little-endian: the count of targets; for
     each target the name (u16 length, UTF-8), the count of points n, then
     n indices of points (u16, each the difference from the index before),
     n dx, n dy and n dz (i16, in steps of 0.0025 units of MakeHuman: 0.25
     mm). The columns make the gzip smaller."""
     out = [b"XTG2"]
-    names = names or target_names()
-    out.append(struct.pack("<I", len(names)))
-    for name in names:
-        path = os.path.join(MPFB, "targets", folder, name + ".target.gz")
+    paths = [(name, os.path.join(folder, name)) for name in names or target_names()]
+    paths += [(name, name) for name in extra]
+    out.append(struct.pack("<I", len(paths)))
+    for name, rel in paths:
+        path = os.path.join(MPFB, "targets", rel + ".target.gz")
         points = []
         for line in gzip.open(path, "rt"):
             parts = line.split()
@@ -333,7 +341,7 @@ def main():
     gz(os.path.join(MPFB, "3dobjs", "base.obj"), os.path.join(OUT, "base.obj.gz"))
     minify_json(os.path.join(MPFB, "rigs", "standard", "rig.game_engine.json"), os.path.join(OUT, "rig.json.gz"))
     minify_json(os.path.join(MPFB, "rigs", "standard", "weights.game_engine.json"), os.path.join(OUT, "weights.json.gz"))
-    write_targets(os.path.join(OUT, "targets.bin.gz"))
+    write_targets(os.path.join(OUT, "targets.bin.gz"), extra=CHEST)
     expressions()
     assets({}, ASSETS)
 
@@ -375,6 +383,8 @@ def assets(manifest, chosen):
 
 if PACKS == "--expressions":
     expressions()
+elif PACKS == "--targets":
+    write_targets(os.path.join(OUT, "targets.bin.gz"), extra=CHEST)
 elif len(sys.argv) > 3:
     kinds = sys.argv[3:]
     assets(json.load(open(os.path.join(OUT, "assets.json"))), [a for a in ASSETS if a[0] in kinds or a[1] in kinds])

@@ -618,7 +618,7 @@ defmodule World.HumanTest do
     end
 
     test "the targets and the assets" do
-      assert map_size(Data.targets()) == 120
+      assert map_size(Data.targets()) == 122
       [{i, {dx, _, _}} | _] = Data.target("asian-male-young")
       assert is_integer(i) and is_float(dx)
       assert Data.asset("eye_materials", "brown").mesh == nil

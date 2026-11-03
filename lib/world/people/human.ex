@@ -89,7 +89,7 @@ defmodule World.People.Human do
     {prims, materials} =
       case level do
         :near -> near(base, points, weights, o, clothes)
-        _ -> proxy(points, weights, o, clothes, level)
+        _ -> proxy(cloth(points), weights, o, clothes, level)
       end
 
     {prims, materials} = helmet({prims, materials}, points, weights, bones, o)
@@ -192,11 +192,23 @@ defmodule World.People.Human do
   defp three(v, low, mid, _high) when v < 0.5, do: [{low, 1 - 2 * v}, {mid, 2 * v}]
   defp three(v, _low, mid, high), do: [{mid, 2 - 2 * v}, {high, 2 * v - 1}]
 
+  # The clothes fit to a body with no nipples: the two targets of
+  # MakeHuman that make the nipples small, at twice the full weight (at
+  # the full weight a point still shows through a top; at three times, a
+  # dip). The body at near stays as MakeHuman makes it, under the clothes.
+  # The body at mid and far and the kit have these points: there the
+  # clothes are the colors of the body.
+  @chest ~w(breast/nipple-point-decr breast/nipple-size-decr)
+
+  defp cloth(points), do: add_targets(points, Enum.map(@chest, &{&1, 2.0}))
+
   # The points of the base mesh with the targets, in the axes of MakeHuman.
-  defp morph(points, o) do
+  defp morph(points, o), do: add_targets(points, target_weights(o))
+
+  defp add_targets(points, weights) do
     arr = :array.from_list(Tuple.to_list(points))
 
-    target_weights(o)
+    weights
     |> Enum.reduce(arr, fn {name, w}, arr ->
       Enum.reduce(Data.target(name), arr, fn {i, {dx, dy, dz}}, arr ->
         {x, y, z} = :array.get(i, arr)
@@ -367,7 +379,10 @@ defmodule World.People.Human do
               shade(fitted(role, a, points, weights, o.ground, mouth_shapes(role, a, mouth, points, shapes)))
             )
         ) ++
-        for({role, a, _} <- assets, do: Detail.collect(fitted(role, a, points, weights, o.ground, face(role, shapes))))
+        for(
+          {role, a, _} <- assets,
+          do: Detail.collect(fitted(role, a, on(role, points), weights, o.ground, face(role, shapes)))
+        )
 
     materials =
       Map.new(
@@ -727,6 +742,10 @@ defmodule World.People.Human do
         {u, v} = elem(a.mesh.uvs, t)
         u > 0.85 and v < 0.15
       end)
+
+  # The points of the body that an asset fits to: a cloth fits to the body
+  # with no nipples (`cloth/1`).
+  defp on(role, points), do: if(String.starts_with?(Atom.to_string(role), "clothes_"), do: cloth(points), else: points)
 
   # The eyebrows and the eyelashes move with the skin of the face.
   defp face(role, shapes) when role in [:eyebrows, :eyelashes], do: shapes
@@ -1123,7 +1142,7 @@ defmodule World.People.Human do
 
     o = o |> Map.put(:colors, %{}) |> Map.put(:rest, Face.rest(o.face)) |> Map.put(:ground, 0.0)
     base = Data.base()
-    points = rest_face(base.points, o)
+    points = base.points |> cloth() |> rest_face(o)
     groups = kit_groups(g)
     names = Enum.map(groups, &hd/1)
     shaped = Map.new(names, fn t -> {t, add_target(points, t)} end)
