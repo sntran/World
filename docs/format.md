@@ -514,7 +514,9 @@ its points moves out along its offset to the mean of its neighbors, and
 never nearer to the body than at the fit.
 
 The levels: near is the full body with the clothes and the hair; mid is
-a body of about 1,600 faces with the hair; far is a body of 730 faces.
+a body of about 1,600 faces with the hair (with each face on the
+breasts cut in sixteen, on the surface of the body: about 1,900 faces);
+far is a body of 730 faces.
 At mid and far, the faces under clothes have the mean color of the
 clothes, and at far the scalp has the color of the hair. A face under
 two items has the color of the item on the outer layer, then of the

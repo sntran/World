@@ -574,7 +574,7 @@ defmodule World.People.Human do
   # the mean color of those clothes; the hair stays at mid.
   defp proxy(points, weights, o, clothes, level) do
     name = if level == :far, do: "proxy741", else: if(o.gender >= 0.5, do: "male1591", else: "female1605")
-    p = Data.asset("proxies", name)
+    p = proxy_asset(name)
     {pts, wts} = fit_points(p, points, weights)
     ring = neighbors(Data.base())
     covers = Enum.map(clothes, &{&1, grow(cover(&1), ring)})
@@ -799,6 +799,188 @@ defmodule World.People.Human do
       acc -> Map.update(acc, a, [b], &[b | &1])
     end
   end
+
+  # A low-poly body of MakeHuman for mid, with each face on the breasts
+  # cut in four, two times: with its 11 faces on a breast, the bust of a
+  # woman at mid is a cone (at far the body stays as it is). Each new
+  # point refers to the place on the surface of the body nearest to it
+  # (the three points of a face of the body, with their weights, as a fit
+  # of MakeHuman), with the offset of the edge or the face that it cuts,
+  # so it is on the round bust of each person. The faces around take the
+  # new points of their edges, so the mesh has no hole.
+  defp proxy_asset("proxy741"), do: Data.asset("proxies", "proxy741")
+  defp proxy_asset(name), do: Data.cached({:proxy, name}, fn -> refine(Data.asset("proxies", name)) end)
+
+  defp refine(p) do
+    breasts = MapSet.new(Data.breast_points())
+    on? = fn {v, _} -> p.fit.refs |> elem(v) |> elem(0) |> Enum.all?(&MapSet.member?(breasts, &1)) end
+    faces = p.mesh.groups |> Map.values() |> Enum.concat()
+    cut = faces |> Enum.filter(&Enum.all?(&1, on?)) |> MapSet.new()
+
+    # A new point: its place on the base mesh (the points of the file of
+    # the proxy are not in the axes of the base mesh: their fit is), its
+    # offset, its UV.
+    start = %{
+      points:
+        p
+        |> fit_positions(Data.base().points)
+        |> Tuple.to_list()
+        |> Enum.with_index()
+        |> Map.new(fn {q, i} -> {i, q} end),
+      offsets: p.fit.refs |> Tuple.to_list() |> Enum.with_index() |> Map.new(fn {{_, _, d}, i} -> {i, d} end),
+      uvs: p.mesh.uvs |> Tuple.to_list() |> Enum.with_index() |> Map.new(fn {t, i} -> {i, t} end),
+      mids: %{},
+      faces: MapSet.to_list(cut)
+    }
+
+    halved = Enum.reduce(1..2, start, fn _, acc -> quarter(acc) end)
+    n0 = tuple_size(p.mesh.points)
+    new_refs = for i <- n0..(map_size(halved.points) - 1)//1, do: on_body(halved.points[i], halved.offsets[i])
+
+    # The faces around: the new points of their edges, in their order.
+    split = fn split, {a, ta}, {b, tb} ->
+      case halved.mids[{min(a, b), max(a, b)}] do
+        nil ->
+          []
+
+        {m, tm} ->
+          split.(split, {a, ta}, {m, tm}) ++ [{m, tm}] ++ split.(split, {m, tm}, {b, tb})
+      end
+    end
+
+    widen = fn f ->
+      if MapSet.member?(cut, f),
+        do: [f],
+        else: [Enum.flat_map(Enum.zip(f, tl(f) ++ [hd(f)]), fn {x, y} -> [x | split.(split, x, y)] end)]
+    end
+
+    groups =
+      Map.new(p.mesh.groups, fn {g, fs} ->
+        {g, Enum.flat_map(fs, fn f -> if MapSet.member?(cut, f), do: [], else: widen.(f) end)}
+      end)
+
+    groups = Map.update(groups, Enum.min(Map.keys(groups)), halved.faces, &(&1 ++ halved.faces))
+
+    %{
+      p
+      | mesh: %{
+          p.mesh
+          | points:
+              List.to_tuple(
+                Tuple.to_list(p.mesh.points) ++ for(i <- n0..(map_size(halved.points) - 1)//1, do: halved.points[i])
+              ),
+            uvs: List.to_tuple(for(i <- 0..(map_size(halved.uvs) - 1), do: halved.uvs[i])),
+            groups: groups
+        },
+        fit: %{p.fit | refs: List.to_tuple(Tuple.to_list(p.fit.refs) ++ new_refs)}
+    }
+  end
+
+  # Each face in four: a point at the middle of each edge (one for two
+  # faces), and one at the middle of the face.
+  defp quarter(acc) do
+    Enum.reduce(acc.faces, %{acc | faces: []}, fn f, acc ->
+      {mids, acc} =
+        Enum.map_reduce(Enum.zip(f, tl(f) ++ [hd(f)]), acc, fn {{a, ta}, {b, tb}}, acc ->
+          key = {min(a, b), max(a, b)}
+
+          case acc.mids[key] do
+            nil ->
+              m = map_size(acc.points)
+              tm = map_size(acc.uvs)
+
+              acc = %{
+                acc
+                | points: Map.put(acc.points, m, Vec.lerp(acc.points[a], acc.points[b], 0.5)),
+                  offsets: Map.put(acc.offsets, m, Vec.lerp(acc.offsets[a], acc.offsets[b], 0.5)),
+                  uvs: Map.put(acc.uvs, tm, uv_mid(acc.uvs[ta], acc.uvs[tb])),
+                  mids: Map.put(acc.mids, key, {m, tm})
+              }
+
+              {{m, tm}, acc}
+
+            {m, tm} ->
+              {{m, tm}, acc}
+          end
+        end)
+
+      c = map_size(acc.points)
+      tc = map_size(acc.uvs)
+      corners = Enum.map(f, &elem(&1, 0))
+
+      acc = %{
+        acc
+        | points: Map.put(acc.points, c, corners |> Enum.map(&acc.points[&1]) |> Vec.mean()),
+          offsets: Map.put(acc.offsets, c, corners |> Enum.map(&acc.offsets[&1]) |> Vec.mean()),
+          uvs:
+            Map.put(
+              acc.uvs,
+              tc,
+              uv_mid(
+                uv_mid(acc.uvs[elem(Enum.at(f, 0), 1)], acc.uvs[elem(Enum.at(f, 2), 1)]),
+                uv_mid(acc.uvs[elem(Enum.at(f, 1), 1)], acc.uvs[elem(Enum.at(f, 3), 1)])
+              )
+            )
+      }
+
+      # The quad of each corner: the corner, the middle of its edge, the
+      # middle of the face, the middle of the edge before it.
+      n = length(f)
+
+      quads =
+        for i <- 0..(n - 1) do
+          [Enum.at(f, i), Enum.at(mids, i), {c, tc}, Enum.at(mids, rem(i - 1 + n, n))]
+        end
+
+      %{acc | faces: acc.faces ++ quads}
+    end)
+  end
+
+  # The place on the surface of the body nearest to a point of the base
+  # mesh: of the triangles of the faces around the nearest point of the
+  # body, the nearest one, and the weights of its three corners there.
+  defp on_body(q, offset) do
+    %{points: base, groups: groups} = Data.base()
+
+    around =
+      Data.cached(:faces_around, fn ->
+        for f <- Map.fetch!(groups, "body"), vs = Enum.map(f, &elem(&1, 0)), v <- vs, reduce: %{} do
+          acc -> Map.update(acc, v, [vs], &[vs | &1])
+        end
+      end)
+
+    v = Enum.min_by(0..13379, &Vec.len(Vec.sub(elem(base, &1), q)))
+
+    {_, vs, ws} =
+      around
+      |> Map.fetch!(v)
+      |> Enum.flat_map(fn [a, b, c, d] -> [[a, b, c], [a, c, d]] end)
+      |> Enum.map(fn tri ->
+        ws = barycentric(q, Enum.map(tri, &elem(base, &1)))
+        at = tri |> Enum.zip(ws) |> Enum.map(fn {k, w} -> Vec.scale(elem(base, k), w) end) |> Enum.reduce(&Vec.add/2)
+        {Vec.len(Vec.sub(at, q)), tri, ws}
+      end)
+      |> Enum.min_by(&elem(&1, 0))
+
+    {vs, ws, offset}
+  end
+
+  # The weights of the place on a triangle nearest to a point (the point
+  # projected on its plane; a weight under 0 is 0).
+  defp barycentric(q, [a, b, c]) do
+    {v0, v1, v2} = {Vec.sub(b, a), Vec.sub(c, a), Vec.sub(q, a)}
+    {d00, d01, d11, d20, d21} = {Vec.dot(v0, v0), Vec.dot(v0, v1), Vec.dot(v1, v1), Vec.dot(v2, v0), Vec.dot(v2, v1)}
+    den = d00 * d11 - d01 * d01
+    v = (d11 * d20 - d01 * d21) / den
+    w = (d00 * d21 - d01 * d20) / den
+    ws = Enum.map([1 - v - w, v, w], &max(&1, 0.0))
+    sum = Enum.sum(ws)
+    Enum.map(ws, &(&1 / sum))
+  end
+
+  defp uv_mid(nil, b), do: b
+  defp uv_mid(a, nil), do: a
+  defp uv_mid({u1, v1}, {u2, v2}), do: {(u1 + u2) / 2, (v1 + v2) / 2}
 
   defp grow(set, ring), do: set |> Enum.flat_map(&Map.get(ring, &1, [])) |> MapSet.new() |> MapSet.union(set)
 
@@ -1478,7 +1660,7 @@ defmodule World.People.Human do
 
   defp kit_body(base, o, k, bones) do
     name = if o.gender >= 0.5, do: "male1591", else: "female1605"
-    p = Data.asset("proxies", name)
+    p = proxy_asset(name)
     {pts, wts} = fit_points(p, k.points, k.weights)
     shapes = kit_shapes(p, wts, k) ++ fit_shapes(p, shapes(o))
     faces = p.mesh.groups |> Map.values() |> Enum.concat()

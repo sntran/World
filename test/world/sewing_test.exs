@@ -140,6 +140,24 @@ defmodule World.SewingTest do
     end
   end
 
+  test "the bust of a woman at mid is round: its faces are cut in sixteen; at far they stay" do
+    triangles = fn level ->
+      fig = Detail.with(level, fn -> Human.person("t", gender: 0.0, bust: 0.75, clothes: ["world_t_shirt"]) end)
+
+      fig.nodes
+      |> List.last()
+      |> Map.fetch!(:primitives)
+      |> Enum.filter(&(&1.material == :skin or String.starts_with?(Atom.to_string(&1.material), "color_")))
+      |> Enum.map(&div(length(&1.indices), 3))
+      |> Enum.sum()
+    end
+
+    # The low-poly bodies of MakeHuman: 1,584 and 730 quads (two triangles
+    # each). At mid, 22 quads on the breasts become 352.
+    assert triangles.(:mid) >= 2 * (1584 - 22 + 352)
+    assert triangles.(:far) == 2 * 730
+  end
+
   test "of two items that cover a face at mid, the outer layer gives its color" do
     clothes = ["world_bra", "world_t_shirt", "world_pants"]
     colors = [[250, 250, 250], [200, 40, 30], [50, 50, 50]]

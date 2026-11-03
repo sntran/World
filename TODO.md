@@ -44,9 +44,10 @@ into the steps of `AGENTS.md`.
 - **The bra in the kit.** The kit has no shape of the bra: the browser
   joins a body with no bra shape. The kit can carry the targets of the
   shape of each item, as `shapes`.
-- **The bust at mid.** The body of mid has few faces: at the apex of a
-  large bust it shows a point in the color of a top. A proxy with more
-  faces there, or smooth normals at the apex.
+- **The edge of the cut faces at mid.** The faces on the breasts of the
+  body of mid are cut in sixteen; the faces around them take the new
+  points of their edges as polygons, and show small creases under the
+  bust. A cut in four of the ring around (one more ring, one step).
 - **Renders next to photos.** The check of step P1 wants renders of the
   áo dài and the bra next to photos of real ones, at near and mid.
 - **A hood up.** The rain shell of World has its hood folded at the
