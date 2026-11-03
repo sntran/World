@@ -22,6 +22,7 @@ defmodule World.MCP do
   2. Call check_order with the order until it has no errors. Each error has the path of the wrong value and the rule.
   3. Call place_order. The answer has the hash of the order and the URLs of its files: the GLB at the near, mid and far levels, the list of the parts, the receipt, and the log of the people of the world that built it.
   The factory builds each file at its first GET (this can take some seconds; 503 means that the order needs more memory than the edge has), and keeps it. The same order always gives the same hash and the same URLs.
+  A new model for the catalog (an engineer): get_blueprint drawing gives the format of a drawing (its shapes, their materials and matter, standard parts, nodes and joints). Call check_drawing until the drawing has no errors and passes the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop, each part has a mass). Then call propose_drawing with the request: the owner reviews the proposal, and accepts or refuses it.
   """
 
   # The schema of an order (docs/factory.md, "The URLs").
@@ -43,6 +44,12 @@ defmodule World.MCP do
   }
 
   @read %{"readOnlyHint" => true, "openWorldHint" => false}
+
+  @drawing %{
+    "type" => "object",
+    "description" =>
+      "A drawing (docs/format.md, \"A drawing\"): name, kind, materials, parts (shapes or a standard part), nodes, clips, sources."
+  }
 
   @tools [
     %{
@@ -79,6 +86,34 @@ defmodule World.MCP do
       "description" =>
         "Checks an order and keeps it. Gives the hash, the full order, the URLs of its files (GLB at the near, mid and far levels, parts, receipt, log, replay GLB) and the URL of its replay page; or the errors. The factory builds each file at its first GET. The same order gives the same hash.",
       "inputSchema" => %{"type" => "object", "properties" => %{"order" => @order}, "required" => ["order"]},
+      "annotations" => %{
+        "readOnlyHint" => false,
+        "destructiveHint" => false,
+        "idempotentHint" => true,
+        "openWorldHint" => false
+      }
+    },
+    %{
+      "name" => "check_drawing",
+      "title" => "Check a new drawing",
+      "description" =>
+        "Checks a drawing of a new model and does not keep it: the errors of the data (each with its path), then the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop), its mass (and the parts with no mass), its size and its parts.",
+      "inputSchema" => %{"type" => "object", "properties" => %{"drawing" => @drawing}, "required" => ["drawing"]},
+      "annotations" => @read
+    },
+    %{
+      "name" => "propose_drawing",
+      "title" => "Propose a new drawing",
+      "description" =>
+        "Checks a drawing as check_drawing does and, when it passes, keeps it as a proposal for the owner, with the request that it answers. Gives the hash of the proposal and its review. The owner accepts or refuses it: a proposal is not in the catalog before the owner accepts it.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "drawing" => @drawing,
+          "request" => %{"type" => "string", "description" => "The request that the drawing answers, in words."}
+        },
+        "required" => ["drawing", "request"]
+      },
       "annotations" => %{
         "readOnlyHint" => false,
         "destructiveHint" => false,
@@ -172,6 +207,24 @@ defmodule World.MCP do
         wrong("no blueprint #{args["name"]}; the blueprints are #{Enum.map_join(Blueprints.all(), ", ", & &1.name)}")
     end
   end
+
+  defp call("check_drawing", %{"drawing" => drawing}, _origin) do
+    case World.Engineers.review(drawing) do
+      {:ok, review} -> result(review)
+      {:error, review} -> result(review, true)
+    end
+  end
+
+  defp call("propose_drawing", %{"drawing" => drawing} = args, _origin) do
+    case World.Engineers.propose(drawing, args["request"]) do
+      {:ok, data} -> result(data)
+      {:error, :store} -> wrong("the store of the proposals failed; try again later")
+      {:error, review} -> result(review, true)
+    end
+  end
+
+  defp call(tool, _args, _origin) when tool in ~w(check_drawing propose_drawing),
+    do: wrong(~s(the argument "drawing" must be a JSON object))
 
   defp call(tool, %{"order" => order}, origin) when is_map(order) do
     case if(tool == "check_order", do: check(order), else: Orders.place(order, origin)) do

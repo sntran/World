@@ -37,6 +37,13 @@ test('put keeps the order with its length, and get gives it back', async () => {
   assert.equal(await text(await store.port(input(), { argv: ['get', KEY] })), '{"blueprint":"box"}');
 });
 
+test('a proposal of a new drawing has a key of its own', async () => {
+  const store = orderStore(bucket());
+  const key = 'proposals/0123456789abcdef0123456789abcdef.json';
+  assert.equal(await text(await store.port(input('{}'), { argv: ['put', key, '2'] })), 'ok\n');
+  assert.equal(await text(await store.port(input(), { argv: ['get', key] })), '{}');
+});
+
 test('get of an order that the store does not have gives nothing', async () => {
   const store = orderStore(bucket());
   assert.equal(await text(await store.port(input(), { argv: ['get', KEY] })), '');
@@ -50,6 +57,7 @@ test('a wrong key, length, operation or input is an error', async () => {
   await fails(['put', KEY, '0']);
   await fails(['put', KEY, 'x']);
   await fails(['put', 'orders/x.json', '2']);
+  await fails(['put', 'drawings/0123456789abcdef0123456789abcdef.json', '2']);
   await fails(['put', KEY, '9'], ended('{}'));
   await fails(['delete', KEY]);
 });

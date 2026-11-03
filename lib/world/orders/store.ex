@@ -21,10 +21,20 @@ defmodule World.Orders.Store do
   @doc "The key of the full order of a hash."
   def key(hash), do: "orders/#{hash}.json"
 
+  @doc """
+  The key of a proposal of a new drawing of a hash (`World.Engineers`):
+  the owner reviews it.
+  """
+  def proposal(hash), do: "proposals/#{hash}.json"
+
   @doc "Puts the full order (its JSON) of a hash in the store."
   @spec put(String.t(), binary()) :: :ok | :error
-  def put(hash, json) when byte_size(json) > 0 do
-    case run(["put", key(hash), "#{byte_size(json)}"], json) do
+  def put(hash, json), do: put_key(key(hash), json)
+
+  @doc "Puts a JSON text in the store at a key."
+  @spec put_key(String.t(), binary()) :: :ok | :error
+  def put_key(key, json) when byte_size(json) > 0 do
+    case run(["put", key, "#{byte_size(json)}"], json) do
       {:ok, "ok\n"} -> :ok
       _ -> :error
     end
@@ -35,8 +45,12 @@ defmodule World.Orders.Store do
   order of the hash, `:error` when the store failed.
   """
   @spec get(String.t()) :: {:ok, binary()} | :none | :error
-  def get(hash) do
-    case run(["get", key(hash)], "") do
+  def get(hash), do: get_key(key(hash))
+
+  @doc "The JSON text at a key: `:none` when the store has none, `:error` when the store failed."
+  @spec get_key(String.t()) :: {:ok, binary()} | :none | :error
+  def get_key(key) do
+    case run(["get", key], "") do
       {:ok, ""} -> :none
       other -> other
     end

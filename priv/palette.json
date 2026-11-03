@@ -2,6 +2,7 @@
   "note": "The default color of each material role: [r, g, b] in sRGB from 0 to 255, the roughness, the metalness, and for glass the alpha (1 is opaque). An app can give its own palette.",
   "roles": {
     "aluminum": {"color": [196, 200, 204], "roughness": 0.35, "metalness": 1.0},
+    "bamboo": {"color": [196, 168, 104], "roughness": 0.55, "metalness": 0.0},
     "blue": {"color": [16, 86, 160], "roughness": 0.45, "metalness": 0.0},
     "brick": {"color": [166, 78, 54], "roughness": 0.9, "metalness": 0.0},
     "black": {"color": [31, 35, 40], "roughness": 0.6, "metalness": 0.0},

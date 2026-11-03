@@ -10,7 +10,11 @@ defmodule World.Drawing do
     `metalness` in this model;
   - `parts`: a name to a part: its `shapes` (`box`, `cylinder`,
     `sphere`, `prism`, `lathe`, `tube`, each with its `material` and its
-    frame `at`, `axis`, `up`), its `ports`, its `sources`;
+    frame `at`, `axis`, `up`; for its mass, a `matter` when the material
+    is a color, and a `skin`: the thickness of a wall, for a tube of
+    bamboo or a panel), its `ports`, its `sources`; or a standard part
+    (`standard`: `"bolt M8x40"`, `"cap_screw M6x20"`, `"nut M8"`,
+    `"washer M8"`, `"bearing 6204"`), with its own ports;
   - `nodes`: the tree of the model, the root first. A node holds a part
     (`part`) or an item of another blueprint (`item`: an order with its
     `blueprint` and its `options`: a model of the catalog, a person, an
@@ -31,6 +35,11 @@ defmodule World.Drawing do
   @kinds ~w(appliance building electrical furniture item prop vehicle)
   @roles ~w(crank door drawer handle knob lid pedal recline slide spin stand steer suspension vane wheel)
   @shapes ~w(box cylinder sphere prism lathe tube)
+  @standards ~w(bolt cap_screw nut washer bearing)
+
+  # The atom of each name of a list of the checks: a drawing names only
+  # these, and the atoms exist when the drawing builds.
+  @atoms Map.new(@kinds ++ @roles ++ @standards ++ ~w(hinge slide), &{&1, String.to_atom(&1)})
   @keys ~w(name kind materials parts nodes clips sources)
   @name ~r/^[a-z0-9_]{1,40}$/
   @size 50.0
@@ -174,16 +183,42 @@ defmodule World.Drawing do
         p = "#{path}.#{name}"
 
         name(name, p) ++
-          object(part, p, ~w(shapes ports sources), fn part ->
-            required(part, "shapes", p, &list(&1, &2, 1, 64, fn s, sp -> shape(s, sp) end)) ++
-              optional(part, "ports", p, &ports/2) ++ optional(part, "sources", p, &sources/2)
-          end)
+          case part do
+            %{"standard" => _} ->
+              object(part, p, ~w(standard), &required(&1, "standard", p, fn v, sp -> standard(v, sp) end))
+
+            _ ->
+              object(part, p, ~w(shapes ports sources), fn part ->
+                required(part, "shapes", p, &list(&1, &2, 1, 64, fn s, sp -> shape(s, sp) end)) ++
+                  optional(part, "ports", p, &ports/2) ++ optional(part, "sources", p, &sources/2)
+              end)
+          end
       end)
 
     if count > 256, do: errors ++ [{path, "must have at most 256 shapes in all"}], else: errors
   end
 
   defp parts(_v, path), do: [{path, "must be an object of at most 64 parts"}]
+
+  # A standard part by its kind and its name: "bolt M8x40".
+  defp standard(v, path) do
+    with true <- is_binary(v),
+         [kind, _name] <- String.split(v, " ", parts: 2),
+         true <- kind in @standards,
+         %Part{} <- standard_part(v) do
+      []
+    else
+      _ ->
+        [{path, "must be a standard part: #{Enum.join(@standards, ", ")} and its name, as \"bolt M8x40\""}]
+    end
+  rescue
+    _ -> [{path, "is not a size of the standard: #{v}"}]
+  end
+
+  defp standard_part(v) do
+    [kind, name] = String.split(v, " ", parts: 2)
+    World.Standards.part({Map.fetch!(@atoms, kind), name})
+  end
 
   defp ports(v, path) when is_map(v),
     do:
@@ -201,8 +236,10 @@ defmodule World.Drawing do
   defp shape(v, path) when is_map(v) do
     case for k <- @shapes, Map.has_key?(v, k), do: k do
       [kind] ->
-        unknown(v, [kind | ~w(material at axis up)], path) ++
+        unknown(v, [kind | ~w(material matter skin at axis up)], path) ++
           optional(v, "material", path, &material/2) ++
+          optional(v, "matter", path, &choice(&1, &2, World.Mass.materials())) ++
+          optional(v, "skin", path, &number(&1, &2, 0.0001, 0.1)) ++
           optional(v, "at", path, &point/2) ++
           optional(v, "axis", path, &direction/2) ++
           optional(v, "up", path, &direction/2) ++ dims(kind, v[kind], "#{path}.#{kind}")
@@ -381,6 +418,7 @@ defmodule World.Drawing do
   defp kind({:part, _}), do: "part"
   defp kind({:item, _}), do: "item"
 
+  defp has_port?({:part, %{"standard" => s}}, name), do: Map.has_key?(standard_part(s).ports, name)
   defp has_port?({:part, part}, name), do: Map.has_key?(Map.get(part, "ports", %{}), name)
 
   defp has_port?({:item, full}, name) do
@@ -481,7 +519,7 @@ defmodule World.Drawing do
     a =
       Assembly.new(Map.get(raw, "name", "drawing"), built(root, parts),
         root: root["name"],
-        kind: String.to_existing_atom(Map.get(raw, "kind", "item")),
+        kind: Map.fetch!(@atoms, Map.get(raw, "kind", "item")),
         materials: materials,
         sources: Map.get(raw, "sources", []),
         clips: for(c <- Map.get(raw, "clips", []), do: clip(c))
@@ -500,8 +538,8 @@ defmodule World.Drawing do
         ] ++
           if joint,
             do: [
-              kind: String.to_existing_atom(joint["kind"]),
-              role: String.to_existing_atom(joint["role"]),
+              kind: Map.fetch!(@atoms, joint["kind"]),
+              role: Map.fetch!(@atoms, joint["role"]),
               limits: joint["limits"]
             ],
             else: []
@@ -529,6 +567,8 @@ defmodule World.Drawing do
     Port.new(name, List.to_tuple(p["at"]), axis, up)
   end
 
+  defp part(_name, %{"standard" => s}), do: standard_part(s)
+
   defp part(name, p) do
     ports = for {n, port} <- Map.get(p, "ports", %{}), do: new_port(n, port)
     Part.new(name, :part, Enum.map(p["shapes"], &shape/1), ports, sources: Map.get(p, "sources", []))
@@ -540,13 +580,22 @@ defmodule World.Drawing do
     [kind] = for k <- @shapes, Map.has_key?(s, k), do: k
     d = s[kind]
 
-    case kind do
-      "box" -> Shape.box(List.to_tuple(d["from"]), List.to_tuple(d["to"]), material, frame)
-      "cylinder" -> Shape.cylinder(d["radius"], d["length"], material, frame)
-      "sphere" -> Shape.sphere(d["radius"], material, frame)
-      "prism" -> Shape.prism(Enum.map(d["loop"], &List.to_tuple/1), d["length"], material, frame)
-      "lathe" -> Shape.lathe(Enum.map(d["profile"], &List.to_tuple/1), material, frame)
-      "tube" -> Shape.sweep(Enum.map(d["line"], &List.to_tuple/1), d["radius"], material, frame)
+    mesh =
+      case kind do
+        "box" -> Shape.box(List.to_tuple(d["from"]), List.to_tuple(d["to"]), material, frame)
+        "cylinder" -> Shape.cylinder(d["radius"], d["length"], material, frame)
+        "sphere" -> Shape.sphere(d["radius"], material, frame)
+        "prism" -> Shape.prism(Enum.map(d["loop"], &List.to_tuple/1), d["length"], material, frame)
+        "lathe" -> Shape.lathe(Enum.map(d["profile"], &List.to_tuple/1), material, frame)
+        "tube" -> Shape.sweep(Enum.map(d["line"], &List.to_tuple/1), d["radius"], material, frame)
+      end
+
+    # The name is one of the list of `World.Mass.materials/0` (the check).
+    matter = if m = s["matter"], do: String.to_atom(m), else: material
+
+    case s["skin"] do
+      nil -> if s["matter"], do: World.Mesh.matter(mesh, matter), else: mesh
+      t -> World.Mesh.skin(mesh, t, matter)
     end
   end
 
