@@ -23,7 +23,7 @@ defmodule World.Catalog do
         {"seat_van", fn -> World.Furniture.Seats.seat("seat_van", @van_seat ++ [track: 0.2, recline: [0, 40]]) end},
         {"bench_van_3",
          fn -> World.Furniture.Seats.bench("bench_van_3", 3, @van_seat ++ [place_width: 0.43, height: 0.45]) end}
-      ] ++ items() ++ animals(),
+      ] ++ items() ++ animals() ++ for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
       &elem(&1, 0)
     )
   end
@@ -46,7 +46,6 @@ defmodule World.Catalog do
       {"traveler", &World.People.traveler/0},
       {"man", &World.People.man/0},
       {"woman", &World.People.woman/0},
-      {"banh_mi_cart", fn -> World.Drawing.file("banh_mi_cart") end},
       {"honda_vision_110_rider", &World.People.rider/0},
       {"fridge_lg_lrfxs2503s", &World.Appliances.fridge/0},
       {"washer_lg_wm4000hwa", &World.Appliances.washer/0},

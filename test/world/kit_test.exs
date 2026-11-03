@@ -4,10 +4,25 @@ defmodule World.KitTest do
   alias World.{Detail, GLB}
   alias World.People.{Human, Kit}
 
-  doctest World.People.Human, only: [kit_targets: 1]
+  doctest World.People.Human, only: [kit_targets: 1, shapes: 0, shape_targets: 0]
   doctest World.People, only: [place: 2]
   doctest World.People.Kit
-  doctest World.People.Data, only: [body_points: 0]
+  doctest World.People.Data, only: [body_points: 0, sliders: 0, known?: 2]
+
+  test "a name of an asset in the code that no asset has stops the compile" do
+    good = "require World.People.Data; World.People.Data.names!(\"clothes\", [\"shoes01\"])"
+    assert {["shoes01"], _} = Code.eval_string(good)
+
+    assert {"short02", _} =
+             Code.eval_string("require World.People.Data; World.People.Data.name!(\"hair\", \"short02\")")
+
+    assert {%{name: "teeth_base"}, _} =
+             Code.eval_string("require World.People.Data; World.People.Data.asset!(\"teeth\", \"teeth_base\")")
+
+    assert_raise CompileError, ~r{no asset hair/mohawk}, fn ->
+      Code.eval_string("require World.People.Data; World.People.Data.name!(\"hair\", \"mohawk\")")
+    end
+  end
 
   test "the targets of a kit: each group has the same moves, and no group is empty" do
     for g <- [0, 1] do
@@ -169,6 +184,12 @@ defmodule World.KitTest do
     assert m["credits"]["punkduck_winter_boots"] == %{"author" => "punkduck", "license" => "CC-BY"}
     assert m["credits"]["toigo_fisherman_sweater"]["license"] == "CC0"
     refute Map.has_key?(m["credits"], "shoes01")
+
+    assert m["shapes"]["waist"] == %{
+             "decr" => ["torso/measure-waist-circ-decr"],
+             "incr" => ["torso/measure-waist-circ-incr"]
+           }
+
     assert m["credits"] |> Map.keys() |> Enum.all?(&(&1 in m["clothes"]))
     assert m["vehicles"]["car"] == "vehicles/car.glb"
     assert m["vehicles"]["camper"]["transit_148"] == "vehicles/camper-transit_148.glb"

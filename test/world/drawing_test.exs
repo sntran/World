@@ -124,19 +124,18 @@ defmodule World.DrawingTest do
     assert "non_la" in Enum.map(Build.parts(cart), & &1["name"])
     {{_, _, ground}, _} = Scene.bounds(scene)
     assert_in_delta ground, 0.0, 0.01
-    assert_raise File.Error, fn -> Drawing.file("nothing") end
+    assert_raise ArgumentError, ~r/no drawing "nothing"/, fn -> Drawing.file("nothing") end
   end
 
-  test "a drawing in the catalog with errors does not build" do
-    dir = Path.join([:code.priv_dir(:world), "drawings"])
-    path = Path.join(dir, "broken_test.json")
-    File.write!(path, ~s({"nodes": []}))
+  test "each drawing of the catalog checks, and a drawing with errors does not" do
+    assert Drawing.check_all!() == Drawing.names()
+    assert "banh_mi_cart" in Drawing.names()
 
-    try do
-      assert_raise ArgumentError, ~r/the drawing broken_test has errors/, fn -> Drawing.file("broken_test") end
-    after
-      File.rm!(path)
+    assert_raise ArgumentError, ~r/the drawing broken_test has errors/, fn ->
+      Drawing.check_all!(%{"broken_test" => %{"nodes" => []}})
     end
+
+    refute Drawing.__mix_recompile__?()
   end
 
   test "the errors of a drawing, each with its path" do

@@ -69,13 +69,60 @@ defmodule World.People.Data do
   @doc "The units of the expressions of the mouth (`expressions.bin.gz`), as `targets/0`."
   def expressions, do: cached(:expressions, fn -> parse_targets(read_gz("expressions.bin.gz")) end)
 
+  # The list of the assets, read when the module compiles: the macros
+  # `asset!/2` and `names!/2` check the names in the code with it.
+  @assets_file Path.expand("../../../priv/makehuman/assets.json", __DIR__)
+  @external_resource @assets_file
+  @assets @assets_file |> File.read!() |> JSON.decode!()
+
   @doc "The list of the assets (`assets.json`), and the jackets of World (`World.Clothes`)."
-  def assets do
-    cached(:assets, fn ->
-      File.read!(Path.join(dir(), "assets.json"))
-      |> JSON.decode!()
-      |> Map.update!("clothes", &Map.merge(&1, World.Clothes.entries()))
-    end)
+  def assets, do: cached(:assets, fn -> Map.update!(@assets, "clothes", &Map.merge(&1, World.Clothes.entries())) end)
+
+  @doc """
+  True when an asset of the kind has the name: an asset of `assets.json`,
+  or a jacket of World (`World.Clothes`).
+
+      iex> World.People.Data.known?("clothes", "shoes01")
+      true
+      iex> World.People.Data.known?("clothes", "world_rain_shell")
+      true
+      iex> World.People.Data.known?("hair", "mohawk")
+      false
+  """
+  def known?(kind, name),
+    do: Map.has_key?(Map.get(@assets, kind, %{}), name) or (kind == "clothes" and name in World.Clothes.names())
+
+  @doc """
+  `asset/2` for a kind and a name in the code: a name that no asset has
+  stops the compile.
+  """
+  defmacro asset!(kind, name) when is_binary(kind) and is_binary(name) do
+    check!(kind, [name])
+    quote do: World.People.Data.asset(unquote(kind), unquote(name))
+  end
+
+  @doc """
+  A name of an asset of a kind in the code, as it is: a name that no asset
+  has stops the compile.
+  """
+  defmacro name!(kind, name) when is_binary(kind) and is_binary(name) do
+    check!(kind, [name])
+    name
+  end
+
+  @doc """
+  A list of names of assets of a kind in the code, as it is: a name that no
+  asset has stops the compile.
+  """
+  defmacro names!(kind, names) when is_binary(kind) and is_list(names) do
+    check!(kind, names)
+    names
+  end
+
+  defp check!(kind, names) do
+    for name <- names, not known?(kind, name) do
+      raise CompileError, description: "no asset #{kind}/#{name} in assets.json"
+    end
   end
 
   @doc """

@@ -13,15 +13,16 @@ defmodule World.People do
   yoga or aerobics), as on the beach of Vũng Tàu.
   """
   alias World.{Assembly, Frame, GLB, Part}
-  alias World.People.{Human, Props}
+  alias World.People.{Data, Human, Props}
+  require Data
   alias World.Vehicles.{ChevyBolt, FordTransit, HondaVision, RoyalEnfieldHimalayan, TouringBicycle, Van}
 
   @doc "A traveler on foot: a t-shirt, cargo pants and shoes."
   def traveler do
     Human.person("traveler",
       age: 28,
-      clothes: ["elvs_crude_t-shirt_male", "cortu_cargo_pants", "shoes02"],
-      hair: "short04",
+      clothes: Data.names!("clothes", ["elvs_crude_t-shirt_male", "cortu_cargo_pants", "shoes02"]),
+      hair: Data.name!("hair", "short04"),
       pose: "stand",
       animations: ["walk"]
     )
@@ -39,10 +40,10 @@ defmodule World.People do
       age: 30,
       height: 0.55,
       weight: 0.4,
-      skin: "young_asian_female",
-      eyebrows: "eyebrow010",
-      hair: "ponytail01",
-      clothes: ["female_casualsuit01", "shoes02"],
+      skin: Data.name!("skins", "young_asian_female"),
+      eyebrows: Data.name!("eyebrows", "eyebrow010"),
+      hair: Data.name!("hair", "ponytail01"),
+      clothes: Data.names!("clothes", ["female_casualsuit01", "shoes02"]),
       pose: "stand"
     )
   end
@@ -56,7 +57,7 @@ defmodule World.People do
     rider =
       Human.person("rider",
         age: 30,
-        clothes: ["elvs_crude_t-shirt_male", "cortu_cargo_pants", "shoes01"],
+        clothes: Data.names!("clothes", ["elvs_crude_t-shirt_male", "cortu_cargo_pants", "shoes01"]),
         pose: "ride"
       )
 
@@ -330,7 +331,7 @@ defmodule World.People do
        height: 0.3 + h * 0.35,
        weight: 0.35 + w * 0.35,
        skin: "#{group}_asian_#{if woman?, do: "female", else: "male"}",
-       eyebrows: if(woman?, do: "eyebrow010", else: "eyebrow001"),
+       eyebrows: if(woman?, do: Data.name!("eyebrows", "eyebrow010"), else: Data.name!("eyebrows", "eyebrow001")),
        hair: hair,
        hair_color: if(age >= 55 and gray < 0.5, do: [180, 178, 172]),
        clothes: outfit ++ [shoes],

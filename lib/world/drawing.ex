@@ -36,6 +36,19 @@ defmodule World.Drawing do
   @size 50.0
   @depth 3
 
+  # The drawings of the catalog (`priv/drawings/NAME.json`), read when the
+  # module compiles (a new file compiles the module again). Their check
+  # needs the catalog (a drawing holds other models), so a test checks
+  # each one (`check_all!/1`).
+  @root Path.expand("../../priv/drawings", __DIR__)
+  @files Path.wildcard(Path.join(@root, "*.json"))
+  for f <- @files, do: @external_resource(f)
+  @drawings Map.new(@files, fn f -> {Path.basename(f, ".json"), f |> File.read!() |> JSON.decode!()} end)
+  @hash :erlang.md5(Enum.join(@files))
+
+  @doc false
+  def __mix_recompile__?, do: :erlang.md5(Enum.join(Path.wildcard(Path.join(@root, "*.json")))) != @hash
+
   @doc """
   Check a drawing. Gives `{:ok, drawing}` (the same data), or `{:error,
   errors}`: each error is `{path, message}`, with the path from `path`.
@@ -429,14 +442,28 @@ defmodule World.Drawing do
 
   @doc """
   The assembly of a drawing of the catalog: the file
-  `priv/drawings/NAME.json`. A drawing that does not check raises.
+  `priv/drawings/NAME.json`. A name with no drawing raises.
   """
   def file(name) do
-    raw = Path.join([:code.priv_dir(:world), "drawings", name <> ".json"]) |> File.read!() |> JSON.decode!()
+    raw = Map.get(@drawings, name) || raise ArgumentError, "no drawing #{inspect(name)}"
+    {:ok, raw} = check(raw, name)
+    build(raw)
+  end
 
-    case check(raw, name) do
-      {:ok, raw} -> build(raw)
-      {:error, errors} -> raise ArgumentError, "the drawing #{name} has errors: #{inspect(errors)}"
+  @doc "The names of the drawings of the catalog, in order."
+  def names, do: @drawings |> Map.keys() |> Enum.sort()
+
+  @doc """
+  The names of the drawings (of `drawings`, by default the drawings of the
+  catalog), after a check of each one: a drawing with errors raises an
+  `ArgumentError` with its errors.
+  """
+  def check_all!(drawings \\ @drawings) do
+    for {name, raw} <- Enum.sort(drawings) do
+      case check(raw, name) do
+        {:ok, _} -> name
+        {:error, errors} -> raise ArgumentError, "the drawing #{name} has errors: #{inspect(errors)}"
+      end
     end
   end
 

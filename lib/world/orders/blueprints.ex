@@ -16,6 +16,7 @@ defmodule World.Orders.Blueprints do
   alias World.Materials.{Construction, Stock}
   alias World.Orders.Blueprint
   alias World.People.{Data, Human, Pose, Props}
+  require Data
   alias World.Vehicles.Van
   import Blueprint, only: [option: 3]
 
@@ -324,13 +325,13 @@ defmodule World.Orders.Blueprints do
           fields: [share.("african", 0.0), share.("asian", 1.0), share.("caucasian", 0.0)],
           doc: "The weight of each origin of the shape of the body."
         ),
-        option("skin", :choice, default: "young_asian_male", values: names.("skins")),
-        option("eyes", :choice, default: "darkbrown", values: names.("eye_materials")),
-        option("eyebrows", :choice, default: "eyebrow001", values: names.("eyebrows")),
-        option("hair", :choice, default: "short02", values: ["none" | names.("hair")]),
+        option("skin", :choice, default: Data.name!("skins", "young_asian_male"), values: names.("skins")),
+        option("eyes", :choice, default: Data.name!("eye_materials", "darkbrown"), values: names.("eye_materials")),
+        option("eyebrows", :choice, default: Data.name!("eyebrows", "eyebrow001"), values: names.("eyebrows")),
+        option("hair", :choice, default: Data.name!("hair", "short02"), values: ["none" | names.("hair")]),
         option("hair_color", :color, default: nil, doc: "The color of the hair. None: the color of its texture."),
         option("clothes", :list,
-          default: ["male_casualsuit01", "shoes01"],
+          default: Data.names!("clothes", ["male_casualsuit01", "shoes01"]),
           item: option("item", :choice, values: names.("clothes")),
           max: 6
         ),

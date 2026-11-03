@@ -14,6 +14,7 @@ defmodule World.People.Human do
   """
   alias World.{Detail, Figure, Frame, Part, Port, Scene, Vec}
   alias World.People.{Data, Face, Joints, Pose, Skeleton, Skin}
+  require Data
 
   @blink ~w(eyeBlinkLeft eyeBlinkRight)
 
@@ -36,11 +37,11 @@ defmodule World.People.Human do
     neck: 0.5,
     shape: %{},
     race: %{"asian" => 1.0},
-    skin: "young_asian_male",
-    eyes: "darkbrown",
-    eyebrows: "eyebrow001",
-    hair: "short02",
-    clothes: ["male_casualsuit01", "shoes01"],
+    skin: Data.name!("skins", "young_asian_male"),
+    eyes: Data.name!("eye_materials", "darkbrown"),
+    eyebrows: Data.name!("eyebrows", "eyebrow001"),
+    hair: Data.name!("hair", "short02"),
+    clothes: Data.names!("clothes", ["male_casualsuit01", "shoes01"]),
     hair_color: nil,
     clothes_colors: [],
     head: 1.0,
@@ -222,6 +223,24 @@ defmodule World.People.Human do
   def shapes do
     [bust: "The cup of the breasts of a woman", firmness: "The firmness of the breasts of a woman"] ++
       for {name, {doc, _}} <- @shape, do: {name, doc}
+  end
+
+  @doc """
+  The targets of each short name of the shape (not the bust and the
+  firmness): under 0.5 the targets `decr` at the weight `1 - 2 * v`, over
+  0.5 the targets `incr` at the weight `2 * v - 1`. `kit.json` has them,
+  so a viewer of the kit needs no copy of the table.
+
+      iex> World.People.Human.shape_targets()["arms"]
+      %{"decr" => ["arms/measure-upperarm-circ-decr", "arms/l-lowerarm-fat-decr", "arms/r-lowerarm-fat-decr"], "incr" => ["arms/measure-upperarm-circ-incr", "arms/l-lowerarm-fat-incr", "arms/r-lowerarm-fat-incr"]}
+  """
+  def shape_targets do
+    sliders = Data.sliders()
+
+    Map.new(@shape, fn {name, {_, names}} ->
+      {Atom.to_string(name),
+       %{"decr" => Enum.flat_map(names, &sliders[&1].decr), "incr" => Enum.flat_map(names, &sliders[&1].incr)}}
+    end)
   end
 
   @doc """
@@ -451,14 +470,14 @@ defmodule World.People.Human do
 
     mouth =
       if o.speech or o.expressions,
-        do: [{:teeth, Data.asset("teeth", "teeth_base")}, {:tongue, Data.asset("tongue", "tongue01")}],
+        do: [{:teeth, Data.asset!("teeth", "teeth_base")}, {:tongue, Data.asset!("tongue", "tongue01")}],
         else: []
 
     assets =
       [
-        {:eyes, Data.asset("eyes", "high-poly"), Data.asset("eye_materials", o.eyes)},
+        {:eyes, Data.asset!("eyes", "high-poly"), Data.asset("eye_materials", o.eyes)},
         {:eyebrows, Data.asset("eyebrows", o.eyebrows), nil},
-        {:eyelashes, Data.asset("eyelashes", "eyelashes01"), nil}
+        {:eyelashes, Data.asset!("eyelashes", "eyelashes01"), nil}
       ] ++
         if(o.hair, do: [{:hair, Data.asset("hair", o.hair), nil}], else: []) ++
         for(c <- clothes, do: {String.to_atom("clothes_" <> c.name), c, nil})
@@ -535,7 +554,10 @@ defmodule World.People.Human do
 
     prims =
       prims ++
-        [fitted(:eyes, Data.asset("eyes", "low-poly"), points, weights, o.ground), holes(p, pts, wts, shapes, o.ground)] ++
+        [
+          fitted(:eyes, Data.asset!("eyes", "low-poly"), points, weights, o.ground),
+          holes(p, pts, wts, shapes, o.ground)
+        ] ++
         eyebrows
 
     hair =
@@ -1350,8 +1372,8 @@ defmodule World.People.Human do
     uv = fn i -> if i, do: elem(p.mesh.uvs, i), else: {0.0, 0.0} end
     skin = mesh(:skin, faces, &elem(pts, &1), uv, &elem(wts, &1), 0.0, shapes)
 
-    {eyes_pts, eyes_wts} = fit_points(Data.asset("eyes", "low-poly"), k.points, k.weights)
-    eyes = Data.asset("eyes", "low-poly")
+    {eyes_pts, eyes_wts} = fit_points(Data.asset!("eyes", "low-poly"), k.points, k.weights)
+    eyes = Data.asset!("eyes", "low-poly")
     eyes_faces = eyes.mesh.groups |> Map.values() |> Enum.concat() |> Enum.reject(&cornea?(eyes, &1))
     eyes_uv = fn i -> if i, do: elem(eyes.mesh.uvs, i), else: {0.0, 0.0} end
 

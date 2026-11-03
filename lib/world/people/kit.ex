@@ -83,7 +83,8 @@ defmodule World.People.Kit do
 
   @doc """
   The data of `kit.json`: the files of the bodies and of the hair, the
-  textures of the skins and the eyes, the clothes, and the place of a
+  textures of the skins and the eyes, the clothes, the targets of the
+  short names of the shape (`World.People.Human.shape_targets/0`), and the place of a
   parked person (`translation` in the axes of glTF, and `rotation`, a
   quaternion) next to each vehicle and each van of the camper.
   """
@@ -102,6 +103,7 @@ defmodule World.People.Kit do
       "eyes" => Map.new(textures("eye_materials"), fn {name, path} -> {name, "eyes/#{name}#{Path.extname(path)}"} end),
       "clothes" => Data.assets()["clothes"] |> Map.keys() |> Enum.sort(),
       "credits" => credits(),
+      "shapes" => World.People.Human.shape_targets(),
       "rotation" => @turn,
       "places" => Map.new(People.vehicles() -- ["camper"], &{&1, place(&1, nil)}),
       "vans" => Map.new(vans, &{&1, place("camper", &1)}),
