@@ -16,12 +16,65 @@ defmodule World.Materials.Stock do
   @lumber World.Standards.tuples({"stock", "lumber"})
   @bearings World.Standards.tuples({"stock", "bearing"})
   @pipe World.Standards.tuples({"stock", "pipe"})
+  # The sawn timber of Việt Nam (TCVN 1075:1971): its thicknesses and its
+  # widths, in mm.
+  @vn World.Standards.table("stock", "vn_lumber")["sizes"]
 
   @doc "The sizes of a table, in meters, for the tests."
   def table(:lumber, nominal), do: @lumber |> Map.fetch!(nominal) |> then(fn {t, w} -> {t * 0.0254, w * 0.0254} end)
 
   def table(:bearing, code),
     do: @bearings |> Map.fetch!(code) |> then(fn {d, o, b} -> {d / 1000, o / 1000, b / 1000} end)
+
+  @doc """
+  A size of the sawn timber of Việt Nam (TCVN 1075:1971): the least
+  thickness or width of the standard that is not less than `size` (m),
+  in m. A width over 320 mm takes a width of 360 to 600 mm, which the
+  standard gives by agreement of the mill and the buyer. The rules of a
+  wooden boat round each size up to it (QCVN 91, II.II-B 2.3).
+
+      iex> World.Materials.Stock.vn(:thickness, 0.055)
+      0.06
+      iex> World.Materials.Stock.vn(:width, 0.21)
+      0.22
+      iex> World.Materials.Stock.vn(:width, 0.33)
+      0.36
+  """
+  def vn(kind, size) when kind in [:thickness, :width] do
+    mm = Float.round(size * 1000, 3)
+
+    sizes = if kind == :width, do: @vn["width"] ++ @vn["width_by_agreement"], else: @vn["thickness"]
+
+    case Enum.find(sizes, &(&1 >= mm)) do
+      nil -> raise ArgumentError, "no #{kind} of TCVN 1075 is #{mm} mm or more"
+      v -> v / 1000
+    end
+  end
+
+  @doc """
+  A section of the sawn timber of Việt Nam (TCVN 1075:1971, Bảng 1): the
+  smallest pair of a thickness and one of its widths that is not less than
+  `{thickness, width}` (m), as `{thickness, width}` in m. With no pair (a
+  width over 320 mm), the next thickness and a width by agreement.
+
+      iex> World.Materials.Stock.vn_section(0.22, 0.308)
+      {0.25, 0.32}
+      iex> World.Materials.Stock.vn_section(0.092, 0.22)
+      {0.14, 0.22}
+      iex> World.Materials.Stock.vn_section(0.3, 0.4)
+      {0.32, 0.4}
+  """
+  def vn_section(t, w) do
+    {tm, wm} = {Float.round(t * 1000, 3), Float.round(w * 1000, 3)}
+
+    pairs =
+      for {th, widths} <- @vn["pairs"], th = String.to_integer(th), th >= tm, wd <- widths, wd >= wm, do: {th, wd}
+
+    case Enum.min_by(pairs, fn {a, b} -> {a * b, a} end, fn -> nil end) do
+      nil -> {vn(:thickness, t), vn(:width, w)}
+      {a, b} -> {a / 1000, b / 1000}
+    end
+  end
 
   @doc "The names in a table."
   def names(:lumber), do: Map.keys(@lumber) |> Enum.sort()

@@ -91,6 +91,10 @@
       "eps": [
         14.4,
         "ASTM C578, Type I expanded polystyrene: 0.90 lb/ft3 (14.4 kg/m3) at the least. The core of an insulated door."
+      ],
+      "sao": [
+        775,
+        "PROSEA (Plant Resources of South-East Asia), Hopea odorata (sao đen): 620-930 kg/m3 at 15% moisture (the middle). A wood of boats (https://prosea.prota4u.org/view.aspx?id=3545)."
       ]
     }
   }

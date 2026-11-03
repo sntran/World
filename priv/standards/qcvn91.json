@@ -1,0 +1,762 @@
+{
+  "note": "The wooden hull of a fishing boat in QCVN 91:2025/BNNMT, Chương II.II-B. Each size is the least size of the rules; a sawn size rounds up to the next size of TCVN 1075:1971 (2.3). The wood groups (I to VI) are those of TCVN 12619:2019: groups I to III for the frames, the keel and the stems; II or III for the planks under the water. Each list of bands has the low edge of each band (L, l = D + B/2, or B in m; the power in kW); a value under the first edge takes the first band.",
+  "keel": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), Bảng 2/2-B: the short side of the section of the keel (sống dưới đáy), by the band of L.",
+    "unit": "cm",
+    "fields": [
+      "short side"
+    ],
+    "bands": [
+      21,
+      23,
+      25,
+      27,
+      29,
+      31
+    ],
+    "sizes": {
+      "I": [
+        18.5,
+        20,
+        21,
+        22.5,
+        24,
+        25.5
+      ],
+      "II": [
+        20.5,
+        22,
+        23,
+        24.5,
+        26,
+        27.5
+      ],
+      "III": [
+        22,
+        23.5,
+        24.5,
+        26.5,
+        28,
+        29.5
+      ]
+    }
+  },
+  "keelson": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), Bảng 2/2-B: the short side of the section of the keelson (sống trên đáy).",
+    "unit": "cm",
+    "fields": [
+      "short side"
+    ],
+    "bands": [
+      21,
+      23,
+      25,
+      27,
+      29,
+      31
+    ],
+    "sizes": {
+      "I": [
+        22,
+        24,
+        25,
+        26,
+        27,
+        29
+      ],
+      "II": [
+        24,
+        26,
+        27.5,
+        29,
+        31.5,
+        33
+      ],
+      "III": [
+        26,
+        28,
+        29.5,
+        31.5,
+        33.5,
+        35
+      ]
+    }
+  },
+  "bilge_stringer": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 4 and Bảng 5/2-B: the thickness of a bilge stringer (thanh dọc hông); 3 or more on each side, each 20 cm wide or more.",
+    "unit": "cm",
+    "fields": [
+      "thickness"
+    ],
+    "bands": [
+      21,
+      23,
+      25,
+      27,
+      29,
+      31
+    ],
+    "sizes": {
+      "I": [
+        5.5,
+        6,
+        6.5,
+        7,
+        7.5,
+        8
+      ],
+      "II": [
+        6.5,
+        7,
+        7.5,
+        8,
+        8.5,
+        9
+      ],
+      "III": [
+        7.5,
+        8,
+        8.5,
+        9,
+        9.5,
+        10
+      ]
+    }
+  },
+  "side_stringer": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 5 and Bảng 6/2-B: the area of the section of a side stringer (thanh dọc mạn), for D of 2.5 m or more.",
+    "unit": "cm2",
+    "fields": [
+      "area"
+    ],
+    "bands": [
+      21,
+      23,
+      25,
+      27,
+      29,
+      31
+    ],
+    "sizes": {
+      "I": [
+        130,
+        140,
+        150,
+        165,
+        180,
+        190
+      ],
+      "II": [
+        150,
+        160,
+        190,
+        190,
+        210,
+        230
+      ],
+      "III": [
+        170,
+        180,
+        195,
+        215,
+        240,
+        255
+      ]
+    }
+  },
+  "clamp": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 6 and Bảng 7/2-B: the beam clamp (thanh đỡ đầu xà ngang boong trên), width by thickness; 10% to 20% more area for D of 2.5 m or more.",
+    "unit": "cm",
+    "fields": [
+      "width",
+      "thickness"
+    ],
+    "bands": [
+      21,
+      23,
+      25,
+      27,
+      28,
+      29,
+      31
+    ],
+    "sizes": {
+      "I": [
+        [
+          22,
+          7
+        ],
+        [
+          22,
+          7.5
+        ],
+        [
+          22,
+          7.5
+        ],
+        [
+          22,
+          7.5
+        ],
+        [
+          24,
+          7
+        ],
+        [
+          25,
+          7.5
+        ],
+        [
+          26,
+          8
+        ]
+      ],
+      "II": [
+        [
+          22,
+          7.5
+        ],
+        [
+          22,
+          8
+        ],
+        [
+          22,
+          8
+        ],
+        [
+          22,
+          8
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          25,
+          8.5
+        ],
+        [
+          26,
+          9
+        ]
+      ],
+      "III": [
+        [
+          22,
+          8
+        ],
+        [
+          22,
+          8.5
+        ],
+        [
+          22,
+          8.5
+        ],
+        [
+          22,
+          8.5
+        ],
+        [
+          24,
+          9
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          26,
+          11
+        ]
+      ]
+    }
+  },
+  "shelf": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 7 and Bảng 7/2-B: the beam shelf over the ends of the beams (thanh đè đầu xà ngang boong trên), width by thickness.",
+    "unit": "cm",
+    "fields": [
+      "width",
+      "thickness"
+    ],
+    "bands": [
+      21,
+      23,
+      25,
+      27,
+      28,
+      29,
+      31
+    ],
+    "sizes": {
+      "I": [
+        [
+          24,
+          7
+        ],
+        [
+          24,
+          7.5
+        ],
+        [
+          24,
+          7.5
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          27,
+          8.5
+        ],
+        [
+          27,
+          9
+        ],
+        [
+          27,
+          9.5
+        ]
+      ],
+      "II": [
+        [
+          24,
+          8.5
+        ],
+        [
+          24,
+          8.5
+        ],
+        [
+          24,
+          8.5
+        ],
+        [
+          24,
+          9
+        ],
+        [
+          27,
+          9.5
+        ],
+        [
+          27,
+          10
+        ],
+        [
+          27,
+          10.5
+        ]
+      ],
+      "III": [
+        [
+          24,
+          9
+        ],
+        [
+          24,
+          9.5
+        ],
+        [
+          24,
+          9.5
+        ],
+        [
+          24,
+          10
+        ],
+        [
+          27,
+          10.5
+        ],
+        [
+          27,
+          11.5
+        ],
+        [
+          27,
+          12
+        ]
+      ]
+    }
+  },
+  "stem": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 8 and Bảng 8/2-B: the short side of the stem, the sternpost and the rudder stock (sống mũi, sống đuôi, trục bánh lái); at the top 75% of the area at the foot or more.",
+    "unit": "cm",
+    "fields": [
+      "short side"
+    ],
+    "bands": [
+      21,
+      23,
+      25,
+      27,
+      29,
+      31
+    ],
+    "sizes": {
+      "I": [
+        19.5,
+        21,
+        22,
+        22,
+        23.5,
+        24
+      ],
+      "II": [
+        21.5,
+        23,
+        24,
+        25.5,
+        27,
+        28.5
+      ],
+      "III": [
+        23,
+        24.5,
+        25.5,
+        27.5,
+        29,
+        30.5
+      ]
+    }
+  },
+  "frame": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 9 and Bảng 9/2-B: the short side of a single frame (sườn đơn) at the deck, the bilge and the bottom, by the band of l = D + B/2 (m); the frame spacing is L + 20 cm or less (L in m).",
+    "unit": "cm",
+    "fields": [
+      "deck",
+      "bilge",
+      "bottom"
+    ],
+    "bands": [
+      0,
+      3.5,
+      4,
+      4.5,
+      5,
+      5.5,
+      6,
+      6.5,
+      7,
+      7.5
+    ],
+    "sizes": {
+      "I": [
+        [
+          5,
+          5.5,
+          6.5
+        ],
+        [
+          5.5,
+          6.5,
+          7
+        ],
+        [
+          6,
+          7.5,
+          8.5
+        ],
+        [
+          7,
+          8.5,
+          9
+        ],
+        [
+          8,
+          9.5,
+          10.5
+        ],
+        [
+          8.5,
+          10.5,
+          12
+        ],
+        [
+          9.5,
+          12,
+          13.5
+        ],
+        [
+          10.5,
+          13,
+          15
+        ],
+        [
+          11,
+          14.5,
+          15.5
+        ],
+        [
+          12,
+          14,
+          16
+        ]
+      ],
+      "II": [
+        [
+          5.5,
+          6.5,
+          7
+        ],
+        [
+          6,
+          7,
+          8
+        ],
+        [
+          7,
+          8,
+          9
+        ],
+        [
+          8,
+          9,
+          10
+        ],
+        [
+          8.5,
+          10.5,
+          11.5
+        ],
+        [
+          9,
+          11.5,
+          13
+        ],
+        [
+          10,
+          13,
+          14.5
+        ],
+        [
+          11,
+          14,
+          16
+        ],
+        [
+          12,
+          16,
+          17.5
+        ],
+        [
+          13,
+          17,
+          19
+        ]
+      ],
+      "III": [
+        [
+          6,
+          7,
+          8
+        ],
+        [
+          6.5,
+          8,
+          8.5
+        ],
+        [
+          7,
+          9,
+          10
+        ],
+        [
+          8.5,
+          10,
+          11
+        ],
+        [
+          9,
+          11,
+          12
+        ],
+        [
+          10,
+          12,
+          14
+        ],
+        [
+          11,
+          14,
+          15.5
+        ],
+        [
+          12,
+          15.5,
+          17
+        ],
+        [
+          13,
+          17,
+          18.5
+        ],
+        [
+          14,
+          18,
+          20
+        ]
+      ]
+    }
+  },
+  "beam": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 10 and Bảng 10/2-B: the short side of a deck beam (xà ngang boong), by the band of B (m); a beam on each second frame or nearer; at the sides 9/10 of its height.",
+    "unit": "cm",
+    "fields": [
+      "short side"
+    ],
+    "bands": [
+      0,
+      4,
+      4.5,
+      5,
+      5.5,
+      6,
+      6.5,
+      7,
+      7.5,
+      8,
+      8.5
+    ],
+    "sizes": {
+      "I": [
+        8.5,
+        9.5,
+        10,
+        11.5,
+        12,
+        12.5,
+        14,
+        14.5,
+        15.5,
+        17,
+        18.5
+      ],
+      "II": [
+        9.5,
+        10,
+        11.5,
+        12.5,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18.5,
+        20
+      ],
+      "III": [
+        10,
+        11,
+        12.5,
+        13,
+        14,
+        14.5,
+        16,
+        17,
+        18,
+        19.5,
+        21
+      ]
+    }
+  },
+  "planking": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 12, 13 and Bảng 14/2-B, the first band of L (21 m to 23 m; to 24 m for the garboard and the sheer strake): the planks of the hull and of the deck, by wood group (II to IV). A plank of the hull is 45 mm or more, a plank of the deck 40 mm or more and 250 mm wide or less.",
+    "unit": "cm",
+    "fields": [
+      "thickness, or width by thickness"
+    ],
+    "band": [
+      21,
+      23
+    ],
+    "sizes": {
+      "outer": {
+        "II": 4.5,
+        "III": 5,
+        "IV": 6
+      },
+      "inner": {
+        "II": 3.5,
+        "III": 3.5,
+        "IV": 3.5
+      },
+      "bilge_strake": {
+        "II": 5,
+        "III": 6,
+        "IV": 7
+      },
+      "wale": {
+        "II": 5,
+        "III": 6,
+        "IV": 7
+      },
+      "deck": {
+        "II": 5,
+        "III": 5.5,
+        "IV": 7
+      },
+      "garboard": {
+        "II": [
+          21,
+          6
+        ],
+        "III": [
+          21,
+          7
+        ],
+        "IV": [
+          21,
+          8.5
+        ]
+      },
+      "sheer_strake": {
+        "II": [
+          33,
+          6
+        ],
+        "III": [
+          33,
+          7
+        ],
+        "IV": [
+          33,
+          8
+        ]
+      }
+    }
+  },
+  "engine_bed": {
+    "source": "QCVN 91:2025/BNNMT, Quy chuẩn kỹ thuật quốc gia về phân cấp và đóng tàu cá có chiều dài lớn nhất từ 24 m trở lên (Thông tư 57/2025/TT-BNNMT, https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/9/57-bnnmt-kem.pdf), Chương II.II-B (the wooden hull), 3.6 and Bảng 4/2-B: the short side of an engine bed girder and its cross ties, by the power of the main engine (kW).",
+    "unit": "cm",
+    "fields": [
+      "short side"
+    ],
+    "bands": [
+      0,
+      75,
+      150,
+      225
+    ],
+    "sizes": {
+      "girder": [
+        30,
+        33,
+        36,
+        39
+      ],
+      "tie": [
+        30,
+        33,
+        36,
+        39
+      ],
+      "least_ties": [
+        3
+      ]
+    }
+  }
+}

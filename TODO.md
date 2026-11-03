@@ -37,6 +37,15 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **The ghe of Vũng Tàu, more real.** The lines from a drawing or
+  photos (now by eye); the engine and its bed (QCVN 91, Bảng 4/2-B), the
+  shaft and the propeller, the fish holds and their hatches (Bảng 10/2-B
+  and 11/2-B), the mast, the eyes on the bow, and the paint of the boats
+  of Vũng Tàu. Its stability: the center of buoyancy and the metacenter
+  at its draft, in place of the stand check of a thing on the ground.
+  The strakes of the hull (the garboard, the bilge strake, the wale and
+  the sheer strake of Bảng 14/2-B) as boards of their own sizes.
+
 - **The mass of the tires and the van.** A tire is a solid ring now: it
   must be a skin of rubber and cord (about 10 mm on a car). The van has
   29 parts with no mass: its body, hood and doors are panels of steel

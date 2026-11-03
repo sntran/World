@@ -23,6 +23,7 @@ defmodule World.Places do
     :seats,
     :openings,
     :turned,
+    :boats,
     :vehicles,
     :appliances,
     :clothes,
@@ -41,12 +42,21 @@ defmodule World.Places do
   def families, do: @families
 
   # The family of an assembly by its kind: the factory that makes it.
-  @family_of_kind %{wheel: :wheels, seat: :seats, door: :openings, window: :openings, house: :houses, turned: :turned}
+  @family_of_kind %{
+    wheel: :wheels,
+    seat: :seats,
+    door: :openings,
+    window: :openings,
+    house: :houses,
+    turned: :turned,
+    boat: :boats
+  }
 
   @doc """
   The family of an item: the factory that makes it (`:wheels` for a
   wheel, `:seats` for a seat or a bench, `:openings` for a door or a
-  window, `:turned` for a part of the lathe (`World.Lathe`), `:houses` for a house or a
+  window, `:turned` for a part of the lathe (`World.Lathe`), `:boats` for a boat
+  (`World.Boats`), `:houses` for a house or a
   building of the world), or `nil` for an item that the factory of its
   parent makes.
   """
