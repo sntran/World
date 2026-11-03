@@ -19,7 +19,7 @@ defmodule World.Buildings do
   The axes of a wall: along x from 0 to its length, its outside face at
   y = 0 and its inside face at y = its thickness, z up. An opening is
   `{kind, x, width, z, height}` in the axes of its wall (the rough
-  opening), with the kind `:door`, `:window` or `:hole`.
+  opening), with the kind `:door`, `:overhead`, `:window` or `:hole`.
   """
   alias World.{Assembly, Frame, Kit, Part, Shape, Vec}
   alias World.Materials.{Construction, Stock}
@@ -90,21 +90,30 @@ defmodule World.Buildings do
 
     gable_courses = round(rise / ph)
 
-    units =
+    # The free parts of each course: the whole span, less the openings.
+    segments =
       for k <- 0..(courses + gable_courses - 1),
           z = k * ph,
           # The span of the course: the whole wall, or a part of the gable.
           {s0, s1} = span(length, z + ph, z_top, rise),
           s1 - s0 > 0.04,
           {a, b} <- free(s0, s1, Enum.map(cuts(holes, z, z + ph), fn {c0, c1} -> {c0 - u.joint, c1 + u.joint} end)),
+          do: {k, z, a, b}
+
+    # Each unit: its start, its place across the wall, its course, its
+    # length, and the end of its segment.
+    placed =
+      for {k, z, a, b} <- segments,
           n <- floor((a + rem(k, 2) * pl / 2) / pl)..ceil((b + rem(k, 2) * pl / 2) / pl)//1,
           x0 = n * pl - rem(k, 2) * pl / 2,
           p0 = max(x0, a),
           p1 = min(x0 + u.l, b),
           p1 - p0 > 0.03,
           i <- 0..(wythes - 1) do
-        {p0, i * (u.w + u.joint), z, p1 - p0}
+        {p0, i * (u.w + u.joint), z, p1 - p0, b}
       end
+
+    units = for {x, y, z, l, _} <- placed, do: {x, y, z, l}
 
     # One part for each length of unit: the whole unit and its cuts.
     parts =
@@ -125,11 +134,20 @@ defmodule World.Buildings do
          at("lintel_#{i + 1}", {x0, 0.0, z0}, {1, 0, 0}, {0, 0, 1})}
       end
 
-    # The mortar behind the faces of the units, and the solid wall of the
-    # low levels.
+    # The joints of mortar, 6 mm back from the faces (a tooled joint): a
+    # bed joint on each course, a head joint after each unit, and a
+    # collar joint between two wythes. Then the solid wall of the low
+    # levels.
+    {f0, f1} = {0.006, thick - 0.006}
+
     mortar =
-      solid(length, z_top, holes, {0.006, thick - 0.006}, :mortar) ++
-        gable_prism(length, z_top, rise, {0.006, thick - 0.006}, :mortar)
+      for({_, z, a, b} <- segments, do: Shape.box({a, f0, z + u.h}, {b, f1, z + ph}, :mortar)) ++
+        for(
+          {x, y, z, l, b} <- placed,
+          x + l < b - 1.0e-6,
+          do: Shape.box({x + l, max(y, f0), z}, {min(x + l + u.joint, b), min(y + u.w, f1), z + u.h}, :mortar)
+        ) ++
+        for {_, z, a, b} <- segments, wythes > 1, do: Shape.box({a, u.w, z}, {b, u.w + u.joint, z + u.h}, :mortar)
 
     low =
       solid(length, z_top, holes, {0.0, thick}, u.material) ++
@@ -184,7 +202,7 @@ defmodule World.Buildings do
     flat = fn n, x, len, z -> {n, Stock.lumber("2x4", len) |> inside(), at(n, {x, 0.0, z}, {1, 0, 0}, {0, 0, 1})} end
 
     # The bottom plate stops at each door.
-    doors = for {:door, x, ow, _, _} <- openings, do: {x, x + ow}
+    doors = for {kind, x, ow, _, _} <- openings, kind in [:door, :overhead], do: {x, x + ow}
 
     framing =
       for({{a, b}, i} <- Enum.with_index(free(0.0, length, doors), 1), do: flat.("plate_bottom_#{i}", a, b - a, 0.0)) ++
@@ -217,7 +235,7 @@ defmodule World.Buildings do
       root: "origin",
       kind: :wall,
       sources: [
-        "2x4 studs at 16 in (IRC R602.3), a double top plate, a header of two 2x8 over each opening; OSB of 7/16 in; lap siding of 8 in with 6 1/2 in of exposure."
+        "2x4 studs at 16 in (IRC R602.3), a double top plate, a header of two 2x8 over each opening (two 2x12 over an opening wider than 6 ft); OSB of 7/16 in; lap siding of 8 in with 6 1/2 in of exposure."
       ]
     )
     |> Assembly.add_all(framing ++ gable_studs)
@@ -244,7 +262,9 @@ defmodule World.Buildings do
   # The studs of an opening: the king studs, the jack studs, the header,
   # the cripples over it; for a window the sill and the cripples under it.
   defp opening_framing({kind, x, ow, z, oh}, i, t, w, height) do
-    hd = inch(7.25)
+    # Two 2x8 over an opening up to 6 ft, two 2x12 over a wider one.
+    size = if ow > inch(72), do: "2x12", else: "2x8"
+    {_, hd} = Stock.table(:lumber, size)
     top = height - 2 * t
     head_z = z + oh
     v = fn n, xx, len, zz -> {n, Stock.lumber("2x4", len) |> inside(), stud_at(n, xx, zz, w)} end
@@ -254,7 +274,7 @@ defmodule World.Buildings do
 
     header =
       for {y, k} <- [{t, "a"}, {w, "b"}] do
-        {"header_#{i}_#{k}", Stock.lumber("2x8", ow + 2 * t) |> inside(),
+        {"header_#{i}_#{k}", Stock.lumber(size, ow + 2 * t) |> inside(),
          at("header_#{i}_#{k}", {x - t, y, head_z}, {1, 0, 0}, {0, -1, 0})}
       end
 
@@ -471,9 +491,10 @@ defmodule World.Buildings do
   - `wall`: `{:masonry, unit, wythes}` or `:studs`, and `wall_height`;
   - `roof`: `:tile` or `:metal`, `pitch` (rise over run), `overhang`;
   - `openings`: a map of `:front`, `:back`, `:left`, `:right` to a list
-    of `{:door, x, w, h}` (the slab) or `{:window, x, w, h, sill}` (the
-    rough opening), with `x` the center along the wall, from its left
-    when you look at it from outside.
+    of `{:door, x, w, h}` (the slab), `{:overhead, x, w, h}` (a
+    sectional door, `World.Openings.overhead/4`) or `{:window, x, w, h,
+    sill}` (the rough opening), with `x` the center along the wall, from
+    its left when you look at it from outside.
   """
   def house(name, opts) do
     {l, d} = {opts[:length], opts[:depth]}
@@ -534,6 +555,9 @@ defmodule World.Buildings do
                 {ro_w, ro_h} = World.Openings.prehung_opening(w, h)
                 {:door, x - ro_w / 2, ro_w, 0.0, ro_h}
 
+              {:overhead, x, w, h} ->
+                {:overhead, x - w / 2, w, 0.0, h}
+
               {:window, x, w, h, sill} ->
                 {:window, x - w / 2, w, sill, h}
             end
@@ -548,6 +572,7 @@ defmodule World.Buildings do
             fill =
               case item do
                 {:door, _, w, h} -> World.Openings.prehung(n, w, h, thick)
+                {:overhead, _, w, h} -> World.Openings.overhead(n, w, h, thick)
                 {:window, _, w, h, _} -> World.Openings.window(n, w, h, thick)
               end
 

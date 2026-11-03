@@ -43,7 +43,11 @@ the steps of `README.md`.
   sheet, or a measurement. A size that is a guess says so.
 - `ports`: the places where the part connects to another part (below).
 - `shapes`: the meshes of the part, each with its material role. The
-  core of Wings makes them (`World.Mesh`).
+  core of Wings makes them (`World.Mesh`). A mesh can be a `skin` of a
+  thickness (a panel, a bumper: `World.Mesh.skin/3`; its mass is its
+  area times the thickness, and it has no inside for `World.Check`), and
+  can have a `matter` for its mass when its role is a color
+  (`World.Mesh.matter/2`).
 - `detail`: the class of the part for the levels of detail (below).
 - `print`: `:keep`, `:skip` (not in the STL: too thin) or `:only` (only
   in the STL: a thicker stand-in).
@@ -209,7 +213,7 @@ strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `wood`, `fabric`, `skin`, `hair`, `cloth`, `white`, `dark`, `black`,
 `gray`, `rubber`, `copper`, `stainless`, `screen`, `blue`, `orange`,
 `red`, `plywood`, `solar_cell`, `porcelain`, `glass_amber`,
-`terracotta`. A person
+`terracotta`, `eps` (expanded polystyrene, the core of a door). A person
 has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
 `clothes_NAME`, `color_NAME` (the mean color of an asset at mid and
 far), `hole` (the dark inside of the mouth at mid and far),

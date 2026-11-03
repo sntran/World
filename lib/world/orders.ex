@@ -136,11 +136,18 @@ defmodule World.Orders do
   (`World.Orders.Store`), so that its files can build later at their
   URLs. `origin` is the start of the URLs (`https://world.mkfifo.com`).
 
+  The model of the order must be true (`World.Check`, at the level
+  `far`: it has few parts): it stands, its parts are not in one place,
+  its joints are in their limits, and it goes out of the door of its
+  workshop. Else the order is refused, with each reason at the path
+  `"model"`.
+
   Gives `{:ok, %{"hash", "order", "files", "replay"}}`, `{:error,
   errors}` as `check/1`, or `{:error, :store}` when the store failed.
   """
   def place(order, origin) do
-    with {:ok, full} <- check(order) do
+    with {:ok, full} <- check(order),
+         :ok <- sound(full) do
       hash = hash(full)
 
       case World.Orders.Store.put(hash, encode(full)) do
@@ -209,6 +216,17 @@ defmodule World.Orders do
     log = Run.log(run)
     Run.stop(run)
     {result.glb, Log.to_json(log)}
+  end
+
+  # The checks of a true model, on the item at the level far.
+  defp sound(order) do
+    {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
+    item = Detail.with(:far, fn -> blueprint.build.(order["options"]) end)
+
+    case World.Check.model(item, order["joints"]) do
+      :ok -> :ok
+      {:error, reasons} -> {:error, for(r <- reasons, do: %{"path" => "model", "message" => World.Check.message(r)})}
+    end
   end
 
   # A joint of the order must be a joint of the model, and a target a

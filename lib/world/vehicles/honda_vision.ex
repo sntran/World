@@ -8,7 +8,7 @@ defmodule World.Vehicles.HondaVision do
   parts (the body, the seat, the engine) follow the photos of the
   scooter, by eye; the sizes are from the data page of the model.
   """
-  alias World.{Assembly, Frame, Part, Shape}
+  alias World.{Assembly, Frame, Mesh, Part, Shape}
   alias World.Materials.{Fasteners, Stock}
   alias World.Vehicles.Wheels
   @length 1.871
@@ -72,7 +72,7 @@ defmodule World.Vehicles.HondaVision do
         same("seat", {0.0, 0.88, 0.79}, {-1, 0, 0}, {0, 0, 1}),
         same("steer", @steer_at, @steer_axis, {0.0, 0.894, 0.447}),
         same("pivot", @pivot, {1, 0, 0}, {0, 0, 1}),
-        same("stand", {0.0, 0.70, 0.17}, {1, 0, 0}, {0, 0, 1})
+        same("stand", {0.0, 0.70, 0.125}, {1, 0, 0}, {0, 0, 1})
       ],
       inside: true,
       sources: ["An underbone frame of steel tube, 48 mm."]
@@ -143,8 +143,11 @@ defmodule World.Vehicles.HondaVision do
         sides: 8
       )
 
+    # The panels are skins of ABS of 3 mm (half on each face of the loft).
+    skins = for m <- [rear, floor, shield], do: Mesh.skin(m, 0.0015, :plastic)
+
     panels =
-      Part.new("body_vision", :body, [rear, floor, shield, plate, holder, rail], [origin("body")],
+      Part.new("body_vision", :body, skins ++ [plate, holder, rail], [origin("body")],
         sources: ["By eye, from photos."]
       )
 
@@ -225,8 +228,10 @@ defmodule World.Vehicles.HondaVision do
         sources: ["A steel bar of 22.2 mm."]
       )
 
+    # A tube of rubber on the bar of 22.2 mm: 34 mm out.
     grip = fn x ->
-      Shape.cylinder(0.017, 0.12, :rubber,
+      Shape.lathe([{0.0111, 0.0}, {0.017, 0.0}, {0.017, 0.12}, {0.0111, 0.12}], :rubber,
+        kind: :ring,
         sides: 12,
         frame: Frame.new({x, 1.12, 1.05}, {if(x > 0, do: 1.0, else: -1.0), 0.0, 0.0}, {0, 0, 1})
       )
@@ -322,12 +327,14 @@ defmodule World.Vehicles.HondaVision do
 
   # The center stand: at rest its legs go back, under the scooter; at 92
   # degrees they stand on the ground.
+  # The stand turns on a pivot under the case of the engine; its legs are
+  # as long as the pivot is high, so the foot goes down to the ground.
   defp stand do
     legs =
       for x <- [-0.1, 0.1],
-          do: Shape.sweep([{x, 0.70, 0.17}, {x, 0.6, 0.17}, {x * 1.2, 0.53, 0.16}], 0.011, :black, sides: 8)
+          do: Shape.sweep([{x, 0.70, 0.125}, {x, 0.62, 0.125}, {x * 1.2, 0.575, 0.115}], 0.011, :black, sides: 8)
 
-    foot = Shape.sweep([{-0.12, 0.53, 0.16}, {0.12, 0.53, 0.16}], 0.011, :black, sides: 8)
-    Part.new("center_stand_vision", :stand, legs ++ [foot], [same("pivot", {0.0, 0.70, 0.17}, {1, 0, 0}, {0, 0, 1})])
+    foot = Shape.sweep([{-0.12, 0.575, 0.115}, {0.12, 0.575, 0.115}], 0.011, :black, sides: 8)
+    Part.new("center_stand_vision", :stand, legs ++ [foot], [same("pivot", {0.0, 0.70, 0.125}, {1, 0, 0}, {0, 0, 1})])
   end
 end

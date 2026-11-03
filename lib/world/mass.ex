@@ -6,9 +6,12 @@ defmodule World.Mass do
   source of each density). An assembly has the mass of its parts at
   their places, and its center of mass.
 
-  Only a closed mesh has a volume (each edge in two faces). A part with
-  an open mesh, or a mesh of a role with no density (a paint, a color),
-  has no mass: `part/1` gives `nil`, and `of/1` names it in `unknown`.
+  Only a closed mesh has a volume (each edge in two faces). A skin
+  (`World.Mesh.skin/3`: a panel, open or closed) has its area times its
+  thickness. A mesh of a color role (`:paint`, `:trim`) takes the density
+  of its `matter` (`World.Mesh.matter/2`). A part with an open mesh that
+  is not a skin, or a mesh with no density, has no mass: `part/1` gives
+  `nil`, and `of/1` names it in `unknown`.
   """
   alias World.{Build, Frame, Mesh, Part, Standards, Vec}
 
@@ -51,6 +54,32 @@ defmodule World.Mass do
     end
   end
 
+  # The volume and the center of a mesh: of its skin, or of its inside.
+  defp volume(%Mesh{skin: nil} = m), do: mesh(m)
+  defp volume(%Mesh{skin: t} = m), do: with({a, c} <- area(m), do: {a * t, c})
+
+  @doc """
+  The area (m²) and the center of the area of a mesh, or nil for a mesh
+  with no area.
+
+      iex> {a, c} = World.Mass.area(World.Shape.box({0, 0, 0}, {1, 2, 3}, :steel))
+      iex> {Float.round(a, 6), c}
+      {22.0, {0.5, 1.0, 1.5}}
+  """
+  def area(%Mesh{points: points, faces: faces}) do
+    pt = List.to_tuple(points)
+
+    {a, m} =
+      for [i | rest] <- faces, [j, k] <- Enum.chunk_every(rest, 2, 1, :discard), reduce: {0.0, {0.0, 0.0, 0.0}} do
+        {a, m} ->
+          {pa, pb, pc} = {elem(pt, i), elem(pt, j), elem(pt, k)}
+          t = Vec.len(Vec.cross(Vec.sub(pb, pa), Vec.sub(pc, pa))) / 2
+          {a + t, Vec.add(m, Vec.scale(Vec.add(Vec.add(pa, pb), pc), t / 3))}
+      end
+
+    if a > 0, do: {a, Vec.scale(m, 1 / a)}, else: nil
+  end
+
   # Each edge of a closed mesh is in two faces.
   defp closed?(faces) do
     faces
@@ -66,7 +95,7 @@ defmodule World.Mass do
   def part(%Part{shapes: shapes}) do
     parts =
       Enum.map(shapes, fn m ->
-        with d when is_number(d) <- density(m.material), {v, c} <- mesh(m), do: {d * v, c}
+        with d when is_number(d) <- density(m.matter || m.material), {v, c} <- volume(m), do: {d * v, c}
       end)
 
     if shapes != [] and Enum.all?(parts, &is_tuple/1) do

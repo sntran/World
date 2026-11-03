@@ -87,6 +87,10 @@
       "wood": [
         450,
         "The Engineering ToolBox, Wood densities (https://www.engineeringtoolbox.com/wood-density-d_40.html): spruce, Canadian 450 (the spruce of spruce-pine-fir lumber)."
+      ],
+      "eps": [
+        14.4,
+        "ASTM C578, Type I expanded polystyrene: 0.90 lb/ft3 (14.4 kg/m3) at the least. The core of an insulated door."
       ]
     }
   }

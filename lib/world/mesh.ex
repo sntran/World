@@ -8,15 +8,39 @@ defmodule World.Mesh do
   into triangles (`wings_tesselation:triangulate/2`).
   """
   alias World.{Frame, Vec}
-  defstruct points: [], faces: [], material: :paint, smooth: 0, angle: 40.0
+  defstruct points: [], faces: [], material: :paint, smooth: 0, angle: 40.0, skin: nil, matter: nil
 
   @type t :: %__MODULE__{
           points: [Vec.t()],
           faces: [[non_neg_integer]],
           material: atom,
           smooth: non_neg_integer,
-          angle: number
+          angle: number,
+          skin: number | nil,
+          matter: atom | nil
         }
+
+  @doc """
+  A mesh that is the skin of a thing, of a thickness (m) and a material
+  (`World.Mass`): a panel of a body, a shell of a light. Its mass is its
+  area times the thickness times the density of the material; it has no
+  inside (`World.Check`). The thickness is on each face: a closed mesh
+  around a sheet has two faces, so it takes half of the sheet.
+
+      iex> m = World.Mesh.skin(World.Shape.box({0, 0, 0}, {1, 1, 1}, :paint), 0.001, :plastic)
+      iex> {m.skin, m.matter, m.material}
+      {0.001, :plastic, :paint}
+  """
+  def skin(%__MODULE__{} = mesh, thickness, matter), do: %{mesh | skin: thickness / 1, matter: matter}
+
+  @doc """
+  A mesh of a material for its mass, when its material role is a color
+  (`:paint`, `:trim`): a seat of foam in the color of the trim.
+
+      iex> World.Mesh.matter(World.Shape.box({0, 0, 0}, {1, 1, 1}, :trim), :plastic).matter
+      :plastic
+  """
+  def matter(%__MODULE__{} = mesh, matter), do: %{mesh | matter: matter}
 
   @doc """
   A mesh. The options: `smooth` (the number of smooth steps, 0 by

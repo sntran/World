@@ -10,6 +10,8 @@ defmodule World.Openings do
     hinges, and a knob (`prehung/4`).
   - The window of a building: a frame of vinyl, and a casement sash or a
     fixed pane (`window/5`).
+  - The overhead door of a workshop: four sections on two tracks
+    (`overhead/4`).
   - The doors and the windows of a van, to the numbers of the order of
     the van (`World.Openings.Van`).
   """
@@ -154,6 +156,76 @@ defmodule World.Openings do
         ),
       else:
         Assembly.add(base, "sash_" <> name, sash, at: Kit.same("hinge", hinge_at, {0, 0, -1}, {0, 1, 0}), port: "hinge")
+  end
+
+  @doc """
+  A sectional overhead door of `w` by `h` for a wall of `depth`: four
+  sections of 2 in (two skins of steel of 25 gauge, 0.5 mm, on a core of
+  expanded polystyrene) on the inside face of the wall, and the tracks of
+  2 in on each side: up the jambs, then back under the roof for the
+  height of the door and 18 in more. The rough opening is the size of the
+  door. Its origin is at the bottom left of the rough opening, on the
+  outside face of the wall. The torsion spring is not in the model.
+  """
+  def overhead(name, w, h, depth) do
+    {t, skin} = {inch(2), 0.0005}
+    y0 = depth + 0.005
+    {track, leg} = {0.002, inch(2)}
+    back = h + inch(18)
+    rise = h + 0.1
+
+    # A track of angle steel at each side: a rail up the jamb, a short
+    # piece where it turns, and a rail back under the roof. Each rail is
+    # a part: the rails go to the site one by one.
+    rails =
+      for {x, side} <- [{-leg - 0.005, "left"}, {w + 0.005, "right"}],
+          {piece, box} <- [
+            {"up", Shape.box({x, y0, 0.0}, {x + leg, y0 + track, rise}, :steel)},
+            {"turn", Shape.box({x, y0 + t + 0.01, rise - 0.1}, {x + leg, y0 + t + 0.01 + track, rise}, :steel)},
+            {"back", Shape.box({x, y0 + t + 0.01 + track, rise - track}, {x + leg, y0 + back, rise}, :steel)}
+          ] do
+        {"track_#{side}_#{piece}", Part.new("overhead_track_#{piece}", :frame, [box], [@o])}
+      end
+
+    [{_, root} | rails] = rails
+    frame = %{root | params: %{"rough_opening" => [w, h]}}
+
+    sh = h / 4
+
+    door =
+      Assembly.new(name, frame,
+        root: "track_left_up",
+        kind: :door,
+        # The sections and the tracks go to the site, and the door is put
+        # together there (World.Check).
+        extras: %{"site" => true},
+        sources: [
+          "A sectional overhead door of #{round(w / 0.0254 / 12)} by #{round(h / 0.0254 / 12)} ft: four sections of 2 in, steel of 25 gauge on a core of expanded polystyrene (ASTM C578 Type I), tracks of 2 in."
+        ]
+      )
+
+    door = Enum.reduce(rails, door, fn {n, rail}, door -> Assembly.add(door, n, rail, at: @o, port: @o) end)
+
+    Enum.reduce(1..4, door, fn i, door ->
+      z = (i - 1) * sh
+
+      section =
+        Part.new(
+          "overhead_section_#{round(w / 0.0254)}x#{round(sh / 0.0254)}",
+          :door,
+          [
+            Shape.box({0.0, y0, 0.002}, {w, y0 + skin, sh - 0.002}, :steel),
+            Shape.box({0.0, y0 + skin, 0.002}, {w, y0 + t - skin, sh - 0.002}, :eps),
+            Shape.box({0.0, y0 + t - skin, 0.002}, {w, y0 + t, sh - 0.002}, :steel)
+          ],
+          [@o]
+        )
+
+      Assembly.add(door, "section_#{name}_#{i}", section,
+        at: Part.port("section_#{i}", {0.0, 0.0, z}, {0, 0, 1}, {0, 1, 0}),
+        port: @o
+      )
+    end)
   end
 
   @doc "A prehung door of 36 by 80 in, for a wall of 2x4 with its sheathing (4 1/2 in)."

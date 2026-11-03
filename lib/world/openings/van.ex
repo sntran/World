@@ -66,6 +66,7 @@ defmodule World.Openings.Van do
 
           band =
             Hull.skin(h, f + af - 0.02, d1 - @gap, :trim,
+              skin: {0.0015, :plastic},
               offset: o + 0.006,
               sides: 12,
               step: 0.1,
@@ -136,6 +137,7 @@ defmodule World.Openings.Van do
 
           band =
             Hull.skin(h, s0 + @gap, s1 - @gap, :trim,
+              skin: {0.0015, :plastic},
               offset: o + 0.006,
               sides: 12,
               step: 0.1,
@@ -239,6 +241,7 @@ defmodule World.Openings.Van do
 
         level ->
           Hull.skin(h, w["base"], top, :glass_dark,
+            skin: {0.002, nil},
             offset: %{mid: 0.01, far: 0.025}[level],
             sides: 16,
             step: 0.05,
@@ -296,6 +299,7 @@ defmodule World.Openings.Van do
   defp region(van, d0, d1, planes, s, level) do
     [
       Hull.skin(van.h, d0, d1, :glass_dark,
+        skin: {0.002, nil},
         offset: 0.006,
         sides: 8,
         step: %{mid: 0.1, far: 0.3}[level],

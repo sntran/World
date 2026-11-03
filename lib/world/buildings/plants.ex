@@ -2,7 +2,8 @@ defmodule World.Buildings.Plants do
   @moduledoc """
   The buildings of the places of the world (`docs/world.md`, step W5): a
   warehouse and a factory are houses of `World.Buildings` (walls of 2x4
-  studs, a metal roof, a door at the left end), and the people of the
+  studs, a metal roof, a door and an overhead door of 9 by 8 ft at the
+  left end), and the people of the
   world build them as orders (`World.Run.build/3`).
 
   - The size of a warehouse comes from the limit of its store. One rack
@@ -80,7 +81,8 @@ defmodule World.Buildings.Plants do
   end
 
   defp building(name, length, depth) do
-    door = {:door, depth / 2, 36 * @inch, 80 * @inch}
+    door = {:door, 0.7, 36 * @inch, 80 * @inch}
+    overhead = {:overhead, depth / 2, 9 * 12 * @inch, 8 * 12 * @inch}
 
     Buildings.house(name,
       length: length,
@@ -90,7 +92,7 @@ defmodule World.Buildings.Plants do
       roof: :metal,
       pitch: 4 / 12,
       overhang: 12 * @inch,
-      openings: %{left: [door]},
+      openings: %{left: [door, overhead]},
       sources: ["A building of the world: its size from its store or its workers (World.Buildings.Plants)."]
     )
     |> Map.update!(:extras, &Map.merge(&1, %{"length" => length, "depth" => depth}))

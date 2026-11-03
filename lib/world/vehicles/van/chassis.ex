@@ -64,9 +64,11 @@ defmodule World.Vehicles.Van.Chassis do
       |> Assembly.add("bay_parts", hidden.(bay_parts(l)), at: "origin", port: "origin")
 
     Enum.reduce(items, asm, fn
+      # Low at the left of the front of the engine, beside the compressor
+      # of the air conditioner and under the air box.
       :second_alternator, asm ->
         Assembly.add(asm, "second_alternator", inside(Kit.station(Camper.second_alternator(), "upfit")),
-          at: Kit.port("second_alternator", {-0.42, l - 0.48, 0.84}, {0, 0, 1}, {0, 1, 0}),
+          at: Kit.port("second_alternator", {-0.42, l - 0.48, 0.62}, {0, 0, 1}, {0, 1, 0}),
           port: "o"
         )
 

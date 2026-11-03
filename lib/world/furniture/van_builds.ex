@@ -139,8 +139,9 @@ defmodule World.Furniture.VanBuilds do
         {0, -1, 0}
       )
 
-    # The counter, with the hole of the sink.
-    {sx, sy, sw, sd} = {x1 - inch(14) - inch(13) / 2, -inch(0.5), inch(13), inch(15)}
+    # The counter, with the hole of the sink: over the middle of the
+    # cabinet at the right, so the bowl clears the drawers.
+    {sx, sy, sw, sd} = {(xm + x1) / 2, -inch(0.5), inch(13), inch(15)}
 
     counter =
       Part.new(

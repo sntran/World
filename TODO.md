@@ -37,6 +37,20 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **The mass of the tires and the van.** A tire is a solid ring now: it
+  must be a skin of rubber and cord (about 10 mm on a car). The van has
+  29 parts with no mass: its body, hood and doors are panels of steel
+  (0.8 mm), its seats foam, its engine and its bay parts of colors; the
+  drivetrain (the block, the axles, the tank) is not there, so the check
+  of step P4 against the curb weight waits.
+- **The cage of a smooth mesh.** `World.Mass` and `World.Check` use the
+  cage of a mesh, before its smooth steps; the smooth surface is a bit
+  inside the cage.
+- **The doors of the factories.** A vehicle goes through a drive-in door
+  of 12 by 14 ft (`World.Check.drive_in/0`), but the buildings of the
+  factories have walls of 3 m and an overhead door of 9 by 8 ft: a plant
+  for vehicles needs taller walls and its drive-in door.
+
 - **More garments from patterns.** `World.Sewing` cuts the pieces from
   the body and its skirt. Next: a skirt and a coat (wide pieces on the
   skirt), shorts, a polo collar, sleeves to the elbow, and the colors of

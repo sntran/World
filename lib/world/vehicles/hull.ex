@@ -22,7 +22,7 @@ defmodule World.Vehicles.Hull do
   The model is in the axes of World with its back at y = 0: a point at
   `d` is at y = length - d.
   """
-  alias World.{Detail, Shape}
+  alias World.{Detail, Mesh, Shape}
 
   defstruct length: 0.0,
             width: 0.0,
@@ -357,6 +357,9 @@ defmodule World.Vehicles.Hull do
   - `sides`: the points of each section of a region (`clip`) (40); the
     sections of the whole body keep the points of `section/2`;
   - `step`: the most step of the sections (0.25 m, `stations/4`);
+  - `skin`: `{thickness, matter}`, for a thin part on the body (a bumper,
+    a band of plastic, a window): the solid is a skin of that thickness
+    on each face (`World.Mesh.skin/3`), not a block of the matter;
   - the options of `World.Shape.rings/3`.
   """
   def skin(%__MODULE__{} = h, d0, d1, material, opts \\ []) do
@@ -373,7 +376,12 @@ defmodule World.Vehicles.Hull do
         for {x, z} <- loop, do: {x, h.length - d, z}
       end
 
-    Shape.rings(rings, material, Keyword.drop(opts, [:offset, :clip, :sides, :step]))
+    mesh = Shape.rings(rings, material, Keyword.drop(opts, [:offset, :clip, :sides, :step, :skin]))
+
+    case Keyword.get(opts, :skin) do
+      nil -> mesh
+      {t, matter} -> Mesh.skin(mesh, t, matter)
+    end
   end
 
   @doc """

@@ -305,14 +305,15 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
     arms = for x <- [-0.1, 0.1], do: Shape.sweep([{x, 0.88, 0.44}, {x, ry, rz}], 0.02, :black, sides: 8)
     cross = Shape.sweep([{-0.1, 0.80, 0.42}, {0.1, 0.80, 0.42}], 0.018, :black, sides: 8)
 
+    # The chain runs outside the crankcase (14 cm from the middle).
     chain =
       Shape.sweep(
         [
-          {0.115, 1.13, 0.40},
-          {0.115, ry, rz + 0.11},
-          {0.115, ry - 0.11, rz},
-          {0.115, ry, rz - 0.11},
-          {0.115, 1.13, 0.36}
+          {0.15, 1.13, 0.40},
+          {0.15, ry, rz + 0.11},
+          {0.15, ry - 0.11, rz},
+          {0.15, ry, rz - 0.11},
+          {0.15, 1.13, 0.36}
         ],
         0.006,
         :metal,

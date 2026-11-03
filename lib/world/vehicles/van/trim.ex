@@ -5,7 +5,7 @@ defmodule World.Vehicles.Van.Trim do
   the windows of the body, `World.Openings.Van`), the black plastic, the
   lamps, the grille, the small parts, and inside the dash and the seats.
   """
-  alias World.{Assembly, Detail, Frame, Shape}
+  alias World.{Assembly, Detail, Frame, Mesh, Shape}
   alias World.Furniture.Seats
   alias World.Vehicles.Hull
   alias World.Openings.Van, as: OpeningsFactory
@@ -58,6 +58,7 @@ defmodule World.Vehicles.Van.Trim do
 
     bumper_f =
       Hull.skin(h, d0 - 0.018, 0.56, :trim,
+        skin: {0.0015, :plastic},
         offset: 0.018,
         sides: 20,
         step: 0.06,
@@ -66,6 +67,7 @@ defmodule World.Vehicles.Van.Trim do
 
     bumper_r =
       Hull.skin(h, l - 0.34, d1 + 0.018, :trim,
+        skin: {0.0015, :plastic},
         offset: 0.018,
         sides: 28,
         step: 0.06,
@@ -76,6 +78,7 @@ defmodule World.Vehicles.Van.Trim do
     # not on the sliding door. The edge under 0.41 m: from wheel to wheel.
     band = fn s, d0, d1, z0, z1 ->
       Hull.skin(h, d0, d1, :trim,
+        skin: {0.0015, :plastic},
         offset: 0.006,
         sides: if(Detail.level() == :near, do: 12, else: 8),
         step: 0.1,
@@ -105,11 +108,12 @@ defmodule World.Vehicles.Van.Trim do
             {s * (hw - 0.01), l - d + (r + 0.015) * :math.sin(a), az + (r + 0.015) * :math.cos(a)}
           end
 
-        Shape.sweep(line, 0.03, :trim, sides: if(n == 14, do: 6, else: 4))
+        line |> Shape.sweep(0.03, :trim, sides: if(n == 14, do: 6, else: 4)) |> Mesh.skin(0.0015, :plastic)
       end
 
     cowl =
       Hull.skin(h, 0.634, van.make["openings"]["windshield"]["base"], :trim,
+        skin: {0.0015, :plastic},
         offset: 0.004,
         sides: 16,
         step: 0.05,
@@ -255,6 +259,7 @@ defmodule World.Vehicles.Van.Trim do
 
     grille =
       Hull.skin(h, -0.012, 0.2, :black,
+        skin: {0.0015, :plastic},
         offset: 0.012,
         sides: 16,
         step: 0.02,
@@ -314,6 +319,7 @@ defmodule World.Vehicles.Van.Trim do
     vents =
       for s <- [1, -1] do
         Hull.skin(h, 0.52, 0.575, :black,
+          skin: {0.0015, :plastic},
           offset: 0.009,
           sides: 8,
           step: 0.02,
@@ -325,6 +331,7 @@ defmodule World.Vehicles.Van.Trim do
 
     rail =
       Hull.skin(h, s1 + 0.03, l - 0.36, :dark,
+        skin: {0.0015, :plastic},
         offset: 0.008,
         sides: 8,
         step: 0.1,
