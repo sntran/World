@@ -99,14 +99,48 @@ defmodule World.KitTest do
     assert Enum.max(errors) < 0.003
   end
 
+  test "the kit of a woman with the options of the shape is the person of World, within 1 mm" do
+    shape = %{
+      bust: 0.8,
+      firmness: 0.7,
+      waist: 0.3,
+      hips: 0.7,
+      buttocks: 0.6,
+      stomach: 0.4,
+      torso: 0.6,
+      shoulders: 0.4,
+      arms: 0.7,
+      legs: 0.3,
+      neck: 0.6
+    }
+
+    numbers = Map.merge(%{gender: 0.0, age: 40, muscle: 0.5, weight: 0.3, height: 0.5, race: %{"asian" => 1.0}}, shape)
+    kit = Human.kit(0, :body)
+    extras = Map.put(mesh(kit).extras["kit"], "order", Enum.map(kit.skeleton.bones, & &1.name))
+
+    person =
+      Detail.with(:mid, fn ->
+        Human.person(
+          "traveler",
+          [gender: 0.0, age: 40, weight: 0.3, race: %{"asian" => 1.0}, hair: "short02", clothes: [], pose: "stand"] ++
+            Map.to_list(shape)
+        )
+      end)
+
+    skin = fn figure -> Enum.find(mesh(figure).primitives, &(&1.material == :skin)) end
+    joined = join(skin.(kit), extras, numbers, "none")
+    errors = Enum.zip_with(joined, skin.(person).positions, &World.Vec.len(World.Vec.sub(&1, &2)))
+    assert Enum.max(errors) < 0.001
+  end
+
   test "the data of a body: the ground under each pair of shoes, the faces of each item, and its color" do
     extras = mesh(Human.kit(0, :body)).extras["kit"]
-    assert length(extras["targets"]) == 14
+    assert length(extras["targets"]) == 75
     assert map_size(extras["bones"]) == 53
     assert [g0, moves] = extras["ground"]["shoes01"]
     # The soles of the shoes are under the feet.
     assert g0 < hd(extras["ground"]["none"])
-    assert length(moves) == 14
+    assert length(moves) == 75
     assert [[_first, count, n] | _] = extras["covers"]["female_casualsuit01"]
     assert count >= 1 and n > 0
     assert [_, _, _] = extras["colors"]["shoes01"]

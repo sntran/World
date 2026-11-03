@@ -15,7 +15,7 @@ defmodule World.Orders.Blueprints do
   alias World.{Buildings, Framing}
   alias World.Materials.{Construction, Stock}
   alias World.Orders.Blueprint
-  alias World.People.{Data, Pose, Props}
+  alias World.People.{Data, Human, Pose, Props}
   alias World.Vehicles.Van
   import Blueprint, only: [option: 3]
 
@@ -290,67 +290,91 @@ defmodule World.Orders.Blueprints do
       option("age", :number, default: 30.0, min: 25.0, max: 90.0, unit: "years"),
       share.("muscle", 0.5),
       share.("weight", 0.5),
-      share.("height", 0.5),
-      option("head", :number,
-        default: 1.0,
-        min: 1.0,
-        max: 2.0,
-        doc: "The size of the head: 1 is the size of the body, more is the bigger head of a game."
-      ),
-      option("origin", :object,
-        default: %{"african" => 0.0, "asian" => 1.0, "caucasian" => 0.0},
-        fields: [share.("african", 0.0), share.("asian", 1.0), share.("caucasian", 0.0)],
-        doc: "The weight of each origin of the shape of the body."
-      ),
-      option("skin", :choice, default: "young_asian_male", values: names.("skins")),
-      option("eyes", :choice, default: "darkbrown", values: names.("eye_materials")),
-      option("eyebrows", :choice, default: "eyebrow001", values: names.("eyebrows")),
-      option("hair", :choice, default: "short02", values: ["none" | names.("hair")]),
-      option("hair_color", :color, default: nil, doc: "The color of the hair. None: the color of its texture."),
-      option("clothes", :list,
-        default: ["male_casualsuit01", "shoes01"],
-        item: option("item", :choice, values: names.("clothes")),
-        max: 6
-      ),
-      option("clothes_colors", :list,
-        default: [],
-        item: option("item", :color, []),
-        max: 6,
-        doc:
-          "A color for each item of the clothes, in their order: at mid and far its color, at near a tint of its texture."
-      ),
-      option("face", :choice,
-        default: "relaxed",
-        values: ["relaxed", "neutral"],
-        doc: "The face at rest: relaxed (the eyelids a little lower, a hint of a smile) or neutral."
-      ),
-      option("blink", :boolean,
-        default: true,
-        doc: "The shapes of a blink as morph targets, and the animation blink (a loop of 4 s)."
-      )
-    ]
+      share.("height", 0.5)
+    ] ++
+      for(
+        {name, doc} <- Human.shapes(),
+        do:
+          option(Atom.to_string(name), :number,
+            default: 0.5,
+            min: 0.0,
+            max: 1.0,
+            doc: doc <> ": 0.5 is the shape of MakeHuman."
+          )
+      ) ++
+      [
+        option("shape", :object,
+          default: Map.new(Data.sliders(), fn {name, _} -> {name, 0.0} end),
+          fields:
+            for(
+              {name, s} <- Enum.sort(Data.sliders()),
+              do: option(name, :number, default: 0.0, min: -1.0, max: 1.0, doc: "A slider of MakeHuman (#{s.group}).")
+            ),
+          doc:
+            "The sliders of MakeHuman (targets/target.json of MPFB), from -1 to 1: 0 is the shape of MakeHuman. A slider here wins over its short name."
+        ),
+        option("head", :number,
+          default: 1.0,
+          min: 1.0,
+          max: 2.0,
+          doc: "The size of the head: 1 is the size of the body, more is the bigger head of a game."
+        ),
+        option("origin", :object,
+          default: %{"african" => 0.0, "asian" => 1.0, "caucasian" => 0.0},
+          fields: [share.("african", 0.0), share.("asian", 1.0), share.("caucasian", 0.0)],
+          doc: "The weight of each origin of the shape of the body."
+        ),
+        option("skin", :choice, default: "young_asian_male", values: names.("skins")),
+        option("eyes", :choice, default: "darkbrown", values: names.("eye_materials")),
+        option("eyebrows", :choice, default: "eyebrow001", values: names.("eyebrows")),
+        option("hair", :choice, default: "short02", values: ["none" | names.("hair")]),
+        option("hair_color", :color, default: nil, doc: "The color of the hair. None: the color of its texture."),
+        option("clothes", :list,
+          default: ["male_casualsuit01", "shoes01"],
+          item: option("item", :choice, values: names.("clothes")),
+          max: 6
+        ),
+        option("clothes_colors", :list,
+          default: [],
+          item: option("item", :color, []),
+          max: 6,
+          doc:
+            "A color for each item of the clothes, in their order: at mid and far its color, at near a tint of its texture."
+        ),
+        option("face", :choice,
+          default: "relaxed",
+          values: ["relaxed", "neutral"],
+          doc: "The face at rest: relaxed (the eyelids a little lower, a hint of a smile) or neutral."
+        ),
+        option("blink", :boolean,
+          default: true,
+          doc: "The shapes of a blink as morph targets, and the animation blink (a loop of 4 s)."
+        )
+      ]
   end
 
   # The options of World.People.Human.person/2 from the options of an order.
   defp person_opts(o) do
-    [
-      gender: o["gender"],
-      age: o["age"],
-      muscle: o["muscle"],
-      weight: o["weight"],
-      height: o["height"],
-      head: o["head"],
-      race: Map.reject(o["origin"], fn {_, w} -> w == 0 end),
-      skin: o["skin"],
-      eyes: o["eyes"],
-      eyebrows: o["eyebrows"],
-      hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
-      hair_color: o["hair_color"] && rgb(o["hair_color"]),
-      clothes: o["clothes"],
-      clothes_colors: Enum.map(o["clothes_colors"], &rgb/1),
-      face: o["face"],
-      blink: o["blink"]
-    ]
+    for({name, _} <- Human.shapes(), do: {name, o[Atom.to_string(name)]}) ++
+      [
+        shape: Map.reject(o["shape"], fn {_, v} -> v == 0 end),
+        gender: o["gender"],
+        age: o["age"],
+        muscle: o["muscle"],
+        weight: o["weight"],
+        height: o["height"],
+        head: o["head"],
+        race: Map.reject(o["origin"], fn {_, w} -> w == 0 end),
+        skin: o["skin"],
+        eyes: o["eyes"],
+        eyebrows: o["eyebrows"],
+        hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
+        hair_color: o["hair_color"] && rgb(o["hair_color"]),
+        clothes: o["clothes"],
+        clothes_colors: Enum.map(o["clothes_colors"], &rgb/1),
+        face: o["face"],
+        blink: o["blink"]
+      ]
   end
 
   defp origin_check(o) do

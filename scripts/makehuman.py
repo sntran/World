@@ -14,11 +14,14 @@ needs Pillow.
 The script writes:
 - base.obj.gz, rig.json.gz, weights.json.gz: the base mesh, the skeleton
   "game_engine" and its weights.
-- targets.bin.gz: the targets of the body of an adult, and the two
+- targets.bin.gz: the targets of the body of an adult, the two
   targets of the chest that World.People.Human gives to the body under
-  the clothes (no nipples show through), in a small binary format (see
+  the clothes (no nipples show through), the breasts of a woman, and the
+  targets of each slider of MakeHuman, in a small binary format (see
   World.People.Data). With --targets, the script writes only this file
-  (no packs).
+  and sliders.json (no packs).
+- sliders.json: the sliders of MakeHuman (targets/target.json), the
+  options of the shape of World.People.Human.
 - expressions.bin.gz: the units of the expressions of the face (the
   mouth, the eyes, the brows, the nose), for each of the three origins
   (the targets of targets/expression/units), in the same format. With --expressions, the script writes only this
@@ -62,6 +65,40 @@ RACES = ["african", "asian", "caucasian"]
 # The targets that make the nipples small: the clothes fit to the body
 # with them (World.People.Human), so no nipples show through.
 CHEST = ["breast/nipple-point-decr", "breast/nipple-size-decr"]
+# The cup and the firmness of the breasts of a woman of each age, muscle
+# and weight (World.People.Human: the options bust and firmness; the mean
+# cup and firmness is the base mesh, with no file).
+def breasts():
+    return [f"breast/female-{a}-{m}-{w}-{c}-{f}"
+            for a in AGES for m in LEVELS["muscle"] for w in LEVELS["weight"]
+            for c in ["mincup", "averagecup", "maxcup"] for f in ["minfirmness", "averagefirmness", "maxfirmness"]
+            if (c, f) != ("averagecup", "averagefirmness")]
+
+
+def sliders():
+    """The sliders of MakeHuman (targets/target.json): each group has its
+    categories, and each category has its targets."""
+    return json.load(open(os.path.join(MPFB, "targets", "target.json")))
+
+
+def shape_targets():
+    """The targets of the shape: the breasts, then each target of each
+    slider (GROUP/NAME), with no target twice."""
+    names = CHEST + breasts()
+    for group, entry in sorted(sliders().items()):
+        for category in entry["categories"]:
+            for target in category["targets"]:
+                name = f"{group}/{target}"
+                if name not in names:
+                    names.append(name)
+    return names[len(CHEST):]
+
+
+def write_sliders():
+    """sliders.json: target.json of MakeHuman, with no spaces."""
+    with open(os.path.join(OUT, "sliders.json"), "w") as f:
+        json.dump(sliders(), f, sort_keys=True, separators=(",", ":"))
+        f.write("\n")
 GENDERS = ["female", "male"]
 AGES = ["young", "old"]
 LEVELS = {"muscle": ["minmuscle", "averagemuscle", "maxmuscle"], "weight": ["minweight", "averageweight", "maxweight"]}
@@ -341,7 +378,8 @@ def main():
     gz(os.path.join(MPFB, "3dobjs", "base.obj"), os.path.join(OUT, "base.obj.gz"))
     minify_json(os.path.join(MPFB, "rigs", "standard", "rig.game_engine.json"), os.path.join(OUT, "rig.json.gz"))
     minify_json(os.path.join(MPFB, "rigs", "standard", "weights.game_engine.json"), os.path.join(OUT, "weights.json.gz"))
-    write_targets(os.path.join(OUT, "targets.bin.gz"), extra=CHEST)
+    write_targets(os.path.join(OUT, "targets.bin.gz"), extra=CHEST + shape_targets())
+    write_sliders()
     expressions()
     assets({}, ASSETS)
 
@@ -384,7 +422,8 @@ def assets(manifest, chosen):
 if PACKS == "--expressions":
     expressions()
 elif PACKS == "--targets":
-    write_targets(os.path.join(OUT, "targets.bin.gz"), extra=CHEST)
+    write_targets(os.path.join(OUT, "targets.bin.gz"), extra=CHEST + shape_targets())
+    write_sliders()
 elif len(sys.argv) > 3:
     kinds = sys.argv[3:]
     assets(json.load(open(os.path.join(OUT, "assets.json"))), [a for a in ASSETS if a[0] in kinds or a[1] in kinds])

@@ -12,7 +12,7 @@ makes people from it.
 
 | Source | Version | SHA-256 |
 |---|---|---|
-| [makehumancommunity/mpfb2](https://github.com/makehumancommunity/mpfb2), `src/mpfb/data`: the base mesh, the targets of the body (`macrodetails`, and `breast/nipple-point-decr` and `breast/nipple-size-decr`), the units of the expressions of the face (`expression/units`: the mouth, the eyes, the brows, the nose), the skeleton `game_engine` and its weights | commit `6ff1eb358f6c1959ced77e79e6dd2406d9a71f49` | |
+| [makehumancommunity/mpfb2](https://github.com/makehumancommunity/mpfb2), `src/mpfb/data`: the base mesh, the targets of the body (`macrodetails`, the targets of each slider of `targets/target.json`, and the cup and the firmness of the breasts of a woman of each age, muscle and weight), the list of the sliders (`targets/target.json`), the units of the expressions of the face (`expression/units`: the mouth, the eyes, the brows, the nose), the skeleton `game_engine` and its weights | commit `6ff1eb358f6c1959ced77e79e6dd2406d9a71f49` | |
 | The release `people-packs-1` of `sntran/Vung_Tau`: `makehuman_system_assets.zip` (skins, eyes, eyebrows, eyelashes, hair, clothes, low-poly bodies, the teeth `teeth_base` and the tongue `tongue01`) | | `b542127a8e25547c7c29c19f2d1d2adb9a664c80396ecd694095dbc8028a0107` |
 | The same release: `pants01.zip` (`cortu_cargo_pants`) | | `e4e0ec60db34f279be291a83cfd7b342a7c5cf09bb7676682a5f39f4f6ac4ad9` |
 | The same release: `shirts01.zip` (`elvs_crude_t-shirt_male`, `joepal_crude_t-shirt_female`) | | `a5a723b0e84a109bb190fcfeac7f1de4138d875da3e30fe5b3340eac9f38bcd3` |
@@ -46,6 +46,10 @@ again.
   `python3 -I scripts/makehuman.py MPFB_DATA --targets`. The clothes fit
   to the body with them at twice the full weight (`World.People.Human`):
   no nipples show through the clothes.
+- The targets of the sliders and of the breasts came after them, at the
+  end of `targets.bin.gz` (856 targets in all), with `sliders.json`,
+  the file `targets/target.json` of MPFB with no spaces: the same
+  command.
 - The teeth and the tongue came later, with no change to the other
   files: `python3 scripts/makehuman.py MPFB_DATA PACKS_DIR teeth tongue`.
 - The eye color `darkbrown` is not in MakeHuman: the script makes it

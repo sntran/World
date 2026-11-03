@@ -28,6 +28,44 @@ defmodule World.People.Data do
   @doc "The targets, by name (see `parse_targets/1` and `target/1`)."
   def targets, do: cached(:targets, fn -> parse_targets(read_gz("targets.bin.gz")) end)
 
+  # The sliders, read when the module compiles (a literal of the module:
+  # no read of the file at run time). A new sliders.json compiles the
+  # module again.
+  @sliders_file Path.expand("../../../priv/makehuman/sliders.json", __DIR__)
+  @external_resource @sliders_file
+  @sliders (for {group, entry} <- JSON.decode!(File.read!(@sliders_file)), c <- entry["categories"], into: %{} do
+              case c["opposites"] do
+                nil ->
+                  {c["name"], %{group: group, decr: [], incr: Enum.map(c["targets"], &"#{group}/#{&1}")}}
+
+                o ->
+                  side = fn sign ->
+                    ~w(left right unsided)
+                    |> Enum.map(&o["#{sign}-#{&1}"])
+                    |> Enum.reject(&(&1 == ""))
+                    |> Enum.map(&"#{group}/#{&1}")
+                  end
+
+                  {c["name"], %{group: group, decr: side.("negative"), incr: side.("positive")}}
+              end
+            end)
+
+  @doc """
+  The sliders of MakeHuman (`sliders.json`, the file `targets/target.json`
+  of MPFB): a map of the name of a slider to its group and to the targets
+  at -1 (`decr`) and at 1 (`incr`), both sides for a slider of the left and
+  the right. A slider with one target (the shapes of the head) has it at 1,
+  and nothing at -1.
+
+      iex> World.People.Data.sliders()["measure-waist-circ-decr-incr"]
+      %{group: "torso", decr: ["torso/measure-waist-circ-decr"], incr: ["torso/measure-waist-circ-incr"]}
+      iex> World.People.Data.sliders()["lowerarm-fat-decr-incr"].incr
+      ["arms/l-lowerarm-fat-incr", "arms/r-lowerarm-fat-incr"]
+      iex> World.People.Data.sliders()["head-oval"]
+      %{group: "head", decr: [], incr: ["head/head-oval"]}
+  """
+  def sliders, do: @sliders
+
   @doc "The units of the expressions of the mouth (`expressions.bin.gz`), as `targets/0`."
   def expressions, do: cached(:expressions, fn -> parse_targets(read_gz("expressions.bin.gz")) end)
 

@@ -292,8 +292,11 @@ The extras `kit` of the mesh of a body have the data of the viewer:
 - `targets`: the morph targets, each a group of targets of MakeHuman
   with the same moves. The weight of a group is the sum of the weights
   of its targets for the numbers of the person (sex, age, weight,
-  height, origin; `World.People.Human.target_weights/1` with the mean
-  muscle).
+  height, origin, and the options of the shape with a short name: bust,
+  firmness, waist, hips, buttocks, stomach, torso, shoulders, arms, legs,
+  neck; `World.People.Human.target_weights/1` with the mean muscle). The
+  other sliders of MakeHuman (the option `shape`) are only in an order:
+  each target makes the body of the kit bigger.
 - `bones`: the move of the head of each bone for each target (glTF
   axes). The viewer moves the bones by the weights; a morph target has
   only the rest of the move of a point (the move less the moves of its

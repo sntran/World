@@ -559,6 +559,85 @@ defmodule World.HumanTest do
 
     tall = Map.new(Human.target_weights(%{o | height: 1.0}))
     assert_in_delta tall["height/male-old-minmuscle-averageweight-maxheight"], 0.25 * 0.5 * 0.5, 1.0e-9
+
+    # The shape: with no options, the shape of MakeHuman.
+    refute Enum.any?(weights, fn {name, _} -> String.contains?(name, ["breast/", "-decr", "-incr"]) end)
+
+    shaped =
+      Map.new(
+        Human.target_weights(
+          Map.merge(o, %{
+            bust: 1.0,
+            firmness: 0.25,
+            waist: 0.0,
+            arms: 0.75,
+            shape: %{"measure-calf-circ-decr-incr" => -0.4}
+          })
+        )
+      )
+
+    # 0.75 a woman, old, half minmuscle, half maxweight, the max cup, half minfirmness.
+    assert_in_delta shaped["breast/female-old-minmuscle-maxweight-maxcup-minfirmness"], 0.75 * 0.5 * 0.5 * 0.5, 1.0e-9
+
+    assert_in_delta shaped["breast/female-old-minmuscle-maxweight-maxcup-averagefirmness"],
+                    0.75 * 0.5 * 0.5 * 0.5,
+                    1.0e-9
+
+    assert shaped["torso/measure-waist-circ-decr"] == 1.0
+    assert shaped["arms/l-lowerarm-fat-incr"] == 0.5 and shaped["arms/r-lowerarm-fat-incr"] == 0.5
+    assert_in_delta shaped["legs/measure-calf-circ-decr"], 0.4, 1.0e-9
+
+    assert_raise ArgumentError, ~r/no slider/, fn -> Human.target_weights(Map.put(o, :shape, %{"wings" => 1.0})) end
+  end
+
+  test "each slider of MakeHuman has its targets in the data" do
+    for {name, s} <- Data.sliders(), t <- s.decr ++ s.incr do
+      assert Data.target(t) != [], "#{name}: #{t}"
+    end
+
+    assert map_size(Data.sliders()) == 234
+  end
+
+  test "the options of the shape move the body" do
+    skin = fn opts ->
+      woman =
+        Detail.with(:near, fn -> Human.person("w", [gender: 0.0, hair: nil, clothes: [], pose: "stand"] ++ opts) end)
+
+      woman.nodes
+      |> List.last()
+      |> Map.fetch!(:primitives)
+      |> Enum.find(&(&1.material == :skin))
+      |> Map.fetch!(:positions)
+    end
+
+    base = skin.([])
+    # The front of the torso, with no arms (World: y to the front), the width of the waist and of the hips (x).
+    front = fn ps ->
+      ps
+      |> Enum.filter(fn {x, _, z} -> abs(x) < 0.12 and z > 1.0 and z < 1.45 end)
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.max()
+    end
+
+    # The mean width: the arms do not move.
+    width = fn ps, {lo, hi} ->
+      xs = for {x, _, z} <- ps, abs(x) < 0.25 and z > lo and z < hi, do: abs(x)
+      Enum.sum(xs) / length(xs)
+    end
+
+    assert front.(skin.(bust: 1.0)) > front.(base) + 0.01
+    assert width.(skin.(waist: 0.0), {1.0, 1.05}) < width.(base, {1.0, 1.05})
+    assert width.(skin.(hips: 1.0), {0.85, 0.95}) > width.(base, {0.85, 0.95})
+
+    # Each other short name moves some points more than 5 mm, at 0 and at 1.
+    for {name, _} <- Human.shapes(), name not in [:bust, :firmness], v <- [0.0, 1.0] do
+      moved = Enum.zip_with(skin.([{name, v}]), base, &World.Vec.len(World.Vec.sub(&1, &2)))
+      assert Enum.max(moved) > 0.005, "#{name} #{v}"
+    end
+
+    # A slider of the map shape, and the map wins over the short name.
+    assert skin.(shape: %{"measure-neck-circ-decr-incr" => 1.0}) == skin.(neck: 1.0)
+    assert skin.(neck: 1.0, shape: %{"measure-neck-circ-decr-incr" => 0.0}) == base
   end
 
   test "the 4 largest weights" do
@@ -618,7 +697,7 @@ defmodule World.HumanTest do
     end
 
     test "the targets and the assets" do
-      assert map_size(Data.targets()) == 122
+      assert map_size(Data.targets()) == 856
       [{i, {dx, _, _}} | _] = Data.target("asian-male-young")
       assert is_integer(i) and is_float(dx)
       assert Data.asset("eye_materials", "brown").mesh == nil

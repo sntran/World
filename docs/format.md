@@ -477,6 +477,22 @@ meaning on the two sides, so `Pose.mirror/1` makes the pose of the other
 side. The directions are in the axes of World of the person at rest (x
 to the right side, y to the front, z up).
 
+The shape of a body comes from the sliders of MakeHuman (234 sliders in
+23 groups, the file `targets/target.json` of MPFB, in
+`priv/makehuman/sliders.json`; `World.People.Data.sliders/0`):
+
+- `shape`: a map of the name of a slider to a value from -1 to 1 (0 is
+  the shape of MakeHuman; -1 is its target "decr" at the full weight, 1
+  its target "incr"). A slider of the left and the right moves the two
+  sides. A slider with one target (the shapes of the head) goes from 0
+  to 1.
+- Short names, 0 to 1 (0.5 is the shape of MakeHuman):
+  `World.People.Human.shapes/0`. `bust` and `firmness` are the cup and
+  the firmness of the breasts of a woman, with a target of MakeHuman for
+  each age, muscle and weight. `waist`, `hips`, `buttocks`, `stomach`,
+  `torso`, `shoulders`, `arms`, `legs` and `neck` move sliders of the
+  list; a slider in `shape` wins over its short name.
+
 The clothes fit to a body with no nipples: the two targets of MakeHuman
 that make the nipples small (`breast/nipple-point-decr`,
 `breast/nipple-size-decr`), at twice the full weight. So no nipples show

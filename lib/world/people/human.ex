@@ -23,6 +23,18 @@ defmodule World.People.Human do
     muscle: 0.5,
     weight: 0.5,
     height: 0.5,
+    bust: 0.5,
+    firmness: 0.5,
+    waist: 0.5,
+    hips: 0.5,
+    buttocks: 0.5,
+    stomach: 0.5,
+    torso: 0.5,
+    shoulders: 0.5,
+    arms: 0.5,
+    legs: 0.5,
+    neck: 0.5,
+    shape: %{},
     race: %{"asian" => 1.0},
     skin: "young_asian_male",
     eyes: "darkbrown",
@@ -45,7 +57,12 @@ defmodule World.People.Human do
   @doc """
   A person. The options (with their defaults in `@defaults`): `gender`
   (0 is a woman, 1 a man), `age` (years, 25 to 90), `muscle`, `weight`
-  and `height` (0 to 1, 0.5 is the mean), `race` (a map of
+  and `height` (0 to 1, 0.5 is the mean), the options of the shape
+  (`shapes/0`: `bust` and `firmness` of a woman, `waist`, `hips`,
+  `buttocks`, `stomach`, `torso`, `shoulders`, `arms`, `legs`, `neck`; 0
+  to 1, 0.5 is the shape of MakeHuman), `shape` (a map of a slider of
+  MakeHuman, `World.People.Data.sliders/0`, to a value from -1 to 1; it
+  wins over a short name of the same slider), `race` (a map of
   "african", "asian", "caucasian" to a weight), `skin`, `eyes`,
   `eyebrows`, `hair` (or nil), `clothes` (a list), `hair_color` (`[r, g,
   b]`, or nil for the color of the hair), `clothes_colors` (a list of
@@ -110,6 +127,18 @@ defmodule World.People.Human do
           :muscle,
           :weight,
           :height,
+          :bust,
+          :firmness,
+          :waist,
+          :hips,
+          :buttocks,
+          :stomach,
+          :torso,
+          :shoulders,
+          :arms,
+          :legs,
+          :neck,
+          :shape,
           :race,
           :skin,
           :hair,
@@ -159,6 +188,42 @@ defmodule World.People.Human do
 
   # --- The shape of the body ----------------------------------------------------
 
+  # The short names of some sliders of MakeHuman (`Data.sliders/0`), with
+  # what each one changes: 0 to 1, 0.5 is the shape of MakeHuman (the
+  # slider at 0). The bust and the firmness of a woman are in
+  # `target_weights/1`: MakeHuman has a target for each age, muscle and
+  # weight.
+  @shape [
+    waist: {"The size of the waist", ~w(measure-waist-circ-decr-incr)},
+    hips: {"The size of the hips", ~w(measure-hips-circ-decr-incr)},
+    buttocks: {"The size of the buttocks", ~w(buttocks-volume-decr-incr)},
+    stomach: {"The size of the belly", ~w(stomach-pregnant-decr-incr)},
+    torso: {"The V shape of the torso: wide at the shoulders, narrow at the waist", ~w(torso-vshape-decr-incr)},
+    shoulders: {"The width of the shoulders", ~w(measure-shoulder-dist-decr-incr)},
+    arms: {"The size of the arms", ~w(measure-upperarm-circ-decr-incr lowerarm-fat-decr-incr)},
+    legs:
+      {"The size of the legs (the thighs and the calves)", ~w(measure-thigh-circ-decr-incr measure-calf-circ-decr-incr)},
+    neck: {"The size of the neck", ~w(measure-neck-circ-decr-incr)}
+  ]
+
+  # A short name of a slider that MakeHuman does not have stops the compile.
+  for {name, {_, sliders}} <- @shape, s <- sliders, not Map.has_key?(Data.sliders(), s) do
+    raise CompileError, description: "the short name #{name}: no slider #{s} in sliders.json"
+  end
+
+  @doc """
+  The options of the shape of a body with short names, and what each one
+  changes: 0 to 1, 0.5 is the shape of MakeHuman. The option `shape` has
+  all the sliders of MakeHuman.
+
+      iex> World.People.Human.shapes() |> Enum.take(3)
+      [bust: "The cup of the breasts of a woman", firmness: "The firmness of the breasts of a woman", waist: "The size of the waist"]
+  """
+  def shapes do
+    [bust: "The cup of the breasts of a woman", firmness: "The firmness of the breasts of a woman"] ++
+      for {name, {doc, _}} <- @shape, do: {name, doc}
+  end
+
   @doc """
   The weight of each target for the numbers of a person: a list of
   `{target name, weight}` (MakeHuman, "macrodetails").
@@ -186,7 +251,36 @@ defmodule World.People.Human do
         {"height/#{gn}-#{an}-#{mn}-#{wn}-#{hn}", wg * wa * wm * ww * wh}
       end
 
-    Enum.filter(racegenderage ++ universal ++ heights, fn {_, w} -> w > 1.0e-4 end)
+    # The shape: the breasts of a woman by her age, muscle and weight (the
+    # mean cup and firmness has no target), then the sliders.
+    cup = three(Map.get(o, :bust, 0.5), "mincup", "averagecup", "maxcup")
+    firm = three(Map.get(o, :firmness, 0.5), "minfirmness", "averagefirmness", "maxfirmness")
+
+    breasts =
+      for {an, wa} <- age,
+          {mn, wm} <- muscle,
+          {wn, ww} <- weight,
+          {cn, wc} <- cup,
+          {fname, wf} <- firm,
+          {cn, fname} != {"averagecup", "averagefirmness"} do
+        {"breast/female-#{an}-#{mn}-#{wn}-#{cn}-#{fname}", (1 - o.gender) * wa * wm * ww * wc * wf}
+      end
+
+    Enum.filter(racegenderage ++ universal ++ heights ++ breasts ++ slider_weights(o), fn {_, w} -> w > 1.0e-4 end)
+  end
+
+  # The targets of the sliders: the short names, then the map `shape`
+  # (it wins). A slider at -1 has its targets "decr" at the full weight, at
+  # 1 its targets "incr".
+  defp slider_weights(o) do
+    sliders = Data.sliders()
+    short = for {name, {_, names}} <- @shape, s <- names, into: %{}, do: {s, 2 * Map.get(o, name, 0.5) - 1}
+
+    for {name, v} <- Map.merge(short, Map.get(o, :shape, %{})),
+        slider = Map.get(sliders, name) || raise(ArgumentError, "no slider #{inspect(name)}"),
+        t <- if(v < 0, do: slider.decr, else: slider.incr) do
+      {t, abs(v)}
+    end
   end
 
   defp three(v, low, mid, _high) when v < 0.5, do: [{low, 1 - 2 * v}, {mid, 2 * v}]
@@ -1060,10 +1154,15 @@ defmodule World.People.Human do
   @doc """
   The names of the shape targets of a kit (`kit/3`) of a sex (0: a woman,
   1: a man): the targets of `target_weights/1` with the mean muscle, for
-  each age, weight, height and origin, in a fixed order.
+  each age, weight, height and origin, the breasts of a woman, and the
+  sliders of the short names of the shape (`shapes/0`; not all the
+  sliders: each target makes the body of the kit bigger), in a fixed
+  order.
 
       iex> length(World.People.Human.kit_targets(1))
-      24
+      48
+      iex> length(World.People.Human.kit_targets(0))
+      96
       iex> hd(World.People.Human.kit_targets(0))
       "african-female-young"
   """
@@ -1072,9 +1171,25 @@ defmodule World.People.Human do
     ages = ~w(young old)
     weights = ~w(minweight averageweight maxweight)
 
+    breasts =
+      if g == "female",
+        do:
+          for(
+            a <- ages,
+            w <- weights,
+            c <- ~w(mincup averagecup maxcup),
+            f <- ~w(minfirmness averagefirmness maxfirmness),
+            {c, f} != {"averagecup", "averagefirmness"},
+            do: "breast/female-#{a}-averagemuscle-#{w}-#{c}-#{f}"
+          ),
+        else: []
+
+    sliders = Data.sliders()
+
     for(r <- @races, a <- ages, do: "#{r}-#{g}-#{a}") ++
       for(a <- ages, w <- weights, do: "universal-#{g}-#{a}-averagemuscle-#{w}") ++
-      for a <- ages, w <- weights, h <- ~w(minheight maxheight), do: "height/#{g}-#{a}-averagemuscle-#{w}-#{h}"
+      for(a <- ages, w <- weights, h <- ~w(minheight maxheight), do: "height/#{g}-#{a}-averagemuscle-#{w}-#{h}") ++
+      breasts ++ for({_, {_, names}} <- @shape, s <- names, t <- sliders[s].decr ++ sliders[s].incr, do: t)
   end
 
   @doc """
