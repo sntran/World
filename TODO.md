@@ -46,11 +46,14 @@ into the steps of `AGENTS.md`.
   (5.12); the tests of QCVN 2:2021 as checks of the world (the impact,
   the strap at 500 N, the stability); a helmet of three quarters and a
   full helmet with a visor.
-- **The sandal, more real.** The tread of the outsole and the shape of
-  the footbed (the arch, the heel cup); the sole of the left foot (a
-  pair); the strap on the foot of a person in a pose; the sizes of the
-  hardware from a data sheet; a woven band with its mass for each meter;
-  a render next to a photo of a real sandal.
+- **The footwear, more real.** The tread of a sole (the tread of a tire
+  on the dép lốp); the shape of the footbed (the arch, the heel cup); the
+  carved arch under a guốc cao, the burned and the lacquered decoration
+  of a guốc; the left foot (a pair); a shoe on the foot of a person in a
+  pose; the sizes of the hardware from a data sheet; a woven band with
+  its mass for each meter. More kinds from the same parts: the dép tổ
+  ong (one molded piece), the geta (two teeth under a wooden sole, a
+  thong of cloth), a slide with one band.
 - **More of the mold shop.** A seat (a pan and a back along a bent
   spine, an open shell), a hull of glass fiber with its plies (the
   thickness and the density of a laminate from the mass of the glass and
