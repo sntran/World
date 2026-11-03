@@ -24,9 +24,11 @@
 //   with the errors.
 // - /mcp: the MCP server (the VM, World.MCP).
 // - GET /o/HASH.glb, .mid.glb, .far.glb, .parts.json, .receipt.json,
-//   .log.json, .replay.glb: the files of an order of POST /orders. The
-//   people of the world build the model (World.Run): the log tells what
-//   each one did, and the replay GLB has a node for each part.
+//   .log.json, .replay.glb, .faces.json, .mid.faces.json, .far.faces.json:
+//   the files of an order of POST /orders. The people of the world build
+//   the model (World.Run): the log tells what each one did, and the
+//   replay GLB has a node for each part. The faces are for a painter of a
+//   picture in 2D (World.Faces).
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
 //   %23rrggbb&joint.NAME=DEGREES&target.LIMB=X,Y,Z: an order in the URL. A list is
 //   VALUE,VALUE, and OPTION.FIELD=VALUE is a field of an object.
@@ -38,8 +40,12 @@
 
 const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
-// The suffix of each file: the level and the file of /build.
+// The suffix of each file: the level and the file of /build. A longer
+// suffix comes before a shorter one that it ends with.
 const FILES = [
+  ['.mid.faces.json', 'mid', 'faces', 'application/json'],
+  ['.far.faces.json', 'far', 'faces', 'application/json'],
+  ['.faces.json', 'near', 'faces', 'application/json'],
   ['.mid.glb', 'mid', 'glb', 'model/gltf-binary'],
   ['.far.glb', 'far', 'glb', 'model/gltf-binary'],
   ['.parts.json', 'near', 'parts', 'application/json'],

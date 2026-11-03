@@ -1331,6 +1331,7 @@ The build (`mix world.build`) writes:
 | `priv/models/NAME.glb` | the near level |
 | `priv/models/NAME.mid.glb` | the mid level |
 | `priv/models/NAME.far.glb` | the far level |
+| `priv/models/NAME.mid.faces.json`, `NAME.far.faces.json` | the faces of the parts at mid and at far, for a painter in 2D (below) |
 | `priv/models/NAME.parts.json` | the list of the parts |
 | `priv/models/NAME.stl` | the print (step 9) |
 | `priv/models/NAME.vox` | the voxel version, when the model asks for one (step 8) |
@@ -1366,6 +1367,72 @@ The build gives the same bytes for the same model.
   `level` (`near`, `mid` or `far`).
 - **The check.** The Khronos glTF validator checks each file in CI: no
   error and no warning.
+
+## The faces
+
+A painter of a picture in 2D (the SVG of DIY) cannot use the triangles
+of a GLB well:
+
+- A GLB has one mesh for each node of a joint, so the painter cannot
+  sort the parts of a node.
+- A triangle is a half of a face: the picture has twice the polygons,
+  and a line can show between the two halves.
+
+`NAME.mid.faces.json` and `NAME.far.faces.json` (`World.Faces`) give the
+faces of each part that the level keeps, in this form:
+
+```json
+{
+  "name": "washer_lg_wm4000hwa",
+  "level": "far",
+  "size": [0.686, 0.768, 0.991],
+  "colors": {"white": {"color": [233, 236, 240], "alpha": 1.0}},
+  "parts": [
+    {
+      "path": "door",
+      "node": "door",
+      "box": [[-0.3, 0.33, 0.24], [0.21, 0.38, 0.75]],
+      "shapes": [
+        {
+          "role": "white",
+          "box": [[-0.3, 0.33, 0.24], [0.21, 0.38, 0.75]],
+          "points": [[-0.3, 0.33, 0.24], ...],
+          "faces": [[0, 1, 2, 3], ...],
+          "normals": [[0.0, 1.0, 0.0], ...]
+        }
+      ]
+    }
+  ]
+}
+```
+
+- The points are in the axes of World (x to the right, y to the front,
+  z up), in meters, with 3 decimals (1 mm), in the pose of the model.
+  They are not in the axes of glTF.
+- `parts`: each part that the level keeps, in the order of the build,
+  with its `path` (its id in `World.Plan.flat/1`), the `node` of its
+  joint (the name of the model for a part with no joint), and its
+  `box` (`[min, max]`). A part with no mesh is not in the list. A
+  skinned mesh of a figure is not a part: only the props of a figure
+  are in the list.
+- `shapes`: each mesh of the part, with its material `role`, its `box`,
+  its `points` (each point once), its `faces` (each face a polygon of
+  the mesh as indices into the points, counterclockwise from the
+  outside, not cut into triangles) and the `normal` of each face. A
+  mesh that smooths has the faces of the smooth level of the level.
+- `colors`: the color (sRGB, 0 to 255) and the alpha of each role of
+  the faces, from the palette and the colors of an order.
+
+A painter sorts the shapes by their boxes, then the faces of each shape.
+It drops a face that does not look to its eye. The box of a shell
+around another shape (the cabinet of a fridge around its drawer) holds
+the box of the other shape: a sort of the boxes cannot paint them in
+the correct order. A painter that cuts the faces (a BSP tree) paints
+each model in the correct order.
+
+An order gives the faces at each level, in its pose and in its colors:
+`/o/HASH.faces.json`, `.mid.faces.json` and `.far.faces.json`
+(`docs/factory.md`).
 
 ## The list of the parts
 

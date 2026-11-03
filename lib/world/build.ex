@@ -93,6 +93,28 @@ defmodule World.Build do
     for {i, parts} <- Enum.sort(acc.parts), {f, p, _} <- Enum.reverse(parts), do: {Frame.compose(frames[i], f), p}
   end
 
+  @doc """
+  The parts of a model that a level keeps, at their places in a pose:
+  a list of `{frame, part, path, node}`. The frame of each part is in the
+  axes of the model, as the GLB shows it. `path` is the id of the part in
+  `World.Plan.flat/1`, and `node` the name of the node of its joint (the
+  name of the model for a part with no joint). The options are `level`,
+  `pose` and `targets`, as for `scene/2`. A skinned mesh of a figure is
+  not a part: only the props of a figure are here. `World.Faces` writes
+  them for a painter of a picture in 2D.
+  """
+  def pieces(item, opts \\ []) do
+    level = Keyword.get(opts, :level, :near)
+    start = start(item, Keyword.get(opts, :targets, %{}))
+    acc = walk(keep_root(item), Frame.identity(), 0, start, level, Keyword.get(opts, :pose, %{}))
+    frames = Scene.world_frames(%Scene{nodes: acc.nodes})
+    names = acc.nodes |> Enum.map(& &1.name) |> List.to_tuple()
+
+    for {i, parts} <- Enum.sort(acc.parts), {f, p, path} <- Enum.reverse(parts) do
+      {Frame.compose(frames[i], f), p, path, elem(names, i)}
+    end
+  end
+
   @doc "Write the GLB of a model at a level, in a pose."
   def glb(item, opts \\ []), do: GLB.encode(scene(item, opts))
 

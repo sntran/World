@@ -38,12 +38,14 @@ An order is data, never code. World runs no code from an order.
 | `/replay.html?order=HASH` | The replay of an order: the map of the yard with the truck on its road, what each person does, and the model that grows when each task ends (`docs/world.md`, step W3). |
 | `/models/list.json` | The names of the models of the catalog. |
 | `/models/NAME.glb`, `NAME.mid.glb`, `NAME.far.glb` | A model of the catalog at each level. |
+| `/models/NAME.mid.faces.json`, `NAME.far.faces.json` | The faces of its parts at mid and at far, for a painter of a picture in 2D (`docs/format.md`, "The faces"). |
 | `/models/NAME.parts.json` | The list of its parts. |
 | `/palette.json` | The default color of each material role. |
 | `/version.json` | The commit of World that the site has. |
 | `/blueprints` | Each blueprint with its options: the type, the default, the unit, the range or the values. |
 | `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. |
 | `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the world build the GLB at each level (`World.Run`). |
+| `/o/HASH.faces.json`, `.mid.faces.json`, `.far.faces.json` | The faces of the parts of an order at each level, in its pose and its colors, for a painter in 2D (`World.Faces`). A URL `/m/` gives them too: `/m/van.mid.faces.json?model=sprinter_144`. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the run of the world that built the near level (`World.Log`: one line for the clock and the yard, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. |
 | `/m/BLUEPRINT.glb?OPTION=VALUE` (and the other files) | An order in the URL: `color.ROLE=%23rrggbb` gives a color, `joint.NAME=50` a joint, `target.LIMB=X,Y,Z` the end of a limb, `A,B` a list, and `OPTION.FIELD=VALUE` a field of an object (`origin.asian=1`: give each field, because a field that is not in the URL has its default). |
 | `POST /mcp` | The MCP server: the same orders, as the tools of the Model Context Protocol (below, "The MCP server"). |

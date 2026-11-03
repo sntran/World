@@ -377,12 +377,21 @@ defmodule World.GLB do
     {texture, buf}
   end
 
-  defp material(role, buf, overrides) do
+  @doc """
+  The spec of a material role (its color, roughness, metalness and alpha,
+  with keys as strings): from `overrides` (the materials of a scene: the
+  colors of an order), else from the palette, else a gray.
+  """
+  def spec(role, overrides) do
     spec =
       Map.get(overrides, role) || Map.get(@palette, Atom.to_string(role)) ||
         %{"color" => [154, 161, 170], "roughness" => 0.6, "metalness" => 0.0}
 
-    spec = Map.new(spec, fn {k, v} -> {to_string(k), v} end)
+    Map.new(spec, fn {k, v} -> {to_string(k), v} end)
+  end
+
+  defp material(role, buf, overrides) do
+    spec = spec(role, overrides)
     [r, g, b] = spec["color"]
     color = for c <- [r, g, b], do: Float.round(srgb_to_linear(c / 255), 5)
 

@@ -13,6 +13,10 @@ test('the name and the file of a path', () => {
   assert.equal(split('van.receipt.json')[1][2], 'receipt');
   assert.equal(split('van.log.json')[1][2], 'log');
   assert.deepEqual(split('van.replay.glb').map((x, i) => (i ? x[2] : x)), ['van', 'replay']);
+  // A longer suffix wins: the faces of the level mid are not the faces of near.
+  assert.deepEqual(split('van.mid.faces.json').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['mid', 'faces']]);
+  assert.deepEqual(split('van.far.faces.json')[1].slice(1, 3), ['far', 'faces']);
+  assert.deepEqual(split('van.faces.json')[1].slice(1, 3), ['near', 'faces']);
   assert.equal(split('.glb'), null);
   assert.equal(split('van.txt'), null);
 });

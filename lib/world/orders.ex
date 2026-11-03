@@ -18,11 +18,11 @@ defmodule World.Orders do
   keys in one order. `hash/1` is the name of its files: the same order
   gives the same hash, and the same files.
   """
-  alias World.{Build, Detail, GLB, Log, Run}
+  alias World.{Build, Detail, Faces, GLB, Log, Run}
   alias World.Orders.{Blueprint, Blueprints}
   @keys ~w(blueprint options colors joints targets)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
-  @files ~w(glb log replay parts receipt)
+  @files ~w(glb log replay parts receipt faces)
 
   @doc "The names of the levels of detail."
   def levels, do: Map.keys(@levels) |> Enum.sort()
@@ -128,7 +128,7 @@ defmodule World.Orders do
 
   # The URL of each file of a placed order: the suffix of /o/HASH (the
   # names that the Worker serves, handler.js), the level and the file.
-  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb)
+  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb faces.json mid.faces.json far.faces.json)
 
   @doc """
   Place an order (`POST /orders`, and the tool `place_order` of
@@ -171,6 +171,8 @@ defmodule World.Orders do
   - `"replay"`: the model with each part in a node of its own, with the id
     of its task, for the replay of the log.
   - `"parts"`: the list of the parts. `"receipt"`: the receipt.
+  - `"faces"`: the faces of the parts at the level, in the pose and the
+    colors of the order, for a painter of a picture in 2D (`World.Faces`).
 
   Gives `{:ok, binary}`, or `{:error, errors}` as `check/1`.
   """
@@ -204,6 +206,13 @@ defmodule World.Orders do
 
   defp make("replay", _order, _lvl, item, scene), do: GLB.encode(scene.(item.(), split: true))
   defp make("parts", _order, _lvl, item, _scene), do: parts(item.())
+
+  defp make("faces", order, lvl, item, _scene) do
+    targets = Map.new(Map.get(order, "targets", %{}), fn {k, [x, y, z]} -> {k, {x, y, z}} end)
+    opts = [level: lvl, pose: order["joints"], targets: targets, materials: materials(order["colors"])]
+    Faces.encode(item.(), opts)
+  end
+
   defp make("receipt", order, lvl, item, scene), do: receipt(order, lvl, scene.(item.(), []))
 
   # A run of the world for the order: the files of the model and the log,

@@ -52,7 +52,12 @@ defmodule World.ServiceTest do
     assert Plug.Conn.get_resp_header(replay, "content-type") == ["model/gltf-binary"]
     assert <<"glTF", _::binary>> = replay.resp_body
 
-    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt"}] =
+    # The faces of the parts at the level, for a painter in 2D.
+    faces = call(:post, "/build?level=mid&file=faces", @strut)
+    assert Plug.Conn.get_resp_header(faces, "content-type") == ["application/json"]
+    assert %{"level" => "mid", "parts" => [_ | _]} = json(faces)
+
+    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt, faces"}] =
              json(call(:post, "/build?file=zip", @strut))["errors"]
 
     assert [%{"path" => "level"}] = json(call(:post, "/build?level=huge", @strut))["errors"]
@@ -98,6 +103,7 @@ defmodule World.ServiceTest do
 
     assert conn.status == 200
     %{"hash" => hash, "files" => files, "replay" => replay} = json(conn)
+    assert files["mid.faces.json"] == "https://world.mkfifo.com/o/#{hash}.mid.faces.json"
     assert files["mid.glb"] == "https://world.mkfifo.com/o/#{hash}.mid.glb"
     assert replay == "https://world.mkfifo.com/replay.html?order=#{hash}"
 

@@ -14,8 +14,8 @@ defmodule World.Service do
   - `POST /build?level=near&file=glb`: an order in the body, or
     `&hash=HASH` with no body for an order of `POST /orders` (404 when
     the store has no order of the hash). 200 with the file
-    (`World.Orders.files/0`: `glb`, `log`, `replay`, `parts` or
-    `receipt`), or 422 with `{"errors"}`. The header `server-timing`
+    (`World.Orders.files/0`: `glb`, `log`, `replay`, `parts`, `receipt`
+    or `faces`), or 422 with `{"errors"}`. The header `server-timing`
     has the time of the build in the VM (`build;dur=MS`), with no wait
     for the build before it, and the header `x-world-order` the hash of
     the full order (the Worker keeps the file of a URL `/m/` by it).
@@ -39,7 +39,8 @@ defmodule World.Service do
     "replay" => "model/gltf-binary",
     "log" => "application/json",
     "parts" => "application/json",
-    "receipt" => "application/json"
+    "receipt" => "application/json",
+    "faces" => "application/json"
   }
 
   get "/blueprints" do

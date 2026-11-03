@@ -92,7 +92,52 @@ defmodule World.Mesh do
     normals(tris, pos, if(level > 0, do: 180.0, else: m.angle))
   end
 
-  defp wings_triangles(%__MODULE__{points: ps, faces: fs}, level) do
+  @doc """
+  The faces of the mesh at a smooth level (the level of the mesh by
+  default), not cut into triangles: a list of `{points, normal}`, the
+  points of each face counterclockwise from the outside, and the normal
+  of the face (Newell). A face with no area has no normal: it is not in
+  the list. A painter of a picture in 2D draws each face as one polygon
+  (`World.Faces`).
+  """
+  def faces(%__MODULE__{} = m, level \\ nil) do
+    level = if level == nil, do: m.smooth, else: level
+    we = smoothed(m, level)
+    vp = elem(we, 10)
+
+    for f <- :wings_we.visible(we),
+        points = for(v <- :wings_face.vertices_ccw(f, we), do: :array.get(v, vp)),
+        normal = newell(points),
+        normal != nil,
+        do: {points, normal}
+  end
+
+  # The normal of a polygon (Newell): the sum of the cross products of
+  # its edges, so a face that is not quite flat gets its mean normal.
+  defp newell(points) do
+    [first | _] = points
+
+    n =
+      points
+      |> Enum.zip(tl(points) ++ [first])
+      |> Enum.map(fn {a, b} -> Vec.cross(a, b) end)
+      |> Enum.reduce(&Vec.add/2)
+
+    if Vec.len(n) < 1.0e-12, do: nil, else: Vec.norm(n)
+  end
+
+  defp wings_triangles(%__MODULE__{} = m, level) do
+    we = smoothed(m, level)
+    # The core of Wings closes an open shape with hidden faces (holes):
+    # only the visible faces are a part of the shape.
+    we = :wings_tesselation.triangulate(:wings_we.visible(we), we)
+    vp = elem(we, 10)
+    tris = for f <- :wings_we.visible(we), do: :wings_face.vertices_ccw(f, we)
+    {tris, fn v -> :array.get(v, vp) end}
+  end
+
+  # The mesh in the core of Wings, smoothed `level` times.
+  defp smoothed(%__MODULE__{points: ps, faces: fs}, level) do
     we =
       try do
         :wings_we.build(fs, ps)
@@ -100,13 +145,7 @@ defmodule World.Mesh do
         kind, reason -> raise ArgumentError, "the core of Wings refused the mesh: #{inspect({kind, reason}, limit: 6)}"
       end
 
-    we = Enum.reduce(List.duplicate(nil, level), we, fn _, w -> :wings_subdiv.smooth(w) end)
-    # The core of Wings closes an open shape with hidden faces (holes):
-    # only the visible faces are a part of the shape.
-    we = :wings_tesselation.triangulate(:wings_we.visible(we), we)
-    vp = elem(we, 10)
-    tris = for f <- :wings_we.visible(we), do: :wings_face.vertices_ccw(f, we)
-    {tris, fn v -> :array.get(v, vp) end}
+    Enum.reduce(List.duplicate(nil, level), we, fn _, w -> :wings_subdiv.smooth(w) end)
   end
 
   # A corner takes the mean normal of the faces at its point that are
