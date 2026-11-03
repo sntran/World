@@ -215,6 +215,12 @@ has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
 far), `hole` (the dark inside of the mouth at mid and far),
 and with `speech` or `expressions` `teeth` and `tongue`.
 
+The standards (`priv/standards/*.json`, `World.Standards`): each file
+has its tables; each table has its `source`, its `unit` (`mm` or `in`),
+the names of its `fields` and its `sizes` (a name to its numbers, in
+the order of the fields). A new file or a new size compiles World
+again.
+
 `priv/palette.json` gives each role a color, a roughness and a
 metalness. Glass also has an alpha (0.35 for `glass`, 0.85 for
 `glass_dark`): its glTF material has the alpha mode `BLEND`. An app can give its own palette (the woodblock tones of Tre),

@@ -17,91 +17,29 @@ defmodule World.Materials.Fasteners do
     the parts, with the same axis as the bolt.
   """
   alias World.{Part, Shape}
-  # Hexagon head bolt (ISO 4014, ISO 4017): the width across the flats s,
-  # and the height of the head k, in mm.
-  @hex_head %{
-    "M3" => {5.5, 2.0},
-    "M4" => {7.0, 2.8},
-    "M5" => {8.0, 3.5},
-    "M6" => {10.0, 4.0},
-    "M8" => {13.0, 5.3},
-    "M10" => {16.0, 6.4},
-    "M12" => {18.0, 7.5},
-    "M14" => {21.0, 8.8},
-    "M16" => {24.0, 10.0},
-    "M20" => {30.0, 12.5},
-    "M24" => {36.0, 15.0}
-  }
-
-  # Hexagon nut (ISO 4032): the height m, in mm (s is as for the bolt).
-  @nut_height %{
-    "M3" => 2.4,
-    "M4" => 3.2,
-    "M5" => 4.7,
-    "M6" => 5.2,
-    "M8" => 6.8,
-    "M10" => 8.4,
-    "M12" => 10.8,
-    "M14" => 12.8,
-    "M16" => 14.8,
-    "M20" => 18.0,
-    "M24" => 21.5
-  }
-
-  # Plain washer (ISO 7089): the inner diameter d1, the outer d2 and the
-  # thickness h, in mm.
-  @washer %{
-    "M3" => {3.2, 7.0, 0.5},
-    "M4" => {4.3, 9.0, 0.8},
-    "M5" => {5.3, 10.0, 1.0},
-    "M6" => {6.4, 12.0, 1.6},
-    "M8" => {8.4, 16.0, 1.6},
-    "M10" => {10.5, 20.0, 2.0},
-    "M12" => {13.0, 24.0, 2.5},
-    "M14" => {15.0, 28.0, 2.5},
-    "M16" => {17.0, 30.0, 3.0},
-    "M20" => {21.0, 37.0, 3.0},
-    "M24" => {25.0, 44.0, 4.0}
-  }
-
-  # Hexagon socket head cap screw (ISO 4762): the head diameter dk and its
-  # height k, in mm.
-  @cap_head %{
-    "M3" => {5.5, 3.0},
-    "M4" => {7.0, 4.0},
-    "M5" => {8.5, 5.0},
-    "M6" => {10.0, 6.0},
-    "M8" => {13.0, 8.0},
-    "M10" => {16.0, 10.0},
-    "M12" => {18.0, 12.0},
-    "M16" => {24.0, 16.0},
-    "M20" => {30.0, 20.0}
-  }
-
-  # Flat head wood screw (ASME B18.6.1), by its gauge: the diameter of the
-  # thread D, the diameter of the head A and its height H, in inches.
-  @wood_screw %{
-    "#6" => {0.138, 0.279, 0.083},
-    "#8" => {0.164, 0.332, 0.100},
-    "#10" => {0.190, 0.385, 0.116},
-    "#12" => {0.216, 0.438, 0.132}
-  }
-
-  # The unified inch threads (ASME B18.2.1 and B18.2.2): the width across
-  # the flats of a hex head, the height of the head, the height of a hex
-  # nut; a SAE flat washer: its inner and outer diameters and its
-  # thickness; a socket button head (ASME B18.3): its diameter and its
-  # height. All in inches.
-  @inch %{
-    "1/4-20" => %{hex: {0.4375, 0.156}, nut: 0.219, washer: {0.281, 0.625, 0.065}, button: {0.437, 0.132}},
-    "5/16-18" => %{hex: {0.5, 0.203}, nut: 0.266, washer: {0.344, 0.688, 0.065}, button: {0.547, 0.166}},
-    "3/8-16" => %{hex: {0.5625, 0.234}, nut: 0.328, washer: {0.406, 0.812, 0.065}, button: {0.656, 0.199}},
-    "1/2-13" => %{hex: {0.75, 0.312}, nut: 0.438, washer: {0.531, 1.062, 0.095}, button: {0.875, 0.265}}
-  }
-
-  # Socket button head screws with metric threads (ISO 7380): the head
-  # diameter dk and its height k, in mm.
-  @button_head %{"M4" => {7.6, 2.2}, "M5" => {9.5, 2.75}, "M6" => {10.5, 3.3}, "M8" => {14.0, 4.4}}
+  # The tables of the standards (`priv/standards/fasteners.json`, read
+  # when World.Standards compiles): a metric size in mm, an inch size in
+  # inches. A bolt (ISO 4014, 4017): the width across the flats s and the
+  # height of the head k. A nut (ISO 4032): its height m. A washer (ISO
+  # 7089): d1, d2, h. A cap screw (ISO 4762) and a button head (ISO 7380):
+  # dk, k. A wood screw (ASME B18.6.1): D, A, H. The inch threads (ASME
+  # B18.2.1, B18.2.2, B18.3, SAE): the hex head, the nut, the washer and
+  # the button head.
+  @hex_head World.Standards.tuples({"fasteners", "hex_head"})
+  @nut_height World.Standards.tuples({"fasteners", "nut"})
+  @washer World.Standards.tuples({"fasteners", "washer"})
+  @cap_head World.Standards.tuples({"fasteners", "cap_head"})
+  @wood_screw World.Standards.tuples({"fasteners", "wood_screw"})
+  @button_head World.Standards.tuples({"fasteners", "button_head"})
+  @inch (for {thread, t} <- World.Standards.table("fasteners", "inch")["sizes"], into: %{} do
+           {thread,
+            %{
+              hex: List.to_tuple(t["hex"]),
+              nut: t["nut"],
+              washer: List.to_tuple(t["washer"]),
+              button: List.to_tuple(t["button"])
+            }}
+         end)
 
   @doc "The metric threads in the tables, from small to large."
   def threads, do: @hex_head |> Map.keys() |> Enum.sort_by(&diameter/1)

@@ -1,0 +1,41 @@
+{
+  "note": "The units of masonry of World.",
+  "units": {
+    "source": "Each unit has its own source.",
+    "unit": "mm",
+    "fields": [
+      "size",
+      "material",
+      "source"
+    ],
+    "sizes": {
+      "brick_vn": {
+        "size": [
+          220,
+          105,
+          60
+        ],
+        "material": "brick",
+        "source": "TCVN 1451:1998, a solid clay brick: 220 by 105 by 60 mm."
+      },
+      "brick_us_modular": {
+        "size": [
+          193.7,
+          92.1,
+          57.2
+        ],
+        "material": "brick",
+        "source": "ASTM C216, a modular brick: 7 5/8 by 3 5/8 by 2 1/4 in."
+      },
+      "cmu_8": {
+        "size": [
+          397,
+          194,
+          194
+        ],
+        "material": "concrete",
+        "source": "ASTM C90, a hollow concrete block of 8 by 8 by 16 in (nominal): 15 5/8 by 7 5/8 by 7 5/8 in."
+      }
+    }
+  }
+}

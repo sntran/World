@@ -10,15 +10,12 @@ defmodule World.Materials.Construction do
   `o` is at the origin, with the axis +z and `up` +y.
   """
   alias World.{Frame, Part, Shape}
-  # The units of masonry: the length, the width and the height in mm, the
-  # material, the source.
-  @units %{
-    "brick_vn" => {220, 105, 60, :brick, "TCVN 1451:1998, a solid clay brick: 220 by 105 by 60 mm."},
-    "brick_us_modular" => {193.7, 92.1, 57.2, :brick, "ASTM C216, a modular brick: 7 5/8 by 3 5/8 by 2 1/4 in."},
-    "cmu_8" =>
-      {397, 194, 194, :concrete,
-       "ASTM C90, a hollow concrete block of 8 by 8 by 16 in (nominal): 15 5/8 by 7 5/8 by 7 5/8 in."}
-  }
+  # The units of masonry (`priv/standards/masonry.json`): the length, the
+  # width and the height in mm, the material, the source.
+  @units (for {name, u} <- World.Standards.table("masonry", "units")["sizes"], into: %{} do
+            [l, w, h] = u["size"]
+            {name, {l, w, h, String.to_atom(u["material"]), u["source"]}}
+          end)
 
   @doc "The names of the units of masonry."
   def units, do: @units |> Map.keys() |> Enum.sort()

@@ -1,0 +1,322 @@
+{
+  "note": "The sizes of the fasteners of World. A metric size is in mm, an inch size in inches.",
+  "hex_head": {
+    "source": "ISO 4014 and ISO 4017: the width across the flats s and the height of the head k.",
+    "unit": "mm",
+    "fields": [
+      "s",
+      "k"
+    ],
+    "sizes": {
+      "M3": [
+        5.5,
+        2.0
+      ],
+      "M4": [
+        7.0,
+        2.8
+      ],
+      "M5": [
+        8.0,
+        3.5
+      ],
+      "M6": [
+        10.0,
+        4.0
+      ],
+      "M8": [
+        13.0,
+        5.3
+      ],
+      "M10": [
+        16.0,
+        6.4
+      ],
+      "M12": [
+        18.0,
+        7.5
+      ],
+      "M14": [
+        21.0,
+        8.8
+      ],
+      "M16": [
+        24.0,
+        10.0
+      ],
+      "M20": [
+        30.0,
+        12.5
+      ],
+      "M24": [
+        36.0,
+        15.0
+      ]
+    }
+  },
+  "nut": {
+    "source": "ISO 4032: the height m of a hexagon nut (s is as for the bolt).",
+    "unit": "mm",
+    "fields": [
+      "m"
+    ],
+    "sizes": {
+      "M3": 2.4,
+      "M4": 3.2,
+      "M5": 4.7,
+      "M6": 5.2,
+      "M8": 6.8,
+      "M10": 8.4,
+      "M12": 10.8,
+      "M14": 12.8,
+      "M16": 14.8,
+      "M20": 18.0,
+      "M24": 21.5
+    }
+  },
+  "washer": {
+    "source": "ISO 7089: the inner diameter d1, the outer diameter d2 and the thickness h of a plain washer.",
+    "unit": "mm",
+    "fields": [
+      "d1",
+      "d2",
+      "h"
+    ],
+    "sizes": {
+      "M3": [
+        3.2,
+        7.0,
+        0.5
+      ],
+      "M4": [
+        4.3,
+        9.0,
+        0.8
+      ],
+      "M5": [
+        5.3,
+        10.0,
+        1.0
+      ],
+      "M6": [
+        6.4,
+        12.0,
+        1.6
+      ],
+      "M8": [
+        8.4,
+        16.0,
+        1.6
+      ],
+      "M10": [
+        10.5,
+        20.0,
+        2.0
+      ],
+      "M12": [
+        13.0,
+        24.0,
+        2.5
+      ],
+      "M14": [
+        15.0,
+        28.0,
+        2.5
+      ],
+      "M16": [
+        17.0,
+        30.0,
+        3.0
+      ],
+      "M20": [
+        21.0,
+        37.0,
+        3.0
+      ],
+      "M24": [
+        25.0,
+        44.0,
+        4.0
+      ]
+    }
+  },
+  "cap_head": {
+    "source": "ISO 4762: the diameter dk and the height k of the head of a hexagon socket head cap screw.",
+    "unit": "mm",
+    "fields": [
+      "dk",
+      "k"
+    ],
+    "sizes": {
+      "M3": [
+        5.5,
+        3.0
+      ],
+      "M4": [
+        7.0,
+        4.0
+      ],
+      "M5": [
+        8.5,
+        5.0
+      ],
+      "M6": [
+        10.0,
+        6.0
+      ],
+      "M8": [
+        13.0,
+        8.0
+      ],
+      "M10": [
+        16.0,
+        10.0
+      ],
+      "M12": [
+        18.0,
+        12.0
+      ],
+      "M16": [
+        24.0,
+        16.0
+      ],
+      "M20": [
+        30.0,
+        20.0
+      ]
+    }
+  },
+  "button_head": {
+    "source": "ISO 7380: the diameter dk and the height k of the head of a socket button head screw.",
+    "unit": "mm",
+    "fields": [
+      "dk",
+      "k"
+    ],
+    "sizes": {
+      "M4": [
+        7.6,
+        2.2
+      ],
+      "M5": [
+        9.5,
+        2.75
+      ],
+      "M6": [
+        10.5,
+        3.3
+      ],
+      "M8": [
+        14.0,
+        4.4
+      ]
+    }
+  },
+  "wood_screw": {
+    "source": "ASME B18.6.1: the diameter of the thread D, the diameter of the head A and its height H of a flat head wood screw, by its gauge.",
+    "unit": "in",
+    "fields": [
+      "D",
+      "A",
+      "H"
+    ],
+    "sizes": {
+      "#6": [
+        0.138,
+        0.279,
+        0.083
+      ],
+      "#8": [
+        0.164,
+        0.332,
+        0.1
+      ],
+      "#10": [
+        0.19,
+        0.385,
+        0.116
+      ],
+      "#12": [
+        0.216,
+        0.438,
+        0.132
+      ]
+    }
+  },
+  "inch": {
+    "source": "ASME B18.2.1 and B18.2.2 (the hex head: across the flats and height; the hex nut: height), a SAE flat washer (inner and outer diameters, thickness), ASME B18.3 (a socket button head: diameter and height).",
+    "unit": "in",
+    "fields": [
+      "hex",
+      "nut",
+      "washer",
+      "button"
+    ],
+    "sizes": {
+      "1/4-20": {
+        "hex": [
+          0.4375,
+          0.156
+        ],
+        "washer": [
+          0.281,
+          0.625,
+          0.065
+        ],
+        "button": [
+          0.437,
+          0.132
+        ],
+        "nut": 0.219
+      },
+      "5/16-18": {
+        "hex": [
+          0.5,
+          0.203
+        ],
+        "washer": [
+          0.344,
+          0.688,
+          0.065
+        ],
+        "button": [
+          0.547,
+          0.166
+        ],
+        "nut": 0.266
+      },
+      "3/8-16": {
+        "hex": [
+          0.5625,
+          0.234
+        ],
+        "washer": [
+          0.406,
+          0.812,
+          0.065
+        ],
+        "button": [
+          0.656,
+          0.199
+        ],
+        "nut": 0.328
+      },
+      "1/2-13": {
+        "hex": [
+          0.75,
+          0.312
+        ],
+        "washer": [
+          0.531,
+          1.062,
+          0.095
+        ],
+        "button": [
+          0.875,
+          0.265
+        ],
+        "nut": 0.438
+      }
+    }
+  }
+}

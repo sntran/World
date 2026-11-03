@@ -123,7 +123,7 @@ models").
 | W9. The world: the engineers | Later, with the owner. | To do |
 | P1. The real world: sewing | `World.Sewing`: garments from patterns, seams and layers; a bra, the áo dài, a T-shirt and pants (`docs/world.md`, "The real world"). | In progress: the garments, the layers, the drape and the bra are done; the renders next to photos are next |
 | P2. The real world: turning | `World.Lathe`: cups, bowls, bottles, posts and pots from a profile; the turnery of the world turns them. | In progress: the lathe, five parts and the turnery are done; the renders next to photos are next |
-| P3. The real world: the standards | Bolts, nuts, lumber, pipe, tires, bricks, doors and windows as data, by their standard names. | To do |
+| P3. The real world: the standards | Bolts, nuts, lumber, pipe, tires, bricks, doors and windows as data, by their standard names. | In progress: the fasteners, the lumber of the US, the bearings, the steel pipe and the bricks are data now; the lumber of Việt Nam, the tires, the doors and the windows are next |
 | P4. The real world: the materials | The density, surface and price of each material; the mass and the center of mass of each assembly. | To do |
 | P5. The real world: the checks | A model stands, its parts do not pass through each other, its joints stay in their limits, and it fits through its doors. | To do |
 | P6. The real world: sheets and molds | `World.Sheet` and `World.Loft`: cabinets, the ghe of Vũng Tàu, helmets, seats; the body shop of the vans on `World.Sheet`. | To do |

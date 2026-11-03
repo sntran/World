@@ -1,0 +1,186 @@
+{
+  "note": "The stock of World: lumber, bearings and steel pipe.",
+  "lumber": {
+    "source": "Softwood lumber of the US (ASTM D245 and the American Softwood Lumber Standard PS 20): the nominal size and the dry size, the thickness and the width.",
+    "unit": "in",
+    "fields": [
+      "t",
+      "w"
+    ],
+    "sizes": {
+      "1x2": [
+        0.75,
+        1.5
+      ],
+      "1x4": [
+        0.75,
+        3.5
+      ],
+      "1x6": [
+        0.75,
+        5.5
+      ],
+      "2x2": [
+        1.5,
+        1.5
+      ],
+      "2x3": [
+        1.5,
+        2.5
+      ],
+      "2x4": [
+        1.5,
+        3.5
+      ],
+      "2x6": [
+        1.5,
+        5.5
+      ],
+      "2x8": [
+        1.5,
+        7.25
+      ],
+      "4x4": [
+        3.5,
+        3.5
+      ]
+    }
+  },
+  "bearing": {
+    "source": "Deep groove ball bearings (ISO 15): the bore d, the outer diameter D and the width B.",
+    "unit": "mm",
+    "fields": [
+      "d",
+      "D",
+      "B"
+    ],
+    "sizes": {
+      "6000": [
+        10,
+        26,
+        8
+      ],
+      "6001": [
+        12,
+        28,
+        8
+      ],
+      "6002": [
+        15,
+        32,
+        9
+      ],
+      "6003": [
+        17,
+        35,
+        10
+      ],
+      "6004": [
+        20,
+        42,
+        12
+      ],
+      "6005": [
+        25,
+        47,
+        12
+      ],
+      "6200": [
+        10,
+        30,
+        9
+      ],
+      "6201": [
+        12,
+        32,
+        10
+      ],
+      "6202": [
+        15,
+        35,
+        11
+      ],
+      "6203": [
+        17,
+        40,
+        12
+      ],
+      "6204": [
+        20,
+        47,
+        14
+      ],
+      "6205": [
+        25,
+        52,
+        15
+      ],
+      "6301": [
+        12,
+        37,
+        12
+      ],
+      "6302": [
+        15,
+        42,
+        13
+      ]
+    }
+  },
+  "pipe": {
+    "source": "Welded and seamless wrought steel pipe (ASME B36.10M, Table 1): the outside diameter and the wall of schedule 40 and schedule 80, by the nominal pipe size (NPS).",
+    "unit": "in",
+    "fields": [
+      "od",
+      "sch40",
+      "sch80"
+    ],
+    "sizes": {
+      "1/2": [
+        0.84,
+        0.109,
+        0.147
+      ],
+      "3/4": [
+        1.05,
+        0.113,
+        0.154
+      ],
+      "1": [
+        1.315,
+        0.133,
+        0.179
+      ],
+      "1-1/4": [
+        1.66,
+        0.14,
+        0.191
+      ],
+      "1-1/2": [
+        1.9,
+        0.145,
+        0.2
+      ],
+      "2": [
+        2.375,
+        0.154,
+        0.218
+      ],
+      "2-1/2": [
+        2.875,
+        0.203,
+        0.276
+      ],
+      "3": [
+        3.5,
+        0.216,
+        0.3
+      ],
+      "4": [
+        4.5,
+        0.237,
+        0.337
+      ]
+    }
+  }
+}

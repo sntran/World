@@ -8,38 +8,14 @@ defmodule World.Materials.Stock do
   face of another with the same port axis.
   """
   alias World.{Frame, Part, Shape}
-  # Lumber (US softwood, ASTM D245 and the American Softwood Lumber
-  # Standard PS 20): the nominal size and the dry size in inches.
-  @lumber %{
-    "1x2" => {0.75, 1.5},
-    "1x4" => {0.75, 3.5},
-    "1x6" => {0.75, 5.5},
-    "2x2" => {1.5, 1.5},
-    "2x3" => {1.5, 2.5},
-    "2x4" => {1.5, 3.5},
-    "2x6" => {1.5, 5.5},
-    "2x8" => {1.5, 7.25},
-    "4x4" => {3.5, 3.5}
-  }
-
-  # Deep groove ball bearings (ISO 15): the bore d, the outer diameter D
-  # and the width B, in mm.
-  @bearings %{
-    "6000" => {10, 26, 8},
-    "6001" => {12, 28, 8},
-    "6002" => {15, 32, 9},
-    "6003" => {17, 35, 10},
-    "6004" => {20, 42, 12},
-    "6005" => {25, 47, 12},
-    "6200" => {10, 30, 9},
-    "6201" => {12, 32, 10},
-    "6202" => {15, 35, 11},
-    "6203" => {17, 40, 12},
-    "6204" => {20, 47, 14},
-    "6205" => {25, 52, 15},
-    "6301" => {12, 37, 12},
-    "6302" => {15, 42, 13}
-  }
+  # The tables of the standards (`priv/standards/stock.json`): lumber (US
+  # softwood, ASTM D245 and PS 20: the nominal size, and the dry size in
+  # inches), deep groove ball bearings (ISO 15: d, D, B in mm), steel pipe
+  # (ASME B36.10M: the outside diameter, the wall of schedule 40 and of
+  # schedule 80, in inches).
+  @lumber World.Standards.tuples({"stock", "lumber"})
+  @bearings World.Standards.tuples({"stock", "bearing"})
+  @pipe World.Standards.tuples({"stock", "pipe"})
 
   @doc "The sizes of a table, in meters, for the tests."
   def table(:lumber, nominal), do: @lumber |> Map.fetch!(nominal) |> then(fn {t, w} -> {t * 0.0254, w * 0.0254} end)
@@ -50,6 +26,7 @@ defmodule World.Materials.Stock do
   @doc "The names in a table."
   def names(:lumber), do: Map.keys(@lumber) |> Enum.sort()
   def names(:bearing), do: Map.keys(@bearings) |> Enum.sort()
+  def names(:pipe), do: Map.keys(@pipe) |> Enum.sort()
 
   @doc """
   A round tube along z, from 0 to `length`: the outer diameter and the
@@ -72,6 +49,30 @@ defmodule World.Materials.Stock do
       length,
       %{"od" => od, "wall" => wall, "length" => length},
       opts
+    )
+  end
+
+  @doc """
+  A steel pipe along z, of a nominal pipe size (ASME B36.10M) and a
+  schedule (`:sch40` or `:sch80`), as `tube/5`: `pipe("1", :sch40, 2.0)`.
+  """
+  def pipe(nps, schedule, length, opts \\ []) do
+    {od, sch40, sch80} = Map.fetch!(@pipe, nps)
+    wall = if schedule == :sch40, do: sch40, else: sch80
+    s = if schedule == :sch40, do: "40", else: "80"
+
+    tube(
+      od * 0.0254,
+      wall * 0.0254,
+      length,
+      Keyword.get(opts, :material, :steel),
+      Keyword.merge(
+        [
+          name: "pipe_nps_#{String.replace(nps, ["-", "/"], "_")}_sch#{s}x#{mm(length)}",
+          sources: ["Steel pipe, ASME B36.10M: NPS #{nps}, schedule #{s}, #{od} in outside, a wall of #{wall} in."]
+        ],
+        opts
+      )
     )
   end
 
