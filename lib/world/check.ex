@@ -22,8 +22,9 @@ defmodule World.Check do
     thing put together on its site (`"site"` in its extras) goes through
     the door in its parts.
 
-  `model/2` does not check that a door, a window or a material (a roof
-  tile) stands: each is held in its wall or on its roof. A boat floats,
+  `model/2` does not check that a door, a window, a material (a roof
+  tile) or an enclosure stands: each is held in its wall, on its roof or
+  on its wall. A boat floats,
   and it is built on a slipway: no check of its stand or of a door.
 
   `model/2` runs them all and gives `:ok` or `{:error, reasons}`.
@@ -63,9 +64,9 @@ defmodule World.Check do
   end
 
   # A door and a window stand in a wall, a material (a roof tile) on its
-  # roof: they do not stand on their own. A boat floats (its check is its
-  # stability: TODO.md).
-  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :boat], do: :ok
+  # roof, an enclosure on its wall: they do not stand on their own. A boat
+  # floats (its check is its stability: TODO.md).
+  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat], do: :ok
   defp stand(item), do: stands(item)
 
   # A house or a wall is built on its site, a boat on the slipway of its

@@ -27,7 +27,8 @@ defmodule World.Catalog do
         items() ++
         animals() ++
         World.Turned.models() ++
-        World.Boats.models() ++ for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
+        World.Boats.models() ++
+        World.Enclosures.models() ++ for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
       &elem(&1, 0)
     )
   end

@@ -50,7 +50,9 @@ defmodule World.Run do
     # bottles, posts, pots).
     %{place: "turnery", family: :turned, at: {-600, 0}, foreman: "hoa", workers: ["kim"]},
     # The boatyard: it builds the wooden boats (World.Boats) on its slipway.
-    %{place: "boatyard", family: :boats, at: {-600, 400}, foreman: "loc", workers: ["nhan", "phong"]}
+    %{place: "boatyard", family: :boats, at: {-600, 400}, foreman: "loc", workers: ["nhan", "phong"]},
+    # The sheet metal shop: it cuts and bends the parts of World.Sheet.
+    %{place: "sheet_shop", family: :sheets, at: {-300, 700}, foreman: "son", workers: ["thanh"]}
   ]
 
   @doc """
@@ -103,6 +105,7 @@ defmodule World.Run do
     |> Yard.road("openings", "houses")
     |> Yard.road("turnery", "customer")
     |> Yard.road("boatyard", "customer")
+    |> Yard.road("sheet_shop", "customer")
   end
 
   defp warehouse(name, at, limit, store),

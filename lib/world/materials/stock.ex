@@ -19,6 +19,8 @@ defmodule World.Materials.Stock do
   # The sawn timber of Việt Nam (TCVN 1075:1971): its thicknesses and its
   # widths, in mm.
   @vn World.Standards.table("stock", "vn_lumber")["sizes"]
+  # The Manufacturers' Standard Gauge for steel sheet, in inches.
+  @gauge World.Standards.tuples({"stock", "sheet_gauge"})
 
   @doc "The sizes of a table, in meters, for the tests."
   def table(:lumber, nominal), do: @lumber |> Map.fetch!(nominal) |> then(fn {t, w} -> {t * 0.0254, w * 0.0254} end)
@@ -75,6 +77,15 @@ defmodule World.Materials.Stock do
       {a, b} -> {a / 1000, b / 1000}
     end
   end
+
+  @doc """
+  The thickness of a gauge of steel sheet (the Manufacturers' Standard
+  Gauge), in m.
+
+      iex> Float.round(World.Materials.Stock.gauge("16") * 1000, 3)
+      1.519
+  """
+  def gauge(g), do: Map.fetch!(@gauge, g) * 0.0254
 
   @doc "The names in a table."
   def names(:lumber), do: Map.keys(@lumber) |> Enum.sort()

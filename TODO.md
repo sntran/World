@@ -37,6 +37,10 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **More of the sheet metal shop.** Bends of other angles (a hem of 180
+  degrees, a joggle), holes in a flange (knockouts), and a gasket for a
+  box of NEMA Type 4. The gauge of the A-16N126 from its datasheet (16
+  gauge now, the gauge of the A12N128).
 - **The ghe of Vũng Tàu, more real.** The lines from a drawing or
   photos (now by eye); the engine and its bed (QCVN 91, Bảng 4/2-B), the
   shaft and the propeller, the fish holds and their hatches (Bảng 10/2-B
