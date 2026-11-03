@@ -3,6 +3,8 @@ defmodule World.LoftTest do
 
   alias World.{Loft, Mesh, Molds}
 
+  doctest Molds
+
   # A half sphere of the radius r over z = 0, with its apex at the top.
   defp dome(r, k \\ 16) do
     spine = for i <- 0..k, do: {0.0, 0.0, r * :math.sin(:math.pi() / 2 * i / k)}
@@ -65,21 +67,72 @@ defmodule World.LoftTest do
     assert hd(Loft.part(dome(0.1), "dome", :shell, [], 0.004, :plastic).shapes).matter == nil
   end
 
-  test "the half helmet of Việt Nam: a true model, under the mass limit of QCVN 2:2021" do
-    g = Molds.half_helmet()
-    assert g.kind == :helmet and World.Places.family_of(g) == :molds
-    assert World.Check.model(g) == :ok
+  test "a surface grows out along its normal" do
+    {r, d} = {0.1, 0.02}
+    l = Loft.grow(dome(r), d)
+    assert_in_delta Loft.area(l), 2 * :math.pi() * (r + d) ** 2, 0.015 * 2 * :math.pi() * (r + d) ** 2
+    # The apex moves up by d, and the rim out by d.
+    {rows, _} = Loft.rows(l)
+    {_, _, top} = rows |> List.last() |> hd()
+    assert_in_delta top, r + d, 1.0e-6
+    assert_in_delta World.Vec.len(hd(hd(rows))), r + d, 1.0e-3
+  end
 
-    %{mass: mass, unknown: unknown} = World.Mass.of(g)
-    assert mass > 0.3 and mass <= Molds.mass_limit()
-    assert unknown == []
+  describe "the half helmet of Việt Nam (QCVN 2:2021/BKHCN)" do
+    test "each headform: its perimeter at the reference plane is its circumference within 2%, and its top is at Y" do
+      for size <- Molds.sizes() do
+        h = Molds.headform(size)
+        {[row | _] = rows, _} = Loft.rows(h.loft)
 
-    # Each part of the helmet is a part of its own: the shell, the peak,
-    # the liner, the comfort pad, the two straps and the buckle.
-    assert Enum.map(g.nodes, &elem(&1, 0)) ==
-             ~w(shell_helmet_half peak_helmet_half liner_helmet_half pad_helmet_half strap_left_helmet_half strap_right_helmet_half buckle_helmet_half)
+        perimeter =
+          (row ++ [hd(row)])
+          |> Enum.chunk_every(2, 1, :discard)
+          |> Enum.map(fn [a, b] -> World.Vec.len(World.Vec.sub(b, a)) end)
+          |> Enum.sum()
 
-    # A bigger head gives a bigger helmet.
-    assert World.Mass.of(Molds.half_helmet(0.62)).mass > mass
+        assert_in_delta perimeter, h.circumference, 0.02 * h.circumference, "size #{size}"
+        {_, _, top} = rows |> List.last() |> hd()
+        assert_in_delta top, h.y, 1.0e-9
+      end
+    end
+
+    test "a true model under the mass limit of its size; a bigger headform gives a bigger helmet" do
+      masses =
+        for size <- ~w(1 6 9) do
+          g = Molds.half_helmet(size)
+          assert g.kind == :helmet and World.Places.family_of(g) == :molds
+          assert World.Check.model(g) == :ok
+          %{mass: mass, unknown: []} = World.Mass.of(g)
+          assert mass > 0.3 and mass <= Molds.mass_limit("half", size), "size #{size}: #{mass} kg"
+          mass
+        end
+
+      assert masses == Enum.sort(masses)
+      assert Molds.mass_limit("half", "1") == 0.8
+    end
+
+    test "the parts of Hình 2, each a part of its own" do
+      g = Molds.half_helmet()
+
+      assert Enum.map(g.nodes, &elem(&1, 0)) ==
+               ~w(shell_helmet_half liner_helmet_half pad_helmet_half trim_helmet_half peak_helmet_half rivet_left_helmet_half rivet_right_helmet_half strap_left_helmet_half strap_right_helmet_half buckle_helmet_half)
+    end
+
+    test "it covers the headform over the line AA', the view up is 7 degrees or more, and a rivet is 2 mm or less" do
+      g = Molds.half_helmet()
+      [aa] = World.Standards.size({"helmet", "limits"}, "aa_line")
+      [up] = World.Standards.size({"helmet", "vision"}, "up")
+      [rivet] = World.Standards.size({"helmet", "limits"}, "rivet_head")
+
+      # The rim of the liner and of the shell is under AA'.
+      for {name, %World.Part{} = p, _} <- g.nodes, name in ~w(liner_helmet_half shell_helmet_half) do
+        {{_, _, low}, _} = World.Part.bounds(p)
+        assert low * 1000 < aa
+      end
+
+      assert Molds.vision_up(g, "6") >= up
+
+      for {_, %World.Part{kind: :rivet} = p, _} <- g.nodes, do: assert(p.params["head"] * 1000 <= rivet)
+    end
   end
 end

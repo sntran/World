@@ -3,20 +3,20 @@ defmodule World.Molds do
   The things of the mold shop (`docs/world.md`, step P6; the family
   `:molds`): shells from molds, each made with `World.Loft`.
 
-  - `half_helmet/1`: the half helmet of Việt Nam (mũ bảo hiểm che nửa
-    đầu): a shell of ABS, a peak, a liner of EPS, a comfort pad, and a
-    strap of webbing on each side to a buckle
-    (`World.Materials.Webbing`), each a part of its own.
+  - `headform/1`: a headform (dạng đầu) of QCVN 2:2021/BKHCN, from the
+    polar coordinates of its sections (`priv/standards/helmet.json`).
+  - `half_helmet/2`: the half helmet of Việt Nam (mũ bảo hiểm che nửa
+    đầu) on a headform: the parts of Hình 2 of QCVN 2:2021, each a part
+    of its own: the shell, the liner, the comfort pad, the edge trim, the
+    rivets, the straps of webbing and the buckle
+    (`World.Materials.Webbing`), and the peak (an optional part, 3.2.2).
   """
-  alias World.{Assembly, Loft, Part, Shape, Vec}
+  alias World.{Assembly, Frame, Loft, Part, Shape, Standards, Vec}
   alias World.Materials.Webbing
 
   @o Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
 
-  # QCVN 2:2021/BKHCN (Bảng 1): the mass of a half helmet or a helmet of
-  # three quarters is 1 kg or less for the head sizes 4 to 9, and 0.8 kg or
-  # less for the sizes 1 to 3.
-  @mass_limit 1.0
+  @sizes ~w(1 2 3 4 5 6 7 8 9)
 
   # Trzaskalska and Chwastek, "Analysis of the protective helmets",
   # Archives of Metallurgy and Materials 66 (2021): a liner of EPS of 30
@@ -26,47 +26,94 @@ defmodule World.Molds do
   @shell 0.004
   # The comfort pad between the head and the liner: by eye.
   @gap 0.003
-  # The webbing of the strap: by eye.
+  # The webbing of the strap, and the head of a rivet: by eye.
   @webbing 0.02
+  @rivet {0.005, 0.0015}
 
   @doc "The models of the mold shop, as `{name, fun}`."
   def models, do: [{"helmet_half_vn", fn -> half_helmet() end}]
 
-  @doc "The mass limit of a half helmet of the large head sizes (kg, QCVN 2:2021/BKHCN)."
-  def mass_limit, do: @mass_limit
+  @doc "The sizes of a headform: \"1\" to \"9\"."
+  def sizes, do: @sizes
 
   @doc """
-  The half helmet of Việt Nam, for a head of the circumference `c` (m,
-  0.57 by default). The options: `color` (`[r, g, b]` of the shell).
+  The mass limit of a helmet of a kind (`"half"`, `"three_quarter"`,
+  `"open_face"`, `"full_face"`) for a size of headform (kg, QCVN
+  2:2021/BKHCN, 5.2).
 
-  The head over the rim is half of an ellipsoid: its length along y, its
-  breadth across x (0.82 of the length, by eye), its height over the rim
-  0.10 m (by eye). The circumference of the ellipse of the rim is `c`
-  (Ramanujan). Out from the head: the comfort pad, the liner of EPS, and
-  the shell of ABS. The peak at the front, the straps and the buckle: by
-  eye.
-
-  The axes: x across, y to the front, z up from the rim.
+      iex> World.Molds.mass_limit("half", "6")
+      1.0
+      iex> World.Molds.mass_limit("full_face", "2")
+      1.2
   """
-  def half_helmet(c \\ 0.57, opts \\ []) do
-    # The half axes of the head at the rim: a along y, b across x.
-    r = 0.82
-    a = c / (:math.pi() * (3 * (1 + r) - :math.sqrt((3 + r) * (1 + 3 * r))))
-    {b, h} = {r * a, 0.10}
+  def mass_limit(kind, size) when size in @sizes do
+    [small, large] = Standards.size({"helmet", "mass"}, kind)
+    if size in ~w(1 2 3), do: small, else: large
+  end
 
-    liner_out = @gap + @liner
-    shell_out = liner_out + @shell
+  @doc """
+  A headform of a size: `%{circumference, x, y, loft}`, in m. The loft is
+  the upper part of the headform, over its reference plane (z = 0): a
+  section at each height of the table, a ring of 24 points from the front
+  (+y) around the right side (+x) to the back and around the left side,
+  and the top at the height Y.
+  """
+  def headform(size) when size in @sizes do
+    [c, x, y] = Standards.size({"helmet", "headform"}, size)
+    rows = Standards.size({"helmet", "sections"}, size)
 
-    liner = dome(b + liner_out, a + liner_out, h + liner_out)
-    shell = dome(b + shell_out, a + shell_out, h + shell_out)
-    {sx, sy} = {b + shell_out, a + shell_out}
+    spine = for([h | _] <- rows, do: {0.0, 0.0, h / 1000}) ++ [{0.0, 0.0, y / 1000}]
+    sections = for([_ | radii] <- rows, do: ring(radii)) ++ [{0, 0, 2}]
+
+    %{circumference: c / 1000, x: x / 1000, y: y / 1000, loft: Loft.new(spine, sections, up: {1, 0, 0})}
+  end
+
+  # A ring of a section: the radii at 0, 15, ... 180 degrees from the
+  # front, on the right side, then the left side back to the front.
+  defp ring(radii) do
+    right =
+      for {r, i} <- Enum.with_index(radii),
+          a = i * 15 * :math.pi() / 180,
+          do: {r / 1000 * :math.sin(a), r / 1000 * :math.cos(a)}
+
+    left = for {px, py} <- right |> Enum.slice(1..11) |> Enum.reverse(), do: {-px, py}
+    right ++ left
+  end
+
+  @doc """
+  The half helmet of Việt Nam on the headform of a size (\"6\", a head of
+  56 cm, by default). The options: `color` (`[r, g, b]` of the shell).
+
+  Out from the headform: the comfort pad, the liner of EPS and the shell
+  of ABS, each the thickness out from the one under it. The rim is on the
+  reference plane of the headform, under the line AA' (12.7 mm over it):
+  the helmet covers the headform over AA', as 6.4.1 b) asks. The rivets
+  of the straps are on the sides, at 105 degrees from the front; the
+  buckle is under the chin, and the peak at the front (by eye).
+
+  The axes: x across, y to the front, z up from the reference plane.
+  """
+  def half_helmet(size \\ "6", opts \\ []) when size in @sizes do
+    head = headform(size)
+    pad = Loft.grow(head.loft, @gap)
+    liner = Loft.grow(head.loft, @gap + @liner)
+    shell = Loft.grow(head.loft, @gap + @liner + @shell)
+    {shell_rows, _} = Loft.rows(shell)
+    {liner_rows, _} = Loft.rows(liner)
+    rim = hd(shell_rows)
 
     color = Keyword.get(opts, :color, [236, 232, 222])
 
-    # The places of the rivets of the strap, on each side of the rim, and
-    # the buckle under the chin, 0.13 m under the rim (by eye).
-    rivet = fn sign -> {sign * (sx + 0.001), -0.005, 0.012} end
-    {bl, bw} = {Webbing.buckle("buckle", @webbing), @webbing}
+    # A rivet on each side, on the outside of the shell, 6 mm over the
+    # rim, at 105 degrees from the front (the index 7 of the ring), and its
+    # normal out.
+    rivet = fn sign ->
+      p = Enum.at(rim, if(sign > 0, do: 7, else: 17))
+      {px, py, pz} = p
+      {Vec.add(p, {0.0, 0.0, 0.006}), Vec.norm({px, py, 0.0}), pz}
+    end
+
+    bl = Webbing.buckle("buckle_helmet_half", @webbing)
     buckle_len = elem(Part.port!(bl, "male").at, 0)
     chin = {-buckle_len / 2, 0.07, -0.13}
 
@@ -74,7 +121,7 @@ defmodule World.Molds do
       Loft.part(shell, "shell_helmet_half", :shell, [@o | ports(rivet)], @shell, :paint,
         matter: :plastic,
         sources: [
-          "The shell: ABS of #{mm(@shell)} mm, the least of a thermoplastic shell (Trzaskalska and Chwastek, Archives of Metallurgy and Materials 66, 2021)."
+          "The shell: ABS of #{mm(@shell)} mm, the least of a thermoplastic shell (Trzaskalska and Chwastek, Archives of Metallurgy and Materials 66, 2021), over the headform of the size #{size} of QCVN 2:2021/BKHCN."
         ]
       )
 
@@ -88,94 +135,141 @@ defmodule World.Molds do
         :eps,
         matter: :eps_helmet,
         sources: [
-          "The liner: EPS of #{mm(@liner)} mm and 45 kg/m3, the least thickness and the middle density of a liner (Trzaskalska and Chwastek, 2021)."
+          "The liner (đệm hấp thụ xung động): EPS of #{mm(@liner)} mm and 45 kg/m3, the least thickness and the middle density of a liner (Trzaskalska and Chwastek, 2021)."
         ]
       )
 
-    pad =
-      Loft.part(dome(b + @gap, a + @gap, h + @gap), "pad_helmet_half", :pad, [@o], @gap, :fabric,
+    pad_part =
+      Loft.part(pad, "pad_helmet_half", :pad, [@o], @gap, :fabric,
         matter: :pu_foam,
         sources: [
-          "The comfort pad: PU foam of #{mm(@gap)} mm (30 kg/m3, The Engineering ToolBox); it gives the fit, not the protection (GRSP, Helmet standards guide, 2025)."
+          "The comfort pad (lớp vải lót, đệm lót trong): PU foam of #{mm(@gap)} mm (30 kg/m3, The Engineering ToolBox), on the headform; it gives the fit, not the protection (GRSP, Helmet standards guide, 2025)."
         ]
       )
 
-    # A strap from each rivet to its end of the buckle, in the axes of the
-    # rivet.
+    # A strap from each rivet down the shell to under the rim, then to its
+    # end of the buckle, in the axes of the rivet.
     strap = fn name, sign, to ->
-      Webbing.strap(name, [{0.0, 0.0, 0.0}, Vec.sub(to, rivet.(sign))], bw, across: {0, 1, 0})
+      {at, _, _} = rivet.(sign)
+      Webbing.strap(name, [{0.0, 0.0, 0.0}, {0.0, 0.0, -0.012}, Vec.sub(to, at)], @webbing, across: {0, 1, 0})
     end
 
     {cx, cy, cz} = chin
-    left = strap.("strap_left_helmet_half", -1, chin)
-    right = strap.("strap_right_helmet_half", 1, {cx + buckle_len, cy, cz})
 
     Assembly.new("helmet_half_vn", shell_part,
       root: "shell_helmet_half",
       kind: :helmet,
       materials: %{paint: %{"color" => color, "roughness" => 0.35, "metalness" => 0.0}},
       sources: [
-        "A half helmet of Việt Nam (QCVN 2:2021/BKHCN, mũ che nửa đầu): a mass of 1 kg or less for the head sizes 4 to 9; for a head of #{round(c * 100)} cm. Its parts: the shell, the energy absorbing liner, the comfort pad and the retention system (GRSP, Helmet standards guide, 2025)."
+        "A half helmet of Việt Nam (QCVN 2:2021/BKHCN, mũ che nửa đầu) on the headform of the size #{size} (a head of #{round(head.circumference * 100)} cm): its parts from 3.2 and Hình 2, its mass under the limit of 5.2."
       ],
-      extras: %{"head" => c, "mass_limit" => @mass_limit}
+      extras: %{"size" => size, "head" => head.circumference, "mass_limit" => mass_limit("half", size)}
     )
-    |> Assembly.add("peak_helmet_half", peak(sx, sy), at: "peak", port: "o")
     |> Assembly.add("liner_helmet_half", liner_part, at: "liner", port: "o")
-    |> Assembly.add("pad_helmet_half", pad, at: "pad", port: "o", to: "liner_helmet_half")
-    |> Assembly.add("strap_left_helmet_half", left, at: "rivet_left", port: "a")
-    |> Assembly.add("strap_right_helmet_half", right, at: "rivet_right", port: "a")
-    |> Assembly.add("buckle_helmet_half", %{bl | name: "buckle_helmet_half"},
-      at: "b",
-      port: "female",
-      to: "strap_left_helmet_half"
+    |> Assembly.add("pad_helmet_half", pad_part, at: "pad", port: "o", to: "liner_helmet_half")
+    |> Assembly.add("trim_helmet_half", trim(rim, hd(liner_rows)), at: "trim", port: "o")
+    |> Assembly.add("peak_helmet_half", peak(rim), at: "peak", port: "o")
+    |> Assembly.add("rivet_left_helmet_half", rivet_part("rivet_left_helmet_half", rivet.(-1)),
+      at: "rivet_left",
+      port: "o"
     )
+    |> Assembly.add("rivet_right_helmet_half", rivet_part("rivet_right_helmet_half", rivet.(1)),
+      at: "rivet_right",
+      port: "o"
+    )
+    |> Assembly.add("strap_left_helmet_half", strap.("strap_left_helmet_half", -1, chin), at: "rivet_left", port: "a")
+    |> Assembly.add("strap_right_helmet_half", strap.("strap_right_helmet_half", 1, {cx + buckle_len, cy, cz}),
+      at: "rivet_right",
+      port: "a"
+    )
+    |> Assembly.add("buckle_helmet_half", bl, at: "b", port: "female", to: "strap_left_helmet_half")
   end
 
-  # The ports of the shell: its liner, its peak, and a rivet on each side.
+  # The ports of the shell: its liner, its trim, its peak, and a rivet on
+  # each side.
   defp ports(rivet) do
     [
       Part.port("liner", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
+      Part.port("trim", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
       Part.port("peak", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
-      Part.port("rivet_left", rivet.(-1), {0, 0, 1}, {0, 1, 0}),
-      Part.port("rivet_right", rivet.(1), {0, 0, 1}, {0, 1, 0})
+      Part.port("rivet_left", elem(rivet.(-1), 0), {0, 0, 1}, {0, 1, 0}),
+      Part.port("rivet_right", elem(rivet.(1), 0), {0, 0, 1}, {0, 1, 0})
     ]
   end
 
-  # A half ellipsoid over the rim (z = 0), as sections along z to the
-  # crown: x across (hx), y along (hy), the height hz.
-  defp dome(hx, hy, hz) do
-    k = 12
-    angles = for i <- 0..k, do: :math.pi() / 2 * i / k
-    spine = for t <- angles, do: {0.0, 0.0, hz * :math.sin(t)}
+  # A rivet: a round head of 10 mm and 1.5 mm out from the shell (5.4: at
+  # most 2 mm), in the axes of its port.
+  defp rivet_part(name, {_at, normal, _}) do
+    {r, h} = @rivet
+    head = Shape.cylinder(r, h, :steel, sides: 12, frame: Frame.new({0.0, 0.0, 0.0}, normal, {0, 0, 1}))
 
-    sections =
-      for {t, i} <- Enum.with_index(angles),
-          do: if(i == k, do: {0, 0, 2}, else: {hx * :math.cos(t), hy * :math.cos(t), 2})
-
-    Loft.new(spine, sections, sides: 32, up: {1, 0, 0})
+    Part.new(name, :rivet, [head], [@o],
+      params: %{"head" => h, "diameter" => 2 * r},
+      sources: [
+        "A rivet of steel with a round head of #{mm(2 * r)} mm, #{h * 1000} mm out from the shell (QCVN 2:2021/BKHCN, 5.4: at most 2 mm); by eye."
+      ]
+    )
   end
 
-  # The peak: a plate of 3 mm and 40 mm out from the rim at the front,
-  # from -50 to 50 degrees around the front, down by 15 degrees.
-  defp peak(sx, sy) do
+  # The edge trim (bọc mép): a band of rubber round the rim of the shell
+  # and the liner.
+  defp trim(rim, liner_rim) do
+    line = Enum.zip_with(rim, liner_rim, fn a, b -> Vec.scale(Vec.add(a, b), 0.5) end)
+
+    band =
+      (line ++ [hd(line)])
+      |> Shape.sweep(@shell / 2 + 0.0015, :black, sides: 8)
+      |> World.Mesh.matter(:rubber)
+
+    Part.new("trim_helmet_half", :trim, [band], [@o],
+      sources: [
+        "The edge trim (bọc mép, QCVN 2:2021/BKHCN, Hình 2): rubber round the rim of the shell; its size by eye."
+      ]
+    )
+  end
+
+  # The peak (lưỡi trai, an optional part, 3.2.2): a plate of 3 mm and up
+  # to 40 mm out from the rim at the front, from -45 to 45 degrees, down by
+  # 15 degrees.
+  defp peak(rim) do
     {out, t, down} = {0.04, 0.003, 15 * :math.pi() / 180}
 
     sections =
-      for i <- 0..10 do
-        phi = (-50 + 100 * i / 10) * :math.pi() / 180
-        p = {sx * :math.sin(phi), sy * :math.cos(phi), 0.004}
-        # The normal of the ellipse of the rim, out.
-        n = Vec.norm({:math.sin(phi) / sx, :math.cos(phi) / sy, 0.0})
+      for {k, i} <- Enum.with_index([21, 22, 23, 0, 1, 2, 3]) do
+        {px, py, pz} = Enum.at(rim, k)
+        n = Vec.norm({px, py, 0.0})
         u = Vec.norm(Vec.add(n, {0.0, 0.0, -:math.tan(down)}))
         v = Vec.norm(Vec.cross(Vec.cross(u, {0.0, 0.0, 1.0}), u))
         # Less out at the ends of the peak.
-        w = out * (0.35 + 0.65 * :math.cos(phi * 1.6))
-        {Vec.add(p, Vec.scale(u, w / 2 - 0.002)), u, v, w / 2, t / 2, 8}
+        w = out * (0.4 + 0.6 * :math.cos((i - 3) * 15 * :math.pi() / 180 * 1.6))
+        {Vec.add({px, py, pz + 0.004}, Vec.scale(u, w / 2 - 0.002)), u, v, w / 2, t / 2, 8}
       end
 
     Part.new("peak_helmet_half", :peak, [Shape.loft(sections, :paint, sides: 12) |> World.Mesh.matter(:plastic)], [@o],
-      sources: ["The peak: ABS of 3 mm, 40 mm out from the rim at the front, by eye."]
+      sources: [
+        "The peak (lưỡi trai, QCVN 2:2021/BKHCN, 3.2.2): ABS of 3 mm, 40 mm out from the rim at the front, by eye."
+      ]
     )
+  end
+
+  @doc """
+  The angle of the view up from the point K of the headform (degrees):
+  the least angle over the horizontal from K to a point of the helmet in
+  front of K, in the plane of symmetry (6.9; 5.10 b asks 7 degrees at the
+  least). K is the front of the headform on its basic plane, X under the
+  reference plane; the model takes the front of the headform there as the
+  front at the reference plane.
+  """
+  def vision_up(%Assembly{} = g, size) when size in @sizes do
+    head = headform(size)
+    {[[front | _] | _], _} = Loft.rows(head.loft)
+    {_, ky, _} = front
+    kz = -head.x
+
+    for {_, p} <- World.Build.placed(g), m <- p.shapes, {x, y, z} <- m.points, abs(x) < 0.01, y > ky do
+      :math.atan2(z - kz, y - ky) * 180 / :math.pi()
+    end
+    |> Enum.min()
   end
 
   defp mm(m), do: round(m * 1000)

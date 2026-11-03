@@ -41,11 +41,16 @@ into the steps of `AGENTS.md`.
   degrees, a joggle), holes in a flange (knockouts), and a gasket for a
   box of NEMA Type 4. The gauge of the A-16N126 from its datasheet (16
   gauge now, the gauge of the A12N128).
-- **The half helmet, more real.** The nine sizes and the coverage of
-  TCVN 5756:2017; the rim lower at the back and over the ears; the
-  vents and the rivets; the mass of a woven webbing (a mass for each
-  meter, with its source, in place of a solid band of nylon); a D-ring
-  coupling; a helmet of three quarters and a full helmet with a visor.
+- **The half helmet, more real.** The low part of the headform (under
+  its reference plane: the point K, the chin for the buckle); the vents
+  (5.12); the tests of QCVN 2:2021 as checks of the world (the impact,
+  the strap at 500 N, the stability); a helmet of three quarters and a
+  full helmet with a visor.
+- **A sandal (next, the decision of the owner).** Straps of webbing or
+  leather on a molded sole of EVA or rubber (`World.Loft`), along the
+  foot of a person; the hardware of a strap: a pin buckle, a ladder lock
+  or a tri-glide, a D-ring, a hook and loop; a strap of leather or of a
+  woven band with its mass for each meter.
 - **More of the mold shop.** A seat (a pan and a back along a bent
   spine, an open shell), a hull of glass fiber with its plies (the
   thickness and the density of a laminate from the mass of the glass and

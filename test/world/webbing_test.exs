@@ -21,6 +21,9 @@ defmodule World.WebbingTest do
     assert_in_delta Mass.part(s).mass, box, 0.08 * box
     assert Mass.part(s).mass < box
 
+    # With no options: 1 mm thick.
+    assert Webbing.strap("strap", [{0, 0, 0}, {0, 0, 1}], 0.02).params["thickness"] == 0.001
+
     # With no direction across, the strap takes one of its own.
     assert Webbing.strap("strap", [{0, 0, 0}, {0, 0, 1}], 0.02, thickness: 0.002).params["thickness"] == 0.002
   end
@@ -29,8 +32,9 @@ defmodule World.WebbingTest do
     b = Webbing.buckle("buckle", 0.02)
     assert b.kind == :buckle and b.params["width"] == 0.02
     assert Part.port!(b, "female").at == {0.0, 0.0, 0.0}
-    {x, 0.0, 0.0} = Part.port!(b, "male").at
+    {x, y, z} = Part.port!(b, "male").at
     assert_in_delta x, 0.052, 1.0e-9
+    assert y == 0 and z == 0
     assert Mass.part(b).mass > 0
   end
 end

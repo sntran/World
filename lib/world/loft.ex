@@ -7,8 +7,10 @@ defmodule World.Loft do
 
   The spine is a line of points. At each point of the spine, a section is
   a superellipse `{half_u, half_v, power}` in the plane of the directions
-  `u` and `v` (power 2 is an ellipse, 4 is a box with round corners). A
-  section of the half sizes 0 is an apex: one point (the crown of a dome).
+  `u` and `v` (power 2 is an ellipse, 4 is a box with round corners), or a
+  closed ring of points `{a, b}` (a measured section: a list of the same
+  length at each point). A section of the half sizes 0 is an apex: one
+  point (the crown of a dome).
 
   The directions move along the spine with no twist (a parallel
   transport): `u` starts at the option `up` (a direction perpendicular to
@@ -20,11 +22,12 @@ defmodule World.Loft do
 
   `shell/3` gives the closed mesh: the outside is the surface of the
   sections, and the inside is the thickness in from it, along the normal
-  of the surface. A rim closes each open edge.
+  of the surface. A rim closes each open edge. `grow/2` moves the surface
+  out along its normal (the outside of a layer over a surface).
   """
   alias World.{Detail, Mesh, Part, Vec}
 
-  defstruct spine: [], sections: [], sides: 24, arc: {0.0, 360.0}, up: nil
+  defstruct spine: [], sections: [], sides: 24, arc: {0.0, 360.0}, up: nil, rows: nil
 
   @doc """
   A loft of a spine (two or more points) and a section at each point. The
@@ -38,38 +41,62 @@ defmodule World.Loft do
 
     %__MODULE__{
       spine: Enum.map(spine, &Vec.float/1),
-      sections: Enum.map(sections, fn {hu, hv, p} -> {hu / 1, hv / 1, p / 1} end),
+      sections: Enum.map(sections, &section/1),
       sides: Keyword.get(opts, :sides, 24),
       arc: {a0 / 1, a1 / 1},
       up: Keyword.get(opts, :up)
     }
   end
 
+  defp section({hu, hv, p}), do: {hu / 1, hv / 1, p / 1}
+  defp section([{_, _}, _, _ | _] = ring), do: Enum.map(ring, fn {a, b} -> {a / 1, b / 1} end)
+
   @doc """
   The rows of the outside: a list of points for each point of the spine
   (one point for an apex), and the frames `{center, tangent, u, v}`.
   """
+  def rows(%__MODULE__{rows: rows} = l) when is_list(rows), do: {rows, frames(l)}
+
   def rows(%__MODULE__{} = l) do
     frames = frames(l)
     n = columns(l)
     {a0, a1} = l.arc
 
     rows =
-      for {{c, _t, u, v}, {hu, hv, p}} <- Enum.zip(frames, l.sections) do
-        if hu == 0 and hv == 0 do
-          [c]
-        else
-          for k <- 0..(n - 1) do
-            a = (a0 + (a1 - a0) * k / if(full?(l), do: n, else: n - 1)) * :math.pi() / 180
+      for {{c, _t, u, v}, section} <- Enum.zip(frames, l.sections) do
+        case section do
+          ring when is_list(ring) ->
+            for {a, b} <- ring, do: c |> Vec.add(Vec.scale(u, a)) |> Vec.add(Vec.scale(v, b))
 
-            c
-            |> Vec.add(Vec.scale(u, hu * curve(:math.cos(a), p)))
-            |> Vec.add(Vec.scale(v, hv * curve(:math.sin(a), p)))
-          end
+          {hu, hv, _} when hu == 0 and hv == 0 ->
+            [c]
+
+          {hu, hv, p} ->
+            for k <- 0..(n - 1) do
+              a = (a0 + (a1 - a0) * k / if(full?(l), do: n, else: n - 1)) * :math.pi() / 180
+
+              c
+              |> Vec.add(Vec.scale(u, hu * curve(:math.cos(a), p)))
+              |> Vec.add(Vec.scale(v, hv * curve(:math.sin(a), p)))
+            end
         end
       end
 
     {rows, frames}
+  end
+
+  @doc """
+  The loft of the surface `d` out from this one, along its normal (an
+  apex moves along the spine). A negative `d` moves it in.
+  """
+  def grow(%__MODULE__{} = l, d) do
+    {rows, frames} = rows(l)
+    moved = for {row, j} <- Enum.with_index(rows), do: offset(row, j, rows, frames, l, -d)
+
+    spine =
+      for {{c, _, _, _}, row} <- Enum.zip(frames, moved), do: if(length(row) == 1, do: hd(row), else: c)
+
+    %{l | rows: moved, spine: spine}
   end
 
   @doc """
@@ -78,7 +105,7 @@ defmodule World.Loft do
   """
   def shell(%__MODULE__{} = l, t, material, opts \\ []) do
     {rows, frames} = rows(l)
-    n = columns(l)
+    n = width(rows)
     m = length(rows)
     outer = rows
     inner = for {row, j} <- Enum.with_index(rows), do: offset(row, j, rows, frames, l, t)
@@ -121,7 +148,7 @@ defmodule World.Loft do
   @doc "The area of the outside (m2)."
   def area(%__MODULE__{} = l) do
     {rows, _} = rows(l)
-    n = columns(l)
+    n = width(rows)
     ks = if full?(l), do: 0..(n - 1), else: 0..(n - 2)//1
     at = fn row, k -> if length(row) == 1, do: hd(row), else: Enum.at(row, rem(k, n)) end
 
@@ -152,6 +179,9 @@ defmodule World.Loft do
   # --- The frames and the normals ---------------------------------------------------------------
 
   defp full?(%{arc: {a0, a1}}), do: abs(a1 - a0 - 360) < 1.0e-9
+
+  # The points of the widest row.
+  defp width(rows), do: rows |> Enum.map(&length/1) |> Enum.max()
 
   defp columns(%__MODULE__{} = l) do
     n = Detail.sides(l.sides)
