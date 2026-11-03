@@ -61,11 +61,13 @@ defmodule World.Footwear.Upper do
   The Y of a thong: `%{post: path, straps: [inside, outside]}`. The post
   goes up 18 mm from the sole at the gap of the toes; each strap goes from
   the top of the post over the foot to a side of the sole at 55% of the
-  length of the foot (by eye from the photos).
+  length of the foot (by eye from the photos). The options: `at` (the
+  place `{x, y}` of the post) and `to` (the part of the length of the
+  foot where the straps end).
   """
-  def thong(%Last{} = last, top) do
-    {gx, gy} = Last.toe_gap(last)
-    {y, xa, xb, foot} = Last.at(last, 0.55)
+  def thong(%Last{} = last, top, opts \\ []) do
+    {gx, gy} = Keyword.get_lazy(opts, :at, fn -> Last.toe_gap(last) end)
+    {y, xa, xb, foot} = Last.at(last, Keyword.get(opts, :to, 0.55))
     z = top.(gy)
     knot = {gx, gy, z + 0.018}
 
@@ -107,6 +109,44 @@ defmodule World.Footwear.Upper do
     end
 
     [strap.({a0 - 0.002, y0}, {b1 + 0.002, y1}), strap.({b0 + 0.002, y0}, {a1 - 0.002, y1})]
+  end
+
+  @doc """
+  A lattice over the front of the foot, from the part `p0` to the part
+  `p1` of its length: rods of the radius `r` in two families of diagonal
+  lines (`n` of each) and a rod round its edge, on a surface 4 mm over the
+  foot (and `high` over the ground at most), its ends on the sides of the
+  sole. The holes are diamonds (the honeycomb of a dép tổ ong, by eye). A
+  list of paths.
+  """
+  def lattice(%Last{} = last, {p0, p1}, top, n, high \\ :infinity) do
+    point = fn s, part ->
+      {y, xa, xb, foot} = Last.at(last, part)
+      z0 = top.(y)
+      peak = min(foot, high) + 0.004
+      {xa - 0.003 + (xb - xa + 0.006) * s, y, z0 + (peak - z0) * :math.sin(:math.pi() * s) ** 0.5}
+    end
+
+    line = fn f -> for i <- 0..12, t = i / 12, do: f.(t) end
+    span = fn t -> p0 + (p1 - p0) * t end
+
+    diagonals =
+      for k <- -n..n, sign <- [1, -1] do
+        line.(fn t -> {min(max((k + t * n) / n, 0.0), 1.0), t} end)
+        |> Enum.map(fn {s, t} -> if(sign > 0, do: {s, t}, else: {1 - s, t}) end)
+        |> Enum.dedup()
+      end
+      |> Enum.filter(fn pts -> length(pts) > 2 end)
+      |> Enum.map(fn pts -> Enum.map(pts, fn {s, t} -> point.(s, span.(t)) end) end)
+
+    edges = [
+      line.(&point.(&1, p0)),
+      line.(&point.(&1, p1)),
+      line.(&point.(0.0, span.(&1))),
+      line.(&point.(1.0, span.(&1)))
+    ]
+
+    edges ++ diagonals
   end
 
   @doc """

@@ -51,9 +51,9 @@ into the steps of `AGENTS.md`.
   carved arch under a guốc cao, the burned and the lacquered decoration
   of a guốc; the left foot (a pair); a shoe on the foot of a person in a
   pose; the sizes of the hardware from a data sheet; a woven band with
-  its mass for each meter. More kinds from the same parts: the dép tổ
-  ong (one molded piece), the geta (two teeth under a wooden sole, a
-  thong of cloth), a slide with one band.
+  its mass for each meter. The holes of the dép tổ ong as hexagons
+  (now diamonds), and its heel ring on the footbed; the knot of the
+  hanao of a geta from a photo of its back.
 - **More of the mold shop.** A seat (a pan and a back along a bent
   spine, an open shell), a hull of glass fiber with its plies (the
   thickness and the density of a laminate from the mass of the glass and

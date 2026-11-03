@@ -19,6 +19,15 @@ defmodule World.Footwear do
   - `clog/1`: a wooden clog (guốc mộc): a sole of vông wood on a grip pad
     of rubber, and one wide strap nailed to its sides; with `heel:
     :high`, a wedge heel of 70 mm.
+  - `honeycomb/1`: a dép tổ ong: a thick sole of EVA and one wide vamp
+    with a lattice of holes, one beige piece.
+  - `geta/1`: a geta: a board of paulownia on two teeth, and a thong of
+    cloth (the hanao) from a hole at the front to the back of the board.
+  - `slide/1`: a slide (dép quai ngang): a sole of EVA and one wide band
+    of rubber, its ends in the sole.
+
+  Each model of the catalog is a pair (`pair/1`): the right shoe and its
+  mirror (`World.Mirror`), the left shoe, side by side.
 
   The places of the straps and the sizes that are not from a standard
   are by eye from photos: the sport sandals of Wikimedia Commons, the
@@ -38,13 +47,50 @@ defmodule World.Footwear do
   @doc "The models of the shoe shop, as `{name, fun}`."
   def models,
     do: [
-      {"sandal_vn", fn -> sandal() end},
-      {"sandal_leather_vn", fn -> sandal(leather: true) end},
-      {"dep_tong_vn", fn -> thong() end},
-      {"dep_lop_vn", fn -> tire_sandal() end},
-      {"guoc_moc_vn", fn -> clog() end},
-      {"guoc_cao_vn", fn -> clog(heel: :high) end}
+      {"sandal_vn", fn -> pair(sandal()) end},
+      {"sandal_leather_vn", fn -> pair(sandal(leather: true)) end},
+      {"dep_tong_vn", fn -> pair(thong()) end},
+      {"dep_lop_vn", fn -> pair(tire_sandal()) end},
+      {"guoc_moc_vn", fn -> pair(clog()) end},
+      {"guoc_cao_vn", fn -> pair(clog(heel: :high)) end},
+      {"dep_to_ong_vn", fn -> pair(honeycomb()) end},
+      {"geta", fn -> pair(geta()) end},
+      {"dep_quai_ngang_vn", fn -> pair(slide()) end}
     ]
+
+  @doc """
+  A pair of a shoe: the right shoe and its mirror, the left shoe
+  (`World.Mirror.assembly/2`), side by side with 30 mm between them, on a
+  mark at the middle of the pair.
+  """
+  def pair(%Assembly{} = right) do
+    {x0, x1} =
+      right
+      |> World.Build.placed()
+      |> Enum.flat_map(fn {_, p} -> Enum.flat_map(p.shapes, & &1.points) end)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.min_max()
+
+    {c, d} = {(x0 + x1) / 2, (x1 - x0) / 2 + 0.015}
+    o = Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
+
+    mark =
+      Part.new("pair_#{right.name}", :mark, [], [
+        o,
+        Part.port("right", {d - c, 0, 0}, {0, 0, 1}, {0, 1, 0}),
+        Part.port("left", {c - d, 0, 0}, {0, 0, 1}, {0, 1, 0})
+      ])
+
+    Assembly.new(right.name, mark,
+      root: "pair_#{right.name}",
+      kind: right.kind,
+      materials: right.materials,
+      sources: right.sources ++ ["A pair: the right shoe and its mirror, the left shoe."],
+      extras: Map.put(right.extras, "pair", true)
+    )
+    |> Assembly.add("right", %{right | name: right.name <> "_right"}, at: "right", port: "o")
+    |> Assembly.add("left", World.Mirror.assembly(right, right.name <> "_left"), at: "left", port: "o")
+  end
 
   @doc """
   The EU size of a shoe for a foot of a length (m)
@@ -285,6 +331,141 @@ defmodule World.Footwear do
     assemble(name, :clog, last, sole, [{"band_#{name}", strap, "sole_#{name}"}],
       source:
         "A wooden clog (guốc mộc): a sole of wood and one wide strap of clear plastic nailed to its sides, on a grip pad; by eye from the photos of the shop of Trần Thị Hoàng Yến in Vĩnh Long (Tuổi Trẻ News, Woman spends 3 decades making traditional clogs by hand, 2023)."
+    )
+  end
+
+  @doc """
+  A dép tổ ong for the right foot of a person. The option `person`.
+  """
+  def honeycomb(opts \\ []) do
+    last = Last.new(Keyword.get(opts, :person, []))
+
+    sole =
+      Sole.stack(last, [
+        [
+          name: "sole_dep_to_ong",
+          heel: 0.025,
+          ball: 0.016,
+          role: :paint,
+          matter: :eva,
+          source:
+            "The sole: EVA, 25 mm at the heel and 16 mm at the ball (by eye from the photos); 240 kg/m3 (Footwear Science). The first dép tổ ong were of natural rubber (Tiền Phong, Hải Phòng, the 1980s: Saigoneer, 2018); the ones of today are EVA (listings of sellers)."
+        ]
+      ])
+
+    rods =
+      for path <- Upper.lattice(last, {0.45, 0.86}, sole.top, 4, 0.055) do
+        path |> World.Shape.sweep(0.0025, :paint, sides: 6) |> World.Mesh.matter(:eva)
+      end
+
+    vamp =
+      Part.new("vamp_dep_to_ong", :strap, rods, [Part.port("a", hd(hd(rods).points), {0, 0, 1}, {0, 1, 0})],
+        sources: [
+          "The vamp: one piece of EVA with the sole, a lattice of rods of 5 mm with holes between them (the honeycomb of the photos, as diamonds), from 45% to 86% of the length of the foot, 59 mm over the ground at most; by eye."
+        ]
+      )
+
+    assemble("dep_to_ong_vn", :sandal, last, sole, [{"vamp_dep_to_ong", vamp, "sole_dep_to_ong"}],
+      materials: %{paint: %{"color" => [222, 205, 170], "roughness" => 0.8, "metalness" => 0.0}},
+      source:
+        "A dép tổ ong: a slide with a thick sole and a vamp with a honeycomb of holes, in its beige; by eye from the renders of the project TỔONG of Nguyễn Duy Anh (Saigoneer, How dép tổ ong goes from timeless family keepsake to millennial icon, 2018)."
+    )
+  end
+
+  @doc """
+  A geta for the right foot of a person. The option `person`.
+  """
+  def geta(opts \\ []) do
+    last = Last.new(Keyword.get(opts, :person, []))
+    {height, thick} = {0.045, 0.02}
+
+    teeth =
+      Sole.teeth("teeth_geta", last, {height, thick, [0.2, 0.75]},
+        role: :wood,
+        matter: :paulownia,
+        source:
+          "The two teeth (ha): paulownia, #{round(height * 1000)} mm high and #{round(thick * 1000)} mm thick, at 20% and 75% of the last (by eye from the photos)."
+      )
+
+    sole =
+      Sole.stack(
+        last,
+        [
+          [
+            name: "board_geta",
+            heel: 0.015,
+            role: :wood,
+            matter: :paulownia,
+            outline: :board,
+            source:
+              "The board (dai): paulownia of 15 mm, 270 kg/m3 (Paulownia tomentosa, air dry, Komán), by eye from the photos."
+          ]
+        ],
+        base: height
+      )
+
+    # The front hole is in the middle of the board, near the toes.
+    {_, a, b, _} = Last.at(last, 0.88)
+    cx = (a + b) / 2
+    %{post: post, straps: [inside, outside]} = Upper.thong(last, sole.top, at: {cx, Last.y(last, 0.84)}, to: 0.3)
+
+    cord = fn name, path ->
+      Webbing.strap(name, path, 0.012, thickness: 0.01, across: {0, 1, 0}, matter: :cotton, material: :cloth)
+    end
+
+    knot =
+      World.Shape.sphere(0.008, :cloth)
+      |> World.Mesh.transform(World.Frame.move({elem(hd(post), 0), elem(hd(post), 1), height - 0.004}))
+      |> World.Mesh.matter(:cotton)
+
+    hanao =
+      Part.new(
+        "hanao_geta",
+        :strap,
+        Enum.flat_map([cord.("post", post), cord.("in", inside), cord.("out", outside)], & &1.shapes) ++ [knot],
+        [Part.port("a", hd(post), {0, 0, 1}, {0, 1, 0})],
+        sources: [
+          "The thong (hanao): cloth over cotton, 12 mm (by eye), from a hole at the front, knotted under the board, to a hole at each side at 30% of the foot (the photo of Wikimedia Commons, Geta (wooden clogs)); the density of cotton (The Engineering ToolBox)."
+        ]
+      )
+
+    assemble("geta", :clog, last, %{sole | parts: [teeth | sole.parts]}, [{"hanao_geta", hanao, "board_geta"}],
+      source:
+        "A geta: a board of paulownia on two teeth, and a thong of cloth; by eye from the photos of Wikimedia Commons (Category: Geta (footwear), Geta (wooden clogs))."
+    )
+  end
+
+  @doc """
+  A slide (dép quai ngang) for the right foot of a person. The option
+  `person`.
+  """
+  def slide(opts \\ []) do
+    last = Last.new(Keyword.get(opts, :person, []))
+
+    sole =
+      Sole.stack(last, [
+        [
+          name: "sole_dep_quai_ngang",
+          heel: 0.02,
+          ball: 0.014,
+          role: :dark,
+          matter: :eva,
+          source: "The sole: EVA, 20 mm at the heel and 14 mm at the ball (by eye), 240 kg/m3 (Footwear Science)."
+        ]
+      ])
+
+    band = Upper.band(last, 0.6, sole.top, {0.002, 0.008})
+
+    strap =
+      Webbing.strap("band_dep_quai_ngang", band, 0.06,
+        thickness: 0.004,
+        across: {0, 1, 0},
+        matter: :rubber,
+        material: :black
+      )
+
+    assemble("dep_quai_ngang_vn", :sandal, last, sole, [{"band_dep_quai_ngang", strap, "sole_dep_quai_ngang"}],
+      source: "A slide (dép quai ngang): one wide band of rubber of 60 mm, its ends glued into a sole of EVA; by eye."
     )
   end
 

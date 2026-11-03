@@ -97,15 +97,25 @@ defmodule World.FootwearTest do
     assert_in_delta high, 0.005, 1.0e-9
   end
 
-  test "each model of the shoe shop is a true model, with a mass for each part" do
+  test "each model of the shoe shop is a true pair, with a mass for each part but the mark between the shoes" do
     for {name, fun} <- Footwear.models() do
       s = fun.()
       assert World.Places.family_of(s) == :footwear, name
       assert World.Check.model(s) == :ok, name
-      %{mass: mass, unknown: []} = World.Mass.of(s)
-      assert mass > 0.05 and mass < 0.4, "#{name}: #{mass} kg"
+      %{mass: mass, unknown: unknown} = World.Mass.of(s)
+      assert unknown == ["pair_#{name}"] and s.extras["pair"]
+      assert mass > 0.1 and mass < 0.8, "#{name}: #{mass} kg"
       assert_in_delta s.extras["last"] - s.extras["foot"], 2 * Last.paris(), 1.0e-3
     end
+  end
+
+  test "a pair: the left shoe is the mirror of the right one, beside it" do
+    shoe = Footwear.thong()
+    pair = Footwear.pair(shoe)
+    assert Enum.map(pair.nodes, &elem(&1, 0)) == ["pair_dep_tong_vn", "right", "left"]
+    xs = fn node -> pair |> World.Assembly.node_frame(node) |> Map.fetch!(:at) |> elem(0) end
+    assert xs.("right") > 0 and xs.("left") < 0
+    assert_in_delta World.Mass.of(pair).mass, 2 * World.Mass.of(shoe).mass, 1.0e-9
   end
 
   test "the sport sandal: its closures, the heel strap from the ankle strap, and the ankle strap at the ankle" do
@@ -127,6 +137,35 @@ defmodule World.FootwearTest do
     names = Enum.map(l.nodes, &elem(&1, 0))
     assert "buckle_toe_sandal" in names and "buckle_ankle_sandal" in names
     refute "ring_ankle_sandal" in names or "glide_sandal" in names
+  end
+
+  test "a board with round ends and two teeth under it: the geta" do
+    g = Footwear.geta()
+    {_, teeth, _} = List.keyfind(g.nodes, "teeth_geta", 0)
+    assert teeth.params["count"] == 2 and length(teeth.shapes) == 2
+    {_, board, _} = List.keyfind(g.nodes, "board_geta", 0)
+    {{_, _, z0}, _} = Part.bounds(board)
+    assert_in_delta z0, 0.045, 1.0e-9
+    assert hd(board.shapes).matter == :paulownia
+    {_, hanao, _} = List.keyfind(g.nodes, "hanao_geta", 0)
+    assert Enum.all?(hanao.shapes, &(&1.matter == :cotton))
+  end
+
+  test "the dép tổ ong: a lattice not over its limit; the slide: one band into the sole", %{last: last} do
+    top = fn _ -> 0.02 end
+    high = Upper.lattice(last, {0.45, 0.86}, top, 4, 0.055)
+    assert length(high) > 8
+    assert high |> List.flatten() |> Enum.map(&elem(&1, 2)) |> Enum.max() <= 0.059 + 1.0e-9
+    assert Upper.lattice(last, {0.45, 0.86}, top, 2) |> List.flatten() |> Enum.map(&elem(&1, 2)) |> Enum.max() > 0.059
+
+    h = Footwear.honeycomb()
+    {_, vamp, _} = List.keyfind(h.nodes, "vamp_dep_to_ong", 0)
+    assert length(vamp.shapes) > 8 and hd(vamp.shapes).matter == :eva
+
+    s = Footwear.slide()
+    {_, band, _} = List.keyfind(s.nodes, "band_dep_quai_ngang", 0)
+    {{_, _, z0}, _} = Part.bounds(band)
+    assert z0 < 0.02
   end
 
   test "the clogs: the high heel is higher, the strap is nailed, the sole is vông wood" do
