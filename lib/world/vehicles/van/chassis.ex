@@ -4,8 +4,17 @@ defmodule World.Vehicles.Van.Chassis do
   marriage of the body and the drive. The engine bay under the hood (the
   3.5 L V6 with its belt, the radiator and its fan, the air box, the
   reservoirs and the fuse box), the items of DIY in the bay (a second
-  alternator, a DC-DC charger), and the four wheels, the front two on
-  their knuckles that steer.
+  alternator, a DC-DC charger), the drive under the body (the
+  transmission, the propeller shaft, the rear axle on its leaf springs,
+  the front suspension, the fuel tank, the battery, the exhaust and the
+  spare wheel), and the four wheels, the front two on their knuckles
+  that steer.
+
+  The engine, the transmission, the axle and the other bought parts have
+  the mass of their data sheets (`World.Mass`), with the fluids of a van
+  ready to drive: the curb weight of Ford is with a full tank of fuel.
+  The parts under the body are boxes and tubes of their sizes (most
+  sizes are estimates).
   """
   alias World.{Assembly, Frame, Part, Shape}
   alias World.Gear.Camper
@@ -30,6 +39,7 @@ defmodule World.Vehicles.Van.Chassis do
 
     asm
     |> engine_bay(van, items)
+    |> drive(van)
     |> Corners.corner("front_right", wheel, {tf / 2, l - f, rz},
       steer: true,
       limits: [-38, 38],
@@ -117,7 +127,11 @@ defmodule World.Vehicles.Van.Chassis do
     belt = Shape.sweep(belt_line(@pulleys, by), 0.005, :rubber, sides: 4)
 
     Kit.part(@station, "engine_ford_3_5_v6", :engine, block ++ pulleys ++ accessories ++ [belt], [Kit.origin()],
-      sources: ["The 3.5 L V6 of the Transit, along the van: its size and its belt by eye, from photos of the bay."]
+      params: %{"mass" => 194.0},
+      sources: [
+        "The 3.5 L V6 of the Transit, along the van: its size and its belt by eye, from photos of the bay.",
+        "The mass: 189 kg dry, with no accessory drive (Ford Performance, the 3.5 L EcoBoost crate engine; the 3.5 L PFDi of the van is near it: an estimate), and 5 kg of oil (5.7 L)."
+      ]
     )
   end
 
@@ -160,7 +174,8 @@ defmodule World.Vehicles.Van.Chassis do
       end
 
     Kit.part(@station, "radiator_transit", :radiator, [core | tanks ++ shroud], [Kit.origin()],
-      sources: ["A radiator of about 1.1 by 0.5 m with its fan shroud: by eye."]
+      params: %{"mass" => 10.0},
+      sources: ["A radiator of about 1.1 by 0.5 m with its fan shroud: by eye; 10 kg with its coolant (an estimate)."]
     )
   end
 
@@ -182,10 +197,144 @@ defmodule World.Vehicles.Van.Chassis do
 
     hub = Shape.cylinder(0.045, 0.04, :black, sides: 12, frame: Frame.new({0.0, y - 0.02, 0.8}, {0, 1, 0}, {0, 0, 1}))
 
-    Kit.part(@station, "radiator_fan_transit", :fan, [hub | blades], [
-      Kit.port("axle", {0.0, y, 0.8}, {0, 1, 0}, {0, 0, 1})
-    ])
+    Kit.part(
+      @station,
+      "radiator_fan_transit",
+      :fan,
+      [hub | blades],
+      [Kit.port("axle", {0.0, y, 0.8}, {0, 1, 0}, {0, 0, 1})],
+      matter: %{black: {:plastic, 0.0025}}
+    )
   end
+
+  # --- The drive under the body ------------------------------------------------------------
+
+  # The parts of the drive, in the axes of the van (`d` back from the
+  # front, as `l - d` on y), each a box or a tube of its size: the
+  # transmission behind the engine, the propeller shaft to the rear axle,
+  # the axle on two leaf springs, the front crossmember with the
+  # suspension and the steering, the fuel tank, the battery under the
+  # floor of the driver, the exhaust at the right side, the spare wheel
+  # under the back. They are only in the near level, as the bay.
+  defp drive(asm, %{l: l, f: f, m: m}) do
+    wb = m["wheelbase"] / 1
+    rz = Wheels.tire_radius(m["tire"])
+    [_, tr] = m["track"]
+    {ya, yr} = {l - f, l - f - wb}
+    hidden = fn part -> %{part | inside: true} end
+    box = fn a, b, role -> Shape.box(a, b, role) end
+
+    transmission =
+      bought(
+        "transmission_10r80",
+        :transmission,
+        [box.({-0.2, ya - 0.66, 0.42}, {0.2, ya + 0.19, 0.8}, :aluminum)],
+        116.0,
+        "The 10R80, the automatic transmission of 10 speeds: 106.17 kg (Ford, workshop manual of the 2019 Ranger), and 10 kg of its fluid (11.8 L of MERCON ULV): 116 kg. Its box of 0.85 by 0.4 by 0.38 m: an estimate."
+      )
+
+    shaft =
+      bought(
+        "propeller_shaft",
+        :shaft,
+        [Shape.sweep([{0.0, ya - 0.66, 0.5}, {0.0, yr + 0.2, 0.42}], 0.04, :steel, sides: 10)],
+        25.0,
+        "The propeller shaft of two pieces of steel: 25 kg (its package is 27.6 kg: an estimate)."
+      )
+
+    axle =
+      bought(
+        "rear_axle_9_75",
+        :axle,
+        [
+          Shape.sweep([{0.12 - tr / 2, yr, rz}, {tr / 2 - 0.12, yr, rz}], 0.06, :steel, sides: 12),
+          Shape.cylinder(0.15, 0.2, :steel, sides: 12, frame: Frame.new({-0.1, yr, rz}, {1, 0, 0}, {0, 0, 1}))
+        ],
+        150.0,
+        "The rear axle with a ring gear of 9.75 in, its shafts and its brakes: 150 kg (the housing of the 9.75 in axle of the F-150 ships at 127 kg with no shafts and no brakes, Ford Performance: an estimate)."
+      )
+
+    springs =
+      bought(
+        "leaf_springs",
+        :spring,
+        for(s <- [1, -1], do: box.({s * 0.55, yr - 0.75, rz - 0.08}, {s * 0.62, yr + 0.75, rz - 0.02}, :steel)),
+        40.0,
+        "The two leaf springs of the rear axle: 40 kg (an estimate)."
+      )
+
+    front =
+      bought(
+        "front_suspension",
+        :suspension,
+        [box.({-0.7, ya - 0.1, 0.25}, {0.7, ya + 0.1, 0.4}, :steel)],
+        130.0,
+        "The front crossmember, the struts, the arms and the steering gear: 130 kg (an estimate)."
+      )
+
+    tank =
+      bought(
+        "fuel_tank",
+        :tank,
+        [box.({-0.75, l / 2 - 0.5, 0.3}, {-0.1, l / 2 + 0.5, 0.55}, :black)],
+        82.0,
+        "The fuel tank of 25 gal (Ford, 2025 Transit Technical Specifications): 11.7 kg empty (the tank CK4Z-9002-E, a retailer of Ford parts), and 70 kg of gasoline (94.6 L at 0.74 kg/L: an estimate). The curb weight of Ford is with a full tank."
+      )
+
+    battery =
+      bought(
+        "battery_h6",
+        :battery,
+        [box.({-0.55, ya - 1.0, 0.35}, {-0.3, ya - 0.72, 0.55}, :black)],
+        20.4,
+        "The battery H6, 70 Ah, 610 CCA (Ford, 2022 Transit Body and Equipment Mounting Manual, page 87), under the floor of the driver: 20.4 kg (an AGM battery of that size, a retailer)."
+      )
+
+    exhaust =
+      bought(
+        "exhaust",
+        :exhaust,
+        [
+          Shape.sweep(
+            [{0.25, ya, 0.45}, {0.35, ya - 0.8, 0.35}, {0.4, yr + 0.6, 0.33}, {0.45, 0.3, 0.33}],
+            0.035,
+            :steel,
+            sides: 10
+          ),
+          box.({0.25, l / 2 - 0.3, 0.25}, {0.55, l / 2 + 0.3, 0.45}, :steel)
+        ],
+        25.0,
+        "The exhaust with its converters and its muffler: 25 kg (an estimate)."
+      )
+
+    # The spare wheel under the back, flat: one cylinder of its size (it
+    # is not in sight), with the mass of a tire and a wheel.
+    %{diameter: dw, width: ww} = Wheels.tire_size(m["tire"])
+
+    spare =
+      bought(
+        "spare_wheel",
+        :wheel,
+        [Shape.cylinder(dw / 2, ww, :tire, sides: 16, frame: Frame.move({0.0, 0.55, 0.33 - ww / 2}))],
+        28.1,
+        "The spare wheel: a tire of 15.9 kg (Michelin, Agilis CrossClimate data book, 235/65R16C) on a steel wheel of 16 by 6.5 in of 12.2 kg (a retailer)."
+      )
+
+    asm
+    |> Assembly.add("transmission", hidden.(transmission), to: "engine", at: "origin", port: "origin")
+    |> Assembly.add("propeller_shaft", hidden.(shaft), to: "transmission", at: "origin", port: "origin")
+    |> Assembly.add("rear_axle", hidden.(axle), to: "propeller_shaft", at: "origin", port: "origin")
+    |> Assembly.add("leaf_springs", hidden.(springs), to: "rear_axle", at: "origin", port: "origin")
+    |> Assembly.add("front_suspension", hidden.(front), to: "engine", at: "origin", port: "origin")
+    |> Assembly.add("fuel_tank", hidden.(tank), at: "origin", port: "origin")
+    |> Assembly.add("battery", hidden.(battery), at: "origin", port: "origin")
+    |> Assembly.add("exhaust", hidden.(exhaust), at: "origin", port: "origin")
+    |> Assembly.add("spare_wheel", hidden.(spare), at: "origin", port: "origin")
+  end
+
+  # A part that the line buys, with the mass of its data sheet.
+  defp bought(name, kind, shapes, kg, source),
+    do: Kit.part(@station, name, kind, shapes, [Kit.origin()], params: %{"mass" => kg}, sources: [source])
 
   # The air box and its duct, the coolant reservoir, the fuse box, the
   # brake reservoir: in the places of the photos of the bay.
@@ -201,6 +350,7 @@ defmodule World.Vehicles.Van.Chassis do
     ]
 
     Kit.part(@station, "engine_bay_transit", :bay, shapes, [Kit.origin()],
+      matter: %{black: {:plastic, 0.0025}, plastic: {:plastic, 0.0025}},
       sources: [
         "The air box, the coolant reservoir, the fuse box and the brake reservoir: from the photos of the bay of a 2022 Transit."
       ]

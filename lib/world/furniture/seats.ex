@@ -21,8 +21,12 @@ defmodule World.Furniture.Seats do
     (`:hinge`, role `recline`): a value more than 0 turns the back to
     the rear (degrees).
   - `driver_head_1` (to `driver_head_N`): the headrests on the back.
+
+  The masses: the cushion, the back and the headrests of the role `seat`
+  are molded foam (`seat_foam`); the black frame of the base is of steel
+  tube and sheet, 2 mm thick (a guess).
   """
-  alias World.{Assembly, Part, Shape}
+  alias World.{Assembly, Mesh, Part, Shape}
 
   @defaults [
     place_width: 0.5,
@@ -68,13 +72,13 @@ defmodule World.Furniture.Seats do
     params = %{"places" => places, "width" => w, "height" => o.height, "depth" => o.depth}
 
     base =
-      Part.new(name <> "_base", :seat_base, base(o.base, w, o.depth, zb), [
+      Part.new(name <> "_base", :seat_base, Enum.map(base(o.base, w, o.depth, zb), &frame/1), [
         Part.port("floor", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
         Part.port("track", {0, 0, zb}, {0, 1, 0}, {0, 0, 1})
       ])
 
     cushion =
-      Part.new(name <> "_cushion", :cushion, cushion(o, w, zb), [
+      Part.new(name <> "_cushion", :cushion, foam(cushion(o, w, zb)), [
         Part.port("track", {0, 0, zb}, {0, 1, 0}, {0, 0, 1}),
         Part.port("hinge", hinge, {1, 0, 0}, {0, 0, 1})
       ])
@@ -91,7 +95,7 @@ defmodule World.Furniture.Seats do
       |> Assembly.add(name <> "_seat", cushion, [at: "track", port: "track"] ++ track(o.track))
       |> Assembly.add(
         name <> "_back",
-        Part.new(name <> "_back", :seat_back, back, [Part.port("hinge", hinge, {1, 0, 0}, {0, 0, 1})]),
+        Part.new(name <> "_back", :seat_back, Enum.map(back, &foam/1), [Part.port("hinge", hinge, {1, 0, 0}, {0, 0, 1})]),
         [to: name <> "_seat", at: "hinge", port: "hinge"] ++ recline(o.recline)
       )
 
@@ -101,7 +105,7 @@ defmodule World.Furniture.Seats do
       |> Enum.reduce(asm, fn {{shapes, at}, i}, asm ->
         port = Part.port("post", at, {0, 0, 1}, {0, 1, 0})
 
-        Assembly.add(asm, "#{name}_head_#{i}", Part.new("headrest", :headrest, shapes, [port]),
+        Assembly.add(asm, "#{name}_head_#{i}", Part.new("headrest", :headrest, Enum.map(shapes, &foam/1), [port]),
           to: name <> "_back",
           at: port,
           port: "post"
@@ -111,6 +115,14 @@ defmodule World.Furniture.Seats do
       asm
     end
   end
+
+  # The foam of a cushion, a back or a headrest of the role `seat`.
+  defp foam(%Mesh{material: :seat} = m), do: Mesh.matter(m, :seat_foam)
+  defp foam(m), do: m
+
+  # The black frame of a base: a skin of steel.
+  defp frame(%Mesh{material: :black} = m), do: Mesh.skin(m, 0.002, :steel)
+  defp frame(m), do: m
 
   defp track(nil), do: []
   defp track(travel), do: [kind: :slide, role: :slide, limits: [-travel / 2, travel / 2]]

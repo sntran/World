@@ -36,7 +36,11 @@ defmodule World.MassTest do
     assert Mass.part(%World.Part{name: "open", shapes: [open]}) == nil
     painted = World.Shape.box({0, 0, 0}, {1, 1, 1}, :paint)
     assert Mass.part(%World.Part{name: "painted", shapes: [painted]}) == nil
-    assert Mass.part(%World.Part{name: "mark", shapes: []}) == nil
+    assert Mass.part(%World.Part{name: "mark", shapes: []}) == %{mass: 0.0, center: {0.0, 0.0, 0.0}}
+
+    # A part that a shop buys: the mass of its data sheet, at the center of its box.
+    bought = World.Part.new("engine", :engine, [painted], [], params: %{"mass" => 200})
+    assert Mass.part(bought) == %{mass: 200.0, center: {0.5, 0.5, 0.5}}
 
     # A model with no known part: no mass, no center.
     assert %{mass: +0.0, center: nil, unknown: ["painted"]} =

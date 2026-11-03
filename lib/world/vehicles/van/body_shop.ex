@@ -3,16 +3,19 @@ defmodule World.Vehicles.Van.BodyShop do
   The first station of the line of a van (`World.Vehicles.Van`): the body
   in white.
 
-  At the near level the body is of sheets on the hull: the nose, the
-  fenders and the floor of the engine bay, the firewall, and from there
-  to the back the sheets of the sides, the roof and the floor, 3 cm
-  thick, with the openings (`World.Vehicles.Van.Openings`) cut: the
+  The body is of panels of steel sheet, each pressed in a die from a
+  blank (`World.Sheet.stamp/4`), on the hull: the nose, the fenders and
+  the floor of the engine bay, the firewall, and from there to the back
+  the panels of the sides, the roof and the floor. At the near level the
+  panels have the openings (`World.Vehicles.Van.Openings`) cut: the
   windshield, the front doors, the sliding door, the rear doors, the
-  windows of the body, and the arches of the wheels. Inside are the
-  floors, the wells of the wheels and the pillar behind the front door
-  at the right side. At the mid and far levels the body is closed.
+  windows of the body, and the arches of the wheels; a panel is drawn 3
+  cm thick (the sheet and the ribs behind it), and its mass is that of
+  its sheet. Inside are the floors, the wells of the wheels and the
+  pillar behind the front door at the right side. At the mid and far
+  levels the body is closed: its outside is the sheet.
   """
-  alias World.Detail
+  alias World.{Detail, Sheet}
   alias World.Vehicles.{Corners, Hull, Wheels}
   alias World.Vehicles.Van.{Kit, Openings}
 
@@ -23,9 +26,15 @@ defmodule World.Vehicles.Van.BodyShop do
   # (z = 0.5).
   @bay {0.2, 0.62, 0.6, 0.5}
 
+  # The outer panels of a van of steel sheet: about 0.8 mm (TODO).
+  @sheet 0.0008
+
   # The cab floor (z) from the firewall to the back of the front doors:
   # by eye from the photos of the cab with the doors open.
   @cab_floor 0.6
+
+  @doc "The thickness of the steel sheet of the panels of the body, the hood and the doors (m)."
+  def sheet, do: @sheet
 
   @doc "The body of a van, with its ports: `hood`, and a corner at each wheel."
   def body(van) do
@@ -41,7 +50,7 @@ defmodule World.Vehicles.Van.BodyShop do
       Hull.skin(h, b0, b1, :paint, clip: side.({:z_max, bz}))
     ]
 
-    cab_and_cargo =
+    {cab_and_cargo, faces} =
       if Detail.level() == :near do
         firewall = Hull.skin(h, b1, b1 + 0.02, :paint)
 
@@ -55,10 +64,13 @@ defmodule World.Vehicles.Van.BodyShop do
                   edges: Openings.edges(van)
                 )
 
-        [firewall | List.flatten(sheets)]
+        {[firewall | List.flatten(sheets)], 2}
       else
-        [Hull.skin(h, b1, d1, :paint)]
+        {[Hull.skin(h, b1, d1, :paint)], 1}
       end
+
+    {nose, nose_params} = Sheet.stamp(nose, @sheet, :steel)
+    {cab_and_cargo, params} = Sheet.stamp(cab_and_cargo, @sheet, :steel, faces: faces)
 
     {f, wb, [tf, tr]} = {m["front"], m["wheelbase"], m["track"]}
     rz = Wheels.tire_radius(m["tire"])
@@ -73,6 +85,7 @@ defmodule World.Vehicles.Van.BodyShop do
           do: Corners.corner_port("corner_#{name}", {x, h.length - d, rz})
 
     Kit.part(@station, "body_" <> m["make"], :body, nose ++ cab_and_cargo, [Kit.origin() | corners],
+      params: %{params | "sheet" => Float.round(params["sheet"] + nose_params["sheet"], 4)},
       sources: van.make["openings"]["sources"]
     )
   end
@@ -128,8 +141,11 @@ defmodule World.Vehicles.Van.BodyShop do
     top = min(2.36, lean_in(Hull.half(h, (f1 + s0) / 2), hw - 0.06) - 0.01)
     pillar = World.Shape.box({hw - 0.14, l - (s0 + 0.06), 0.42}, {hw - 0.06, l - (f1 - 0.04), top}, :paint)
 
+    # The pillar and the wells are of the steel sheet of the body; the
+    # floor of the cab has a mat of rubber (3 mm: a guess).
     Kit.part(@station, "inside_" <> m["make"], :body, [pillar | floors ++ wells], [Kit.origin() | mounts(van)],
       detail: :near,
+      matter: %{paint: {:steel, @sheet}, black: {:steel, @sheet}, dark: {:rubber, 0.003}},
       sources: [
         "The floor of the cargo area at #{floor} m (the model); the floor of the cab, the wells of the wheels and the pillar behind the front door: by eye from the photos of the van with the doors open."
       ]

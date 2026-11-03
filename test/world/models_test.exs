@@ -167,6 +167,29 @@ defmodule World.ModelsTest do
     assert Enum.all?(edges, &({elem(&1, 1), elem(&1, 0)} in edges))
   end
 
+  test "the van of the line: its body of stamped steel sheet is the hull (the same van), and the mass of each part" do
+    van = Detail.with(:near, &World.Vehicles.FordTransit.model/0)
+    {_, body, _} = List.keyfind(van.nodes, "body", 0)
+    assert Enum.all?(body.shapes, &(&1.matter == :steel and &1.skin > 0))
+    assert body.params["sheet"] > 30 and body.params["thickness"] == 0.0008
+
+    # The body has the box of the hull: the panels are the outside of the
+    # hull, as before the body shop moved to World.Sheet.
+    h = World.Vehicles.Van.hull("transit_148")
+    {{x0, y0, _}, {x1, y1, z1}} = World.Part.bounds(body)
+    assert_in_delta x1 - x0, h.width, 0.001
+    {d0, d1} = World.Vehicles.Hull.span(h)
+    assert_in_delta y1 - y0, d1 - d0, 0.001
+    assert_in_delta z1, h.top, 0.001
+
+    # Each part has a mass. The curb weight of Ford is 2418 kg (the 2020
+    # cargo van of 148 in with a high roof, 3.5 L PFDi, a full tank): the
+    # model is under it, with no rails, no gauges of the body but one, no
+    # air conditioner and no wires (TODO.md).
+    %{mass: mass, unknown: []} = World.Mass.of(van)
+    assert mass > 0.75 * 2418 and mass < 2418
+  end
+
   test "the hood of the van opens on the engine bay, with the items of DIY in it" do
     van = World.Vehicles.FordTransit.model()
     assert {_, _, %{kind: :hinge, role: :lid, limits: [0, 60]}} = List.keyfind(van.nodes, "hood", 0)

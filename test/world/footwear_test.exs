@@ -97,13 +97,13 @@ defmodule World.FootwearTest do
     assert_in_delta high, 0.005, 1.0e-9
   end
 
-  test "each model of the shoe shop is a true pair, with a mass for each part but the mark between the shoes" do
+  test "each model of the shoe shop is a true pair, with a mass for each part (the mark between the shoes has none: 0)" do
     for {name, fun} <- Footwear.models() do
       s = fun.()
       assert World.Places.family_of(s) == :footwear, name
       assert World.Check.model(s) == :ok, name
       %{mass: mass, unknown: unknown} = World.Mass.of(s)
-      assert unknown == ["pair_#{name}"] and s.extras["pair"]
+      assert unknown == [] and s.extras["pair"]
       assert mass > 0.1 and mass < 0.8, "#{name}: #{mass} kg"
       assert_in_delta s.extras["last"] - s.extras["foot"], 2 * Last.paris(), 1.0e-3
     end

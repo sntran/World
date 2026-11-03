@@ -16,7 +16,7 @@ defmodule World.Openings.Van do
   kind `:window`: the glass in its opening at the near level, flush with
   the body, or on the closed body at the mid and far levels.
   """
-  alias World.{Assembly, Detail, Shape, Vec}
+  alias World.{Assembly, Detail, Mesh, Shape, Vec}
   alias World.Vehicles.Hull
   alias World.Vehicles.Van.{Kit, Trim}
   alias World.Vehicles.Van.Openings, as: Cuts
@@ -81,10 +81,18 @@ defmodule World.Openings.Van do
 
     name = if s == 1, do: "front_door_right", else: "front_door_left"
     sources = van.make["openings"]["sources"] |> Enum.take(1)
+    {panel, params} = stamp(panel)
 
-    door(name, Kit.part(@station, "front_door_panel", :door, panel, [hinge, Kit.origin()], sources: sources), sources)
+    door(
+      name,
+      Kit.part(@station, "front_door_panel", :door, panel, [hinge, Kit.origin()], sources: sources, params: params),
+      sources
+    )
     |> add("glass", Kit.part(@station, "front_door_glass", :glass, glass, [Kit.origin()]))
-    |> add("mirror", Kit.part(@station, "mirror", :mirror, mirror(van, s), [Kit.origin()]))
+    |> add(
+      "mirror",
+      Kit.part(@station, "mirror", :mirror, mirror(van, s), [Kit.origin()], matter: %{black: {:plastic, 0.0025}})
+    )
   end
 
   @doc "The sliding door at the right side, with its port `slide` on its rail."
@@ -150,10 +158,11 @@ defmodule World.Openings.Van do
 
     slide = slide(van)
     sources = van.make["openings"]["sources"] |> Enum.slice(1, 1)
+    {panel, params} = stamp(panel)
 
     door(
       "sliding_door",
-      Kit.part(@station, "sliding_door_panel", :door, panel, [slide, Kit.origin()], sources: sources),
+      Kit.part(@station, "sliding_door_panel", :door, panel, [slide, Kit.origin()], sources: sources, params: params),
       sources
     )
     |> add("glass", Kit.part(@station, "sliding_door_glass", :glass, glass, [Kit.origin()]))
@@ -213,9 +222,24 @@ defmodule World.Openings.Van do
 
     name = if s == 1, do: "rear_door_right", else: "rear_door_left"
     sources = van.make["openings"]["sources"] |> Enum.slice(2, 1)
+    {panel, params} = stamp(panel)
 
-    door(name, Kit.part(@station, "rear_door_panel", :door, panel, [hinge, Kit.origin()], sources: sources), sources)
+    door(
+      name,
+      Kit.part(@station, "rear_door_panel", :door, panel, [hinge, Kit.origin()], sources: sources, params: params),
+      sources
+    )
     |> add("glass", Kit.part(@station, "rear_door_glass", :glass, glass, [Kit.origin()]))
+  end
+
+  # The panels of a door, pressed from the steel sheet of the body: a
+  # door is an outer panel over an inner panel, so each face of its solid
+  # is a sheet (`World.Sheet.stamp/4`). Its handle is of plastic.
+  defp stamp(meshes) do
+    {sheets, rest} = Enum.split_with(meshes, &(&1.material == :paint))
+    {sheets, params} = World.Sheet.stamp(sheets, World.Vehicles.Van.BodyShop.sheet(), :steel)
+    rest = Enum.map(rest, &if(&1.material == :black and &1.skin == nil, do: Mesh.matter(&1, :plastic), else: &1))
+    {sheets ++ rest, params}
   end
 
   # --- The windows of the body ----------------------------------------------------------

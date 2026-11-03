@@ -103,6 +103,31 @@ defmodule World.Sheet do
   end
 
   @doc """
+  A panel pressed from a blank of sheet in a die (a stamping: the side, the
+  roof, the hood or a door of a body). The meshes have the shape of the
+  die, and the panel is a skin of the thickness `t` on them
+  (`World.Mesh.skin/3`), of the matter `matter`. The option `faces`: 1
+  (the default) when each mesh is one face of the sheet (the outside of a
+  closed body), 2 when a mesh has the two faces of the sheet (a sheet
+  drawn with a thickness): each face then takes half of the sheet. A
+  drawn panel has about the area of its blank (the sheet thins a little,
+  and the die trims the edges). The params: `sheet`, the area of the
+  sheet (m2), and its `thickness`.
+
+      iex> box = World.Shape.box({0, 0, 0}, {1, 1, 0.001}, :paint)
+      iex> {[m], %{"sheet" => a}} = World.Sheet.stamp([box], 0.0008, :steel, faces: 2)
+      iex> {m.skin, m.matter, Float.round(a, 3)}
+      {4.0e-4, :steel, 1.002}
+  """
+  def stamp(meshes, t, matter, opts \\ []) do
+    faces = Keyword.get(opts, :faces, 1)
+    area = meshes |> Enum.map(&elem(World.Mass.area(&1) || {0.0, nil}, 0)) |> Enum.sum()
+
+    {Enum.map(meshes, &Mesh.skin(&1, t / faces, matter)),
+     %{"sheet" => Float.round(area / faces, 4), "thickness" => t / 1}}
+  end
+
+  @doc """
   The part of a sheet: its name, its kind, its ports, and the options
   `frame` (the place of the sheet in the axes of the part) and `sources`.
   """

@@ -15,6 +15,9 @@ defmodule World.Vehicles.Wheels do
   """
   alias World.{Assembly, Frame, Part, Shape, Vec}
 
+  # The sheet of the pressed disc of a steel wheel (m).
+  @disc 0.005
+
   @doc """
   The sizes of a tire code, in meters: `%{width, height, rim}` (the rim
   is the bead seat diameter) and the outer diameter.
@@ -46,6 +49,12 @@ defmodule World.Vehicles.Wheels do
   @doc """
   A tire. The options: `profile` (`:round` for a motorcycle or a bicycle,
   `:flat` for a car), `rim_width` (in meters), `sides`.
+
+  A tire is a skin of rubber and cord (`World.Mesh.skin/3`), not a solid
+  ring: its mean thickness is 7.5 % of the height of its side. That is a
+  fit to two real tires: the 235/65R16C of a van, 15.9 kg (Michelin,
+  Agilis CrossClimate data book), and the 37-622 of a bicycle, 0.73 kg
+  (Schwalbe, Marathon GreenGuard).
   """
   def tire(code, opts \\ []) do
     %{width: w, height: h, rim: d} = size = tire_size(code)
@@ -82,7 +91,9 @@ defmodule World.Vehicles.Wheels do
     Part.new(
       "tire_#{String.replace(code, ~r{[^0-9A-Za-z]+}, "_")}",
       :tire,
-      Shape.lathe(profile, :tire, kind: :ring, sides: Keyword.get(opts, :sides, 48)),
+      profile
+      |> Shape.lathe(:tire, kind: :ring, sides: Keyword.get(opts, :sides, 48))
+      |> World.Mesh.skin(0.075 * h, :tire),
       [hub_port()],
       params: %{"code" => code, "diameter" => Float.round(size.diameter, 4)},
       sources: [
@@ -94,6 +105,8 @@ defmodule World.Vehicles.Wheels do
   @doc """
   A rim: a ring with a well and two flanges, for a bead seat diameter and
   a width (meters). Options: `depth` of the well, `flange`, `material`.
+  The rim is a sheet of 4 mm, rolled to its profile: its mass is that of
+  the sheet (a skin on the two faces of the ring), not of a solid ring.
   """
   def rim(diameter, width, opts \\ []) do
     r0 = diameter / 2
@@ -117,7 +130,9 @@ defmodule World.Vehicles.Wheels do
     Part.new(
       "rim_#{round(diameter * 1000)}x#{round(width * 1000)}",
       :rim,
-      Shape.lathe(profile, Keyword.get(opts, :material, :rim), kind: :ring, sides: Keyword.get(opts, :sides, 48)),
+      profile
+      |> Shape.lathe(Keyword.get(opts, :material, :rim), kind: :ring, sides: Keyword.get(opts, :sides, 48))
+      |> then(&World.Mesh.skin(&1, t / 2, &1.material)),
       [hub_port()],
       params: %{"diameter" => diameter, "width" => width}
     )
@@ -304,7 +319,8 @@ defmodule World.Vehicles.Wheels do
           [{0.0, face_z - 0.03}, {0.085, face_z - 0.03}, {0.085, face_z}, {0.06, face_z + 0.01}, {0.0, face_z + 0.012}],
           Keyword.get(opts, :rim_material, :aluminum),
           sides: 24
-        ),
+        )
+        |> then(&if(Keyword.get(opts, :face) == :disc, do: World.Mesh.skin(&1, @disc / 2, &1.material), else: &1)),
         [hub_port()]
       )
 
@@ -361,13 +377,14 @@ defmodule World.Vehicles.Wheels do
   end
 
   # The pressed face of a steel wheel: a disc from the hub to the rim, a
-  # ring of holes (dark discs in the face), and a black cap.
+  # ring of holes (dark discs in the face), and a black cap. The disc and
+  # the center are pressed from a sheet of steel (5 mm: a guess), so each
+  # is a skin on its two faces.
   defp disc_face(ri, face_z, holes) do
     disc =
-      Shape.lathe([{0.08, face_z - 0.022}, {ri, face_z - 0.022}, {ri, face_z - 0.008}, {0.08, face_z - 0.004}], :steel,
-        kind: :ring,
-        sides: 32
-      )
+      [{0.08, face_z - 0.022}, {ri, face_z - 0.022}, {ri, face_z - 0.008}, {0.08, face_z - 0.004}]
+      |> Shape.lathe(:steel, kind: :ring, sides: 32)
+      |> World.Mesh.skin(@disc / 2, :steel)
 
     r = 0.08 + (ri - 0.08) * 0.62
 
@@ -380,6 +397,7 @@ defmodule World.Vehicles.Wheels do
               sides: 10,
               frame: World.Frame.move(polar(r, 360 * k / holes, face_z - 0.008))
             )
+            |> World.Mesh.matter(:air)
 
     Part.new("wheel_disc_steel", :spoke, [disc | dots], [hub_port()])
   end

@@ -528,11 +528,13 @@ defmodule World.Gear.Camper do
 
     Assembly.new(
       "redarc_bcdc1250d",
-      Part.new("redarc_bcdc1250d", :charger, shapes, [origin()], params: %{"amps" => 50, "engine_bay" => true}),
+      Part.new("redarc_bcdc1250d", :charger, shapes, [origin()],
+        params: %{"amps" => 50, "engine_bay" => true, "mass" => 1.0}
+      ),
       root: "charger",
       kind: :electrical,
       sources: [
-        "REDARC BCDC1250D: 165 by 120 by 37 mm, about 1 kg, made for the engine bay (retailer listings). The fins and the cables are approximate."
+        "REDARC BCDC1250D: 165 by 120 by 37 mm, 1 kg, made for the engine bay (REDARC, Install Guide BCDC Dual, the specifications). The fins and the cables are approximate."
       ]
     )
   end
@@ -586,18 +588,21 @@ defmodule World.Gear.Camper do
         "alternator_pulley_6_groove",
         :pulley,
         [
-          Shape.lathe(pulley_profile, :steel, sides: 24, frame: Frame.new({0.0, yf, zc}, {0, 1, 0}, {0, 0, 1})) | blades
+          Shape.lathe(pulley_profile, :steel, sides: 24, frame: Frame.new({0.0, yf, zc}, {0, 1, 0}, {0, 0, 1}))
+          | Enum.map(blades, &World.Mesh.matter(&1, :steel))
         ],
         [same("axle", {0.0, yf, zc}, {0, 1, 0}, {0, 0, 1})]
       )
 
     Assembly.new(
       "second_alternator_250a",
-      Part.new("second_alternator_250a", :alternator, case_ ++ bracket, [origin()], params: %{"label_amps" => 250}),
+      Part.new("second_alternator_250a", :alternator, case_ ++ bracket, [origin()],
+        params: %{"label_amps" => 250, "mass" => 7.0}
+      ),
       root: "alternator",
       kind: :electrical,
       sources: [
-        "A second alternator of 250 A: a case of about 6 in across, on a bracket (approximate). Ford gives a second alternator for the Transit with the 3.5 L V6 (Ford Pro upfitter documents)."
+        "A second alternator of 250 A: a case of about 6 in across, on a bracket (approximate), about 7 kg with the bracket (a guess). Ford gives a second alternator for the Transit with the 3.5 L V6 (Ford Pro upfitter documents)."
       ]
     )
     |> Assembly.add("pulley", rotor,

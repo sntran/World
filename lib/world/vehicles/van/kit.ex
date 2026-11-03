@@ -16,12 +16,25 @@ defmodule World.Vehicles.Van.Kit do
   @doc """
   A part that a station of the line makes: its station is in its
   `params`, so the list of the parts tells where each part comes from.
-  `opts` are those of `World.Part.new/5`.
+  The option `matter`: the matter of each role of color of its meshes, a
+  map of the role to `{material, thickness}` (a skin of it,
+  `World.Mesh.skin/3`). A mesh that has a matter keeps it. The other `opts` are those of `World.Part.new/5`.
   """
   def part(station, name, kind, shapes, ports, opts \\ []) do
     {params, opts} = Keyword.pop(opts, :params, %{})
+    {matter, opts} = Keyword.pop(opts, :matter, %{})
+    shapes = Enum.map(List.wrap(shapes), &matter(&1, matter))
     Part.new(name, kind, shapes, ports, [params: Map.put(params, "station", station)] ++ opts)
   end
+
+  defp matter(%{matter: nil, skin: nil} = mesh, map) do
+    case Map.get(map, mesh.material) do
+      nil -> mesh
+      {m, t} -> World.Mesh.skin(mesh, t, m)
+    end
+  end
+
+  defp matter(mesh, _map), do: mesh
 
   @doc "Each part of an item (a part or an assembly) at the station."
   def station(%Part{} = p, station), do: %{p | params: Map.put(p.params, "station", station)}

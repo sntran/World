@@ -9,26 +9,42 @@ defmodule World.Mass do
   Only a closed mesh has a volume (each edge in two faces). A skin
   (`World.Mesh.skin/3`: a panel, open or closed) has its area times its
   thickness. A mesh of a color role (`:paint`, `:trim`) takes the density
-  of its `matter` (`World.Mesh.matter/2`). A part with an open mesh that
-  is not a skin, or a mesh with no density, has no mass: `part/1` gives
-  `nil`, and `of/1` names it in `unknown`.
+  of its `matter` (`World.Mesh.matter/2`). A part that a shop buys (an
+  engine, a battery, a lamp) has the mass of its data sheet in its
+  params (`"mass"`, in kg, with its source), and its center is the center
+  of its box. A part with no meshes (a mark, a window that a van does not
+  have) has a mass of 0. A part with an open mesh that is not a skin, or
+  a mesh with no density, has no mass: `part/1` gives `nil`, and `of/1`
+  names it in `unknown`.
   """
   alias World.{Build, Frame, Mesh, Part, Standards, Vec}
 
   @doc """
-  The density of a material role (kg/m³), or nil.
+  The density of a material role (kg/m³), or nil. A number is a density
+  of its own (the matter of a mesh of a laminate,
+  `World.Materials.Laminate`).
 
       iex> World.Mass.density(:steel)
       7820
       iex> World.Mass.density(:paint)
       nil
   """
+  def density(kg_m3) when is_number(kg_m3), do: kg_m3 / 1
+
   def density(role) do
     case Map.get(Standards.table("materials", "density")["sizes"], Atom.to_string(role)) do
       [d | _] -> d
       nil -> nil
     end
   end
+
+  @doc """
+  The names of the materials with a density, in order.
+
+      iex> "steel" in World.Mass.materials()
+      true
+  """
+  def materials, do: Standards.table("materials", "density")["sizes"] |> Map.keys() |> Enum.sort()
 
   @doc """
   The volume (m³) and the centroid of a closed mesh, or nil for an open
@@ -92,13 +108,20 @@ defmodule World.Mass do
   The mass of a part (kg) and its center of mass (in the axes of the
   part), or nil: `%{mass, center}`.
   """
+  def part(%Part{shapes: []}), do: %{mass: 0.0, center: {0.0, 0.0, 0.0}}
+
+  def part(%Part{params: %{"mass" => kg}} = p) when is_number(kg) do
+    {a, b} = Part.bounds(p)
+    %{mass: kg / 1, center: Vec.scale(Vec.add(a, b), 0.5)}
+  end
+
   def part(%Part{shapes: shapes}) do
     parts =
       Enum.map(shapes, fn m ->
         with d when is_number(d) <- density(m.matter || m.material), {v, c} <- volume(m), do: {d * v, c}
       end)
 
-    if shapes != [] and Enum.all?(parts, &is_tuple/1) do
+    if Enum.all?(parts, &is_tuple/1) do
       mass = parts |> Enum.map(&elem(&1, 0)) |> Enum.sum()
       center = parts |> Enum.map(fn {m, c} -> Vec.scale(c, m) end) |> Enum.reduce(&Vec.add/2) |> Vec.scale(1 / mass)
       %{mass: mass, center: center}

@@ -40,7 +40,11 @@ defmodule World.Vehicles.Van.Closures do
 
     hinge = Kit.port("hinge", {0.0, h.length - hd1, hz - 0.006}, {1, 0, 0}, {0, 0, 1})
 
-    Assembly.add(asm, "hood", Kit.part(@station, "hood_transit", :lid, [shell], [hinge]),
+    # The hood is an outer panel over an inner panel: the top and the
+    # bottom of the solid are each a sheet.
+    {[shell], params} = World.Sheet.stamp([shell], World.Vehicles.Van.BodyShop.sheet(), :steel)
+
+    Assembly.add(asm, "hood", Kit.part(@station, "hood_transit", :lid, [shell], [hinge], params: params),
       at: hinge,
       port: "hinge",
       kind: :hinge,

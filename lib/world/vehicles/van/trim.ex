@@ -13,6 +13,13 @@ defmodule World.Vehicles.Van.Trim do
 
   @station "trim"
 
+  # The roles of color of the molded parts of the trim (the lamps, the
+  # grille, the small parts, the dash): skins of plastic, 2.5 mm thick (a
+  # wall of an injection molded part of ABS is 1.14 to 3.56 mm: Protolabs,
+  # "Design guide: injection molding", the table of the walls).
+  @wall {:plastic, 0.0025}
+  @plastic Map.new(~w(black dark white chrome blue orange red light_back light_front glass_dark)a, &{&1, @wall})
+
   @doc "The van with its trim."
   def fit(asm, van) do
     asm
@@ -226,7 +233,8 @@ defmodule World.Vehicles.Van.Trim do
         :near -> lamp.(0.02, 0.7, :black, 0.0) ++ reflector ++ lamp.(0.56, 0.7, :orange, 0.002) ++ back ++ stop
       end,
       [Kit.origin()],
-      detail: :always
+      detail: :always,
+      matter: @plastic
     )
   end
 
@@ -289,6 +297,7 @@ defmodule World.Vehicles.Van.Trim do
       [grille, oval.(yf, 0.98, 0.165, 0.065, :chrome, 0.03), oval.(yf + 0.006, 0.98, 0.15, 0.055, :blue, 0.03)],
       [Kit.origin()],
       detail: :always,
+      matter: @plastic,
       sources: [
         "The grille: a hexagon 1.2 m wide at its top and 0.95 m at its bottom, from 0.66 to 1.15 m, with the oval in its upper middle (the photos of dealers)."
       ]
@@ -346,6 +355,7 @@ defmodule World.Vehicles.Van.Trim do
       end
 
     Kit.part(@station, "details_transit", :trim, [rail | plates ++ pockets ++ vents ++ hinges], [Kit.origin()],
+      matter: @plastic,
       sources: ["The vents of the hood and the rail of the sliding door at 1.45 m: from the photos of dealers."]
     )
   end
@@ -377,6 +387,7 @@ defmodule World.Vehicles.Van.Trim do
 
     Kit.part(@station, "cab_transit", :dash, [dash, wheel, column], [Kit.origin()],
       detail: :near,
+      matter: @plastic,
       sources: [
         "The dash and the steering wheel: by eye from the photos of the inside of a 2026 Transit passenger van (https://www.comvoy.com/work-van/fenton-mi/new-2026-ford-transit-350-xl-passenger-van-25226733)."
       ]
