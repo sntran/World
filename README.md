@@ -121,6 +121,15 @@ models").
 | W7. The world: the measures | Each run has its time and its memory in its log. An order of Phượt gives its files and its log, and the times agree with the service. The release is 31 MB (no catalog files in it), so the site can deploy again. | Done |
 | W8. The world: the other vans | The ProMaster with a high roof (136 in, 159 in, 159 in extended) and a standard roof (118 in, 136 in), from the renders and the sizes of Ram; the Sprinter with a high roof (144 in, 170 in, 170 in extended), from the drawing and the tables of the guide of Mercedes-Benz, and a standard roof (144 in), from the drawings of Mercedes-Benz Australia. The crew van waits for photos. The order of a van gives its windows (a list, with the presets cargo, crew and passenger), its doors and its rows of seats as numbers; the openings factory makes the doors and the windows as sub-orders. | In progress |
 | W9. The world: the engineers | Later, with the owner. | To do |
+| P1. The real world: sewing | `World.Sewing`: garments from patterns, seams and layers; a bra, the áo dài, a T-shirt and pants (`docs/world.md`, "The real world"). | To do |
+| P2. The real world: turning | `World.Lathe`: cups, bowls, bottles, posts and pots from a profile. | To do |
+| P3. The real world: the standards | Bolts, nuts, lumber, pipe, tires, bricks, doors and windows as data, by their standard names. | To do |
+| P4. The real world: the materials | The density, surface and price of each material; the mass and the center of mass of each assembly. | To do |
+| P5. The real world: the checks | A model stands, its parts do not pass through each other, its joints stay in their limits, and it fits through its doors. | To do |
+| P6. The real world: sheets and molds | `World.Sheet` and `World.Loft`: cabinets, the ghe of Vũng Tàu, helmets, seats; the body shop of the vans on `World.Sheet`. | To do |
+| P7. The real world: plants | `World.Plants`: species from rules (the coconut palm, the banana, bamboo, the frangipani). | To do |
+| P8. The real world: places | Streets from OpenStreetMap, with the buildings, the roads and the trees; a street of Vũng Tàu first. | To do |
+| P9. The real world: the engineers | New blueprints from requests, with the checks as the gate and the owner as the reviewer. | To do |
 | 7. DIY uses World | DIY draws its SVG from the models, and keeps its pictures. | To do |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |

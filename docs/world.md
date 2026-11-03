@@ -431,6 +431,70 @@ What they tell:
 | The replay page | A static page (three.js and an SVG map) that reads the log and the replay GLB of an order from the site. No Phoenix LiveView. | The log is a file that does not change: a page that reads it needs no server and no socket. The Worker stays a plug (`World.Service`) in one VM of 128 MB. A live view of the world as it runs comes when the world runs for a long time (W4 and later); then a socket from the Durable Object can send the new lines of the log to the same page. |
 | The crew van of the Transit | It comes with the Sprinter and the ProMaster, after the first world. | The owner wants the crew van in the line. Ford does not sell it for 2024 to 2027: its sizes come from the earlier years. |
 
+## The real world
+
+The goal: World builds the common things of the world (buildings,
+vehicles, furniture, tools, clothes, plants, animals, and the streets
+and the towns that hold them) as the real world makes them. A new model
+comes from data and rules, not from new code for each model.
+
+The rules of a model of the real world:
+
+- **Real sizes.** Each number of a model comes from a source: a
+  datasheet, a standard, a brochure, a drawing to scale, or a measure of
+  a photo with a known size in it. The source is in the data, next to
+  the number. A guess is marked as a guess.
+- **Real materials.** Each part has a material with its density and its
+  surface, so each model has a mass, a center of mass and a bill of
+  materials.
+- **Real processes.** A part comes from the process that makes it in the
+  real world: a cut of stock, a turn on a lathe, a bend of a sheet, a
+  mold, a seam, a growth. Each process is a workshop of the world, with
+  its people, as the factories are.
+- **Real limits.** A model stands on its base, its parts do not pass
+  through each other, its joints stay in their limits, and it fits
+  through the door of its workshop and on the truck that delivers it.
+- **Real time.** A process takes the time of the real process, on the
+  clock of the world.
+
+### The processes
+
+| Process | What it makes | In World |
+|---|---|---|
+| Cut stock to size, then join | Lumber framing, extrusions, strut channel, shelves | `World.Framing` |
+| Turn on a lathe: a profile around an axis | Bottles, cups, bowls, posts, lamps, wheels, pots | Step P2 |
+| Bend and cut a sheet | Bodies of cars and vans, cabinets, boxes, roofs, ducts | The body shop of the vans; step P6 for all sheets |
+| Mold and cast: sections along a spine | Hulls of boats, seats, helmets, bodies of scooters | `World.Blob`; step P6 |
+| Sew: pieces cut from a pattern, joined at seams | Clothes, underwear, bags, tents, covers, sails | Step P1 |
+| Grow from rules | Trees, palms, bamboo, flowers, grass | Step P7 |
+| Grow a body on a skeleton | People, animals | `World.People`, `World.Animals` |
+| Join with standard parts | Bolts, nuts, screws, hinges, brackets | Steps P3 and P5 |
+
+### The places and the engineers
+
+The places come from open data: OpenStreetMap (ODbL: the attribution
+"© OpenStreetMap contributors" goes with each model of a place) has the
+footprints of the buildings, their levels and roof shapes, the roads
+with their widths and lanes, and the trees. With the blueprints of the
+buildings, World builds a real street, at three levels of detail, in
+tiles (step P8).
+
+The engineers (step P9, the second world of "The engineers" above): a
+person or an agent turns a request ("a bamboo chair", "a Honda Super
+Cub of 1967") into a new blueprint from the processes and the standard
+parts, with the tools of `World.MCP`. The checks of step P5 stop a bad
+design before an order, and the owner reviews each new blueprint.
+
+What World does not make: art (a statue, the face of a real person),
+brands (logos and trademarks), and the inside of a machine down to each
+gear (World makes the outside and the parts that show). A mesh with a
+license goes in only with its license in `CREDITS.md`; big data goes to
+R2, not to the release (the Worker has 64 MiB).
+
+The plan changes with what the steps teach: after each step, a render
+of each new model next to its reference, and a row in "The decisions"
+for each choice.
+
 ## The steps
 
 Each step is a small series of commits on `main`, with tests at 100%
@@ -448,6 +512,15 @@ and a picture of the replay where there is one.
 | W7. The site | The orders of the projects go through the world at <https://world.mkfifo.com> (done in W3). Each run of an order has its measures in its log (`run_done`, `World.Run.measure/3`): the time of the wall clock, and the memory of the VM, sampled each 25 ms. At the edge the emulator has no allocators of ERTS (`-Mea min`), so `:erlang.memory/1` is not there: the log then counts the memory of the processes and of their binaries (`memory: "processes"`), and the host logs the memory of all of the VM (`beam: memory N MB`). `POST /build` gives the time of the build in the header `server-timing`. The release has no `priv/models` now (the site serves them): `edge.com` goes from 87 MB to 31 MB. The deploys after 29 October 2026 did not reach the site (it served `af1ad01`); the first deploy with the smaller `edge.com` (3911c45) reached it, so the size of the Worker was the cause. The numbers are in "The measures of a run" below. Done. | An order of Phượt gives its files and its log. The times in the log agree with the times of the service. |
 | W8. The other vans | The Sprinter, the ProMaster and the crew van of the Transit, built on the line of the vehicle factory. The ProMaster (2026-11-01): the make `ram_promaster` and the models `promaster_136_high`, `promaster_159_high` and `promaster_159_ext_high` in `priv/data/vans.json`. The side traces come from the render of Ram on the side of the 159 in, high roof (sent by the owner), with the length and the height of the brochure of Ram as the scales; the sizes from the brochure of Ram (2018) and the cargo page of Ram. The black band and the window of the front door are data of the make now (`trim.band`, `openings.door_window`). The Sprinter (2026-11-01): the make `mercedes_sprinter` and the models `sprinter_144_high`, `sprinter_170_high` and `sprinter_170_ext_high`. The side traces come from a drawing of the high roof van in the Body and Equipment Guideline of Mercedes-Benz (BM907, 2024-9, sent by the owner), which is to scale: with its wheelbase as the scale, its overhangs and its length are those of the guide to 6 mm; the lengths, the wheelbases and the front overhang from the tables of the guide. The standard roofs (2026-11-01): the models `promaster_118`, `promaster_136` and `sprinter_144`. The roof of the ProMaster comes from the render of Ram of the 136 in, standard roof (sent by the owner), at the scales of the render of the high roof; The roof of the Sprinter comes from the vector drawing of the minibus with a standard roof (Mercedes-Benz Vans Australia, Sprinter Technical Data MY2022, page 39). The sizes of a van are numbers of the order (`size`: `length`, `width`, `height`); the default is the size of the US market: the heights of the US page of Mercedes-Benz Vans (100 in and 107 in) and of the 2026 guide of Ram (91.7 in to 103.6 in). An order for Australia gives the heights of Mercedes-Benz Australia (2.331 m and 2.62 m). The height goes up 0.3 m, and down to the height of the traces; the length and the width go 0.05 m each way. A model can give its own `openings` (the doors of a standard roof are lower). The sliding door of the Sprinter with a high roof goes to 2.54 m now, not 2.30 m (2.30 m is the door of the standard roof); a sliding door stays under the round edge of the roof. The order of a van (2026-11-01, the decision of the owner: as the real world): its windows are a list (each window with its place and its numbers), with the presets cargo, crew and passenger; its doors and its rows of seats are numbers of the order too (`World.Vehicles.Van.Order`). The openings factory (the decision of the owner: one factory for the doors and the windows of all kinds, `World.Openings`) makes the doors and the windows of a van as a sub-order, each to its numbers, and its truck brings them to the line (`World.Openings.Van`); a house orders its doors and windows there too. A number of the make that is a guess (the windows of the Transit on a Sprinter) moves into the limits of its door or its side. Still from the Transit, for both makes: the lamps, the grille, the wheels and the dash; the super high roof of the ProMaster is not there yet. The crew van waits for photos (see "Open questions for the owner"). | As the Transit: a render next to the photo of the dealer. |
 | W9. The engineers | Later, with the owner. | — |
+| P1. Sewing | `World.Sewing`: a garment is a set of pieces, each cut from a pattern (an outline on the body, with the ease of the fit), joined at seams, of a fabric (thickness, stiffness, grain). The sewing shop of the world sews the pieces in the order of the seams. Each piece has its layer: an inner layer is nearer to the body, and the pieces of two layers that meet overlap. The first garments: a bra (its cups give the shape that the layers over it fit to: round, higher, no point), the áo dài (two long panels, a bodice, sleeves, a stand collar, the slits) with the quần, a T-shirt and pants. `World.Clothes` makes its jackets as patterns too. | Renders of the áo dài and the bra next to photos, at near and mid. No skin shows between two layers or through a layer (a test of the points of each layer). The shape of the bust of a woman shows under a top, with no point. |
+| P2. Turning | `World.Lathe`: a profile (points of a curve) around an axis, with its levels of detail (fewer sides far away). The lathe of the workshop. The first models: a cup, a bowl, a bottle, a post of a balcony, a pot of a plant. | The volume of a cup from its mesh is the volume of its profile (Pappus), within 1%. A render next to a photo of a real cup with its sizes. |
+| P3. The standards | `priv/standards/*.json`, read at compile time: metric bolts, nuts and washers (ISO 4014, 4017, 4032, 7089), lumber (the US sizes and the sizes of Việt Nam), steel pipe, tires (ETRTO), bricks, doors and windows. A part by its standard name (`{:bolt, "M8x40"}`). | The head of an M8 bolt is 13 mm across the flats; a 2x4 is 38 by 89 mm. A wrong name stops the compile. |
+| P4. The materials | A material has its density, its surface (color, roughness, metal; the CC0 textures of ambientCG and Poly Haven) and its price. Each assembly has its mass and its center of mass; the bill of materials has the mass of each part. | The mass of a cup, a chair and the Transit van (empty) next to their real masses: 10% for the van. |
+| P5. The checks of a true model | `World.Check`: it stands on its base (the center of mass over the support), no two parts pass through each other (boxes first, then the meshes), each joint in its limits, and it fits through the door of its workshop and on its truck. An order with a model that fails is refused, with the reason. | A test model that tips over, two parts that overlap, and a model too big for its door: each one is refused. Each model of the catalog passes. |
+| P6. Sheets and molds | `World.Sheet` (a flat pattern with bend lines, flanges and openings, as a real sheet metal part) and `World.Loft` (sections along a spine, for a hull or a seat). The body shop of the vans moves to `World.Sheet`. The first models: a cabinet, a ghe (the wooden fishing boat of Vũng Tàu), a helmet, a seat. | The ghe next to a photo with its sizes. The van from `World.Sheet` is the same van (within 1 mm). |
+| P7. Plants | `World.Plants`: a plant grows from the rules of its species (a file of data: the trunk, the branches, the leaves, the flowers, the season), with its levels of detail (cards of leaves far away). The nursery of the world. The first species: the coconut palm, the banana, bamboo, the frangipani. | Renders next to photos of each species. The far level of a palm has less than 500 faces. |
+| P8. Places from OpenStreetMap | `World.Places.OSM`: a tile of OpenStreetMap gives the buildings (from their footprints, levels and roof shapes, with the blueprints of the houses), the roads (widths and lanes), the trees (step P7), at three levels of detail. The first place: a street of Vũng Tàu. | A render of the street next to a photo of it. A tile stays under its size limit. |
+| P9. The engineers | The tools of `World.MCP` make a blueprint from the processes and the standard parts; the checks of P5 are the gate; the owner reviews each new blueprint before it goes into the catalog. | An agent makes the blueprint of a bamboo chair from a request; it passes the checks, and the owner accepts or refuses it. |
 
 ## Open questions for the owner
 
