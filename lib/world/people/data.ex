@@ -75,12 +75,12 @@ defmodule World.People.Data do
   @external_resource @assets_file
   @assets @assets_file |> File.read!() |> JSON.decode!()
 
-  @doc "The list of the assets (`assets.json`), and the jackets of World (`World.Clothes`)."
-  def assets, do: cached(:assets, fn -> Map.update!(@assets, "clothes", &Map.merge(&1, World.Clothes.entries())) end)
+  @doc "The list of the assets (`assets.json`), and the garments of World (`World.Sewing`)."
+  def assets, do: cached(:assets, fn -> Map.update!(@assets, "clothes", &Map.merge(&1, World.Sewing.entries())) end)
 
   @doc """
   True when an asset of the kind has the name: an asset of `assets.json`,
-  or a jacket of World (`World.Clothes`).
+  or a garment of World (`World.Sewing`).
 
       iex> World.People.Data.known?("clothes", "shoes01")
       true
@@ -90,7 +90,7 @@ defmodule World.People.Data do
       false
   """
   def known?(kind, name),
-    do: Map.has_key?(Map.get(@assets, kind, %{}), name) or (kind == "clothes" and name in World.Clothes.names())
+    do: Map.has_key?(Map.get(@assets, kind, %{}), name) or (kind == "clothes" and name in World.Sewing.names())
 
   @doc """
   `asset/2` for a kind and a name in the code: a name that no asset has
@@ -129,7 +129,10 @@ defmodule World.People.Data do
   An asset by its kind and name: its mesh (as `base/0`), its fit to the
   body, the path of its texture (or nil), the mean color of the texture,
   the mean of a gray texture (`gray`, a hair: its color is the factor of
-  its material), and if it is transparent.
+  its material), and if it is transparent. A garment of World
+  (`World.Sewing`) also has its layer (1 for the other clothes), the shape
+  that it gives to the body (a list of `{target, weight}`) and its drape
+  (`%{points: [index], steps: n}`, or nil).
   """
   def asset(kind, name) do
     cached({:asset, kind, name}, fn ->
@@ -143,7 +146,10 @@ defmodule World.People.Data do
         texture: if(entry["texture"], do: Path.join(folder, entry["texture"])),
         color: Map.get(entry, "color", [128, 128, 128]),
         gray: entry["gray"],
-        transparent: Map.get(entry, "transparent", false)
+        transparent: Map.get(entry, "transparent", false),
+        layer: Map.get(entry, "layer", 1),
+        shape: for([t, w] <- Map.get(entry, "shape", []), do: {t, w}),
+        drape: with(%{"points" => ps, "steps" => n} <- entry["drape"], do: %{points: ps, steps: n})
       }
     end)
   end
@@ -184,11 +190,30 @@ defmodule World.People.Data do
     end
   end
 
-  # A parse makes much garbage. A short process parses and puts the
-  # value in `:persistent_term`: its heap goes at its end, and the caller
-  # gets the value with no copy. An error in the parse is raised again in
-  # the caller.
-  defp cached(key, fun) do
+  @doc """
+  The points of the breasts in the base mesh: the points of the body
+  (not of a helper) that the target of the largest cup of MakeHuman
+  moves (more than 0.05 dm).
+  """
+  def breast_points do
+    cached(:breast_points, fn ->
+      "breast/female-young-averagemuscle-averageweight-maxcup-averagefirmness"
+      |> target()
+      |> Enum.filter(fn {v, {x, y, z}} -> v < 13380 and x * x + y * y + z * z > 0.0025 end)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.sort()
+    end)
+  end
+
+  @doc """
+  A value made once and kept (`World.Sewing` keeps its cut with it).
+
+  A parse makes much garbage. A short process parses and puts the
+  value in `:persistent_term`: its heap goes at its end, and the caller
+  gets the value with no copy. An error in the parse is raised again in
+  the caller.
+  """
+  def cached(key, fun) do
     k = {__MODULE__, key}
 
     case :persistent_term.get(k, nil) do

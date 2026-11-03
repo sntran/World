@@ -97,8 +97,8 @@ defmodule World.People.Human do
     o = Map.put(o, :colors, chosen_colors(o))
     base = Data.base()
     o = Map.put(o, :rest, Face.rest(o.face))
-    points = base.points |> morph(o) |> rest_face(o)
     clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
+    points = base.points |> morph(o) |> worn(clothes) |> rest_face(o)
     o = Map.put(o, :ground, ground(base, points, clothes))
     bones = skeleton(points, o.ground)
     weights = Detail.collect(vertex_weights(Enum.map(bones, & &1.name)))
@@ -182,9 +182,34 @@ defmodule World.People.Human do
     o = Map.new(Keyword.merge(@defaults, opts))
     base = Data.base()
     o = Map.put(o, :rest, Face.rest(o.face))
-    points = base.points |> morph(o) |> rest_face(o)
     clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
+    points = base.points |> morph(o) |> worn(clothes) |> rest_face(o)
     Skeleton.new(skeleton(points, ground(base, points, clothes)))
+  end
+
+  @doc """
+  The clothes of a person (the options of `person/2`) on its body: for
+  each item, in the order of `clothes`, its name, its layer, and a list
+  of `{point of the body, position, out}`, one for each point of the item
+  (the axes of MakeHuman, after the drape; `out` is the distance of the
+  point from its point of the body). The checks of the layers
+  (`World.Sewing`) use it.
+  """
+  def dressed(opts \\ []) do
+    o = Map.new(Keyword.merge(@defaults, opts))
+    o = Map.put(o, :rest, Face.rest(o.face))
+    clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
+    points = Data.base().points |> morph(o) |> worn(clothes) |> rest_face(o) |> cloth()
+
+    for c <- clothes do
+      q = positions(c, points)
+
+      items =
+        for {{[v | _], _, _}, i} <- Enum.with_index(Tuple.to_list(c.fit.refs)),
+            do: {v, elem(q, i), Vec.len(Vec.sub(elem(q, i), elem(points, v)))}
+
+      {c.name, c.layer, items}
+    end
   end
 
   # --- The shape of the body ----------------------------------------------------
@@ -308,15 +333,50 @@ defmodule World.People.Human do
   # The clothes fit to a body with no nipples: the two targets of
   # MakeHuman that make the nipples small, at twice the full weight (at
   # the full weight a point still shows through a top; at three times, a
-  # dip). The body at near stays as MakeHuman makes it, under the clothes.
-  # The body at mid and far and the kit have these points: there the
-  # clothes are the colors of the body.
+  # dip), then a smooth of the breasts (`smooth/1`). The body at near stays
+  # as MakeHuman makes it, under the clothes. The body at mid and far and
+  # the kit have these points: there the clothes are the colors of the
+  # body.
   @chest ~w(breast/nipple-point-decr breast/nipple-size-decr)
 
-  defp cloth(points), do: add_targets(points, Enum.map(@chest, &{&1, 2.0}))
+  defp cloth(points), do: points |> add_targets(Enum.map(@chest, &{&1, 2.0})) |> smooth()
+
+  # The steps of the smooth of the breasts: each step moves each point of
+  # the breasts (`Data.breast_points/0`) half the way to the mean of its
+  # neighbors, then back a little more (Taubin), so the breasts stay
+  # round and do not shrink, and the rest of the point of a nipple goes
+  # (the cups of a bra are smooth). Each step is linear: the smooth of a
+  # sum of targets is the sum of the smooth targets, so the kit smooths
+  # each of its targets.
+  @smooth_steps 60
+
+  defp smooth(points) do
+    chest = chest()
+
+    moved =
+      Enum.reduce(1..@smooth_steps, Map.new(chest, fn {v, _} -> {v, elem(points, v)} end), fn i, m ->
+        t = if rem(i, 2) == 1, do: 0.5, else: -0.53
+        at = fn v -> Map.get(m, v) || elem(points, v) end
+        Map.new(chest, fn {v, ns} -> {v, Vec.lerp(at.(v), ns |> Enum.map(at) |> Vec.mean(), t)} end)
+      end)
+
+    Enum.reduce(moved, points, fn {v, p}, acc -> put_elem(acc, v, p) end)
+  end
+
+  # The points of the breasts with their neighbors.
+  defp chest do
+    Data.cached(:chest, fn ->
+      ring = neighbors(Data.base())
+      for v <- Data.breast_points(), do: {v, Map.fetch!(ring, v)}
+    end)
+  end
 
   # The points of the base mesh with the targets, in the axes of MakeHuman.
   defp morph(points, o), do: add_targets(points, target_weights(o))
+
+  # The body takes the shape that its clothes give it (the cups of a bra:
+  # `World.Sewing`).
+  defp worn(points, clothes), do: add_targets(points, Enum.flat_map(clothes, & &1.shape))
 
   defp add_targets(points, weights) do
     arr = :array.from_list(Tuple.to_list(points))
@@ -524,14 +584,16 @@ defmodule World.People.Human do
         do: [{Data.asset("hair", o.hair), cover(Data.asset("hair", o.hair))} | covers],
         else: covers
 
-    # The clothes that cover the most of the points of the body under a face.
+    # Of the clothes that cover the most of the points of the body under
+    # a face, the one on the outer layer (a top over a bra); then the one
+    # that covers the most.
     owner = fn face ->
       body = Enum.flat_map(face, fn {v, _} -> elem(elem(p.fit.refs, v), 0) end)
 
       covers
       |> Enum.map(fn {c, set} -> {c, Enum.count(body, &MapSet.member?(set, &1))} end)
       |> Enum.filter(fn {_, n} -> n * 2 > length(body) end)
-      |> Enum.max_by(&elem(&1, 1), &>=/2, fn -> {nil, 0} end)
+      |> Enum.max_by(fn {c, n} -> {Map.get(c, :layer, 1), n} end, &>=/2, fn -> {nil, 0} end)
       |> elem(0)
     end
 
@@ -945,7 +1007,56 @@ defmodule World.People.Human do
 
   defp fit_points(%{fit: fit} = a, points, weights) do
     weights = for {vs, ws, _} <- Tuple.to_list(fit.refs), do: blend(weights, Enum.zip(vs, ws))
-    {fit_positions(a, points), List.to_tuple(weights)}
+    {positions(a, points), List.to_tuple(weights)}
+  end
+
+  defp positions(a, points), do: a |> fit_positions(points) |> drape(a, points)
+
+  # The cloth spans the dips of the body (`World.Sewing`): at each step,
+  # each point of the drape moves out along the offset of its fit to the
+  # mean of its neighbors in the mesh of the garment, but not nearer to
+  # the body than at the fit. So the cloth bridges a dip (between the
+  # breasts, under the bust) and stays on a round part. A point does not
+  # move to the side: it stays over its point of the body, so it does not
+  # go into a layer under it. The drape runs on the body of the person:
+  # it is the same on each shape.
+  defp drape(q, %{drape: nil}, _points), do: q
+
+  defp drape(q, %{drape: %{points: ps, steps: steps}} = a, points) do
+    ring = mesh_ring(a)
+    body = fn i -> elem(points, a.fit.refs |> elem(i) |> elem(0) |> hd()) end
+
+    least =
+      Map.new(ps, fn i ->
+        d = Vec.sub(elem(q, i), body.(i))
+        {i, {Vec.norm(d), Vec.len(d)}}
+      end)
+
+    moved =
+      Enum.reduce(1..steps//1, Map.new(ps, &{&1, elem(q, &1)}), fn _, m ->
+        at = fn i -> Map.get(m, i) || elem(q, i) end
+
+        Map.new(ps, fn i ->
+          c = Vec.lerp(at.(i), ring |> Map.fetch!(i) |> Enum.map(at) |> Vec.mean(), 0.5)
+          {n, d} = least[i]
+          {i, Vec.add(body.(i), Vec.scale(n, max(d, Vec.dot(Vec.sub(c, body.(i)), n))))}
+        end)
+      end)
+
+    Enum.reduce(moved, q, fn {i, p}, acc -> put_elem(acc, i, p) end)
+  end
+
+  # The neighbors of each point of the mesh of an asset.
+  defp mesh_ring(a) do
+    Data.cached({:mesh_ring, a.name}, fn ->
+      a.mesh.groups
+      |> Map.values()
+      |> Enum.concat()
+      |> Enum.reduce(%{}, fn f, acc ->
+        vs = Enum.map(f, &elem(&1, 0))
+        Enum.reduce(vs, acc, fn v, acc -> Map.update(acc, v, vs -- [v], &Enum.uniq(&1 ++ (vs -- [v]))) end)
+      end)
+    end)
   end
 
   # The points of an asset on the body (MakeHuman, "mhclo"): the sum of
@@ -1279,10 +1390,12 @@ defmodule World.People.Human do
 
     o = o |> Map.put(:colors, %{}) |> Map.put(:rest, Face.rest(o.face)) |> Map.put(:ground, 0.0)
     base = Data.base()
-    points = base.points |> cloth() |> rest_face(o)
+    raw = rest_face(base.points, o)
+    points = cloth(raw)
     groups = kit_groups(g)
     names = Enum.map(groups, &hd/1)
-    shaped = Map.new(names, fn t -> {t, add_target(points, t)} end)
+    # The smooth of the breasts is linear: each target goes through it.
+    shaped = Map.new(names, fn t -> {t, cloth(add_target(raw, t))} end)
     bones = skeleton(points, 0.0)
     weights = Detail.collect(vertex_weights(Enum.map(bones, & &1.name)))
     heads = fn bs -> List.to_tuple(Enum.map(bs, & &1.head)) end

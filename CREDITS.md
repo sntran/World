@@ -58,10 +58,10 @@ World or an app shows it.
 | `toigo_gloves_short` | MargaretToigo | gloves01 | CC0 |
 | `toigo_wool_pants` | MargaretToigo | pants01 | CC0 |
 
-The jackets `world_rain_shell`, `world_softshell` and
-`world_down_jacket` in the same folder are not from MakeHuman: World
-makes them from the base mesh (`World.Clothes`), under the
-license of World.
+The garments `world_*` in the same folder (the bra, the áo dài, the
+quần, the T-shirt, the pants and the jackets) are not from MakeHuman:
+World sews them from the base mesh (`World.Sewing`), under the license
+of World.
 
 ## BigMaQ
 

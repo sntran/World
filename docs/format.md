@@ -495,18 +495,31 @@ The shape of a body comes from the sliders of MakeHuman (234 sliders in
 
 The clothes fit to a body with no nipples: the two targets of MakeHuman
 that make the nipples small (`breast/nipple-point-decr`,
-`breast/nipple-size-decr`), at twice the full weight. So no nipples show
-through a top. The body at near stays as MakeHuman makes it. The body at
-mid and far, and the kit, have the points with these targets, because
-there the clothes are the colors of the body.
+`breast/nipple-size-decr`), at twice the full weight, then 60 steps
+that smooth the breasts and do not make them smaller (Taubin). So no
+point shows through a top, and the bust stays round. The body at near
+stays as MakeHuman makes it. The body at mid and far, and the kit, have
+these points, because there the clothes are the colors of the body.
+Each step is linear, so the kit smooths each of its targets the same
+way.
+
+The garments of World (`World.Sewing`) have three more fields in their
+entries: `layer` (0 next to the skin, 1 pants, 2 a top, 3 a jacket; the
+other clothes are on layer 1), `shape` (a list of `[target, weight]`: the
+body and all the clothes take that shape when the item is worn; the cups
+of `world_bra` lift the bust and make it round) and `drape` (the points
+of the mesh that span the dips of the body, and the steps of the span of
+the fabric; or null). The drape runs when the item fits a body: each of
+its points moves out along its offset to the mean of its neighbors, and
+never nearer to the body than at the fit.
 
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair; far is a body of 730 faces.
 At mid and far, the faces under clothes have the mean color of the
 clothes, and at far the scalp has the color of the hair. A face under
-two items has the color of the item that covers the most of its points;
-with the same count, the item first in `clothes`: put a jacket before
-the shirt under it. An item that fits to a helper of the base mesh (the
+two items has the color of the item on the outer layer, then of the
+item that covers the most of its points; with the same count, the item
+first in `clothes`: put a jacket before the shirt under it. An item that fits to a helper of the base mesh (the
 tights or the skirt) covers the points of the body under the helper. The low-poly
 bodies have the low-poly eyes of MakeHuman (`eyes`, with the texture of
 the eyes), the eyebrows at mid, and a dark fan (`hole`) closes the hole of the mouth, from its

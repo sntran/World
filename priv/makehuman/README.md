@@ -26,7 +26,7 @@ of the items; the script takes their author and license from its table
 `CREDITS`, from the pack pages).
 
 The files `clothes/world_*` are not from MakeHuman: they are the
-clothes that World makes from the base mesh (`World.Clothes`,
+clothes that World sews from the base mesh (`World.Sewing`,
 the license of World). `scripts/makehuman.py` with no names deletes the
 folder first: after it, `mix run scripts/clothes.exs` writes them
 again.

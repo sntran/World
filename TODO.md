@@ -37,14 +37,18 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
-- **Clothes from parts.** `World.Clothes` makes each item from the
-  surface of the body: a torso (the hem at the waist, the hips or the
-  thighs), sleeves (none, short, to the elbow, long), a collar (none,
-  crew, polo, stand, hood), legs (shorts, to the knee, long) and a
-  fabric (the thickness, the room at the hem, baffles, the grain). An
-  item is a list of parts and a fabric, and the three jackets become
-  presets. A wide part that does not follow the body (the long panels
-  of an áo dài, a skirt, a coat) needs its own surface.
+- **More garments from patterns.** `World.Sewing` cuts the pieces from
+  the body and its skirt. Next: a skirt and a coat (wide pieces on the
+  skirt), shorts, a polo collar, sleeves to the elbow, and the colors of
+  two fabrics in one garment (the cups and the band of a bra).
+- **The bra in the kit.** The kit has no shape of the bra: the browser
+  joins a body with no bra shape. The kit can carry the targets of the
+  shape of each item, as `shapes`.
+- **The bust at mid.** The body of mid has few faces: at the apex of a
+  large bust it shows a point in the color of a top. A proxy with more
+  faces there, or smooth normals at the apex.
+- **Renders next to photos.** The check of step P1 wants renders of the
+  áo dài and the bra next to photos of real ones, at near and mid.
 - **A hood up.** The rain shell of World has its hood folded at the
   back of the neck. A hood over the head needs room for the hair, and
   a cut for the face.
