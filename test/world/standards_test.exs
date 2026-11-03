@@ -14,6 +14,11 @@ defmodule World.StandardsTest do
       assert map_size(table["sizes"]) > 2, "#{file}/#{t}"
     end
 
+    # A table of one number for each name (the height of a nut), and the
+    # names of a table in order.
+    assert Standards.tuples({"fasteners", "nut"})["M8"] == 6.8
+    assert hd(Standards.names({"stock", "pipe"})) == "1"
+
     refute Standards.__mix_recompile__?()
     assert_raise ArgumentError, "no table stock/nope", fn -> Standards.table("stock", "nope") end
     assert_raise ArgumentError, "no M7 in fasteners/hex_head", fn -> Standards.size({"fasteners", "hex_head"}, "M7") end
