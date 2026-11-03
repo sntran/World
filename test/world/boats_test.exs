@@ -68,7 +68,7 @@ defmodule World.BoatsTest do
     %{mass: mass, center: {x, y, _}, unknown: unknown} = World.Mass.of(g)
     assert abs(x) < 0.01
     assert y > 0.35 * 20.7 and y < 0.55 * 20.7
-    assert mass > 20_000 and unknown == ["framing_mark"]
+    assert mass > 20_000 and unknown == []
   end
 
   test "a ghe of other sizes" do

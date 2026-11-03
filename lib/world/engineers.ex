@@ -95,10 +95,10 @@ defmodule World.Engineers do
 
   @doc """
   The owner accepts a proposal: its drawing goes to `dir/NAME.json`
-  (`priv/drawings` by default). A drawing of that name in the folder
+  (`priv/drawings` for the catalog). A drawing of that name in the folder
   stays: `{:error, :exists}`.
   """
-  def accept(%{"drawing" => %{"name" => name} = drawing}, dir \\ "priv/drawings") do
+  def accept(%{"drawing" => %{"name" => name} = drawing}, dir) do
     path = Path.join(dir, name <> ".json")
 
     if File.exists?(path) do
