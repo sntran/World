@@ -37,4 +37,31 @@ defmodule World.WebbingTest do
     assert y == 0 and z == 0
     assert Mass.part(b).mass > 0
   end
+
+  test "the hardware of a strap: a D-ring, a tri-glide, a pin buckle and hook and loop, each with a mass" do
+    for {p, kind} <- [
+          {Webbing.d_ring("ring", 0.025), :d_ring},
+          {Webbing.tri_glide("glide", 0.025), :tri_glide},
+          {Webbing.pin_buckle("buckle", 0.025), :pin_buckle},
+          {Webbing.hook_loop("patch", 0.025, 0.03), :hook_loop}
+        ] do
+      assert p.kind == kind and p.params["width"] == 0.025
+      assert Part.port!(p, "o").at == {0.0, 0.0, 0.0}
+      assert Mass.part(p).mass > 0
+    end
+
+    # A frame moves the hardware and its port.
+    moved = Webbing.d_ring("ring", 0.025, frame: World.Frame.new({0.1, 0.2, 0.3}, {0, 0, 1}, {0, 1, 0}))
+    assert Part.port!(moved, "o").at == {0.1, 0.2, 0.3}
+    {{x0, _, _}, _} = Part.bounds(moved)
+    assert_in_delta x0, 0.1 - 0.0015, 1.0e-6
+    assert Webbing.hook_loop("patch", 0.025, 0.03).params["length"] == 0.03
+  end
+
+  test "a strap of leather, with more ports for its hardware" do
+    s = Webbing.strap("strap", [{0, 0, 0}, {0, 0.1, 0}], 0.02, matter: :leather, ports: [{"ring", {0.0, 0.05, 0.0}}])
+    assert hd(s.shapes).matter == :leather
+    assert Part.port!(s, "ring").at == {0.0, 0.05, 0.0}
+    assert Mass.part(s).mass < Mass.part(Webbing.strap("strap", [{0, 0, 0}, {0, 0.1, 0}], 0.02)).mass
+  end
 end

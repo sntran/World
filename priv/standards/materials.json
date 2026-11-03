@@ -108,6 +108,18 @@
         30,
         "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): PU - poly urethane foam 0.03."
       ],
+      "leather": [
+        860,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): leather, dry 0.86."
+      ],
+      "rubber_sole": [
+        1100,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): rubber, soft commercial 1.1 (the outsole of a shoe)."
+      ],
+      "eva": [
+        240,
+        "EVA foam of a midsole: 240 kg/m3, the foam of a midsole of one density (Footwear Science, Mechanical ageing performance of minimalist and traditional footwear foams, https://aquila.usm.edu/fac_pubs/18396)."
+      ],
       "sao": [
         775,
         "PROSEA (Plant Resources of South-East Asia), Hopea odorata (sao đen): 620-930 kg/m3 at 15% moisture (the middle). A wood of boats (https://prosea.prota4u.org/view.aspx?id=3545)."

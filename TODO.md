@@ -46,11 +46,11 @@ into the steps of `AGENTS.md`.
   (5.12); the tests of QCVN 2:2021 as checks of the world (the impact,
   the strap at 500 N, the stability); a helmet of three quarters and a
   full helmet with a visor.
-- **A sandal (next, the decision of the owner).** Straps of webbing or
-  leather on a molded sole of EVA or rubber (`World.Loft`), along the
-  foot of a person; the hardware of a strap: a pin buckle, a ladder lock
-  or a tri-glide, a D-ring, a hook and loop; a strap of leather or of a
-  woven band with its mass for each meter.
+- **The sandal, more real.** The tread of the outsole and the shape of
+  the footbed (the arch, the heel cup); the sole of the left foot (a
+  pair); the strap on the foot of a person in a pose; the sizes of the
+  hardware from a data sheet; a woven band with its mass for each meter;
+  a render next to a photo of a real sandal.
 - **More of the mold shop.** A seat (a pan and a back along a bent
   spine, an open shell), a hull of glass fiber with its plies (the
   thickness and the density of a laminate from the mass of the glass and

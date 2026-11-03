@@ -188,6 +188,45 @@ defmodule World.People.Human do
   end
 
   @doc """
+  The footprint of a bare foot of a person (the options of `person/2`;
+  the clothes do not count), at rest, in the axes of World (m, the ground
+  at z = 0): `%{length: m, rows: [{y, x0, x1, top}]}`, a row for each
+  5 mm from the heel to the toes: the sides of the foot in plan (its
+  points under 40 mm, 7.5 mm or less from the row: the base mesh is
+  sparse) and the height of its top (its points under 120 mm). `side` is `"l"` (the left foot, x < 0) or `"r"`.
+  """
+  def footprint(opts \\ [], side \\ "l") when side in ["l", "r"] do
+    o = Map.new(Keyword.merge(@defaults, Keyword.put(opts, :clothes, [])))
+    base = Data.base()
+    points = morph(base.points, o)
+    g = ground(base, points, [])
+    sign = if side == "l", do: -1, else: 1
+
+    foot =
+      for f <- Map.fetch!(base.groups, "body"),
+          {v, _} <- f,
+          {x, y, z} = to_world(elem(points, v)),
+          z - g < 0.12 and x * sign > 0.02,
+          uniq: true,
+          do: {x, y, z - g}
+
+    {y0, y1} = foot |> Enum.map(&elem(&1, 1)) |> Enum.min_max()
+    step = 0.005
+
+    rows =
+      for i <- 0..floor((y1 - y0) / step),
+          y = y0 + i * step,
+          near = Enum.filter(foot, fn {_, py, _} -> abs(py - y) <= step * 1.5 end),
+          low = Enum.filter(near, fn {_, _, pz} -> pz < 0.04 end),
+          low != [] do
+        {x0, x1} = low |> Enum.map(&elem(&1, 0)) |> Enum.min_max()
+        {y, x0, x1, near |> Enum.map(&elem(&1, 2)) |> Enum.max()}
+      end
+
+    %{length: y1 - y0, rows: rows}
+  end
+
+  @doc """
   The clothes of a person (the options of `person/2`) on its body: for
   each item, in the order of `clothes`, its name, its layer, and a list
   of `{point of the body, position, out}`, one for each point of the item

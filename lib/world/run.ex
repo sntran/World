@@ -54,7 +54,9 @@ defmodule World.Run do
     # The sheet metal shop: it cuts and bends the parts of World.Sheet.
     %{place: "sheet_shop", family: :sheets, at: {-300, 700}, foreman: "son", workers: ["thanh"]},
     # The mold shop: it molds the shells of World.Loft (helmets).
-    %{place: "mold_shop", family: :molds, at: {0, 700}, foreman: "trinh", workers: ["vy"]}
+    %{place: "mold_shop", family: :molds, at: {0, 700}, foreman: "trinh", workers: ["vy"]},
+    # The shoe shop: it makes the footwear of World.Footwear (sandals).
+    %{place: "shoe_shop", family: :footwear, at: {300, 700}, foreman: "huong", workers: ["duc"]}
   ]
 
   @doc """
@@ -109,6 +111,7 @@ defmodule World.Run do
     |> Yard.road("boatyard", "customer")
     |> Yard.road("sheet_shop", "customer")
     |> Yard.road("mold_shop", "customer")
+    |> Yard.road("shoe_shop", "customer")
   end
 
   defp warehouse(name, at, limit, store),

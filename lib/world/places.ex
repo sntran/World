@@ -26,6 +26,7 @@ defmodule World.Places do
     :boats,
     :sheets,
     :molds,
+    :footwear,
     :vehicles,
     :appliances,
     :clothes,
@@ -53,14 +54,15 @@ defmodule World.Places do
     turned: :turned,
     boat: :boats,
     enclosure: :sheets,
-    helmet: :molds
+    helmet: :molds,
+    sandal: :footwear
   }
 
   @doc """
   The family of an item: the factory that makes it (`:wheels` for a
   wheel, `:seats` for a seat or a bench, `:openings` for a door or a
   window, `:turned` for a part of the lathe (`World.Lathe`), `:boats` for a boat
-  (`World.Boats`), `:sheets` for a box of sheet metal (`World.Enclosures`), `:molds` for a shell from a mold (`World.Molds`), `:houses` for a house or a
+  (`World.Boats`), `:sheets` for a box of sheet metal (`World.Enclosures`), `:molds` for a shell from a mold (`World.Molds`), `:footwear` for a sandal (`World.Footwear`), `:houses` for a house or a
   building of the world), or `nil` for an item that the factory of its
   parent makes.
   """
