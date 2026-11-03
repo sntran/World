@@ -31,8 +31,14 @@ defmodule World.People.Data do
   @doc "The units of the expressions of the mouth (`expressions.bin.gz`), as `targets/0`."
   def expressions, do: cached(:expressions, fn -> parse_targets(read_gz("expressions.bin.gz")) end)
 
-  @doc "The list of the assets (`assets.json`)."
-  def assets, do: cached(:assets, fn -> File.read!(Path.join(dir(), "assets.json")) |> JSON.decode!() end)
+  @doc "The list of the assets (`assets.json`), and the jackets of World (`World.Clothes`)."
+  def assets do
+    cached(:assets, fn ->
+      File.read!(Path.join(dir(), "assets.json"))
+      |> JSON.decode!()
+      |> Map.update!("clothes", &Map.merge(&1, World.Clothes.entries()))
+    end)
+  end
 
   @doc """
   An asset by its kind and name: its mesh (as `base/0`), its fit to the
@@ -55,6 +61,42 @@ defmodule World.People.Data do
         transparent: Map.get(entry, "transparent", false)
       }
     end)
+  end
+
+  @doc """
+  The point of the body under each point of the helpers "tights" and
+  "skirt" of the base mesh: the nearest point of the group "body" at
+  rest. A cloth that fits only to a helper (`elvs_hooded_sweat_jacket1`)
+  covers these points of the body. A map of a helper point to a point of
+  the body.
+
+      iex> map = World.People.Data.body_points()
+      iex> {map_size(map), Enum.all?(map, fn {h, b} -> h >= 15328 and b < 13380 end)}
+      {3394, true}
+  """
+  def body_points do
+    cached(:body_points, fn ->
+      %{points: points, groups: groups} = base()
+      body = groups |> Map.fetch!("body") |> Enum.flat_map(fn f -> Enum.map(f, &elem(&1, 0)) end) |> Enum.uniq()
+      cell = fn {x, y, z} -> {floor(x / 0.5), floor(y / 0.5), floor(z / 0.5)} end
+      grid = Enum.group_by(body, &cell.(elem(points, &1)))
+
+      helpers =
+        for g <- ["helper-tights", "helper-skirt"], f <- Map.fetch!(groups, g), {v, _} <- f, uniq: true, do: v
+
+      Map.new(helpers, fn h -> {h, nearest(points, grid, cell.(elem(points, h)), elem(points, h), 1)} end)
+    end)
+  end
+
+  # The nearest point of the grid to `p`: the cells within `r` of its
+  # cell, else a larger `r`.
+  defp nearest(points, grid, {i, j, k}, p, r) do
+    near = for a <- -r..r, b <- -r..r, c <- -r..r, v <- Map.get(grid, {i + a, j + b, k + c}, []), do: v
+
+    case near do
+      [] -> nearest(points, grid, {i, j, k}, p, r + 1)
+      _ -> Enum.min_by(near, &World.Vec.len(World.Vec.sub(elem(points, &1), p)))
+    end
   end
 
   # A parse makes much garbage. A short process parses and puts the

@@ -17,8 +17,10 @@ defmodule World.People.Kit do
     `/m/traveler.mid.glb?vehicle=NAME&scene=parked&part=vehicle` (and
     `&van=VAN` for the camper), so a change of the vehicle needs no
     build after a new version of World;
-  - `kit.json`: the names of the files, the clothes, and the place of the
-    person next to each vehicle (and each van of the camper).
+  - `kit.json`: the names of the files, the clothes and the credits of
+    the clothes of the community (the author and the license), and the
+    place of the person next to each vehicle (and each van of the
+    camper).
 
   The viewer finds the weights of the targets from the numbers of the
   person as `World.People.Human.target_weights/1`, moves the bones, gives
@@ -99,6 +101,7 @@ defmodule World.People.Kit do
       "skins" => Map.new(textures("skins"), fn {name, path} -> {name, "skins/#{name}#{Path.extname(path)}"} end),
       "eyes" => Map.new(textures("eye_materials"), fn {name, path} -> {name, "eyes/#{name}#{Path.extname(path)}"} end),
       "clothes" => Data.assets()["clothes"] |> Map.keys() |> Enum.sort(),
+      "credits" => credits(),
       "rotation" => @turn,
       "places" => Map.new(People.vehicles() -- ["camper"], &{&1, place(&1, nil)}),
       "vans" => Map.new(vans, &{&1, place("camper", &1)}),
@@ -114,6 +117,15 @@ defmodule World.People.Kit do
     {x, y} = People.place(vehicle, van)
     {a, b, c} = GLB.gl({x, y, 0.0})
     [a / 1, b / 1, c / 1]
+  end
+
+  # The author and the license of each item of the clothes of the
+  # MakeHuman community (`CREDITS.md`): an app that shows an item with the
+  # license CC-BY names its author.
+  defp credits do
+    for {name, %{"author" => author} = entry} <- Data.assets()["clothes"], into: %{} do
+      {name, %{"author" => author, "license" => entry["license"]}}
+    end
   end
 
   defp hair, do: Data.assets()["hair"] |> Map.keys() |> Enum.sort()

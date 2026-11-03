@@ -25,7 +25,8 @@ The script writes:
 - assets.json: the list of the assets.
 
 With KIND... (for example teeth tongue), the script writes only the
-assets of these kinds, and puts them in assets.json with the others.
+assets of these kinds (or with these names), and puts them in
+assets.json with the others.
 """
 import colorsys
 import gzip
@@ -35,7 +36,7 @@ import shutil
 import struct
 import sys
 
-from PIL import Image
+from PIL import Image, ImageFile, PngImagePlugin, UnidentifiedImageError
 
 MPFB, PACKS = sys.argv[1], sys.argv[2]
 
@@ -96,6 +97,31 @@ ASSETS = [
     ("clothes", "elvs_crude_t-shirt_male", "shirts01", "clothes/elvs_crude_t-shirt_male", 1024),
     ("clothes", "joepal_crude_t-shirt_female", "shirts01", "clothes/joepal_crude_t-shirt_female", 1024),
     ("clothes", "cortu_cargo_pants", "pants01", "clothes/cortu_cargo_pants", 1024),
+] + [
+    # The clothes for travelers, from the asset packs of the community
+    # site (static.makehumancommunity.org/assets/assetpacks.html): CC0
+    # (shoes01, shirts01, pants01, hats01, gloves01) and CC-BY 4.0
+    # (shoes02, shoes03, shirts02, pants02, pants03). CREDITS has the
+    # author and the license of each item.
+    ("clothes", name, pack, f"clothes/{name}", size)
+    for pack, names, size in [
+        ("shoes01", ["culturalibre_male_boots", "toigo_ankle_boots_male", "toigo_ankle_boots_female",
+                     "scailman_semitransparent_water_boots"], 512),
+        ("shoes02", ["punkduck_running_shoes_01", "culturalibre_sneakers", "punkduck_comfortable_sneakers",
+                     "punkduck_cycling_shoes", "elvs_caesar_sandals1", "elvs_male_flip_flop_sandals1"], 512),
+        ("shoes03", ["punkduck_winter_boots", "mindfront_shoes_biker_boots_male",
+                     "mindfront_shoes_biker_boots_female", "maciekg_leather_boots"], 512),
+        ("shirts01", ["toigo_fisherman_sweater", "namuhekam_male_polo_shirt", "toigo_basic_tucked_t-shirt"], 512),
+        ("shirts02", ["elvs_hooded_sweat_jacket1", "mindfront_knitted_sweater_01", "elvs_male_shirt_untucked_bd1"], 512),
+        ("pants01", ["cortu_jeans_shorts", "toigo_wool_pants"], 512),
+        ("pants02", ["elvs_jeans_straight_leg", "mindfront_male_trousers_1", "mindfront_female_trousers_1",
+                     "punkduck_female_tight_jeans"], 512),
+        ("pants03", ["elvs_male_trouser_short_1", "punkduck_female_short_jeans"], 512),
+        ("hats01", ["jujube_newsboy_cap"], 256),
+        ("gloves01", ["toigo_gloves_short"], 256),
+    ]
+    for name in names
+] + [
     ("proxies", "proxy741", "makehuman_system_assets", "proxymeshes/proxy741", None),
     ("proxies", "male1591", "makehuman_system_assets", "proxymeshes/male1591", None),
     ("proxies", "female1605", "makehuman_system_assets", "proxymeshes/female1605", None),
@@ -105,6 +131,44 @@ ASSETS = [
     ("teeth", "teeth_base", "makehuman_system_assets", "teeth/teeth_base", 256),
     ("tongue", "tongue01", "makehuman_system_assets", "tongue/tongue01", 256),
 ]
+
+
+# The author and the license of each item of the asset packs of the
+# community, from the table of its pack page (not from the head of its
+# .mhclo file: some heads have the default text of MakeClothes, AGPL3).
+# The other assets are CC0, with no author to name.
+CREDITS = {
+    "toigo_gloves_short": ("MargaretToigo", "CC0"),
+    "jujube_newsboy_cap": ("jujube", "CC0"),
+    "cortu_jeans_shorts": ("Cortu", "CC0"),
+    "toigo_wool_pants": ("MargaretToigo", "CC0"),
+    "elvs_jeans_straight_leg": ("Elvaerwyn", "CC-BY"),
+    "mindfront_female_trousers_1": ("Mindfront", "CC-BY"),
+    "mindfront_male_trousers_1": ("Mindfront", "CC-BY"),
+    "punkduck_female_tight_jeans": ("punkduck", "CC-BY"),
+    "elvs_male_trouser_short_1": ("Elvaerwyn", "CC-BY"),
+    "punkduck_female_short_jeans": ("punkduck", "CC-BY"),
+    "namuhekam_male_polo_shirt": ("namuhekam", "CC0"),
+    "toigo_basic_tucked_t-shirt": ("MargaretToigo", "CC0"),
+    "toigo_fisherman_sweater": ("MargaretToigo", "CC0"),
+    "elvs_hooded_sweat_jacket1": ("Elvaerwyn", "CC-BY"),
+    "elvs_male_shirt_untucked_bd1": ("Elvaerwyn", "CC-BY"),
+    "mindfront_knitted_sweater_01": ("Mindfront", "CC-BY"),
+    "culturalibre_male_boots": ("culturalibre", "CC0"),
+    "scailman_semitransparent_water_boots": ("scailman", "CC0"),
+    "toigo_ankle_boots_female": ("MargaretToigo", "CC0"),
+    "toigo_ankle_boots_male": ("MargaretToigo", "CC0"),
+    "culturalibre_sneakers": ("culturalibre", "CC-BY"),
+    "elvs_caesar_sandals1": ("Elvaerwyn", "CC-BY"),
+    "elvs_male_flip_flop_sandals1": ("Elvaerwyn", "CC-BY"),
+    "punkduck_comfortable_sneakers": ("punkduck", "CC-BY"),
+    "punkduck_cycling_shoes": ("punkduck", "CC-BY"),
+    "punkduck_running_shoes_01": ("punkduck", "CC-BY"),
+    "maciekg_leather_boots": ("MaciekG", "CC-BY"),
+    "mindfront_shoes_biker_boots_female": ("Mindfront", "CC-BY"),
+    "mindfront_shoes_biker_boots_male": ("Mindfront", "CC-BY"),
+    "punkduck_winter_boots": ("punkduck", "CC-BY"),
+}
 
 
 def gz(src, dest):
@@ -166,8 +230,25 @@ def write_targets(dest, folder="macrodetails", names=None):
         g.write(b"".join(out))
 
 
+def open_image(src):
+    """The image of a file. A PNG file with a bad checksum in its color
+    profile (sandaltex.png of elvs_caesar_sandals1) is not an image for
+    Image.open; the PNG reader reads it when it skips the checksums. The
+    script drops the color profile anyway."""
+    try:
+        return Image.open(src)
+    except UnidentifiedImageError:
+        ImageFile.LOAD_TRUNCATED_IMAGES = True
+        try:
+            im = PngImagePlugin.PngImageFile(src)
+            im.load()
+            return im
+        finally:
+            ImageFile.LOAD_TRUNCATED_IMAGES = False
+
+
 def texture(src, dest_base, size, gray=False, recolor=None):
-    im = Image.open(src)
+    im = open_image(src)
     if recolor:
         im = recolor(im)
     # glTF wants images with no color profile.
@@ -221,7 +302,7 @@ def bright_gray(im):
 
 def mean_color(path):
     """The mean color of the parts of a texture that are not transparent."""
-    im = Image.open(path).convert("RGBA").resize((64, 64))
+    im = open_image(path).convert("RGBA").resize((64, 64))
     px = [p for p in im.get_flattened_data() if p[3] > 128]
     return [round(sum(p[k] for p in px) / len(px)) for k in range(3)] if px else [128, 128, 128]
 
@@ -262,7 +343,8 @@ def assets(manifest, chosen):
         src = os.path.join(PACKS, pack, folder)
         dest = os.path.join(OUT, kind)
         os.makedirs(dest, exist_ok=True)
-        entry = {"pack": pack, "license": "CC0"}
+        author, license = CREDITS.get(name, (None, "CC0"))
+        entry = {"pack": pack, "license": license, **({"author": author} if author else {})}
         if kind == "eye_materials" and name == "darkbrown":
             entry["texture"] = texture(os.path.join(src, "brown_eye.png"), os.path.join(dest, name), size, recolor=dark_iris)
         elif kind == "eye_materials":
@@ -295,6 +377,6 @@ if PACKS == "--expressions":
     expressions()
 elif len(sys.argv) > 3:
     kinds = sys.argv[3:]
-    assets(json.load(open(os.path.join(OUT, "assets.json"))), [a for a in ASSETS if a[0] in kinds])
+    assets(json.load(open(os.path.join(OUT, "assets.json"))), [a for a in ASSETS if a[0] in kinds or a[1] in kinds])
 else:
     main()

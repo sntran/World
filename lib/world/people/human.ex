@@ -610,9 +610,17 @@ defmodule World.People.Human do
   defp grow(set, ring), do: set |> Enum.flat_map(&Map.get(ring, &1, [])) |> MapSet.new() |> MapSet.union(set)
 
   # The points of the body under clothes: the points that the clothes
-  # hide, and the points that hold the clothes.
+  # hide, and the points that hold the clothes (a point of a helper of
+  # the base mesh holds the point of the body under it).
   defp cover(%{fit: fit}) do
-    fit.refs |> Tuple.to_list() |> Enum.flat_map(&elem(&1, 0)) |> MapSet.new() |> MapSet.union(fit.delete)
+    under = Data.body_points()
+
+    fit.refs
+    |> Tuple.to_list()
+    |> Enum.flat_map(&elem(&1, 0))
+    |> Enum.map(&Map.get(under, &1, &1))
+    |> MapSet.new()
+    |> MapSet.union(fit.delete)
   end
 
   # The morph targets of a person: with speech, the moves of the visemes,

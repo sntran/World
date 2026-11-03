@@ -7,6 +7,7 @@ defmodule World.KitTest do
   doctest World.People.Human, only: [kit_targets: 1]
   doctest World.People, only: [place: 2]
   doctest World.People.Kit
+  doctest World.People.Data, only: [body_points: 0]
 
   test "the targets of a kit: each group has the same moves, and no group is empty" do
     for g <- [0, 1] do
@@ -111,6 +112,13 @@ defmodule World.KitTest do
     assert [_, _, _] = extras["colors"]["shoes01"]
   end
 
+  test "each item of the clothes of the community makes a person, with its color at mid" do
+    for {name, %{"author" => _}} <- World.People.Data.assets()["clothes"] do
+      person = Detail.with(:mid, fn -> Human.person("t", gender: 1.0, clothes: [name], pose: "stand") end)
+      assert Enum.any?(mesh(person).primitives, &(&1.material == :"color_#{name}")), name
+    end
+  end
+
   test "the manifest: the files, and the place of a parked person next to each vehicle" do
     m = Kit.manifest()
     assert m["people"] == %{"woman" => "person/woman.glb", "man" => "person/man.glb"}
@@ -123,6 +131,11 @@ defmodule World.KitTest do
     # The place of the default camper is the place of the camper of World.
     {x, y} = World.People.place("camper")
     assert m["vans"]["transit_148"] == Tuple.to_list(GLB.gl({x, y, 0.0}))
+    # The clothes of the community name their author and license.
+    assert m["credits"]["punkduck_winter_boots"] == %{"author" => "punkduck", "license" => "CC-BY"}
+    assert m["credits"]["toigo_fisherman_sweater"]["license"] == "CC0"
+    refute Map.has_key?(m["credits"], "shoes01")
+    assert m["credits"] |> Map.keys() |> Enum.all?(&(&1 in m["clothes"]))
     assert m["vehicles"]["car"] == "vehicles/car.glb"
     assert m["vehicles"]["camper"]["transit_148"] == "vehicles/camper-transit_148.glb"
     refute Map.has_key?(m["vehicles"], "foot")

@@ -13,6 +13,62 @@
       "texture": "cortu_cargo_pants.png",
       "transparent": false
     },
+    "cortu_jeans_shorts": {
+      "author": "Cortu",
+      "color": [
+        41,
+        48,
+        62
+      ],
+      "fit": "cortu_jeans_shorts.mhclo.gz",
+      "license": "CC0",
+      "obj": "cortu_jeans_shorts.obj.gz",
+      "pack": "pants01",
+      "texture": "cortu_jeans_shorts.png",
+      "transparent": false
+    },
+    "culturalibre_male_boots": {
+      "author": "culturalibre",
+      "color": [
+        61,
+        42,
+        18
+      ],
+      "fit": "culturalibre_male_boots.mhclo.gz",
+      "license": "CC0",
+      "obj": "culturalibre_male_boots.obj.gz",
+      "pack": "shoes01",
+      "texture": "culturalibre_male_boots.png",
+      "transparent": false
+    },
+    "culturalibre_sneakers": {
+      "author": "culturalibre",
+      "color": [
+        86,
+        71,
+        64
+      ],
+      "fit": "culturalibre_sneakers.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "culturalibre_sneakers.obj.gz",
+      "pack": "shoes02",
+      "texture": "culturalibre_sneakers.png",
+      "transparent": false
+    },
+    "elvs_caesar_sandals1": {
+      "author": "Elvaerwyn",
+      "color": [
+        85,
+        27,
+        12
+      ],
+      "fit": "elvs_caesar_sandals1.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "elvs_caesar_sandals1.obj.gz",
+      "pack": "shoes02",
+      "texture": "elvs_caesar_sandals1.png",
+      "transparent": false
+    },
     "elvs_crude_t-shirt_male": {
       "color": [
         165,
@@ -24,6 +80,76 @@
       "obj": "elvs_crude_t-shirt_male.obj.gz",
       "pack": "shirts01",
       "texture": "elvs_crude_t-shirt_male.png",
+      "transparent": false
+    },
+    "elvs_hooded_sweat_jacket1": {
+      "author": "Elvaerwyn",
+      "color": [
+        45,
+        45,
+        55
+      ],
+      "fit": "elvs_hooded_sweat_jacket1.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "elvs_hooded_sweat_jacket1.obj.gz",
+      "pack": "shirts02",
+      "texture": "elvs_hooded_sweat_jacket1.png",
+      "transparent": false
+    },
+    "elvs_jeans_straight_leg": {
+      "author": "Elvaerwyn",
+      "color": [
+        40,
+        40,
+        53
+      ],
+      "fit": "elvs_jeans_straight_leg.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "elvs_jeans_straight_leg.obj.gz",
+      "pack": "pants02",
+      "texture": "elvs_jeans_straight_leg.png",
+      "transparent": false
+    },
+    "elvs_male_flip_flop_sandals1": {
+      "author": "Elvaerwyn",
+      "color": [
+        35,
+        86,
+        121
+      ],
+      "fit": "elvs_male_flip_flop_sandals1.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "elvs_male_flip_flop_sandals1.obj.gz",
+      "pack": "shoes02",
+      "texture": "elvs_male_flip_flop_sandals1.png",
+      "transparent": false
+    },
+    "elvs_male_shirt_untucked_bd1": {
+      "author": "Elvaerwyn",
+      "color": [
+        32,
+        32,
+        32
+      ],
+      "fit": "elvs_male_shirt_untucked_bd1.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "elvs_male_shirt_untucked_bd1.obj.gz",
+      "pack": "shirts02",
+      "texture": "elvs_male_shirt_untucked_bd1.png",
+      "transparent": false
+    },
+    "elvs_male_trouser_short_1": {
+      "author": "Elvaerwyn",
+      "color": [
+        45,
+        45,
+        45
+      ],
+      "fit": "elvs_male_trouser_short_1.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "elvs_male_trouser_short_1.obj.gz",
+      "pack": "pants03",
+      "texture": "elvs_male_trouser_short_1.png",
       "transparent": false
     },
     "fedora01": {
@@ -102,6 +228,34 @@
       "obj": "joepal_crude_t-shirt_female.obj.gz",
       "pack": "shirts01",
       "texture": "joepal_crude_t-shirt_female.png",
+      "transparent": false
+    },
+    "jujube_newsboy_cap": {
+      "author": "jujube",
+      "color": [
+        89,
+        89,
+        89
+      ],
+      "fit": "jujube_newsboy_cap.mhclo.gz",
+      "license": "CC0",
+      "obj": "jujube_newsboy_cap.obj.gz",
+      "pack": "hats01",
+      "texture": "jujube_newsboy_cap.png",
+      "transparent": false
+    },
+    "maciekg_leather_boots": {
+      "author": "MaciekG",
+      "color": [
+        100,
+        76,
+        62
+      ],
+      "fit": "maciekg_leather_boots.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "maciekg_leather_boots.obj.gz",
+      "pack": "shoes03",
+      "texture": "maciekg_leather_boots.jpg",
       "transparent": false
     },
     "male_casualsuit01": {
@@ -208,6 +362,188 @@
       "texture": "male_worksuit01.jpg",
       "transparent": false
     },
+    "mindfront_female_trousers_1": {
+      "author": "Mindfront",
+      "color": [
+        148,
+        95,
+        61
+      ],
+      "fit": "mindfront_female_trousers_1.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "mindfront_female_trousers_1.obj.gz",
+      "pack": "pants02",
+      "texture": "mindfront_female_trousers_1.png",
+      "transparent": false
+    },
+    "mindfront_knitted_sweater_01": {
+      "author": "Mindfront",
+      "color": [
+        208,
+        128,
+        67
+      ],
+      "fit": "mindfront_knitted_sweater_01.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "mindfront_knitted_sweater_01.obj.gz",
+      "pack": "shirts02",
+      "texture": "mindfront_knitted_sweater_01.png",
+      "transparent": false
+    },
+    "mindfront_male_trousers_1": {
+      "author": "Mindfront",
+      "color": [
+        163,
+        89,
+        33
+      ],
+      "fit": "mindfront_male_trousers_1.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "mindfront_male_trousers_1.obj.gz",
+      "pack": "pants02",
+      "texture": "mindfront_male_trousers_1.png",
+      "transparent": false
+    },
+    "mindfront_shoes_biker_boots_female": {
+      "author": "Mindfront",
+      "color": [
+        127,
+        71,
+        29
+      ],
+      "fit": "mindfront_shoes_biker_boots_female.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "mindfront_shoes_biker_boots_female.obj.gz",
+      "pack": "shoes03",
+      "texture": "mindfront_shoes_biker_boots_female.png",
+      "transparent": false
+    },
+    "mindfront_shoes_biker_boots_male": {
+      "author": "Mindfront",
+      "color": [
+        127,
+        71,
+        29
+      ],
+      "fit": "mindfront_shoes_biker_boots_male.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "mindfront_shoes_biker_boots_male.obj.gz",
+      "pack": "shoes03",
+      "texture": "mindfront_shoes_biker_boots_male.png",
+      "transparent": false
+    },
+    "namuhekam_male_polo_shirt": {
+      "author": "namuhekam",
+      "color": [
+        145,
+        145,
+        145
+      ],
+      "fit": "namuhekam_male_polo_shirt.mhclo.gz",
+      "license": "CC0",
+      "obj": "namuhekam_male_polo_shirt.obj.gz",
+      "pack": "shirts01",
+      "texture": "namuhekam_male_polo_shirt.jpg",
+      "transparent": false
+    },
+    "punkduck_comfortable_sneakers": {
+      "author": "punkduck",
+      "color": [
+        96,
+        96,
+        94
+      ],
+      "fit": "punkduck_comfortable_sneakers.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "punkduck_comfortable_sneakers.obj.gz",
+      "pack": "shoes02",
+      "texture": "punkduck_comfortable_sneakers.png",
+      "transparent": false
+    },
+    "punkduck_cycling_shoes": {
+      "author": "punkduck",
+      "color": [
+        185,
+        178,
+        179
+      ],
+      "fit": "punkduck_cycling_shoes.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "punkduck_cycling_shoes.obj.gz",
+      "pack": "shoes02",
+      "texture": "punkduck_cycling_shoes.png",
+      "transparent": false
+    },
+    "punkduck_female_short_jeans": {
+      "author": "punkduck",
+      "color": [
+        68,
+        74,
+        97
+      ],
+      "fit": "punkduck_female_short_jeans.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "punkduck_female_short_jeans.obj.gz",
+      "pack": "pants03",
+      "texture": "punkduck_female_short_jeans.png",
+      "transparent": false
+    },
+    "punkduck_female_tight_jeans": {
+      "author": "punkduck",
+      "color": [
+        68,
+        74,
+        97
+      ],
+      "fit": "punkduck_female_tight_jeans.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "punkduck_female_tight_jeans.obj.gz",
+      "pack": "pants02",
+      "texture": "punkduck_female_tight_jeans.png",
+      "transparent": false
+    },
+    "punkduck_running_shoes_01": {
+      "author": "punkduck",
+      "color": [
+        97,
+        94,
+        86
+      ],
+      "fit": "punkduck_running_shoes_01.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "punkduck_running_shoes_01.obj.gz",
+      "pack": "shoes02",
+      "texture": "punkduck_running_shoes_01.png",
+      "transparent": false
+    },
+    "punkduck_winter_boots": {
+      "author": "punkduck",
+      "color": [
+        175,
+        147,
+        113
+      ],
+      "fit": "punkduck_winter_boots.mhclo.gz",
+      "license": "CC-BY",
+      "obj": "punkduck_winter_boots.obj.gz",
+      "pack": "shoes03",
+      "texture": "punkduck_winter_boots.png",
+      "transparent": false
+    },
+    "scailman_semitransparent_water_boots": {
+      "author": "scailman",
+      "color": [
+        84,
+        100,
+        113
+      ],
+      "fit": "scailman_semitransparent_water_boots.mhclo.gz",
+      "license": "CC0",
+      "obj": "scailman_semitransparent_water_boots.obj.gz",
+      "pack": "shoes01",
+      "texture": "scailman_semitransparent_water_boots.png",
+      "transparent": false
+    },
     "shoes01": {
       "color": [
         98,
@@ -284,6 +620,90 @@
       "obj": "shoes06.obj.gz",
       "pack": "makehuman_system_assets",
       "texture": "shoes06.png",
+      "transparent": false
+    },
+    "toigo_ankle_boots_female": {
+      "author": "MargaretToigo",
+      "color": [
+        176,
+        171,
+        167
+      ],
+      "fit": "toigo_ankle_boots_female.mhclo.gz",
+      "license": "CC0",
+      "obj": "toigo_ankle_boots_female.obj.gz",
+      "pack": "shoes01",
+      "texture": "toigo_ankle_boots_female.png",
+      "transparent": false
+    },
+    "toigo_ankle_boots_male": {
+      "author": "MargaretToigo",
+      "color": [
+        82,
+        75,
+        69
+      ],
+      "fit": "toigo_ankle_boots_male.mhclo.gz",
+      "license": "CC0",
+      "obj": "toigo_ankle_boots_male.obj.gz",
+      "pack": "shoes01",
+      "texture": "toigo_ankle_boots_male.png",
+      "transparent": false
+    },
+    "toigo_basic_tucked_t-shirt": {
+      "author": "MargaretToigo",
+      "color": [
+        131,
+        131,
+        131
+      ],
+      "fit": "toigo_basic_tucked_t-shirt.mhclo.gz",
+      "license": "CC0",
+      "obj": "toigo_basic_tucked_t-shirt.obj.gz",
+      "pack": "shirts01",
+      "texture": "toigo_basic_tucked_t-shirt.png",
+      "transparent": false
+    },
+    "toigo_fisherman_sweater": {
+      "author": "MargaretToigo",
+      "color": [
+        95,
+        32,
+        32
+      ],
+      "fit": "toigo_fisherman_sweater.mhclo.gz",
+      "license": "CC0",
+      "obj": "toigo_fisherman_sweater.obj.gz",
+      "pack": "shirts01",
+      "texture": "toigo_fisherman_sweater.png",
+      "transparent": false
+    },
+    "toigo_gloves_short": {
+      "author": "MargaretToigo",
+      "color": [
+        79,
+        79,
+        79
+      ],
+      "fit": "toigo_gloves_short.mhclo.gz",
+      "license": "CC0",
+      "obj": "toigo_gloves_short.obj.gz",
+      "pack": "gloves01",
+      "texture": "toigo_gloves_short.png",
+      "transparent": false
+    },
+    "toigo_wool_pants": {
+      "author": "MargaretToigo",
+      "color": [
+        58,
+        59,
+        61
+      ],
+      "fit": "toigo_wool_pants.mhclo.gz",
+      "license": "CC0",
+      "obj": "toigo_wool_pants.obj.gz",
+      "pack": "pants01",
+      "texture": "toigo_wool_pants.png",
       "transparent": false
     }
   },

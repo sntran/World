@@ -37,6 +37,26 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **Clothes from parts.** `World.Clothes` makes each item from the
+  surface of the body: a torso (the hem at the waist, the hips or the
+  thighs), sleeves (none, short, to the elbow, long), a collar (none,
+  crew, polo, stand, hood), legs (shorts, to the knee, long) and a
+  fabric (the thickness, the room at the hem, baffles, the grain). An
+  item is a list of parts and a fabric, and the three jackets become
+  presets. A wide part that does not follow the body (the long panels
+  of an áo dài, a skirt, a coat) needs its own surface.
+- **A hood up.** The rain shell of World has its hood folded at the
+  back of the neck. A hood over the head needs room for the hair, and
+  a cut for the face.
+- **Layers of the clothes at near.** At near each item is its own mesh
+  over the body, in the order of its `z_depth`. Wide pants come through
+  the shaft of a tall boot (`toigo_wool_pants` in
+  `punkduck_winter_boots`), and the top of some jeans comes through a
+  T-shirt (`punkduck_female_tight_jeans`, `cortu_jeans_shorts`). An
+  item under another one can move in to the body where the two meet.
+  At mid and far the clothes are colors on the body, with no such
+  problem.
+
 - **Paint the weights of a skin in the Wings plugin.** The people have
   the weights of MakeHuman. A shaped part that bends (a seat cushion, a
   cable) needs a tool for its own weights.

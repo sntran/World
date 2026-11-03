@@ -281,7 +281,7 @@ kit is the parked traveler of the blueprint `traveler` at mid:
 
 | File | What it has |
 |---|---|
-| `kit.json` | The names of the other files (`vehicles`: the file of each vehicle, and of each van of the camper), the clothes, and the place of a parked person (a translation and a rotation in the axes of glTF) next to each vehicle and each van of the camper. |
+| `kit.json` | The names of the other files (`vehicles`: the file of each vehicle, and of each van of the camper), the clothes, the credits of the clothes of the MakeHuman community (`credits`: the `author` and the `license` of each item; an app that shows an item with the license CC-BY names its author), and the place of a parked person (a translation and a rotation in the axes of glTF) next to each vehicle and each van of the camper. |
 | `person/woman.glb`, `person/man.glb` | The body of each sex: all its faces in one primitive (the material `skin`), the eyes, the eyebrows, the mouth closed behind, the skeleton in the pose "stand", and the animations "wave", "point" and "blink". The shape targets of the body are morph targets (`World.People.Human.kit/3`). |
 | `person/SEX-hair-NAME.glb` | Each hair, with the same skeleton and the same targets. |
 | `skins/NAME.jpg`, `eyes/NAME.png` | The textures of the skins and the eyes. |

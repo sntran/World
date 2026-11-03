@@ -480,7 +480,11 @@ to the right side, y to the front, z up).
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair; far is a body of 730 faces.
 At mid and far, the faces under clothes have the mean color of the
-clothes, and at far the scalp has the color of the hair. The low-poly
+clothes, and at far the scalp has the color of the hair. A face under
+two items has the color of the item that covers the most of its points;
+with the same count, the item first in `clothes`: put a jacket before
+the shirt under it. An item that fits to a helper of the base mesh (the
+tights or the skirt) covers the points of the body under the helper. The low-poly
 bodies have the low-poly eyes of MakeHuman (`eyes`, with the texture of
 the eyes), the eyebrows at mid, and a dark fan (`hole`) closes the hole of the mouth, from its
 edge to a point 2 cm behind its middle. The eyes at near have no cornea:
