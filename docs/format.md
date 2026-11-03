@@ -1350,7 +1350,25 @@ The build gives the same bytes for the same model.
   `extras` of a joint node gives `role`, `axis`, `kind` and `limits`.
   An engine turns or moves the node along `extras.axis`.
 - **The meshes.** One mesh for each node, with one primitive for each
-  material. The writer takes only the visible faces of a Wings mesh: the
+  material.
+- **The copies.** A mesh that is in a model more than once (a brick, a
+  bolt, the two shoes of a pair) is in the file once. Each part with it
+  is a node of its own, a child of the node of its joint, with the frame
+  of the part; the nodes share the mesh. The parts that are in the model
+  once go into the mesh of the node of their joint, at their places.
+- **The mirrors.** A part from `World.Mirror.part/2` keeps the meshes of
+  its source (`mirror`). Its node has the mesh of its source and a
+  `scale` of `[-1, 1, 1]`: an app turns the faces of the node over, so
+  the outside stays outside. Its mass, its checks and its list of the
+  parts use its own meshes.
+- **The instances.** 16 copies or more of one mesh, with one scale, in
+  the node of one joint (a wall of bricks) are one node with
+  `EXT_mesh_gpu_instancing`: a `TRANSLATION` and a `ROTATION` for each
+  copy, and `extras.count`. three.js (0.169) and gltf-transform read
+  it. An app that does not read it shows one copy: Godot (4.x) does not
+  read it yet (the proposal godot-proposals 8787). For such an app,
+  build with `instances: false` (`World.Build.scene/2`): a node for each
+  copy. A replay file (`split: true`) has no instances. The writer takes only the visible faces of a Wings mesh: the
   core of Wings closes an open shape with hidden faces (holes). A flat
   face (a hard edge) has the normal of its face; a smooth part has the
   normal of each vertex.
@@ -1359,7 +1377,7 @@ The build gives the same bytes for the same model.
   texture and a normal texture (each can repeat, with
   `KHR_texture_transform`), a sheen (`KHR_materials_sheen`) and a
   specular factor (`KHR_materials_specular`); `extensionsUsed` lists the
-  extensions that the materials use. A primitive of a material with a
+  extensions that the materials and the nodes use. A primitive of a material with a
   normal texture has a tangent for each point (`TANGENT`: the direction
   of +u, and the sign of +v), from its UVs.
 - **`extras` of the root.** `name`, `kind`, `size` (the box), `sources`,

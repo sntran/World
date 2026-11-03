@@ -100,7 +100,8 @@ async function load(remember) {
   scene.add(current);
   const extras = gltf.scene.userData;
   let tris = 0;
-  current.traverse((o) => { if (o.isMesh) tris += o.geometry.index.count / 3; });
+  // A mesh with instances (EXT_mesh_gpu_instancing) draws each instance.
+  current.traverse((o) => { if (o.isMesh) tris += (o.geometry.index.count / 3) * (o.isInstancedMesh ? o.count : 1); });
   document.getElementById('info').textContent = `Size: ${(extras.size ?? []).map((v) => v.toFixed(3)).join(' × ')} m. Triangles: ${tris}.`;
   joints(current);
   animations(gltf);

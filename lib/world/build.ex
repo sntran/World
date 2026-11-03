@@ -15,10 +15,16 @@ defmodule World.Build do
     is only in mid and far: it stands in for many small parts (one wall
     in place of its bricks).
   """
-  alias World.{Assembly, Detail, Figure, Frame, GLB, Joint, Mesh, Part, Port, Scene, Vec}
+  alias World.{Assembly, Detail, Figure, Frame, GLB, Joint, Mesh, Mirror, Part, Port, Scene, Vec}
   alias World.Assembly.Connection
 
   @limits %{near: {0.0, 0.0}, mid: {0.02, 0.003}, far: {0.10, 0.01}}
+
+  # The scale of a mirror, and the least copies of a mesh in one node for
+  # instances.
+  @mirror {-1.0, 1.0, 1.0}
+  @instances 16
+  @share 100
 
   @doc """
   The scene of a model. The options: `level` (`:near`, `:mid` or `:far`),
@@ -27,7 +33,14 @@ defmodule World.Build do
   axes of the figure: `World.Limb`), and
   `split` (`true`: each part in a node of its own, with the id of its task
   of `World.Plan.flat/1` in the `"task"` of its extras, for the replay of
-  a run).
+  a run), and `instances` (`false`: no node with instances, for an app
+  that does not read `EXT_mesh_gpu_instancing`).
+
+  A mesh of #{@share} triangles or more that is in the model more than
+  once (a wheel, a shoe and its mirror) is in the scene once: each part
+  with it is a node with its frame, and the nodes share the mesh. A
+  mirror is a scale of -1 on x. #{@instances} copies or more of a mesh
+  in one node (a wall of bricks) are one node with instances.
   """
   def scene(item, opts \\ []) do
     level = Keyword.get(opts, :level, :near)
@@ -36,7 +49,7 @@ defmodule World.Build do
     name = item.name
     acc = walk(keep_root(item), Frame.identity(), 0, start(item, targets), level, pose)
 
-    {nodes, _} = finish(acc, Keyword.get(opts, :split, false))
+    {nodes, _} = finish(acc, {Keyword.get(opts, :split, false), Keyword.get(opts, :instances, true)})
 
     materials = Map.merge(Map.get(item, :materials, %{}), acc.materials)
     animations = join(acc.animations ++ Enum.map(acc.clips, &clip(&1, acc.moves)))
@@ -301,35 +314,146 @@ defmodule World.Build do
   defp motion(:hinge, deg), do: Frame.turn({0.0, 0.0, 1.0}, deg)
   defp motion(:slide, d), do: Frame.move({0.0, 0.0, d})
 
-  defp finish(%{nodes: nodes, parts: parts}, false) do
+  # The parts whose meshes are in the scene more than once (a wheel, the
+  # two shoes of a pair) go into nodes of their own, under the node of
+  # their joint, with one key of their mesh: the GLB has the mesh once.
+  # A mirror has the key of the part it comes from, and a scale of -1 on
+  # x. Only a mesh of @share triangles or more, or @instances copies or
+  # more in one node (with `instances`: one node with an instance for
+  # each copy, a wall of bricks). The other parts go into the mesh of
+  # their node, at their places.
+  defp finish(%{nodes: nodes, parts: parts}, {false, instances}) do
+    all = all_placed(nodes, parts)
+    counts = Enum.frequencies_by(all, fn {_, _, _, _, {shapes, _}} -> shapes end)
+    copies = Enum.filter(all, fn {_, _, _, _, {shapes, _}} -> counts[shapes] > 1 end)
+    keys = keys(copies)
+    groups = Enum.frequencies_by(copies, fn {i, _, _, _, shown} -> {i, shown} end)
+
+    # A node of its own costs a draw of the app: only for a big mesh, or
+    # for the instances of many copies.
+    {many, once} =
+      Enum.split_with(all, fn {i, _, _, _, {shapes, _} = shown} ->
+        counts[shapes] > 1 and
+          (keys[shapes].triangles >= @share or (instances and groups[{i, shown}] >= @instances))
+      end)
+
+    once = Enum.group_by(once, &elem(&1, 0), fn {_, f, p, _, _} -> {f, p.shapes} end)
+
     nodes =
       for {n, i} <- Enum.with_index(nodes),
-          do: %{n | primitives: n.primitives ++ primitives(Enum.reverse(parts[i]))}
+          do: %{n | primitives: n.primitives ++ primitives(Map.get(once, i, []))}
 
-    {nodes, parts}
+    {nodes ++ shared(many, keys, instances), parts}
   end
 
-  # Each part in a node of its own, under the node of its joint.
-  defp finish(%{nodes: nodes, parts: parts}, true) do
+  # Each part in a node of its own, under the node of its joint, with the
+  # id of its task; the parts with one mesh share it, as above.
+  defp finish(%{nodes: nodes, parts: parts}, {true, _}) do
+    all = all_placed(nodes, parts)
+    keys = keys(all)
+
     split =
-      for {_, i} <- Enum.with_index(nodes), {f, p, path} <- Enum.reverse(parts[i]) do
-        %Scene.Node{name: path, parent: i, extras: %{"task" => path}, primitives: primitives([{f, p, path}])}
+      for {i, f, _, path, {shapes, scale}} <- all do
+        %Scene.Node{
+          name: path,
+          parent: i,
+          frame: f,
+          scale: scale,
+          extras: %{"task" => path},
+          primitives: keys[shapes].primitives,
+          mesh: keys[shapes].id
+        }
       end
 
     {nodes ++ split, parts}
   end
 
+  # Each part with meshes: its node, frame, part, path and the meshes it
+  # shows with their scale (the meshes of its source for a mirror).
+  defp all_placed(nodes, parts) do
+    for {_, i} <- Enum.with_index(nodes), {f, p, path} <- Enum.reverse(parts[i]), p.shapes != [] do
+      shown =
+        case Mirror.source(p) do
+          nil -> {p.shapes, 1.0}
+          source -> {source, @mirror}
+        end
+
+      {i, f, p, path, shown}
+    end
+  end
+
+  # The id (in the order of the first part) and the primitives (in the
+  # axes of the part) of each list of meshes.
+  defp keys(all) do
+    {keys, _} =
+      Enum.reduce(all, {%{}, 0}, fn {_, _, _, _, {shapes, _}}, {keys, n} ->
+        if Map.has_key?(keys, shapes),
+          do: {keys, n},
+          else: {Map.put(keys, shapes, key(n, primitives([{Frame.identity(), shapes}]))), n + 1}
+      end)
+
+    keys
+  end
+
+  defp key(id, primitives),
+    do: %{
+      id: id,
+      primitives: primitives,
+      triangles: primitives |> Enum.map(&length(&1.indices)) |> Enum.sum() |> div(3)
+    }
+
+  # The nodes of the parts with a shared mesh: one for each part, or one
+  # with instances for each group of @instances parts or more with one
+  # node, one mesh and one scale (a mirror in the scale of the node: an
+  # app turns the faces of the node over, not of each instance).
+  defp shared(many, keys, instances) do
+    groups = Enum.group_by(many, fn {i, _, _, _, shown} -> {i, shown} end)
+
+    {nodes, _} =
+      Enum.flat_map_reduce(many, MapSet.new(), fn {i, f, p, path, {shapes, scale} = shown}, done ->
+        group = groups[{i, shown}]
+
+        cond do
+          not instances or length(group) < @instances ->
+            node = %Scene.Node{name: path, parent: i, frame: f, scale: scale, primitives: keys[shapes].primitives}
+            {[%{node | mesh: keys[shapes].id}], done}
+
+          MapSet.member?(done, {i, shown}) ->
+            {[], done}
+
+          true ->
+            # A mirror in the scale of the node: each frame in the node
+            # is the mirror of the frame of its part (S F S, a turn).
+            frames = for {_, g, _, _, _} <- group, do: if(scale == 1.0, do: g, else: Mirror.frame(g))
+
+            node = %Scene.Node{
+              name: p.name,
+              parent: i,
+              scale: scale,
+              primitives: keys[shapes].primitives,
+              mesh: keys[shapes].id,
+              instances: frames,
+              extras: %{"count" => length(group)}
+            }
+
+            {[node], MapSet.put(done, {i, shown})}
+        end
+      end)
+
+    nodes
+  end
+
   # One material at a time: the corners of one material are live, not
   # the corners of all the parts, and a full collection after each
   # primitive keeps the peak low (`World.Detail.collect/1`).
-  defp primitives(parts) do
-    parts
-    |> Enum.flat_map(fn {f, p, _} -> for m <- p.shapes, do: {m.material, {f, m}} end)
+  defp primitives(placed) do
+    placed
+    |> Enum.flat_map(fn {f, shapes} -> for m <- shapes, do: {m.material, {f, m}} end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Enum.sort_by(&elem(&1, 0))
     |> Enum.map(fn {mat, shapes} ->
       # The triangles of a mesh, kept for the next part with the same
-      # mesh (a bolt), for this material only.
+      # mesh, for this material only.
       {corners, _} =
         Enum.flat_map_reduce(shapes, %{}, fn {f, m}, memo ->
           tris = Map.get_lazy(memo, m, fn -> Mesh.triangles(m) end)

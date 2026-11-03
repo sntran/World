@@ -75,8 +75,13 @@ defmodule World.AssemblyTest do
 
   test "the build: a node for each joint, with its role and limits" do
     scene = Build.scene(cart())
-    names = Enum.map(scene.nodes, & &1.name)
-    assert names == ["cart", "wheel_right", "wheel_left", "lid", "shock"]
+    {joints, copies} = Enum.split(scene.nodes, 5)
+    assert Enum.map(joints, & &1.name) == ["cart", "wheel_right", "wheel_left", "lid", "shock"]
+    # The two wheels share the meshes of the rim, the tire and the hub.
+    assert Enum.map(copies, & &1.name) ==
+             ~w(wheel_right/rim wheel_right/tire wheel_right/hub wheel_left/rim wheel_left/tire wheel_left/hub)
+
+    assert Enum.map(copies, & &1.mesh) == [0, 1, 2, 0, 1, 2]
     assert Enum.at(scene.nodes, 3).extras["limits"] == [0, 90]
     assert Enum.at(scene.nodes, 4).extras["kind"] == "slide"
     assert scene.extras["joints"] == ["wheel_right", "wheel_left", "lid", "shock"]

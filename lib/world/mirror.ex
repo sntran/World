@@ -33,15 +33,34 @@ defmodule World.Mirror do
   def frame(%Frame{x: x, y: y, z: z, at: at}),
     do: %Frame{x: World.Vec.scale(point(x), -1.0), y: point(y), z: point(z), at: point(at)}
 
-  @doc "The mirror of a part, with a new name (its own by default)."
+  @doc """
+  The mirror of a part, with a new name (its own by default). It keeps
+  the meshes of the part it comes from in `mirror`: a build writes them
+  once, with a scale of -1 on x for the mirror. The mirror of a mirror
+  is the part it comes from.
+  """
   def part(%Part{} = p, name \\ nil) do
+    {shapes, mirror} =
+      case source(p) do
+        nil -> {Enum.map(p.shapes, &mesh/1), p.shapes}
+        source -> {source, nil}
+      end
+
     %{
       p
       | name: name || p.name,
-        shapes: Enum.map(p.shapes, &mesh/1),
+        shapes: shapes,
+        mirror: mirror,
         ports: Map.new(p.ports, fn {n, port} -> {n, port(port)} end)
     }
   end
+
+  @doc """
+  The meshes that a part is the mirror of, or nil: nil for a part that is
+  not a mirror, and for a mirror whose meshes changed after the mirror.
+  """
+  def source(%Part{mirror: nil}), do: nil
+  def source(%Part{mirror: source, shapes: shapes}), do: if(Enum.map(source, &mesh/1) == shapes, do: source)
 
   @doc """
   The mirror of an assembly, with a new name (its own by default): each

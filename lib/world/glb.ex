@@ -5,6 +5,11 @@ defmodule World.GLB do
   - The axes: a point (x, y, z) of World is (-x, z, y) in glTF: +Y up and
     the front to +Z. This is a turn, not a mirror, so each triangle keeps
     the order of its corners.
+  - The nodes with one key of their mesh share one glTF mesh. A node
+    with instances has `EXT_mesh_gpu_instancing`: an app that does not
+    read it shows one copy (`World.Build.scene/2` with `instances:
+    false` gives no instances). A node with a negative scale (a mirror)
+    turns its faces over in the app: the order of the corners stays.
   - One glTF material for each role, from `priv/palette.json` or from the
     `materials` of the scene. Its name is its role.
   - The same scene gives the same bytes.
@@ -56,14 +61,19 @@ defmodule World.GLB do
           into: MapSet.new(),
           do: role
 
-    {meshes, node_mesh, buf} =
+    # The nodes with one key of their mesh share one mesh: the first of
+    # them writes it.
+    {meshes, node_mesh, _, buf} =
       nodes
       |> Enum.with_index()
-      |> Enum.reduce({[], %{}, buf}, fn
+      |> Enum.reduce({[], %{}, %{}, buf}, fn
         {%{primitives: []}, _i}, acc ->
           acc
 
-        {node, i}, {meshes, map, buf} ->
+        {%{mesh: key}, i}, {meshes, map, keys, buf} when is_map_key(keys, key) ->
+          {meshes, Map.put(map, i, keys[key]), keys, buf}
+
+        {node, i}, {meshes, map, keys, buf} ->
           # The morph targets: each primitive of a mesh has all of them (a
           # primitive with no move for a target has a target of zeros);
           # when a target of the mesh moves the normals, each target of
@@ -77,7 +87,20 @@ defmodule World.GLB do
             |> put_some("weights", names && Enum.map(names, fn _ -> 0.0 end))
             |> put_some("extras", names && %{"targetNames" => names})
 
-          {[mesh | meshes], Map.put(map, i, length(meshes)), buf}
+          keys = if node.mesh == nil, do: keys, else: Map.put(keys, node.mesh, length(meshes))
+          {[mesh | meshes], Map.put(map, i, length(meshes)), keys, buf}
+      end)
+
+    # The instances of a node: a move and a turn for each, in the axes of
+    # glTF (EXT_mesh_gpu_instancing).
+    {node_instances, buf} =
+      nodes
+      |> Enum.with_index()
+      |> Enum.filter(&elem(&1, 0).instances)
+      |> Enum.reduce({%{}, buf}, fn {n, i}, {map, buf} ->
+        {moves, buf} = floats(buf, Enum.map(n.instances, & &1.at), "VEC3", nil, false, &gl/1)
+        {turns, buf} = floats(buf, Enum.map(n.instances, &Frame.quaternion(gl_frame(&1))), "VEC4", nil, false)
+        {Map.put(map, i, %{"attributes" => %{"TRANSLATION" => moves, "ROTATION" => turns}}), buf}
       end)
 
     {skins, buf} = Enum.map_reduce(scene.skins, buf, &skin/2)
@@ -100,7 +123,8 @@ defmodule World.GLB do
         |> put_some("mesh", node_mesh[i])
         |> put_some("children", children[i])
         |> put_some("skin", n.skin)
-        |> put_some("scale", if(n.scale == 1.0, do: nil, else: [n.scale, n.scale, n.scale]))
+        |> put_some("scale", scale(n.scale))
+        |> put_some("extensions", if(m = node_instances[i], do: %{"EXT_mesh_gpu_instancing" => m}))
         |> put_some("extras", if(n.extras == %{}, do: nil, else: n.extras))
       end
 
@@ -118,7 +142,7 @@ defmodule World.GLB do
       |> put_some("meshes", nonempty(Enum.reverse(meshes)))
       |> put_some("skins", nonempty(skins))
       |> put_some("animations", nonempty(animations))
-      |> put_some("extensionsUsed", extensions(materials))
+      |> put_some("extensionsUsed", extensions(materials, node_instances != %{}))
       |> put_some("images", nonempty(Enum.reverse(buf.images)))
       |> put_some("textures", nonempty(for {_, i} <- Enum.with_index(buf.images), do: %{"source" => i, "sampler" => 0}))
       |> put_some("samplers", if(buf.images == [], do: nil, else: [%{"magFilter" => 9729, "minFilter" => 9987}]))
@@ -333,8 +357,14 @@ defmodule World.GLB do
     {%{"name" => name, "samplers" => Enum.map(pairs, &elem(&1, 0)), "channels" => Enum.map(pairs, &elem(&1, 1))}, buf}
   end
 
-  # The extensions that the materials use.
-  defp extensions(materials) do
+  # The scale of a node: none, the same on each axis, or one for each
+  # axis. A scale of -1 on x in World is -1 on x in glTF (x goes to -x).
+  defp scale(1.0), do: nil
+  defp scale({x, y, z}), do: [x / 1, y / 1, z / 1]
+  defp scale(s), do: [s, s, s]
+
+  # The extensions that the materials and the nodes use.
+  defp extensions(materials, instances?) do
     transform? =
       Enum.any?(materials, fn m ->
         get_in(m, ["pbrMetallicRoughness", "baseColorTexture", "extensions"]) ||
@@ -342,7 +372,8 @@ defmodule World.GLB do
       end)
 
     names = for m <- materials, {name, _} <- Map.get(m, "extensions", %{}), uniq: true, do: name
-    nonempty(Enum.sort(if(transform?, do: ["KHR_texture_transform" | names], else: names)))
+    names = if transform?, do: ["KHR_texture_transform" | names], else: names
+    nonempty(Enum.sort(if(instances?, do: ["EXT_mesh_gpu_instancing" | names], else: names)))
   end
 
   # A texture of an image. Two materials with the same image share it. A

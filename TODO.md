@@ -162,7 +162,11 @@ into the steps of `AGENTS.md`.
   or queue: in the 128 MB of the edge, a grid in `:atomics` or in one
   binary is the only memory.
 - **Godot import.** A script for Vung_Tau that reads the joint nodes and
-  the levels of detail of a GLB of World.
+  the levels of detail of a GLB of World, and the nodes with
+  `EXT_mesh_gpu_instancing` (a `GLTFDocumentExtension` that makes a
+  `MultiMeshInstance3D`): Godot 4 does not read that extension yet
+  (godot-proposals 8787). Until then, a model for Vung_Tau is a build
+  with `instances: false` (`World.Build.scene/2`).
 
 ## For Vũng Tàu
 

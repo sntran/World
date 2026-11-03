@@ -13,10 +13,24 @@ defmodule World.Scene do
   defmodule Node do
     @moduledoc """
     A node: its name, the index of its parent (or nil), its frame relative
-    to the parent, and its scale (the same on each axis, after the frame:
-    the size of the head of a person).
+    to the parent, and its scale after the frame: a number (the same on
+    each axis: the size of the head of a person) or `{x, y, z}` (`{-1.0,
+    1.0, 1.0}`: a mirror).
+
+    - `mesh`: a key of its primitives, or nil. The nodes with one key
+      have the same primitives: the GLB has them once.
+    - `instances`: nil, or a list of frames in the node: the node shows
+      its primitives at each frame (a wall of bricks), in place of once.
     """
-    defstruct name: "node", parent: nil, frame: %World.Frame{}, scale: 1.0, primitives: [], extras: %{}, skin: nil
+    defstruct name: "node",
+              parent: nil,
+              frame: %World.Frame{},
+              scale: 1.0,
+              primitives: [],
+              extras: %{},
+              skin: nil,
+              mesh: nil,
+              instances: nil
   end
 
   defmodule Primitive do
@@ -72,9 +86,11 @@ defmodule World.Scene do
 
   defp round6({x, y, z}), do: {Float.round(x / 1, 6), Float.round(y / 1, 6), Float.round(z / 1, 6)}
 
-  @doc "The number of triangles of a scene."
+  @doc "The number of triangles of a scene: each instance of a node counts."
   def triangles(%__MODULE__{nodes: nodes}) do
-    nodes |> Enum.flat_map(& &1.primitives) |> Enum.map(&div(length(&1.indices), 3)) |> Enum.sum()
+    for n <- nodes, p <- n.primitives, reduce: 0 do
+      sum -> sum + div(length(p.indices), 3) * length(n.instances || [nil])
+    end
   end
 
   @doc """
@@ -91,7 +107,11 @@ defmodule World.Scene do
   end
 
   defp scaled(frame, 1.0), do: frame
-  defp scaled(%Frame{x: x, y: y, z: z} = f, s), do: %{f | x: Vec.scale(x, s), y: Vec.scale(y, s), z: Vec.scale(z, s)}
+
+  defp scaled(%Frame{x: x, y: y, z: z} = f, {a, b, c}),
+    do: %{f | x: Vec.scale(x, a), y: Vec.scale(y, b), z: Vec.scale(z, c)}
+
+  defp scaled(f, s), do: scaled(f, {s, s, s})
 
   @doc """
   The box of all points of the scene, in its axes: `{min, max}`. The
@@ -103,11 +123,17 @@ defmodule World.Scene do
     nodes
     |> Enum.with_index()
     |> Enum.flat_map(fn
-      {%{skin: nil} = n, i} -> for p <- n.primitives, pt <- p.positions, do: Frame.point(frames[i], pt)
-      {n, _} -> skinned(n, Enum.at(skins, n.skin), frames)
+      {%{skin: nil} = n, i} ->
+        for f <- places(frames[i], n.instances), p <- n.primitives, pt <- p.positions, do: Frame.point(f, pt)
+
+      {n, _} ->
+        skinned(n, Enum.at(skins, n.skin), frames)
     end)
     |> Vec.bounds()
   end
+
+  defp places(frame, nil), do: [frame]
+  defp places(frame, instances), do: Enum.map(instances, &Frame.compose(frame, &1))
 
   defp skinned(node, skin, frames) do
     bones =

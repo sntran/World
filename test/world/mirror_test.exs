@@ -19,6 +19,20 @@ defmodule World.MirrorTest do
     assert length(Mesh.triangles(mesh, 0)) == length(Mesh.triangles(box, 0))
   end
 
+  test "a mirror keeps its source: the mirror of the mirror is the source, and a change of the meshes ends it" do
+    box = Shape.box({0.1, 0.0, 0.0}, {0.3, 0.2, 0.1}, :steel)
+    p = Part.new("a", :part, [box], [@o])
+    m = Mirror.part(p)
+    assert m.mirror == [box] and Mirror.source(m) == [box] and Mirror.source(p) == nil
+    assert Mirror.part(m).shapes == [box] and Mirror.part(m).mirror == nil
+
+    # A paint paints the source too; a new mesh ends the mirror.
+    assert Mirror.source(Part.paint(m, :red)) == [%{box | material: :red}]
+    moved = %{m | shapes: [Shape.box({0.0, 0.0, 0.0}, {0.1, 0.1, 0.1}, :steel)]}
+    assert Mirror.source(moved) == nil
+    assert Mirror.part(moved).mirror == moved.shapes
+  end
+
   test "a frame stays a turn: its axes are a right hand, and a point in it goes to the mirror" do
     f = Frame.new({0.1, 0.2, 0.3}, {1, 1, 0}, {0, 0, 1})
     g = Mirror.frame(f)

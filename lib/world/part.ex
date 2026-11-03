@@ -33,6 +33,9 @@ defmodule World.Part do
     stands in for many small parts, not in the list of the parts).
   - `inside`: a part that a body hides (a bolt in a frame, a bearing in a
     hub): only the near level.
+  - `mirror`: the meshes of the part that this part is the mirror of
+    (`World.Mirror.part/2`), or nil. The GLB writes those meshes once,
+    with a scale of -1 on x for the mirror (`World.Build`).
   """
   alias World.{Mesh, Port, Vec}
 
@@ -44,7 +47,8 @@ defmodule World.Part do
             shapes: [],
             detail: nil,
             inside: false,
-            print: :keep
+            print: :keep,
+            mirror: nil
 
   @doc """
   A part. `ports` is a list of `World.Port`; `opts` are the other fields.
@@ -64,9 +68,11 @@ defmodule World.Part do
   @doc "The box of the meshes of the part: `{min, max}`."
   def bounds(%__MODULE__{shapes: shapes}), do: shapes |> Enum.flat_map(& &1.points) |> Vec.bounds()
 
-  @doc "The same part with each mesh in one material."
-  def paint(%__MODULE__{shapes: shapes} = p, material),
-    do: %{p | shapes: Enum.map(shapes, fn %Mesh{} = m -> %{m | material: material} end)}
+  @doc "The same part with each mesh in one material (and the meshes of its mirror)."
+  def paint(%__MODULE__{shapes: shapes, mirror: mirror} = p, material) do
+    color = fn meshes -> Enum.map(meshes, fn %Mesh{} = m -> %{m | material: material} end) end
+    %{p | shapes: color.(shapes), mirror: mirror && color.(mirror)}
+  end
 
   @doc "The same part with a new name."
   def rename(%__MODULE__{} = p, name), do: %{p | name: name}
