@@ -72,7 +72,12 @@ defmodule World.LoftTest do
 
     %{mass: mass, unknown: unknown} = World.Mass.of(g)
     assert mass > 0.3 and mass <= Molds.mass_limit()
-    assert unknown == ["strap_helmet_half"]
+    assert unknown == []
+
+    # Each part of the helmet is a part of its own: the shell, the peak,
+    # the liner, the comfort pad, the two straps and the buckle.
+    assert Enum.map(g.nodes, &elem(&1, 0)) ==
+             ~w(shell_helmet_half peak_helmet_half liner_helmet_half pad_helmet_half strap_left_helmet_half strap_right_helmet_half buckle_helmet_half)
 
     # A bigger head gives a bigger helmet.
     assert World.Mass.of(Molds.half_helmet(0.62)).mass > mass

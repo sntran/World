@@ -43,9 +43,9 @@ into the steps of `AGENTS.md`.
   gauge now, the gauge of the A12N128).
 - **The half helmet, more real.** The nine sizes and the coverage of
   TCVN 5756:2017; the rim lower at the back and over the ears; the
-  comfort pad, the vents and the rivets; the mass of the strap (a
-  density of nylon webbing with its source); a helmet of three
-  quarters and a full helmet with a visor.
+  vents and the rivets; the mass of a woven webbing (a mass for each
+  meter, with its source, in place of a solid band of nylon); a D-ring
+  coupling; a helmet of three quarters and a full helmet with a visor.
 - **More of the mold shop.** A seat (a pan and a back along a bent
   spine, an open shell), a hull of glass fiber with its plies (the
   thickness and the density of a laminate from the mass of the glass and

@@ -96,6 +96,18 @@
         45,
         "Trzaskalska and Chwastek, Archives of Metallurgy and Materials 66 (2021): the liners of motorcycle helmets are EPS of 40 to 50 kg/m3 (the middle)."
       ],
+      "nylon": [
+        1140,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): Nylon 6,6 1.13-1.15 (the middle)."
+      ],
+      "pom": [
+        1400,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): POM - poly oxy methylene 1.4."
+      ],
+      "pu_foam": [
+        30,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): PU - poly urethane foam 0.03."
+      ],
       "sao": [
         775,
         "PROSEA (Plant Resources of South-East Asia), Hopea odorata (sao đen): 620-930 kg/m3 at 15% moisture (the middle). A wood of boats (https://prosea.prota4u.org/view.aspx?id=3545)."

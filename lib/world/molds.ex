@@ -4,9 +4,12 @@ defmodule World.Molds do
   `:molds`): shells from molds, each made with `World.Loft`.
 
   - `half_helmet/1`: the half helmet of Việt Nam (mũ bảo hiểm che nửa
-    đầu): a shell of ABS over a liner of EPS, with a peak and a strap.
+    đầu): a shell of ABS, a peak, a liner of EPS, a comfort pad, and a
+    strap of webbing on each side to a buckle
+    (`World.Materials.Webbing`), each a part of its own.
   """
   alias World.{Assembly, Loft, Part, Shape, Vec}
+  alias World.Materials.Webbing
 
   @o Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
 
@@ -21,8 +24,10 @@ defmodule World.Molds do
   # least of each.
   @liner 0.030
   @shell 0.004
-  # The gap between the head and the liner (the comfort pad): by eye.
+  # The comfort pad between the head and the liner: by eye.
   @gap 0.003
+  # The webbing of the strap: by eye.
+  @webbing 0.02
 
   @doc "The models of the mold shop, as `{name, fun}`."
   def models, do: [{"helmet_half_vn", fn -> half_helmet() end}]
@@ -37,8 +42,9 @@ defmodule World.Molds do
   The head over the rim is half of an ellipsoid: its length along y, its
   breadth across x (0.82 of the length, by eye), its height over the rim
   0.10 m (by eye). The circumference of the ellipse of the rim is `c`
-  (Ramanujan). Out from the head: the gap, the liner of EPS, and the
-  shell of ABS. The peak at the front, the strap and its buckle: by eye.
+  (Ramanujan). Out from the head: the comfort pad, the liner of EPS, and
+  the shell of ABS. The peak at the front, the straps and the buckle: by
+  eye.
 
   The axes: x across, y to the front, z up from the rim.
   """
@@ -57,37 +63,82 @@ defmodule World.Molds do
 
     color = Keyword.get(opts, :color, [236, 232, 222])
 
+    # The places of the rivets of the strap, on each side of the rim, and
+    # the buckle under the chin, 0.13 m under the rim (by eye).
+    rivet = fn sign -> {sign * (sx + 0.001), -0.005, 0.012} end
+    {bl, bw} = {Webbing.buckle("buckle", @webbing), @webbing}
+    buckle_len = elem(Part.port!(bl, "male").at, 0)
+    chin = {-buckle_len / 2, 0.07, -0.13}
+
     shell_part =
-      Part.new(
-        "shell_helmet_half",
-        :shell,
-        [Loft.shell(shell, @shell, :paint) |> World.Mesh.matter(:plastic) | peak(sx, sy)],
-        [@o, Part.port("liner", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}), Part.port("strap", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})],
-        params: %{"area" => Float.round(Loft.area(shell), 4), "thickness" => @shell},
+      Loft.part(shell, "shell_helmet_half", :shell, [@o | ports(rivet)], @shell, :paint,
+        matter: :plastic,
         sources: [
-          "The shell: ABS of #{mm(@shell)} mm, the least of a thermoplastic shell (Trzaskalska and Chwastek, Archives of Metallurgy and Materials 66, 2021); a peak of 40 mm at the front, by eye."
+          "The shell: ABS of #{mm(@shell)} mm, the least of a thermoplastic shell (Trzaskalska and Chwastek, Archives of Metallurgy and Materials 66, 2021)."
         ]
       )
 
     liner_part =
-      Loft.part(liner, "liner_helmet_half", :liner, [@o], @liner, :eps,
+      Loft.part(
+        liner,
+        "liner_helmet_half",
+        :liner,
+        [@o, Part.port("pad", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})],
+        @liner,
+        :eps,
         matter: :eps_helmet,
         sources: [
           "The liner: EPS of #{mm(@liner)} mm and 45 kg/m3, the least thickness and the middle density of a liner (Trzaskalska and Chwastek, 2021)."
         ]
       )
 
+    pad =
+      Loft.part(dome(b + @gap, a + @gap, h + @gap), "pad_helmet_half", :pad, [@o], @gap, :fabric,
+        matter: :pu_foam,
+        sources: [
+          "The comfort pad: PU foam of #{mm(@gap)} mm (30 kg/m3, The Engineering ToolBox); it gives the fit, not the protection (GRSP, Helmet standards guide, 2025)."
+        ]
+      )
+
+    # A strap from each rivet to its end of the buckle, in the axes of the
+    # rivet.
+    strap = fn name, sign, to ->
+      Webbing.strap(name, [{0.0, 0.0, 0.0}, Vec.sub(to, rivet.(sign))], bw, across: {0, 1, 0})
+    end
+
+    {cx, cy, cz} = chin
+    left = strap.("strap_left_helmet_half", -1, chin)
+    right = strap.("strap_right_helmet_half", 1, {cx + buckle_len, cy, cz})
+
     Assembly.new("helmet_half_vn", shell_part,
       root: "shell_helmet_half",
       kind: :helmet,
       materials: %{paint: %{"color" => color, "roughness" => 0.35, "metalness" => 0.0}},
       sources: [
-        "A half helmet of Việt Nam (QCVN 2:2021/BKHCN, mũ che nửa đầu): a mass of 1 kg or less for the head sizes 4 to 9; for a head of #{round(c * 100)} cm."
+        "A half helmet of Việt Nam (QCVN 2:2021/BKHCN, mũ che nửa đầu): a mass of 1 kg or less for the head sizes 4 to 9; for a head of #{round(c * 100)} cm. Its parts: the shell, the energy absorbing liner, the comfort pad and the retention system (GRSP, Helmet standards guide, 2025)."
       ],
       extras: %{"head" => c, "mass_limit" => @mass_limit}
     )
+    |> Assembly.add("peak_helmet_half", peak(sx, sy), at: "peak", port: "o")
     |> Assembly.add("liner_helmet_half", liner_part, at: "liner", port: "o")
-    |> Assembly.add("strap_helmet_half", strap(sx), at: "strap", port: "o")
+    |> Assembly.add("pad_helmet_half", pad, at: "pad", port: "o", to: "liner_helmet_half")
+    |> Assembly.add("strap_left_helmet_half", left, at: "rivet_left", port: "a")
+    |> Assembly.add("strap_right_helmet_half", right, at: "rivet_right", port: "a")
+    |> Assembly.add("buckle_helmet_half", %{bl | name: "buckle_helmet_half"},
+      at: "b",
+      port: "female",
+      to: "strap_left_helmet_half"
+    )
+  end
+
+  # The ports of the shell: its liner, its peak, and a rivet on each side.
+  defp ports(rivet) do
+    [
+      Part.port("liner", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
+      Part.port("peak", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
+      Part.port("rivet_left", rivet.(-1), {0, 0, 1}, {0, 1, 0}),
+      Part.port("rivet_right", rivet.(1), {0, 0, 1}, {0, 1, 0})
+    ]
   end
 
   # A half ellipsoid over the rim (z = 0), as sections along z to the
@@ -122,32 +173,8 @@ defmodule World.Molds do
         {Vec.add(p, Vec.scale(u, w / 2 - 0.002)), u, v, w / 2, t / 2, 8}
       end
 
-    [Shape.loft(sections, :paint, sides: 12) |> World.Mesh.matter(:plastic)]
-  end
-
-  # The strap: a webbing of 20 mm from a rivet on each side of the rim to
-  # the buckle under the chin, 0.13 m under the rim (by eye).
-  defp strap(sx) do
-    buckle = {0.0, 0.07, -0.13}
-
-    straps =
-      for sign <- [1, -1] do
-        rivet = {sign * (sx + 0.001), -0.005, 0.012}
-        d = Vec.norm(Vec.sub(buckle, rivet))
-        w = Vec.norm(Vec.sub({0.0, 1.0, 0.0}, Vec.scale(d, Vec.dot({0.0, 1.0, 0.0}, d))))
-        th = Vec.cross(d, w)
-        end_ = Vec.add(buckle, {sign * 0.012, 0.0, 0.0})
-        Shape.loft([{rivet, w, th, 0.01, 0.0006, 8}, {end_, w, th, 0.01, 0.0006, 8}], :black, sides: 12)
-      end
-
-    {bx, by, bz} = buckle
-
-    clip =
-      Shape.box({bx - 0.012, by - 0.004, bz - 0.012}, {bx + 0.012, by + 0.006, bz + 0.012}, :black)
-      |> World.Mesh.matter(:plastic)
-
-    Part.new("strap_helmet_half", :strap, straps ++ [clip], [@o],
-      sources: ["The strap: a webbing of 20 mm with a buckle under the chin, by eye."]
+    Part.new("peak_helmet_half", :peak, [Shape.loft(sections, :paint, sides: 12) |> World.Mesh.matter(:plastic)], [@o],
+      sources: ["The peak: ABS of 3 mm, 40 mm out from the rim at the front, by eye."]
     )
   end
 
