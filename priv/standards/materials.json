@@ -92,6 +92,10 @@
         14.4,
         "ASTM C578, Type I expanded polystyrene: 0.90 lb/ft3 (14.4 kg/m3) at the least. The core of an insulated door."
       ],
+      "eps_helmet": [
+        45,
+        "Trzaskalska and Chwastek, Archives of Metallurgy and Materials 66 (2021): the liners of motorcycle helmets are EPS of 40 to 50 kg/m3 (the middle)."
+      ],
       "sao": [
         775,
         "PROSEA (Plant Resources of South-East Asia), Hopea odorata (sao đen): 620-930 kg/m3 at 15% moisture (the middle). A wood of boats (https://prosea.prota4u.org/view.aspx?id=3545)."

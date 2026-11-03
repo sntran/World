@@ -65,8 +65,9 @@ defmodule World.Check do
 
   # A door and a window stand in a wall, a material (a roof tile) on its
   # roof, an enclosure on its wall: they do not stand on their own. A boat
-  # floats (its check is its stability: TODO.md).
-  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat], do: :ok
+  # floats (its check is its stability: TODO.md). A helmet is worn, and
+  # its strap hangs under its rim.
+  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat, :helmet], do: :ok
   defp stand(item), do: stands(item)
 
   # A house or a wall is built on its site, a boat on the slipway of its

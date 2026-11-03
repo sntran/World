@@ -41,6 +41,15 @@ into the steps of `AGENTS.md`.
   degrees, a joggle), holes in a flange (knockouts), and a gasket for a
   box of NEMA Type 4. The gauge of the A-16N126 from its datasheet (16
   gauge now, the gauge of the A12N128).
+- **The half helmet, more real.** The nine sizes and the coverage of
+  TCVN 5756:2017; the rim lower at the back and over the ears; the
+  comfort pad, the vents and the rivets; the mass of the strap (a
+  density of nylon webbing with its source); a helmet of three
+  quarters and a full helmet with a visor.
+- **More of the mold shop.** A seat (a pan and a back along a bent
+  spine, an open shell), a hull of glass fiber with its plies (the
+  thickness and the density of a laminate from the mass of the glass and
+  the resin), and the body of a scooter.
 - **The ghe of Vũng Tàu, more real.** The lines from a drawing (now by
   eye, with the stern, the stem head, the wale, the propeller and the
   paint from the photos of the owner); the engine and its bed (QCVN 91,
