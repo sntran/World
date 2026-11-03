@@ -1366,7 +1366,10 @@ The build gives the same bytes for the same model.
 ## The list of the parts
 
 `NAME.parts.json` lists each part once, with its count, its kind, its
-params and its sources, in a fixed order:
+params, its sources and, when it has one, the mass of one (`mass`, in
+kg: the volume of each closed mesh times the density of its material,
+`priv/standards/materials.json`; a part with an open mesh or a material
+with no density, a paint or a color, has no mass), in a fixed order:
 
 ```json
 {

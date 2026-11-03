@@ -34,30 +34,7 @@ defmodule World.Build do
     pose = Keyword.get(opts, :pose, %{})
     targets = Keyword.get(opts, :targets, %{})
     name = item.name
-    root = %Scene.Node{name: name}
-
-    acc =
-      walk(
-        keep_root(item),
-        Frame.identity(),
-        0,
-        %{
-          nodes: [root],
-          parts: %{0 => []},
-          skins: [],
-          animations: [],
-          materials: %{},
-          joints: [],
-          limbs: [],
-          moves: %{},
-          clips: [],
-          targets: targets,
-          path: name,
-          prefix: ""
-        },
-        level,
-        pose
-      )
+    acc = walk(keep_root(item), Frame.identity(), 0, start(item, targets), level, pose)
 
     {nodes, _} = finish(acc, Keyword.get(opts, :split, false))
 
@@ -78,6 +55,42 @@ defmodule World.Build do
     }
 
     %{scene | extras: Map.merge(extras, Map.get(item, :extras, %{}))}
+  end
+
+  # The start of a walk of a model: the root node, and no parts yet.
+  defp start(item, targets) do
+    %{
+      nodes: [%Scene.Node{name: item.name}],
+      parts: %{0 => []},
+      skins: [],
+      animations: [],
+      materials: %{},
+      joints: [],
+      limbs: [],
+      moves: %{},
+      clips: [],
+      targets: targets,
+      path: item.name,
+      prefix: ""
+    }
+  end
+
+  @doc """
+  The parts of a model at their places: a list of `{frame, part}`, the
+  frame of each part in the axes of the model (at near, with each joint
+  at 0). `World.Mass` adds their masses.
+  """
+  def placed(item) do
+    acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), :near, %{})
+
+    frames =
+      acc.nodes
+      |> Enum.with_index()
+      |> Enum.reduce(%{}, fn {n, i}, frames ->
+        Map.put(frames, i, if(n.parent, do: Frame.compose(frames[n.parent], n.frame), else: n.frame))
+      end)
+
+    for {i, parts} <- Enum.sort(acc.parts), {f, p, _} <- Enum.reverse(parts), do: {Frame.compose(frames[i], f), p}
   end
 
   @doc "Write the GLB of a model at a level, in a pose."
@@ -352,17 +365,26 @@ defmodule World.Build do
     Enum.max(sides) >= long and Enum.min(sides) >= thin
   end
 
-  @doc "The list of the parts of a model, each with its count, in the order of the names."
+  @doc """
+  The list of the parts of a model, each with its count and, when its
+  materials have densities and its meshes are closed, the mass of one
+  (kg, `World.Mass`), in the order of the names.
+  """
   def parts(item) do
-    item
-    |> all_parts()
+    all = all_parts(item)
+    masses = Map.new(all, &{{&1.name, &1.kind, &1.params, &1.sources}, mass(&1)})
+
+    all
     |> Enum.frequencies_by(&{&1.name, &1.kind, &1.params, &1.sources})
-    |> Enum.map(fn {{name, kind, params, sources}, count} ->
+    |> Enum.map(fn {{name, kind, params, sources} = key, count} ->
       %{"name" => name, "kind" => Atom.to_string(kind), "count" => count, "params" => params, "sources" => sources}
+      |> then(fn row -> if m = masses[key], do: Map.put(row, "mass", m), else: row end)
     end)
     # Two parts can have one name with other params: all the fields fix the order.
     |> Enum.sort_by(&{&1["name"], &1["kind"], &1["params"], &1["sources"]})
   end
+
+  defp mass(%Part{} = p), do: with(%{mass: m} <- World.Mass.part(p), do: Float.round(m, 4))
 
   # A part with no shapes is a mark (the origin of a build), and a part of
   # the low levels stands in for other parts: not things to buy.

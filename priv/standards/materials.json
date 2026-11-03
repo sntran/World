@@ -1,0 +1,93 @@
+{
+  "note": "The densities of the material roles of World (kg/m3), each with its source. A role with no density (a paint, a color) has no mass.",
+  "density": {
+    "source": "Each density has its own source.",
+    "unit": "kg/m3",
+    "fields": [
+      "density",
+      "source"
+    ],
+    "sizes": {
+      "steel": [
+        7820,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): steel 7.82."
+      ],
+      "chrome": [
+        7820,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): steel 7.82 (chrome on steel)."
+      ],
+      "metal": [
+        7820,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): steel 7.82."
+      ],
+      "rim": [
+        2700,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): aluminum 2.7 (a cast or a rolled rim of aluminum)."
+      ],
+      "aluminum": [
+        2700,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): aluminum 2.7."
+      ],
+      "copper": [
+        8790,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): copper 8.79."
+      ],
+      "stainless": [
+        7900,
+        "Rolled Alloys, 304/304L datasheet: 7900 kg/m3 (https://www.rolledalloys.ca/wp-content/uploads/304-304L_Datasheet_rolled-alloys_CA.pdf)."
+      ],
+      "glass": [
+        2500,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): glass, common 2.4-2.8 (the middle)."
+      ],
+      "glass_dark": [
+        2500,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): glass, common 2.4-2.8 (the middle)."
+      ],
+      "glass_amber": [
+        2500,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): glass, common 2.4-2.8 (the middle)."
+      ],
+      "porcelain": [
+        2400,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): porcelain 2.3-2.5 (the middle)."
+      ],
+      "terracotta": [
+        1900,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): brick 1.4-2.4 (the middle: terracotta is fired clay, as a brick)."
+      ],
+      "brick": [
+        1900,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): brick 1.4-2.4 (the middle)."
+      ],
+      "tile": [
+        1900,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): brick 1.4-2.4 (the middle: a clay roof tile is fired clay)."
+      ],
+      "concrete": [
+        2400,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): concrete, dense 2.0-2.4 (normal concrete)."
+      ],
+      "mortar": [
+        1600,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): brickwork in mortar 1.6."
+      ],
+      "rubber": [
+        920,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): rubber, pure gum 0.91-0.93 (the middle)."
+      ],
+      "plastic": [
+        1060,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): ABS 1.06."
+      ],
+      "plywood": [
+        540,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): plywood 0.54."
+      ],
+      "wood": [
+        450,
+        "The Engineering ToolBox, Wood densities (https://www.engineeringtoolbox.com/wood-density-d_40.html): spruce, Canadian 450 (the spruce of spruce-pine-fir lumber)."
+      ]
+    }
+  }
+}

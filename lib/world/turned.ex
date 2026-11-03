@@ -84,9 +84,9 @@ defmodule World.Turned do
         {0.0275, 0.0},
         {0.0305, 0.004},
         {0.0305, 0.108},
-        {0.0295, 0.12},
-        {0.024, 0.145},
-        {0.0155, 0.175},
+        {0.029, 0.118},
+        {0.0225, 0.142},
+        {0.0148, 0.17},
         {0.0125, 0.2},
         {0.0123, 0.219},
         {0.0133, 0.222},
@@ -94,11 +94,11 @@ defmodule World.Turned do
         {0.0125, 0.231}
       ],
       :glass_amber,
-      wall: 0.002,
+      wall: 0.0016,
       floor: 0.005,
       sources: [
         "A 12 oz long neck beer bottle: 9.09 in (23.1 cm) high, 2.4 in (6.1 cm) across, 355 ml (https://www.dimensions.com/element/beer-bottle-12-oz-long-neck).",
-        "The crown cap of a longneck: 26 mm. The shoulder and the neck: by eye from photos of the bottle; the wall of 2 mm gives about 220 g of glass (a longneck: about 200 g)."
+        "The crown cap of a longneck: 26 mm. The shoulder and the neck: by eye from photos of the bottle. The wall of 1.6 mm gives the mass of a real bottle: 0.425 lb (193 g) for a 12 oz amber longneck (Kaufman Container, https://www.kaufmancontainer.com/12-oz-amber-glass-beer-bottle-bulk/)."
       ]
     )
   end
