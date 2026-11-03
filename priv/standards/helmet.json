@@ -1,5 +1,5 @@
 {
-  "note": "The helmet of a rider of a motorcycle in Việt Nam: the nine sizes of the headform (dạng đầu), the polar coordinates of each section of the headform over its reference plane (mặt chuẩn), the area that a helmet covers, and the limits of its tests. The reference plane is X over the basic plane (mặt cơ bản, through the holes of the ears and the low edge of the eye sockets); Y is the height of the top of the headform over the reference plane. The angles of a section go from the front (0) to the back (180), the same on the two sides. Five cells of the photos have a misprint that the cells around them make clear; the tables have the correct values: size 1, height 50, 30 degrees (5454: 54); size 5, height 0, 150 degrees (919: 91) and height 20, 150 degrees (0,5: 90.5); size 7, height 95, 45 degrees (69: 39); size 8, height 85, 165 degrees (22: 72).",
+  "note": "The helmet of a rider of a motorcycle in Việt Nam: the nine sizes of the headform (dạng đầu), the polar coordinates of each section of the headform over its reference plane (mặt chuẩn), the area that a helmet covers, and the limits of its tests. The reference plane is X over the basic plane (mặt cơ bản, through the holes of the ears and the low edge of the eye sockets); Y is the height of the top of the headform over the reference plane. The angles of a section go from the front (0) to the back (180), the same on the two sides. Five cells of the photos have a misprint that the cells around them make clear; the tables have the correct values: size 1, height 50, 30 degrees (5454: 54); size 5, height 0, 150 degrees (919: 91) and height 20, 150 degrees (0,5: 90.5); size 7, height 95, 45 degrees (69: 39); size 8, height 85, 165 degrees (22: 72). One cell is a judgement: size 7, height 50, 165 degrees is 96 in the photos; the table has 93.5, as at 180 degrees: in each other size and height the two angles are 1 mm or less apart, and 93.5 agrees with the cells at 150 degrees and at 180 degrees.",
   "headform": {
     "source": "QCVN 2:2021/BKHCN, Quy chuẩn kỹ thuật quốc gia về mũ bảo hiểm cho người đi mô tô, xe máy (Thông tư 04/2021/TT-BKHCN), from photos of the text from the owner, 4.2, Bảng 1 (Kích thước cơ bản của dạng đầu).",
     "unit": "mm",
@@ -1046,7 +1046,7 @@
           83.0,
           88.0,
           92.5,
-          96.0,
+          93.5,
           93.5
         ],
         [
