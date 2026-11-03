@@ -1,1 +1,1 @@
-{"name":"ceiling_fan_52in","parts":[{"count":1,"kind":"mount","name":"fan_mount","params":{},"sources":[]},{"count":1,"kind":"rotor","name":"fan_rotor_52in","params":{},"sources":[]}]}
+{"name":"ceiling_fan_52in","parts":[{"count":1,"kind":"mount","mass":17.3259,"name":"fan_mount","params":{},"sources":[]},{"count":1,"kind":"rotor","mass":35.5062,"name":"fan_rotor_52in","params":{},"sources":[]}]}
