@@ -4,6 +4,9 @@ defmodule Mix.Tasks.World.Build do
   Writes the files of each model of `World.Catalog` in `priv/models`:
 
   - `NAME.glb`, `NAME.mid.glb`, `NAME.far.glb`: the three levels of detail;
+  - `NAME.mid.faces.json`, `NAME.far.faces.json`: the faces of the parts
+    at the levels mid and far, for a painter of a picture in 2D
+    (`World.Faces`);
   - `NAME.parts.json`: the list of the parts;
   - `list.json`: the names of the models, for the review page.
 
@@ -21,6 +24,9 @@ defmodule Mix.Tasks.World.Build do
 
   @levels [{:near, ""}, {:mid, ".mid"}, {:far, ".far"}]
 
+  # The levels of the faces: a picture in 2D is small (World.Faces).
+  @faces [:mid, :far]
+
   @impl true
   def run(args) do
     {opts, names} = OptionParser.parse!(args, strict: [check: :boolean, dir: :string, kit: :string])
@@ -33,9 +39,10 @@ defmodule Mix.Tasks.World.Build do
       Enum.flat_map(chosen, fn {name, fun} ->
         # The model is made again at each level (World.Detail).
         glbs =
-          for {level, ext} <- @levels do
-            item = World.Detail.with(level, fun)
-            {Path.join(dir, name <> ext <> ".glb"), World.Build.glb(item, level: level)}
+          for {level, ext} <- @levels,
+              item = World.Detail.with(level, fun),
+              {suffix, bin} <- [{".glb", World.Build.glb(item, level: level)} | faces(item, level)] do
+            {Path.join(dir, name <> ext <> suffix), bin}
           end
 
         parts = %{"name" => name, "parts" => World.Build.parts(fun.())}
@@ -49,6 +56,9 @@ defmodule Mix.Tasks.World.Build do
 
     if opts[:check], do: check(files), else: write(files)
   end
+
+  defp faces(item, level) when level in @faces, do: [{".faces.json", World.Faces.encode(item, level: level)}]
+  defp faces(_item, _level), do: []
 
   defp kit(opts) do
     dir = Keyword.get(opts, :kit, "priv/kit")

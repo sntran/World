@@ -127,8 +127,12 @@ into the steps of `AGENTS.md`.
   writer writes them.
 - **A 3MF file for a print with colors.** One file with the color of
   each material, for a printer with more than one filament.
-- **An SVG of any mesh.** The painter of DIY sorts its parts (boxes and
-  prisms). A mesh of Wings needs a sort of its triangles.
+- **An SVG of any mesh.** The faces of each part are in the files now
+  (`World.Faces`). A sort of the boxes of the shapes does not paint a
+  shell around another shape (a cabinet around its drawer). A painter
+  with a BSP tree paints each model in the correct order, but it cuts
+  faces: a picture gets three to six times the polygons. A painter that
+  cuts only the faces that cross another face would keep fewer.
 - **A catalog of makes and models.** Real vehicles with their real
   sizes and sources: the Chevy Bolt, the Honda Wave, the Honda Vision. A
   person chooses a vehicle in Phượt.

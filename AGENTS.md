@@ -72,7 +72,7 @@ about it.
 |---|---|
 | `World.Vec`, `World.Frame`, `World.Mesh`, `World.Shape` | Points, frames, meshes and the shapes of parts: the matter of the world. |
 | `World.Part`, `World.Port`, `World.Assembly`, `World.Joint`, `World.Limb`, `World.Figure` | A part, its ports, an assembly of parts, a joint (hinge, slide or ball, with its limits), a limb (a chain of bones and its solver), a figure with a skeleton, its joints, its limbs and its props. |
-| `World.Detail`, `World.Build`, `World.Scene`, `World.GLB`, `World.PNG` | The levels of detail (and `collect/1`: a full garbage collection after a big step of a build, for the 128 MB of the edge), the build of a model into a scene, the GLB writer, and the PNG writer for the textures that World makes. |
+| `World.Detail`, `World.Build`, `World.Scene`, `World.GLB`, `World.PNG`, `World.Faces` | The levels of detail (and `collect/1`: a full garbage collection after a big step of a build, for the 128 MB of the edge), the build of a model into a scene, the GLB writer, the PNG writer for the textures that World makes, and the faces of the parts for a painter in 2D. |
 | `World.Kit` | Small helpers for the shapes of items (inches, round boxes, handles, feet). |
 | `World.Materials` | `Stock` (tubes, lumber, sheets, extrusions), `Fasteners` (bolts, nuts, screws), `Construction` (bricks, blocks, lintels, tiles, panels), `Webbing` (a strap of webbing or leather along a path, a side-release buckle, a D-ring, a tri-glide, a pin buckle, hook and loop: for a helmet, a sandal, a bag, a harness). |
 | `World.Framing` | T-slot extrusions, strut channel, L-track, and `Builds` from them. |

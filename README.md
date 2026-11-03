@@ -130,7 +130,7 @@ models").
 | P7. The real world: plants | `World.Plants`: species from rules (the coconut palm, the banana, bamboo, the frangipani). | To do |
 | P8. The real world: places | Streets from OpenStreetMap, with the buildings, the roads and the trees; a street of Vũng Tàu first. | To do |
 | P9. The real world: the engineers | New blueprints from requests, with the checks as the gate and the owner as the reviewer. | To do |
-| 7. DIY uses World | DIY draws its SVG from the models, and keeps its pictures. | To do |
+| 7. DIY uses World | DIY draws its SVG from the models, and keeps its pictures. | In progress: the faces of each model for a painter in 2D (`World.Faces`) are done; the painter of DIY is next |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |
 
@@ -149,6 +149,7 @@ const gltf = await new GLTFLoader().loadAsync('https://world.mkfifo.com/models/f
 |---|---|
 | `/models/list.json` | The names of the models. |
 | `/models/NAME.glb`, `NAME.mid.glb`, `NAME.far.glb` | A model at each level. |
+| `/models/NAME.mid.faces.json`, `NAME.far.faces.json` | The faces of its parts, for a painter of a picture in 2D (`docs/format.md`, "The faces"). |
 | `/models/NAME.parts.json` | The list of its parts. |
 | `/palette.json` | The default color of each material role. |
 | `/version.json` | The commit of World that the site has. |

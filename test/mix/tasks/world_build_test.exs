@@ -12,14 +12,18 @@ defmodule Mix.Tasks.World.BuildTest do
 
   test "writes the files of a model, and --check finds a change" do
     Mix.Tasks.World.Build.run(["--dir", @dir, "wheel_bicycle_37_622"])
-    assert_received {:mix_shell, :info, ["Wrote 4 files."]}
+    assert_received {:mix_shell, :info, ["Wrote 6 files."]}
 
-    for f <-
-          ~w(wheel_bicycle_37_622.glb wheel_bicycle_37_622.mid.glb wheel_bicycle_37_622.far.glb wheel_bicycle_37_622.parts.json),
-        do: assert(File.exists?(Path.join(@dir, f)))
+    for ext <- ~w(glb mid.glb far.glb mid.faces.json far.faces.json parts.json),
+        do: assert(File.exists?(Path.join(@dir, "wheel_bicycle_37_622." <> ext)))
+
+    # The faces of the level of each file.
+    faces = @dir |> Path.join("wheel_bicycle_37_622.far.faces.json") |> File.read!() |> JSON.decode!()
+    assert faces["level"] == "far"
+    assert faces["parts"] != []
 
     Mix.Tasks.World.Build.run(["--dir", @dir, "--check", "wheel_bicycle_37_622"])
-    assert_received {:mix_shell, :info, ["The 4 files are the same as the build."]}
+    assert_received {:mix_shell, :info, ["The 6 files are the same as the build."]}
 
     File.write!(Path.join(@dir, "wheel_bicycle_37_622.glb"), "x")
 
