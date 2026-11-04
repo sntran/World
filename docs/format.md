@@ -38,7 +38,11 @@ the steps of `README.md`.
   `:bearing`, `:tube`, `:sheet`, `:lumber`, `:extrusion`, `:rim`,
   `:tire`, `:shaped`, and more.
 - `params`: the numbers that make the part. The same params give the
-  same part, byte by byte.
+  same part, byte by byte. A part that stretches (a spring, a band) has
+  `"stretch" => %{"to" => node, "from" => point, "end" => point}`: in
+  the GLB it is a skinned mesh between its own node and the node `to`
+  (a slide), each point with a weight from 0 at `from` to 1 at `end`
+  along the line (`World.Build`), so it stretches as the slide moves.
 - `sources`: where each size comes from, in words: a standard, a data
   sheet, or a measurement. A size that is a guess says so.
 - `ports`: the places where the part connects to another part (below).
@@ -161,7 +165,7 @@ The joints of the catalog:
 | The rear legs of a folding chair of bamboo (`World.Furniture.Bamboo.folding/1`) | A pin of bamboo at each side, tight in the rear leg, loose in a hole of the post. | Each pin (`pin/2`) on the node of the rear legs, on the axis. |
 | The seat of the folding chair | The rear rail of the seat goes through a hole in each post and turns in it. | The rail is a piece of the seat, on the axis; no pin. |
 | A hammock, a võng, a plank swing, a porch swing on two anchors (`World.Furniture.Hanging`) | The thing swings about the line through its two anchors (the knots on the trees, the hooks in the ceiling). | One hinge of the role `:swing` on that line. The anchors (the trees, the posts, the beam, the stand), the hooks and the loops of the straps are on the root and stay; the bed, the ropes, the chains and the seat are on the node of the hinge. |
-| The egg chair on its spring (`World.Furniture.Hanging.Rig.spring/2`) | The spring stretches under the weight: the chair goes down and up. | A slide of the role `:bounce` down at the middle of the spring, to the stretch at its rated load (the load over the rate of the spring, `G d^4 / (8 D^3 n)`). The top half of the spring is on the node that swings; the bottom half, the chain, the swivel and the basket are on the slide. |
+| The egg chair on its spring (`World.Furniture.Hanging.Rig.spring/3`) | The spring stretches under the weight: the chair goes down and up, and the coils part as one. | A slide of the role `:bounce` down at the middle of the spring, to the stretch at its rated load (the load over the rate of the spring, `G d^4 / (8 D^3 n)`). The spring is on the node that swings, and stretches to the slide (`"stretch"`); the chain, the swivel and the basket are on the slide. |
 | The frame of a võng xếp that folds (`vong_xep_frame/1`) | A pin at the foot of each strut and of each arm; with the net off, the struts turn down onto the base, then the arms turn in onto it. | A hinge of the role `:fold` about y at each pin; the clip `fold`. With the net on (`vong_xep/1`) the frame is fixed: the net holds it open. |
 | A person in a hammock (`lie/3`) | The person lies on the bed and swings with it. | The person (`World.People`) on the node of the bed, by its port `hips`. |
 | A tire swing, an egg chair on one point | The thing swings in any way about its point (a ball joint), and turns on its swivel. | Two hinges at the point (about x, then about y, on mark parts `_x` and `_y`) and a hinge of the role `:spin` about z, with no limits. The top half of the swivel (`World.Furniture.Hanging.Rig.swivel/2`) is on the node that swings; the bottom half is on the node that spins. |

@@ -21,8 +21,8 @@ defmodule World.Furniture.Hanging.Rig do
   - `hook/2`: an eye hook in a beam, or the hook at the top of a stand;
   - `carabiner/2`: a carabiner of aluminum;
   - `swivel/2`: a swivel in its two halves, `{top, bottom}`;
-  - `spring/2`: the spring of a hanging chair in its two halves, and its
-    rate (`spring_rate/3`) and stretch (`stretch/1`);
+  - `spring/3`: the spring of a hanging chair, its coils that stretch,
+    and its rate (`spring_rate/3`) and stretch (`stretch/1`);
   - `tree_strap/4`: a strap of webbing round a trunk, to its loop;
   - `trunk/3`, `post/3`, `beam/3`: the anchors of a site (a tree, a pole
     of a café, the joist of a porch ceiling): the site is not a part of
@@ -177,15 +177,16 @@ defmodule World.Furniture.Hanging.Rig do
 
   @doc """
   The extension spring of a hanging chair from `at` down (`at`: the wire
-  at the top of its upper eye, in the eye of a hook), in its two halves,
-  `{top, bottom}`: 108 mm long, a wire of 7
-  mm, rated for 317.5 kg (the hammock chair springs of the shops: 7 mm,
-  108 mm, 700 lb); 9 coils close wound, 29 mm across their middle (by
-  eye), an eye of 19 mm at each end. A rigid model cannot stretch its
-  coils: the two halves part at the middle as the spring stretches (the
-  slide of the chair, `stretch/1`).
+  at the top of its upper eye, in the eye of a hook): 108 mm long, a wire
+  of 7 mm, rated for 317.5 kg (the hammock chair springs of the shops: 7
+  mm, 108 mm, 700 lb); 9 coils close wound, 29 mm across their middle
+  (by eye), an eye of 19 mm at each end. Its coils stretch to the node
+  `to` (a slide, `stretch/1`): the part goes on the node over the slide,
+  and its points from the top of the coils to their bottom go with the
+  slide by their place along the spring (`"stretch"` in its params,
+  `World.Build`).
   """
-  def spring(name, at) do
+  def spring(name, at, to) do
     {x, y, z} = at
     {d, dm, n, eye} = @spring
     re = (eye - d) / 2
@@ -198,23 +199,25 @@ defmodule World.Furniture.Hanging.Rig do
     end
 
     z1 = z0 - n * d
-    half = div(n * steps, 2)
     wire = fn pts -> Shape.sweep(pts, d / 2, :steel, sides: 6) |> Mesh.matter(:steel) end
     # An eye across the eye of the hook (its plane x z), on the axis of the
-    # spring; a short wire from the eye to the end of the coils.
+    # spring; a short wire from each eye to the end of the coils.
     eye_at = fn c -> ring(c, {0, 1, 0}, re, d / 2, sides: 10) end
-    source = ["A spring of a hanging chair: 108 mm, a wire of 7 mm, rated for 317.5 kg (the shops); its coils by eye."]
 
-    top = [eye_at.({x, y, z - re}), wire.([{x, y, z - 2 * re}, coil.(0)]), wire.(Enum.map(0..half, coil))]
-
-    bottom = [
-      wire.(Enum.map(half..(n * steps), coil)),
+    meshes = [
+      eye_at.({x, y, z - re}),
+      wire.([{x, y, z - 2 * re}, coil.(0)]),
+      wire.(Enum.map(0..(n * steps), coil)),
       wire.([{x + dm / 2, y, z1}, {x, y, z1 - d}]),
       eye_at.({x, y, z1 - d - re})
     ]
 
-    {Part.new(name <> "_top", :hardware, top, [@o], sources: source),
-     Part.new(name <> "_bottom", :hardware, bottom, [@o], sources: source)}
+    Part.new(name, :hardware, meshes, [@o],
+      params: %{"stretch" => %{"to" => to, "from" => [x, y, z0], "end" => [x, y, z1]}},
+      sources: [
+        "A spring of a hanging chair: 108 mm, a wire of 7 mm, rated for 317.5 kg (the shops); its coils by eye."
+      ]
+    )
   end
 
   @doc """

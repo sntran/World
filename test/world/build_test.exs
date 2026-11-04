@@ -117,4 +117,44 @@ defmodule World.BuildTest do
   end
 
   defp round6({x, y, z}), do: {Float.round(x / 1, 5) + 0.0, Float.round(y / 1, 5) + 0.0, Float.round(z / 1, 5) + 0.0}
+
+  test "a part that stretches on the root to a slide: a skin of two joints; its points go with the slide by their place along it" do
+    o = Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
+    band = Shape.box({-0.01, -0.01, 0.0}, {0.01, 0.01, 1.0}, :rubber)
+
+    root =
+      Part.new("frame", :frame, [Shape.box({-0.1, -0.1, 1.0}, {0.1, 0.1, 1.1}, :steel)], [o])
+
+    elastic =
+      Part.new("band", :band, [band], [o],
+        params: %{"stretch" => %{"to" => "weight", "from" => [0, 0, 1.0], "end" => [0, 0, 0.0]}}
+      )
+
+    weight =
+      Part.new("weight", :mass, [Shape.box({-0.05, -0.05, -0.1}, {0.05, 0.05, 0.0}, :steel)], [
+        o,
+        Part.port("hang", {0, 0, 0}, {0, 0, -1}, {0, 1, 0})
+      ])
+
+    item =
+      Assembly.new("drop", root, root: "frame")
+      |> Assembly.add("band", elastic, at: "o", port: "o")
+      |> Assembly.add("weight", weight,
+        at: Part.port("pull", {0, 0, 0}, {0, 0, -1}, {0, 1, 0}),
+        port: "hang",
+        kind: :slide,
+        role: :drawer,
+        limits: [0, 0.5]
+      )
+
+    scene = Build.scene(item, pose: %{"weight" => 0.3})
+    band_node = Enum.find(scene.nodes, &(&1.name == "band"))
+    assert band_node.skin == 0
+    only = %{scene | nodes: Enum.map(scene.nodes, &if(&1.name == "band", do: &1, else: %{&1 | primitives: []}))}
+    {{_, _, lo}, {_, _, hi}} = Scene.bounds(only)
+    assert_in_delta lo, -0.3, 1.0e-6
+    assert_in_delta hi, 1.0, 1.0e-6
+    # The GLB has the skin.
+    assert %{"skins" => [_]} = GLBHelper.json(World.GLB.encode(scene))
+  end
 end

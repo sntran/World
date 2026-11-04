@@ -949,7 +949,7 @@ defmodule World.Furniture.Hanging do
       )
 
     hook = Rig.hook("hook_#{name}", hook_at)
-    {spring_top, spring_bottom} = Rig.spring("spring_#{name}", hook_at)
+    spring = Rig.spring("spring_#{name}", hook_at, "bounce_#{name}")
     spring_end = elem(hook_at, 2) - Rig.spring_length()
     swivel_at = {0.0, 0.0, low + bh + 0.12}
     {top_half, bottom_half} = Rig.swivel("swivel_#{name}", swivel_at)
@@ -967,11 +967,11 @@ defmodule World.Furniture.Hanging do
       materials: %{fabric: Keyword.get(opts, :color, [200, 196, 186])}
     )
     |> fixed([hook])
-    |> swing1("swing_#{name}", hook_at, [spring_top], limits: [-20, 20])
+    |> swing1("swing_#{name}", hook_at, [spring], limits: [-20, 20])
     |> bounce(
       "bounce_#{name}",
       {0.0, 0.0, elem(hook_at, 2) - Rig.spring_length() / 2},
-      [spring_bottom, chain, top_half],
+      [chain, top_half],
       to: "swing_#{name}_y",
       limits: [0, Rig.stretch(317.5)]
     )

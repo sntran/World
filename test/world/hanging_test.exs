@@ -152,6 +152,49 @@ defmodule World.HangingTest do
     assert z.("crown") > z.("hips") and z.("sole_l") > z.("hips")
   end
 
+  test "a part that stretches: the spring is a skin between the node that swings and the slide" do
+    item = Hanging.egg_chair()
+    scene = Build.scene(item, pose: %{"bounce_egg_chair" => 0.02})
+    i = Enum.find_index(scene.nodes, &(&1.name == "spring_egg_chair"))
+    node = Enum.at(scene.nodes, i)
+    %{joints: [a, b]} = Enum.at(scene.skins, node.skin)
+    assert Enum.at(scene.nodes, a).name == "swing_egg_chair_y" and Enum.at(scene.nodes, b).name == "bounce_egg_chair"
+    # The top eye stays, the bottom eye goes down with the slide, the coils between.
+    weights =
+      for p <- node.primitives,
+          {{j, _, _, _}, {w0, w1, _, _}} <- Enum.zip(p.joints, p.weights),
+          do: if(j == 1, do: 1.0, else: w1 * 1.0 + 0 * w0)
+
+    assert Enum.min(weights) == 0.0 and Enum.max(weights) == 1.0
+    assert Enum.any?(weights, &(&1 > 0.3 and &1 < 0.7))
+    # The bottom of the spring goes down with the slide; its top stays.
+    only = fn sc ->
+      %{sc | nodes: Enum.map(sc.nodes, &if(&1.name == "spring_egg_chair", do: &1, else: %{&1 | primitives: []}))}
+    end
+
+    {{_, _, lo}, {_, _, hi}} = Scene.bounds(only.(scene))
+    {{_, _, lo0}, {_, _, hi0}} = Scene.bounds(only.(Build.scene(item)))
+    assert_in_delta lo, lo0 - 0.02, 1.0e-6
+    assert_in_delta hi, hi0, 1.0e-6
+    # A part that stretches to a node that is not there is an error.
+    bad =
+      put_in(
+        Hanging.egg_chair().nodes,
+        Enum.map(item.nodes, fn
+          {"bounce_egg_chair" = n, part, c} ->
+            {n, %{part | name: n}, c}
+
+          {n, %{params: %{"stretch" => st}} = part, c} ->
+            {n, %{part | params: %{"stretch" => %{st | "to" => "none"}}}, c}
+
+          other ->
+            other
+        end)
+      )
+
+    assert_raise ArgumentError, ~r/no node none/, fn -> Build.scene(bad) end
+  end
+
   test "the shelter of a camping hammock: a tarp and a bug net on the site, over the hammock" do
     item = Hanging.camping(shelter: true, name: "s")
     names = for {_, p, _} <- item.nodes, do: p.name
@@ -182,7 +225,7 @@ defmodule World.HangingTest do
     # Down by the stretch: the basket goes down, the top of the spring stays.
     frames = fn p -> Map.new(Build.placed(item, p), fn {f, part} -> {part.name, f} end) end
     {rest, down} = {frames.(%{}), frames.(%{"bounce_egg_chair" => max})}
-    assert rest["spring_egg_chair_top"] == down["spring_egg_chair_top"]
+    assert rest["spring_egg_chair"] == down["spring_egg_chair"]
     assert_in_delta elem(Frame.point(down["basket_egg_chair"], {0, 0, 0}), 2), -max, 1.0e-9
   end
 

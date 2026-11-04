@@ -48,12 +48,13 @@ defmodule World.Build do
     targets = Keyword.get(opts, :targets, %{})
     name = item.name
     acc = walk(keep_root(item), Frame.identity(), 0, start(item, targets), level, pose)
-
-    {nodes, _} = finish(acc, {Keyword.get(opts, :split, false), Keyword.get(opts, :instances, true)})
+    fixed = %{acc | parts: Map.new(acc.parts, fn {i, ps} -> {i, Enum.reject(ps, fn {_, p, _} -> stretch?(p) end)} end)}
+    {nodes, _} = finish(fixed, {Keyword.get(opts, :split, false), Keyword.get(opts, :instances, true)})
+    {nodes, skins} = stretched(nodes, acc.skins, Enum.reverse(acc.stretches), acc.moves)
 
     materials = Map.merge(Map.get(item, :materials, %{}), acc.materials)
     animations = join(acc.animations ++ Enum.map(acc.clips, &clip(&1, acc.moves)))
-    scene = %Scene{name: name, nodes: nodes, skins: acc.skins, animations: animations, materials: materials}
+    scene = %Scene{name: name, nodes: nodes, skins: skins, animations: animations, materials: materials}
     {lo, hi} = if Scene.triangles(scene) > 0, do: Scene.bounds(scene), else: {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}
     size = Vec.sub(hi, lo)
 
@@ -82,6 +83,7 @@ defmodule World.Build do
       limbs: [],
       moves: %{},
       clips: [],
+      stretches: [],
       targets: targets,
       path: item.name,
       prefix: ""
@@ -179,7 +181,16 @@ defmodule World.Build do
   end
 
   defp walk(%Part{} = p, frame, node, acc, level, _pose) do
-    if keep?(p, level), do: update_in(acc.parts[node], &[{frame, p, acc.path} | &1]), else: acc
+    cond do
+      not keep?(p, level) ->
+        acc
+
+      stretch?(p) ->
+        %{update_in(acc.parts[node], &[{frame, p, acc.path} | &1]) | stretches: [{frame, p, node} | acc.stretches]}
+
+      true ->
+        update_in(acc.parts[node], &[{frame, p, acc.path} | &1])
+    end
   end
 
   defp walk(
@@ -465,6 +476,56 @@ defmodule World.Build do
   end
 
   defp place(corners, f), do: for({p, n} <- corners, do: {Frame.point(f, p), Frame.dir(f, n)})
+
+  # A part that stretches between its node and another node (a spring):
+  # `"stretch"` in its params, `%{"to" => node, "from" => point, "end" =>
+  # point}` (the points in the axes of the part).
+  defp stretch?(%Part{params: %{"stretch" => _}}), do: true
+  defp stretch?(_), do: false
+
+  # Each part that stretches is a skinned mesh: its points from `from` to
+  # `end` go from its own node to the node `to` (a weight from 0 to 1
+  # along the line; the points out of the line stay with the nearer
+  # node). The bind is the frame of each node at rest (a joint at 0): a
+  # joint at its value moves the points by its weight, so the part
+  # stretches as the joint moves, in each app that plays a skin.
+  defp stretched(nodes, skins, stretches, moves) do
+    frames = Scene.world_frames(%Scene{nodes: nodes})
+    joints = Map.new(moves, fn {_, {id, port, _}} -> {id, port} end)
+
+    rest = fn i ->
+      case joints do
+        %{^i => port} -> Frame.compose(frames[Enum.at(nodes, i).parent], port)
+        _ -> frames[i]
+      end
+    end
+
+    Enum.reduce(stretches, {nodes, skins}, fn {f, p, node}, {nodes, skins} ->
+      %{"to" => to, "from" => a, "end" => b} = p.params["stretch"]
+      j = Enum.find_index(nodes, &(&1.name == to)) || raise ArgumentError, "no node #{to} for the stretch of #{p.name}"
+      {ra, rb} = {rest.(node), rest.(j)}
+      place = Frame.compose(ra, f)
+      {pa, pb} = {Frame.point(place, List.to_tuple(a)), Frame.point(place, List.to_tuple(b))}
+      ab = Vec.sub(pb, pa)
+
+      prims =
+        for prim <- primitives([{place, p.shapes}]) do
+          ts = for q <- prim.positions, do: min(max(Vec.dot(Vec.sub(q, pa), ab) / Vec.dot(ab, ab), 0.0), 1.0)
+          # A point at an end goes with one node alone (no joint with no weight).
+          joints = Enum.map(ts, &if(&1 == 1.0, do: {1, 0, 0, 0}, else: {0, 1, 0, 0}))
+          weights = Enum.map(ts, &if(&1 == 1.0 or &1 == 0.0, do: {1.0, 0.0, 0.0, 0.0}, else: {1.0 - &1, &1, 0.0, 0.0}))
+
+          %{
+            prim
+            | joints: Enum.map(Enum.zip(ts, joints), fn {t, j} -> if t == 0.0, do: {0, 0, 0, 0}, else: j end),
+              weights: weights
+          }
+        end
+
+      skin = %{joints: [node, j], inverse_bind: [Frame.invert(ra), Frame.invert(rb)], skeleton: node}
+      {nodes ++ [%Scene.Node{name: p.name, skin: length(skins), primitives: prims}], skins ++ [skin]}
+    end)
+  end
 
   # The root part of a model stays at each level: a small model (a
   # switch of 7 cm) keeps its body at far.
