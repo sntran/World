@@ -528,9 +528,11 @@ defmodule World.Furniture.Hanging do
   A hanging egg chair on its stand (Outsunny, the egg chair with a stand:
   98 by 95 by 198 cm, the basket 90 by 60 by 105 cm, 52 cm from the
   floor): a basket of wicker over a frame (ribs and rings of 8 mm, by
-  eye), open at its front, with a cushion; a chain and a swivel from the
-  hook at the top of a C stand of steel tube. It swings about the hook
-  (two hinges) and spins on its swivel. Options: `color`, `name`.
+  eye), open at its front, with a cushion; a spring, a chain and a swivel
+  from the hook at the top of a C stand of steel tube. It swings about
+  the hook (two hinges), bounces on its spring (a slide down, to the
+  stretch of the spring at its rated load of 317.5 kg) and spins on its
+  swivel. Options: `color`, `name`.
   """
   def egg_chair(opts \\ []) do
     name = Keyword.get(opts, :name, "egg_chair")
@@ -560,13 +562,15 @@ defmodule World.Furniture.Hanging do
       )
 
     hook = Rig.hook("hook_#{name}", hook_at)
+    {spring_top, spring_bottom} = Rig.spring("spring_#{name}", hook_at)
+    spring_end = elem(hook_at, 2) - Rig.spring_length()
     swivel_at = {0.0, 0.0, low + bh + 0.12}
     {top_half, bottom_half} = Rig.swivel("swivel_#{name}", swivel_at)
     {sx, sy, sz} = swivel_at
 
     chain =
-      Part.new("chain_#{name}", :chain, Rig.chain({0.0, 0.0, elem(hook_at, 2)}, {sx, sy, sz + 0.045}), [@o],
-        sources: ["A chain from the hook to the swivel (by eye)."]
+      Part.new("chain_#{name}", :chain, Rig.chain({0.0, 0.0, spring_end}, {sx, sy, sz + 0.045}), [@o],
+        sources: ["A chain from the spring to the swivel (by eye)."]
       )
 
     basket = basket(name, bw, bd, bh, low, {sx, sy, sz - 0.045})
@@ -576,8 +580,15 @@ defmodule World.Furniture.Hanging do
       materials: %{fabric: Keyword.get(opts, :color, [200, 196, 186])}
     )
     |> fixed([hook])
-    |> swing1("swing_#{name}", hook_at, [chain, top_half], limits: [-20, 20])
-    |> spin("spin_#{name}", swivel_at, [bottom_half, basket], to: "swing_#{name}_y")
+    |> swing1("swing_#{name}", hook_at, [spring_top], limits: [-20, 20])
+    |> bounce(
+      "bounce_#{name}",
+      {0.0, 0.0, elem(hook_at, 2) - Rig.spring_length() / 2},
+      [spring_bottom, chain, top_half],
+      to: "swing_#{name}_y",
+      limits: [0, Rig.stretch(317.5)]
+    )
+    |> spin("spin_#{name}", swivel_at, [bottom_half, basket], to: "bounce_#{name}")
   end
 
   # The basket of an egg chair: ribs of wicker over an egg, from the seat
@@ -739,6 +750,26 @@ defmodule World.Furniture.Hanging do
     )
     |> then(fn a ->
       Enum.reduce(parts, a, fn p, a -> Assembly.add(a, p.name, with_o(p), to: name <> "_y", at: "o", port: "o") end)
+    end)
+  end
+
+  # The node that bounces on a spring: a slide down at the middle of the
+  # spring, on the node `to`; its parts go on it.
+  defp bounce(asm, name, at, [first | rest], to: to, limits: limits) do
+    port = Part.port("bounce", at, {0, 0, -1}, {0, 1, 0})
+    first = %{first | ports: Map.put(first.ports, "bounce", port)}
+
+    asm
+    |> Assembly.add(name, first,
+      to: to,
+      at: %{port | name: name <> "_axis"},
+      port: "bounce",
+      kind: :slide,
+      role: :bounce,
+      limits: limits
+    )
+    |> then(fn a ->
+      Enum.reduce(rest, a, fn p, a -> Assembly.add(a, p.name, with_o(p), to: name, at: "o", port: "o") end)
     end)
   end
 

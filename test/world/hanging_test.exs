@@ -122,6 +122,20 @@ defmodule World.HangingTest do
     end
   end
 
+  test "the spring of the egg chair: its rate, its stretch, and the chair that bounces on it" do
+    assert_in_delta Rig.spring_length() + 0.007, 0.108, 1.0e-9
+    assert_in_delta Rig.stretch(317.5), 0.0287, 0.001
+    item = Hanging.egg_chair()
+    {_, _, slide} = List.keyfind(item.nodes, "bounce_egg_chair", 0)
+    assert %{kind: :slide, role: :bounce, limits: [0, max]} = slide
+    assert_in_delta max, Rig.stretch(317.5), 1.0e-9
+    # Down by the stretch: the basket goes down, the top of the spring stays.
+    frames = fn p -> Map.new(Build.placed(item, p), fn {f, part} -> {part.name, f} end) end
+    {rest, down} = {frames.(%{}), frames.(%{"bounce_egg_chair" => max})}
+    assert rest["spring_egg_chair_top"] == down["spring_egg_chair_top"]
+    assert_in_delta elem(Frame.point(down["basket_egg_chair"], {0, 0, 0}), 2), -max, 1.0e-9
+  end
+
   test "a thing on one point: two hinges at the point and a spin on its swivel, the halves of the swivel on two nodes" do
     for item <- [Hanging.tire_swing(), Hanging.egg_chair()] do
       roles = for {n, _, %{kind: :hinge, role: r}} <- item.nodes, do: {n, r}
@@ -129,12 +143,13 @@ defmodule World.HangingTest do
       assert Enum.count(roles, fn {_, r} -> r == :swing end) == 2 and
                Enum.count(roles, fn {_, r} -> r == :spin end) == 1
 
-      # The top half of the swivel is on the node that swings; the bottom
-      # half is the first part of the node that spins.
-      {_, _, top} = Enum.find(item.nodes, &(elem(&1, 0) =~ "_top"))
+      # The top half of the swivel is on the node over the spin (the one
+      # that swings, or the spring of the egg chair); the bottom half is
+      # the first part of the node that spins.
+      {_, _, top} = Enum.find(item.nodes, &(elem(&1, 0) =~ "swivel_" and elem(&1, 0) =~ "_top"))
       {_, _, spin} = Enum.find(item.nodes, fn {_, _, c} -> c && c.role == :spin end)
-      assert top.to =~ "_y" and spin.to =~ "_y"
-      assert Enum.any?(item.nodes, fn {_, p, c} -> c != nil and c.role == :spin and p.name =~ "_bottom" end)
+      assert top.to == spin.to
+      assert Enum.any?(item.nodes, fn {_, p, c} -> c != nil and c.role == :spin and p.name =~ "swivel_" end)
     end
   end
 
