@@ -263,6 +263,11 @@ defmodule World.Check do
     {{Enum.min(xs), Enum.min(ys)}, {Enum.max(xs), Enum.max(ys)}}
   end
 
+  # The size of a cell of the grid of the overlap check (m), and the most
+  # cells of a mesh in the grid.
+  @cell 0.25
+  @cells 4096
+
   @doc """
   The parts of a model that are in one place: `:ok`, or `{:error,
   {:overlap, [{name, name}]}}`. Two parts are in one place when their
@@ -283,17 +288,22 @@ defmodule World.Check do
       |> Enum.with_index(fn m, i -> {i, m} end)
       |> Map.new()
 
+    # A large mesh (the ground of a street, a building) meets too many
+    # cells: it goes to each other mesh with no grid.
+    {large, small} = Enum.split_with(meshes, fn {_, {_, box, _}} -> count(box) > @cells end)
+
     cells =
-      Enum.reduce(meshes, %{}, fn {i, {_, box, _}}, acc ->
+      Enum.reduce(small, %{}, fn {i, {_, box, _}}, acc ->
         Enum.reduce(cells(box), acc, &Map.update(&2, &1, [i], fn l -> [i | l] end))
       end)
 
     # The pairs of meshes of two parts that a connection does not join,
     # with boxes in one place; then a point inside one in the other.
+    pairs = for {_, ids} <- cells, [i | rest] <- tails(Enum.sort(ids)), j <- rest, do: {i, j}
+    wide = for {i, _} <- large, j <- Map.keys(meshes), j != i, do: {min(i, j), max(i, j)}
+
     near =
-      for {_, ids} <- cells, [i | rest] <- tails(Enum.sort(ids)), j <- rest, uniq: true do
-        {i, j}
-      end
+      Enum.uniq(pairs ++ wide)
       |> Enum.filter(fn {i, j} ->
         {{{n, a}, ba, _}, {{k, b}, bb, _}} = {meshes[i], meshes[j]}
         n != k and not MapSet.member?(joined, pair(a, b)) and same?(ba, bb)
@@ -317,7 +327,11 @@ defmodule World.Check do
   end
 
   # The cells of the grid that a box meets.
-  @cell 0.25
+  defp count({{x0, y0, z0}, {x1, y1, z1}}) do
+    c = fn v -> floor(v / @cell) end
+    (c.(x1) - c.(x0) + 1) * (c.(y1) - c.(y0) + 1) * (c.(z1) - c.(z0) + 1)
+  end
+
   defp cells({{x0, y0, z0}, {x1, y1, z1}}) do
     c = fn v -> floor(v / @cell) end
     for i <- c.(x0)..c.(x1), j <- c.(y0)..c.(y1), k <- c.(z0)..c.(z1), do: {i, j, k}
