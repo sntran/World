@@ -5,10 +5,10 @@ defmodule World.Furniture.Bamboo.Panel do
   (length `lu`), the direction `v` across them (width `lv`), and the face
   `n` (the side of the lashing and of the person).
 
-  - `slats/6`: slats split from a culm side by side: a seat;
-  - `culms/6`: thin culms side by side: the uprights of a back, or the
+  - `slats/4`: slats split from a culm side by side: a seat;
+  - `culms/4`: thin culms side by side: the uprights of a back, or the
     bars of a back across;
-  - `lattice/5`: a frame inside the frame with four links to it (the
+  - `lattice/4`: a frame inside the frame with four links to it (the
     backs of the bench and the armchairs of a set);
   - `lash/5`: a cord in a zigzag across the pieces, and a second cord in
     the other phase, so that the two make a row of X (the white cord over
@@ -26,7 +26,7 @@ defmodule World.Furniture.Bamboo.Panel do
   `width` (0.016), `t` (0.006), `gap` (3 mm), `lash` (the places of the
   rows of the lashing along `u`, as parts of `lu`: none). The meshes.
   """
-  def slats({o, u, v, n}, lu, lv, opts \\ []) do
+  def slats({o, u, v, n}, lu, lv, opts) do
     w = Keyword.get(opts, :width, 0.016)
     t = Keyword.get(opts, :t, 0.006)
     centers = centers(lv, w, Keyword.get(opts, :gap, @gap))
@@ -45,7 +45,7 @@ defmodule World.Furniture.Bamboo.Panel do
   with their axes `d / 2` over the face: options `d` (0.016), `gap` (4
   mm), `ends` (`{:node, :node}`), `lash` (as `slats/4`). The meshes.
   """
-  def culms({o, u, v, n}, lu, lv, opts \\ []) do
+  def culms({o, u, v, n}, lu, lv, opts) do
     d = Keyword.get(opts, :d, 0.016)
     centers = centers(lv, d, Keyword.get(opts, :gap, 0.004))
 

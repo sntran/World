@@ -65,7 +65,7 @@ defmodule World.Furniture.Bamboo do
   `over` (option, 10 mm) out of the far side of each leg, where its end
   shows. Options of `Culm.piece/3`; the ends are open by default.
   """
-  def rail(a, b, leg, opts \\ []) do
+  def rail(a, b, leg, opts) do
     dir = Vec.norm(Vec.sub(b, a))
     out = leg + Keyword.get(opts, :over, 0.01)
 
