@@ -62,14 +62,42 @@ defmodule World.BambooTest do
     assert top > 0.42 and top < 0.46
   end
 
-  test "the folding chair: the two frames cross at the pin, and both feet stand on the ground" do
+  test "the folding chair stands on its four feet, and folds flat" do
     chair = Bamboo.folding()
-    {_, frame, _} = hd(chair.nodes)
-    low = frame.shapes |> Enum.flat_map(& &1.points) |> Enum.map(&elem(&1, 2)) |> Enum.min()
+
+    points = fn pose ->
+      for {f, p} <- Build.placed(chair, pose), m <- p.shapes, do: Enum.map(m.points, &World.Frame.point(f, &1))
+    end
+
+    low = points.(%{}) |> List.flatten() |> Enum.map(&elem(&1, 2)) |> Enum.min()
     assert abs(low) < 0.001
-    # Each of the four feet has a point on the ground.
-    feet = for m <- Enum.take(frame.shapes, 4), Enum.any?(m.points, fn {_, _, z} -> z < 1.0e-3 end), do: m
-    assert length(feet) == 4
+
+    # Each of the four legs has a point on the ground.
+    legs = for {_, p} <- Build.placed(chair), p.kind in [:frame, :panel], m <- Enum.take(p.shapes, 2), do: m
+    assert Enum.count(legs, fn m -> Enum.any?(m.points, fn {_, _, z} -> z < 1.0e-3 end) end) == 4
+
+    # Two hinges and the clip that folds them: at its middle, the rear
+    # legs and the seat lie along the posts, and the chair is flat.
+    hinges = for {name, _, %{kind: :hinge, role: :fold, limits: limits}} <- chair.nodes, do: {name, limits}
+    assert [{"rear_legs_ghe_tre_xep", [0, legs]}, {"seat_ghe_tre_xep", [seat, 0]}] = hinges
+    assert legs > 60 and seat < -60
+    [%{name: "fold", keys: [_, {1.5, folded}, {3.0, open}]}] = chair.clips
+    assert folded == %{"rear_legs_ghe_tre_xep" => legs, "seat_ghe_tre_xep" => seat}
+    assert Enum.all?(open, fn {_, v} -> v == 0.0 end)
+
+    n = World.Vec.norm(World.Vec.cross({0.0, -0.32, 0.88}, {1.0, 0.0, 0.0}))
+
+    depth = fn pose ->
+      pose
+      |> points.()
+      |> List.flatten()
+      |> Enum.map(&World.Vec.dot(&1, n))
+      |> Enum.min_max()
+      |> then(fn {a, b} -> b - a end)
+    end
+
+    assert depth.(%{}) > 0.5 and depth.(folded) < 0.08
+    assert World.Check.model(chair, folded) == :ok
     assert Bamboo.folding(back: :bars).name == "ghe_tre_xep"
   end
 end

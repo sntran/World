@@ -19,9 +19,11 @@ defmodule World.Furniture.Bamboo do
     lashing, a back of uprights with two rows of lashing;
   - `folding/1`: a folding chair (ghế xếp) on two frames in an X: the
     posts of the back go down to the front feet, the rear legs go from
-    the front of the seat to the rear feet, with a pin where they cross.
-    Option `back`: `:uprights` (a back of thin uprights with lashing) or
-    `:bars` (a back of culms across, on the front of the posts);
+    the front of the seat to the rear feet, with a pin at each side where
+    they cross. The rear legs and the seat turn on hinges, and the clip
+    `fold` folds the chair flat and opens it again. Option `back`:
+    `:uprights` (a back of thin uprights with lashing) or `:bars` (a back
+    of culms across, on the front of the posts);
   - `armchair/1`: an armchair of thick culms with arms, a seat of slats
     on two rails at each side, and a back that leans. Options `back`
     (`:slats` or `:lattice`), `width` and `panels`: a bench (ghế băng) is
@@ -120,107 +122,174 @@ defmodule World.Furniture.Bamboo do
 
   @doc """
   A folding chair on two frames in an X (photos: Siêu Thị Tre Trúc, Home
-  eGreen). Options: `name`, `back` (`:uprights` or `:bars`).
+  eGreen) that folds flat. Options: `name`, `back` (`:uprights` or
+  `:bars`).
+
+  The posts of the back go down to the front feet; the rear legs are
+  outside the posts and turn on a pin at each side where the two frames
+  cross (the joint `rear_legs_NAME`). The seat is inside the posts and
+  turns on its rear rail, which goes through the posts (the joint
+  `seat_NAME`); its front rests on the top rail of the rear legs. Folded
+  (the clip `fold`), the rear legs and the seat lie along the posts. The
+  rails of the rear legs and the low rail of the posts are on a face of
+  their legs, at the back of the chair when it is folded, so that no
+  rail goes through a leg of the other frame.
   """
   def folding(opts \\ []) do
     name = Keyword.get(opts, :name, "ghe_tre_xep")
     back = Keyword.get(opts, :back, :uprights)
-    {xa, xb, d} = {0.2, 0.165, 0.035}
+    {xa, xb, d} = {0.2, 0.24, 0.035}
     r = d / 2
+    {sr, t, rt} = {0.015, 0.006, 0.0125}
+    x = {1.0, 0.0, 0.0}
     # The posts: from the front foot up to the top of the back.
     {foot, top} = grounded({0.0, 0.2, 0.0}, {0.0, -0.12, 0.88}, r)
     post = fn s, px -> Vec.add(Vec.add(foot, Vec.scale(Vec.sub(top, foot), s)), {px, 0.0, 0.0}) end
     up = Vec.norm(Vec.sub(top, foot))
     plen = Vec.len(Vec.sub(top, foot))
-    # The rear legs: from under the front of the seat to the rear foot.
-    {b_foot, b_top} = grounded({0.0, -0.22, 0.0}, {0.0, 0.3, 0.41}, r)
+    n = Vec.cross(up, x)
+    # The seat: its rim at 0.425 m, from the rear rail on the posts to
+    # the front rail.
     seat_z = 0.425
-    s_seat = seat_z / 0.88
-    rear_y = elem(post.(s_seat, 0.0), 1)
+    y0 = elem(post.((seat_z - elem(foot, 2)) / (elem(top, 2) - elem(foot, 2)), 0.0), 1)
+    y1 = 0.32
+    # The rear legs: from the rear foot up to under the front of the seat,
+    # with the top rail on their back face, under the front rail.
+    rail_top = {0.0, y1, seat_z - sr - rt}
+    {b_foot, b_top} = rear_legs({0.0, -0.22, 0.0}, rail_top, r, r + rt)
+    b_dir = Vec.norm(Vec.sub(b_top, b_foot))
+    behind_b = Vec.scale(Vec.cross(b_dir, x), -1.0)
     pin = cross(foot, top, b_top, b_foot)
 
-    frame =
+    posts =
       for(px <- [-xa, xa], do: Culm.piece(post.(0.0, px), post.(1.0, px), d: d, ends: {:open, :node}, phase: 0.4)) ++
-        for(
-          px <- [-xb, xb],
-          do: Culm.piece(Vec.add(b_foot, {px, 0.0, 0.0}), Vec.add(b_top, {px, 0.0, 0.0}), d: d, ends: {:open, :node})
-        ) ++
         [
-          rail(post.(0.11, -xa), post.(0.11, xa), r, d: 0.022),
           rail(
-            Vec.add(along(b_foot, b_top, 0.25), {-xb, 0.0, 0.0}),
-            Vec.add(along(b_foot, b_top, 0.25), {xb, 0.0, 0.0}),
-            r,
-            d: 0.022
-          ),
-          rail({-xa, elem(pin, 1), elem(pin, 2)}, {xa, elem(pin, 1), elem(pin, 2)}, r,
-            d: 0.012,
-            over: 0.006,
-            ends: {:node, :node}
+            Vec.sub(post.(0.11, -xa), Vec.scale(n, r + 0.011)),
+            Vec.sub(post.(0.11, xa), Vec.scale(n, r + 0.011)),
+            0.0,
+            d: 0.022,
+            over: r
           )
+        ] ++
+        for(
+          sx <- [-1, 1],
+          do:
+            Culm.piece(
+              {sx * (xa - r - 0.004), elem(pin, 1), elem(pin, 2)},
+              {sx * (xb + r + 0.006), elem(pin, 1), elem(pin, 2)},
+              d: 0.012,
+              ends: {:node, :node}
+            )
+        )
+
+    on_b = fn point, k -> Vec.add(point, Vec.scale(behind_b, k)) end
+    low = along(b_foot, b_top, 0.25)
+
+    rear =
+      for(
+        px <- [-xb, xb],
+        do: Culm.piece(Vec.add(b_foot, {px, 0.0, 0.0}), Vec.add(b_top, {px, 0.0, 0.0}), d: d, ends: {:open, :node})
+      ) ++
+        [
+          rail(Vec.add(on_b.(low, r + 0.011), {-xb, 0.0, 0.0}), Vec.add(on_b.(low, r + 0.011), {xb, 0.0, 0.0}), 0.0,
+            d: 0.022,
+            over: r
+          ),
+          rail(Vec.add(rail_top, {-xb, 0.0, 0.0}), Vec.add(rail_top, {xb, 0.0, 0.0}), 0.0, d: 2 * rt, over: r)
         ]
 
-    # The seat: a rim of four culms (the rear rail through the posts, a
-    # side rail on each rear leg, the front rail through the side rails),
-    # and slats that fill the rim from rail to rail, their tops level with
-    # the top of the rim.
-    {sr, t} = {0.015, 0.006}
-    {y0, y1} = {rear_y + 0.01, elem(b_top, 1) + 0.02}
+    # The seat: a rim of four culms inside the posts (the rear rail
+    # through the posts, two side rails, the front rail), and slats that
+    # fill the rim from rail to rail, their tops level with the top of
+    # the rim.
+    xs = xa - r - sr - 0.002
 
     seat =
       [
-        rail({-xa, y0, seat_z}, {xa, y0, seat_z}, r, d: 2 * sr),
-        rail({-xb, y1, seat_z}, {xb, y1, seat_z}, sr, d: 2 * sr)
+        rail({-xa, y0, seat_z}, {xa, y0, seat_z}, r, d: 2 * sr, over: 0.004),
+        Culm.piece({-xs - sr, y1, seat_z}, {xs + sr, y1, seat_z}, d: 2 * sr, ends: {:open, :open})
       ] ++
         for(
-          px <- [-xb, xb],
+          px <- [-xs, xs],
           do: Culm.piece({px, y0 + sr, seat_z}, {px, y1 - sr, seat_z}, d: 2 * sr, ends: {:node, :node})
         ) ++
-        Panel.slats(
-          {{-(xb - sr), y0, seat_z + sr - t}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}},
-          y1 - y0,
-          2 * (xb - sr),
+        Panel.slats({{-(xs - sr), y0, seat_z + sr - t}, {0.0, 1.0, 0.0}, x, {0.0, 0.0, 1.0}}, y1 - y0, 2 * (xs - sr),
           width: 0.018,
           t: t,
           gap: 0.002
         )
 
-    n = Vec.cross(up, {1.0, 0.0, 0.0})
-
     backrest =
       case back do
         :uprights ->
           [
-            rail(post.(0.62, -xa), post.(0.62, xa), r, d: 0.025),
-            rail(post.(0.9, -xa), post.(0.9, xa), r, d: 0.025),
-            rail(post.(0.97, -xa), post.(0.97, xa), r, d: 0.022)
+            rail(post.(0.62, -xa), post.(0.62, xa), r, d: 0.025, over: 0.004),
+            rail(post.(0.9, -xa), post.(0.9, xa), r, d: 0.025, over: 0.004),
+            rail(post.(0.97, -xa), post.(0.97, xa), r, d: 0.022, over: 0.004)
           ] ++
-            Panel.culms(
-              {Vec.sub(post.(0.62, -(xa - r)), Vec.scale(n, 0.008)), up, {1.0, 0.0, 0.0}, n},
-              0.28 * plen,
-              2 * (xa - r),
+            Panel.culms({Vec.sub(post.(0.62, -(xa - r)), Vec.scale(n, 0.008)), up, x, n}, 0.28 * plen, 2 * (xa - r),
               d: 0.014,
               lash: [0.45, 0.8]
             )
 
         :bars ->
-          Panel.culms({Vec.add(post.(0.6, -0.235), Vec.scale(n, r)), {1.0, 0.0, 0.0}, up, n}, 0.47, 0.38 * plen,
+          Panel.culms({Vec.add(post.(0.6, -0.22), Vec.scale(n, r)), x, up, n}, 0.44, 0.38 * plen,
             d: 0.024,
             gap: 0.006,
             ends: {:open, :open}
           )
       end
 
-    build(name, "A folding chair of bamboo (ghế xếp) on two frames in an X, with a pin where they cross.", [
-      {"frame", frame, "The posts of the back down to the front feet and the rear legs, 35 mm, with a pin of 12 mm."},
-      {"seat", seat,
-       "A seat of slats from the back to the front, 18 by 6 mm, that fill a rim of four culms of 30 mm, level with its top."},
-      {"back", backrest,
-       if(back == :uprights,
-         do: "A back of uprights of 14 mm between two rails, with two rows of lashing.",
-         else: "A back of culms of 24 mm across, on the front of the posts."
-       )}
-    ])
+    # The angles of the fold: the rear legs and the seat turn to lie
+    # along the posts.
+    angle = fn {_, vy, vz} -> :math.atan2(vz, vy) * 180 / :math.pi() end
+    legs_fold = Float.round(angle.(up) - angle.(b_dir), 1)
+    seat_fold = Float.round(angle.(Vec.scale(up, -1.0)), 1)
+    {legs, chair_seat} = {"rear_legs_#{name}", "seat_#{name}"}
+
+    build(
+      name,
+      "A folding chair of bamboo (ghế xếp) on two frames in an X, with a pin at each side where they cross; it folds flat.",
+      [
+        {"frame", posts,
+         "The posts of the back down to the front feet, 35 mm, a low rail of 22 mm, two pins of 12 mm."},
+        {"rear_legs", rear,
+         "The rear legs of 35 mm, a low rail of 22 mm and a top rail of 25 mm under the front of the seat.",
+         hinge: {pin, [0, legs_fold]}},
+        {"seat", seat,
+         "A seat of slats from the back to the front, 18 by 6 mm, that fill a rim of four culms of 30 mm, level with its top.",
+         hinge: {{0.0, y0, seat_z}, [seat_fold, 0]}},
+        {"back", backrest,
+         if(back == :uprights,
+           do: "A back of uprights of 14 mm between two rails, with two rows of lashing.",
+           else: "A back of culms of 24 mm across, on the front of the posts."
+         )}
+      ],
+      [
+        %{
+          name: "fold",
+          length: 3.0,
+          keys: [
+            {0.0, %{legs => 0.0, chair_seat => 0.0}},
+            {1.5, %{legs => legs_fold, chair_seat => seat_fold}},
+            {3.0, %{legs => 0.0, chair_seat => 0.0}}
+          ]
+        }
+      ]
+    )
+  end
+
+  # The rear legs from their foot to a top under the top rail at `rail`,
+  # with the axis of the rail `off` from the axis of the legs, on their
+  # back face: a few steps, since the face depends on the slope of the
+  # legs. The foot stands level (`grounded/3`).
+  defp rear_legs(foot0, rail, r, off) do
+    Enum.reduce(1..4, {foot0, rail}, fn _, {foot, top} ->
+      dir = Vec.norm(Vec.sub(top, foot))
+      back = Vec.scale(Vec.cross(dir, {1.0, 0.0, 0.0}), -1.0)
+      grounded(foot0, Vec.sub(rail, Vec.scale(back, off)), r)
+    end)
   end
 
   @doc """
@@ -359,16 +428,40 @@ defmodule World.Furniture.Bamboo do
   end
 
   # The assembly: the first group is the root, the others are on it.
-  defp build(name, about, [{root, shapes, note} | rest]) do
-    part = fn group, meshes, text -> Part.new("#{group}_#{name}", group_kind(group), meshes, [@o], sources: [text]) end
+  # A group with `hinge: {point, limits}` turns about the line along x
+  # through the point: the joint of its name, of the role `:fold`.
+  defp build(name, about, [{root, shapes, note} | rest], clips \\ []) do
+    hinge = fn at -> Part.port("hinge", at, {1, 0, 0}, {0, 0, 1}) end
 
-    Enum.reduce(
-      rest,
-      Assembly.new(name, part.(root, shapes, note), root: "#{root}_#{name}", kind: :bamboo, sources: [about, @source]),
-      fn {group, meshes, text}, asm ->
-        Assembly.add(asm, "#{group}_#{name}", part.(group, meshes, text), at: "o", port: "o")
-      end
-    )
+    part = fn group, meshes, text, ports ->
+      Part.new("#{group}_#{name}", group_kind(group), meshes, [@o | ports], sources: [text])
+    end
+
+    hinges = for {group, _, _, opts} <- rest, {at, _} <- [opts[:hinge]], do: %{hinge.(at) | name: "#{group}_hinge"}
+
+    asm =
+      Assembly.new(name, part.(root, shapes, note, hinges),
+        root: "#{root}_#{name}",
+        kind: :bamboo,
+        sources: [about, @source],
+        clips: clips
+      )
+
+    Enum.reduce(rest, asm, fn
+      {group, meshes, text}, asm ->
+        Assembly.add(asm, "#{group}_#{name}", part.(group, meshes, text, []), at: "o", port: "o")
+
+      {group, meshes, text, opts}, asm ->
+        {at, limits} = opts[:hinge]
+
+        Assembly.add(asm, "#{group}_#{name}", part.(group, meshes, text, [hinge.(at)]),
+          at: "#{group}_hinge",
+          port: "hinge",
+          kind: :hinge,
+          role: :fold,
+          limits: limits
+        )
+    end)
   end
 
   defp group_kind("frame"), do: :frame
