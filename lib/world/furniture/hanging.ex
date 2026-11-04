@@ -86,7 +86,9 @@ defmodule World.Furniture.Hanging do
       {"vong_luoi_cafe_person", fn -> cafe(person: true, name: "vong_luoi_cafe_person") end},
       {"swing_plank_person", fn -> plank_swing(person: true, name: "swing_plank_person") end},
       {"swing_porch_person", fn -> porch_swing(person: true, name: "swing_porch_person") end},
-      {"egg_chair_person", fn -> egg_chair(person: true, name: "egg_chair_person") end}
+      {"egg_chair_person", fn -> egg_chair(person: true, name: "egg_chair_person") end},
+      {"swing_tire_person", fn -> tire_swing(person: true, name: "swing_tire_person") end},
+      {"hammock_spreader_canvas_person", fn -> spreader(person: true, name: "hammock_spreader_canvas_person") end}
     ]
 
   @doc """
@@ -865,7 +867,7 @@ defmodule World.Furniture.Hanging do
   ring, and a chain from the ring to a tree strap, the trees 15 ft apart
   (Sunnydaze, the rope hammock with spreader bars: the anchors about 15
   ft apart). Options: `bed` (`:cloth`, a canvas; `:net`, a bed of rope),
-  `name`.
+  `name`, `person` (true: a person lies along it).
   """
   def spreader(opts \\ []) do
     bed = Keyword.get(opts, :bed, :cloth)
@@ -877,7 +879,8 @@ defmodule World.Furniture.Hanging do
     # bars hangs flatter than a gathered one.
     span = 0.9 * length
     reach = d - trunk
-    sag = Bed.sag(span, length)
+    load = if Keyword.get(opts, :person, false), do: @body_load
+    sag = Bed.sag(span, length, load)
     # The cords of the ends go from the bar to the ring along the bed; the
     # chain from the ring to the strap at 30 degrees.
     drop = @tan30 * (reach / 2 - span / 2 - fan)
@@ -886,7 +889,7 @@ defmodule World.Furniture.Hanging do
     z = anchor - drop
     {e1, e2} = {{-span / 2, 0.0, z}, {span / 2, 0.0, z}}
     {r1, r2} = {{-span / 2 - fan, 0.0, z}, {span / 2 + fan, 0.0, z}}
-    surface = Bed.surface(e1, e2, length: length, width: width, ends: :spread)
+    surface = Bed.surface(e1, e2, length: length, width: width, ends: :spread, load: load)
 
     beds =
       case bed do
@@ -931,6 +934,7 @@ defmodule World.Furniture.Hanging do
     new(name, site, "A hammock with spreader bars between two trees.", materials: colors)
     |> fixed([other | loops])
     |> swing2("bed_#{name}", hammock, a1, a2)
+    |> then(fn a -> if load, do: lie(a, "bed_#{name}", surface), else: a end)
   end
 
   @doc """
@@ -991,9 +995,11 @@ defmodule World.Furniture.Hanging do
   @doc """
   A tire swing on a branch (the guides of a tire swing: three chains to a
   swivel, the tire about 30 in over the ground): a tire 225/60R16 on its
-  side, three chains to the swivel, one rope of 18 mm from the swivel to
-  a branch of 8 in at 10 ft (HGTV). It swings about the knot on the branch (two
-  hinges) and spins on its swivel. Options: `name`.
+  side, three chains to the swivel at 2 m (over the head of an adult who
+  sits on the tire, by eye), one rope of 18 mm from the swivel to a
+  branch of 8 in at 10 ft (HGTV). It swings about the knot on the branch (two
+  hinges) and spins on its swivel. Options: `name`, `person` (true: a
+  person sits on it).
   """
   def tire_swing(opts \\ []) do
     name = Keyword.get(opts, :name, "swing_tire")
@@ -1001,7 +1007,7 @@ defmodule World.Furniture.Hanging do
     knot = {0.0, 0.0, branch - @branch_r}
     tire = World.Vehicles.Wheels.tire("225/60R16")
     {low, height} = {30 * 0.0254, 0.225}
-    swivel_at = {0.0, 0.0, 1.45}
+    swivel_at = {0.0, 0.0, 2.0}
     {top, bottom} = Rig.swivel("swivel_#{name}", swivel_at)
     {sx, sy, sz} = swivel_at
 
@@ -1041,6 +1047,28 @@ defmodule World.Furniture.Hanging do
     ])
     |> swing1("swing_#{name}", knot, [rope, top], limits: [-45, 45])
     |> spin("spin_#{name}", swivel_at, [bottom, hanging, %{flat | name: "tire_#{name}"}], to: "swing_#{name}_y")
+    # A person on the tread of the tire between two chains, the face out,
+    # the hands on the two chains at the height of the chest.
+    |> then(fn a ->
+      if Keyword.get(opts, :person, false) do
+        top_z = low + height
+        hips = {-0.26, 0.0, top_z + 0.09}
+
+        on_chain = fn k, z ->
+          ang = 2 * :math.pi() * k / 3
+          t = (sz - 0.045 - z) / (sz - 0.045 - top_z)
+          {rim * :math.cos(ang) * t, rim * :math.sin(ang) * t, z}
+        end
+
+        sit(a, "spin_#{name}", hips,
+          front: {-1.0, 0.0, 0.0},
+          grips: [{"l", on_chain.(2, top_z + 0.45)}, {"r", on_chain.(1, top_z + 0.45)}],
+          pose: %{"calf_l" => [{{1.0, 0.0, 0.0}, -75}], "calf_r" => [{{1.0, 0.0, 0.0}, -75}]}
+        )
+      else
+        a
+      end
+    end)
   end
 
   @doc """
