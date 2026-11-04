@@ -96,8 +96,11 @@ into the steps of `AGENTS.md`.
   body of mid are cut in sixteen; the faces around them take the new
   points of their edges as polygons, and show small creases under the
   bust. A cut in four of the ring around (one more ring, one step).
-- **Renders next to photos.** The check of step P1 wants renders of the
-  áo dài and the bra next to photos of real ones, at near and mid.
+- **The faults of the renders next to photos (step P1).** At mid the
+  áo dài has no panels: the clothes are colors on the body there, so the
+  áo dài is a suit that fits the body; a mid level of the panels (a few
+  faces) can stay. The bra has no shoulder straps. The quần is narrower
+  than the wide legs of the photos.
 - **A hood up.** The rain shell of World has its hood folded at the
   back of the neck. A hood over the head needs room for the hair, and
   a cut for the face.
@@ -173,6 +176,22 @@ into the steps of `AGENTS.md`.
   branch `feat/0023-gpu-instancing`. Still to do there: the joint nodes
   and the levels of detail of a GLB of World. A model with no instances
   is a build with `instances: false` (`World.Build.scene/2`).
+
+- **More of the nursery.** The foliage of the clump of bamboo and of the
+  frangipani is less dense than in the photos (cards of leaves, not a
+  mass of leaves). Plumeria obtusa (evergreen) next to P. rubra; the
+  bunch of a banana as hands of a real shape; a wind that moves the
+  leaves (an animation).
+- **More of the streets from OpenStreetMap.** The data of Vũng Tàu is
+  sparse: no building of the block of Ba Cu has a height or a roof
+  shape, only 10 have levels, and many buildings are not in the data.
+  The blueprints of the tube houses on the footprints (W1), the roofs,
+  the sidewalks and the trees of their species. A tile of the data of the
+  owner of the game (photos of the street) can correct the levels.
+- **The sizes of TCVN 9366-1:2012.** The doors and the windows of Việt Nam
+  have their sizes in TCVN 9366-1:2012 (Table 1), which has no open copy;
+  the table of World has the least door of an exit (TCVN 4451:2012) and
+  the sizes of the market.
 
 ## For Vũng Tàu
 
