@@ -82,7 +82,11 @@ defmodule World.Furniture.Hanging do
       {"swing_plank", fn -> plank_swing() end},
       {"swing_tire", fn -> tire_swing() end},
       {"swing_porch", fn -> porch_swing() end},
-      {"egg_chair", fn -> egg_chair() end}
+      {"egg_chair", fn -> egg_chair() end},
+      {"vong_luoi_cafe_person", fn -> cafe(person: true, name: "vong_luoi_cafe_person") end},
+      {"swing_plank_person", fn -> plank_swing(person: true, name: "swing_plank_person") end},
+      {"swing_porch_person", fn -> porch_swing(person: true, name: "swing_porch_person") end},
+      {"egg_chair_person", fn -> egg_chair(person: true, name: "egg_chair_person") end}
     ]
 
   @doc """
@@ -109,7 +113,7 @@ defmodule World.Furniture.Hanging do
   The võng of a café between two posts (photos: Cà Phê Võng, Vietnam
   Coracle): its ends gathered, a rope from each end to a post. Options:
   `bed` (`:net`, a net of nylon cord, or `:cloth`, parachute nylon),
-  `color`, `name`.
+  `color`, `name`, `person` (true: a person lies along it, `lie/4`).
   """
   def cafe(opts \\ []) do
     bed = Keyword.get(opts, :bed, :net)
@@ -120,10 +124,11 @@ defmodule World.Furniture.Hanging do
     # cm, by eye.
     {d, post} = {2.8, 0.12}
     {length, width} = if bed == :net, do: {1.8, 1.42}, else: {2.2, 1.2}
-    h = hang(d - post, length, 0.45)
+    load = if Keyword.get(opts, :person, false), do: @body_load
+    h = hang(d - post, length, 0.45, nil, load)
     {a1, a2} = {{-(d - post) / 2, 0.0, h.anchor}, {(d - post) / 2, 0.0, h.anchor}}
     {e1, e2} = {{-h.span / 2, 0.0, h.anchor - h.drop}, {h.span / 2, 0.0, h.anchor - h.drop}}
-    surface = Bed.surface(e1, e2, length: length, width: width, ends: :gathered)
+    surface = Bed.surface(e1, e2, length: length, width: width, ends: :gathered, load: load)
     color = Keyword.get(opts, :color, if(bed == :net, do: [24, 92, 150], else: [20, 120, 130]))
 
     # The net: a mesh of about 3.5 cm (by eye). The cloth: a hem of 2 cm
@@ -167,6 +172,8 @@ defmodule World.Furniture.Hanging do
       materials: %{fabric: color, dark: Enum.map(color, &round(&1 * 0.6))}
     )
     |> swing2("bed_#{name}", swinging, a1, a2)
+    # A person lies along the võng (the way of the cafés).
+    |> then(fn a -> if load, do: lie(a, "bed_#{name}", surface), else: a end)
   end
 
   @doc """
@@ -611,7 +618,8 @@ defmodule World.Furniture.Hanging do
     |> fixed([other | loops] ++ cover)
     # In the bug net, the hammock swings only a little (by eye).
     |> swing2("bed_#{name}", bed, a1, a2, straps ++ carabiners, limits: if(shelter?, do: [-8, 8], else: [-30, 30]))
-    |> then(fn a -> if person?, do: lie(a, "bed_#{name}", surface), else: a end)
+    # The diagonal lay: 15 degrees across the bed (The Ultimate Hang).
+    |> then(fn a -> if person?, do: lie(a, "bed_#{name}", surface, 15), else: a end)
   end
 
   @doc """
@@ -622,24 +630,36 @@ defmodule World.Furniture.Hanging do
   hips bend by the two angles), the knees and the neck bend a little,
   the arms lie along the sides (by eye). The person of `World.People.man/0`.
   """
-  def lie(asm, bed, surface) do
-    at = fn x -> surface.({x, 0.0}) end
-    # The middle line of the bed: u from 0 to 1; its points by x.
-    line = for i <- 0..200, do: at.(i / 200)
-    z_at = fn x -> line |> Enum.min_by(fn {px, _, _} -> abs(px - x) end) |> elem(2) end
+  def lie(asm, bed, surface, angle \\ 0) do
+    {x1, _, _} = surface.({0.0, 0.0})
+    {x2, _, _} = surface.({1.0, 0.0})
+    # The height of the bed at a point {x, y}: u from x, v from y over the
+    # half width of the bed at u.
+    height = fn x, y ->
+      u = min(max((x - x1) / (x2 - x1), 0.0), 1.0)
+      {_, half, _} = surface.({u, 1.0})
+      elem(surface.({u, min(max(y / max(half, 0.01), -1.0), 1.0)}), 2)
+    end
+
+    line = for i <- 0..200, do: surface.({i / 200, 0.0})
     {x_low, _, _} = Enum.min_by(line, &elem(&1, 2))
-    xh = x_low - 0.08
-    slope = fn dx -> :math.atan2(z_at.(xh + dx) - z_at.(xh), abs(dx)) end
+    # The head to -x, turned by `angle` (the diagonal lay): the line of
+    # the body through the lowest point.
+    a = angle * :math.pi() / 180
+    head = {-:math.cos(a), -:math.sin(a), 0.0}
+    {hx, hy, _} = Vec.add({x_low, 0.0, 0.0}, Vec.scale(head, 0.08))
+    z = fn s -> height.(hx + s * elem(head, 0), hy + s * elem(head, 1)) end
+    slope = fn s -> :math.atan2(z.(s) - z.(0.0), abs(s)) end
     # The torso along the bed to the shoulders, the legs along the bed to
     # the heels.
-    {torso, thigh} = {slope.(-0.5), slope.(0.85)}
+    {torso, thigh} = {slope.(0.5), slope.(-0.85)}
     deg = 180 / :math.pi()
     # The hips 10 cm over the bed, across the line of the torso.
-    hips = {xh + 0.1 * :math.sin(torso), 0.0, z_at.(xh) + 0.1 * :math.cos(torso)}
+    hips = Vec.add({hx, hy, z.(0.0) + 0.1 * :math.cos(torso)}, Vec.scale(head, -0.1 * :math.sin(torso)))
     # The hips port of the person (z up, y to its front) onto this port:
     # its up to the head, its front to the sky.
-    up = {-:math.cos(torso), 0.0, :math.sin(torso)}
-    front = {:math.sin(torso), 0.0, :math.cos(torso)}
+    up = Vec.add(Vec.scale(head, :math.cos(torso)), {0.0, 0.0, :math.sin(torso)})
+    front = Vec.add(Vec.scale(head, -:math.sin(torso)), {0.0, 0.0, :math.cos(torso)})
     x = {1.0, 0.0, 0.0}
 
     pose = %{
@@ -654,8 +674,50 @@ defmodule World.Furniture.Hanging do
       "lowerarm_r" => [{x, 15}]
     }
 
-    person = World.People.Human.person("person", age: 35, height: 0.55, muscle: 0.55, pose: pose)
-    Assembly.add(asm, "person", person, to: bed, at: Part.port("lie", hips, up, front), port: "hips")
+    Assembly.add(asm, "person", person(pose), to: bed, at: Part.port("lie", hips, up, front), port: "hips")
+  end
+
+  # The person of the hammock shop (`World.People.man/0`), in a pose.
+  @person [age: 35, height: 0.55, muscle: 0.55]
+  defp person(pose), do: World.People.Human.person("person", Keyword.put(@person, :pose, pose))
+
+  @doc """
+  A person who sits on the node `node` (a seat, a bench, a basket), the
+  hips at `hips`, the front to `front` (a vector on the level, `+y` by
+  default), the body back by `recline` degrees (0): the pose `"sit"` of
+  `World.People.Pose`, with the changes of `pose`, and the hands to the points of `grips` (`{side, point}`, in the
+  axes of the model; the hand closes on a rope). The person swings with
+  the node.
+  """
+  def sit(asm, node, hips, opts \\ []) do
+    front = Keyword.get(opts, :front, {0.0, 1.0, 0.0})
+    # The point of a hand in the axes of the person (its hips at the head
+    # of its pelvis, `World.People.Human.skeleton/1`).
+    h0 = Enum.find(World.People.Human.skeleton(@person).bones, &(&1.name == "pelvis")).head
+    side = Vec.cross(front, {0.0, 0.0, 1.0})
+
+    local = fn p ->
+      d = Vec.sub(p, hips)
+      Vec.add(h0, {Vec.dot(d, side), Vec.dot(d, front), elem(d, 2)})
+    end
+
+    grips =
+      for {s, p} <- Keyword.get(opts, :grips, []), into: %{} do
+        {{:limb, "arm_#{s}"}, %{at: local.(p)}}
+      end
+
+    hands = for {s, _} <- Keyword.get(opts, :grips, []), into: %{}, do: {{:hand, String.to_existing_atom(s)}, "grip"}
+
+    pose =
+      World.People.Pose.resolve("sit")
+      |> Map.merge(Keyword.get(opts, :pose, %{}))
+      |> Map.merge(grips)
+      |> Map.merge(hands)
+
+    r = Keyword.get(opts, :recline, 0) * :math.pi() / 180
+    up = Vec.add(Vec.scale({0.0, 0.0, 1.0}, :math.cos(r)), Vec.scale(front, -:math.sin(r)))
+    ahead = Vec.add(Vec.scale(front, :math.cos(r)), Vec.scale({0.0, 0.0, 1.0}, :math.sin(r)))
+    Assembly.add(asm, "person", person(pose), to: node, at: Part.port("sit", hips, up, ahead), port: "hips")
   end
 
   @doc """
@@ -878,7 +940,8 @@ defmodule World.Furniture.Hanging do
   25 by 60 cm for an adult), 3 cm thick, at 60 cm (Corderie Mansas: 60
   cm for an adult), on two ropes of 18 mm (the polypropylene rope of the
   tall tree swing of Masters of Games) 5 cm in from its ends. It swings
-  about the line through the two knots on the branch. Options: `name`.
+  about the line through the two knots on the branch. Options: `name`, `person` (true: a person
+  sits on it, `sit/4`).
   """
   def plank_swing(opts \\ []) do
     name = Keyword.get(opts, :name, "swing_plank")
@@ -912,6 +975,17 @@ defmodule World.Furniture.Hanging do
       role: :swing,
       limits: [-60, 60]
     )
+    # A person on the board, the hands on the ropes at the height of the
+    # chest, the feet off the ground (the seat of an adult at 60 cm).
+    |> then(fn a ->
+      if Keyword.get(opts, :person, false),
+        do:
+          sit(a, "seat_#{name}", {0.0, -0.03, seat + 0.09},
+            grips: [{"l", {-gap / 2, 0.0, seat + 0.45}}, {"r", {gap / 2, 0.0, seat + 0.45}}],
+            pose: %{"calf_l" => [{{1.0, 0.0, 0.0}, -60}], "calf_r" => [{{1.0, 0.0, 0.0}, -60}]}
+          ),
+        else: a
+    end)
   end
 
   @doc """
@@ -975,7 +1049,8 @@ defmodule World.Furniture.Hanging do
   cm, the seat at 18 in, on a chain at each side from an eye hook in the
   joist of the ceiling, the chain parted into two over the bench (a Y), to
   the front and the back of its side. It swings about the line through
-  the two hooks. Options: `name`.
+  the two hooks. Options: `name`, `person` (true: a person
+  sits on it).
   """
   def porch_swing(opts \\ []) do
     name = Keyword.get(opts, :name, "swing_porch")
@@ -1034,6 +1109,10 @@ defmodule World.Furniture.Hanging do
     )
     |> fixed(hooks)
     |> swing2("bench_#{name}", bench, h1, h2, [], role: :swing, limits: [-25, 25])
+    # A person on the bench, the back near the slats of the back.
+    |> then(fn a ->
+      if Keyword.get(opts, :person, false), do: sit(a, "bench_#{name}", {0.0, -depth / 2 + 0.14, seat + 0.09}), else: a
+    end)
   end
 
   @doc """
@@ -1044,7 +1123,8 @@ defmodule World.Furniture.Hanging do
   from the hook at the top of a C stand of steel tube. It swings about
   the hook (two hinges), bounces on its spring (a slide down, to the
   stretch of the spring at its rated load of 317.5 kg) and spins on its
-  swivel. Options: `color`, `name`.
+  swivel. Options: `color`, `name`, `person`
+  (true: a person sits in it).
   """
   def egg_chair(opts \\ []) do
     name = Keyword.get(opts, :name, "egg_chair")
@@ -1101,6 +1181,22 @@ defmodule World.Furniture.Hanging do
       limits: [0, Rig.stretch(317.5)]
     )
     |> spin("spin_#{name}", swivel_at, [bottom_half, basket], to: "bounce_#{name}")
+    # A person on the cushion, the back against the back of the basket
+    # (25 degrees back, by eye), the legs out of its front.
+    |> then(fn a ->
+      if Keyword.get(opts, :person, false),
+        do:
+          sit(a, "spin_#{name}", {0.0, -0.03, low + 0.12 * bh + 0.08 + 0.09},
+            recline: 25,
+            pose: %{
+              "thigh_l" => [{{1.0, 0.0, 0.0}, 80}],
+              "thigh_r" => [{{1.0, 0.0, 0.0}, 80}],
+              "calf_l" => [{{1.0, 0.0, 0.0}, -70}],
+              "calf_r" => [{{1.0, 0.0, 0.0}, -70}]
+            }
+          ),
+        else: a
+    end)
   end
 
   # The basket of an egg chair: ribs of wicker over an egg, from the seat

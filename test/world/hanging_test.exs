@@ -215,6 +215,35 @@ defmodule World.HangingTest do
     assert_raise ArgumentError, ~r/no node none/, fn -> Build.scene(bad) end
   end
 
+  test "people on the swings and in the beds: the diagonal lay, the hands on the ropes, the back in the basket" do
+    place = fn item ->
+      {_, person, c} = List.keyfind(item.nodes, "person", 0)
+      f = Frame.compose(World.Port.frame(c.at), Frame.invert(World.Figure.port_frame(person, "hips")))
+      {person, c, fn n -> Frame.point(f, World.Figure.port_frame(person, n).at) end}
+    end
+
+    # The camping hammock: the head 15 degrees off the middle line.
+    {_, _, at} = place.(Detail.with(:far, fn -> Hanging.camping(person: true, name: "p") end))
+    {hx, hy, _} = Vec.sub(at.("crown"), at.("hips"))
+    assert_in_delta :math.atan2(-hy, -hx) * 180 / :math.pi(), 15, 3
+
+    # The plank swing: the hands close on the ropes, the person on the seat.
+    {person, c, at} = place.(Detail.with(:far, fn -> Hanging.plank_swing(person: true) end))
+    assert c.to == "seat_swing_plank"
+    # The hand closes: its fingers turn (the shape "grip").
+    assert Map.has_key?(person.pose, "index_01_l")
+    {gx, _, gz} = at.("grip_l")
+    assert_in_delta gx, -0.25, 0.08
+    assert_in_delta gz, 1.05, 0.1
+
+    # The egg chair: the person leans back, on the node that spins.
+    {_, c, at} = place.(Detail.with(:far, fn -> Hanging.egg_chair(person: true) end))
+    assert c.to == "spin_egg_chair"
+    assert elem(at.("crown"), 1) < elem(at.("hips"), 1) - 0.2
+    {_, c, _} = place.(Detail.with(:far, fn -> Hanging.porch_swing(person: true) end))
+    assert c.to == "bench_swing_porch"
+  end
+
   test "the shelter of a camping hammock: a tarp and a bug net on the site, over the hammock" do
     item = Hanging.camping(shelter: true, name: "s")
     names = for {_, p, _} <- item.nodes, do: p.name
