@@ -31,8 +31,9 @@ defmodule World.Furniture.Hanging do
   - `cafe/1`: the võng of the cafés of the South between two posts: a net
     of cords (`bed: :net`) or a cloth of parachute nylon (võng dù, `bed:
     :cloth`);
-  - `vong_xep/1`: the võng xếp, a net on two short bars on a stand of
-    steel tube;
+  - `vong_xep/1`: the võng xếp, a net on two short bars on the frame of
+    steel of Duy Lợi; `vong_xep_frame/1`, the frame alone as it folds;
+  - `iron_stand/1`: a stand of iron tube in arches, with the same net;
   - `camping/1`: a camping hammock between two trees: tree straps,
     carabiners and a ridgeline;
   - `spreader/1`: a hammock with spreader bars between two trees: a
@@ -66,6 +67,8 @@ defmodule World.Furniture.Hanging do
       {"vong_luoi_cafe", fn -> cafe() end},
       {"vong_du_cafe", fn -> cafe(bed: :cloth, name: "vong_du_cafe") end},
       {"vong_xep", fn -> vong_xep() end},
+      {"vong_xep_frame", fn -> vong_xep_frame() end},
+      {"hammock_stand_iron", fn -> iron_stand() end},
       {"hammock_camping", fn -> camping() end},
       {"hammock_camping_shelter", fn -> camping(shelter: true, name: "hammock_camping_shelter") end},
       {"hammock_camping_packed", fn -> camping_packed() end},
@@ -159,15 +162,216 @@ defmodule World.Furniture.Hanging do
   end
 
   @doc """
-  The võng xếp (photo: Sturdy Iron Frame Hammock, Alibaba): a stand of
-  steel tube of 27 mm (the frame of a võng xếp of Duy Phương: phi 27,
-  Meta.vn), 2.5 by 1.0 by 0.9 m (the large võng xếp of Duy Lợi, FPTShop),
-  and a net of 180 by 142 cm on a bar of wood of 50 cm at each end (the
-  net of Bản Mai, gỗ 50 cm, Meta.vn), on two cords to the hook at each
-  end. Options: `color`, `name`.
+  The võng xếp of Duy Lợi (the large frame of steel: 260 by 75 by 71 cm,
+  6.3 kg, for 150 kg; demxanh.com) with a net of 180 by 142 cm on a bar of
+  wood of 50 cm at each end (the net of Bản Mai, gỗ 50 cm, Meta.vn), on
+  two cords to the hook at each end. The frame (`vong_xep_frame/1`) is
+  locked open while the net is on it. Options: `color`, `name`.
   """
   def vong_xep(opts \\ []) do
     name = Keyword.get(opts, :name, "vong_xep")
+    {asm, a1, a2} = duy_loi(name, false)
+
+    asm
+    |> Map.update!(:materials, &Map.put(&1, :fabric, color(Keyword.get(opts, :color, [40, 150, 80]))))
+    |> swing2("net_#{name}", bar_net(name, a1, a2, 1.7), a1, a2)
+  end
+
+  @doc """
+  The frame of the võng xếp alone, as it folds (Duy Lợi, the steps to
+  fold it: the net off, the two ends of the frame in to the middle, then
+  the frame into its bag): the four struts turn down onto the side
+  tubes, then the two arms turn in onto the base, the right one over the
+  left one. The clip `fold` folds it and opens it again. Options: `name`.
+  """
+  def vong_xep_frame(opts \\ []) do
+    name = Keyword.get(opts, :name, "vong_xep_frame")
+    {asm, _, _} = duy_loi(name, true)
+    asm
+  end
+
+  # The frame of steel of a võng xếp of Duy Lợi (the large one: 260 by 75
+  # by 71 cm): a base of two side tubes on four rubber feet, 1.1 m long
+  # (the length of a folded võng xếp: 1 to 1.13 m), with a crossbar at
+  # each end and the fan brace in the middle (it sets the width); at each
+  # end an arm, a V of two legs that lean out from the ends of the base to
+  # the hook at its tip; four struts with two bends from the base to the
+  # legs. The tube of 32 by 0.8 mm (the frame of Bản Mai, D32 x 0.8 mm,
+  # Meta.vn). With `fold`, the struts and the arms turn on their pins
+  # (hinges of the role `:fold`), and the clip `fold`; else all of it is
+  # fixed. Gives the assembly and the two hooks.
+  defp duy_loi(name, fold) do
+    {len, wid, hgt, lb, r, foot} = {2.6, 0.75, 0.71, 1.1, 0.016, 0.012}
+    tube = fn pts -> Shape.sweep(pts, r, :steel, sides: 10) |> Mesh.skin(0.0008, :steel) end
+    {yb, zb} = {wid / 2 - r, foot + r}
+    base_end = fn sx, sy -> {sx * lb / 2, sy * yb, zb} end
+    tip = fn sx -> {sx * (len / 2 - 0.03), 0.0, hgt - 0.02} end
+    along = fn a, b, t -> Vec.add(a, Vec.scale(Vec.sub(b, a), t)) end
+
+    feet =
+      for sx <- [-1, 1], sy <- [-1, 1] do
+        Shape.cylinder(0.022, foot, :rubber, sides: 10, frame: World.Frame.move({sx * (lb / 2 - 0.02), sy * yb, 0.0}))
+        |> Mesh.matter(:rubber)
+      end
+
+    # The fan brace: a hub in the middle and four blades to the side tubes.
+    hub =
+      Shape.cylinder(0.04, 0.02, :steel, sides: 12, frame: World.Frame.move({0.0, 0.0, zb - 0.01}))
+      |> Mesh.matter(:steel)
+
+    blades = for sx <- [-1, 1], sy <- [-1, 1], do: tube.([{0.0, 0.0, zb}, {sx * 0.14, sy * yb, zb}])
+
+    base =
+      Part.new(
+        "base_#{name}",
+        :stand,
+        [hub | feet] ++
+          blades ++
+          for(sy <- [-1, 1], do: tube.([base_end.(-1, sy), base_end.(1, sy)])) ++
+          for(sx <- [-1, 1], do: tube.([{sx * (lb / 2 - 0.06), -yb, zb}, {sx * (lb / 2 - 0.06), yb, zb}])),
+        [@o],
+        sources: [
+          "The base of the frame of Duy Lợi (the large one: 260 by 75 by 71 cm, 6.3 kg; demxanh.com), 1.1 m long (a folded võng xếp: 1 to 1.13 m), the tube of 32 by 0.8 mm (Bản Mai, Meta.vn), the fan brace and the rubber feet; their sizes by eye."
+        ]
+      )
+
+    arms =
+      for {sx, s} <- [{-1, "left"}, {1, "right"}] do
+        legs = for sy <- [-1, 1], do: tube.([base_end.(sx, sy), tip.(sx)])
+        brace = tube.([along.(base_end.(sx, -1), tip.(sx), 0.65), along.(base_end.(sx, 1), tip.(sx), 0.65)])
+        {tx, _, tz} = tip.(sx)
+        cap = Rig.ring({tx, 0.0, tz - 0.018}, {1, 0, 0}, 0.012, 0.004)
+
+        Part.new("arm_#{s}_#{name}", :stand, legs ++ [brace, cap], [@o],
+          sources: [
+            "An arm of the frame: a V of two legs to the hook at its tip (the hook on a bearing, Duy Lợi), and the V brace near its tip; by eye."
+          ]
+        )
+      end
+
+    # A strut from the base at 20 cm from the middle, with two bends, to
+    # the middle of a leg.
+    struts =
+      for {sx, s} <- [{-1, "left"}, {1, "right"}], {sy, t} <- [{-1, "back"}, {1, "front"}] do
+        s0 = {sx * 0.2, sy * yb, zb}
+
+        {Part.new(
+           "strut_#{s}_#{t}_#{name}",
+           :stand,
+           [tube.([s0, Vec.add(s0, {sx * 0.08, 0.0, 0.12}), along.(base_end.(sx, sy), tip.(sx), 0.5)])],
+           [@o],
+           sources: ["A strut with two bends and its notches (Duy Lợi); by eye."]
+         ), s0, sx}
+      end
+
+    hooks = {Vec.add(tip.(-1), {0.0, 0.0, -0.03}), Vec.add(tip.(1), {0.0, 0.0, -0.03})}
+    about = "The frame of steel of a võng xếp (Duy Lợi)#{if fold, do: ", as it folds", else: ""}."
+    asm = new(name, base, about, site: false)
+
+    asm =
+      if fold do
+        # The angle of a strut or an arm over the level, to turn it down onto
+        # the base (less a little: it lies on the tubes).
+        lift = fn {x0, _, z0}, {x1, _, z1} -> :math.atan2(z1 - z0, abs(x1 - x0)) * 180 / :math.pi() end
+
+        asm =
+          Enum.reduce(struts, asm, fn {part, s0, sx}, a ->
+            angle = 180 - lift.(s0, along.(base_end.(sx, 1), tip.(sx), 0.5)) - 8
+            hinge(a, part, s0, sx * -angle, "base_#{name}")
+          end)
+
+        Enum.zip(arms, [-1, 1])
+        |> Enum.reduce(asm, fn {part, sx}, a ->
+          angle = 180 - lift.(base_end.(sx, 1), tip.(sx)) - if(sx == 1, do: 6, else: 3)
+          hinge(a, part, {sx * lb / 2, 0.0, zb}, sx * -angle, "base_#{name}")
+        end)
+        |> then(fn a ->
+          folded =
+            Map.new(
+              a.nodes
+              |> Enum.flat_map(fn {n, _, c} ->
+                if c && c.kind == :hinge, do: [{n, Enum.max_by(c.limits, &abs/1)}], else: []
+              end)
+            )
+
+          {struts_down, _} = Map.split_with(folded, fn {n, _} -> n =~ "strut_" end)
+          zeros = Map.new(folded, fn {n, _} -> {n, 0.0} end)
+
+          %{
+            a
+            | clips: [
+                %{
+                  name: "fold",
+                  length: 6.0,
+                  keys: [
+                    {0.0, zeros},
+                    {1.5, Map.merge(zeros, struts_down)},
+                    {3.0, folded},
+                    {4.5, Map.merge(zeros, struts_down)},
+                    {6.0, zeros}
+                  ]
+                }
+              ]
+          }
+        end)
+      else
+        fixed(asm, arms ++ Enum.map(struts, &elem(&1, 0)))
+      end
+
+    {asm, elem(hooks, 0), elem(hooks, 1)}
+  end
+
+  # A part on a hinge of the role `:fold` about the y axis at `at`, from 0
+  # to `angle` (degrees), on the node `to`.
+  defp hinge(asm, part, at, angle, to) do
+    port = Part.port("pin", at, {0, 1, 0}, {0, 0, 1})
+
+    Assembly.add(asm, part.name, %{part | ports: Map.put(part.ports, "pin", port)},
+      to: to,
+      at: %{port | name: part.name <> "_pin"},
+      port: "pin",
+      kind: :hinge,
+      role: :fold,
+      limits: Enum.sort([0, angle])
+    )
+  end
+
+  # The net of a võng xếp or of a stand: 180 by 142 cm on a bar of wood of
+  # 50 cm at each end, `span` between its bars, a fan of two cords from
+  # each bar to its hook (`a1`, `a2`).
+  defp bar_net(name, a1, a2, span) do
+    {length, bar} = {1.8, 0.5}
+    {{x1, _, z}, {x2, _, _}} = {a1, a2}
+    drop = @tan30 * (x2 - x1 - span) / 2
+    {e1, e2} = {{-span / 2, 0.0, z - drop}, {span / 2, 0.0, z - drop}}
+    surface = Bed.surface(e1, e2, length: length, width: 1.42, ends: {:bar, bar})
+
+    bars =
+      for {{x, _, zz}, a} <- [{e1, a1}, {e2, a2}] do
+        ends = [{x, -bar / 2, zz}, {x, bar / 2, zz}]
+
+        [
+          Shape.box({x - 0.012, -bar / 2 - 0.02, zz - 0.012}, {x + 0.012, bar / 2 + 0.02, zz + 0.012}, :wood)
+          |> Mesh.matter(:wood)
+          | Rig.fan(a, ends, d: 0.005)
+        ]
+      end
+
+    Part.new("net_#{name}", :bed, Bed.net(surface, strands: 40, knots: 44) ++ List.flatten(bars), [@o],
+      sources: [
+        "A net of nylon cord, 180 by 142 cm, on a bar of wood of 50 cm at each end (Bản Mai, gỗ 50 cm, Meta.vn); two cords of 5 mm to each hook."
+      ]
+    )
+  end
+
+  @doc """
+  A hammock stand of iron tube in arches (photo: Sturdy Iron Frame
+  Hammock, Alibaba): a stand of steel tube of 27 mm (phi 27, Duy Phương,
+  Meta.vn), 2.5 by 1.0 by 0.9 m, its posts bent into an arch at each end,
+  with the net of a võng xếp. Options: `color`, `name`.
+  """
+  def iron_stand(opts \\ []) do
+    name = Keyword.get(opts, :name, "hammock_stand_iron")
     {len, wid, hgt, tube} = {2.5, 1.0, 0.9, 0.027}
     r = tube / 2
     # The stand: two rails on the ground, three cross rails, and at each
@@ -193,45 +397,19 @@ defmodule World.Furniture.Hanging do
     stand =
       Part.new("stand_#{name}", :stand, rails ++ cross ++ posts, [@o],
         sources: [
-          "A stand of steel tube of 27 mm (phi 27, Duy Phương, Meta.vn), a wall of 1.5 mm (by eye), 2.5 by 1.0 by 0.9 m (Duy Lợi, FPTShop)."
+          "A stand of steel tube of 27 mm (phi 27, Duy Phương, Meta.vn), a wall of 1.5 mm (by eye), 2.5 by 1.0 by 0.9 m (FPTShop)."
         ]
       )
 
     {a1, a2} = {{-xh, 0.0, hgt - 0.03}, {xh, 0.0, hgt - 0.03}}
-
-    # The net: 1.8 m long, 1.6 m between its bars, so that the cords to the
-    # hooks go at about 30 degrees.
-    {length, span, bar} = {1.8, 1.6, 0.5}
-    drop = @tan30 * (2 * xh - span) / 2
-    {e1, e2} = {{-span / 2, 0.0, hgt - 0.03 - drop}, {span / 2, 0.0, hgt - 0.03 - drop}}
-    surface = Bed.surface(e1, e2, length: length, width: 1.42, ends: {:bar, bar})
-
-    bars =
-      for {{x, _, z}, a} <- [{e1, a1}, {e2, a2}] do
-        ends = [{x, -bar / 2, z}, {x, bar / 2, z}]
-
-        [
-          Shape.box({x - 0.012, -bar / 2 - 0.02, z - 0.012}, {x + 0.012, bar / 2 + 0.02, z + 0.012}, :wood)
-          |> Mesh.matter(:wood)
-          | Rig.fan(a, ends, d: 0.005)
-        ]
-      end
-
-    net =
-      Part.new("net_#{name}", :bed, Bed.net(surface, strands: 40, knots: 44) ++ List.flatten(bars), [@o],
-        sources: [
-          "A net of nylon cord, 180 by 142 cm, on a bar of wood of 50 cm at each end (Bản Mai, gỗ 50 cm, Meta.vn); two cords of 5 mm to each hook."
-        ]
-      )
-
     hooks = for {a, s} <- [{a1, "left"}, {a2, "right"}], do: Rig.hook("hook_#{s}_#{name}", a)
 
-    new(name, stand, "A võng xếp: a net of cord on a stand of steel tube.",
+    new(name, stand, "A hammock stand of iron tube in arches, with the net of a võng xếp.",
       site: false,
       materials: %{fabric: Keyword.get(opts, :color, [40, 150, 80])}
     )
     |> fixed(hooks)
-    |> swing2("net_#{name}", net, a1, a2)
+    |> swing2("net_#{name}", bar_net(name, a1, a2, 1.6), a1, a2)
   end
 
   @doc """
@@ -829,6 +1007,11 @@ defmodule World.Furniture.Hanging do
   # The whipping of each gathered end: on the bed, toward its rope.
   defp whippings(e1, e2, a1, a2), do: [Bed.whipping(e1, Vec.sub(a1, e1)), Bed.whipping(e2, Vec.sub(a2, e2))]
 
+  # A material of a role: a color (with the roughness and the metalness of
+  # cloth), or a map of its own.
+  defp color(%{} = spec), do: Map.merge(%{"roughness" => 0.85, "metalness" => 0.0}, spec)
+  defp color(rgb), do: %{"color" => rgb, "roughness" => 0.85, "metalness" => 0.0}
+
   # The assembly of a thing that hangs: the site (or the stand) as its
   # root. A site holds it: no check of its stand (`"site"` in its extras).
   defp new(name, root, about, opts \\ []) do
@@ -837,11 +1020,7 @@ defmodule World.Furniture.Hanging do
     Assembly.new(name, root,
       root: root.name,
       kind: :hanging,
-      materials:
-        Map.new(Keyword.get(opts, :materials, %{}), fn
-          {role, %{} = spec} -> {role, Map.merge(%{"roughness" => 0.85, "metalness" => 0.0}, spec)}
-          {role, rgb} -> {role, %{"color" => rgb, "roughness" => 0.85, "metalness" => 0.0}}
-        end),
+      materials: Map.new(Keyword.get(opts, :materials, %{}), fn {role, c} -> {role, color(c)} end),
       sources: [about, "The parts of the hammock shop (World.Furniture.Hanging)."],
       extras: if(site, do: %{"site" => true}, else: %{})
     )
