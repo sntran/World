@@ -365,7 +365,7 @@ defmodule World.Check do
 
         probes =
           [Frame.point(f, center), Vec.add(mid, n), Vec.sub(mid, n)]
-          |> Enum.filter(&inside_mesh?(&1, tris))
+          |> Enum.filter(&World.Contact.inside?(&1, tris))
           |> Enum.take(1)
 
         {probes, tris}
@@ -379,28 +379,8 @@ defmodule World.Check do
   defp into?(a, b),
     do:
       Enum.any?(a, fn {ps, _} ->
-        Enum.any?(ps, fn p -> Enum.any?(b, fn {_, tris} -> tris != [] and inside_mesh?(p, tris) end) end)
+        Enum.any?(ps, fn p -> Enum.any?(b, fn {_, tris} -> tris != [] and World.Contact.inside?(p, tris) end) end)
       end)
-
-  # A point is inside a closed mesh when a ray from it goes through its
-  # faces an odd count of times. The ray is not along an axis, so it
-  # does not go along the edge of a face of a box.
-  @ray Vec.norm({0.5773, 0.5791, 0.5751})
-  defp inside_mesh?(p, tris), do: tris |> Enum.count(&hit?(p, &1)) |> rem(2) == 1
-
-  # Möller and Trumbore: the ray from `o` goes through the triangle.
-  defp hit?(o, {a, b, c}) do
-    {e1, e2} = {Vec.sub(b, a), Vec.sub(c, a)}
-    h = Vec.cross(@ray, e2)
-    det = Vec.dot(e1, h)
-    s = Vec.sub(o, a)
-    q = Vec.cross(s, e1)
-
-    {u, v, t} =
-      if det == 0, do: {-1.0, -1.0, -1.0}, else: {Vec.dot(s, h) / det, Vec.dot(@ray, q) / det, Vec.dot(e2, q) / det}
-
-    u >= 0 and v >= 0 and u + v <= 1 and t > 1.0e-9
-  end
 
   # The pairs of the names of the parts that a connection joins: each
   # part of a node with each part of the node that it connects to, and
