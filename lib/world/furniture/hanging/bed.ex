@@ -44,9 +44,46 @@ defmodule World.Furniture.Hanging.Bed do
     for i <- 0..n, x = -span / 2 + span * i / n, do: {x, a * :math.cosh(x / a) - top}
   end
 
-  @doc "The sag of the middle of a bed of `length` over a `span` (m, a positive number)."
-  def sag(span, length) do
-    {_, z} = Enum.min_by(catenary(span, length, 2), &elem(&1, 1))
+  @doc """
+  The middle line of a bed of `length` over a `span` with a person in it:
+  the weight of the person on the middle `2 c` of the span (the body on
+  the bed), the weight of the bed small next to it. Under the load the
+  line is a parabola, and out of it straight to the ends (a line with no
+  load between two loads is straight): `n + 1` points `{x, z}` as
+  `catenary/3`.
+
+      iex> pts = World.Furniture.Hanging.Bed.loaded(2.0, 2.5, 0.5, 40)
+      iex> l = pts |> Enum.chunk_every(2, 1, :discard) |> Enum.map(fn [{x0, z0}, {x1, z1}] -> :math.sqrt((x1 - x0) ** 2 + (z1 - z0) ** 2) end) |> Enum.sum()
+      iex> abs(l - 2.5) < 0.01
+      true
+  """
+  def loaded(span, length, c, n) when length > span and c < span / 2 do
+    h = span / 2
+    # The length of the line for the curve k (the load over the pull).
+    len = fn k ->
+      c * :math.sqrt(1 + (k * c) ** 2) + :math.asinh(k * c) / k + 2 * (h - c) * :math.sqrt(1 + (k * c) ** 2)
+    end
+
+    k =
+      Enum.reduce(1..100, {1.0e-6, 1.0e3}, fn _, {lo, hi} ->
+        mid = :math.sqrt(lo * hi)
+        if len.(mid) < length, do: {mid, hi}, else: {lo, mid}
+      end)
+      |> then(fn {lo, hi} -> :math.sqrt(lo * hi) end)
+
+    z0 = -(k * c * c / 2 + k * c * (h - c))
+    z = fn x -> if abs(x) <= c, do: z0 + k * x * x / 2, else: z0 + k * c * c / 2 + k * c * (abs(x) - c) end
+    for i <- 0..n, x = -h + span * i / n, do: {x, z.(x)}
+  end
+
+  @doc """
+  The sag of the middle of a bed of `length` over a `span` (m, a positive
+  number); with a load on its middle `2 c` (`load`, `loaded/4`), the sag
+  with a person in it.
+  """
+  def sag(span, length, load \\ nil) do
+    line = if load, do: loaded(span, length, load, 2), else: catenary(span, length, 2)
+    {_, z} = Enum.min_by(line, &elem(&1, 1))
     -z
   end
 
@@ -66,7 +103,8 @@ defmodule World.Furniture.Hanging.Bed do
   A bed between the ends `e1` and `e2` (at one height): a function of
   `{u, v}` to a point. Options: `length` (along its middle line),
   `width` (the cloth or the net flat, across), `ends` (`:gathered`,
-  `{:bar, b}` or `:spread`).
+  `{:bar, b}` or `:spread`), `load` (with a person in it: the half
+  length of the body on the bed, `loaded/4`).
 
   The bed hangs as a real cloth hangs. Each thread along the bed has the
   full length of the bed: a thread near an edge goes out to the side, so
@@ -86,7 +124,14 @@ defmodule World.Furniture.Hanging.Bed do
     x = Vec.norm(Vec.sub(e2, e1))
     y = Vec.norm(Vec.cross({0.0, 0.0, 1.0}, x))
     {w, length} = {Keyword.fetch!(opts, :width), Keyword.fetch!(opts, :length)}
-    line = catenary(span, length, @n) |> List.to_tuple()
+
+    line =
+      case Keyword.get(opts, :load) do
+        nil -> catenary(span, length, @n)
+        c -> loaded(span, length, c, @n)
+      end
+      |> List.to_tuple()
+
     sag = -(line |> Tuple.to_list() |> Enum.map(&elem(&1, 1)) |> Enum.min())
     {half, drops} = hang_across(Keyword.get(opts, :ends, :gathered), w, span, length, sag, line)
 

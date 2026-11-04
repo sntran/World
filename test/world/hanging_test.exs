@@ -75,9 +75,17 @@ defmodule World.HangingTest do
       assert %{unknown: []} = Mass.of(item)
       assert World.Places.family_of(item) == :hanging
 
+      # A person (World.People) has its own triangles: 44 000 at near.
+      person? = Enum.any?(item.nodes, &match?({_, %World.Figure{}, _}, &1))
+
       for level <- [:near, :mid, :far] do
         tris = Scene.triangles(Build.scene(Detail.with(level, fun), level: level))
-        assert tris < %{near: 40_000, mid: 15_000, far: 8_000}[level], "#{name} at #{level}: #{tris}"
+
+        limit =
+          %{near: 40_000, mid: 15_000, far: 8_000}[level] +
+            if(person?, do: %{near: 45_000, mid: 8_000, far: 2_000}[level], else: 0)
+
+        assert tris < limit, "#{name} at #{level}: #{tris}"
       end
     end
   end
@@ -123,6 +131,25 @@ defmodule World.HangingTest do
         assert Vec.len(Vec.sub(moved, at)) < 1.0e-6, "#{name}: #{n}"
       end
     end
+  end
+
+  test "a person in a hammock: the bed hangs deeper under the weight, and the person lies on the bed" do
+    # The same bed with a person in it sags more: its middle is a parabola
+    # under the body, straight out of it.
+    assert Bed.sag(2.4, 2.9, 0.7) > Bed.sag(2.4, 2.9)
+    [{_, z0}, {_, z1}, {_, z2}] = Bed.loaded(2.4, 2.9, 0.7, 2)
+    assert z0 == 0.0 and z2 == 0.0 and z1 < 0
+    assert Hanging.hang(4.2, 2.9, 0.46, nil, 0.7).anchor > Hanging.hang(4.2, 2.9, 0.46).anchor
+
+    item = Detail.with(:far, fn -> Hanging.camping(person: true, name: "p") end)
+    {_, person, c} = List.keyfind(item.nodes, "person", 0)
+    assert %World.Figure{kind: :person} = person
+    assert c.to == "bed_p"
+    # The head and the feet are over the hips: the person lies in the
+    # curve of the bed.
+    place = Frame.compose(World.Port.frame(c.at), Frame.invert(World.Figure.port_frame(person, "hips")))
+    z = fn n -> elem(Frame.point(place, World.Figure.port_frame(person, n).at), 2) end
+    assert z.("crown") > z.("hips") and z.("sole_l") > z.("hips")
   end
 
   test "the shelter of a camping hammock: a tarp and a bug net on the site, over the hammock" do

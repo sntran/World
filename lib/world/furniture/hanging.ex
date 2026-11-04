@@ -57,6 +57,10 @@ defmodule World.Furniture.Hanging do
   @branch 10 * 12 * 0.0254
   @branch_r 4 * 0.0254
 
+  # The half length of the body of a person on the bed (by eye: the
+  # weight on about 1.4 m of the bed, from the shoulders to the heels).
+  @body_load 0.7
+
   # The sit height of a camping hammock (ENO: 18 in or less).
   @eno_sit 18 * 0.0254
   @ultimate "The Ultimate Hang, the hammock hang calculator: the suspension at 30 degrees, the ridgeline at 83% of the length."
@@ -72,6 +76,7 @@ defmodule World.Furniture.Hanging do
       {"hammock_camping", fn -> camping() end},
       {"hammock_camping_shelter", fn -> camping(shelter: true, name: "hammock_camping_shelter") end},
       {"hammock_camping_packed", fn -> camping_packed() end},
+      {"hammock_camping_person", fn -> camping(person: true, name: "hammock_camping_person") end},
       {"hammock_spreader_canvas", fn -> spreader() end},
       {"hammock_spreader_rope", fn -> spreader(bed: :net, name: "hammock_spreader_rope") end},
       {"swing_plank", fn -> plank_swing() end},
@@ -84,16 +89,19 @@ defmodule World.Furniture.Hanging do
   The hang of a bed with gathered ends between two anchors `d` apart: the
   span of the bed (83% of its length), the drop of the suspension at 30
   degrees, the sag of the bed, and the height of the anchors for a lowest
-  point at `sit`. A map `%{span, drop, sag, anchor}` (m).
+  point at `sit`. With a `load` (the half length of a body on the bed,
+  `World.Furniture.Hanging.Bed.loaded/4`), the sag with a person in it:
+  the sit height is the height with a person in it. A map `%{span, drop,
+  sag, anchor}` (m).
 
       iex> h = World.Furniture.Hanging.hang(4.5, 2.9, 0.46)
       iex> {Float.round(h.span, 3), Float.round(h.anchor, 2)}
       {2.407, 1.78}
   """
-  def hang(d, length, sit, span \\ nil) do
+  def hang(d, length, sit, span \\ nil, load \\ nil) do
     span = span || 0.83 * length
     drop = @tan30 * (d - span) / 2
-    sag = Bed.sag(span, length)
+    sag = Bed.sag(span, length, load)
     %{span: span, drop: drop, sag: sag, anchor: sit + sag + drop}
   end
 
@@ -421,16 +429,20 @@ defmodule World.Furniture.Hanging do
   sit height of 18 in (ENO: 18 in or less). Its stuff sack is sewn to
   the middle of one edge (ENO: an integrated stuff sack), and hangs there
   as a pocket. Options: `color`, `name`, `shelter` (true: a tarp and a bug
-  net over it, `shelter/5`).
+  net over it, `shelter/4`), `person` (true: a person lies in it, `lie/3`;
+  the bed hangs under the weight, and the anchors go up so that the
+  person is at the sit height).
   """
   def camping(opts \\ []) do
     name = Keyword.get(opts, :name, "hammock_camping")
     {d, trunk, length} = {4.5, 0.3, 2.9}
     reach = d - trunk
-    h = hang(reach, length, @eno_sit)
+    person? = Keyword.get(opts, :person, false)
+    load = if person?, do: @body_load
+    h = hang(reach, length, @eno_sit, nil, load)
     {a1, a2} = {{-reach / 2, 0.0, h.anchor}, {reach / 2, 0.0, h.anchor}}
     {e1, e2} = {{-h.span / 2, 0.0, h.anchor - h.drop}, {h.span / 2, 0.0, h.anchor - h.drop}}
-    surface = Bed.surface(e1, e2, length: length, width: 1.92, ends: :gathered)
+    surface = Bed.surface(e1, e2, length: length, width: 1.92, ends: :gathered, load: load)
     # The carabiner at each gathered end, on the end of its strap.
     clips = for {e, s} <- [{e1, -1}, {e2, 1}], do: Vec.add(e, {s * 0.05, 0.0, 0.0})
 
@@ -474,6 +486,51 @@ defmodule World.Furniture.Hanging do
     |> fixed([other | loops] ++ cover)
     # In the bug net, the hammock swings only a little (by eye).
     |> swing2("bed_#{name}", bed, a1, a2, straps ++ carabiners, limits: if(shelter?, do: [-8, 8], else: [-30, 30]))
+    |> then(fn a -> if person?, do: lie(a, "bed_#{name}", surface), else: a end)
+  end
+
+  @doc """
+  A person who lies in a hammock: on the node `bed` (the person swings
+  with the bed), the back on the middle line of the bed (`surface`), the
+  hips 8 cm to the side of the head from the lowest point, the head to
+  -x, the body in the middle of the bed. The torso and the thighs follow the line of the bed under them (the
+  hips bend by the two angles), the knees and the neck bend a little,
+  the arms lie along the sides (by eye). The person of `World.People.man/0`.
+  """
+  def lie(asm, bed, surface) do
+    at = fn x -> surface.({x, 0.0}) end
+    # The middle line of the bed: u from 0 to 1; its points by x.
+    line = for i <- 0..200, do: at.(i / 200)
+    z_at = fn x -> line |> Enum.min_by(fn {px, _, _} -> abs(px - x) end) |> elem(2) end
+    {x_low, _, _} = Enum.min_by(line, &elem(&1, 2))
+    xh = x_low - 0.08
+    slope = fn dx -> :math.atan2(z_at.(xh + dx) - z_at.(xh), abs(dx)) end
+    # The torso along the bed to the shoulders, the legs along the bed to
+    # the heels.
+    {torso, thigh} = {slope.(-0.5), slope.(0.85)}
+    deg = 180 / :math.pi()
+    # The hips 10 cm over the bed, across the line of the torso.
+    hips = {xh + 0.1 * :math.sin(torso), 0.0, z_at.(xh) + 0.1 * :math.cos(torso)}
+    # The hips port of the person (z up, y to its front) onto this port:
+    # its up to the head, its front to the sky.
+    up = {-:math.cos(torso), 0.0, :math.sin(torso)}
+    front = {:math.sin(torso), 0.0, :math.cos(torso)}
+    x = {1.0, 0.0, 0.0}
+
+    pose = %{
+      "thigh_l" => [{x, (torso + thigh) * deg}],
+      "thigh_r" => [{x, (torso + thigh) * deg}],
+      "calf_l" => [{x, -6}],
+      "calf_r" => [{x, -6}],
+      "neck_01" => [{x, -15}],
+      "upperarm_l" => [{{0.0, 1.0, 0.0}, -38}],
+      "upperarm_r" => [{{0.0, 1.0, 0.0}, 38}],
+      "lowerarm_l" => [{x, 15}],
+      "lowerarm_r" => [{x, 15}]
+    }
+
+    person = World.People.Human.person("person", age: 35, height: 0.55, muscle: 0.55, pose: pose)
+    Assembly.add(asm, "person", person, to: bed, at: Part.port("lie", hips, up, front), port: "hips")
   end
 
   @doc """
