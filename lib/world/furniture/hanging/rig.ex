@@ -120,10 +120,11 @@ defmodule World.Furniture.Hanging.Rig do
   @doc """
   A carabiner of aluminum at `at` (its axis along `axis`): an oval of 75
   by 45 mm of a rod of 9 mm (the carabiners of 7075 aluminum of a camping
-  hammock, ENO: by eye).
+  hammock, ENO: by eye), its plane at a right angle to `normal` (option,
+  x).
   """
-  def carabiner(name, at, axis \\ {0, 0, 1}) do
-    mesh = ring(at, {1, 0, 0}, 0.018, 0.0045, stretch: 1.6, along: axis, material: :aluminum) |> Mesh.matter(:aluminum)
+  def carabiner(name, at, axis \\ {0, 0, 1}, normal \\ {1, 0, 0}) do
+    mesh = ring(at, normal, 0.018, 0.0045, stretch: 1.6, along: axis, material: :aluminum) |> Mesh.matter(:aluminum)
 
     Part.new(name, :hardware, [mesh], [@o],
       sources: ["A carabiner of 7075 aluminum (ENO): its size by eye."],

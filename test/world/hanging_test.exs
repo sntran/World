@@ -92,7 +92,10 @@ defmodule World.HangingTest do
   end
 
   test "the joints as in real life: the site and its hooks stay, the thing swings about the real axis" do
-    for {name, fun} <- Hanging.models() do
+    # A packed hammock has no joint: its carabiners lie on the ground.
+    assert [] == for({_, _, %{kind: :hinge}} <- Hanging.camping_packed().nodes, do: :hinge)
+
+    for {name, fun} <- Hanging.models(), name != "hammock_camping_packed" do
       item = fun.()
       hinges = for {n, _, %{kind: :hinge, limits: limits}} <- item.nodes, do: {n, limits}
       assert hinges != [], name
@@ -120,6 +123,26 @@ defmodule World.HangingTest do
         assert Vec.len(Vec.sub(moved, at)) < 1.0e-6, "#{name}: #{n}"
       end
     end
+  end
+
+  test "the shelter of a camping hammock: a tarp and a bug net on the site, over the hammock" do
+    item = Hanging.camping(shelter: true, name: "s")
+    names = for {_, p, _} <- item.nodes, do: p.name
+    assert "tarp_s" in names and "bug_net_s" in names
+    # The tarp and the net stay on the site: on the root, not on the bed.
+    for n <- ["tarp_s", "bug_net_s"],
+        do: assert({_, _, %{kind: :fixed, to: "tree_left_s"}} = List.keyfind(item.nodes, n, 0))
+
+    {_, _, %{limits: [-8, 8]}} = List.keyfind(item.nodes, "bed_s", 0)
+    # The bug net goes under the hammock, and the tarp over the net.
+    z = fn n ->
+      {_, p, _} = List.keyfind(item.nodes, n, 0)
+      p.shapes |> Enum.flat_map(& &1.points) |> Enum.map(&elem(&1, 2))
+    end
+
+    assert Enum.min(z.("bug_net_s")) < Enum.min(z.("bed_s"))
+    assert Enum.max(z.("tarp_s")) > Enum.max(z.("bug_net_s"))
+    assert item.materials[:screen]["alpha"] == 0.35
   end
 
   test "the spring of the egg chair: its rate, its stretch, and the chair that bounces on it" do

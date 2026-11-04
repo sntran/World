@@ -67,6 +67,8 @@ defmodule World.Furniture.Hanging do
       {"vong_du_cafe", fn -> cafe(bed: :cloth, name: "vong_du_cafe") end},
       {"vong_xep", fn -> vong_xep() end},
       {"hammock_camping", fn -> camping() end},
+      {"hammock_camping_shelter", fn -> camping(shelter: true, name: "hammock_camping_shelter") end},
+      {"hammock_camping_packed", fn -> camping_packed() end},
       {"hammock_spreader_canvas", fn -> spreader() end},
       {"hammock_spreader_rope", fn -> spreader(bed: :net, name: "hammock_spreader_rope") end},
       {"swing_plank", fn -> plank_swing() end},
@@ -238,7 +240,10 @@ defmodule World.Furniture.Hanging do
   gathered, a ridgeline of 83% of its length, a tree strap round each
   trunk to a carabiner, the trees 4.5 m apart (the FAQ of ENO: 3 to 4.5
   m between the trees; the straps at least 1.5 m from the ground), its
-  sit height of 18 in (ENO: 18 in or less). Options: `color`, `name`.
+  sit height of 18 in (ENO: 18 in or less). Its stuff sack is sewn to
+  the middle of one edge (ENO: an integrated stuff sack), and hangs there
+  as a pocket. Options: `color`, `name`, `shelter` (true: a tarp and a bug
+  net over it, `shelter/5`).
   """
   def camping(opts \\ []) do
     name = Keyword.get(opts, :name, "hammock_camping")
@@ -256,7 +261,7 @@ defmodule World.Furniture.Hanging do
         "bed_#{name}",
         :bed,
         Bed.cloth(surface, cols: 24, bands: [{1, :cloth}, {3, :fabric}, {1, :cloth}]) ++
-          whippings(e1, e2, a1, a2) ++ [Rig.rope(e1, e2, 0.003)],
+          whippings(e1, e2, a1, a2) ++ [Rig.rope(e1, e2, 0.003), pouch(surface.({0.5, 1.0}))],
         [@o],
         params: %{"mass" => 0.538},
         sources: [
@@ -275,13 +280,160 @@ defmodule World.Furniture.Hanging do
 
     carabiners = for {c, s} <- Enum.zip(clips, ["left", "right"]), do: Rig.carabiner("carabiner_#{s}_#{name}", c)
     [site, other] = trees(name, d, trunk)
+    shelter? = Keyword.get(opts, :shelter, false)
+    cover = if shelter?, do: shelter(name, d, h.anchor, elem(surface.({0.5, 0.0}), 2)), else: []
 
-    new(name, site, "A camping hammock between two trees, on tree straps and carabiners.",
-      materials: %{fabric: Keyword.get(opts, :color, [200, 120, 40]), cloth: [70, 74, 80]}
+    new(
+      name,
+      site,
+      "A camping hammock between two trees, on tree straps and carabiners#{if shelter?, do: ", under a tarp and a bug net"}.",
+      materials:
+        Map.merge(
+          %{fabric: Keyword.get(opts, :color, [200, 120, 40]), cloth: [70, 74, 80]},
+          if(shelter?, do: %{dark: [86, 94, 62], screen: %{"color" => [24, 24, 24], "alpha" => 0.35}}, else: %{})
+        )
     )
-    |> fixed([other | loops])
-    |> swing2("bed_#{name}", bed, a1, a2, straps ++ carabiners)
+    |> fixed([other | loops] ++ cover)
+    # In the bug net, the hammock swings only a little (by eye).
+    |> swing2("bed_#{name}", bed, a1, a2, straps ++ carabiners, limits: if(shelter?, do: [-8, 8], else: [-30, 30]))
   end
+
+  @doc """
+  A camping hammock packed in its stuff sack (ENO DoubleNest: packed 5 by
+  6 by 5 in, 538 g; the hammock that a hiker carries): the sack on its
+  side on the ground, the loop of its drawstring out of one end, and the
+  two carabiners of the hammock clipped on the loop. Options: `color`,
+  `name`.
+  """
+  def camping_packed(opts \\ []) do
+    name = Keyword.get(opts, :name, "hammock_camping_packed")
+    {r, len} = {2.5 * 0.0254, 6 * 0.0254}
+
+    # Round at the bottom, drawn in at the top by its drawstring.
+    sack =
+      [
+        {0.0, 0.0},
+        {0.55 * r, 0.006},
+        {0.85 * r, 0.018},
+        {r, 0.04},
+        {r, len - 0.045},
+        {0.8 * r, len - 0.02},
+        {0.35 * r, len - 0.006},
+        {0.0, len}
+      ]
+      |> Shape.lathe(:fabric, sides: 20)
+      |> Mesh.transform(World.Frame.new({-len / 2, 0.0, r}, {1, 0, 0}, {0, 0, 1}))
+
+    # The loop of the drawstring, flat on the ground, and a carabiner on it
+    # at each side (75 by 45 mm, flat).
+    loop = Rig.ring({len / 2 + 0.02, 0.0, 0.0015}, {0, 0, 1}, 0.02, 0.0015, material: :black, sides: 10)
+    clips = for sy <- [-1, 1], do: Rig.carabiner("c", {len / 2 + 0.07, sy * 0.022, 0.0045}, {1, 0, 0}, {0, 0, 1})
+
+    hammock =
+      Part.new("sack_#{name}", :bed, [sack, loop] ++ Enum.flat_map(clips, & &1.shapes), [@o],
+        params: %{"mass" => 0.538},
+        sources: [
+          "ENO DoubleNest in its integrated stuff sack: 5 by 6 by 5 in, 538 g (ENO); the carabiners clipped on the loop of the drawstring."
+        ]
+      )
+
+    new(name, hammock, "A camping hammock packed in its stuff sack, with its carabiners.",
+      site: false,
+      materials: %{fabric: Keyword.get(opts, :color, [200, 120, 40])}
+    )
+  end
+
+  # The stuff sack of a camping hammock, sewn to its edge at `at`: a sack
+  # of nylon 5 in across and 6 in long (ENO DoubleNest: packed 5 by 6 by 5
+  # in), empty and flat, outside the edge.
+  defp pouch({x, y, z}) do
+    [{0.0, 0.0}, {0.05, 0.01}, {0.0635, 0.04}, {0.0635, 0.12}, {0.03, 0.15}, {0.0, 0.152}]
+    |> Shape.lathe(:cloth, sides: 12)
+    |> Mesh.transform(World.Frame.new({x, y + 0.07, z - 0.152}, {0, 0, 1}, {1, 0, 0}))
+    |> then(&%{&1 | points: for({px, py, pz} <- &1.points, do: {px, y + 0.07 + (py - y - 0.07) * 0.35, pz})})
+  end
+
+  @doc """
+  The tarp and the bug net over a camping hammock between two trees `d`
+  apart, the anchors of the straps at `anchor`, the lowest point of the
+  hammock at `low`: parts on the site (each hangs
+  on its own cord from tree to tree, and stays when the hammock swings).
+
+  - The bug net (ENO Guardian: 9 ft 4 in long, 454 g): a net that hangs
+    from its cord 25 cm over the anchors (by eye), down on each side to 5
+    cm under the hammock, its ends drawn in round the suspension.
+  - The tarp (ENO ProFly: 10 ft 6 in by 6 ft 4 in, 640 g, six guy
+    points): a ridge on its cord 35 cm over the cord of the net (by eye),
+    a side at 50 degrees down to two corners on each side (the hexagon of
+    the tarp: its bottom edge 2.2 m long, by eye), a guy line from each
+    corner to a stake.
+  """
+  def shelter(name, d, anchor, low) do
+    {zn, zt} = {anchor + 0.25, anchor + 0.6}
+    net_half = 9 * 12 * 0.0254 / 2 + 2 * 0.0254
+    cord = fn z -> Rig.rope({-d / 2, 0.0, z}, {d / 2, 0.0, z}, 0.003) end
+
+    # The bug net: at u along it, its top on the cord, its sides 0.8 m
+    # out at the middle (out of the edges of the hammock), down to 5 cm
+    # under the hammock; at its ends, drawn in to the suspension.
+    net =
+      fn {u, v} ->
+        x = -net_half + 2 * net_half * u
+        p = :math.pow(:math.sin(:math.pi() * u), 0.6)
+        {hw, bottom} = {0.03 + 0.77 * p, zn - 0.1 - (zn - 0.1 - (low - 0.05)) * p}
+        a = min(abs(v) / 0.35, 1.0)
+        side = max(abs(v) - 0.35, 0.0) / 0.65
+
+        {x, sign(v) * hw * :math.sin(a * :math.pi() / 2),
+         zn - 0.25 * p * (1 - :math.cos(a * :math.pi() / 2)) - side * (zn - 0.25 * p - bottom)}
+      end
+
+    # The tarp: two sides from the ridge (3.2 m) to the bottom edges (2.2 m).
+    {half_ridge, half_edge, side} = {10.5 * 12 * 0.0254 / 2, 1.1, 6 * 12 * 0.0254 / 2 + 2 * 0.0254}
+    {cy, cz} = {side * :math.cos(50 * :math.pi() / 180), zt - side * :math.sin(50 * :math.pi() / 180)}
+
+    sides =
+      for sy <- [-1, 1] do
+        fn {u, v} ->
+          t = (v + 1) / 2
+
+          {(-half_ridge + 2 * half_ridge * u) * (1 - t) + (-half_edge + 2 * half_edge * u) * t, sy * cy * t,
+           zt + (cz - zt) * t}
+        end
+      end
+
+    guys =
+      for sx <- [-1, 1],
+          sy <- [-1, 1],
+          do: Rig.rope({sx * half_edge, sy * cy, cz}, {sx * (half_edge + 0.3), sy * (cy + 0.6), 0.0}, 0.003)
+
+    [
+      Part.new(
+        "bug_net_#{name}",
+        :cover,
+        Enum.map(Bed.cloth(net, rows: 24, cols: 16, t: 0.0005, material: :screen), &Mesh.skin(&1, 0.0005, :nylon)) ++
+          [cord.(zn)],
+        [@o],
+        params: %{"mass" => 0.454},
+        sources: ["ENO Guardian Bug Net: 9 ft 4 in long, 454 g (the shops); its shape by eye."]
+      ),
+      Part.new(
+        "tarp_#{name}",
+        :cover,
+        Enum.flat_map(sides, &Bed.cloth(&1, rows: 8, cols: 4, t: 0.001, material: :dark))
+        |> Enum.map(&Mesh.skin(&1, 0.001, :nylon)),
+        [@o],
+        params: %{"mass" => 0.64},
+        sources: ["ENO ProFly Rain Tarp: 10 ft 6 in by 6 ft 4 in, 640 g, six guy points (the shops); its pitch by eye."]
+      ),
+      Part.new("guy_lines_#{name}", :rope, [cord.(zt) | guys], [@o],
+        sources: ["The cord of the ridge of the tarp and four guy lines of 3 mm (by eye)."]
+      )
+    ]
+  end
+
+  defp sign(v) when v < 0, do: -1.0
+  defp sign(_), do: 1.0
 
   @doc """
   A hammock with spreader bars between two trees (photos: the Wikipedia
@@ -686,8 +838,9 @@ defmodule World.Furniture.Hanging do
       root: root.name,
       kind: :hanging,
       materials:
-        Map.new(Keyword.get(opts, :materials, %{}), fn {role, rgb} ->
-          {role, %{"color" => rgb, "roughness" => 0.85, "metalness" => 0.0}}
+        Map.new(Keyword.get(opts, :materials, %{}), fn
+          {role, %{} = spec} -> {role, Map.merge(%{"roughness" => 0.85, "metalness" => 0.0}, spec)}
+          {role, rgb} -> {role, %{"color" => rgb, "roughness" => 0.85, "metalness" => 0.0}}
         end),
       sources: [about, "The parts of the hammock shop (World.Furniture.Hanging)."],
       extras: if(site, do: %{"site" => true}, else: %{})
