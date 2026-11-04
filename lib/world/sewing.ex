@@ -34,6 +34,9 @@ defmodule World.Sewing do
   to the base mesh, a texture: as the clothes of MakeHuman), `entries/0`
   their entries in `assets.json` (`World.People.Data.assets/0`). `mix run
   scripts/clothes.exs` writes the files in `priv/makehuman/clothes/`.
+  The shop also sews cushions (`World.Sewing.Cushion`): a cover of
+  pieces over a fill of foam or fiber, for the seats of the furniture.
+
   The license is that of World (AGPL-3.0).
   """
   alias World.People.Data
