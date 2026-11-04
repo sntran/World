@@ -42,6 +42,13 @@ into the steps of `AGENTS.md`.
   rails, the culms that taper and are not quite straight, the hole of
   a rail end that shows the diaphragm, a green fresh culm. The sizes
   of the culms come from photos: measure a chair of a shop.
+- **More of the hammock shop.** A camping hammock in its pouch (the
+  hammock that a hiker carries: the bed packs into a stuff sack on its
+  side), a bug net and a tarp over the ridgeline; the spring of an egg
+  chair; the stand of a võng xếp that folds (with the net off); a person
+  who lies in a hammock (the bed sags under the mass). The sizes by eye:
+  the posts of a café, the trees, the branch of a swing, the plank, the
+  ropes; measure them in a shop and at a café.
 
 - **More of the sheet metal shop.** Bends of other angles (a hem of 180
   degrees, a joggle), holes in a flange (knockouts), and a gasket for a
