@@ -236,12 +236,51 @@ defmodule World.HangingTest do
     assert_in_delta gx, -0.25, 0.08
     assert_in_delta gz, 1.05, 0.1
 
-    # The egg chair: the person leans back, on the node that spins.
-    {_, c, at} = place.(Detail.with(:far, fn -> Hanging.egg_chair(person: true) end))
+    # The egg chair: the person sits nearly upright in the basket, on the
+    # node that spins, the hands on the lap.
+    {person, c, at} = place.(Detail.with(:far, fn -> Hanging.egg_chair(person: true) end))
     assert c.to == "spin_egg_chair"
-    assert elem(at.("crown"), 1) < elem(at.("hips"), 1) - 0.2
+    assert abs(elem(at.("crown"), 1) - elem(at.("hips"), 1)) < 0.1
+    assert elem(at.("crown"), 2) > elem(at.("hips"), 2) + 0.6
+    assert Map.has_key?(person.pose, "index_01_l")
     {_, c, _} = place.(Detail.with(:far, fn -> Hanging.porch_swing(person: true) end))
     assert c.to == "bench_swing_porch"
+  end
+
+  test "the person in the egg chair is inside its basket: no point through the wicker, the head under its top" do
+    item = Detail.with(:mid, fn -> Hanging.egg_chair(person: true) end)
+    scene = Build.scene(item, level: :mid)
+    frames = Scene.world_frames(scene)
+    {bw, bd, bh, low} = {0.9, 0.6, 1.05, 0.52}
+    person = Enum.find(scene.nodes, &(&1.skin != nil and &1.name != "spring_egg_chair"))
+    skin = Enum.at(scene.skins, person.skin)
+
+    bones =
+      skin.joints
+      |> Enum.zip(skin.inverse_bind)
+      |> Enum.map(fn {j, ib} -> Frame.compose(frames[j], ib) end)
+      |> List.to_tuple()
+
+    points =
+      for p <- person.primitives, {pt, js, ws} <- Enum.zip([p.positions, p.joints, p.weights]) do
+        Enum.zip(Tuple.to_list(js), Tuple.to_list(ws))
+        |> Enum.map(fn {j, w} -> Vec.scale(Frame.point(elem(bones, j), pt), w) end)
+        |> Enum.reduce(&Vec.add/2)
+      end
+
+    # Out of the oval of the basket at its height, and not out of the front
+    # (the legs go out of the opening).
+    through =
+      for {x, y, z} <- points,
+          z > low and z < low + bh,
+          e = Hanging.egg((z - low) / bh),
+          e > 0,
+          (x / (bw / 2 * e)) ** 2 + (y / (bd / 2 * e)) ** 2 > 1.0,
+          y < 0.25 * bd / 2 * e,
+          do: {x, y, z}
+
+    assert through == []
+    assert points |> Enum.map(&elem(&1, 2)) |> Enum.max() < low + bh
   end
 
   test "the shelter of a camping hammock: a tarp and a bug net on the site, over the hammock" do

@@ -53,6 +53,9 @@ defmodule World.Furniture.Hanging do
 
   @o Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
   @tan30 :math.tan(:math.pi() / 6)
+  # The top of the cushion of an egg chair, over the bottom of its basket.
+  @cushion 0.1
+
   # The branch of a swing: 8 in at 10 ft (HGTV, how to make a tree swing).
   @branch 10 * 12 * 0.0254
   @branch_r 4 * 0.0254
@@ -689,7 +692,7 @@ defmodule World.Furniture.Hanging do
   hips at `hips`, the front to `front` (a vector on the level, `+y` by
   default), the body back by `recline` degrees (0): the pose `"sit"` of
   `World.People.Pose`, with the changes of `pose`, and the hands to the points of `grips` (`{side, point}`, in the
-  axes of the model; the hand closes on a rope). The person swings with
+  axes of the model; the hand closes on a rope) or of `rest` (the hand lies there: on the lap). The person swings with
   the node.
   """
   def sit(asm, node, hips, opts \\ []) do
@@ -704,12 +707,12 @@ defmodule World.Furniture.Hanging do
       Vec.add(h0, {Vec.dot(d, side), Vec.dot(d, front), elem(d, 2)})
     end
 
-    grips =
-      for {s, p} <- Keyword.get(opts, :grips, []), into: %{} do
-        {{:limb, "arm_#{s}"}, %{at: local.(p)}}
-      end
-
-    hands = for {s, _} <- Keyword.get(opts, :grips, []), into: %{}, do: {{:hand, String.to_existing_atom(s)}, "grip"}
+    # The hands that hold (a rope: the shape "grip") and the hands that lie
+    # on a thing (the lap: "relaxed").
+    held = for {s, p} <- Keyword.get(opts, :grips, []), do: {s, p, "grip"}
+    laid = for {s, p} <- Keyword.get(opts, :rest, []), do: {s, p, "relaxed"}
+    grips = for {s, p, _} <- held ++ laid, into: %{}, do: {{:limb, "arm_#{s}"}, %{at: local.(p)}}
+    hands = for {s, _, shape} <- held ++ laid, into: %{}, do: {{:hand, String.to_existing_atom(s)}, shape}
 
     pose =
       World.People.Pose.resolve("sit")
@@ -1210,16 +1213,17 @@ defmodule World.Furniture.Hanging do
       limits: [0, Rig.stretch(317.5)]
     )
     |> spin("spin_#{name}", swivel_at, [bottom_half, basket], to: "bounce_#{name}")
-    # A person on the cushion, the back against the back of the basket
-    # (25 degrees back, by eye), the legs out of its front.
+    # A person on the cushion, inside the basket: a little back (8
+    # degrees, by eye), the hands on the lap, the legs out of its front.
     |> then(fn a ->
       if Keyword.get(opts, :person, false),
         do:
-          sit(a, "spin_#{name}", {0.0, -0.03, low + 0.12 * bh + 0.08 + 0.09},
-            recline: 25,
+          sit(a, "spin_#{name}", {0.0, 0.03, low + @cushion * bh + 0.09},
+            recline: 4,
+            rest: [{"l", {-0.12, 0.28, low + @cushion * bh + 0.2}}, {"r", {0.12, 0.28, low + @cushion * bh + 0.2}}],
             pose: %{
-              "thigh_l" => [{{1.0, 0.0, 0.0}, 80}],
-              "thigh_r" => [{{1.0, 0.0, 0.0}, 80}],
+              "thigh_l" => [{{1.0, 0.0, 0.0}, 85}],
+              "thigh_r" => [{{1.0, 0.0, 0.0}, 85}],
               "calf_l" => [{{1.0, 0.0, 0.0}, -70}],
               "calf_r" => [{{1.0, 0.0, 0.0}, -70}]
             }
@@ -1228,13 +1232,21 @@ defmodule World.Furniture.Hanging do
     end)
   end
 
+  @doc """
+  The shape of the basket of an egg chair at `t` (0 at its bottom, 1 at
+  its top): its half width and its half depth there, over their most (a
+  teardrop, wide from the seat to high up).
+  """
+  def egg(t), do: :math.pow(:math.sin(:math.pi() * t), 0.45) * (1 - 0.15 * t)
+
   # The basket of an egg chair: ribs of wicker over an egg, from the seat
   # to the top, rings round it, its front open from the seat to the top
   # of the opening, a cushion on the seat, and a short chain to the
   # swivel.
   defp basket(name, bw, bd, bh, low, to) do
     r = 0.008
-    profile = fn t -> :math.pow(:math.sin(:math.pi() * t), 0.8) * (1 - 0.15 * t) end
+    # A teardrop: wide from the seat to high up, narrow only near its hook.
+    profile = &egg/1
     point = fn t, a -> {bw / 2 * profile.(t) * :math.cos(a), bd / 2 * profile.(t) * :math.sin(a), low + bh * t} end
     # The opening faces +y, from 12% to 82% of the height: there the ribs
     # and the rings go only round the back.
@@ -1259,8 +1271,13 @@ defmodule World.Furniture.Hanging do
 
     strands = for line <- ribs ++ rings, do: Shape.sweep(line, r, :black, sides: 5) |> Mesh.matter(:plastic)
 
+    # The cushion in the bowl: an oval of the shape of the basket at its
+    # top, 8 cm thick.
+    {cx, cy} = {bw / 2 * egg(@cushion) * 0.92, bd / 2 * egg(@cushion) * 0.92}
+
     cushion =
-      Shape.cylinder(0.36, 0.08, :fabric, sides: 20, frame: World.Frame.move({0.0, 0.03, low + 0.12 * bh}))
+      Shape.cylinder(1.0, 0.08, :fabric, sides: 20, frame: World.Frame.move({0.0, 0.0, low + (@cushion * bh - 0.08)}))
+      |> then(&%{&1 | points: for({x, y, z} <- &1.points, do: {x * cx, y * cy, z})})
       |> Mesh.matter(:seat_foam)
 
     {tx, ty, tz} = to
