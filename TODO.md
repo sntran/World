@@ -42,13 +42,17 @@ into the steps of `AGENTS.md`.
   rails, the culms that taper and are not quite straight, the hole of
   a rail end that shows the diaphragm, a green fresh culm. The sizes
   of the culms come from photos: measure a chair of a shop.
-- **More of the hammock shop.** A camping hammock in its pouch (the
-  hammock that a hiker carries: the bed packs into a stuff sack on its
-  side), a bug net and a tarp over the ridgeline; the spring of an egg
-  chair; the stand of a võng xếp that folds (with the net off); a person
-  who lies in a hammock (the bed sags under the mass). The sizes by eye:
-  the posts of a café, the trees, the branch of a swing, the plank, the
-  ropes; measure them in a shop and at a café.
+- **More of the hammock shop.** The width of the frame of the võng xếp
+  folds too (its fan brace brings the two sides together, to 1.13 by
+  0.19 by 0.13 m): now only its struts and its arms fold. The coils of
+  the spring of the egg chair stretch as one (a morph target of a part,
+  driven by its slide): now the two halves of the spring part at the
+  middle. A person who lies at an angle across a gathered hammock (the
+  flat lay), a person in the other beds and the swings, and the clip of
+  a person who gets in. The sizes still by eye: the café poles (12 cm),
+  the trunks, the coils and the eyes of the spring, the shape of the bug
+  net and the pitch of the tarp, the parts of the frame of Duy Lợi;
+  measure them in a shop and at a café.
 
 - **More of the sheet metal shop.** Bends of other angles (a hem of 180
   degrees, a joggle), holes in a flange (knockouts), and a gasket for a
