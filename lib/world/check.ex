@@ -69,6 +69,9 @@ defmodule World.Check do
   # its strap hangs under its rim. A plant grows in the ground: its roots
   # hold it.
   defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat, :helmet, :plant], do: :ok
+  # A thing on its site (a hammock between two trees, a swing on a
+  # branch or under a ceiling: `"site"` in its extras) is held by its site.
+  defp stand(%Assembly{extras: %{"site" => true}}), do: :ok
   defp stand(item), do: stands(item)
 
   # A house, a wall or a street is built on its site, a boat on the
