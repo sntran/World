@@ -214,7 +214,9 @@ strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `gray`, `rubber`, `copper`, `stainless`, `screen`, `blue`, `orange`,
 `red`, `plywood`, `solar_cell`, `porcelain`, `glass_amber`,
 `terracotta`, `eps` (expanded polystyrene, the core of a door),
-`bamboo`. A person
+`bamboo`, `leaf` and `bark` (a plant), `plaster`, `asphalt` and
+`ground` (a street). The `paint` of the palette is a neutral gray: a
+model gives its own color of paint. A person
 has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
 `clothes_NAME`, `color_NAME` (the mean color of an asset at mid and
 far), `hole` (the dark inside of the mouth at mid and far),

@@ -1,6 +1,11 @@
 {
   "note": "The default color of each material role: [r, g, b] in sRGB from 0 to 255, the roughness, the metalness, and for glass the alpha (1 is opaque). An app can give its own palette.",
   "roles": {
+    "asphalt": {"color": [58, 60, 62], "roughness": 0.95, "metalness": 0.0},
+    "bark": {"color": [118, 102, 86], "roughness": 0.9, "metalness": 0.0},
+    "ground": {"color": [150, 140, 116], "roughness": 1.0, "metalness": 0.0},
+    "leaf": {"color": [74, 112, 52], "roughness": 0.7, "metalness": 0.0},
+    "plaster": {"color": [224, 216, 198], "roughness": 0.9, "metalness": 0.0},
     "aluminum": {"color": [196, 200, 204], "roughness": 0.35, "metalness": 1.0},
     "bamboo": {"color": [196, 168, 104], "roughness": 0.55, "metalness": 0.0},
     "blue": {"color": [16, 86, 160], "roughness": 0.45, "metalness": 0.0},
@@ -22,7 +27,7 @@
     "metal": {"color": [123, 130, 140], "roughness": 0.45, "metalness": 1.0},
     "mortar": {"color": [204, 199, 190], "roughness": 0.95, "metalness": 0.0},
     "orange": {"color": [236, 112, 24], "roughness": 0.5, "metalness": 0.0},
-    "paint": {"color": [185, 28, 28], "roughness": 0.3, "metalness": 0.2},
+    "paint": {"color": [142, 144, 146], "roughness": 0.3, "metalness": 0.2},
     "plywood": {"color": [222, 186, 140], "roughness": 0.85, "metalness": 0.0},
     "porcelain": {"color": [240, 238, 230], "roughness": 0.12, "metalness": 0.0},
     "eps": {"color": [236, 236, 228], "roughness": 0.9, "metalness": 0.0},
