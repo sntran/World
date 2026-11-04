@@ -131,11 +131,12 @@ defmodule World.Mass do
   @doc """
   The mass of a model (kg), its center of mass (in the axes of the model)
   and the names of its parts with no mass: `%{mass, center, unknown}`.
+  The joints are at their values in `pose`, else at 0.
   """
-  def of(item) do
+  def of(item, pose \\ %{}) do
     {known, unknown} =
       item
-      |> Build.placed()
+      |> Build.placed(pose)
       |> Enum.map(fn {f, p} -> {p.name, part(p), f} end)
       |> Enum.split_with(fn {_, m, _} -> m end)
 

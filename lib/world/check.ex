@@ -66,15 +66,17 @@ defmodule World.Check do
   # A door and a window stand in a wall, a material (a roof tile) on its
   # roof, an enclosure on its wall: they do not stand on their own. A boat
   # floats (its check is its stability: TODO.md). A helmet is worn, and
-  # its strap hangs under its rim.
-  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat, :helmet], do: :ok
+  # its strap hangs under its rim. A plant grows in the ground: its roots
+  # hold it.
+  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat, :helmet, :plant], do: :ok
   defp stand(item), do: stands(item)
 
-  # A house or a wall is built on its site, a boat on the slipway of its
-  # yard: they go through no door. A
+  # A house, a wall or a street is built on its site, a boat on the
+  # slipway of its yard, a plant grows where it stands: they go through no
+  # door. A
   # thing put together on its site (an overhead door: `"site"` in its
   # extras) goes through the door in its parts.
-  defp door(%Assembly{kind: kind}) when kind in [:wall, :house, :boat], do: :ok
+  defp door(%Assembly{kind: kind}) when kind in [:wall, :house, :boat, :street, :plant], do: :ok
   defp door(%Assembly{kind: :vehicle} = item), do: fits(item, @drive_in)
 
   defp door(%Assembly{extras: %{"site" => true}} = item),
@@ -85,9 +87,17 @@ defmodule World.Check do
   @doc """
   If the model stands on its base: `:ok`, or `{:error, {:tips, center,
   base}}` with the center of mass and the box of the base (x and y).
+
+  A joint of the role `:stand` (the stand of a scooter, the side stand of
+  a motorcycle) goes down to the angle where its stand first touches the
+  ground, or to its upper limit. When the model is then on a line (two
+  wheels) and its stand is to one side of the line, the model leans to
+  that side until a point touches the ground: a motorcycle on its side
+  stand.
   """
   def stands(item) do
-    placed = Build.placed(item)
+    pose = stand_pose(item)
+    placed = Build.placed(item, pose)
     points = for {f, p} <- placed, m <- p.shapes, pt <- m.points, do: Frame.point(f, pt)
 
     case points do
@@ -95,33 +105,114 @@ defmodule World.Check do
         :ok
 
       _ ->
+        stand = for {f, %{kind: :stand} = p} <- placed, m <- p.shapes, pt <- m.points, do: Frame.point(f, pt)
+        {points, {x, y, _}} = lean(points, stand, center(item, pose, placed, points))
         low = points |> Enum.map(&elem(&1, 2)) |> Enum.min()
         base = points |> Enum.filter(&(elem(&1, 2) < low + 0.002)) |> Enum.map(fn {x, y, _} -> {x, y} end) |> hull()
-        center = center(item, placed, points)
 
-        if inside?(base, center, 0.001),
+        if inside?(base, {x, y}, 0.001),
           do: :ok,
-          else: {:error, {:tips, center, box(base)}}
+          else: {:error, {:tips, {x, y}, box(base)}}
     end
+  end
+
+  # The angle of each stand: the first angle where its lowest point is on
+  # the ground of the other parts (by halves of the range), or its upper
+  # limit when it does not get there.
+  defp stand_pose(%Assembly{nodes: nodes} = item) do
+    for {name, _, %{role: :stand, limits: [lo, hi]}} <- nodes, into: %{} do
+      {name, if(gap(item, %{name => hi}) >= 0, do: hi, else: halve(item, name, lo, hi, 12))}
+    end
+  end
+
+  defp stand_pose(_), do: %{}
+
+  defp halve(_, _, _, hi, 0), do: hi
+
+  defp halve(item, name, lo, hi, n) do
+    mid = (lo + hi) / 2
+    if gap(item, %{name => mid}) < 0, do: halve(item, name, lo, mid, n - 1), else: halve(item, name, mid, hi, n - 1)
+  end
+
+  # The height of the lowest point of the stands over the lowest point of
+  # the other parts.
+  defp gap(item, pose) do
+    {stand, rest} = item |> Build.placed(pose) |> Enum.split_with(fn {_, p} -> p.kind == :stand end)
+
+    low = fn placed ->
+      for({f, p} <- placed, m <- p.shapes, pt <- m.points, do: elem(Frame.point(f, pt), 2)) |> Enum.min(fn -> 0.0 end)
+    end
+
+    low.(stand) - low.(rest)
+  end
+
+  # A model on a line of the ground, with its stand to one side of the
+  # line: it turns about the line to that side until a point touches.
+  defp lean(points, [], center), do: {points, center}
+
+  defp lean(points, stand, center) do
+    low = points |> Enum.map(&elem(&1, 2)) |> Enum.min()
+    base = for {x, y, z} <- points, z < low + 0.002, do: {x, y}
+    {a, b} = far_pair(base)
+    {ux, uy} = norm2(sub2(b, a))
+    n = {-uy, ux}
+    d = fn {x, y, _} -> dot2(sub2({x, y}, a), n) end
+    side = stand |> Enum.map(d) |> then(&(Enum.sum(&1) / length(&1)))
+
+    if not line?(base, a, n) or abs(side) < 0.01 do
+      {points, center}
+    else
+      s = if side > 0, do: 1, else: -1
+
+      angles =
+        for {_, _, z} = p <- points, e = s * d.(p), e > 0.002, do: :math.atan2(z - low, e)
+
+      t = Enum.min(angles, fn -> 0.0 end)
+
+      turn = fn {x, y, z} = p ->
+        e = s * d.(p)
+        h = z - low
+        e2 = e * :math.cos(t) + h * :math.sin(t)
+        h2 = h * :math.cos(t) - e * :math.sin(t)
+        {nx, ny} = n
+        {x + nx * s * (e2 - e), y + ny * s * (e2 - e), low + h2}
+      end
+
+      {Enum.map(points, turn), turn.(center)}
+    end
+  end
+
+  # The base is a line: each point of it is within 2 mm of the line.
+  defp line?(base, a, n), do: Enum.all?(base, &(abs(dot2(sub2(&1, a), n)) < 0.002))
+
+  defp far_pair([p | _] = ps) do
+    q = Enum.max_by(ps, &dist2(&1, p))
+    {q, Enum.max_by(ps, &dist2(&1, q))}
+  end
+
+  defp sub2({x0, y0}, {x1, y1}), do: {x0 - x1, y0 - y1}
+  defp dot2({x0, y0}, {x1, y1}), do: x0 * x1 + y0 * y1
+  defp dist2(p, q), do: dot2(sub2(p, q), sub2(p, q))
+
+  defp norm2(v) do
+    l = :math.sqrt(dot2(v, v))
+    if l < 1.0e-9, do: {1.0, 0.0}, else: {elem(v, 0) / l, elem(v, 1) / l}
   end
 
   # The center of mass. With a part of no mass, the center of the volume
   # of the closed meshes; with no closed mesh, the mean of the points.
-  defp center(item, placed, points) do
-    case Mass.of(item) do
-      %{center: {x, y, _}, unknown: []} ->
-        {x, y}
+  defp center(item, pose, placed, points) do
+    case Mass.of(item, pose) do
+      %{center: {_, _, _} = c, unknown: []} ->
+        c
 
       _ ->
         solids = for {f, p} <- placed, m <- p.shapes, {v, c} <- [Mass.mesh(m)], do: {v, Frame.point(f, c)}
         total = solids |> Enum.map(&elem(&1, 0)) |> Enum.sum()
 
-        {x, y, _} =
-          if total > 0,
-            do: solids |> Enum.map(fn {v, c} -> Vec.scale(c, v / total) end) |> Enum.reduce(&Vec.add/2),
-            else: Vec.mean(points)
-
-        {x, y}
+        if total > 0,
+          do: solids |> Enum.map(fn {v, c} -> Vec.scale(c, v / total) end) |> Enum.reduce(&Vec.add/2),
+          else: Vec.mean(points)
     end
   end
 

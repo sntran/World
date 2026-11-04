@@ -61,6 +61,37 @@ defmodule World.CheckTest do
     end
   end
 
+  describe "stands/1 with a stand" do
+    # Two thin wheels in line on the y axis, a body over them, and a stand
+    # at the left on a hinge, as the side stand of a motorcycle: the stand
+    # is along the frame at 0 and goes down to 80 degrees.
+    defp bike(body_x, leg) do
+      pivot = {-0.1, 0.0, 0.3}
+      stand_port = Part.port("stand", pivot, {1, 0, 0}, {0, 0, 1})
+      wheels = for y <- [-0.5, 0.5], do: Shape.box({-0.001, y - 0.15, 0.0}, {0.001, y + 0.15, 0.3}, :steel)
+      body = Shape.box({body_x - 0.05, -0.5, 0.3}, {body_x + 0.05, 0.5, 0.5}, :steel)
+      frame = Part.new("frame", :frame, [body | wheels], [@o, stand_port])
+      foot = Shape.box({-0.105, -leg, 0.295}, {-0.095, 0.0, 0.305}, :steel)
+      stand = Part.new("stand", :stand, [foot], [Part.port("pivot", pivot, {1, 0, 0}, {0, 0, 1})])
+
+      Assembly.new("bike", frame, root: "frame")
+      |> Assembly.add("side_stand", stand, at: "stand", port: "pivot", kind: :hinge, role: :stand, limits: [0, 80])
+    end
+
+    test "a long stand stops where it touches the ground, and holds the model" do
+      # At 80 degrees the foot is under the wheels: the stand stops at
+      # the angle where it first touches.
+      assert Check.stands(bike(-0.005, 0.32)) == :ok
+    end
+
+    test "a short stand: the model leans to it until it touches" do
+      assert Check.stands(bike(0.005, 0.29)) == :ok
+      # With no stand the same model tips off its line.
+      {_, frame, _} = hd(bike(0.005, 0.29).nodes)
+      assert {:error, {:tips, _, _}} = Check.stands(frame)
+    end
+  end
+
   describe "overlaps/1" do
     test "two parts in one place, and not joined, are an overlap" do
       a = part("a", Shape.box({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, :steel))

@@ -91,10 +91,10 @@ defmodule World.Build do
   @doc """
   The parts of a model at their places: a list of `{frame, part}`, the
   frame of each part in the axes of the model (at near, with each joint
-  at 0). `World.Mass` adds their masses.
+  at its value in `pose`, else at 0). `World.Mass` adds their masses.
   """
-  def placed(item) do
-    acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), :near, %{})
+  def placed(item, pose \\ %{}) do
+    acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), :near, pose)
 
     frames =
       acc.nodes
