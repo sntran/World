@@ -99,18 +99,32 @@ defmodule World.BambooTest do
     assert depth.(%{}) > 0.5 and depth.(folded) < 0.08
     assert World.Check.model(chair, folded) == :ok
 
-    # As the hinges of a door: each joint turns on two pins, parts of the
-    # kind :hinge of their own on the axis of the joint.
+    # As a real folding chair: the pin of each rear leg is fixed in the
+    # leg, so it is on the node of the rear legs, on the axis of the joint;
+    # the rear rail of the seat is its axle, through the posts.
     {_, root, _} = hd(chair.nodes)
-    pins = for {name, %World.Part{kind: :hinge}, c} <- chair.nodes, do: {name, c.at.at}
-    assert length(pins) == 4
+    pins = for {name, %World.Part{kind: :hinge}, c} <- chair.nodes, do: {name, c.to, c.at.at}
+    assert length(pins) == 2
 
-    for {name, {_, y, z}} <- pins do
-      joint = if name =~ "rear_legs", do: "rear_legs_hinge", else: "seat_hinge"
-      {_, hy, hz} = root.ports[joint].at
+    for {_, to, {_, y, z}} <- pins do
+      assert to == "rear_legs_ghe_tre_xep"
+      {_, hy, hz} = root.ports["rear_legs_hinge"].at
       assert_in_delta y, hy, 1.0e-9
       assert_in_delta z, hz, 1.0e-9
     end
+
+    {_, seat, _} = List.keyfind(chair.nodes, "seat_ghe_tre_xep", 0)
+    {_, {_, sy, sz}} = {nil, root.ports["seat_hinge"].at}
+
+    axle =
+      Enum.find(seat.shapes, fn m ->
+        {{x0, _, _}, {x1, _, _}} = World.Vec.bounds(m.points)
+        x1 - x0 > 0.44
+      end)
+
+    {{_, y0, z0}, {_, y1, z1}} = World.Vec.bounds(axle.points)
+    assert_in_delta (y0 + y1) / 2, sy, 1.0e-3
+    assert_in_delta (z0 + z1) / 2, sz, 1.0e-3
 
     assert %{kind: :hinge, ports: %{"pin" => _}} = Bamboo.pin(0.05, 0.012)
     assert Bamboo.folding(back: :bars).name == "ghe_tre_xep"

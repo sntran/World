@@ -127,11 +127,13 @@ defmodule World.Furniture.Bamboo do
 
   The posts of the back go down to the front feet; the rear legs are
   outside the posts and turn on a pin at each side where the two frames
-  cross (the joint `rear_legs_NAME`). The seat is inside the posts and
-  turns on a pin at each side, through the post into the end of its rear
-  rail (the joint `seat_NAME`); its front rests on the top rail of the
-  rear legs. As the hinges of a door, each pin is a part of its own
-  (`pin/2`, the kind `:hinge`) on the axis of its joint. Folded
+  cross (the joint `rear_legs_NAME`): the pin is fixed tight in the rear
+  leg and turns in a loose hole of the post, so it is a part of its own
+  (`pin/2`) on the node of the rear legs. The seat is inside the posts,
+  and its rear rail is its axle: the rail goes through a hole in each post
+  and turns in it (the joint `seat_NAME`). The front of the seat rests on
+  the top rail of the rear legs (`docs/format.md`, "A joint as in real
+  life"). Folded
   (the clip `fold`), the rear legs and the seat lie along the posts. The
   rails of the rear legs and the low rail of the posts are on a face of
   their legs, at the back of the chair when it is folded, so that no
@@ -175,21 +177,16 @@ defmodule World.Furniture.Bamboo do
           )
         ]
 
-    # The hinges, as the hinges of a door: a pin of bamboo at each side,
-    # a part of its own on the axis of its joint. A pin of the rear legs
-    # goes through the post and the leg; a pin of the seat goes through
-    # the post into the end of the rear rail of the seat.
-    {xp, xr} = {xa - r - 0.004, xa - r - 0.002}
-
+    # The pivot of the rear legs, as in a real folding chair: a pin of
+    # bamboo at each side, fixed tight in the rear leg (a part of its own
+    # on the node of the rear legs, so it turns with them) and loose in a
+    # hole of the post, on the axis of the joint.
     pins =
-      for {joint, at, from, to} <- [
-            {"rear_legs", pin, xp, xb + r + 0.006},
-            {"seat", {0.0, y0, seat_z}, xr - 0.02, xa + r + 0.006}
-          ],
-          {side, sx} <- [{"left", -1}, {"right", 1}] do
-        {_, py, pz} = at
-        port = Part.port("pin_#{joint}_#{side}", {sx * from, py, pz}, {sx, 0, 0}, {0, 0, 1})
-        {"pin_#{joint}_#{side}_#{name}", pin(to - from, 0.012), [at: port, port: "pin"]}
+      for {side, sx} <- [{"left", -1}, {"right", 1}] do
+        {_, py, pz} = pin
+        from = xa - r - 0.004
+        port = Part.port("pin_#{side}", {sx * from, py, pz}, {sx, 0, 0}, {0, 0, 1})
+        {"pin_#{side}_#{name}", pin(xb + r + 0.006 - from, 0.012), [to: "rear_legs_#{name}", at: port, port: "pin"]}
       end
 
     on_b = fn point, k -> Vec.add(point, Vec.scale(behind_b, k)) end
@@ -216,7 +213,9 @@ defmodule World.Furniture.Bamboo do
 
     seat =
       [
-        Culm.piece({-xr, y0, seat_z}, {xr, y0, seat_z}, d: 2 * sr, ends: {:open, :open}),
+        # The rear rail is the axle of the seat: it goes through a hole in
+        # each post and turns in it.
+        rail({-xa, y0, seat_z}, {xa, y0, seat_z}, r, d: 2 * sr, over: 0.004),
         Culm.piece({-xs - sr, y1, seat_z}, {xs + sr, y1, seat_z}, d: 2 * sr, ends: {:open, :open})
       ] ++
         for(
@@ -290,9 +289,10 @@ defmodule World.Furniture.Bamboo do
   end
 
   @doc """
-  A pin of bamboo for a hinge, `length` long and `d` across, along z from
-  its port `pin` (as `World.Materials.Construction.hinge/0` for a door):
-  a part of the kind `:hinge`, only at the near level.
+  A pin of bamboo for a pivot, `length` long and `d` across, along z from
+  its port `pin` on its axis: a part of the kind `:hinge`, only at the
+  near level. It goes on the node of the member that holds it tight; it
+  turns in a loose hole of the other member.
   """
   def pin(length, d) do
     Part.new(
