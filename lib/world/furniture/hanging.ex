@@ -48,7 +48,7 @@ defmodule World.Furniture.Hanging do
 
   The axes: x along the bed or the bench, y across, z up.
   """
-  alias World.{Assembly, Mesh, Part, Shape, Vec}
+  alias World.{Assembly, Contact, Frame, Mesh, Part, Shape, Vec}
   alias World.Furniture.Hanging.{Bed, Rig}
 
   @o Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
@@ -693,7 +693,10 @@ defmodule World.Furniture.Hanging do
   default), the body back by `recline` degrees (0): the pose `"sit"` of
   `World.People.Pose`, with the changes of `pose`, and the hands to the points of `grips` (`{side, point}`, in the
   axes of the model; the hand closes on a rope) or of `rest` (the hand lies there: on the lap). The person swings with
-  the node.
+  the node. The person leans as far as the joint values of `lean` (such
+  as `%{"spine.flex" => -30}`: the back 30 degrees to the back) and stops
+  where the body touches one of the `obstacles`, in the axes of the
+  model (`World.Contact`).
   """
   def sit(asm, node, hips, opts \\ []) do
     front = Keyword.get(opts, :front, {0.0, 1.0, 0.0})
@@ -723,7 +726,12 @@ defmodule World.Furniture.Hanging do
     r = Keyword.get(opts, :recline, 0) * :math.pi() / 180
     up = Vec.add(Vec.scale({0.0, 0.0, 1.0}, :math.cos(r)), Vec.scale(front, -:math.sin(r)))
     ahead = Vec.add(Vec.scale(front, :math.cos(r)), Vec.scale({0.0, 0.0, 1.0}, :math.sin(r)))
-    Assembly.add(asm, "person", person(pose), to: node, at: Part.port("sit", hips, up, ahead), port: "hips")
+    port = Part.port("sit", hips, up, ahead)
+    figure = person(pose)
+    # The lean that the person wants, to the first touch of an obstacle.
+    place = Frame.compose(World.Port.frame(port), Frame.invert(World.Figure.port_frame(figure, "hips")))
+    {figure, _} = Contact.lean(figure, Keyword.get(opts, :lean, %{}), Keyword.get(opts, :obstacles, []), place)
+    Assembly.add(asm, "person", figure, to: node, at: port, port: "hips")
   end
 
   @doc """
@@ -1141,9 +1149,15 @@ defmodule World.Furniture.Hanging do
     )
     |> fixed(hooks)
     |> swing2("bench_#{name}", bench, h1, h2, [], role: :swing, limits: [-25, 25])
-    # A person on the bench, the back near the slats of the back.
+    # A person on the bench, who leans back to the slats of the back.
     |> then(fn a ->
-      if Keyword.get(opts, :person, false), do: sit(a, "bench_#{name}", {0.0, -depth / 2 + 0.14, seat + 0.09}), else: a
+      if Keyword.get(opts, :person, false),
+        do:
+          sit(a, "bench_#{name}", {0.0, -depth / 2 + 0.14, seat + 0.09},
+            lean: %{"spine.flex" => -30},
+            obstacles: Enum.map(backs, &Contact.solid/1)
+          ),
+        else: a
     end)
   end
 
@@ -1213,13 +1227,16 @@ defmodule World.Furniture.Hanging do
       limits: [0, Rig.stretch(317.5)]
     )
     |> spin("spin_#{name}", swivel_at, [bottom_half, basket], to: "bounce_#{name}")
-    # A person on the cushion, inside the basket: a little back (8
-    # degrees, by eye), the hands on the lap, the legs out of its front.
+    # A person on the cushion, inside the basket, the hands on the lap,
+    # the legs out of its front. The back leans back and to the left side
+    # as far as the person wants, and stops at the wicker.
     |> then(fn a ->
       if Keyword.get(opts, :person, false),
         do:
           sit(a, "spin_#{name}", {0.0, 0.03, low + @cushion * bh + 0.09},
             recline: 4,
+            lean: %{"spine.flex" => -40, "spine.spread" => -20},
+            obstacles: [wicker(bw, bd, bh, low)],
             rest: [{"l", {-0.12, 0.28, low + @cushion * bh + 0.2}}, {"r", {0.12, 0.28, low + @cushion * bh + 0.2}}],
             pose: %{
               "thigh_l" => [{{1.0, 0.0, 0.0}, 85}],
@@ -1238,6 +1255,25 @@ defmodule World.Furniture.Hanging do
   teardrop, wide from the seat to high up).
   """
   def egg(t), do: :math.pow(:math.sin(:math.pi() * t), 0.45) * (1 - 0.15 * t)
+
+  # The wicker of an egg chair as an obstacle (`World.Contact`): a point
+  # out of the inner face of its wall (the ribs are 8 mm), but not
+  # through its opening (to the front, up to 82% of its height), or a
+  # point over its top. The wicker between the ribs is closed.
+  defp wicker(bw, bd, bh, low) do
+    fn {x, y, z} ->
+      t = (z - low) / bh
+      over = t >= 1 and abs(x) < bw / 2 and abs(y) < bd / 2
+      over or (t > 0 and t < 1 and out_of_wicker?(x, y, t, bw, bd))
+    end
+  end
+
+  defp out_of_wicker?(x, y, t, bw, bd) do
+    e = egg(t)
+    {u, v} = {x / (bw / 2 * e - 0.008), y / (bd / 2 * e - 0.008)}
+    rho = :math.sqrt(u * u + v * v)
+    rho > 1 and not (t < 0.82 and v > 0.2 * rho)
+  end
 
   # The basket of an egg chair: ribs of wicker over an egg, from the seat
   # to the top, rings round it, its front open from the seat to the top

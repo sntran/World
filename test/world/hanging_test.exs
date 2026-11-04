@@ -1,7 +1,7 @@
 defmodule World.HangingTest do
   use ExUnit.Case, async: true
 
-  alias World.{Build, Detail, Frame, Mass, Scene, Vec}
+  alias World.{Build, Contact, Detail, Frame, Mass, Scene, Vec}
   alias World.Furniture.Hanging
   alias World.Furniture.Hanging.{Bed, Rig}
 
@@ -236,15 +236,32 @@ defmodule World.HangingTest do
     assert_in_delta gx, -0.25, 0.08
     assert_in_delta gz, 1.05, 0.1
 
-    # The egg chair: the person sits nearly upright in the basket, on the
-    # node that spins, the hands on the lap.
+    # The egg chair: the person sits in the basket, on the node that
+    # spins, the hands on the lap, the back to the back and to the left
+    # side to the wicker.
     {person, c, at} = place.(Detail.with(:far, fn -> Hanging.egg_chair(person: true) end))
     assert c.to == "spin_egg_chair"
-    assert abs(elem(at.("crown"), 1) - elem(at.("hips"), 1)) < 0.1
-    assert elem(at.("crown"), 2) > elem(at.("hips"), 2) + 0.6
+    {cx, cy, cz} = at.("crown")
+    {_, hy, hz} = at.("hips")
+    assert cy < hy and cx < 0 and cz > hz + 0.6
     assert Map.has_key?(person.pose, "index_01_l")
-    {_, c, _} = place.(Detail.with(:far, fn -> Hanging.porch_swing(person: true) end))
+
+    # The porch swing: the person leans back to the slats of the back, and
+    # no point of the body goes through them.
+    item = Detail.with(:far, fn -> Hanging.porch_swing(person: true) end)
+    {person, c, at} = place.(item)
     assert c.to == "bench_swing_porch"
+    assert elem(at.("crown"), 1) < elem(at.("hips"), 1) - 0.1
+    {_, bench, _} = List.keyfind(item.nodes, "bench_swing_porch", 0)
+
+    slats =
+      for m <- bench.shapes,
+          {{x0, y0, _}, {x1, y1, _}} = Vec.bounds(m.points),
+          y1 - y0 < 0.03 and x1 - x0 > 1.0,
+          do: Contact.solid(m)
+
+    f = Frame.compose(World.Port.frame(c.at), Frame.invert(World.Figure.port_frame(person, "hips")))
+    refute person |> Contact.points() |> Enum.any?(&Contact.blocked?(Frame.point(f, &1), slats))
   end
 
   test "the person in the egg chair is inside its basket: no point through the wicker, the head under its top" do
