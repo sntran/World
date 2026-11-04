@@ -95,24 +95,31 @@ defmodule World.Furniture.Hanging do
   def cafe(opts \\ []) do
     bed = Keyword.get(opts, :bed, :net)
     name = Keyword.get(opts, :name, "vong_luoi_cafe")
-    # The posts by eye from the photos: 3.4 m apart, 12 cm. The net of a
-    # võng: 180 by 142 cm (the net of a võng of Meta.vn); the cloth: 220
-    # by 120 cm, by eye.
-    {d, post} = {3.4, 0.12}
+    # The posts by eye from the photos: round poles of 12 cm, 2.8 m apart
+    # (the võng fills most of the gap, on short ropes). The net of a võng:
+    # 180 by 142 cm (the net of a võng of Meta.vn); the cloth: 220 by 120
+    # cm, by eye.
+    {d, post} = {2.8, 0.12}
     {length, width} = if bed == :net, do: {1.8, 1.42}, else: {2.2, 1.2}
     h = hang(d - post, length, 0.45)
     {a1, a2} = {{-(d - post) / 2, 0.0, h.anchor}, {(d - post) / 2, 0.0, h.anchor}}
     {e1, e2} = {{-h.span / 2, 0.0, h.anchor - h.drop}, {h.span / 2, 0.0, h.anchor - h.drop}}
-    surface = Bed.surface(e1, e2, length: length, width: width, ends: :gathered, rise: 0.12)
+    surface = Bed.surface(e1, e2, length: length, width: width, ends: :gathered)
     color = Keyword.get(opts, :color, if(bed == :net, do: [24, 92, 150], else: [20, 120, 130]))
 
+    # The net: a mesh of about 3.5 cm (by eye). The cloth: a hem of 2 cm
+    # at each edge, of a darker color (by eye).
     beds =
       if bed == :net,
-        do: Bed.net(surface, strands: 24, knots: 30),
-        else: [cloth_mass(Bed.cloth(surface), surface, 0.087)]
+        do: Bed.net(surface, strands: 40, knots: 48),
+        else: cloth_mass(Bed.cloth(surface, cols: 24, bands: [{2, :dark}, {116, :fabric}, {2, :dark}]), surface, 0.087)
 
     swinging =
-      Part.new("bed_#{name}", :bed, beds ++ [Rig.rope(a1, e1, 0.01), Rig.rope(e2, a2, 0.01)], [@o],
+      Part.new(
+        "bed_#{name}",
+        :bed,
+        beds ++ whippings(e1, e2, a1, a2) ++ [Rig.rope(a1, e1, 0.01), Rig.rope(e2, a2, 0.01)],
+        [@o],
         sources: [
           if(bed == :net,
             do: "A net of nylon cord of 2.4 mm, 180 by 142 cm (the net of a võng, Meta.vn), its ends gathered.",
@@ -129,14 +136,14 @@ defmodule World.Furniture.Hanging do
         :site,
         for(sx <- [-1, 1], p <- Rig.post("p", {sx * d / 2, 0.0}, post).shapes, do: p),
         [@o],
-        sources: ["Two posts of wood of 12 cm, 3.4 m apart: the site (by eye)."]
+        sources: ["Two round poles of wood of 12 cm, 2.8 m apart: the site (by eye)."]
       )
 
     new(
       name,
       site,
       "A võng of a café of the South between two posts: #{if(bed == :net, do: "a net of cord (võng lưới)", else: "a cloth of parachute nylon (võng dù)")}.",
-      materials: %{fabric: color}
+      materials: %{fabric: color, dark: Enum.map(color, &round(&1 * 0.6))}
     )
     |> swing2("bed_#{name}", swinging, a1, a2)
   end
@@ -159,7 +166,19 @@ defmodule World.Furniture.Hanging do
     tub = fn a, b -> Shape.sweep([a, b], r, :steel, sides: 10) |> Mesh.skin(0.0015, :steel) end
     rails = for sy <- [-1, 1], do: tub.({-xb, sy * (wid / 2 - r), r}, {xb, sy * (wid / 2 - r), r})
     cross = for x <- [-xb, 0.0, xb], do: tub.({x, -(wid / 2 - r), r}, {x, wid / 2 - r, r})
-    posts = for sx <- [-1, 1], sy <- [-1, 1], do: tub.({sx * xb, sy * (wid / 2 - r), r}, {sx * xh, 0.0, hgt - 0.03})
+    # Each post bends in to the hook: the two posts of an end make an arch
+    # (the photo of the stand).
+    posts =
+      for sx <- [-1, 1], sy <- [-1, 1] do
+        arch =
+          for k <- 0..8,
+              t = k / 8,
+              do:
+                {sx * (xb + (xh - xb) * t), sy * (wid / 2 - r) * (1 - t * t),
+                 r + (hgt - 0.03 - r) * :math.sin(:math.pi() / 2 * t)}
+
+        Shape.sweep(arch, r, :steel, sides: 10) |> Mesh.skin(0.0015, :steel)
+      end
 
     stand =
       Part.new("stand_#{name}", :stand, rails ++ cross ++ posts, [@o],
@@ -175,7 +194,7 @@ defmodule World.Furniture.Hanging do
     {length, span, bar} = {1.8, 1.6, 0.5}
     drop = @tan30 * (2 * xh - span) / 2
     {e1, e2} = {{-span / 2, 0.0, hgt - 0.03 - drop}, {span / 2, 0.0, hgt - 0.03 - drop}}
-    surface = Bed.surface(e1, e2, length: length, width: 1.42, ends: {:bar, bar}, rise: 0.1)
+    surface = Bed.surface(e1, e2, length: length, width: 1.42, ends: {:bar, bar})
 
     bars =
       for {{x, _, z}, a} <- [{e1, a1}, {e2, a2}] do
@@ -189,7 +208,7 @@ defmodule World.Furniture.Hanging do
       end
 
     net =
-      Part.new("net_#{name}", :bed, Bed.net(surface, strands: 24, knots: 28) ++ List.flatten(bars), [@o],
+      Part.new("net_#{name}", :bed, Bed.net(surface, strands: 40, knots: 44) ++ List.flatten(bars), [@o],
         sources: [
           "A net of nylon cord, 180 by 142 cm, on a bar of wood of 50 cm at each end (Bản Mai, gỗ 50 cm, Meta.vn); two cords of 5 mm to each hook."
         ]
@@ -219,12 +238,17 @@ defmodule World.Furniture.Hanging do
     h = hang(reach, length, 0.46)
     {a1, a2} = {{-reach / 2, 0.0, h.anchor}, {reach / 2, 0.0, h.anchor}}
     {e1, e2} = {{-h.span / 2, 0.0, h.anchor - h.drop}, {h.span / 2, 0.0, h.anchor - h.drop}}
-    surface = Bed.surface(e1, e2, length: length, width: 1.92, ends: :gathered, rise: 0.25)
+    surface = Bed.surface(e1, e2, length: length, width: 1.92, ends: :gathered)
     # The carabiner at each gathered end, on the end of its strap.
     clips = for {e, s} <- [{e1, -1}, {e2, 1}], do: Vec.add(e, {s * 0.05, 0.0, 0.0})
 
     bed =
-      Part.new("bed_#{name}", :bed, [Bed.cloth(surface), Rig.rope(e1, e2, 0.003)], [@o],
+      Part.new(
+        "bed_#{name}",
+        :bed,
+        Bed.cloth(surface, cols: 24, bands: [{1, :cloth}, {3, :fabric}, {1, :cloth}]) ++
+          whippings(e1, e2, a1, a2) ++ [Rig.rope(e1, e2, 0.003)],
+        [@o],
         params: %{"mass" => 0.538},
         sources: [
           "ENO DoubleNest: 2.9 by 1.92 m, 538 g, nylon of 70 denier; a ridgeline of 83% of its length (#{@ultimate})"
@@ -244,7 +268,7 @@ defmodule World.Furniture.Hanging do
     [site, other] = trees(name, d, trunk)
 
     new(name, site, "A camping hammock between two trees, on tree straps and carabiners.",
-      materials: %{fabric: Keyword.get(opts, :color, [200, 120, 40])}
+      materials: %{fabric: Keyword.get(opts, :color, [200, 120, 40]), cloth: [70, 74, 80]}
     )
     |> fixed([other | loops])
     |> swing2("bed_#{name}", bed, a1, a2, straps ++ carabiners)
@@ -278,11 +302,11 @@ defmodule World.Furniture.Hanging do
     z = anchor - drop
     {e1, e2} = {{-span / 2, 0.0, z}, {span / 2, 0.0, z}}
     {r1, r2} = {{-span / 2 - fan, 0.0, z}, {span / 2 + fan, 0.0, z}}
-    surface = Bed.surface(e1, e2, length: length, width: width, ends: :spread, rise: 0.03)
+    surface = Bed.surface(e1, e2, length: length, width: width, ends: :spread)
 
     beds =
       case bed do
-        :cloth -> [cloth_mass(Bed.cloth(surface, t: 0.003), surface, 0.407)]
+        :cloth -> cloth_mass(Bed.cloth(surface, t: 0.003, cols: 22, bands: stripes()), surface, 0.407)
         :net -> Bed.net(surface, strands: 22, knots: 26, d: 0.006, material: :rope)
       end
 
@@ -313,7 +337,10 @@ defmodule World.Furniture.Hanging do
       for {a, s, sx} <- [{a1, "left", -1}, {a2, "right", 1}],
           do: Rig.tree_strap("strap_#{s}_#{name}", {sx * d / 2, 0.0}, trunk / 2, elem(a, 2), a)
 
-    colors = if bed == :cloth, do: %{fabric: [196, 40, 44]}, else: %{rope: [222, 205, 170]}
+    colors =
+      if bed == :cloth,
+        do: %{red: [178, 36, 40], blue: [34, 62, 120], orange: [226, 170, 52], white: [232, 222, 196]},
+        else: %{rope: [222, 205, 170]}
 
     [site, other] = trees(name, d, trunk)
 
@@ -606,8 +633,19 @@ defmodule World.Furniture.Hanging do
   # The mass of a cloth: its area by its mass of a square meter (kg/m2).
   # A skin of nylon of the thickness that gives that mass: the mesh is the
   # two faces of the cloth.
-  defp cloth_mass(mesh, surface, kg),
-    do: Mesh.skin(mesh, kg * Bed.area(surface) / (1140 * elem(World.Mass.area(mesh), 0)), :nylon)
+  defp cloth_mass(meshes, surface, kg) do
+    t = kg * Bed.area(surface) / (1140 * (meshes |> Enum.map(&elem(World.Mass.area(&1), 0)) |> Enum.sum()))
+    for m <- meshes, do: Mesh.skin(m, t, :nylon)
+  end
+
+  # The stripes of a canvas along the bed (the canvas of the photos of
+  # Wayfair: stripes of red, blue, yellow and cream, by eye).
+  defp stripes do
+    for(_ <- 1..3, b <- [{3, :red}, {1, :white}, {2, :blue}, {1, :orange}, {1, :white}], do: b) ++ [{3, :red}]
+  end
+
+  # The whipping of each gathered end: on the bed, toward its rope.
+  defp whippings(e1, e2, a1, a2), do: [Bed.whipping(e1, Vec.sub(a1, e1)), Bed.whipping(e2, Vec.sub(a2, e2))]
 
   # The assembly of a thing that hangs: the site (or the stand) as its
   # root. A site holds it: no check of its stand (`"site"` in its extras).

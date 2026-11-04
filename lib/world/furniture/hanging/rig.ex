@@ -22,7 +22,7 @@ defmodule World.Furniture.Hanging.Rig do
   - `carabiner/2`: a carabiner of aluminum;
   - `swivel/2`: a swivel in its two halves, `{top, bottom}`;
   - `tree_strap/4`: a strap of webbing round a trunk, to its loop;
-  - `trunk/3`, `post/3`, `beam/3`: the anchors of a site (a tree, a post
+  - `trunk/3`, `post/3`, `beam/3`: the anchors of a site (a tree, a pole
     of a café, the joist of a porch ceiling): the site is not a part of
     the thing that hangs, but it holds it.
   """
@@ -184,10 +184,17 @@ defmodule World.Furniture.Hanging.Rig do
     )
   end
 
-  @doc "A post of wood at `{x, y}`, `d` across and `h` high: an anchor of a site (a post of a café)."
+  @doc """
+  A round pole of wood at `{x, y}`, `d` across and `h` high, with its
+  bark: an anchor of a site (the poles of a café of võng, by eye from the
+  photos).
+  """
   def post(name, {x, y}, d, h \\ 2.6) do
-    mesh = Shape.box({x - d / 2, y - d / 2, 0.0}, {x + d / 2, y + d / 2, h}, :wood) |> Mesh.matter(:wood)
-    Part.new(name, :site, [mesh], [@o], sources: ["A post of wood of #{round(d * 100)} cm: the site of the hammock."])
+    mesh = Shape.cylinder(d / 2, h, :bark, sides: 12, frame: World.Frame.move({x, y, 0.0})) |> Mesh.matter(:wood)
+
+    Part.new(name, :site, [mesh], [@o],
+      sources: ["A round pole of wood of #{round(d * 100)} cm: the site of the hammock."]
+    )
   end
 
   @doc """

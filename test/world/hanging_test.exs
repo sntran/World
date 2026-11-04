@@ -31,13 +31,26 @@ defmodule World.HangingTest do
     assert width.(:gathered) < 0.03
     assert_in_delta width.({:bar, 0.5}), 0.5, 0.01
     assert_in_delta width.(:spread), 1.4, 0.01
-    s = Bed.surface(elem(e, 0), elem(e, 1), length: 2.3, width: 1.4, ends: :gathered, rise: 0.2)
-    # The edges ride over the middle line at the middle of the bed.
-    assert elem(s.({0.5, 1.0}), 2) > elem(s.({0.5, 0.0}), 2) + 0.19
-    # A net: a cord for each strand, half at mid, one sheet at far.
-    assert length(Bed.net(s, strands: 10, knots: 12)) == 10
-    assert length(Detail.with(:mid, fn -> Bed.net(s, strands: 10, knots: 12) end)) == 5
+    s = Bed.surface(elem(e, 0), elem(e, 1), length: 2.3, width: 1.4, ends: :gathered)
+    # Each thread along the bed has the length of the bed: the edges hang
+    # almost taut, the middle deep.
+    len = fn v -> polyline(for i <- 0..200, do: s.({i / 200, v})) end
+    for v <- [0.0, 0.5, 1.0], do: assert_in_delta(len.(v), 2.3, 0.01)
+    assert elem(s.({0.5, 1.0}), 2) > elem(s.({0.5, 0.0}), 2) + 0.2
+    # Across the middle, the cloth is as wide as it is flat.
+    assert_in_delta polyline(for j <- 0..100, do: s.({0.5, -1 + j / 50})), 1.4, 0.02
+    # A bed with short ends cannot spread: its edges are taut, no longer
+    # than the bed.
+    short = Bed.surface(elem(e, 0), elem(e, 1), length: 2.05, width: 1.4, ends: :gathered)
+    assert polyline(for i <- 0..200, do: short.({i / 200, 1.0})) <= 2.06
+    # A net: a cord for each strand and an edge cord at each side, half at
+    # mid, sheets at far.
+    assert length(Bed.net(s, strands: 10, knots: 12)) == 12
+    assert length(Detail.with(:mid, fn -> Bed.net(s, strands: 10, knots: 12) end)) == 7
     assert [%World.Mesh{}] = Detail.with(:far, fn -> Bed.net(s) end)
+    # A cloth in bands across: one mesh for each band.
+    assert [_, _, _] = Bed.cloth(s, bands: [{1, :dark}, {4, :fabric}, {1, :dark}])
+    assert %World.Mesh{} = Bed.whipping({0, 0, 0}, {1, 0, 0})
     assert Bed.area(s) > 2.0
   end
 
@@ -72,7 +85,7 @@ defmodule World.HangingTest do
   test "the hang: the lowest point of a camping hammock at its sit height, its straps at 30 degrees" do
     item = Hanging.camping()
     {_, bed, _} = List.keyfind(item.nodes, "bed_hammock_camping", 0)
-    low = bed.shapes |> hd() |> Map.fetch!(:points) |> Enum.map(&elem(&1, 2)) |> Enum.min()
+    low = bed.shapes |> Enum.flat_map(& &1.points) |> Enum.map(&elem(&1, 2)) |> Enum.min()
     assert_in_delta low, 0.46, 0.03
     # The camping hammock has the mass of its data sheet.
     assert bed.params["mass"] == 0.538
@@ -124,4 +137,7 @@ defmodule World.HangingTest do
       assert Enum.any?(item.nodes, fn {_, p, c} -> c != nil and c.role == :spin and p.name =~ "_bottom" end)
     end
   end
+
+  defp polyline(points),
+    do: points |> Enum.chunk_every(2, 1, :discard) |> Enum.map(fn [a, b] -> Vec.len(Vec.sub(b, a)) end) |> Enum.sum()
 end
