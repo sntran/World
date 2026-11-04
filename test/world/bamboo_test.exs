@@ -98,6 +98,21 @@ defmodule World.BambooTest do
 
     assert depth.(%{}) > 0.5 and depth.(folded) < 0.08
     assert World.Check.model(chair, folded) == :ok
+
+    # As the hinges of a door: each joint turns on two pins, parts of the
+    # kind :hinge of their own on the axis of the joint.
+    {_, root, _} = hd(chair.nodes)
+    pins = for {name, %World.Part{kind: :hinge}, c} <- chair.nodes, do: {name, c.at.at}
+    assert length(pins) == 4
+
+    for {name, {_, y, z}} <- pins do
+      joint = if name =~ "rear_legs", do: "rear_legs_hinge", else: "seat_hinge"
+      {_, hy, hz} = root.ports[joint].at
+      assert_in_delta y, hy, 1.0e-9
+      assert_in_delta z, hz, 1.0e-9
+    end
+
+    assert %{kind: :hinge, ports: %{"pin" => _}} = Bamboo.pin(0.05, 0.012)
     assert Bamboo.folding(back: :bars).name == "ghe_tre_xep"
   end
 end
