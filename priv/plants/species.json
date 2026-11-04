@@ -1,0 +1,44 @@
+{
+  "note": "The species of the nursery of World (World.Plants): the numbers of the rules of each plant, in meters and degrees, each with its source. A number that is an estimate says so in its source.",
+  "coconut": {
+    "name": "Cocos nucifera, the tall type (dừa ta, dừa cao)",
+    "height": [18.0, "20 to 22 m at 40 years, 20 to 30 m for tall cultivars (Chan and Elevitch, Cocos nucifera, Species Profiles for Pacific Island Agroforestry, 2006): a palm of about 25 years (an estimate)."],
+    "trunk": [0.33, "The trunk is 30 to 35 cm across, about 40 cm at the height of the chest, with almost no taper above its base (Chan and Elevitch, 2006)."],
+    "base": [0.6, "The base is swollen, to about 80 cm (Chan and Elevitch, 2006); the model takes 60 cm (an estimate)."],
+    "lean": [8.0, "The trunk is often curved and usually leans (Plants of the World Online, the floras of Cocos nucifera); the angle is an estimate."],
+    "fronds": [30, "30 to 35 fronds in the crown (Chan and Elevitch, 2006; 20 to 40, Palms of New Guinea)."],
+    "frond": [5.0, "A frond is 4.5 to 5.5 m long, the petiole about a quarter of it (Chan and Elevitch, 2006)."],
+    "leaflet": [1.0, "The leaflets are 50 to 150 cm long, about 100 cm at the middle of the frond, 1.5 to 5 cm wide; 200 to 250 on a frond (Chan and Elevitch, 2006)."],
+    "nuts": [12, "A bunch of about 12 nuts of about 30 by 25 cm under the crown, all the year in the South of Việt Nam (Trần Văn Hâu and Nguyễn Chí Linh, Tạp chí Khoa học ĐH Cần Thơ 17a, 2011: 59 to 72 nuts on a tree each year)."]
+  },
+  "banana": {
+    "name": "Musa ABB 'Pisang Awak' (chuối sứ, chuối xiêm)",
+    "height": [2.8, "The pseudostem of Pisang Awak is 1.8 to 3.75 m (Sunandar and Kahar, Biosaintifika 9, 2017)."],
+    "trunk": [0.22, "About 22 cm across: a girth of 68 cm at flowering (the Grand Naine, Indian Journal of Agricultural Sciences, 2014)."],
+    "leaves": [11, "6 to 20 leaves in the canopy (Nelson, Ploetz and Kepler, Musa species, Species Profiles for Pacific Island Agroforestry, 2006)."],
+    "blade": [1.6, "The blade of Pisang Awak is 1.13 to 1.90 m by 0.34 to 0.58 m (Sunandar and Kahar, 2017); its leaves droop."],
+    "width": [0.45, "The blade of Pisang Awak is 0.34 to 0.58 m wide (Sunandar and Kahar, 2017)."],
+    "petiole": [0.4, "The petiole is more than 30 cm (Flora of China 24); 40 cm is an estimate."],
+    "hands": [12, "A bunch of about 12.7 hands, 209 fruits and 20 kg; 10 to 14 fruits of 7 to 9 cm on a hand (Sunandar and Kahar, 2017)."]
+  },
+  "bamboo": {
+    "name": "Bambusa blumeana (tre gai)",
+    "height": [16.0, "The culms are 15 to 25 m tall (PROSEA, Bambusa blumeana)."],
+    "trunk": [0.08, "The culms are 5 to 10 cm across, to 20 cm, with a wall of 0.5 to 3 cm (PROSEA)."],
+    "culms": [20, "10 to 40 culms in a clump (PROSEA); 20 is the middle."],
+    "internode": [0.35, "The internodes are 25 to 60 cm long (PROSEA)."],
+    "branches": [0.6, "About 30 branches on a culm, from nearly each node; the low branches are horizontal and spiny, a thicket of 2 to 3 m; the high ones grow up (PROSEA; Kew GrassBase). The model has branches on the top 60 % of a culm."],
+    "leaf": [0.18, "The leaves are 15 to 20 by 1.5 to 2 cm (PROSEA); the sprays of leaves at the ends of the branches are cards of 0.45 by 0.18 m (an estimate)."],
+    "clump": [1.5, "The radius of the clump at its base: an estimate."]
+  },
+  "frangipani": {
+    "name": "Plumeria rubra (đại, hoa sứ)",
+    "height": [4.5, "3 to 8 m (Criley, Plumeria, University of Hawai'i CTAHR OF-24, 1998); 3 to 7 m (Cây thuốc và động vật làm thuốc ở Việt Nam, tập 1)."],
+    "trunk": [0.22, "The branches are thick, blunt and brittle (Criley, 1998); the trunk of 22 cm is an estimate."],
+    "forks": [3, "Each shoot ends in a cluster of flowers, then 2 or 3 new shoots grow from under it: the model of Leeuwenberg (Hallé, Oldeman and Tomlinson, Tropical Trees and Forests, 1978); the model forks 5 times, in 3, 3, 2, 2 and 2."],
+    "leaf": [0.25, "The leaves are 14 to 30 by 6 to 8 cm, the petiole 5 to 7 cm, in clusters at the ends of the branches (Shiu-Ying Hu Herbarium, Plumeria rubra, from the Flora of China 16)."],
+    "flower": [0.065, "The flowers are 5 to 7.5 cm across, 5 petals, white with a yellow center (Criley, 1998; the Flora of China 16)."],
+    "flowering": [[5, 6, 7, 8], "It flowers from May to August in Việt Nam (Cây thuốc và động vật làm thuốc ở Việt Nam, tập 1)."],
+    "leafless": [[1, 2, 3], "Plumeria rubra drops its leaves in the dry season (December to April in the South of Việt Nam); the months with no leaves are an estimate."]
+  }
+}

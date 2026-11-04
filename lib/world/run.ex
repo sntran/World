@@ -56,7 +56,9 @@ defmodule World.Run do
     # The mold shop: it molds the shells of World.Loft (helmets).
     %{place: "mold_shop", family: :molds, at: {0, 700}, foreman: "trinh", workers: ["vy"]},
     # The shoe shop: it makes the footwear of World.Footwear (sandals).
-    %{place: "shoe_shop", family: :footwear, at: {300, 700}, foreman: "huong", workers: ["duc"]}
+    %{place: "shoe_shop", family: :footwear, at: {300, 700}, foreman: "huong", workers: ["duc"]},
+    # The nursery: it grows the plants of World.Plants from their seeds.
+    %{place: "nursery", family: :nursery, at: {600, 700}, foreman: "nhung", workers: ["cuc"]}
   ]
 
   @doc """

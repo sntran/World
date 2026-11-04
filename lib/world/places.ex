@@ -26,6 +26,7 @@ defmodule World.Places do
     :boats,
     :sheets,
     :molds,
+    :nursery,
     :footwear,
     :vehicles,
     :appliances,
@@ -55,6 +56,8 @@ defmodule World.Places do
     boat: :boats,
     enclosure: :sheets,
     helmet: :molds,
+    plant: :nursery,
+    street: :houses,
     chair: :molds,
     sandal: :footwear,
     clog: :footwear
@@ -64,8 +67,8 @@ defmodule World.Places do
   The family of an item: the factory that makes it (`:wheels` for a
   wheel, `:seats` for a seat or a bench, `:openings` for a door or a
   window, `:turned` for a part of the lathe (`World.Lathe`), `:boats` for a boat
-  (`World.Boats`), `:sheets` for a box of sheet metal (`World.Enclosures`), `:molds` for a shell from a mold (`World.Molds`), `:footwear` for a sandal (`World.Footwear`), `:houses` for a house or a
-  building of the world), or `nil` for an item that the factory of its
+  (`World.Boats`), `:sheets` for a box of sheet metal (`World.Enclosures`), `:molds` for a shell from a mold (`World.Molds`), `:footwear` for a sandal (`World.Footwear`), `:nursery` for a plant (`World.Plants`), `:houses` for a house, a
+  street or a building of the world), or `nil` for an item that the factory of its
   parent makes.
   """
   def family_of(%World.Assembly{kind: kind}), do: Map.get(@family_of_kind, kind)

@@ -211,6 +211,9 @@ function frame(yaw) {
   const r = (box.getSize(new THREE.Vector3()).length() / 2 || 1) / Number(params.get('zoom') ?? 1);
   const a = THREE.MathUtils.degToRad(Number(yaw ?? 35));
   camera.position.set(center.x + 3.2 * r * Math.sin(a), center.y + 1.4 * r, center.z + 3.2 * r * Math.cos(a));
+  // A big model (a street of 200 m) is out of the far plane of 200 m.
+  camera.far = Math.max(200, 10 * r);
+  camera.updateProjectionMatrix();
   controls.target.copy(center);
   grid.scale.setScalar(Math.max(r, 0.2));
   controls.update();

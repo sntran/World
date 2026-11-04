@@ -5,6 +5,7 @@ of World are under the AGPL-3.0 (`LICENSE`).
 
 | Folder | What | Source | License |
 |---|---|---|---|
+| `priv/osm/ba_cu.json` | The buildings, the roads and the trees of one block of the street Ba Cu, Vũng Tàu (2026-11-03), and the street of World made from them (`street_ba_cu`) | © OpenStreetMap contributors, [openstreetmap.org](https://www.openstreetmap.org/copyright), from the Overpass API | ODbL 1.0: the file is a derived database under the same license |
 | `wings/` | The mesh core of Wings 3D | [dgud/wings](https://github.com/dgud/wings) | The terms of Wings 3D (`wings/LICENSE`) |
 | `priv/makehuman/` | The base mesh, the targets, the units of the expressions of the mouth, the skeleton, the skins, the hair and the clothes of people | [MakeHuman](http://www.makehumancommunity.org/) (`priv/makehuman/README.md`) | CC0, except some clothes of the community (below): CC BY |
 | `priv/animals/meshes/shiba_inu.json`, `wolf.json`, `fox.json`, `deer.json`, `horse.json`, `donkey.json`, `cow.json`, `bull.json`, `alpaca.json`, `husky.json`, `stag.json` | The base meshes, the bones, the weights and the colors of the materials of the templates of the four-legged animals (from the glTF files, by `scripts/gltf_figure.exs`) | Quaternius, [Ultimate Animated Animal Pack](https://quaternius.com/packs/ultimateanimatedanimals.html), the glTF files from [PixelTriks](https://pixeltriks.com/browse?pack=quaternius-ultimate-animated-animals) | CC0 |
