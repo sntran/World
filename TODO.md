@@ -37,6 +37,14 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **More of the bamboo shop.** The folding chair folds: a joint of the
+  rear legs at the pin, with the seat that turns on the posts (two
+  joints that move together). The fan of three spokes at the top of a
+  back, the curved top rail, the seat of slats that bends between its
+  rails, the culms that taper and are not quite straight, the hole of
+  a rail end that shows the diaphragm, a green fresh culm. The sizes
+  of the culms come from photos: measure a chair of a shop.
+
 - **More of the sheet metal shop.** Bends of other angles (a hem of 180
   degrees, a joggle), holes in a flange (knockouts), and a gasket for a
   box of NEMA Type 4. The gauge of the A-16N126 from its datasheet (16
