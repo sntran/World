@@ -80,7 +80,6 @@ defmodule World.Enclosures do
         "nVent HOFFMAN A-16N126, a wall-mount enclosure of NEMA Type 1, 16 by 12 by 6 in (Kele, Border States, Crescent Electric)."
       ]
     )
-    |> Assembly.add("hinges", hinges(cw, front - lip, h), at: @o, port: @o)
     |> Assembly.add("cover", cover,
       at: hinge_port({-cw / 2, front - lip, 0.0}),
       port: "hinge",
@@ -88,6 +87,7 @@ defmodule World.Enclosures do
       role: :door,
       limits: [0, 110]
     )
+    |> Assembly.add_all(hinges({-cw / 2, front - lip}, h))
     |> Assembly.add("latch", latch,
       to: "cover",
       at: Kit.same("latch_a16n126", {cw / 2 - inch(1), front, h / 2}, {0, 1, 0}, {0, 0, 1}),
@@ -99,28 +99,26 @@ defmodule World.Enclosures do
   # cover. The cover opens to the left (+ angle).
   defp hinge_port(at), do: Part.port("hinge", at, {0, 0, 1}, {0, 1, 0})
 
-  # Two butt hinges (by eye): a knuckle on the axis and a leaf on the
-  # side of the body, behind the flange of the cover.
-  defp hinges(cw, y, h) do
-    r = 0.003
-
-    meshes =
-      for z <- [inch(2.5), h - inch(4)] do
-        [
-          World.Shape.cylinder(r, inch(1.5), :metal,
-            sides: 8,
-            frame: Frame.new({-cw / 2 - r, y - r, z}, {0, 0, 1}, {0, 1, 0})
-          ),
-          World.Shape.box(
-            {-cw / 2 + 0.0005, y - 2 * r - inch(1), z},
-            {-cw / 2 + 0.002, y - 2 * r, z + inch(1.5)},
-            :metal
-          )
+  # Two butt hinges of steel of 1 1/2 in (by eye), as on a real box: the
+  # pin on the axis of the cover, the fixed half on the body (its leaf to
+  # the back, -y), the moving half on the cover (its leaf to the front).
+  defp hinges({x, y}, h) do
+    {fixed, moving} =
+      World.Materials.Construction.butt_hinge("butt_hinge_a16n126", inch(1.5), inch(0.45), 0.003,
+        knuckles: 3,
+        t: 0.0015,
+        sources: [
+          "A butt hinge of steel of 1 1/2 in, its leaves 0.45 in, inside the flange of the cover (1/2 in): by eye."
         ]
-      end
-      |> List.flatten()
-      |> Enum.map(&World.Mesh.matter(&1, :steel))
+      )
 
-    Part.new("butt_hinge_a16n126", :hinge, meshes, [@o], sources: ["Two butt hinges of steel: by eye."], detail: :near)
+    for {z, k} <- Enum.with_index([inch(2.5), h - inch(4)], 1),
+        # The leaf of a hinge goes along x of its port: here along y.
+        at <- [Part.port("hinge_#{k}", {x, y, z}, {0, 0, 1}, {-1, 0, 0})],
+        node <- [
+          {"hinge_#{k}", fixed, [at: at, port: "pin"]},
+          {"hinge_leaf_#{k}", moving, [to: "cover", at: at, port: "pin"]}
+        ],
+        do: node
   end
 end

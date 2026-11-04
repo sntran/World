@@ -133,22 +133,58 @@ defmodule World.Materials.Construction do
     )
   end
 
-  @doc "A butt hinge of 3 1/2 in for a door: two leaves and the pin, along z, its pin on the axis."
-  def hinge do
-    h = 0.0889
+  @doc """
+  A butt hinge of 3 1/2 by 3 1/2 in for a door (`butt_hinge/5`): `{fixed,
+  moving}`, the half for the jamb and the half for the door.
+  """
+  def hinge,
+    do:
+      butt_hinge("hinge_3_5in", 0.0889, 0.032, 0.0045,
+        sources: ["A butt hinge of 3 1/2 by 3 1/2 in; its knuckles and its pin by eye."]
+      )
 
-    Part.new(
-      "hinge_3_5in",
-      :hinge,
-      [
-        Shape.box({-0.032, -0.0012, 0.0}, {0.0, 0.0012, h}, :chrome),
-        Shape.box({0.0, -0.0012, 0.0}, {0.032, 0.0012, h}, :chrome),
-        Shape.cylinder(0.0045, h, :chrome, sides: 8)
-      ],
-      [Part.port("pin", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})],
-      detail: :near,
-      sources: ["A butt hinge of 3 1/2 by 3 1/2 in."]
-    )
+  @doc """
+  A butt hinge as it is in real life: two halves on one pin, along z from
+  the port `pin` on the axis of the pin. It gives `{fixed, moving}`:
+
+  - the fixed half: the leaf to the side -x, screwed to the frame (a jamb,
+    the body of a box), with the knuckles 1, 3, 5 and the pin;
+  - the moving half: the leaf to the side +x, screwed to the part that
+    turns (a door, a cover), with the knuckles 2 and 4, that turn on the
+    pin.
+
+  Each half goes on the part that it is screwed to: the fixed half on the
+  frame, the moving half on the node of the part that turns, both on the
+  axis of the joint. Then the leaf of the door turns with the door, and the
+  pin stays on the axis in each pose. `height`, `leaf` (the width of a
+  leaf), `r` (the radius of a knuckle); options `knuckles` (5, an odd
+  number), `t` (the thickness of a leaf, 2.4 mm), `sources`. Only at the
+  near level.
+  """
+  def butt_hinge(name, height, leaf, r, opts \\ []) do
+    n = Keyword.get(opts, :knuckles, 5)
+    t = Keyword.get(opts, :t, 0.0024)
+    pin_r = 0.45 * r
+    step = height / n
+
+    knuckle = fn k ->
+      Shape.lathe([{pin_r, k * step}, {r, k * step}, {r, (k + 1) * step}, {pin_r, (k + 1) * step}], :chrome,
+        kind: :ring,
+        sides: 12
+      )
+    end
+
+    port = [Part.port("pin", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})]
+    sources = Keyword.get(opts, :sources, [])
+
+    fixed =
+      [Shape.box({-leaf, -t / 2, 0.0}, {-r, t / 2, height}, :chrome), Shape.cylinder(pin_r, height, :chrome, sides: 8)] ++
+        for k <- 0..(n - 1)//2, do: knuckle.(k)
+
+    moving = [Shape.box({r, -t / 2, 0.0}, {leaf, t / 2, height}, :chrome) | for(k <- 1..(n - 2)//2, do: knuckle.(k))]
+
+    {Part.new(name <> "_fixed_leaf", :hinge, fixed, port, detail: :near, sources: sources),
+     Part.new(name <> "_moving_leaf", :hinge, moving, port, detail: :near, sources: sources)}
   end
 
   defp mm(x), do: x |> Kernel.*(1000) |> round()

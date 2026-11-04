@@ -63,11 +63,18 @@ defmodule World.Openings do
     knob_at = {x0 + w - 0.065, y_in, 0.914}
     knob = %{Kit.knob("knob_#{name}", knob_at, {0, 1, 0}, {0, 0, 1}, 0.028, 0.06) | name: "door_knob"}
 
+    # Three butt hinges, as on a real door: the fixed half of each on the
+    # jamb, the moving half on the slab, both on the axis of the joint.
+    {fixed, moving} = Construction.hinge()
+
     hinges =
       for {z, k} <- Enum.with_index([0.18, h / 2, h - 0.27], 1),
-          do:
-            {"hinge_#{name}_#{k}", Construction.hinge(),
-             [at: Part.port("hinge_#{name}_#{k}", Vec.add(hinge_at, {0.0, 0.0, z}), {0, 0, 1}, {0, 1, 0}), port: "pin"]}
+          at <- [Part.port("hinge_#{name}_#{k}", Vec.add(hinge_at, {0.0, 0.0, z}), {0, 0, 1}, {0, 1, 0})],
+          node <- [
+            {"hinge_#{name}_#{k}", fixed, [at: at, port: "pin"]},
+            {"hinge_leaf_#{name}_#{k}", moving, [to: "slab_" <> name, at: at, port: "pin"]}
+          ],
+          do: node
 
     Assembly.new(
       name,

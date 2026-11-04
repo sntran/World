@@ -52,7 +52,12 @@ defmodule World.HousesTest do
       assert_in_delta y1, 2.3, 1.0e-9
       assert z0 >= -1.0e-9 and z1 > 0.03
 
-      assert Construction.hinge().detail == :near
+      # A butt hinge: two halves on one pin, only at the near level; the
+      # pin and three knuckles in the fixed half, two in the moving half.
+      {fixed, moving} = Construction.hinge()
+      assert fixed.detail == :near and moving.detail == :near
+      assert length(fixed.shapes) == 5 and length(moving.shapes) == 3
+      assert fixed.ports["pin"] == moving.ports["pin"]
     end
   end
 
@@ -125,7 +130,27 @@ defmodule World.HousesTest do
       door = World.Openings.prehung_sample()
       roles = for {_, _, %{role: r}} <- door.nodes, r, do: r
       assert Enum.sort(roles) == [:door, :knob]
-      assert counts(door)["hinge_3_5in"] == 3
+      assert counts(door)["hinge_3_5in_fixed_leaf"] == 3 and counts(door)["hinge_3_5in_moving_leaf"] == 3
+
+      # As a real door: the leaf of each hinge on the slab turns with the
+      # slab, the leaf on the jamb stays, and the pin stays on the axis.
+      leaves = for {name, %World.Part{kind: :hinge}, c} <- door.nodes, do: {name, c.to}
+      assert Enum.count(leaves, fn {_, to} -> to =~ "slab_" end) == 3
+
+      [slab] = for {name, _, %{role: :door}} <- door.nodes, do: name
+      at = fn pose, part -> for {f, %{name: ^part}} <- World.Build.placed(door, pose), do: f end
+
+      [moved, still] =
+        for part <- ~w(hinge_3_5in_moving_leaf hinge_3_5in_fixed_leaf), do: {at.(%{}, part), at.(%{slab => 90}, part)}
+
+      {closed, open} = moved
+      assert closed != open
+      assert elem(still, 0) == elem(still, 1)
+      # The pin stays on the axis: each leaf of a hinge has its port at the same point.
+      assert Enum.map(closed, & &1.at)
+             |> Enum.zip(Enum.map(open, & &1.at))
+             |> Enum.all?(fn {a, b} -> World.Vec.len(World.Vec.sub(a, b)) < 1.0e-9 end)
+
       assert World.Openings.prehung_opening(0.9144, 2.032) |> elem(0) > 0.9144
     end
 

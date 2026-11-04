@@ -66,5 +66,22 @@ defmodule World.SheetTest do
 
     %{mass: mass, unknown: []} = Mass.of(e)
     assert mass > 4 and mass < 8
+
+    # Two butt hinges as on a real box: the fixed half on the body, the
+    # moving half on the cover; open, the moving half turns with the cover
+    # and the fixed half stays.
+    halves = for {name, %World.Part{kind: :hinge}, c} <- e.nodes, do: {name, c.to}
+
+    assert Enum.sort(halves) == [
+             {"hinge_1", "body"},
+             {"hinge_2", "body"},
+             {"hinge_leaf_1", "cover"},
+             {"hinge_leaf_2", "cover"}
+           ]
+
+    frames = fn pose -> for {f, %{kind: :hinge, name: n}} <- World.Build.placed(e, pose), do: {n, f} end
+    {closed, open} = {frames.(%{}), frames.(%{"cover" => 90})}
+    moved = for {{n, a}, {n, b}} <- Enum.zip(closed, open), a != b, uniq: true, do: n
+    assert moved == ["butt_hinge_a16n126_moving_leaf"]
   end
 end
