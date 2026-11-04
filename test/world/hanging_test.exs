@@ -249,6 +249,38 @@ defmodule World.HangingTest do
     assert cy < hy and cx < 0 and cz > hz + 0.6
     assert Map.has_key?(person.pose, "index_01_l")
 
+    # The cushions of the egg chair are sewn: a seat in the bowl and a back
+    # with tufts, on the node that spins.
+    egg = Hanging.egg_chair()
+
+    for n <- ["seat_cushion_egg_chair", "back_cushion_egg_chair"] do
+      assert {_, %{kind: :cushion, params: %{"pieces" => [_ | _]}}, %{to: "spin_egg_chair"}} =
+               List.keyfind(egg.nodes, n, 0)
+    end
+
+    # The porch swing and the plank swing with cushions: the person sits on
+    # them, the back of the porch swing person on the back cushion.
+    item = Detail.with(:far, fn -> Hanging.porch_swing(person: true, cushion: true) end)
+    {_, back, _} = List.keyfind(item.nodes, "back_cushion_swing_porch", 0)
+    {person, c, at} = place.(item)
+    {_, front} = back.shapes |> hd() |> World.Mesh.bounds()
+    assert elem(at.("crown"), 1) < elem(at.("hips"), 1) - 0.1
+    assert elem(at.("hips"), 1) > elem(front, 1)
+    f = Frame.compose(World.Port.frame(c.at), Frame.invert(World.Figure.port_frame(person, "hips")))
+
+    # The back cushion under the person, at the level of the person: the
+    # person stops at its face.
+    back_at = Frame.new({0.0, -0.25, 0.4572 + 4 * 0.0254 + 0.2}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0})
+
+    squashed =
+      Detail.with(:far, fn -> World.Sewing.Cushion.solid(:box, thick: 3 * 0.0254, size: {1.48, 0.4}, at: back_at) end)
+
+    refute person |> Contact.points() |> Enum.any?(&Contact.blocked?(Frame.point(f, &1), [squashed]))
+    plank = Detail.with(:far, fn -> Hanging.plank_swing(person: true, cushion: true) end)
+    assert {_, %{kind: :cushion}, _} = List.keyfind(plank.nodes, "pad_swing_plank", 0)
+    {_, _, at} = place.(plank)
+    assert elem(at.("hips"), 2) > 0.6 + 0.09 + 0.03
+
     # The porch swing: the person leans back to the slats of the back, and
     # no point of the body goes through them.
     item = Detail.with(:far, fn -> Hanging.porch_swing(person: true) end)

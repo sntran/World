@@ -49,12 +49,14 @@ defmodule World.Furniture.Hanging do
   The axes: x along the bed or the bench, y across, z up.
   """
   alias World.{Assembly, Contact, Frame, Mesh, Part, Shape, Vec}
+  alias World.Sewing.Cushion
   alias World.Furniture.Hanging.{Bed, Rig}
 
   @o Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
   @tan30 :math.tan(:math.pi() / 6)
-  # The top of the cushion of an egg chair, over the bottom of its basket.
-  @cushion 0.1
+  # The top of the seat cushion of an egg chair, over the bottom of its
+  # basket (a share of its height).
+  @cushion 0.12
 
   # The branch of a swing: 8 in at 10 ft (HGTV, how to make a tree swing).
   @branch 10 * 12 * 0.0254
@@ -87,8 +89,8 @@ defmodule World.Furniture.Hanging do
       {"swing_porch", fn -> porch_swing() end},
       {"egg_chair", fn -> egg_chair() end},
       {"vong_luoi_cafe_person", fn -> cafe(person: true, name: "vong_luoi_cafe_person") end},
-      {"swing_plank_person", fn -> plank_swing(person: true, name: "swing_plank_person") end},
-      {"swing_porch_person", fn -> porch_swing(person: true, name: "swing_porch_person") end},
+      {"swing_plank_person", fn -> plank_swing(person: true, cushion: true, name: "swing_plank_person") end},
+      {"swing_porch_person", fn -> porch_swing(person: true, cushion: true, name: "swing_porch_person") end},
       {"egg_chair_person", fn -> egg_chair(person: true, name: "egg_chair_person") end},
       {"swing_tire_person", fn -> tire_swing(person: true, name: "swing_tire_person") end},
       {"hammock_spreader_canvas_person", fn -> spreader(person: true, name: "hammock_spreader_canvas_person") end}
@@ -956,8 +958,9 @@ defmodule World.Furniture.Hanging do
   25 by 60 cm for an adult), 3 cm thick, at 60 cm (Corderie Mansas: 60
   cm for an adult), on two ropes of 18 mm (the polypropylene rope of the
   tall tree swing of Masters of Games) 5 cm in from its ends. It swings
-  about the line through the two knots on the branch. Options: `name`, `person` (true: a person
-  sits on it, `sit/4`).
+  about the line through the two knots on the branch. Options: `name`, `color` (of the pad), `person` (true: a person
+  sits on it, `sit/4`), `cushion` (true: a pad of foam 2 in thick on the
+  board between the ropes, tied to each rope, `World.Sewing.Cushion`).
   """
   def plank_swing(opts \\ []) do
     name = Keyword.get(opts, :name, "swing_plank")
@@ -973,6 +976,19 @@ defmodule World.Furniture.Hanging do
         ]
       )
 
+    # The pad between the ropes, tied round each rope at its ends.
+    pad = [
+      size: {gap - 0.06, 0.25},
+      thick: 2 * 0.0254,
+      at: Frame.move({0.0, 0.0, seat}),
+      ties: for({x, _, _} <- [k1, k2], do: {{x, 0.0, seat + 0.03}, {0.0, 0.0, 1.0}, 0.009}),
+      sources: ["A seat pad of a swing, 2 in thick, tied to its ropes (by eye)."]
+    ]
+
+    cushion? = Keyword.get(opts, :cushion, false)
+    # The hips on the pad, the foam squashed under them.
+    up = if cushion?, do: pad[:thick] * (1 - Cushion.squash(:foam)), else: 0.0
+
     knots =
       Part.new(
         "knots_#{name}",
@@ -985,9 +1001,16 @@ defmodule World.Furniture.Hanging do
         sources: ["A knot of the rope round the branch."]
       )
 
-    new(name, tree_with_branch(name, branch), "A swing of a board on two ropes from a branch.")
+    new(name, tree_with_branch(name, branch), "A swing of a board on two ropes from a branch.",
+      materials: %{fabric: Keyword.get(opts, :color, [160, 70, 56])}
+    )
     |> fixed([knots])
-    |> swing2("seat_#{name}", swing, {-gap / 2, 0.0, branch}, {gap / 2, 0.0, branch}, [],
+    |> swing2(
+      "seat_#{name}",
+      swing,
+      {-gap / 2, 0.0, branch},
+      {gap / 2, 0.0, branch},
+      if(cushion?, do: [Cushion.box("pad_#{name}", pad)], else: []),
       role: :swing,
       limits: [-60, 60]
     )
@@ -996,7 +1019,7 @@ defmodule World.Furniture.Hanging do
     |> then(fn a ->
       if Keyword.get(opts, :person, false),
         do:
-          sit(a, "seat_#{name}", {0.0, -0.03, seat + 0.09},
+          sit(a, "seat_#{name}", {0.0, -0.03, seat + up + 0.09},
             grips: [{"l", {-gap / 2, 0.0, seat + 0.45}}, {"r", {gap / 2, 0.0, seat + 0.45}}],
             pose: %{"calf_l" => [{{1.0, 0.0, 0.0}, -60}], "calf_r" => [{{1.0, 0.0, 0.0}, -60}]}
           ),
@@ -1089,8 +1112,10 @@ defmodule World.Furniture.Hanging do
   cm, the seat at 18 in, on a chain at each side from an eye hook in the
   joist of the ceiling, the chain parted into two over the bench (a Y), to
   the front and the back of its side. It swings about the line through
-  the two hooks. Options: `name`, `person` (true: a person
-  sits on it).
+  the two hooks. Options: `name`, `color` (of the cushions), `person` (true: a person
+  sits on it), `cushion` (true: a seat cushion of foam 4 in thick and a
+  back cushion 3 in thick, tied to the top slat of the back: the sets of
+  a porch swing of 5 ft, `World.Sewing.Cushion`).
   """
   def porch_swing(opts \\ []) do
     name = Keyword.get(opts, :name, "swing_porch")
@@ -1142,20 +1167,57 @@ defmodule World.Furniture.Hanging do
 
     hooks = for {h, s} <- [{h1, "left"}, {h2, "right"}], do: Rig.hook("hook_#{s}_#{name}", h)
 
+    # The cushions: the seat on the slats of the seat, the back on the
+    # seat cushion against the slats of the back, tied to the top slat.
+    cushion? = Keyword.get(opts, :cushion, false)
+    {seat_t, back_t, top} = {4 * 0.0254, 3 * 0.0254, seat + 0.08 + 0.3}
+
+    sources = [
+      "Porch swing cushions of 5 ft: 59 in long, 4 to 5 in thick (Lowe's; Porch Swing Company: the seat is 55 to 60 in wide inside)."
+    ]
+
+    seat_cushion = [
+      size: {width - 0.04, depth - 0.02},
+      thick: seat_t,
+      at: Frame.move({0.0, 0.0, seat}),
+      sources: sources
+    ]
+
+    back_cushion = [
+      size: {width - 0.04, 0.4},
+      thick: back_t,
+      at: Frame.new({0.0, -depth / 2, seat + seat_t + 0.2}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}),
+      ties: for(x <- [-0.6, 0.6], do: {{x, -depth / 2 - 0.01, top + 0.04}, {1.0, 0.0, 0.0}, 0.045}),
+      sources: sources
+    ]
+
+    cushions =
+      if cushion?,
+        do: [Cushion.box("seat_cushion_#{name}", seat_cushion), Cushion.box("back_cushion_#{name}", back_cushion)],
+        else: []
+
+    # The hips on the seat cushion, the back on the back cushion, the foam
+    # squashed under them.
+    {sy, sz} = if cushion?, do: {back_t, seat_t}, else: {0.0, 0.0}
+    sink = 1 - Cushion.squash(:foam)
+
     new(
       name,
       Rig.beam("ceiling_#{name}", {-xh - 0.2, 0.0, ceiling}, {xh + 0.2, 0.0, ceiling}),
-      "A porch swing: a bench on chains from two hooks in the joist of the ceiling."
+      "A porch swing: a bench on chains from two hooks in the joist of the ceiling.",
+      materials: %{fabric: Keyword.get(opts, :color, [70, 96, 130])}
     )
     |> fixed(hooks)
-    |> swing2("bench_#{name}", bench, h1, h2, [], role: :swing, limits: [-25, 25])
-    # A person on the bench, who leans back to the slats of the back.
+    |> swing2("bench_#{name}", bench, h1, h2, cushions, role: :swing, limits: [-25, 25])
+    # A person on the bench, who leans back to the slats of the back (or
+    # to the back cushion).
     |> then(fn a ->
       if Keyword.get(opts, :person, false),
         do:
-          sit(a, "bench_#{name}", {0.0, -depth / 2 + 0.14, seat + 0.09},
+          sit(a, "bench_#{name}", {0.0, -depth / 2 + sy * sink + 0.14, seat + sz * sink + 0.09},
             lean: %{"spine.flex" => -30},
-            obstacles: Enum.map(backs, &Contact.solid/1)
+            obstacles:
+              Enum.map(backs, &Contact.solid/1) ++ if(cushion?, do: [Cushion.solid(:box, back_cushion)], else: [])
           ),
         else: a
     end)
@@ -1165,7 +1227,8 @@ defmodule World.Furniture.Hanging do
   A hanging egg chair on its stand (Outsunny, the egg chair with a stand:
   98 by 95 by 198 cm, the basket 90 by 60 by 105 cm, 52 cm from the
   floor): a basket of wicker over a frame (ribs and rings of 8 mm, by
-  eye), open at its front, with a cushion; a spring, a chain and a swivel
+  eye), open at its front, with a seat cushion and a back cushion with
+  tufts (`World.Sewing.Cushion`); a spring, a chain and a swivel
   from the hook at the top of a C stand of steel tube. It swings about
   the hook (two hinges), bounces on its spring (a slide down, to the
   stretch of the spring at its rated load of 317.5 kg) and spins on its
@@ -1212,6 +1275,9 @@ defmodule World.Furniture.Hanging do
       )
 
     basket = basket(name, bw, bd, bh, low, {sx, sy, sz - 0.045})
+    {seat, back} = egg_cushions(bw, bd, bh, low)
+    # The hips on the seat cushion, the fill squashed under them.
+    sink = Cushion.squash(:fiber) * (@cushion - 0.015) * bh
 
     new(name, stand, "A hanging egg chair of wicker on its stand.",
       site: false,
@@ -1226,18 +1292,27 @@ defmodule World.Furniture.Hanging do
       to: "swing_#{name}_y",
       limits: [0, Rig.stretch(317.5)]
     )
-    |> spin("spin_#{name}", swivel_at, [bottom_half, basket], to: "bounce_#{name}")
-    # A person on the cushion, inside the basket, the hands on the lap,
-    # the legs out of its front. The back leans back and to the left side
-    # as far as the person wants, and stops at the wicker.
+    |> spin(
+      "spin_#{name}",
+      swivel_at,
+      [bottom_half, basket, Cushion.box("seat_cushion_#{name}", seat), Cushion.pad("back_cushion_#{name}", back)],
+      to: "bounce_#{name}"
+    )
+    # A person on the seat cushion, inside the basket, the hands on the
+    # lap, the legs out of its front. The back leans back and to the left
+    # side as far as the person wants, and stops at the back cushion or at
+    # the wicker.
     |> then(fn a ->
       if Keyword.get(opts, :person, false),
         do:
-          sit(a, "spin_#{name}", {0.0, 0.03, low + @cushion * bh + 0.09},
+          sit(a, "spin_#{name}", {0.0, 0.06, low + @cushion * bh - sink + 0.09},
             recline: 4,
             lean: %{"spine.flex" => -40, "spine.spread" => -20},
-            obstacles: [wicker(bw, bd, bh, low)],
-            rest: [{"l", {-0.12, 0.28, low + @cushion * bh + 0.2}}, {"r", {0.12, 0.28, low + @cushion * bh + 0.2}}],
+            obstacles: [wicker(bw, bd, bh, low), Cushion.solid(:pad, back)],
+            rest: [
+              {"l", {-0.12, 0.3, low + @cushion * bh - sink + 0.2}},
+              {"r", {0.12, 0.3, low + @cushion * bh - sink + 0.2}}
+            ],
             pose: %{
               "thigh_l" => [{{1.0, 0.0, 0.0}, 85}],
               "thigh_r" => [{{1.0, 0.0, 0.0}, 85}],
@@ -1255,6 +1330,44 @@ defmodule World.Furniture.Hanging do
   teardrop, wide from the seat to high up).
   """
   def egg(t), do: :math.pow(:math.sin(:math.pi() * t), 0.45) * (1 - 0.15 * t)
+
+  # The cushions of an egg chair (two pieces, as the sets of Sunnydaze): a
+  # seat cushion of fiber that fills the bowl of the basket up to the
+  # seat, and a back cushion with tufts on the wall of its back, from the
+  # seat to 80% of its height, round 145 degrees of it. The options of
+  # `World.Sewing.Cushion.box/2` and `pad/2`.
+  defp egg_cushions(bw, bd, bh, low) do
+    {t0, t1} = {0.015, @cushion}
+
+    wall = fn t, a ->
+      {(bw / 2 * egg(t) - 0.012) * :math.cos(a), (bd / 2 * egg(t) - 0.012) * :math.sin(a), low + bh * t}
+    end
+
+    sources = [
+      "Egg chair cushions of a seat and a back, 4 to 7 in thick (Sunnydaze: Penelope, a seat 7 in and a back 6 in; Caroline, 4 in)."
+    ]
+
+    seat = [
+      size: {bw, bd},
+      thick: (t1 - t0) * bh,
+      power: 2.0,
+      fill: :fiber,
+      at: Frame.move({0.0, 0.0, low + t0 * bh}),
+      bowl: fn z -> {bw / 2 * egg(t0 + z / bh) - 0.012, bd / 2 * egg(t0 + z / bh) - 0.012} end,
+      sources: sources
+    ]
+
+    back = [
+      face: fn {u, v} -> wall.(t1 + v * (0.8 - t1), -:math.pi() / 2 + (u - 0.5) * 2.5) end,
+      toward: {0.0, 0.0, low + 0.45 * bh},
+      thick: 0.13,
+      fill: :fiber,
+      tufts: {3, 3},
+      sources: sources
+    ]
+
+    {seat, back}
+  end
 
   # The wicker of an egg chair as an obstacle (`World.Contact`): a point
   # out of the inner face of its wall (the ribs are 8 mm), but not
@@ -1277,8 +1390,7 @@ defmodule World.Furniture.Hanging do
 
   # The basket of an egg chair: ribs of wicker over an egg, from the seat
   # to the top, rings round it, its front open from the seat to the top
-  # of the opening, a cushion on the seat, and a short chain to the
-  # swivel.
+  # of the opening, and a short chain to the swivel.
   defp basket(name, bw, bd, bh, low, to) do
     r = 0.008
     # A teardrop: wide from the seat to high up, narrow only near its hook.
@@ -1307,21 +1419,12 @@ defmodule World.Furniture.Hanging do
 
     strands = for line <- ribs ++ rings, do: Shape.sweep(line, r, :black, sides: 5) |> Mesh.matter(:plastic)
 
-    # The cushion in the bowl: an oval of the shape of the basket at its
-    # top, 8 cm thick.
-    {cx, cy} = {bw / 2 * egg(@cushion) * 0.92, bd / 2 * egg(@cushion) * 0.92}
-
-    cushion =
-      Shape.cylinder(1.0, 0.08, :fabric, sides: 20, frame: World.Frame.move({0.0, 0.0, low + (@cushion * bh - 0.08)}))
-      |> then(&%{&1 | points: for({x, y, z} <- &1.points, do: {x * cx, y * cy, z})})
-      |> Mesh.matter(:seat_foam)
-
     {tx, ty, tz} = to
     hanger = Rig.chain({tx, ty, low + bh}, {tx, ty, tz})
 
-    Part.new("basket_#{name}", :seat, [cushion | strands] ++ hanger, [@o],
+    Part.new("basket_#{name}", :seat, strands ++ hanger, [@o],
       sources: [
-        "A basket of 90 by 60 by 105 cm, 52 cm from the floor (Outsunny); wicker of PE of 16 mm over a frame (by eye), a cushion."
+        "A basket of 90 by 60 by 105 cm, 52 cm from the floor (Outsunny); wicker of PE of 16 mm over a frame (by eye)."
       ]
     )
   end
