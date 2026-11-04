@@ -160,16 +160,29 @@ defmodule World.Furniture.Bamboo do
           )
         ]
 
+    # The seat: a rim of four culms (the rear rail through the posts, a
+    # side rail on each rear leg, the front rail through the side rails),
+    # and slats that fill the rim from rail to rail, their tops level with
+    # the top of the rim.
+    {sr, t} = {0.015, 0.006}
+    {y0, y1} = {rear_y + 0.01, elem(b_top, 1) + 0.02}
+
     seat =
       [
-        rail({-xa, rear_y + 0.01, seat_z}, {xa, rear_y + 0.01, seat_z}, r, d: 0.03),
-        rail({-xb, elem(b_top, 1) + 0.02, seat_z}, {xb, elem(b_top, 1) + 0.02, seat_z}, r, d: 0.03)
+        rail({-xa, y0, seat_z}, {xa, y0, seat_z}, r, d: 2 * sr),
+        rail({-xb, y1, seat_z}, {xb, y1, seat_z}, sr, d: 2 * sr)
       ] ++
+        for(
+          px <- [-xb, xb],
+          do: Culm.piece({px, y0 + sr, seat_z}, {px, y1 - sr, seat_z}, d: 2 * sr, ends: {:node, :node})
+        ) ++
         Panel.slats(
-          {{-(xb - r), rear_y - 0.005, seat_z + 0.015}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}},
-          elem(b_top, 1) + 0.045 - rear_y,
-          2 * (xb - r),
-          width: 0.018
+          {{-(xb - sr), y0, seat_z + sr - t}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}},
+          y1 - y0,
+          2 * (xb - sr),
+          width: 0.018,
+          t: t,
+          gap: 0.002
         )
 
     n = Vec.cross(up, {1.0, 0.0, 0.0})
@@ -200,7 +213,8 @@ defmodule World.Furniture.Bamboo do
 
     build(name, "A folding chair of bamboo (ghế xếp) on two frames in an X, with a pin where they cross.", [
       {"frame", frame, "The posts of the back down to the front feet and the rear legs, 35 mm, with a pin of 12 mm."},
-      {"seat", seat, "A seat of slats from the back to the front, 18 by 6 mm, on two rails of 30 mm."},
+      {"seat", seat,
+       "A seat of slats from the back to the front, 18 by 6 mm, that fill a rim of four culms of 30 mm, level with its top."},
       {"back", backrest,
        if(back == :uprights,
          do: "A back of uprights of 14 mm between two rails, with two rows of lashing.",
