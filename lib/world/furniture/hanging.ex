@@ -698,7 +698,7 @@ defmodule World.Furniture.Hanging do
   where the body touches one of the `obstacles`, in the axes of the
   model (`World.Contact`).
   """
-  def sit(asm, node, hips, opts \\ []) do
+  def sit(asm, node, hips, opts) do
     front = Keyword.get(opts, :front, {0.0, 1.0, 0.0})
     # The point of a hand in the axes of the person (its hips at the head
     # of its pelvis, `World.People.Human.skeleton/1`).

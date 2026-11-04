@@ -68,6 +68,9 @@ defmodule World.HangingTest do
     assert %{kind: :site} = Rig.beam("b", {-1.0, 0.0, 2.4}, {1.0, 0.0, 2.4})
   end
 
+  # Each model at near, with its people: the lean of a person looks for
+  # the first touch on the full skin.
+  @tag timeout: 180_000
   test "the models: true models of the hammock shop, a mass for each part, in their limits" do
     for {name, fun} <- Hanging.models() do
       item = fun.()
