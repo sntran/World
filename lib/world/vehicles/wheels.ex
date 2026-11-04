@@ -20,14 +20,16 @@ defmodule World.Vehicles.Wheels do
 
   @doc """
   The sizes of a tire code, in meters: `%{width, height, rim}` (the rim
-  is the bead seat diameter) and the outer diameter.
+  is the bead seat diameter) and the outer diameter. The rim of a code
+  comes from Table 1 of ISO 4000-1 (`priv/standards/tires.json`: a code of
+  16 is 406 mm); a tire of a data sheet there has its own outer diameter.
   """
   def tire_size(code) do
     size =
       case Regex.run(~r{^(\d+)/(\d+)\s*[-R ]\s*(\d+(?:\.\d+)?)$}, code) do
         [_, w, ratio, rim] ->
           w = String.to_integer(w) / 1000
-          %{width: w, height: w * String.to_integer(ratio) / 100, rim: parse_number(rim) * 0.0254}
+          %{width: w, height: w * String.to_integer(ratio) / 100, rim: rim_diameter(rim)}
 
         nil ->
           case Regex.run(~r{^(\d+)-(\d+)$}, code) do
@@ -41,7 +43,48 @@ defmodule World.Vehicles.Wheels do
           end
       end
 
-    Map.put(size, :diameter, size.rim + 2 * size.height)
+    case datasheet(code) do
+      [_, _, d, _] -> %{size | height: (d / 1000 - size.rim) / 2} |> Map.put(:diameter, d / 1000)
+      nil -> Map.put(size, :diameter, size.rim + 2 * size.height)
+    end
+  end
+
+  # The bead seat diameter of a rim code (m): the table of ISO 4000-1, or
+  # the inches of a code that is not in it (a rim of 14.5 in).
+  defp rim_diameter(code) do
+    case Map.get(World.Standards.table("tires", "rim")["sizes"], code) do
+      nil -> parse_number(code) * 0.0254
+      mm -> mm / 1000
+    end
+  end
+
+  defp datasheet(code), do: Map.get(World.Standards.table("tires", "datasheet")["sizes"], code)
+
+  @doc """
+  The load (kg) and the most speed (km/h) of a service description: the
+  load index (the first one of a pair) and the speed symbol.
+
+      iex> World.Vehicles.Wheels.service("121/119R")
+      %{load: 1450, speed: 170}
+  """
+  def service(text) do
+    [_, index, symbol] = Regex.run(~r{^(\d+)(?:/\d+)?([A-Z])$}, text)
+
+    %{
+      load: World.Standards.size({"tires", "load"}, index),
+      speed: World.Standards.size({"tires", "speed"}, symbol)
+    }
+  end
+
+  # The params of a tire: its code, its diameter, and the mass of its data
+  # sheet when it has one.
+  defp tire_params(code, size) do
+    base = %{"code" => code, "diameter" => Float.round(size.diameter, 4)}
+
+    case datasheet(code) do
+      [_, _, _, kg] when is_number(kg) -> Map.put(base, "mass", kg)
+      _ -> base
+    end
   end
 
   defp parse_number(s), do: if(String.contains?(s, "."), do: String.to_float(s), else: String.to_integer(s) / 1)
@@ -95,7 +138,7 @@ defmodule World.Vehicles.Wheels do
       |> Shape.lathe(:tire, kind: :ring, sides: Keyword.get(opts, :sides, 48))
       |> World.Mesh.skin(0.075 * h, :tire),
       [hub_port()],
-      params: %{"code" => code, "diameter" => Float.round(size.diameter, 4)},
+      params: tire_params(code, size),
       sources: [
         "ETRTO #{code}: width #{round(w * 1000)} mm, side #{round(h * 1000)} mm, rim #{Float.round(d * 1000, 1)} mm."
       ]

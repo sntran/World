@@ -11,7 +11,7 @@ defmodule World.StandardsTest do
       table = Standards.table(file, t)
 
       assert is_binary(table["source"]) and
-               table["unit"] in ["mm", "in", "kg/m3", "cm", "cm2", "kg", "deg", "g/m2", "g/cm3"]
+               table["unit"] in ["mm", "in", "kg/m3", "cm", "cm2", "kg", "deg", "g/m2", "g/cm3", "km/h"]
 
       assert [_ | _] = table["fields"]
       assert map_size(table["sizes"]) > 2, "#{file}/#{t}"

@@ -1,0 +1,201 @@
+{
+  "note": "The tires of World: the codes of ETRTO and of ISO 4000-1 (cars and vans), ISO 5751 (motorcycles) and ISO 5775 (bicycles). The size of a tire from its code: the section height is the section width times the aspect ratio; the outer diameter is the rim diameter and two section heights (ISO 4000-1:2021, clause 6). A tire of a data sheet has its own sizes and mass.",
+  "rim": {
+    "source": "ISO 4000-1:2001/Amd 1:2004, Table 1: the nominal rim diameter of each code (mm).",
+    "unit": "mm",
+    "fields": [
+      "diameter"
+    ],
+    "sizes": {
+      "10": 254,
+      "12": 305,
+      "13": 330,
+      "14": 356,
+      "15": 381,
+      "16": 406,
+      "17": 432,
+      "18": 457,
+      "19": 483,
+      "20": 508,
+      "21": 533,
+      "22": 559,
+      "23": 584
+    }
+  },
+  "load": {
+    "source": "The load index: the load of one tire (kg). 60 to 120: Tyreleader, Car tyres: load and speed indexes; 121 to 130: Kramp, Technische Daten: Load Index / Speed Index (the same values as PureTyre).",
+    "unit": "kg",
+    "fields": [
+      "load"
+    ],
+    "sizes": {
+      "60": 250,
+      "61": 257,
+      "62": 265,
+      "63": 272,
+      "64": 280,
+      "65": 290,
+      "66": 300,
+      "67": 307,
+      "68": 315,
+      "69": 325,
+      "70": 335,
+      "71": 345,
+      "72": 355,
+      "73": 365,
+      "74": 375,
+      "75": 387,
+      "76": 400,
+      "77": 412,
+      "78": 425,
+      "79": 437,
+      "80": 450,
+      "81": 462,
+      "82": 475,
+      "83": 487,
+      "84": 500,
+      "85": 515,
+      "86": 530,
+      "87": 545,
+      "88": 560,
+      "89": 580,
+      "90": 600,
+      "91": 615,
+      "92": 630,
+      "93": 650,
+      "94": 670,
+      "95": 690,
+      "96": 710,
+      "97": 730,
+      "98": 750,
+      "99": 775,
+      "100": 800,
+      "101": 825,
+      "102": 850,
+      "103": 875,
+      "104": 900,
+      "105": 925,
+      "106": 950,
+      "107": 975,
+      "108": 1000,
+      "109": 1030,
+      "110": 1060,
+      "111": 1090,
+      "112": 1120,
+      "113": 1150,
+      "114": 1180,
+      "115": 1215,
+      "116": 1250,
+      "117": 1285,
+      "118": 1320,
+      "119": 1360,
+      "120": 1400,
+      "121": 1450,
+      "122": 1500,
+      "123": 1550,
+      "124": 1600,
+      "125": 1650,
+      "126": 1700,
+      "127": 1750,
+      "128": 1800,
+      "129": 1850,
+      "130": 1900
+    }
+  },
+  "speed": {
+    "source": "The speed symbol: the most speed of a tire (km/h): Tyreleader and Kramp (the same values).",
+    "unit": "km/h",
+    "fields": [
+      "speed"
+    ],
+    "sizes": {
+      "B": 50,
+      "C": 60,
+      "D": 65,
+      "E": 70,
+      "F": 80,
+      "G": 90,
+      "J": 100,
+      "K": 110,
+      "L": 120,
+      "M": 130,
+      "N": 140,
+      "P": 150,
+      "Q": 160,
+      "R": 170,
+      "S": 180,
+      "T": 190,
+      "U": 200,
+      "H": 210,
+      "V": 240,
+      "W": 270,
+      "Y": 300
+    }
+  },
+  "datasheet": {
+    "source": "The tires of the makers: the measuring rim (in), the section width (mm), the outer diameter (mm) and the mass (kg). 235/65R16C 121/119R, LT245/75R16 120/116R and LT225/75R16 115/112R: Michelin, Agilis CrossClimate data book, pages 116 and 117 (the masses: tiresize.com); 215/50R17 91H: Michelin Energy Saver A/S (tiresize.com); 80/90-14, 90/90-14, 90/90-21 and 120/90-17: Mitas, Product catalog 2020, pages 10 and 24 (the design sizes; no mass); 37-622: Schwalbe, Marathon GreenGuard (730 g; the diameter of ISO 5775: 622 + 2 x 37 mm).",
+    "unit": "mm",
+    "fields": [
+      "rim",
+      "width",
+      "diameter",
+      "mass"
+    ],
+    "sizes": {
+      "235/65R16": [
+        7.0,
+        239,
+        711,
+        15.9
+      ],
+      "245/75R16": [
+        7.0,
+        249,
+        775,
+        20.5
+      ],
+      "225/75R16": [
+        6.0,
+        221,
+        744,
+        18.1
+      ],
+      "215/50R17": [
+        7.0,
+        226,
+        648,
+        10.0
+      ],
+      "80/90-14": [
+        1.85,
+        80,
+        500,
+        null
+      ],
+      "90/90-14": [
+        2.15,
+        90,
+        518,
+        null
+      ],
+      "90/90-21": [
+        2.15,
+        90,
+        695,
+        null
+      ],
+      "120/90-17": [
+        2.75,
+        119,
+        648,
+        null
+      ],
+      "37-622": [
+        null,
+        37,
+        696,
+        0.73
+      ]
+    }
+  }
+}

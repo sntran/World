@@ -228,9 +228,31 @@ defmodule World.Openings do
     end)
   end
 
+  @doc """
+  The width and the height (m) of a standard door or window by its name, in
+  a table of `priv/standards/openings.json`: `door_us` (`"3680"`: 36 by 80
+  in), `garage` (`"9x8"`: 9 by 8 ft), `window_us` (`"3040"`: 3 ft by 4 ft)
+  or `door_vn` (`"room"`, in mm).
+
+      iex> {w, h} = World.Openings.standard("garage", "9x8")
+      iex> {Float.round(w, 4), Float.round(h, 4)}
+      {2.7432, 2.4384}
+  """
+  def standard(table, name) do
+    [w, h | _] = World.Standards.size({"openings", table}, name)
+    scale = if World.Standards.table("openings", table)["unit"] == "mm", do: 0.001, else: 0.0254
+    {w * scale, h * scale}
+  end
+
   @doc "A prehung door of 36 by 80 in, for a wall of 2x4 with its sheathing (4 1/2 in)."
-  def prehung_sample, do: prehung("door_prehung_36x80", inch(36), inch(80), inch(4.5))
+  def prehung_sample do
+    {w, h} = standard("door_us", "3680")
+    prehung("door_prehung_36x80", w, h, inch(4.5))
+  end
 
   @doc "A casement window of 36 by 48 in (the rough opening), for a wall of 2x4."
-  def window_sample, do: window("window_casement_36x48", inch(36), inch(48), inch(4.5))
+  def window_sample do
+    {w, h} = standard("window_us", "3040")
+    window("window_casement_36x48", w, h, inch(4.5))
+  end
 end

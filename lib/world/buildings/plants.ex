@@ -82,7 +82,8 @@ defmodule World.Buildings.Plants do
 
   defp building(name, length, depth) do
     door = {:door, 0.7, 36 * @inch, 80 * @inch}
-    overhead = {:overhead, depth / 2, 9 * 12 * @inch, 8 * 12 * @inch}
+    {ow, oh} = World.Openings.standard("garage", "9x8")
+    overhead = {:overhead, depth / 2, ow, oh}
 
     Buildings.house(name,
       length: length,
