@@ -133,6 +133,37 @@ Each connection that is not `:fixed` is a **joint**. A joint has a
 A model has no joint for the lean of a vehicle with two wheels. An app
 turns the whole model around the line on the ground under its wheels.
 
+### A joint as in real life
+
+A joint works as the real thing works. Before you make a joint, find
+the real part that carries the turn or the slide, and which part each
+piece of its hardware is fixed to. Then:
+
+1. **The axis is the real axis.** The port of the joint is on the axis
+   of the real pin, rail or track: the pin of a hinge, the axle of a
+   wheel, a rail that turns in its holes.
+2. **Each piece of hardware is a part of its own, on the node of the
+   part that it is fixed to.** A piece that is fixed to the frame is on
+   the frame; a piece that is fixed to the part that moves is on the
+   node of that part, and moves with it. No piece of the hardware of a
+   moving part stays on the frame.
+3. **The pin goes with the member that holds it tight.** A pin is tight
+   in one member and loose in the other, where it turns. It is a child
+   of the member that holds it.
+4. **No extra hardware.** When a part is its own axle (a rail through
+   two holes), it has no pin.
+
+The joints of the catalog:
+
+| Joint | The real thing | The parts |
+|---|---|---|
+| A door, a cover on butt hinges (`World.Materials.Construction.butt_hinge/5`) | Two leaves on one pin: one leaf screwed to the jamb (or the body), one leaf screwed to the door (or the cover); the pin is in the knuckles of the fixed leaf. | The fixed half (its leaf, the knuckles 1, 3 and 5, the pin) on the frame; the moving half (its leaf, the knuckles 2 and 4) on the node of the door. Both have the port `pin` on the axis of the joint. |
+| The rear legs of a folding chair of bamboo (`World.Furniture.Bamboo.folding/1`) | A pin of bamboo at each side, tight in the rear leg, loose in a hole of the post. | Each pin (`pin/2`) on the node of the rear legs, on the axis. |
+| The seat of the folding chair | The rear rail of the seat goes through a hole in each post and turns in it. | The rail is a piece of the seat, on the axis; no pin. |
+
+A test of a joint opens it and checks the rule: the pieces on the moving
+node move, the pieces on the frame stay, and the pin stays on the axis.
+
 A **pose** is the value of each joint, by its name:
 `%{"rear_wheel" => 45, "steer" => -10}`. A value out of the limits
 stops at the nearest limit, as a real joint stops.
