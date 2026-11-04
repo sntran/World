@@ -52,6 +52,12 @@ defmodule World.Furniture.Hanging do
 
   @o Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
   @tan30 :math.tan(:math.pi() / 6)
+  # The branch of a swing: 8 in at 10 ft (HGTV, how to make a tree swing).
+  @branch 10 * 12 * 0.0254
+  @branch_r 4 * 0.0254
+
+  # The sit height of a camping hammock (ENO: 18 in or less).
+  @eno_sit 18 * 0.0254
   @ultimate "The Ultimate Hang, the hammock hang calculator: the suspension at 30 degrees, the ridgeline at 83% of the length."
 
   @doc "The models of the hammock shop, as `{name, fun}`."
@@ -95,8 +101,8 @@ defmodule World.Furniture.Hanging do
   def cafe(opts \\ []) do
     bed = Keyword.get(opts, :bed, :net)
     name = Keyword.get(opts, :name, "vong_luoi_cafe")
-    # The posts by eye from the photos: round poles of 12 cm, 2.8 m apart
-    # (the võng fills most of the gap, on short ropes). The net of a võng:
+    # The posts: round poles of 12 cm (by eye from the photos), 2.8 m
+    # apart (Yellow Leaf Hammocks, the hanging sizes: 9 to 12 ft apart). The net of a võng:
     # 180 by 142 cm (the net of a võng of Meta.vn); the cloth: 220 by 120
     # cm, by eye.
     {d, post} = {2.8, 0.12}
@@ -136,7 +142,9 @@ defmodule World.Furniture.Hanging do
         :site,
         for(sx <- [-1, 1], p <- Rig.post("p", {sx * d / 2, 0.0}, post).shapes, do: p),
         [@o],
-        sources: ["Two round poles of wood of 12 cm, 2.8 m apart: the site (by eye)."]
+        sources: [
+          "Two round poles of wood of 12 cm (by eye), 2.8 m apart (Yellow Leaf Hammocks: 9 to 12 ft): the site."
+        ]
       )
 
     new(
@@ -228,14 +236,15 @@ defmodule World.Furniture.Hanging do
   A camping hammock between two trees (ENO DoubleNest: 2.9 by 1.92 m,
   538 g, nylon of 70 denier, carabiners of 7075 aluminum): its ends
   gathered, a ridgeline of 83% of its length, a tree strap round each
-  trunk to a carabiner, the trees 4.5 m apart (by eye), its sit height
-  of 46 cm. Options: `color`, `name`.
+  trunk to a carabiner, the trees 4.5 m apart (the FAQ of ENO: 3 to 4.5
+  m between the trees; the straps at least 1.5 m from the ground), its
+  sit height of 18 in (ENO: 18 in or less). Options: `color`, `name`.
   """
   def camping(opts \\ []) do
     name = Keyword.get(opts, :name, "hammock_camping")
     {d, trunk, length} = {4.5, 0.3, 2.9}
     reach = d - trunk
-    h = hang(reach, length, 0.46)
+    h = hang(reach, length, @eno_sit)
     {a1, a2} = {{-reach / 2, 0.0, h.anchor}, {reach / 2, 0.0, h.anchor}}
     {e1, e2} = {{-h.span / 2, 0.0, h.anchor - h.drop}, {h.span / 2, 0.0, h.anchor - h.drop}}
     surface = Bed.surface(e1, e2, length: length, width: 1.92, ends: :gathered)
@@ -279,14 +288,15 @@ defmodule World.Furniture.Hanging do
   page Võng; Wayfair): a bed of 74 by 55 in, 124.5 in long with the cords
   of its ends (Sunnydaze, Double Wide 2-Person Spreader Bar Rope
   Hammock), on a bar of wood at each end, the cords from the bar to a
-  ring, and a chain from the ring to a tree strap, the trees 4.6 m apart
-  (by eye). Options: `bed` (`:cloth`, a canvas; `:net`, a bed of rope),
+  ring, and a chain from the ring to a tree strap, the trees 15 ft apart
+  (Sunnydaze, the rope hammock with spreader bars: the anchors about 15
+  ft apart). Options: `bed` (`:cloth`, a canvas; `:net`, a bed of rope),
   `name`.
   """
   def spreader(opts \\ []) do
     bed = Keyword.get(opts, :bed, :cloth)
     name = Keyword.get(opts, :name, "hammock_spreader_canvas")
-    {d, trunk} = {4.6, 0.32}
+    {d, trunk} = {15 * 12 * 0.0254, 0.32}
     {length, width} = {74 * 0.0254, 55 * 0.0254}
     fan = (124.5 - 74) / 2 * 0.0254
     # The bars at 90% of the length of the bed apart (by eye): a bed on
@@ -350,21 +360,26 @@ defmodule World.Furniture.Hanging do
   end
 
   @doc """
-  A swing of a board on two ropes from the branch of a tree: the branch at
-  2.6 m, the ropes of 12 mm 0.4 m apart, a board of 60 by 20 by 3 cm at 50
-  cm (by eye). It swings about the line through the two knots on the
-  branch. Options: `name`.
+  A swing of a board on two ropes from the branch of a tree: a branch of
+  8 in at 10 ft (HGTV, how to make a tree swing: a branch of 8 in or more,
+  10 to 15 ft up), a board of an adult of 60 by 25 cm (Corderie Mansas:
+  25 by 60 cm for an adult), 3 cm thick, at 60 cm (Corderie Mansas: 60
+  cm for an adult), on two ropes of 18 mm (the polypropylene rope of the
+  tall tree swing of Masters of Games) 5 cm in from its ends. It swings
+  about the line through the two knots on the branch. Options: `name`.
   """
   def plank_swing(opts \\ []) do
     name = Keyword.get(opts, :name, "swing_plank")
-    {branch, seat, gap} = {2.6, 0.5, 0.4}
-    {k1, k2} = {{-gap / 2, 0.0, branch - 0.06}, {gap / 2, 0.0, branch - 0.06}}
-    board = Shape.box({-0.3, -0.1, seat - 0.03}, {0.3, 0.1, seat}, :wood) |> Mesh.matter(:wood)
-    ropes = for {x, _, z} <- [k1, k2], do: Rig.rope({x, 0.0, z}, {x, 0.0, seat}, 0.012)
+    {branch, seat, gap} = {@branch, 0.6, 0.5}
+    {k1, k2} = {{-gap / 2, 0.0, branch - @branch_r}, {gap / 2, 0.0, branch - @branch_r}}
+    board = Shape.box({-0.3, -0.125, seat - 0.03}, {0.3, 0.125, seat}, :wood) |> Mesh.matter(:wood)
+    ropes = for {x, _, z} <- [k1, k2], do: Rig.rope({x, 0.0, z}, {x, 0.0, seat}, 0.018)
 
     swing =
       Part.new("seat_#{name}", :seat, [board | ropes], [@o],
-        sources: ["A board of 60 by 20 by 3 cm and two ropes of 12 mm (by eye)."]
+        sources: [
+          "A board of 60 by 25 cm at 60 cm (Corderie Mansas: the seat of an adult), 3 cm thick; two ropes of 18 mm (Masters of Games)."
+        ]
       )
 
     knots =
@@ -373,7 +388,7 @@ defmodule World.Furniture.Hanging do
         :hardware,
         for(
           {x, _, _} <- [k1, k2],
-          do: Rig.ring({x, 0.0, branch}, {1, 0, 0}, 0.065, 0.007, material: :rope) |> Mesh.matter(:nylon)
+          do: Rig.ring({x, 0.0, branch}, {1, 0, 0}, @branch_r + 0.009, 0.009, material: :rope) |> Mesh.matter(:nylon)
         ),
         [@o],
         sources: ["A knot of the rope round the branch."]
@@ -390,14 +405,14 @@ defmodule World.Furniture.Hanging do
   @doc """
   A tire swing on a branch (the guides of a tire swing: three chains to a
   swivel, the tire about 30 in over the ground): a tire 225/60R16 on its
-  side, three chains to the swivel, one rope from the swivel to the
-  branch at 2.7 m (by eye). It swings about the knot on the branch (two
+  side, three chains to the swivel, one rope of 18 mm from the swivel to
+  a branch of 8 in at 10 ft (HGTV). It swings about the knot on the branch (two
   hinges) and spins on its swivel. Options: `name`.
   """
   def tire_swing(opts \\ []) do
     name = Keyword.get(opts, :name, "swing_tire")
-    branch = 2.7
-    knot = {0.0, 0.0, branch - 0.06}
+    branch = @branch
+    knot = {0.0, 0.0, branch - @branch_r}
     tire = World.Vehicles.Wheels.tire("225/60R16")
     {low, height} = {30 * 0.0254, 0.225}
     swivel_at = {0.0, 0.0, 1.45}
@@ -405,8 +420,8 @@ defmodule World.Furniture.Hanging do
     {sx, sy, sz} = swivel_at
 
     rope =
-      Part.new("rope_#{name}", :rope, [Rig.rope(knot, {sx, sy, sz + 0.045}, 0.016)], [@o],
-        sources: ["A rope of 16 mm from the branch to the swivel (by eye)."]
+      Part.new("rope_#{name}", :rope, [Rig.rope(knot, {sx, sy, sz + 0.045}, 0.018)], [@o],
+        sources: ["A rope of 18 mm from the branch to the swivel (Masters of Games)."]
       )
 
     # The tire on its side (its axis is z): its bottom at 30 in.
@@ -433,7 +448,7 @@ defmodule World.Furniture.Hanging do
       Part.new(
         "knot_#{name}",
         :hardware,
-        [Rig.ring({0.0, 0.0, branch}, {1, 0, 0}, 0.065, 0.008, material: :rope) |> Mesh.matter(:nylon)],
+        [Rig.ring({0.0, 0.0, branch}, {1, 0, 0}, @branch_r + 0.009, 0.009, material: :rope) |> Mesh.matter(:nylon)],
         [@o],
         sources: ["A knot of the rope round the branch."]
       )
@@ -616,17 +631,21 @@ defmodule World.Furniture.Hanging do
     for {s, sx} <- [{"left", -1}, {"right", 1}], do: Rig.trunk("tree_#{s}_#{name}", {sx * d / 2, 0.0}, trunk)
   end
 
-  # A tree with a branch out over the swing: a trunk, and a branch along x
-  # at the height `z`.
+  # A tree with a branch out over the swing: a trunk of 40 cm (by eye),
+  # and a branch of 8 in along x at the height `z` (HGTV: a branch of 8 in
+  # or more, roughly parallel to the ground).
   defp tree_with_branch(name, z) do
     trunk =
-      Shape.cylinder(0.18, z + 0.6, :bark, sides: 16, frame: World.Frame.move({-1.4, 0.0, 0.0})) |> Mesh.matter(:wood)
+      Shape.cylinder(0.2, z + 0.8, :bark, sides: 16, frame: World.Frame.move({-1.4, 0.0, 0.0})) |> Mesh.matter(:wood)
 
     branch =
-      Shape.sweep([{-1.4, 0.0, z - 0.15}, {-0.6, 0.0, z}, {0.8, 0.0, z}], 0.07, :bark, sides: 12) |> Mesh.matter(:wood)
+      Shape.sweep([{-1.4, 0.0, z - 0.2}, {-0.6, 0.0, z}, {0.8, 0.0, z}], @branch_r, :bark, sides: 12)
+      |> Mesh.matter(:wood)
 
     Part.new("tree_#{name}", :site, [trunk, branch], [@o],
-      sources: ["A tree with a branch of 14 cm at #{z} m: the site (by eye)."]
+      sources: [
+        "A tree with a branch of 8 in at 10 ft (HGTV, how to make a tree swing): the site; the trunk of 40 cm by eye."
+      ]
     )
   end
 
