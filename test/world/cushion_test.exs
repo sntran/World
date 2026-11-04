@@ -66,4 +66,44 @@ defmodule World.Sewing.CushionTest do
     assert Contact.blocked?({0.0, 0.0, 0.7}, [box])
     refute Contact.blocked?({0.0, 0.0, 0.8}, [box])
   end
+
+  test "a mattress: layers on a core, a cover of ticking, tapes on the seams; its mass from each layer" do
+    part = Detail.with(:near, fn -> Cushion.mattress("m", size: {1.6, 2.0}, layers: [{:latex, 0.1}]) end)
+    assert part.kind == :mattress
+    assert Enum.any?(part.params["pieces"], &(&1["name"] == "tape"))
+    assert [%{"fill" => "latex", "thick" => 0.1}] = part.params["layers"]
+    # 0.32 m3 of latex (75 kg/m3) and about 7.6 m2 of ticking (200 g/m2).
+    assert_in_delta part.params["mass"], 0.32 * 75 + 7.6 * 0.2, 1.5
+    assert Enum.any?(part.sources, &(&1 =~ "ticking")) and Enum.any?(part.sources, &(&1 =~ "latex"))
+
+    # A soft layer on a hard core: the squash is the mean of the layers by
+    # their thickness.
+    layers = [{:coir, 0.08}, {:hr_foam, 0.02}]
+    assert_in_delta Cushion.squash(layers: layers), (0.08 * 0.05 + 0.02 * 0.2) / 0.1, 1.0e-9
+    assert Cushion.thick(layers: layers) == 0.1
+  end
+
+  test "a hard cushion: a board of plywood under hard foam does not squash" do
+    opts = [size: {0.4, 0.4}, thick: 0.03, fill: :molded, board: 0.012]
+    assert [{:board, 0.012}, {:molded, 0.03}] = Cushion.layers(opts)
+    assert_in_delta Cushion.thick(opts), 0.042, 1.0e-9
+    assert Cushion.squash(opts) < Cushion.squash(:molded)
+    part = Cushion.box("c", opts)
+    # The board is heavy: 540 kg/m3.
+    assert part.params["mass"] > 0.4 * 0.4 * 0.012 * 540
+  end
+
+  test "the sewing shop of the run makes the mattresses" do
+    yard = World.Run.yard()
+    assert yard.places["sewing_shop"].family == :sewing
+    assert :sewing in World.Places.families()
+  end
+
+  test "the mattresses of the sewing shop are true models" do
+    for {name, fun} <- Cushion.models() do
+      item = fun.()
+      assert item.kind == :mattress and World.Places.family_of(item) == :sewing, name
+      assert World.Check.model(item) == :ok, name
+    end
+  end
 end
