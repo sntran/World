@@ -30,6 +30,7 @@ defmodule World.Places do
     :footwear,
     :bamboo,
     :hanging,
+    :sewing,
     :vehicles,
     :appliances,
     :clothes,
@@ -64,14 +65,15 @@ defmodule World.Places do
     sandal: :footwear,
     clog: :footwear,
     bamboo: :bamboo,
-    hanging: :hanging
+    hanging: :hanging,
+    mattress: :sewing
   }
 
   @doc """
   The family of an item: the factory that makes it (`:wheels` for a
   wheel, `:seats` for a seat or a bench, `:openings` for a door or a
   window, `:turned` for a part of the lathe (`World.Lathe`), `:boats` for a boat
-  (`World.Boats`), `:sheets` for a box of sheet metal (`World.Enclosures`), `:molds` for a shell from a mold (`World.Molds`), `:footwear` for a sandal (`World.Footwear`), `:bamboo` for furniture of bamboo (`World.Furniture.Bamboo`), `:hanging` for a hammock or a swing (`World.Furniture.Hanging`), `:nursery` for a plant (`World.Plants`), `:houses` for a house, a
+  (`World.Boats`), `:sheets` for a box of sheet metal (`World.Enclosures`), `:molds` for a shell from a mold (`World.Molds`), `:footwear` for a sandal (`World.Footwear`), `:bamboo` for furniture of bamboo (`World.Furniture.Bamboo`), `:hanging` for a hammock or a swing (`World.Furniture.Hanging`), `:sewing` for a mattress (`World.Sewing.Cushion`), `:nursery` for a plant (`World.Plants`), `:houses` for a house, a
   street or a building of the world), or `nil` for an item that the factory of its
   parent makes.
   """

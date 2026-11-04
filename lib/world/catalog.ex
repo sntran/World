@@ -35,6 +35,7 @@ defmodule World.Catalog do
         World.Footwear.models() ++
         World.Furniture.Bamboo.models() ++
         World.Furniture.Hanging.models() ++
+        World.Sewing.Cushion.models() ++
         for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
       &elem(&1, 0)
     )

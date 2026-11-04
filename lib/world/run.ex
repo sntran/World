@@ -63,7 +63,10 @@ defmodule World.Run do
     %{place: "bamboo_shop", family: :bamboo, at: {900, 700}, foreman: "tung", workers: ["ngoc"]},
     # The hammock shop: it makes the hammocks and the swings of
     # World.Furniture.Hanging.
-    %{place: "hammock_shop", family: :hanging, at: {1200, 700}, foreman: "hieu", workers: ["bao"]}
+    %{place: "hammock_shop", family: :hanging, at: {1200, 700}, foreman: "hieu", workers: ["bao"]},
+    # The sewing shop: it sews the cushions and the mattresses of
+    # World.Sewing.Cushion.
+    %{place: "sewing_shop", family: :sewing, at: {1500, 700}, foreman: "thao", workers: ["my"]}
   ]
 
   @doc """

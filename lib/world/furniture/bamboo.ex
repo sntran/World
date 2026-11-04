@@ -52,6 +52,7 @@ defmodule World.Furniture.Bamboo do
   def models,
     do: [
       {"ghe_tre", fn -> chair() end},
+      {"ghe_tre_dem", fn -> chair(cushion: true, name: "ghe_tre_dem") end},
       {"ghe_tre_xep", fn -> folding() end},
       {"ghe_tre_xep_nan_ngang", fn -> folding(back: :bars, name: "ghe_tre_xep_nan_ngang") end},
       {"ghe_tre_banh", fn -> armchair() end},
@@ -78,7 +79,9 @@ defmodule World.Furniture.Bamboo do
 
   @doc """
   A chair with a straight back (photo: Ghế tre lưng tựa đứng, Shopee).
-  Options: `name`, `height` of the seat (0.45).
+  Options: `name`, `height` of the seat (0.45), `cushion` (true: a hard
+  pad of foam on the seat, 4 cm thick, tied to the rear legs:
+  `World.Sewing.Cushion`).
   """
   def chair(opts \\ []) do
     name = Keyword.get(opts, :name, "ghe_tre")
@@ -113,11 +116,32 @@ defmodule World.Furniture.Bamboo do
         lash: [0.4, 0.75]
       )
 
+    # The pad on the slats (6 mm), between the legs, tied round each rear
+    # leg.
+    pad = [
+      size: {2 * (x - lr) - 0.004, 2 * (y - rr)},
+      thick: 0.04,
+      fill: :hd_foam,
+      at: World.Frame.move({0.0, 0.0, side + rr + 0.006}),
+      ties: for(px <- [-x, x], do: {{px, -y, side + rr + 0.03}, {0.0, 0.0, 1.0}, lr}),
+      sources: ["A seat pad of a chair, 4 cm thick, tied to the rear legs (by eye)."]
+    ]
+
     build(name, "A chair of bamboo with a straight back (ghế tre lưng tựa đứng): the rear legs go up to the back.", [
       {"frame", frame, "Four legs of 45 mm, rails of 30 mm through the legs, stretchers of 25 mm."},
       {"seat", seat, "A seat of slats across, 16 by 6 mm, with two rows of lashing of white cord."},
       {"back", back, "A back of uprights of 16 mm between two rails, with two rows of lashing."}
     ])
+    |> then(fn asm ->
+      if Keyword.get(opts, :cushion, false),
+        do:
+          World.Assembly.add(asm, "pad_#{name}", World.Sewing.Cushion.box("pad_#{name}", pad), at: "o", port: "o")
+          |> Map.update!(
+            :materials,
+            &Map.put(&1, :fabric, %{"color" => [176, 60, 48], "roughness" => 0.85, "metalness" => 0.0})
+          ),
+        else: asm
+    end)
   end
 
   @doc """

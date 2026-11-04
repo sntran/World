@@ -60,6 +60,15 @@ defmodule World.BambooTest do
     seat = Enum.find(Bamboo.chair().nodes, fn {name, _, _} -> name == "seat_ghe_tre" end) |> elem(1)
     {_, {_, _, top}} = World.Part.bounds(seat)
     assert top > 0.42 and top < 0.46
+
+    # The chair with a hard pad of the sewing shop on its seat, tied to
+    # its rear legs.
+    chair = Bamboo.chair(cushion: true, name: "c")
+    {_, pad, _} = List.keyfind(chair.nodes, "pad_c", 0)
+    assert pad.kind == :cushion
+    assert_in_delta pad.params["squash"], World.Sewing.Cushion.squash(:hd_foam), 1.0e-9
+    {{_, _, bottom}, _} = World.Part.bounds(pad)
+    assert_in_delta bottom, top, 0.003
   end
 
   test "the folding chair stands on its four feet, and folds flat" do
