@@ -89,9 +89,12 @@ defmodule World.PartsTest do
 
   test "the size of a tire from its code" do
     assert %{width: 0.08, rim: rim, diameter: d} = Wheels.tire_size("80/90-14")
-    assert_in_delta rim, 0.3556, 1.0e-9
-    assert_in_delta d, 0.3556 + 2 * 0.072, 1.0e-9
-    assert_in_delta Wheels.tire_size("215/50R17").diameter, 0.4318 + 0.215, 1.0e-9
+    # The rim of 14 in is 356 mm in Table 1 of ISO 4000-1 (not 355.6).
+    assert_in_delta rim, 0.356, 1.0e-9
+    assert_in_delta d, 0.356 + 2 * 0.072, 1.0e-9
+    # A tire of a data sheet has the diameter of its sheet (648 mm), not
+    # the rim and two heights (647 mm).
+    assert_in_delta Wheels.tire_size("215/50R17").diameter, 0.648, 1.0e-9
     assert_in_delta Wheels.tire_size("120/70 - 12.5").rim, 12.5 * 0.0254, 1.0e-9
     assert_in_delta Wheels.tire_size("37-622").rim, 0.622, 1.0e-9
     assert_raise ArgumentError, ~r/unknown tire code/, fn -> Wheels.tire_size("big") end

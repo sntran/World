@@ -257,10 +257,12 @@ defmodule World.Places.OSM do
     Shape.box({x0, y0, -0.1}, {x1, y1, 0.0}, :ground)
   end
 
-  # A tree of the data: of its genus, or a frangipani when the data does
-  # not say. A tree at the near level of the street is built at mid, and
-  # at mid at far: a street has many trees.
-  defp plant(tags) do
+  @doc """
+  The plant of a tree of the data: of its genus (`genus`, or `species`),
+  or a frangipani when the data does not say. A tree at the near level of
+  the street is built at mid, and at mid at far: a street has many trees.
+  """
+  def plant(tags) do
     genus = String.downcase(tags["genus"] || tags["species"] || "")
 
     fun =

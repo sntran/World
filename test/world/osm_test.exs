@@ -33,6 +33,14 @@ defmodule World.OSMTest do
     assert OSM.width(%{"highway" => "track"}) == 5.0
   end
 
+  test "the plant of a tree from its genus or its species, else a frangipani" do
+    name = fn tags -> OSM.plant(tags).name end
+    assert name.(%{"genus" => "Cocos"}) == "coconut_palm"
+    assert name.(%{"species" => "Musa acuminata"}) == "banana_chuoi_su"
+    assert name.(%{"genus" => "Bambusa"}) == "bamboo_tre_gai"
+    assert name.(%{}) == "frangipani_hoa_su"
+  end
+
   test "the levels of the street stay under their limits" do
     for {level, limit} <- [near: 200_000, mid: 60_000, far: 20_000] do
       tris = Scene.triangles(Build.scene(Detail.with(level, fn -> OSM.street("ba_cu") end), level: level))
