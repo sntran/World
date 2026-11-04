@@ -1,1 +1,1 @@
-{"name":"redarc_bcdc1250d","parts":[{"count":1,"kind":"charger","name":"redarc_bcdc1250d","params":{"amps":50,"engine_bay":true},"sources":[]}]}
+{"name":"redarc_bcdc1250d","parts":[{"count":1,"kind":"charger","mass":1.0,"name":"redarc_bcdc1250d","params":{"amps":50,"engine_bay":true,"mass":1.0},"sources":[]}]}
