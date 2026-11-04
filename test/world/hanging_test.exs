@@ -152,6 +152,26 @@ defmodule World.HangingTest do
     assert z.("crown") > z.("hips") and z.("sole_l") > z.("hips")
   end
 
+  test "the frame of the võng xếp folds in the steps of Duy Lợi, to a bundle of about 1.1 by 0.2 by 0.2 m" do
+    item = Hanging.vong_xep_frame()
+    [%{name: "fold", keys: keys}] = item.clips
+    # Open at the start and at the end; the folded pose in the middle.
+    assert {+0.0, open} = hd(keys)
+    assert Enum.all?(open, fn {_, v} -> v == 0.0 end)
+    {_, folded} = Enum.at(keys, 4)
+    assert World.Check.model(item, folded) == :ok
+    {open_lo, open_hi} = Scene.bounds(Build.scene(item, level: :far))
+    {lo, hi} = Scene.bounds(Build.scene(item, pose: folded, level: :far))
+    {ox, oy, _} = Vec.sub(open_hi, open_lo)
+    {x, y, z} = Vec.sub(hi, lo)
+    assert ox > 2.5 and oy > 0.7
+    assert x < 1.2 and y < 0.25 and z < 0.25
+    # The right side slides to the left one; the struts turn first.
+    assert folded["side_right_vong_xep_frame"] > 0.5
+    {_, struts} = Enum.at(keys, 1)
+    assert struts["strut_left_back_vong_xep_frame"] != 0 and struts["side_right_vong_xep_frame"] == 0.0
+  end
+
   test "a part that stretches: the spring is a skin between the node that swings and the slide" do
     item = Hanging.egg_chair()
     scene = Build.scene(item, pose: %{"bounce_egg_chair" => 0.02})

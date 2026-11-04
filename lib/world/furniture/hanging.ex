@@ -200,14 +200,16 @@ defmodule World.Furniture.Hanging do
 
   # The frame of steel of a võng xếp of Duy Lợi (the large one: 260 by 75
   # by 71 cm): a base of two side tubes on four rubber feet, 1.1 m long
-  # (the length of a folded võng xếp: 1 to 1.13 m), with a crossbar at
-  # each end and the fan brace in the middle (it sets the width); at each
-  # end an arm, a V of two legs that lean out from the ends of the base to
-  # the hook at its tip; four struts with two bends from the base to the
-  # legs. The tube of 32 by 0.8 mm (the frame of Bản Mai, D32 x 0.8 mm,
-  # Meta.vn). With `fold`, the struts and the arms turn on their pins
-  # (hinges of the role `:fold`), and the clip `fold`; else all of it is
-  # fixed. Gives the assembly and the two hooks.
+  # (the length of a folded võng xếp: 1 to 1.13 m), with a crossbar in the
+  # notches on the tubes at each end and the fan brace in the middle (it
+  # sets the width); at each end an arm, a V of two legs that lean out
+  # from the ends of the base to the hook at its tip; four struts with two
+  # bends from the base to the legs. The tube of 32 by 0.8 mm (the frame
+  # of Bản Mai, D32 x 0.8 mm, Meta.vn). The left side is the root; the
+  # right side (its tube, its feet, its legs and its struts) is a part of
+  # its own. With `fold`, each piece turns or slides on its pin (the role
+  # `:fold`), and the clip `fold`; else all of it is fixed. Gives the
+  # assembly and the two hooks.
   defp duy_loi(name, fold) do
     {len, wid, hgt, lb, r, foot} = {2.6, 0.75, 0.71, 1.1, 0.016, 0.012}
     tube = fn pts -> Shape.sweep(pts, r, :steel, sides: 10) |> Mesh.skin(0.0008, :steel) end
@@ -215,52 +217,76 @@ defmodule World.Furniture.Hanging do
     base_end = fn sx, sy -> {sx * lb / 2, sy * yb, zb} end
     tip = fn sx -> {sx * (len / 2 - 0.03), 0.0, hgt - 0.02} end
     along = fn a, b, t -> Vec.add(a, Vec.scale(Vec.sub(b, a), t)) end
+    sides = [{-1, "left"}, {1, "right"}]
+    by_eye = "by eye"
 
-    feet =
-      for sx <- [-1, 1], sy <- [-1, 1] do
+    feet = fn sy ->
+      for sx <- [-1, 1] do
         Shape.cylinder(0.022, foot, :rubber, sides: 10, frame: World.Frame.move({sx * (lb / 2 - 0.02), sy * yb, 0.0}))
         |> Mesh.matter(:rubber)
       end
+    end
+
+    side = fn sy, s ->
+      Part.new("side_#{s}_#{name}", :stand, [tube.([base_end.(-1, sy), base_end.(1, sy)]) | feet.(sy)], [@o],
+        sources: [
+          "A side tube of the base of the frame of Duy Lợi (the large one: 260 by 75 by 71 cm, 6.3 kg; demxanh.com), 1.1 m long (a folded võng xếp: 1 to 1.13 m), the tube of 32 by 0.8 mm (Bản Mai, Meta.vn), and its rubber feet; #{by_eye}."
+        ]
+      )
+    end
 
     # The fan brace: a hub in the middle and four blades to the side tubes.
     hub =
-      Shape.cylinder(0.04, 0.02, :steel, sides: 12, frame: World.Frame.move({0.0, 0.0, zb - 0.01}))
-      |> Mesh.matter(:steel)
-
-    blades = for sx <- [-1, 1], sy <- [-1, 1], do: tube.([{0.0, 0.0, zb}, {sx * 0.14, sy * yb, zb}])
-
-    base =
       Part.new(
-        "base_#{name}",
+        "fan_hub_#{name}",
         :stand,
-        [hub | feet] ++
-          blades ++
-          for(sy <- [-1, 1], do: tube.([base_end.(-1, sy), base_end.(1, sy)])) ++
-          for(sx <- [-1, 1], do: tube.([{sx * (lb / 2 - 0.06), -yb, zb}, {sx * (lb / 2 - 0.06), yb, zb}])),
+        [
+          Shape.cylinder(0.04, 0.02, :steel, sides: 12, frame: World.Frame.move({0.0, 0.0, zb - 0.01}))
+          |> Mesh.matter(:steel)
+        ],
         [@o],
         sources: [
-          "The base of the frame of Duy Lợi (the large one: 260 by 75 by 71 cm, 6.3 kg; demxanh.com), 1.1 m long (a folded võng xếp: 1 to 1.13 m), the tube of 32 by 0.8 mm (Bản Mai, Meta.vn), the fan brace and the rubber feet; their sizes by eye."
+          "The hub of the fan brace (thanh giằng cánh quạt, Duy Lợi: it sets the width with its teeth and a knob); #{by_eye}."
         ]
       )
 
-    arms =
-      for {sx, s} <- [{-1, "left"}, {1, "right"}] do
-        legs = for sy <- [-1, 1], do: tube.([base_end.(sx, sy), tip.(sx)])
-        brace = tube.([along.(base_end.(sx, -1), tip.(sx), 0.65), along.(base_end.(sx, 1), tip.(sx), 0.65)])
-        {tx, _, tz} = tip.(sx)
-        cap = Rig.ring({tx, 0.0, tz - 0.018}, {1, 0, 0}, 0.012, 0.004)
+    blades =
+      for {sx, sxn} <- sides, {sy, s} <- sides do
+        {Part.new("fan_blade_#{sxn}_#{s}_#{name}", :stand, [tube.([{0.0, 0.0, zb}, {sx * 0.14, sy * yb, zb}])], [@o],
+           sources: ["A blade of the fan brace; #{by_eye}."]
+         ), sx, sy}
+      end
 
-        Part.new("arm_#{s}_#{name}", :stand, legs ++ [brace, cap], [@o],
-          sources: [
-            "An arm of the frame: a V of two legs to the hook at its tip (the hook on a bearing, Duy Lợi), and the V brace near its tip; by eye."
-          ]
-        )
+    # A crossbar in the notches on top of the side tubes at each end.
+    crossbars =
+      for {sx, s} <- sides do
+        x = sx * (lb / 2 - 0.06)
+
+        {Part.new("crossbar_#{s}_#{name}", :stand, [tube.([{x, -yb, zb + 2 * r}, {x, yb, zb + 2 * r}])], [@o],
+           sources: ["A crossbar in the notches of the side tubes (thanh ngang, Duy Lợi); #{by_eye}."]
+         ), x, sx}
+      end
+
+    # A leg of an arm: from the end of its side tube to the tip, with its
+    # half of the V brace; the hook on the left leg.
+    legs =
+      for {sx, s} <- sides, {sy, t} <- [{-1, "left"}, {1, "right"}] do
+        {tx, _, tz} = tip.(sx)
+        {bx, _, bz} = b = along.(base_end.(sx, sy), tip.(sx), 0.65)
+        brace = tube.([b, {bx, 0.0, bz}])
+        cap = if sy == -1, do: [Rig.ring({tx, 0.0, tz - 0.018}, {1, 0, 0}, 0.012, 0.004)], else: []
+
+        {Part.new("leg_#{s}_#{t}_#{name}", :stand, [tube.([base_end.(sx, sy), tip.(sx)]), brace | cap], [@o],
+           sources: [
+             "A leg of an arm of the frame: the V of two legs to the hook at its tip (the hook on a bearing, Duy Lợi), and half of the V brace; #{by_eye}."
+           ]
+         ), sx, sy}
       end
 
     # A strut from the base at 20 cm from the middle, with two bends, to
     # the middle of a leg.
     struts =
-      for {sx, s} <- [{-1, "left"}, {1, "right"}], {sy, t} <- [{-1, "back"}, {1, "front"}] do
+      for {sx, s} <- sides, {sy, t} <- [{-1, "back"}, {1, "front"}] do
         s0 = {sx * 0.2, sy * yb, zb}
 
         {Part.new(
@@ -268,79 +294,178 @@ defmodule World.Furniture.Hanging do
            :stand,
            [tube.([s0, Vec.add(s0, {sx * 0.08, 0.0, 0.12}), along.(base_end.(sx, sy), tip.(sx), 0.5)])],
            [@o],
-           sources: ["A strut with two bends and its notches (Duy Lợi); by eye."]
-         ), s0, sx}
+           sources: ["A strut with two bends and its notches (Duy Lợi); #{by_eye}."]
+         ), s0, sx, sy}
       end
 
     hooks = {Vec.add(tip.(-1), {0.0, 0.0, -0.03}), Vec.add(tip.(1), {0.0, 0.0, -0.03})}
     about = "The frame of steel of a võng xếp (Duy Lợi)#{if fold, do: ", as it folds", else: ""}."
-    asm = new(name, base, about, site: false)
+    {left, right} = {side.(-1, "left"), side.(1, "right")}
+    asm = new(name, left, about, site: false)
 
     asm =
       if fold do
-        # The angle of a strut or an arm over the level, to turn it down onto
-        # the base (less a little: it lies on the tubes).
-        lift = fn {x0, _, z0}, {x1, _, z1} -> :math.atan2(z1 - z0, abs(x1 - x0)) * 180 / :math.pi() end
-
-        asm =
-          Enum.reduce(struts, asm, fn {part, s0, sx}, a ->
-            angle = 180 - lift.(s0, along.(base_end.(sx, 1), tip.(sx), 0.5)) - 8
-            hinge(a, part, s0, sx * -angle, "base_#{name}")
-          end)
-
-        Enum.zip(arms, [-1, 1])
-        |> Enum.reduce(asm, fn {part, sx}, a ->
-          angle = 180 - lift.(base_end.(sx, 1), tip.(sx)) - if(sx == 1, do: 6, else: 3)
-          hinge(a, part, {sx * lb / 2, 0.0, zb}, sx * -angle, "base_#{name}")
-        end)
-        |> then(fn a ->
-          folded =
-            Map.new(
-              a.nodes
-              |> Enum.flat_map(fn {n, _, c} ->
-                if c && c.kind == :hinge, do: [{n, Enum.max_by(c.limits, &abs/1)}], else: []
-              end)
-            )
-
-          {struts_down, _} = Map.split_with(folded, fn {n, _} -> n =~ "strut_" end)
-          zeros = Map.new(folded, fn {n, _} -> {n, 0.0} end)
-
-          %{
-            a
-            | clips: [
-                %{
-                  name: "fold",
-                  length: 6.0,
-                  keys: [
-                    {0.0, zeros},
-                    {1.5, Map.merge(zeros, struts_down)},
-                    {3.0, folded},
-                    {4.5, Map.merge(zeros, struts_down)},
-                    {6.0, zeros}
-                  ]
-                }
-              ]
-          }
-        end)
+        folded_frame(asm, name, %{
+          right: right,
+          hub: hub,
+          blades: blades,
+          crossbars: crossbars,
+          legs: legs,
+          struts: struts,
+          geometry: %{yb: yb, zb: zb, r: r, base_end: base_end, tip: tip, along: along}
+        })
       else
-        fixed(asm, arms ++ Enum.map(struts, &elem(&1, 0)))
+        parts = [right, hub] ++ Enum.map(blades ++ crossbars ++ legs, &elem(&1, 0)) ++ Enum.map(struts, &elem(&1, 0))
+        fixed(asm, parts)
       end
 
     {asm, elem(hooks, 0), elem(hooks, 1)}
   end
 
-  # A part on a hinge of the role `:fold` about the y axis at `at`, from 0
-  # to `angle` (degrees), on the node `to`.
-  defp hinge(asm, part, at, angle, to) do
-    port = Part.port("pin", at, {0, 1, 0}, {0, 0, 1})
+  # The joints of the frame as it folds, in the steps of Duy Lợi: (1) the
+  # struts turn down onto the side tubes; (2) the arms turn in onto the
+  # base (the legs on pins at the ends of the side tubes); (3) the
+  # crossbars come out of their notches and lie along the left tube; (4)
+  # the fan brace closes: the right side slides to the left side, the hub
+  # goes half as far, the blades turn, and the two legs of each V turn in
+  # their plane until they lie side by side. Folded, the frame is about
+  # 1.13 by 0.19 by 0.13 m (a folded võng xếp, chotot.com).
+  defp folded_frame(asm, name, p) do
+    %{yb: yb, zb: zb, r: r, base_end: base_end, tip: tip, along: along} = p.geometry
+    deg = 180 / :math.pi()
+    # The two side tubes 19 cm apart over their outsides when folded.
+    gap = 0.19 - 2 * r
+    width = 2 * yb - gap
+    lift = fn {x0, _, z0}, {x1, _, z1} -> :math.atan2(z1 - z0, abs(x1 - x0)) * deg end
+    root = "side_left_#{name}"
+    right = "side_right_#{name}"
 
-    Assembly.add(asm, part.name, %{part | ports: Map.put(part.ports, "pin", port)},
+    asm =
+      asm
+      |> joint(p.right, root, Part.port("pin", {0.0, yb, zb}, {0, -1, 0}, {0, 0, 1}), :slide, [0, width])
+      |> joint(p.hub, root, Part.port("pin", {0.0, 0.0, zb}, {0, -1, 0}, {0, 0, 1}), :slide, [0, width / 2])
+
+    # The blades: on the hub, about z; their ends stay on their tubes.
+    blade = Vec.len({0.14, yb, 0.0})
+
+    blade_turn = fn sx, sy ->
+      a0 = :math.atan2(sy * yb, sx * 0.14)
+      a1 = :math.atan2(sy * gap / 2, sx * :math.sqrt(blade * blade - gap * gap / 4))
+      (a1 - a0) * deg
+    end
+
+    asm =
+      Enum.reduce(p.blades, asm, fn {part, sx, sy}, a ->
+        joint(
+          a,
+          part,
+          "fan_hub_#{name}",
+          Part.port("pin", {0.0, 0.0, zb}, {0, 0, 1}, {0, 1, 0}),
+          :hinge,
+          Enum.sort([0, blade_turn.(sx, sy)])
+        )
+      end)
+
+    # The crossbars: about z at the left end, along the left tube.
+    asm =
+      Enum.reduce(p.crossbars, asm, fn {part, x, sx}, a ->
+        joint(
+          a,
+          part,
+          root,
+          Part.port("pin", {x, -yb, zb + 2 * r}, {0, 0, 1}, {0, 1, 0}),
+          :hinge,
+          Enum.sort([0, 90 * sx])
+        )
+      end)
+
+    # The struts: about y at the foot, down onto the tube to the middle.
+    asm =
+      Enum.reduce(p.struts, asm, fn {part, s0, sx, sy}, a ->
+        angle = 180 - lift.(s0, along.(base_end.(sx, sy), tip.(sx), 0.5)) - 8
+
+        joint(
+          a,
+          part,
+          if(sy == 1, do: right, else: root),
+          Part.port("pin", s0, {0, 1, 0}, {0, 0, 1}),
+          :hinge,
+          Enum.sort([0, sx * -angle])
+        )
+      end)
+
+    # The legs: a pin about y at the end of the side tube (the arm turns in,
+    # the right arm over the left one), then a pin across the plane of
+    # the V (the V closes).
+    leg = Vec.len(Vec.sub(tip.(1), base_end.(1, 1)))
+    close = (:math.acos(gap / 2 / leg) - :math.acos(yb / leg)) * deg
+
+    asm =
+      Enum.reduce(p.legs, asm, fn {part, sx, sy}, a ->
+        b = base_end.(sx, sy)
+        other = base_end.(sx, -sy)
+        n = Vec.norm(Vec.cross(Vec.sub(tip.(sx), b), Vec.sub(other, b)))
+        arm = 180 - lift.(b, tip.(sx)) - if(sx == 1, do: 6, else: 3)
+        mark = Part.new(part.name <> "_arm", :mark, [], [@o])
+
+        a
+        |> joint(
+          mark,
+          if(sy == 1, do: right, else: root),
+          Part.port("pin", b, {0, 1, 0}, {0, 0, 1}),
+          :hinge,
+          Enum.sort([0, sx * -arm])
+        )
+        |> joint(
+          part,
+          mark.name,
+          Part.port("pin", b, n, Vec.norm(Vec.sub(tip.(sx), b))),
+          :hinge,
+          Enum.sort([0, -close])
+        )
+      end)
+
+    folded =
+      Map.new(for {n, _, c} <- asm.nodes, c && c.kind != :fixed, do: {n, Enum.max_by(c.limits, &abs/1)})
+
+    step = fn keep -> Map.new(folded, fn {n, v} -> {n, if(keep.(n), do: v, else: 0.0)} end) end
+    struts = step.(&(&1 =~ "strut_"))
+    arms = step.(&(&1 =~ "strut_" or &1 =~ "_arm"))
+    bars = step.(&(&1 =~ "strut_" or &1 =~ "_arm" or &1 =~ "crossbar_"))
+    zeros = step.(fn _ -> false end)
+
+    %{
+      asm
+      | clips: [
+          %{
+            name: "fold",
+            length: 12.0,
+            keys: [
+              {0.0, zeros},
+              {1.5, struts},
+              {3.0, arms},
+              {4.5, bars},
+              {6.0, folded},
+              {7.5, bars},
+              {9.0, arms},
+              {10.5, struts},
+              {12.0, zeros}
+            ]
+          }
+        ]
+    }
+  end
+
+  # A part on a joint of the role `:fold` at the port `at` (its z the axis
+  # of a hinge, or the way of a slide), on the node `to`.
+  defp joint(asm, part, to, at, kind, limits) do
+    Assembly.add(asm, part.name, %{part | ports: Map.put(part.ports, "pin", at)},
       to: to,
-      at: %{port | name: part.name <> "_pin"},
+      at: %{at | name: part.name <> "_pin"},
       port: "pin",
-      kind: :hinge,
+      kind: kind,
       role: :fold,
-      limits: Enum.sort([0, angle])
+      limits: limits
     )
   end
 

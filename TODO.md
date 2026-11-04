@@ -42,9 +42,7 @@ into the steps of `AGENTS.md`.
   rails, the culms that taper and are not quite straight, the hole of
   a rail end that shows the diaphragm, a green fresh culm. The sizes
   of the culms come from photos: measure a chair of a shop.
-- **More of the hammock shop.** The width of the frame of the võng xếp
-  folds too (its fan brace brings the two sides together, to 1.13 by
-  0.19 by 0.13 m): now only its struts and its arms fold. A person who lies at an angle across a gathered hammock (the
+- **More of the hammock shop.** A person who lies at an angle across a gathered hammock (the
   flat lay), a person in the other beds and the swings, and the clip of
   a person who gets in. The sizes still by eye: the café poles (12 cm),
   the trunks, the coils and the eyes of the spring, the shape of the bug
