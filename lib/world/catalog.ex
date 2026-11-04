@@ -32,7 +32,9 @@ defmodule World.Catalog do
         World.Molds.models() ++
         World.Plants.models() ++
         [{"street_ba_cu", fn -> World.Places.OSM.street("ba_cu") end}] ++
-        World.Footwear.models() ++ for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
+        World.Footwear.models() ++
+        World.Furniture.Bamboo.models() ++
+        for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
       &elem(&1, 0)
     )
   end

@@ -58,7 +58,9 @@ defmodule World.Run do
     # The shoe shop: it makes the footwear of World.Footwear (sandals).
     %{place: "shoe_shop", family: :footwear, at: {300, 700}, foreman: "huong", workers: ["duc"]},
     # The nursery: it grows the plants of World.Plants from their seeds.
-    %{place: "nursery", family: :nursery, at: {600, 700}, foreman: "nhung", workers: ["cuc"]}
+    %{place: "nursery", family: :nursery, at: {600, 700}, foreman: "nhung", workers: ["cuc"]},
+    # The bamboo shop: it makes the furniture of World.Furniture.Bamboo.
+    %{place: "bamboo_shop", family: :bamboo, at: {900, 700}, foreman: "tung", workers: ["ngoc"]}
   ]
 
   @doc """
@@ -114,6 +116,7 @@ defmodule World.Run do
     |> Yard.road("sheet_shop", "customer")
     |> Yard.road("mold_shop", "customer")
     |> Yard.road("shoe_shop", "customer")
+    |> Yard.road("bamboo_shop", "customer")
   end
 
   defp warehouse(name, at, limit, store),
