@@ -42,12 +42,13 @@ into the steps of `AGENTS.md`.
   rails, the culms that taper and are not quite straight, the hole of
   a rail end that shows the diaphragm, a green fresh culm. The sizes
   of the culms come from photos: measure a chair of a shop.
-- **More of the hammock shop.** The clip of a person who gets in (the bed
-  must change its shape under a body that moves: a bed that follows a
-  person, by its morph targets). The sizes still by eye: the café poles (12 cm),
-  the trunks, the coils and the eyes of the spring, the shape of the bug
-  net and the pitch of the tarp, the parts of the frame of Duy Lợi;
-  measure them in a shop and at a café.
+- **More of the hammock shop.** The clip of a person who gets in (the
+  bed must change its shape under a body that moves: a bed that follows
+  a person, by its morph targets). The sizes still by eye: the coils and
+  the eyes of the spring (no shop gives them), the shape of the bug net
+  and the pitch of the tarp, the parts of the frame of Duy Lợi, the
+  place of the hips of a person on a seat; measure them in a shop and at
+  a café.
 
 - **More of the sheet metal shop.** Bends of other angles (a hem of 180
   degrees, a joggle), holes in a flange (knockouts), and a gasket for a

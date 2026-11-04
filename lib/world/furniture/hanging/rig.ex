@@ -265,7 +265,9 @@ defmodule World.Furniture.Hanging.Rig do
     mesh = Shape.cylinder(d / 2, h, :bark, sides: 16, frame: World.Frame.move({x, y, 0.0})) |> Mesh.matter(:wood)
 
     Part.new(name, :site, [mesh], [@o],
-      sources: ["A trunk of a tree of #{round(d * 100)} cm: the site of the hammock."]
+      sources: [
+        "A trunk of a tree of #{round(d * 100)} cm: the site of the hammock (REI, ENO and Leave No Trace: a healthy tree at least 6 in across)."
+      ]
     )
   end
 

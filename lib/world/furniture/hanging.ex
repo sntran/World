@@ -120,7 +120,8 @@ defmodule World.Furniture.Hanging do
   def cafe(opts \\ []) do
     bed = Keyword.get(opts, :bed, :net)
     name = Keyword.get(opts, :name, "vong_luoi_cafe")
-    # The posts: round poles of 12 cm (by eye from the photos), 2.8 m
+    # The posts: round poles of 12 cm (the poles of melaleuca, cừ tràm: 6
+    # to 12 cm at the foot, Yellow Pages Việt Nam), 2.8 m
     # apart (Yellow Leaf Hammocks, the hanging sizes: 9 to 12 ft apart). The net of a võng:
     # 180 by 142 cm (the net of a võng of Meta.vn); the cloth: 220 by 120
     # cm, by eye.
@@ -163,7 +164,7 @@ defmodule World.Furniture.Hanging do
         for(sx <- [-1, 1], p <- Rig.post("p", {sx * d / 2, 0.0}, post).shapes, do: p),
         [@o],
         sources: [
-          "Two round poles of wood of 12 cm (by eye), 2.8 m apart (Yellow Leaf Hammocks: 9 to 12 ft): the site."
+          "Two round poles of melaleuca of 12 cm (cừ tràm: 6 to 12 cm at the foot, Yellow Pages Việt Nam), 2.8 m apart (Yellow Leaf Hammocks: 9 to 12 ft): the site."
         ]
       )
 
