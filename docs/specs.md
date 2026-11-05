@@ -116,8 +116,10 @@ what the design says. The replay closes that gap.
 of a real run of `World.Run` and:
 
 1. writes a module `Run.tla` that extends `Order` with the constants of
-   the run: its parts, their sizes, the tasks of its plan, the workers,
-   the size of the warehouse and of the truck, the bytes of the model;
+   the run: its parts, their sizes, the tasks of its plan, the workers
+   of the factory that made the model (the people of the yard at the
+   place of the event `model_done`), the size of the warehouse and of
+   the truck, the bytes of the model;
 2. loads it in the machine of the checker
    (`Accord.TLA.Checker.Machine`);
 3. takes each event of the log as one action of the specification, with
@@ -132,6 +134,10 @@ design does not allow), or `{:error, {:violated, invariant, event}}`.
 the near level: 343 events, two workers. The test also proves
 that the replay can fail: the same log with one `unloaded` event less
 diverges, because a worker then takes a part that is not at the dock.
+It also replays an order of a mattress (`nem_cao_su_160`) at the
+sewing shop: a factory of its own, with its own foreman and worker. So
+a factory other than the vehicle factory gives a behavior of the same
+specification.
 
 ## The log check
 

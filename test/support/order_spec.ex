@@ -21,7 +21,7 @@ defmodule World.OrderSpec do
   """
   def replay(events, result, run, dir, opts \\ []) do
     File.mkdir_p!(dir)
-    File.write!(Path.join(dir, "Run.tla"), module(result, run))
+    File.write!(Path.join(dir, "Run.tla"), module(result, workers(events, result, run)))
     File.write!(Path.join(dir, "Run.cfg"), config(run, Keyword.get(opts, :guard, true)))
     {:ok, m} = Machine.load(Path.join(dir, "Run.tla"), paths: [@specs])
     {:ok, init} = Machine.init_states(m)
@@ -76,7 +76,17 @@ defmodule World.OrderSpec do
   # The places of the specification: the warehouse and the factory.
   defp place(name, run), do: if(run.yard.places[name].kind == :factory, do: "factory", else: "warehouse")
 
-  defp module(result, run) do
+  # The workers of the factory that made the order (the place of its
+  # model), from the people of the yard; with no model in the events,
+  # the workers of the run.
+  defp workers(events, result, run) do
+    case Enum.find_value(events, &(&1.order == result.order and &1.kind == "model_done" and &1.place)) do
+      nil -> Map.keys(run.workers)
+      factory -> for {name, %{job: :worker, place: ^factory}} <- run.yard.people, do: name
+    end
+  end
+
+  defp module(result, workers) do
     tasks = result.plan.tasks
     # The items from other factories never go into the warehouse.
     zero = Map.new(result.plan.ordered, fn {i, _} -> {i, 0} end)
@@ -92,7 +102,7 @@ defmodule World.OrderSpec do
     RunTasks == #{set(Enum.map(tasks, & &1.id))}
     RunWaits == #{fun(Map.new(tasks, &{&1.id, &1.waits}), &set/1)}
     RunUses == #{fun(Map.new(tasks, &{&1.id, &1.uses || ""}), &str/1)}
-    RunWorkers == #{set(Map.keys(run.workers))}
+    RunWorkers == #{set(workers)}
     RunModelSize == #{result.bytes}
     ====
     """

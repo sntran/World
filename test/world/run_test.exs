@@ -87,6 +87,27 @@ defmodule World.RunTest do
     assert Run.stop(run) == :ok
   end
 
+  test "an order of a mattress goes to the sewing shop, and its log replays in the specification", %{tmp_dir: dir} do
+    run = Run.start()
+    {_, fun} = List.keyfind(World.Sewing.Cushion.models(), "nem_cao_su_160", 0)
+    assert {:ok, %{from: :factory} = result} = Run.order(run, fun.(), "nem-1")
+    log = Run.log(run)
+    events = for e <- Log.events(log), e.order == "nem-1", do: e
+    assert Log.check(log) == :ok
+
+    # The foreman of the sewing shop plans it, and its worker sews it.
+    assert Enum.any?(events, &(&1.kind == "task_done" and &1.place == "sewing_shop" and &1.who == "my"))
+    assert Enum.any?(events, &(&1.kind == "departed" and &1.data["to"] == "sewing_shop"))
+    assert %{kind: "delivered", who: "thao"} = List.last(events)
+
+    # The log is a behavior of specs/Order.tla; with an unload less it is not.
+    result = Map.put(result, :order, "nem-1")
+    assert World.OrderSpec.replay(events, result, run, dir) == :ok
+    i = Enum.find_index(events, &(&1.kind == "unloaded"))
+    assert {:error, {:diverged, _}} = World.OrderSpec.replay(List.delete_at(events, i), result, run, dir)
+    assert Run.stop(run) == :ok
+  end
+
   test "a factory does the orders of other factories one at a time, and its truck brings the items" do
     run = Run.start()
     van = World.Detail.with(:far, &World.Vehicles.FordTransit.model/0)
