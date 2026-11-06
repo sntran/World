@@ -3,7 +3,11 @@ defmodule World.Statues do
   The statues of the world (W13 of Vũng Tàu): a figure of the person
   blueprint (`World.People.Human`) at any size and in any pose, in a long
   robe, cast as one solid of concrete or stone (`World.Cast`), with a
-  halo, on a round plinth and on a base with panels of figures in relief.
+  halo, on a base: a round plaza with steps in rings, a block with round
+  corners and a front that curves in, panels of gold with figures in
+  relief in white frames, a band of letters, small windows with grilles,
+  a terrace with a pierced balustrade, and a low dome of 8 faces with a
+  stair up its front to the feet.
 
   The figure is the person at the level `:mid`, posed (the pose
   `arms_out` has the arms straight out to the sides, `lift` degrees over
@@ -20,7 +24,7 @@ defmodule World.Statues do
   With `hollow`, the near level has walls of `wall` m (to the cell of the
   cast, at the least two cells), a spiral stair of `steps` steps round an
   open well of `well` m, each tread from the well to the wall, from the
-  plinth to the shoulders, and openings: the `windows`
+  dome to the shoulders, and openings: the `windows`
   in the front of the robe, a balcony at each shoulder, and the shaft of
   the stair down into the base. The mid and the far levels are solid
   (the inside is closed to the player).
@@ -32,7 +36,7 @@ defmodule World.Statues do
   The origin of the model is on the ground at the center of the base;
   the figure looks to +y.
   """
-  alias World.{Assembly, Cast, Contact, Detail, Figure, Frame, Mesh, Part, Scene, Shape, Vec}
+  alias World.{Assembly, Cast, Detail, Figure, Frame, Mesh, Part, Scene, Shape, Vec}
   alias World.People.Human
 
   @o Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
@@ -56,14 +60,25 @@ defmodule World.Statues do
     steps: 133,
     well: 1.0,
     windows: [],
-    plinth_radius: 4.5,
-    plinth_height: 1.2,
-    base_width: 12.0,
-    base_depth: 12.0,
-    base_height: 4.0,
+    plaza_radius: 10.5,
+    plaza_steps: 3,
+    plaza_rise: 0.15,
+    plaza_tread: 0.6,
+    base_width: 13.0,
+    base_depth: 13.0,
+    base_height: 6.5,
     corner: 1.5,
+    base_curve: 0.8,
+    panel_width: 8.0,
+    panel_height: 3.0,
+    letters: true,
+    grilles: 2,
     reliefs: [],
-    rail: 1.0,
+    terrace_rail: 1.0,
+    dome_width: 8.0,
+    dome_height: 3.0,
+    dome_sides: 8,
+    dome_stair: 1.2,
     weathering: 0.5,
     sources: %{}
   ]
@@ -77,13 +92,23 @@ defmodule World.Statues do
     wall: "m",
     steps: "steps",
     well: "m",
-    plinth_radius: "m",
-    plinth_height: "m",
+    plaza_radius: "m",
+    plaza_steps: "steps",
+    plaza_rise: "m",
+    plaza_tread: "m",
     base_width: "m",
     base_depth: "m",
     base_height: "m",
     corner: "m",
-    rail: "m"
+    base_curve: "m",
+    panel_width: "m",
+    panel_height: "m",
+    grilles: nil,
+    terrace_rail: "m",
+    dome_width: "m",
+    dome_height: "m",
+    dome_sides: nil,
+    dome_stair: "m"
   ]
 
   # The materials of a statue: the role of its look and of its mass.
@@ -103,28 +128,34 @@ defmodule World.Statues do
   `material` (`:concrete` with a render of washed stone, or `:stone`),
   `hollow` (false) with `wall`, `steps`, `well` (the open well in the
   middle of the stair) and `windows` (a list of `{z, width, height}`: the center of an
-  opening over the feet, m), `plinth_radius` and `plinth_height` (0: no
-  plinth), `base_width`, `base_depth` and `base_height` (0: no base),
-  `corner` (the radius of the round corners of the base), `reliefs` (a
-  list of `%{"side" => front | back | left | right, "figures" => n,
-  "title" => text}`), `rail` (the height of the rail round the top of the
-  base; 0: no rail), `weathering` (0 to 1: the stains of the sea air,
+  opening over the feet, m); the plaza: `plaza_radius` (0: no plaza),
+  `plaza_steps`, `plaza_rise` and `plaza_tread` (each ring step); the
+  block: `base_width`, `base_depth` and `base_height` (0: no block),
+  `corner` (the radius of its round corners), `base_curve` (how far its
+  front curves in at the middle), `panel_width` and `panel_height` (the
+  panel of each relief), `letters` (the band of letters over each panel),
+  `grilles` (the small windows under the panel of the front), `reliefs`
+  (a list of `%{"side" => front | back | left | right, "figures" => n,
+  "title" => text}`); the terrace: `terrace_rail` (the height of its
+  balustrade; 0: none); the dome: `dome_width` (across its faces),
+  `dome_height` (0: no dome), `dome_sides` and `dome_stair` (the width
+  of its stair); `weathering` (0 to 1: the stains of the sea air,
   for the shader of an app) and `sources` (a map of the name of a size to
   its source).
   """
   def statue(opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
     level = Detail.level()
-    lift = o.base_height + o.plinth_height
+    {_, _, lift} = levels(o)
     fig = figure(o)
 
-    base = base_part(o)
+    base = base_part(o, fig)
     {shapes, grid} = statue_shapes(fig, o, level)
     up = Frame.move({0.0, 0.0, lift})
     tuong = Part.new(o.name, :statue, Enum.map(shapes, &Mesh.transform(&1, up)), [@o], sources: sources(o))
     stair = if o.hollow and level == :near, do: [stair_part(fig, o, grid) |> move_part(up)], else: []
-    rail = if o.rail > 0 and o.base_height > 0 and level != :far, do: [rail_part(o)], else: []
-    # With no base and no plinth, the statue is the root.
+    rail = if o.terrace_rail > 0 and o.base_height > 0 and level != :far, do: [rail_part(o)], else: []
+    # With no plaza, no block and no dome, the statue is the root.
     parts = if(base.shapes == [], do: [], else: [base]) ++ [tuong] ++ stair ++ rail
     [root | rest] = parts
 
@@ -135,15 +166,16 @@ defmodule World.Statues do
   @doc """
   The statue of Christ the King on Núi Nhỏ, Vũng Tàu (Tượng Chúa Kitô
   Vua, 1974 to 1993): 32 m from the feet to the top of the halo, the
-  arms 18.4 m from hand to hand, 133 steps inside to the shoulders, a
-  base of 4 m with four panels in relief. Each size has its source, or
-  says that it is an estimate.
+  arms 18.4 m from hand to hand, 133 steps inside to the shoulders, on a
+  round plaza, a block of 6.5 m with four panels in relief, a terrace and
+  a low dome. Each size has its source, or says that it is an estimate.
   """
   def nui_nho do
     vi = "vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu)"
     en = "en.wikipedia, Christ of Vũng Tàu"
     av = "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ"
     photo = "by eye from the photo Statue_of_Jesus_in_Vung_Tau.jpg (Wikimedia Commons, Category:Christ of Vung Tau)"
+    lm = "measured from photos (Vung_Tau landmarks.md)"
 
     statue(
       name: "tuong_chua_kito_vua",
@@ -152,6 +184,18 @@ defmodule World.Statues do
       hand: 2.2,
       hollow: true,
       steps: 133,
+      plaza_radius: 10.5,
+      plaza_steps: 3,
+      base_width: 13.0,
+      base_depth: 13.0,
+      base_height: 6.5,
+      base_curve: 0.8,
+      panel_width: 8.0,
+      panel_height: 3.0,
+      grilles: 2,
+      dome_width: 8.0,
+      dome_height: 3.0,
+      dome_sides: 8,
       windows: [{0.585 * 32.0, 1.2, 1.2}, {0.495 * 32.0, 1.2, 1.2}, {0.39 * 32.0, 1.2, 1.2}],
       reliefs: [
         %{"side" => "front", "figures" => 13, "title" => "The Last Supper"},
@@ -165,8 +209,22 @@ defmodule World.Statues do
         "hand" => "#{av}: each hand 2.2 m long (the middle finger 1.1 m).",
         "lift" => photo <> ": the arms a little over the level.",
         "steps" => "#{vi}: 133 steps in a spiral from the base to the shoulders.",
-        "base_height" => "#{en}: a platform of 4 m (36 m in all). The owner: keep 4 m.",
-        "base_width" => "#{av}: the base 12 m long.",
+        "plaza_radius" => "#{lm}, photo 4: a round plaza about 21 m across; ±15%.",
+        "plaza_steps" => "#{lm}, photo 1: 3 steps in rings round the base (15 cm each, an estimate).",
+        "base_height" =>
+          "#{lm}, photo 1: the block from the plaza to the terrace about 6.5 m (the relief of 3 m, its frame, the band of letters, the small windows, the foot band); ±15%. #{en}: a platform of 4 m (36 m in all), which does not agree.",
+        "base_width" => "#{lm}: a block about 12 m to 14 m wide, with round corners. #{av}: the base 12 m long.",
+        "base_depth" => "#{lm}: a block about 12 m to 14 m wide (photo 4: about square).",
+        "base_curve" => "#{lm}: the front of the block is a little curved (photos 1, 4: in between its corner piers).",
+        "panel_width" => "#{lm}: a wide relief in gold color, about 8 m × 3 m, in a white frame.",
+        "panel_height" => "#{lm}: a wide relief in gold color, about 8 m × 3 m, in a white frame.",
+        "grilles" => "#{lm}: small square windows with grilles under the relief (photo 1: two).",
+        "terrace_rail" => "#{lm}: a terrace with 8 sides and a pierced balustrade, about 11 m to 14 m wide.",
+        "dome_width" => "#{lm}: a low dome with 8 faces, about 8 m wide.",
+        "dome_height" =>
+          "#{lm}, photo 1: about 3 m with its drum of 0.6 m, from the face of the dome and the view down of about 45 degrees; ±15%.",
+        "dome_sides" => "#{lm}: a low dome with 8 faces.",
+        "dome_stair" => "#{lm}: a narrow stair up the front of the dome to the feet (1.2 m, an estimate).",
         "rays" => "#{av}: 9 rays of metal in the halo, which are also lightning rods.",
         "material" => "#{av}: reinforced concrete with a render of washed stone.",
         "reliefs" =>
@@ -225,7 +283,7 @@ defmodule World.Statues do
     squeeze = fn {x, _, _} = p -> if x < 0, do: sl.(p), else: sr.(p) end
     move = fn p -> squeeze.(Vec.scale(p, s)) end
 
-    surfaces = for {ps, tris} <- surfaces, do: {Enum.map(ps, move), tris}
+    surfaces = for {ps, tris, mat} <- surfaces, do: {Enum.map(ps, move), tris, mat}
     marks = Map.new(marks, fn {k, p} -> {k, squeeze.(p)} end)
 
     %{
@@ -283,7 +341,7 @@ defmodule World.Statues do
           |> Enum.reduce(&Vec.add/2)
         end
 
-      {points, Enum.chunk_every(p.indices, 3)}
+      {points, Enum.chunk_every(p.indices, 3), p.material}
     end
   end
 
@@ -323,7 +381,7 @@ defmodule World.Statues do
     {look, matter} = @materials[o.material]
     step = if level == :near, do: o.height / 100, else: o.height / 56
     robe = robe(fig, o)
-    grid = Cast.solid(uncovered(fig.surfaces, robe) ++ robe, step)
+    grid = Cast.solid(uncovered(fig, robe) ++ robe, step)
 
     grid =
       if o.hollow and level == :near,
@@ -360,23 +418,28 @@ defmodule World.Statues do
     |> Enum.map(fn {a, b} -> Shape.box(a, b, look) |> Mesh.matter(matter) end)
   end
 
-  # The surfaces of the person with no triangle that the robe covers (its
-  # three points in the robe): the cast takes the head, the hair out of
-  # the robe and the feet, not a chest close under the robe.
-  defp uncovered(surfaces, []), do: surfaces
+  # The surfaces of the person that the cast takes: with no robe, all of
+  # them; in a robe, the hair, the head and the neck over the collar, and
+  # the hands out of the sleeves (the robe, its sleeves and its panels are
+  # the rest of the figure: a statue is a column, not a body in clothes).
+  defp uncovered(%{surfaces: surfaces}, []), do: Enum.map(surfaces, fn {ps, tris, _} -> {ps, tris} end)
 
-  defp uncovered(surfaces, robe) do
-    solids = Enum.map(robe, &Contact.solid/1)
+  defp uncovered(%{surfaces: surfaces, marks: m, scale: s}, _robe) do
+    neck = elem(m["head"], 2) - 0.03 * s
+    {wl, wr} = {elem(m["hand_l"], 0) + 0.01 * s, elem(m["hand_r"], 0) - 0.01 * s}
 
-    for {points, tris} <- surfaces do
-      covered = points |> Enum.map(&Contact.blocked?(&1, solids)) |> List.to_tuple()
-      {points, Enum.reject(tris, fn [a, b, c] -> elem(covered, a) and elem(covered, b) and elem(covered, c) end)}
+    for {points, tris, mat} <- surfaces do
+      out = points |> Enum.map(fn {x, _, z} -> z > neck or x < wl or x > wr end) |> List.to_tuple()
+      keep = if mat == :hair, do: tris, else: Enum.filter(tris, fn t -> Enum.any?(t, &elem(out, &1)) end)
+      {points, keep}
     end
   end
 
-  # The robe: a long column from the neck to the feet, its sleeves along
-  # the bones of the arms, and the two long panels at its sides (by eye
-  # from the photos of the statue on Núi Nhỏ). In units of the person.
+  # The robe: a straight column with a flat front from the neck to the
+  # feet, its sleeves along the bones of the arms, and the two long panels
+  # at its sides to a little over the feet (Vung_Tau landmarks.md: the
+  # column 3.7 m to 4.5 m wide at the feet and 4.5 m to 5 m at the top).
+  # In units of the person.
   defp robe(%{scale: _}, %{robe: false}), do: []
 
   defp robe(%{scale: s, marks: m, hands: hands}, _o) do
@@ -386,15 +449,15 @@ defmodule World.Statues do
 
     column =
       [
-        {0.0, 0.215, 0.135},
-        {0.06, 0.215, 0.135},
-        {0.07, 0.205, 0.13},
-        {0.5, 0.19, 0.12},
-        {0.95, 0.185, 0.125},
-        {sh - 0.12, 0.2, 0.14},
-        {sh, 0.215, 0.13},
-        {sh + 0.05, 0.17, 0.1},
-        {neck, 0.07, 0.07}
+        {0.0, 0.119, 0.085},
+        {0.06, 0.119, 0.085},
+        {0.07, 0.117, 0.083},
+        {0.5, 0.122, 0.085},
+        {0.95, 0.128, 0.088},
+        {sh - 0.12, 0.134, 0.092},
+        {sh, 0.136, 0.09},
+        {sh + 0.05, 0.11, 0.075},
+        {neck, 0.055, 0.055}
       ]
       |> Enum.map(fn {z, hx, hy} -> {{0.0, yc, z * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx * s, hy * s, 3.5} end)
       |> Shape.loft(:concrete, sides: 24)
@@ -403,8 +466,8 @@ defmodule World.Statues do
       for side <- [-1.0, 1.0] do
         Shape.loft(
           [
-            {{side * 0.235 * s, yc, (sh - 0.02) * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, 0.035 * s, 0.12 * s, 4.0},
-            {{side * 0.23 * s, yc, 0.42 * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, 0.035 * s, 0.11 * s, 4.0}
+            {{side * 0.148 * s, yc, (sh - 0.02) * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, 0.02 * s, 0.08 * s, 4.0},
+            {{side * 0.139 * s, yc, 0.03 * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, 0.02 * s, 0.075 * s, 4.0}
           ],
           :concrete,
           sides: 16
@@ -456,7 +519,7 @@ defmodule World.Statues do
 
   # The openings of a hollow statue: the windows in the front of the robe,
   # a balcony in the top of each arm near the shoulder, and the shaft of
-  # the stair down to the plinth.
+  # the stair down to the dome.
   defp openings(%{marks: m, scale: s}, o, step) do
     xs = abs(elem(m["upperarm_l"], 0))
     za = elem(m["upperarm_l"], 2)
@@ -531,7 +594,7 @@ defmodule World.Statues do
     column =
       Shape.loft(
         for(
-          {z, hx, hy} <- [{0.0, 0.215, 0.135}, {sh / s, 0.215, 0.13}, {neck / s, 0.07, 0.07}],
+          {z, hx, hy} <- [{0.0, 0.16, 0.085}, {sh / s, 0.168, 0.09}, {neck / s, 0.055, 0.055}],
           do: {{0.0, 0.01 * s, z * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx * s, hy * s, 3.5}
         ),
         look,
@@ -552,7 +615,7 @@ defmodule World.Statues do
   # The spiral stair inside a hollow statue (by eye from the photo of
   # its inside: the treads go round an open well with a rail at its edge,
   # each from the well to the wall): `steps` treads of 30 degrees (12 to a
-  # turn), from the plinth to the floor of the shoulders. Each tread goes
+  # turn), from the dome to the floor of the shoulders. Each tread goes
   # 0.1 m into the wall of the cast.
   defp stair_part(%{marks: m, scale: s}, o, grid) do
     r = o.well / 2
@@ -600,32 +663,56 @@ defmodule World.Statues do
 
   # --- The base ----------------------------------------------------------------------
 
-  # The outline of the base: a rectangle with round corners, in order
-  # round it (counterclockwise from +z).
-  defp outline(w, d, rc, inset) do
-    n = %{near: 4, mid: 2, far: 1}[Detail.level()]
-    {hw, hd, r} = {w / 2 - inset, d / 2 - inset, max(rc - inset, 0.01)}
-
-    for {cx, cy, a0} <- [
-          {hw - r, hd - r, 0.0},
-          {-hw + r, hd - r, 90.0},
-          {-hw + r, -hd + r, 180.0},
-          {hw - r, -hd + r, 270.0}
-        ],
-        k <- 0..n do
-      a = (a0 + 90.0 * k / n) * :math.pi() / 180
-      {cx + r * :math.cos(a), cy + r * :math.sin(a)}
-    end
+  # The heights of the base: the top of the plaza, of the block (the
+  # floor of the terrace) and of the dome (the feet of the figure).
+  defp levels(o) do
+    zp = if o.plaza_radius > 0, do: o.plaza_steps * o.plaza_rise, else: 0.0
+    zb = zp + o.base_height
+    {zp, zb, zb + o.dome_height}
   end
 
-  # The base and the plinth: at near and mid the base has bands at its
-  # foot and its top and a frame round each panel, the panels in a recess
-  # of 0.15 m with the figures in relief at near; the plinth is round with
-  # a curved top.
-  defp base_part(o) do
+  # The points of a curve at the level now.
+  defp curve_steps, do: %{near: 8, mid: 4, far: 2}[Detail.level()]
+
+  # The half of the front between its corner piers: the part that curves
+  # in (`base_curve` m at its middle).
+  defp front_half(o), do: max(o.base_width / 2 - o.corner - 0.5, 0.0)
+
+  defp curve(o, x) do
+    a = front_half(o)
+    if abs(x) < a, do: o.base_curve * (1 - x * x / (a * a)), else: 0.0
+  end
+
+  defp face_y(o, x), do: o.base_depth / 2 - curve(o, x)
+
+  # The outline of the block, in order round it (counterclockwise from
+  # +z): a rectangle with round corners (`n` steps each; 1 gives the 8
+  # sides of the terrace), the front curved in between its corner piers.
+  defp block_outline(o, inset, n) do
+    {hw, hd, r} = {o.base_width / 2 - inset, o.base_depth / 2 - inset, max(o.corner - inset, 0.01)}
+    a = front_half(o)
+
+    arc = fn cx, cy, a0 ->
+      for k <- 0..n, t = (a0 + 90.0 * k / n) * :math.pi() / 180, do: {cx + r * :math.cos(t), cy + r * :math.sin(t)}
+    end
+
+    m = curve_steps()
+    front = if a > 0, do: for(k <- 0..(2 * m), x = a - a * k / m, do: {x, face_y(o, x) - inset}), else: []
+
+    arc.(hw - r, hd - r, 0.0) ++
+      front ++ arc.(-hw + r, hd - r, 90.0) ++ arc.(-hw + r, -hd + r, 180.0) ++ arc.(hw - r, -hd + r, 270.0)
+  end
+
+  # The base: the plaza with its steps in rings, the block (a band at its
+  # foot and at its top, its middle in a recess of 0.15 m), the panels of
+  # the reliefs in their frames with the band of letters over them, the
+  # small windows with grilles under the panel of the front, and the dome
+  # with its stair. At far: the plaza, the block and the dome.
+  defp base_part(o, fig) do
     level = Detail.level()
     {look, matter} = @materials[o.material]
-    {w, d, h} = {o.base_width, o.base_depth, o.base_height}
+    {zp, zb, _} = levels(o)
+    h = o.base_height
 
     block =
       cond do
@@ -633,27 +720,35 @@ defmodule World.Statues do
           []
 
         level == :far ->
-          [Shape.prism(outline(w, d, o.corner, 0.0), h, look)]
+          [Shape.prism(block_outline(o, 0.0, 1), h, look, frame: Frame.move({0.0, 0.0, zp}))]
 
         true ->
           [
-            Shape.prism(outline(w, d, o.corner, 0.0), 0.6, look),
-            Shape.prism(outline(w, d, o.corner, 0.15), h - 1.1, look, frame: Frame.move({0.0, 0.0, 0.6})),
-            Shape.prism(outline(w, d, o.corner, 0.0), 0.5, look, frame: Frame.move({0.0, 0.0, h - 0.5}))
-          ] ++ frames(o, look) ++ if(level == :near, do: reliefs(o, look), else: [])
+            Shape.prism(block_outline(o, 0.0, 4), 0.6, look, frame: Frame.move({0.0, 0.0, zp})),
+            Shape.prism(block_outline(o, 0.15, 4), h - 1.1, look, frame: Frame.move({0.0, 0.0, zp + 0.6})),
+            Shape.prism(block_outline(o, 0.0, 4), 0.5, look, frame: Frame.move({0.0, 0.0, zb - 0.5}))
+          ] ++ panels(o, look) ++ grilles(o, look, level)
       end
 
-    plinth =
-      if o.plinth_height > 0 do
-        {r, ph} = {o.plinth_radius, o.plinth_height}
-        profile = [{0.0, 0.0}, {r, 0.0}, {r, 0.75 * ph}, {0.92 * r, 0.93 * ph}, {0.7 * r, ph}, {0.0, ph}]
-        [Shape.lathe(profile, look, sides: 32, frame: Frame.move({0.0, 0.0, h})) |> Mesh.matter(matter)]
-      else
-        []
-      end
-
-    Part.new("be", :statue, Enum.map(block, &Mesh.matter(&1, matter)) ++ plinth, [@o], sources: sources(o))
+    shapes = plaza(o, look) ++ block ++ dome(o, fig, look, zb, level)
+    Part.new("be", :statue, Enum.map(shapes, &Mesh.matter(&1, matter)), [@o], sources: sources(o))
   end
+
+  # The plaza: a round floor with `plaza_steps` steps in rings up to the
+  # block, each `plaza_rise` m high and `plaza_tread` m deep.
+  defp plaza(%{plaza_radius: r} = o, look) when r > 0 do
+    {n, rise, t} = {o.plaza_steps, o.plaza_rise, o.plaza_tread}
+
+    rings =
+      if Detail.level() == :far,
+        do: [{r, 0.0}, {r, n * rise}],
+        else: for(k <- 1..n, rk = r - (k - 1) * t, p <- [{rk, (k - 1) * rise}, {rk, k * rise}], do: p)
+
+    sides = if Detail.level() == :far, do: 40, else: 64
+    [Shape.lathe([{0.0, 0.0} | rings] ++ [{0.0, n * rise}], look, sides: sides)]
+  end
+
+  defp plaza(_o, _look), do: []
 
   # The four sides of the base: their normal, their width, and where
   # their middle is.
@@ -668,80 +763,249 @@ defmodule World.Statues do
     }
   end
 
-  # The frame of the panel of each side: a pilaster at each end of the
-  # panel, in the recess of the middle of the base.
-  defp frames(o, look) do
-    for {_, {n, width, mid}} <- sides(o), sign <- [-1.0, 1.0] do
-      along = Vec.cross({0.0, 0.0, 1.0}, n)
-      half = width / 2 - o.corner
-      c = Vec.add(mid, Vec.scale(along, sign * (half - 0.5)))
-      box_on(c, n, along, {0.5, 0.15, o.base_height - 1.1}, 0.6, look)
+  # A strip on a side of the block: from `u0` to `u1` along it, from `d0`
+  # to `d1` in from its face (less than 0: out of it), from `z0` to `z1`.
+  # On the front it follows the curve.
+  defp strip(o, "front", {u0, u1}, {d0, d1}, {z0, z1}, role) do
+    n = curve_steps()
+    xs = for k <- 0..n, do: u1 - (u1 - u0) * k / n
+    loop = for(x <- xs, do: {x, face_y(o, x) - d0}) ++ for(x <- Enum.reverse(xs), do: {x, face_y(o, x) - d1})
+    Shape.prism(loop, z1 - z0, role, frame: Frame.move({0.0, 0.0, z0}))
+  end
+
+  defp strip(o, side, {u0, u1}, {d0, d1}, {z0, z1}, role) do
+    {n, _, mid} = sides(o)[side]
+    along = Vec.cross({0.0, 0.0, 1.0}, n)
+    at = fn u, d -> Vec.add(Vec.add(mid, Vec.scale(along, u)), Vec.scale(n, -d)) end
+    {{x0, y0, _}, {x1, y1, _}} = Vec.bounds([at.(u0, d0), at.(u1, d1)])
+    Shape.box({x0, y0, z0}, {x1, y1, z1}, role)
+  end
+
+  # The heights of a panel: its foot and its top, the foot of the band of
+  # letters over it; no panel in a block too low for one.
+  defp panel_heights(o) do
+    {zp, zb, _} = levels(o)
+    zl = if o.letters, do: zb - 1.1, else: zb - 0.5
+    top = zl - 0.2
+    floor = zp + 0.85 + if(o.grilles > 0, do: 1.2, else: 0.2)
+    ph = min(o.panel_height, top - floor)
+    if ph >= 0.3, do: {top - ph, top, zl}, else: nil
+  end
+
+  # The width of the panel of a side.
+  defp panel_width("front", o), do: min(o.panel_width, 2 * front_half(o) - 0.8)
+  defp panel_width(side, o), do: min(o.panel_width, elem(sides(o)[side], 1) - 2 * o.corner - 1.0)
+
+  # The panel of each side with a relief: the relief of gold in the
+  # recess, its white frame (two sides, a head, a sill out of the face),
+  # the band of letters over it (the letters at near), and the figures.
+  defp panels(o, look) do
+    case panel_heights(o) do
+      nil ->
+        []
+
+      {z0, z1, zl} ->
+        Enum.flat_map(o.reliefs, fn %{"side" => side} = relief ->
+          w = panel_width(side, o)
+          f = w / 2 + 0.35
+          s = fn u, d, z, role -> strip(o, side, u, d, z, role) end
+
+          frame = [
+            s.({-w / 2, w / 2}, {0.08, 0.2}, {z0, z1}, :gold),
+            s.({-f, -w / 2}, {-0.05, 0.2}, {z0 - 0.25, z1 + 0.2}, look),
+            s.({w / 2, f}, {-0.05, 0.2}, {z0 - 0.25, z1 + 0.2}, look),
+            s.({-w / 2, w / 2}, {-0.05, 0.2}, {z1, z1 + 0.2}, look),
+            s.({-f, f}, {-0.3, 0.2}, {z0 - 0.25, z0}, look)
+          ]
+
+          letters =
+            cond do
+              not o.letters ->
+                []
+
+              Detail.level() == :near ->
+                n = trunc(2 * f / 0.42)
+
+                [s.({-f, f}, {-0.02, 0.2}, {zl, zl + 0.6}, look)] ++
+                  for k <- 0..(n - 1), u = -f + 2 * f * (k + 0.5) / n do
+                    s.({u - 0.11, u + 0.11}, {-0.06, 0.0}, {zl + 0.12, zl + 0.48}, :dark)
+                  end
+
+              true ->
+                [s.({-f, f}, {-0.02, 0.2}, {zl, zl + 0.6}, look)]
+            end
+
+          frame ++ letters ++ figures(o, relief, w, {z0, z1})
+        end)
     end
   end
 
-  # A box of `{half along, depth in from the face, height}` on a face of
-  # the base: its outer face on the face, from the height `z`.
-  defp box_on(c, n, along, {ha, depth, h}, z, look) do
-    p0 = Vec.add(Vec.add(c, Vec.scale(along, -ha)), Vec.scale(n, -depth))
-    p1 = Vec.add(c, Vec.scale(along, ha))
-    {{x0, y0, _}, {x1, y1, _}} = Vec.bounds([p0, p1])
-    Shape.box({x0, y0, z}, {x1, y1, z + h}, look)
-  end
-
-  # The figures in relief of each panel: standing figures in a row, each
-  # a body and a head that stand 0.12 m out of the recess.
-  defp reliefs(o, look) do
-    for %{"side" => side, "figures" => count} <- o.reliefs, {n, width, mid} = sides(o)[side], i <- 0..(count - 1) do
+  # The figures in relief of a panel, of gold as the panel: standing
+  # figures in a row, each a body and a head that stand 0.06 m out of the
+  # panel (at near).
+  defp figures(o, %{"side" => side, "figures" => count}, w, {z0, z1}) do
+    if Detail.level() == :near do
+      {n, _, mid} = sides(o)[side]
       along = Vec.cross({0.0, 0.0, 1.0}, n)
-      panel = width - 2 * o.corner - 2.0
-      x = -panel / 2 + panel * (i + 0.5) / count
-      c = Vec.add(mid, Vec.add(Vec.scale(along, x), Vec.scale(n, -0.09)))
-      ph = o.base_height - 1.1
-      fw = min(0.3, panel / count * 0.35)
-      body = {Vec.add(c, {0.0, 0.0, 0.7}), along, n, fw, 0.06, 3.0}
-      shoulders = {Vec.add(c, {0.0, 0.0, 0.6 + 0.62 * ph}), along, n, fw * 1.1, 0.06, 3.0}
-      neck = {Vec.add(c, {0.0, 0.0, 0.6 + 0.7 * ph}), along, n, fw * 0.45, 0.05, 2.0}
-      head = {Vec.add(c, {0.0, 0.0, 0.6 + 0.85 * ph}), along, n, fw * 0.55, 0.05, 2.0}
-      Shape.loft([body, shoulders, neck, head], look, sides: 12)
+      ph = z1 - z0
+      fw = min(0.3, w / count * 0.35)
+
+      for i <- 0..(count - 1) do
+        x = -w / 2 + w * (i + 0.5) / count
+        dy = if side == "front", do: -curve(o, x), else: 0.0
+        c = Vec.add(Vec.add(mid, {0.0, dy, 0.0}), Vec.add(Vec.scale(along, x), Vec.scale(n, -0.08)))
+        at = fn k -> Vec.add(c, {0.0, 0.0, z0 + k * ph}) end
+
+        [{0.05, 1.0, 3.0}, {0.62, 1.1, 3.0}, {0.7, 0.45, 2.0}, {0.85, 0.55, 2.0}]
+        |> Enum.map(fn {k, wk, p} -> {at.(k), along, n, fw * wk, 0.06, p} end)
+        |> Shape.loft(:gold, sides: 12)
+      end
+    else
+      []
     end
   end
 
-  # The rail round the top of the base: posts at the corners and between,
-  # a top rail, and at near the balusters (by eye from the photos).
+  # The small windows under the panel of the front: a dark square and, at
+  # near, a grille of bars in a frame.
+  defp grilles(%{grilles: g} = o, look, level) when g > 0 do
+    case panel_heights(o) do
+      nil ->
+        []
+
+      {z0, _, _} ->
+        w = panel_width("front", o)
+        zc = z0 - 0.25 - 0.6
+
+        for k <- 0..(g - 1), x = -w / 2 + w * (k + 0.5) / g do
+          dark = strip(o, "front", {x - 0.4, x + 0.4}, {0.12, 0.3}, {zc - 0.4, zc + 0.4}, :dark)
+
+          bars =
+            if level == :near do
+              s = fn u, z -> strip(o, "front", u, {0.06, 0.12}, z, look) end
+
+              [
+                s.({x - 0.4, x - 0.33}, {zc - 0.4, zc + 0.4}),
+                s.({x + 0.33, x + 0.4}, {zc - 0.4, zc + 0.4}),
+                s.({x - 0.33, x + 0.33}, {zc - 0.4, zc - 0.33}),
+                s.({x - 0.33, x + 0.33}, {zc + 0.33, zc + 0.4})
+              ] ++
+                for(t <- [-0.13, 0.13], do: s.({x + t - 0.03, x + t + 0.03}, {zc - 0.33, zc + 0.33})) ++
+                for(t <- [-0.13, 0.13], do: s.({x - 0.33, x + 0.33}, {zc + t - 0.03, zc + t + 0.03}))
+            else
+              []
+            end
+
+          [dark | bars]
+        end
+        |> List.flatten()
+    end
+  end
+
+  defp grilles(_o, _look, _level), do: []
+
+  # The dome on the terrace under the feet: a drum and a low dome of
+  # `dome_sides` faces, one face to the front, `dome_width` m across its
+  # faces; and the narrow stair up its front to the feet (not at far).
+  defp dome(%{dome_height: dh} = o, fig, look, zb, level) when dh > 0 do
+    n = o.dome_sides
+    ap = o.dome_width / 2
+    rc = ap / :math.cos(:math.pi() / n)
+    drum = min(0.6, dh / 4)
+    rt = 0.42 * rc
+    # The faces curve in from the drum to the feet (by eye from photos 1
+    # and 5): the part of the radius and of the height at each point.
+    curve =
+      if level == :far,
+        do: [{1.0, 0.0}, {0.0, 1.0}],
+        else: [{1.0, 0.0}, {0.86, 0.3}, {0.62, 0.6}, {0.34, 0.85}, {0.0, 1.0}]
+
+    profile =
+      [{0.0, 0.0}, {rc, 0.0}] ++
+        for({kr, kz} <- curve, do: {rt + (rc - rt) * kr, drum + (dh - drum) * kz}) ++ [{0.0, dh}]
+
+    frame = Frame.compose(Frame.move({0.0, 0.0, zb}), Frame.turn({0.0, 0.0, 1.0}, 180.0 / n))
+    # The faces at each level: a dome of 8 faces has 8 at far too.
+    shell = Detail.with(:near, fn -> Shape.lathe(profile, look, sides: n, frame: frame) end)
+    [shell | dome_stair(o, fig, look, {zb, dh, ap, rt}, level)]
+  end
+
+  defp dome(_o, _fig, _look, _zb, _level), do: []
+
+  # The stair up the front of the dome: from the terrace in front of the
+  # drum to the top of the dome at the robe, `dome_stair` m wide, risers
+  # of at most 18 cm (blocks at near, one wedge at mid).
+  defp dome_stair(o, %{scale: s}, look, {zb, dh, ap, rt}, level) do
+    w = o.dome_stair
+    {y0, y1} = {ap + 0.3, max(rt, 0.145 * s)}
+    n = ceil(dh / 0.18)
+    {rise, tread} = {dh / n, (y0 - y1) / n}
+
+    case level do
+      :near ->
+        for k <- 1..n do
+          Shape.box({-w / 2, y0 - k * tread, zb}, {w / 2, y0 - (k - 1) * tread, zb + k * rise}, look)
+        end
+
+      :mid ->
+        frame = Frame.new({-w / 2, 0.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 0.0, 1.0})
+        [Shape.prism([{y0, zb}, {y1, zb}, {y1, zb + dh}], w, look, frame: frame)]
+
+      :far ->
+        []
+    end
+  end
+
+  # The terrace on the block: a pierced balustrade along its 8 sides and
+  # its curved front, 0.35 m in from the edge: a foot rail, a top rail
+  # and rings between them at near; a low wall at mid.
   defp rail_part(o) do
     level = Detail.level()
-    {hw, hd, h, z} = {o.base_width / 2 - 0.3, o.base_depth / 2 - 0.3, o.rail, o.base_height}
     {look, matter} = @materials[o.material]
+    {_, z, _} = levels(o)
+    h = o.terrace_rail
+    loop = block_outline(o, 0.35, 1)
 
-    # The four lines of the rail (their middles, 0.15 m thick).
-    lines = [
-      {{-hw, hd - 0.15}, {hw, hd}},
-      {{-hw, -hd}, {hw, -hd + 0.15}},
-      {{-hw, -hd + 0.15}, {-hw + 0.15, hd - 0.15}},
-      {{hw - 0.15, -hd + 0.15}, {hw, hd - 0.15}}
-    ]
+    segments =
+      for {{x0, y0}, {x1, y1}} <- Enum.zip(loop, tl(loop) ++ [hd(loop)]),
+          :math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2) > 0.05,
+          do: {{x0, y0, 0.0}, {x1, y1, 0.0}}
 
-    walls =
-      for {{x0, y0}, {x1, y1}} <- lines do
-        if level == :near,
-          do: [
-            Shape.box({x0, y0, z}, {x1, y1, z + 0.15}, look),
-            Shape.box({x0, y0, z + h - 0.12}, {x1, y1, z + h}, look)
-          ],
-          else: [Shape.box({x0, y0, z}, {x1, y1, z + h}, look)]
-      end
+    shapes =
+      Enum.flat_map(segments, fn {a, b} ->
+        len = Vec.len(Vec.sub(b, a))
+        e = Vec.scale(Vec.sub(b, a), 1 / len)
+        # In: to the left of the side (the outline goes counterclockwise).
+        inward = Vec.cross({0.0, 0.0, 1.0}, e)
 
-    balusters =
-      for {{x0, y0}, {x1, y1}} <- lines, level == :near, n = round(max(x1 - x0, y1 - y0) / 0.3), k <- 1..(n - 1)//1 do
-        {cx, cy} = {(x0 + x1) / 2, (y0 + y1) / 2}
-        {x, y} = if x1 - x0 > y1 - y0, do: {x0 + (x1 - x0) * k / n, cy}, else: {cx, y0 + (y1 - y0) * k / n}
-        Shape.cylinder(0.05, h - 0.27, look, sides: 6, frame: Frame.move({x, y, z + 0.15}))
-      end
+        quad = fn t ->
+          [a, b, Vec.add(b, Vec.scale(inward, t)), Vec.add(a, Vec.scale(inward, t))]
+          |> Enum.map(&Tuple.delete_at(&1, 2))
+        end
 
-    shapes = Enum.map(List.flatten(walls) ++ balusters, &Mesh.matter(&1, matter))
+        rail = fn z0, z1 -> Shape.prism(quad.(0.2), z1 - z0, look, frame: Frame.move({0.0, 0.0, z0})) end
 
-    Part.new("lan_can", :statue, shapes, [@o],
-      sources: ["The rail: #{h} m high (an estimate), by eye from the photos."]
+        if level == :near do
+          rr = (h - 0.27) / 2 - 0.03
+          m = max(trunc(len / (2 * rr + 0.1)), 1)
+
+          tube =
+            for k <- 0..7, t = 2 * :math.pi() * k / 8, do: {rr - 0.035 + 0.035 * :math.cos(t), 0.035 * :math.sin(t)}
+
+          rings =
+            for i <- 0..(m - 1) do
+              c = Vec.add(Vec.add(a, Vec.scale(e, len * (i + 0.5) / m)), Vec.scale(inward, 0.1))
+              at = Vec.add(c, {0.0, 0.0, z + 0.15 + (h - 0.27) / 2})
+              Shape.lathe(tube, look, kind: :ring, sides: 12, frame: Frame.new(at, inward, {0.0, 0.0, 1.0}))
+            end
+
+          [rail.(z, z + 0.15), rail.(z + h - 0.12, z + h) | rings]
+        else
+          [Shape.prism(quad.(0.12), h, look, frame: Frame.move({0.0, 0.0, z}))]
+        end
+      end)
+
+    Part.new("lan_can", :statue, Enum.map(shapes, &Mesh.matter(&1, matter)), [@o],
+      sources: ["The balustrade of the terrace: #{h} m high, pierced (by eye from the photos)."]
     )
   end
 
@@ -788,12 +1052,13 @@ defmodule World.Statues do
   # that light the statue at night), the door of the base at its back,
   # and with `hollow` the foot of the stair and a view at each balcony.
   defp ports(%{marks: m}, o, lift) do
-    {hw, hd, h} = {o.base_width / 2 - 0.5, o.base_depth / 2 - 0.5, o.base_height}
+    {zp, h, _} = levels(o)
+    {hw, hd} = {o.base_width / 2 - 0.5, o.base_depth / 2 - 0.5}
 
     lights =
       for x <- [-hw, hw], y <- [-hd, hd], do: port("light", {x, y, h}, {-x, -y, 3 * hw} |> Vec.norm(), [0.3, 0.3, 0.3])
 
-    door = port("door", {0.0, -o.base_depth / 2, 0.0}, {0.0, -1.0, 0.0}, [1.2, 0.2, 2.4])
+    door = port("door", {0.0, -o.base_depth / 2, zp}, {0.0, -1.0, 0.0}, [1.2, 0.2, 2.4])
 
     inside =
       if o.hollow do
@@ -809,23 +1074,26 @@ defmodule World.Statues do
     lights ++ [door | inside]
   end
 
-  # The collision boxes: the base, the plinth, the robe, the arms and the
-  # head (the halo and the rays have none: a player does not reach them).
+  # The collision boxes: the plaza, the block, the dome, the robe, the
+  # arms and the head (the halo and the rays have none: a player does not
+  # reach them).
   defp collision(%{marks: m, scale: s, top: top}, o, lift) do
     box = fn name, {x0, y0, z0}, {x1, y1, z1} ->
       %{"name" => name, "at" => {(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2}, "size" => {x1 - x0, y1 - y0, z1 - z0}}
     end
 
-    {hw, hd, r} = {o.base_width / 2, o.base_depth / 2, o.plinth_radius}
+    {hw, hd, r, ap} = {o.base_width / 2, o.base_depth / 2, o.plaza_radius, o.dome_width / 2}
+    {zp, zb, _} = levels(o)
     sh = elem(m["upperarm_l"], 2) + lift
     tip = abs(elem(m["hand_l"], 0)) + (o.hand || 0.18 * s)
     neck = elem(m["head"], 2) + lift
     za = (elem(m["hand_l"], 2) + elem(m["upperarm_l"], 2)) / 2 + lift
 
     [
-      box.("be", {-hw, -hd, 0.0}, {hw, hd, o.base_height}),
-      box.("de", {-r, -r, o.base_height}, {r, r, lift}),
-      box.("ao", {-0.215 * s, -0.125 * s, lift}, {0.215 * s, 0.145 * s, sh}),
+      box.("san", {-r, -r, 0.0}, {r, r, zp}),
+      box.("be", {-hw, -hd, zp}, {hw, hd, zb}),
+      box.("vom", {-ap, -ap, zb}, {ap, ap, lift}),
+      box.("ao", {-0.168 * s, -0.075 * s, lift}, {0.168 * s, 0.095 * s, sh}),
       box.("tay", {-tip, -0.1 * s, za - 0.1 * s}, {tip, 0.1 * s, za + 0.1 * s}),
       box.("dau", {-0.09 * s, -0.1 * s, neck}, {0.09 * s, 0.12 * s, top + lift})
     ]

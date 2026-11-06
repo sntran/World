@@ -326,9 +326,9 @@ of the parts:
 
 A statue (`World.Statues`, W13 of Vũng Tàu; the blueprint `statue`) is a
 figure of a person (`World.People.Human`, at the level `mid`) in a pose,
-in a long robe, cast as one solid by `World.Cast`, on a round plinth and
-a base. The kind is `statue`. The origin is on the ground at the center
-of the base, and the figure looks to +y.
+in a long robe, cast as one solid by `World.Cast`, on a base: a plaza, a
+block, a terrace and a dome. The kind is `statue`. The origin is on the
+ground at the center of the base, and the figure looks to +y.
 
 - **The figure.** The pose `arms_out` puts the hands straight out to
   the sides, `lift` degrees over the level; any other pose is a pose of
@@ -338,9 +338,11 @@ of the base, and the figure looks to +y.
   finger), the arms out to the sides become shorter or longer along x
   from the shoulders: a statue has the proportions of its sculptor. A
   mitt goes round each hand (the fingers together).
-- **The robe.** A column from the neck to the feet, wide sleeves along
-  the bones of the arms, and two long panels at its sides. The triangles
-  of the person that the robe covers go out of the cast.
+- **The robe.** A straight column with a flat front from the neck to the
+  feet, wide sleeves along the bones of the arms, and two long panels at
+  its sides to a little over the feet. In a robe, the cast takes only the
+  hair, the head and the neck over the collar, and the hands out of the
+  sleeves from the person: a statue is a column, not a body in clothes.
 - **The cast.** One closed shell of the role `stone_wash` (concrete
   with a render of washed stone) or `stone` (granite), on a grid of cells
   of 1/100 of the height at near and 1/56 at mid. Each triangle marks the
@@ -354,18 +356,32 @@ of the base, and the figure looks to +y.
 - **Hollow** (near only). A wall of `wall` m (at the least two cells), a
   spiral stair (the part `cau_thang`: `steps` treads, 12 to a turn, round
   an open well of `well` m with a rail at its edge, each tread from the
-  well 0.1 m into the wall, from the plinth to the floor of the
+  well 0.1 m into the wall, from the dome to the floor of the
   shoulders), the `windows`
   in the front of the robe with a grille, a balcony in the top of each
-  arm, and the shaft of the stair down to the plinth. Mid and far are
+  arm, and the shaft of the stair down to the dome. Mid and far are
   solid: the inside is closed to the player.
 - **The halo.** A ring behind the head with the three arms of a cross,
   and `rays` metal rays (role `steel`) round its top half.
-- **The base.** A block with round corners (`corner`), a band at its
-  foot and at its top, a frame round a panel on each side, and on each
-  side of `reliefs` a row of figures in relief (near only); the rail
-  round its top (`lan_can`: a low wall at mid, rails and balusters at
-  near), and the round plinth on it.
+- **The base**, from the ground up (each part can be 0: none):
+  - the plaza (`plaza_radius`): a round floor with `plaza_steps` steps in
+    rings up to the block, each `plaza_rise` high and `plaza_tread` deep;
+  - the block (`base_width`, `base_depth`, `base_height`): round corners
+    (`corner`), a band at its foot and at its top, its middle in a recess,
+    its front curved in between its corner piers (`base_curve` at the
+    middle); on each side of `reliefs` a panel of gold (role `gold`,
+    `panel_width` by `panel_height`) with its figures in relief (near
+    only), in a white frame with a sill, and a band of letters over it
+    (`letters`); under the panel of the front, `grilles` small square
+    windows with a grille of bars (at near);
+  - the terrace on the block (`lan_can`): a pierced balustrade of
+    `terrace_rail` m along its 8 sides and its curved front (a foot
+    rail, a top rail and rings between them at near; a low wall at
+    mid);
+  - the dome under the feet (`dome_width` across its faces,
+    `dome_height`, `dome_sides` faces, one face to the front): a drum
+    and faces that curve in to the feet, and a narrow stair
+    (`dome_stair`) up its front (blocks at near, a wedge at mid).
 - **The far form.** The robe, the arms from hand to hand, the head, the
   halo ring and the base: at most 300 triangles (R9 of plan 0008).
 
@@ -373,15 +389,19 @@ The extras: `"sizes"` (each size of the order with its value, its unit
 and its source; a size with no source has the source `"estimate (no
 source)"`), `"weathering"` (0 to 1, the stains of the sea air, for the
 shader of an app), `"site"` (a statue is cast fixed to its site: no check
-of a stand), the ports (`light` at the corners of the base, `door` at its
-back, and with `hollow` the `stair` and a `view` at each balcony), the
-collision boxes (the base, the plinth, the robe, the arms, the head), and
+of a stand), the ports (`light` at the corners of the terrace, `door` at
+the back of the block, and with `hollow` the `stair` and a `view` at each
+balcony), the collision boxes (the plaza, the block, the dome, the robe,
+the arms, the head), and
 the corners of the base for `World.Surface`. The receipt of an order of a
 statue has the list `sizes`.
 
 The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
 from the feet to the top of the halo, the hands 18.4 m apart, the hands
-2.2 m, 133 steps inside, a base of 12 by 12 by 4 m with four reliefs.
+2.2 m, 133 steps inside; a plaza of 21 m with 3 steps, a block of 13 by
+13 by 6.5 m with four reliefs, and a dome of 8 faces, 8 m wide and 3 m
+high. The sizes of the base are measured from photos (Vung_Tau
+`landmarks.md`, about 15%), and the receipt says so.
 
 ## A tower
 

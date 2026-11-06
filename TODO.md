@@ -464,10 +464,14 @@ and no logo on them.
     go up inside to its shoulders, where visitors look out). A base
     with panels of figures in relief (Christ and the twelve apostles).
     Done: `World.Cast`, `World.Statues`, the blueprint `statue`, and
-    `tuong_chua_kito_vua` (`docs/format.md`, "A statue"). Not yet: the
-    pattern of the grilles of the windows (chữ thọ), the figures of the
-    reliefs as figures of people, the inside of the base (a room), and
-    the hollow at mid.
+    `tuong_chua_kito_vua` (`docs/format.md`, "A statue"). The review of
+    the owner (2026-11-06, Vung_Tau `landmarks.md`): done, the base (the
+    plaza, the block with the panel of gold, the band of letters and the
+    windows with grilles, the terrace, the dome with its stair) and the
+    robe to the sizes of the photos. Not yet: the pattern of the grilles
+    of the windows (chữ thọ), the figures of the reliefs as figures of
+    people, the letters of the band as real text, the inside of the base
+    (a room), and the hollow at mid.
   - **A tower.** A tapered body of masonry or concrete, a gallery with a
     rail, the lantern room, and the cap (the lighthouse of Vũng Tàu,
     about 18 m). Done: `World.Towers`, the blueprint `tower`, and

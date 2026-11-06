@@ -8,18 +8,31 @@ defmodule World.StatuesTest do
   defp roles(s), do: for(n <- s.nodes, p <- n.primitives, uniq: true, do: p.material)
   defp part(item, name), do: item.nodes |> List.keyfind(name, 0) |> elem(1)
 
+  @no_base [plaza_radius: 0.0, base_height: 0.0, dome_height: 0.0]
+
   @tag timeout: 300_000
   test "the statue on Núi Nhỏ: 32 m from the feet to the halo, the hands 18.4 m apart, hollow at near, the checks" do
     near = at(:near, &Statues.nui_nho/0)
     assert near.kind == :statue and Check.model(near) == :ok
     s = scene(near, :near)
-    {{x0, _, z0}, {x1, _, _}} = Scene.bounds(s)
+    {{_, _, z0}, _} = Scene.bounds(s)
+
+    {{x0, _, _}, {x1, _, _}} =
+      part(near, "tuong_chua_kito_vua").shapes |> Enum.flat_map(& &1.points) |> World.Vec.bounds()
+
     assert_in_delta x1 - x0, 18.4, 0.05
     assert_in_delta z0, 0.0, 1.0e-6
-    # The base of 4 m and the plinth of 1.2 m under the feet.
-    assert_in_delta elem(elem(Mesh.bounds(hd(part(near, "be").shapes)), 1), 2), 0.6, 1.0e-6
-    assert Scene.triangles(s) < 50_000
-    assert :stone_wash in roles(s) and :steel in roles(s)
+    # The base: the plaza of 21 m with 3 steps of 15 cm, the block of
+    # 6.5 m, the dome of 3 m under the feet; the relief of gold, the
+    # windows with grilles, the balustrade of the terrace.
+    {{px0, _, _}, {px1, _, pz1}} = Mesh.bounds(hd(part(near, "be").shapes))
+    assert_in_delta px1 - px0, 21.0, 0.01
+    assert_in_delta pz1, 0.45, 1.0e-6
+    {{_, _, feet}, _} = Mesh.bounds(hd(part(near, "tuong_chua_kito_vua").shapes))
+    assert feet > 9.95 - 0.5 and feet < 9.95 + 0.5
+    assert Scene.triangles(s) < 150_000
+    assert ~w(stone_wash steel gold dark)a -- roles(s) == []
+    assert part(near, "lan_can").shapes |> length() > 50
 
     # The stair of 133 steps to the floor of the shoulders, inside.
     stair = part(near, "cau_thang")
@@ -35,7 +48,9 @@ defmodule World.StatuesTest do
     assert sizes["windows"]["value"] |> length() == 3
     assert sizes["material"]["value"] == "concrete"
     assert ~w(door light stair view) -- Enum.map(near.extras["ports"], & &1["kind"]) == []
-    assert length(near.extras["collision"]) == 5
+    assert length(near.extras["collision"]) == 6
+    assert sizes["base_height"]["source"] =~ "measured from photos (Vung_Tau landmarks.md)"
+    assert sizes["dome_sides"]["value"] == 8
 
     # Hollow at near only: the mid level weighs more.
     mid = at(:mid, &Statues.nui_nho/0)
@@ -47,14 +62,18 @@ defmodule World.StatuesTest do
     far = at(:far, &Statues.nui_nho/0)
     fs = scene(far, :far)
     assert Scene.triangles(fs) <= 300
-    {{fx0, _, _}, {fx1, _, fz1}} = Scene.bounds(fs)
+    {_, {_, _, fz1}} = Scene.bounds(fs)
+
+    {{fx0, _, _}, {fx1, _, _}} =
+      part(far, "tuong_chua_kito_vua").shapes |> Enum.flat_map(& &1.points) |> World.Vec.bounds()
+
     assert_in_delta fx1 - fx0, 18.4, 0.01
-    assert fz1 > 36.0 and fz1 < 37.3
+    assert fz1 > 41.0 and fz1 < 42.5
     refute List.keyfind(far.nodes, "lan_can", 0)
   end
 
   test "a statue of other options: a pose of a person, no robe, no halo, of stone, with no base" do
-    o = [height: 3.0, pose: "stand", robe: false, halo: false, material: :stone, base_height: 0.0, plinth_height: 0.0]
+    o = [height: 3.0, pose: "stand", robe: false, halo: false, material: :stone] ++ @no_base
     item = at(:mid, fn -> Statues.statue(o) end)
     assert Check.model(item) == :ok
     s = scene(item, :mid)
@@ -64,15 +83,27 @@ defmodule World.StatuesTest do
     assert [_] = item.nodes
     assert length(item.extras["collision"]) == 3
 
-    far = at(:far, fn -> Statues.statue(o ++ [halo: true, rays: 4, rail: 0.0, base_height: 1.0]) end)
+    far = at(:far, fn -> Statues.statue(o ++ [halo: true, rays: 4, terrace_rail: 0.0, base_height: 1.0]) end)
     assert Scene.triangles(scene(far, :far)) <= 300
 
     # The rays: an even count has no ray up.
-    near = at(:mid, fn -> Statues.statue(height: 3.0, rays: 4, base_height: 0.0, plinth_height: 0.0) end)
+    near = at(:mid, fn -> Statues.statue([height: 3.0, rays: 4] ++ @no_base) end)
     assert Enum.count(part(near, "tuong").shapes, &(&1.material == :steel)) == 4
 
     # The defaults: a statue of 32 m with its arms out, on a base.
     assert Scene.triangles(scene(at(:far, fn -> Statues.statue() end), :far)) <= 300
+
+    # A small base: no curve in its front, no room for a panel; and a base
+    # with a panel of no letters and no windows.
+    small =
+      [height: 3.0, base_width: 4.0, base_depth: 4.0, base_height: 2.0, plaza_radius: 3.0, plaza_steps: 1] ++
+        [dome_width: 2.0, dome_height: 0.5, reliefs: [%{"side" => "left", "figures" => 2}]]
+
+    assert Check.model(at(:mid, fn -> Statues.statue(small) end)) == :ok
+    plain = [height: 10.0, letters: false, grilles: 0, reliefs: [%{"side" => "back", "figures" => 3}]]
+    item = at(:mid, fn -> Statues.statue(plain) end)
+    assert Check.model(item) == :ok
+    refute :dark in roles(scene(item, :mid))
 
     assert_raise ArgumentError, ~r/span/, fn -> at(:far, fn -> Statues.statue(span: 1.0, hand: 0.5) end) end
   end
