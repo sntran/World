@@ -520,7 +520,12 @@ defmodule World.Orders.Blueprints do
       doc:
         "A whole house on a lot of a town of Việt Nam, as the houses of Vũng Tàu were in 2019: a tube house (nhà ống) on a narrow, deep lot, with its ground floor, its balconies, its roof and its side walls. The origin is at the center of the front of the lot, on the street; the front looks to +y. Three levels for a town: near, mid and far.",
       options: [
-        option("kind", :choice, default: "tube", values: names.(:kind)),
+        option("kind", :choice,
+          default: "tube",
+          values: names.(:kind),
+          doc:
+            "A tube house (nhà ống), a shop house (nhà phố), a villa (biệt thự) behind a yard, or a mini-hotel (khách sạn mini). An option with no value (null) has the default of the kind."
+        ),
         option("width", :number,
           default: 4.0,
           min: 3.0,
@@ -535,37 +540,42 @@ defmodule World.Orders.Blueprints do
           unit: "m",
           doc: "The lot from the street to its back."
         ),
-        option("floors", :integer, default: 3, min: 1, max: 8),
+        option("floors", :integer,
+          default: nil,
+          min: 1,
+          max: 8,
+          doc: "A tube house 1 to 8 (3), a shop house 2 to 6 (4), a villa 1 to 3 (2), a mini-hotel 5 to 8 (6)."
+        ),
         option("style", :choice,
           default: "new",
           values: names.(:style),
           doc: "Old: wood shutters, rails of bars, a folding gate. New: glass in aluminum frames, rails of tubes."
         ),
         option("roof", :choice,
-          default: "flat",
+          default: nil,
           values: names.(:roof),
           doc: "A flat terrace with a parapet, corrugated metal, or clay tiles."
         ),
         option("ground", :choice,
-          default: "cua_cuon",
+          default: nil,
           values: names.(:ground),
           doc:
             "The front of the ground floor: a roll-up shutter, a folding iron gate, a door with an iron gate, or an open shop."
         ),
         option("finish", :choice,
-          default: "granite",
+          default: nil,
           values: names.(:finish),
           doc: "The front of the ground floor plain or of polished granite, or all the front of patterned tiles."
         ),
         option("left", :choice,
-          default: "shared",
+          default: nil,
           values: names.(:side),
           doc:
             "The left side wall, as seen from the street: shared with a neighbor, free with windows, or bare brick over a lower neighbor."
         ),
-        option("right", :choice, default: "shared", values: names.(:side), doc: "The right side wall, as the left."),
+        option("right", :choice, default: nil, values: names.(:side), doc: "The right side wall, as the left."),
         option("extension", :boolean, default: false, doc: "A room of one floor at the back."),
-        option("terrace_room", :boolean, default: false, doc: "A room on a flat terrace."),
+        option("terrace_room", :boolean, default: nil, doc: "A room on a flat terrace."),
         option("interior", :choice,
           default: "none",
           values: names.(:interior),
@@ -586,8 +596,9 @@ defmodule World.Orders.Blueprints do
         )
       ],
       build: fn o ->
-        atom = fn key -> String.to_existing_atom(o[key]) end
+        atom = fn key -> o[key] && String.to_existing_atom(o[key]) end
 
+        # The options with no value have the defaults of the kind.
         Buildings.Lot.house(
           kind: atom.("kind"),
           width: o["width"],

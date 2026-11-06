@@ -41,7 +41,9 @@ defmodule World.Orders.SetTest do
           {%{"order" => @house, "seed" => "x"}, "seed"},
           {%{"order" => @house, "vary" => %{"depth" => []}}, "vary"},
           {%{"order" => @house, "vary" => %{"width" => [9.0]}}, "variants.0.options.width"},
-          {%{"nothing" => 1}, ""}
+          {%{"nothing" => 1}, ""},
+          {%{"orders" => ["x"]}, "orders.0"},
+          {%{"order" => %{"options" => %{}}}, "variants.0.blueprint"}
         ] do
       assert {:error, [%{"path" => ^path} | _]} = Set.check(set)
     end
