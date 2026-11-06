@@ -42,6 +42,14 @@ test('POST /orders goes to the VM, with the origin of the URLs', async () => {
   assert.ok(v.orders.has(HASH));
 });
 
+test('POST /sets goes to the VM, with the origin of the URLs', async () => {
+  const v = vm();
+  const r = await handler(req('/sets', { method: 'POST', body: JSON.stringify({ orders: [] }) }), { ORDERS: bucket() }, { vm: v, commit: 'c1' });
+  assert.equal(r.status, 422);
+  assert.deepEqual(v.calls, ['/sets']);
+  assert.equal(v.last.headers.get('x-world-origin'), 'https://world.mkfifo.com');
+});
+
 test('POST /orders gives the errors of the VM: 422 for a wrong order, 400 for a body that is not JSON', async () => {
   const env = { ORDERS: bucket() };
   const wrong = await handler(req('/orders', { method: 'POST', body: '{"blueprint":"x"}' }), env, { vm: vm(), commit: 'c1' });

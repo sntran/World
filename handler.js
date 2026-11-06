@@ -22,6 +22,9 @@
 // - POST /orders: an order in JSON (the VM). 200 with the hash, the full
 //   order, the URLs of its files and the URL of its replay page; 422
 //   with the errors.
+// - POST /sets: a set of orders in JSON (the VM, World.Orders.Set). 200
+//   with the hash of the set and each variant (its hash, its order, its
+//   files and its lot); 422 with the errors.
 // - /mcp: the MCP server (the VM, World.MCP).
 // - GET /o/HASH.glb, .mid.glb, .far.glb, .parts.json, .receipt.json,
 //   .log.json, .replay.glb: the files of an order of POST /orders. The
@@ -177,6 +180,8 @@ async function route(request, env, { vm, commit }) {
   }
 
   if (path === '/orders' && request.method === 'POST') return forward(request, vm, url.origin, '/orders');
+
+  if (path === '/sets' && request.method === 'POST') return forward(request, vm, url.origin, '/sets');
 
   if (path === '/mcp') return forward(request, vm, url.origin, '/mcp');
 
