@@ -292,6 +292,20 @@ defmodule World.Buildings.Lot do
     "wire" => [0.1, 0.1, 0.05]
   }
 
+  # The most triangles of a whole house at each level, for a town of
+  # thousands of houses (Vũng Tàu, W22).
+  @limits %{near: 40_000, mid: 3_000, far: 300}
+
+  # The material roles of a house: the 10 roles of W23, and the wood and
+  # the aluminum of the shutters, the doors and the frames.
+  @roles ~w(plaster brick_ong tile_granite tile_pattern metal_shutter iron roof_corrugated roof_clay concrete glass wood aluminum)a
+
+  @doc "The most triangles of a whole house at each level (W22): `%{near: _, mid: _, far: _}`."
+  def limits, do: @limits
+
+  @doc "The material roles that a house can have (W23, and `wood` and `aluminum`)."
+  def roles, do: @roles
+
   @doc "The kinds of the ports of a house (W18)."
   def port_kinds, do: @port_sizes |> Map.keys() |> Enum.sort()
 

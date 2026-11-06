@@ -5,9 +5,6 @@ defmodule World.Buildings.LotTest do
   alias World.{Build, Check, Detail, GLB, Orders, Scene, Surface}
   alias World.Buildings.Lot
 
-  # The limits of the triangles of a whole house (Vũng Tàu, W22).
-  @limits %{near: 40_000, mid: 3_000, far: 300}
-
   defp scene(opts, level), do: Detail.with(level, fn -> Build.scene(Lot.house(opts), level: level) end)
 
   defp roles(scene), do: for(n <- scene.nodes, p <- n.primitives, uniq: true, do: p.material)
@@ -51,7 +48,7 @@ defmodule World.Buildings.LotTest do
         ] do
       for level <- [:near, :mid, :far] do
         s = scene(opts, level)
-        assert Scene.triangles(s) <= @limits[level], "#{inspect(opts)} #{level}: #{Scene.triangles(s)}"
+        assert Scene.triangles(s) <= Lot.limits()[level], "#{inspect(opts)} #{level}: #{Scene.triangles(s)}"
       end
 
       far = scene(opts, :far)
@@ -137,7 +134,7 @@ defmodule World.Buildings.LotTest do
       house = Detail.with(level, fn -> Lot.house(opts) end)
       assert Check.model(house) == :ok, "#{inspect(opts)} #{level}: #{inspect(Check.model(house))}"
       s = Build.scene(house, level: level)
-      assert Scene.triangles(s) <= @limits[level]
+      assert Scene.triangles(s) <= Lot.limits()[level]
     end
 
     ext = Detail.with(:mid, fn -> Lot.house(extension: true, terrace_room: true, depth: 10.0) end)
@@ -184,7 +181,7 @@ defmodule World.Buildings.LotTest do
 
       house = Detail.with(level, fn -> Lot.house(opts) end)
       assert Check.model(house) == :ok, "#{inspect(opts)} #{level}"
-      assert Scene.triangles(Build.scene(house, level: level)) <= @limits[level]
+      assert Scene.triangles(Build.scene(house, level: level)) <= Lot.limits()[level]
     end
   end
 
