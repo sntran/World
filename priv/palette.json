@@ -22,6 +22,7 @@
     "glass": {"color": [165, 216, 243], "roughness": 0.05, "metalness": 0.0, "alpha": 0.35},
     "glass_dark": {"color": [39, 49, 61], "roughness": 0.05, "metalness": 0.0, "alpha": 0.85},
     "glass_amber": {"color": [112, 56, 16], "roughness": 0.05, "metalness": 0.0, "alpha": 0.75},
+    "gold": {"color": [205, 165, 70], "roughness": 0.35, "metalness": 0.85},
     "gray": {"color": [150, 146, 140], "roughness": 0.55, "metalness": 0.0},
     "hair": {"color": [28, 24, 22], "roughness": 0.7, "metalness": 0.0},
     "iron": {"color": [52, 54, 56], "roughness": 0.55, "metalness": 0.3},
