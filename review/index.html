@@ -160,13 +160,30 @@ async function parts(name) {
   const res = await fetch(`${base}${name}.parts.json`);
   const table = document.getElementById('parts');
   table.replaceChildren();
-  const rows = (await res.json()).parts;
+  const json = await res.json();
+  const rows = json.parts;
+  if (params.get('ports') === '1') ports(json.ports ?? []);
   for (const p of rows) {
     const row = table.insertRow();
     row.insertCell().textContent = p.name;
     Object.assign(row.insertCell(), { className: 'n', textContent: p.count });
   }
   return rows;
+}
+
+// With ?ports=1, a box for each port of the small parts of a house (W18):
+// its size across, up and out, a color for each kind.
+function ports(list) {
+  const kinds = [...new Set(list.map((p) => p.kind))].sort();
+  for (const p of list) {
+    const [w, h, d] = p.size;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+      new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(kinds.indexOf(p.kind) / kinds.length, 0.8, 0.5) }));
+    const n = new THREE.Vector3(...p.normal);
+    const up = Math.abs(n.y) > 0.5;
+    box.position.fromArray(p.position).addScaledVector(n, up ? h / 2 : d / 2);
+    current.add(box);
+  }
 }
 
 // The fur of an animal, as an app can draw it: 24 shells over the skin,
