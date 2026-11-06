@@ -37,7 +37,7 @@ defmodule World.Buildings.LotTest do
     house = Lot.house()
     {_, _, joint} = List.keyfind(house.nodes, "shutter_nha_ong", 0)
     assert joint.kind == :slide and joint.role == :open
-    assert joint.limits == [0.0, 3.0]
+    assert joint.limits == [0.0, 2.99]
     far = Detail.with(:far, fn -> Lot.house() end)
     refute List.keymember?(far.nodes, "shutter_nha_ong", 0)
   end
@@ -163,6 +163,7 @@ defmodule World.Buildings.LotTest do
             finish <- member_of(c.finish),
             left <- member_of(c.side),
             right <- member_of(c.side),
+            kind <- member_of(c.kind),
             floors <- integer(1..8),
             width <- float(min: 3.0, max: 6.0),
             depth <- float(min: 8.0, max: 25.0),
@@ -171,14 +172,17 @@ defmodule World.Buildings.LotTest do
             level <- member_of([:mid, :far]),
             max_runs: 12
           ) do
+      range = Lot.floors(kind)
+
       opts = [
+        kind: kind,
         style: style,
         roof: roof,
         ground: ground,
         finish: finish,
         left: left,
         right: right,
-        floors: floors,
+        floors: min(max(floors, range.first), range.last),
         width: width,
         depth: depth,
         extension: extension,
@@ -199,7 +203,8 @@ defmodule World.Buildings.LotTest do
           {[floors: 9], "floors"},
           {[style: :modern], "style"},
           {[left: :open], "left"},
-          {[kind: :villa], "kind"}
+          {[kind: :castle], "kind"},
+          {[kind: :villa, floors: 4], "floors"}
         ] do
       assert_raise ArgumentError, ~r/#{message}/, fn -> Lot.house(opts) end
     end
@@ -315,7 +320,7 @@ defmodule World.Buildings.LotTest do
 
     {_, room, _} = List.keyfind(Lot.house(interior: :front_room).nodes, "front_room_nha_ong", 0)
     [floor | _] = room.shapes
-    {{_, _, 0.0}, {_, _, top}} = World.Mesh.bounds(floor)
+    {{_, _, +0.0}, {_, _, top}} = World.Mesh.bounds(floor)
     assert_in_delta top, 0.2, 1.0e-9
     # Each step: a riser of 18 cm at the most, a tread of 26 cm at the most.
     steps = Enum.filter(room.shapes, &(&1.material == :tile_granite)) |> tl()
@@ -338,6 +343,61 @@ defmodule World.Buildings.LotTest do
     assert_in_delta lx + rx + 0.9, 4.0 - 2 * 0.13, 1.0e-6
     assert_raise ArgumentError, ~r/interior/, fn -> Lot.house(interior: :hall) end
   end
+
+  test "a shop house: a high ground floor for the shop, a balcony and a sunshade on each floor" do
+    house = Lot.house(kind: :shop, seed: 3)
+    assert house.extras["house"]["kind"] == "shop" and house.extras["house"]["floors"] == 4
+    assert Check.model(house) == :ok
+    # The first floor is 4.5 m over the floor of the shop.
+    assert_in_delta house.extras["house"]["height"], 0.2 + 4.5 + 3.4 * 3 + 1.1, 1.0e-9
+    ports = Build.parts_file("s", house)["ports"]
+    assert Enum.count(ports, &(&1["kind"] == "rail")) == 3
+    assert_raise ArgumentError, ~r/shop house has 2 to 6 floors/, fn -> Lot.house(kind: :shop, floors: 7) end
+  end
+
+  test "a villa: behind a yard with a fence and a gate, free sides, a roof of clay tiles, balusters" do
+    house = Lot.house(kind: :villa, seed: 4)
+    info = house.extras["house"]
+    assert {info["roof"], info["left"], info["right"], info["floors"]} == {"clay", "free", "free", 2}
+    assert Check.model(house) == :ok
+    # The building stands 3 m back from the street: its front corners.
+    assert [[-2.0, 5.0], [2.0, 5.0] | _] = house.extras["surface"]["corners"]
+    {_, yard, _} = List.keyfind(house.nodes, "yard_nha_ong", 0)
+
+    {{_, _, _}, {_, y1, _}} =
+      yard.shapes |> Enum.map(&World.Mesh.bounds/1) |> Enum.reduce(fn {_, a}, {lo, b} -> {lo, max_v(a, b)} end)
+
+    assert_in_delta y1, 8.0, 1.0e-9
+    names = for n <- scene([kind: :villa], :far).nodes, n.extras["collision"], do: n.name
+    assert ~w(fence_left-colonly fence_right-colonly gate-colonly) -- names == []
+    # Balusters at near, a wall at mid; no iron rail on the balcony.
+    near = scene([kind: :villa, seed: 4], :near)
+    assert :plaster in roles(near) and :iron in roles(near)
+    assert Scene.triangles(scene([kind: :villa], :far)) <= Lot.limits()[:far]
+    assert Check.model(Detail.with(:mid, fn -> Lot.house(kind: :villa, seed: 4) end)) == :ok
+  end
+
+  test "a mini-hotel: 5 to 8 floors, a balcony for each room, a vertical sign, a room on the terrace" do
+    house = Lot.house(kind: :mini_hotel)
+    assert house.extras["house"]["floors"] == 6
+    assert List.keymember?(house.nodes, "terrace_room_nha_ong", 0)
+    assert Check.model(house) == :ok
+    [sign] = for p <- Build.parts_file("k", house)["ports"], p["kind"] == "sign_vertical", do: p
+    [w, h, d] = sign["size"]
+    assert w < d and h > 10.0
+    assert_raise ArgumentError, ~r/5 to 8 floors/, fn -> Lot.house(kind: :mini_hotel, floors: 4) end
+  end
+
+  test "the blueprint gives the defaults of the kind to the options with no value" do
+    {:ok, full} = Orders.check(%{"blueprint" => "lot_house", "options" => %{"kind" => "villa"}})
+    assert full["options"]["roof"] == nil
+    {:ok, json} = Orders.build(full, "far", "parts")
+    assert JSON.decode!(json)["name"] == "nha_ong"
+    {:ok, glb} = Orders.build(full, "far", "glb")
+    assert hd(glb_json(glb)["scenes"])["extras"]["house"]["roof"] == "clay"
+  end
+
+  defp max_v({a, b, c}, {d, e, f}), do: {max(a, d), max(b, e), max(c, f)}
 
   test "the houses of the catalog" do
     for {name, fun} <- Lot.models() do

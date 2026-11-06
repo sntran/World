@@ -9,7 +9,7 @@ defmodule World.TownLimitsTest do
 
   # The heaviest options: the most floors, the widest and deepest lot,
   # windows in both side walls, a room at the back and on the terrace.
-  @heavy [floors: 8, width: 6.0, depth: 25.0, left: :free, right: :free, extension: true, terrace_room: true]
+  @heavy [width: 6.0, depth: 25.0, left: :free, right: :free, extension: true, terrace_room: true]
 
   defp measure(name, fun) do
     for level <- [:near, :mid, :far] do
@@ -43,12 +43,12 @@ defmodule World.TownLimitsTest do
   end
 
   @tag timeout: 600_000
-  test "the heaviest house of each style, roof and ground floor is in the limits at each level" do
+  test "the heaviest house of each kind, style, roof and ground floor is in the limits at each level" do
     c = Lot.choices()
 
     rows =
-      for style <- c.style, roof <- c.roof, ground <- c.ground do
-        opts = @heavy ++ [style: style, roof: roof, ground: ground, seed: 2]
+      for kind <- c.kind, style <- c.style, roof <- c.roof, ground <- c.ground do
+        opts = @heavy ++ [kind: kind, floors: Lot.floors(kind).last, style: style, roof: roof, ground: ground, seed: 2]
         measure(inspect(opts), fn -> Lot.house(opts) end)
       end
 

@@ -47,18 +47,13 @@ defmodule World.Buildings.Lot do
 
   # The floor of the ground floor over the street (W20).
   @plinth 0.2
-  # The height of the ground floor, floor to floor: at least 3.6 m clear
-  # (TCVN 9411:2012), and a slab.
-  @ground 3.8
   # The height of a floor over it, floor to floor (by eye: 3.3 to 3.6 m).
   @storey 3.4
   # A rail and a parapet: 1.1 m (the common height of a rail; 0.9 m at
   # the least).
   @rail 1.1
-  # The piers at the sides of the ground floor, and the top of its
-  # opening over the street.
+  # The piers at the sides of the ground floor.
   @pier 0.25
-  @opening 3.2
   # The walls: a front of 2 wythes of gạch ống (8 by 8 by 18 cm) under
   # plaster, a side wall of 1 wythe (by eye).
   @front_wall 0.2
@@ -69,7 +64,35 @@ defmodule World.Buildings.Lot do
   # The slope of a metal roof and of a roof of clay tiles (by eye).
   @pitch %{corrugated: 12.0, clay: 30.0}
 
-  @kinds [:tube]
+  # Each kind of house: its floors, the height of its ground floor,
+  # floor to floor (at least 3.6 m clear, TCVN 9411:2012, and a slab), the
+  # top of the opening of its ground floor, its yard in front (a villa
+  # stands back from the street), and its defaults (by eye, from the
+  # streets of Vũng Tàu): a tube house (nhà ống); a shop house (nhà phố)
+  # with a high ground floor for the shop and a balcony on each floor; a
+  # villa (biệt thự) of 1 to 3 floors behind a yard, a fence and a gate,
+  # with a roof of clay tiles and balusters (con tiện) on its balconies;
+  # a mini-hotel (khách sạn mini) of 5 to 8 floors, with a balcony for
+  # each room and a vertical sign.
+  @specs %{
+    tube: %{floors: 1..8, ground_h: 3.8, opening: 3.2, yard: 0.0, defaults: []},
+    shop: %{floors: 2..6, ground_h: 4.5, opening: 3.9, yard: 0.0, defaults: [floors: 4]},
+    villa: %{
+      floors: 1..3,
+      ground_h: 3.6,
+      opening: 3.0,
+      yard: 3.0,
+      defaults: [floors: 2, roof: :clay, ground: :door_gate, finish: :plain, left: :free, right: :free]
+    },
+    mini_hotel: %{
+      floors: 5..8,
+      ground_h: 3.8,
+      opening: 3.2,
+      yard: 0.0,
+      defaults: [floors: 6, ground: :open_shop, terrace_room: true]
+    }
+  }
+  @kinds [:tube, :shop, :villa, :mini_hotel]
   @styles [:old, :new]
   @roofs [:flat, :corrugated, :clay]
   @grounds [:cua_cuon, :cua_xep, :door_gate, :open_shop]
@@ -92,8 +115,9 @@ defmodule World.Buildings.Lot do
   @doc """
   The houses of the catalog: a new tube house of 4 by 16 m, an old one
   of 4 by 18 m with a bare wall and a free wall, and a house of 5 by 20 m
-  with two floors and a roof of clay tiles, and a homestay of 4 by 14 m
-  with an open front room.
+  with two floors and a roof of clay tiles, a homestay of 4 by 14 m with
+  an open front room, a shop house of 5 by 20 m, an old villa of 6 by 20
+  m, and a mini-hotel of 7 floors.
   """
   def models do
     [
@@ -129,6 +153,11 @@ defmodule World.Buildings.Lot do
            seed: 4
          )
        end},
+      {"nha_pho_5x20", fn -> house(name: "nha_pho_5x20", kind: :shop, width: 5.0, depth: 20.0, seed: 6) end},
+      {"biet_thu_6x20",
+       fn -> house(name: "biet_thu_6x20", kind: :villa, width: 6.0, depth: 20.0, style: :old, seed: 8) end},
+      {"khach_san_mini_4x16",
+       fn -> house(name: "khach_san_mini_4x16", kind: :mini_hotel, floors: 7, finish: :pattern, seed: 9) end},
       {"nha_ong_homestay_4x14",
        fn ->
          house(
@@ -163,7 +192,8 @@ defmodule World.Buildings.Lot do
         part("inside", inside(o, plan, level)),
         part("front_room", front_room(o, plan, level)),
         part("extension", extension(o, plan, level)),
-        part("terrace_room", terrace_room(o, plan, level))
+        part("terrace_room", terrace_room(o, plan, level)),
+        part("yard", yard(o, plan, level))
       ]
       |> Enum.reject(&(&1.shapes == []))
       |> Enum.map(&%{&1 | name: "#{&1.name}_#{o.name}"})
@@ -185,11 +215,21 @@ defmodule World.Buildings.Lot do
   # --- The options and the plan ---------------------------------------------
 
   defp options(opts) do
-    get = fn key, default -> Keyword.get(opts, key, default) end
+    kind = Keyword.get(opts, :kind) || :tube
+    unless kind in @kinds, do: raise(ArgumentError, "a house has no kind #{inspect(kind)}")
+    spec = @specs[kind]
+
+    # An option that is not given (or nil) has the default of the kind.
+    get = fn key, default ->
+      case Keyword.get(opts, key) do
+        nil -> Keyword.get(spec.defaults, key, default)
+        value -> value
+      end
+    end
 
     o = %{
       name: get.(:name, "nha_ong"),
-      kind: get.(:kind, :tube),
+      kind: kind,
       width: get.(:width, 4.0) / 1,
       depth: get.(:depth, 16.0) / 1,
       floors: get.(:floors, 3),
@@ -203,11 +243,16 @@ defmodule World.Buildings.Lot do
       terrace_room: get.(:terrace_room, false),
       interior: get.(:interior, :none),
       paint_age: get.(:paint_age, 0.3) / 1,
-      seed: get.(:seed, 1)
+      seed: get.(:seed, 1),
+      ground_h: spec.ground_h,
+      opening: spec.opening,
+      yard: spec.yard
     }
 
+    # The front of the building: the front of the lot, or behind the yard.
+    o = Map.put(o, :front, o.depth / 2 - o.yard)
+
     for {k, v} <- [
-          kind: o.kind,
           style: o.style,
           roof: o.roof,
           ground: o.ground,
@@ -221,7 +266,10 @@ defmodule World.Buildings.Lot do
 
     unless o.width >= 3.0 and o.width <= 6.0, do: raise(ArgumentError, "the width of a house is 3 to 6 m")
     unless o.depth >= 8.0 and o.depth <= 25.0, do: raise(ArgumentError, "the depth of a house is 8 to 25 m")
-    unless o.floors in 1..8, do: raise(ArgumentError, "a house has 1 to 8 floors")
+
+    unless o.floors in spec.floors,
+      do: raise(ArgumentError, "a #{kind} house has #{spec.floors.first} to #{spec.floors.last} floors")
+
     o
   end
 
@@ -231,16 +279,17 @@ defmodule World.Buildings.Lot do
     s = :rand.seed_s(:exsss, {o.seed + 1, 7_919, 104_729})
     {r, s} = draws(s, 8)
     [r_reach, r_side, r_cage, r_ext, r_balcony, r_sunshade, r_bars, r_window] = r
-    floors = for i <- 0..o.floors, do: floor_z(i)
+    floors = for i <- 0..o.floors, do: floor_z(o, i)
     top = List.last(floors)
     ext = if o.extension, do: Float.round(min(3.0 + 2.0 * r_ext, o.depth * 0.3), 2), else: 0.0
     {lo, hi} = @reach
     # Each floor over the ground: a balcony or a sunshade over its windows.
     {flags, _} = draws(s, o.floors)
 
+    # A shop house and a mini-hotel have a balcony on each floor.
     balconies =
       for {f, i} <- Enum.with_index(flags), i > 0 do
-        if f < 0.25 + 0.5 * r_balcony, do: :balcony, else: :sunshade
+        if o.kind in [:shop, :mini_hotel] or f < 0.25 + 0.5 * r_balcony, do: :balcony, else: :sunshade
       end
 
     %{
@@ -250,9 +299,9 @@ defmodule World.Buildings.Lot do
       ext: ext,
       reach: Float.round(lo + (hi - lo) * r_reach, 2),
       door_left: r_side < 0.5,
-      cage: r_cage < if(o.style == :old, do: 0.6, else: 0.3),
+      cage: o.kind in [:tube, :shop] and r_cage < if(o.style == :old, do: 0.6, else: 0.3),
       balconies: balconies,
-      sunshade: r_sunshade < 0.7,
+      sunshade: o.kind == :shop or r_sunshade < 0.7,
       bars: o.style == :old or r_bars < 0.3,
       window: o.width >= 4.0 and r_window < 0.8
     }
@@ -261,14 +310,14 @@ defmodule World.Buildings.Lot do
   defp draws(s, n), do: Enum.map_reduce(1..n//1, s, fn _, s -> :rand.uniform_s(s) end)
 
   # The height of the floor `i` over the street (0 is the ground floor).
-  defp floor_z(0), do: @plinth
-  defp floor_z(i), do: @plinth + @ground + @storey * (i - 1)
+  defp floor_z(_o, 0), do: @plinth
+  defp floor_z(o, i), do: @plinth + o.ground_h + @storey * (i - 1)
 
   # The extras of the house: the lot, the corners for the surface data,
   # the paint age and the seed for the shader of the app.
   defp extras(o, plan) do
     hw = o.width / 2
-    corners = [[-hw, o.depth / 2], [hw, o.depth / 2], [-hw, plan.back], [hw, plan.back]]
+    corners = [[-hw, o.front], [hw, o.front], [-hw, plan.back], [hw, plan.back]]
     corners = if plan.ext > 0, do: corners ++ [[-hw, -o.depth / 2], [hw, -o.depth / 2]], else: corners
 
     %{
@@ -307,7 +356,7 @@ defmodule World.Buildings.Lot do
   # level. `World.Build` makes a node of each.
   defp collision(o, plan) do
     hw = o.width / 2
-    {front, back} = {o.depth / 2, plan.back}
+    {front, back} = {o.front, plan.back}
     top = wall_top(o, plan, :far)
     z1 = Enum.at(plan.floors, 1, plan.top)
     box = fn name, {x0, y0, z0}, {x1, y1, z1} -> cbox(name, {x0, y0, z0}, {x1, y1, z1}) end
@@ -316,7 +365,7 @@ defmodule World.Buildings.Lot do
       box.("wall_left", {hw - @side_wall, back, 0.0}, {hw, front, top}),
       box.("wall_right", {-hw, back, 0.0}, {-hw + @side_wall, front, top}),
       box.("wall_back", {-hw + @side_wall, back, 0.0}, {hw - @side_wall, back + @front_wall, top}),
-      box.("front_beam", {-hw + @side_wall, front - @front_wall, @opening}, {hw - @side_wall, front, z1}),
+      box.("front_beam", {-hw + @side_wall, front - @front_wall, o.opening}, {hw - @side_wall, front, z1}),
       box.("floor", {-hw + @side_wall, back + @front_wall, 0.0}, {hw - @side_wall, front, @plinth})
     ]
 
@@ -338,8 +387,25 @@ defmodule World.Buildings.Lot do
         do: [box.("extension", {-hw, -o.depth / 2, 0.0}, {hw, back, @plinth + @storey})],
         else: []
 
-    walls ++ upper ++ ground_boxes(o, plan) ++ step ++ ext ++ room_boxes(o, plan)
+    walls ++ upper ++ ground_boxes(o, plan) ++ step ++ ext ++ room_boxes(o, plan) ++ yard_boxes(o)
   end
+
+  # The fence of the yard of a villa and its gate.
+  defp yard_boxes(%{yard: yard} = o) when yard > 0 do
+    hw = o.width / 2
+    {y0, y1} = {o.front, o.depth / 2}
+    gate = min(2.4, o.width - 1.2)
+
+    [
+      cbox("fence_left", {gate / 2, y1 - 0.3, 0.0}, {hw, y1, 1.8}),
+      cbox("fence_right", {-hw, y1 - 0.3, 0.0}, {-gate / 2, y1, 1.8}),
+      cbox("fence_side_left", {hw - 0.15, y0, 0.0}, {hw, y1, 1.8}),
+      cbox("fence_side_right", {-hw, y0, 0.0}, {-hw + 0.15, y1, 1.8}),
+      cbox("gate", {-gate / 2, y1 - 0.17, 0.0}, {gate / 2, y1 - 0.13, 1.7})
+    ]
+  end
+
+  defp yard_boxes(_o), do: []
 
   # A box between two corners (in any order).
   defp cbox(name, {a0, b0, c0}, {a1, b1, c1}) do
@@ -380,12 +446,12 @@ defmodule World.Buildings.Lot do
   # moves with its node), the gate, or the wall round a door.
   defp ground_boxes(o, _plan) do
     hw = o.width / 2
-    front = o.depth / 2
+    front = o.front
     {y0, y1} = {front - @front_wall, front}
 
     piers = [
-      cbox("pier_left", {hw - @pier, y0, 0.0}, {hw, y1, @opening}),
-      cbox("pier_right", {-hw, y0, 0.0}, {-hw + @pier, y1, @opening})
+      cbox("pier_left", {hw - @pier, y0, 0.0}, {hw, y1, o.opening}),
+      cbox("pier_right", {-hw, y0, 0.0}, {-hw + @pier, y1, o.opening})
     ]
 
     piers ++
@@ -393,22 +459,22 @@ defmodule World.Buildings.Lot do
         :cua_cuon ->
           [
             Map.put(
-              cbox("shutter", {-hw + @pier, y1 - 0.12, @plinth}, {hw - @pier, y1 - 0.08, @opening}),
+              cbox("shutter", {-hw + @pier, y1 - 0.09, @plinth}, {hw - @pier, y1 - 0.05, o.opening}),
               "node",
               "shutter_#{o.name}"
             )
           ]
 
         :cua_xep ->
-          [cbox("gate", {-hw + @pier, y1 - 0.09, @plinth}, {hw - @pier, y1 - 0.03, @opening})]
+          [cbox("gate", {-hw + @pier, y1 - 0.09, @plinth}, {hw - @pier, y1 - 0.03, o.opening})]
 
         :door_gate ->
           [{d0, _, d1, top, _} | _] = door_gate_holes(o)
 
           [
-            cbox("wall_door_left", {hw - d0, y0, 0.0}, {hw - @pier, y1, @opening}),
-            cbox("wall_door_right", {-hw + @pier, y0, 0.0}, {hw - d1, y1, @opening}),
-            cbox("wall_door_top", {hw - d1, y0, top}, {hw - d0, y1, @opening}),
+            cbox("wall_door_left", {hw - d0, y0, 0.0}, {hw - @pier, y1, o.opening}),
+            cbox("wall_door_right", {-hw + @pier, y0, 0.0}, {hw - d1, y1, o.opening}),
+            cbox("wall_door_top", {hw - d1, y0, top}, {hw - d0, y1, o.opening}),
             cbox("door", {hw - d1, y0, @plinth}, {hw - d0, y1, top})
           ]
 
@@ -447,7 +513,7 @@ defmodule World.Buildings.Lot do
 
   defp room_boxes(%{ground: ground} = o, plan) when ground in [:cua_xep, :open_shop] do
     hw = o.width / 2 - @side_wall
-    back = max(o.depth / 2 - @front_wall - 5.0, plan.back + 0.5)
+    back = max(o.front - @front_wall - 5.0, plan.back + 0.5)
     [cbox("room_back", {-hw, back - 0.02, @plinth}, {hw, back, Enum.at(plan.floors, 1, plan.top)})]
   end
 
@@ -462,7 +528,7 @@ defmodule World.Buildings.Lot do
   # (each riser 18 cm at the most, each tread 26 cm at the most: by eye).
   defp room(o, plan) do
     hw = o.width / 2 - @side_wall - 0.02
-    front = o.depth / 2 - @front_wall
+    front = o.front - @front_wall
     back = front - min(7.0, front - (plan.back + @front_wall) - 0.3)
     z1 = Enum.at(plan.floors, 1, plan.top)
     rise = z1 - @plinth
@@ -575,7 +641,8 @@ defmodule World.Buildings.Lot do
     "dish" => [0.6, 0.7, 0.4],
     "antenna" => [0.3, 2.5, 0.3],
     "laundry" => [2.0, 1.6, 0.6],
-    "wire" => [0.1, 0.1, 0.05]
+    "wire" => [0.1, 0.1, 0.05],
+    "sign_vertical" => nil
   }
 
   # The most triangles of a whole house at each level, for a town of
@@ -585,6 +652,9 @@ defmodule World.Buildings.Lot do
   # The material roles of a house: the 10 roles of W23, and the wood and
   # the aluminum of the shutters, the doors and the frames.
   @roles ~w(plaster brick_ong tile_granite tile_pattern metal_shutter iron roof_corrugated roof_clay concrete glass wood aluminum)a
+
+  @doc "The range of the floors of a kind of house."
+  def floors(kind), do: @specs[kind].floors
 
   @doc "The most triangles of a whole house at each level (W22): `%{near: _, mid: _, far: _}`."
   def limits, do: @limits
@@ -614,7 +684,7 @@ defmodule World.Buildings.Lot do
 
   defp front_ports(o, plan) do
     hw = o.width / 2
-    front = o.depth / 2
+    front = o.front
     out = {0.0, 1.0, 0.0}
     up = {0.0, 0.0, 1.0}
 
@@ -641,7 +711,7 @@ defmodule World.Buildings.Lot do
     # The sign on the band between the opening and the first floor, over
     # the sunshade.
     z1 = Enum.at(plan.floors, 1, plan.top)
-    {s0, s1} = {@opening + 0.3, z1 - 0.1}
+    {s0, s1} = {o.opening + 0.3, z1 - 0.1}
     sign_w = o.width - 2 * @pier
 
     sign =
@@ -656,12 +726,23 @@ defmodule World.Buildings.Lot do
     number = port("number", {side * (hw - @pier / 2), front, 2.0}, out)
     altar = port("altar", {side * (hw - @side_wall - 0.3), front - @front_wall - 0.25, @plinth}, up, %{"facing" => out})
     wires = for x <- [hw - 0.15, -hw + 0.15], do: port("wire", {x, front, z1 - 0.3}, out)
-    ac ++ List.flatten(balconies) ++ [sign, number, altar] ++ wires
+    ac ++ List.flatten(balconies) ++ [sign, number, altar] ++ wires ++ vertical_sign(o, plan, side)
   end
+
+  # A mini-hotel has a vertical sign at the edge of its front, from the
+  # first floor to the top (its text along it).
+  defp vertical_sign(%{kind: :mini_hotel} = o, plan, side) do
+    z0 = Enum.at(plan.floors, 1)
+    h = Float.round(plan.top - 0.5 - z0, 3)
+    at = {-side * (o.width / 2 - 0.15), o.front, z0 + h / 2}
+    [port("sign_vertical", at, {0.0, 1.0, 0.0}, %{"size" => [0.12, h, 0.7], "text" => [0.5, Float.round(h - 0.4, 3)]})]
+  end
+
+  defp vertical_sign(_o, _plan, _side), do: []
 
   defp roof_ports(%{roof: :flat} = o, plan) do
     hw = o.width / 2
-    {front, back, top} = {o.depth / 2, plan.back, plan.top}
+    {front, back, top} = {o.front, plan.back, plan.top}
     up = {0.0, 0.0, 1.0}
 
     # On a room on the terrace the tank is on its roof.
@@ -687,7 +768,7 @@ defmodule World.Buildings.Lot do
 
     [
       port("water_tank", {0.0, plan.back + 1.0, ridge}, up),
-      port("dish", {0.0, o.depth / 2 - 0.3, ridge}, up),
+      port("dish", {0.0, o.front - 0.3, ridge}, up),
       port("antenna", {0.0, plan.back + 0.1, ridge}, up)
     ]
   end
@@ -717,7 +798,7 @@ defmodule World.Buildings.Lot do
     sides =
       for {side, u, at} <- [
             {o.left, {0.0, 1.0, 0.0}, {hw, plan.back + @front_wall, 0.0}},
-            {o.right, {0.0, -1.0, 0.0}, {-hw, o.depth / 2 - @front_wall, 0.0}}
+            {o.right, {0.0, -1.0, 0.0}, {-hw, o.front - @front_wall, 0.0}}
           ] do
         # The holes of the windows only at near; at mid the glass is on the
         # wall (`wall_panes/3`).
@@ -741,7 +822,7 @@ defmodule World.Buildings.Lot do
         {z0, z1} = {Enum.at(plan.floors, i), Enum.at(plan.floors, i + 1)}
 
         sheet(
-          {hw, o.depth / 2, z0},
+          {hw, o.front, z0},
           {-1.0, 0.0, 0.0},
           {0.0, 0.0, 1.0},
           o.width,
@@ -757,7 +838,7 @@ defmodule World.Buildings.Lot do
 
   # The length of a side wall, and the top of the walls: at far the
   # walls of a flat terrace go up to the top of the parapet.
-  defp side_length(o, plan), do: o.depth / 2 - plan.back - 2 * @front_wall
+  defp side_length(o, plan), do: o.front - plan.back - 2 * @front_wall
   defp wall_top(%{roof: :flat}, plan, :far), do: plan.top + @rail
   defp wall_top(_o, plan, _level), do: plan.top
 
@@ -796,7 +877,7 @@ defmodule World.Buildings.Lot do
   # back of a roof of two slopes.
   defp top_of_walls(o, plan, level) do
     hw = o.width / 2
-    {top, front, back} = {plan.top, o.depth / 2, plan.back}
+    {top, front, back} = {plan.top, o.front, plan.back}
 
     case o.roof do
       :flat when level == :far ->
@@ -839,7 +920,7 @@ defmodule World.Buildings.Lot do
     hw = o.width / 2
 
     [
-      sheet({hw, o.depth / 2, 0.0}, {-1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, o.width, wall_top(o, plan, :far), [], role,
+      sheet({hw, o.front, 0.0}, {-1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, o.width, wall_top(o, plan, :far), [], role,
         skin: {@front_wall, :brick}
       )
     ]
@@ -853,10 +934,10 @@ defmodule World.Buildings.Lot do
     holes =
       if o.ground == :door_gate,
         do: door_gate_holes(o),
-        else: [{@pier, @plinth, o.width - @pier, @opening, 0.12}]
+        else: [{@pier, @plinth, o.width - @pier, o.opening, 0.12}]
 
     [
-      sheet({hw, o.depth / 2, 0.0}, {-1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, o.width, z1, holes, role,
+      sheet({hw, o.front, 0.0}, {-1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, o.width, z1, holes, role,
         vs: [@plinth],
         skin: {@front_wall, :brick}
       )
@@ -877,19 +958,21 @@ defmodule World.Buildings.Lot do
   # its box (the role `:open`, 0 closed to 3 m open). Not for the other
   # fronts, and not at far: there the front is one sheet.
   defp shutter(asm, %{ground: :cua_cuon} = o, _plan, level) when level != :far do
-    hw = o.width / 2 - @pier
-    y = o.depth / 2 - 0.1
-    h = @opening - @plinth
+    # 1 cm in from the sides and the top of the opening, 7 cm in from the
+    # face of the wall (not at the middle of the wall).
+    hw = o.width / 2 - @pier - 0.01
+    y = o.front - 0.07
+    h = o.opening - @plinth - 0.01
 
     panel =
       if level == :near,
         do:
-          sheet({hw, y, 0.0}, {-1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, 2 * hw, h, [], :metal_shutter,
+          sheet({hw, y, @plinth}, {-1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, 2 * hw, h, [], :metal_shutter,
             vs: ribs(h, 0.08),
             relief: fn _u, v -> if rem(round(v / 0.04), 2) == 0, do: 0.0, else: 0.012 end,
             skin: {0.0008, :steel}
           ),
-        else: Shape.box({-hw, y - 0.01, 0.0}, {hw, y, h}, :metal_shutter) |> Mesh.matter(:steel)
+        else: Shape.box({-hw, y - 0.01, @plinth}, {hw, y, @plinth + h}, :metal_shutter) |> Mesh.matter(:steel)
 
     port = Part.port("slide", {0.0, y, @plinth}, {0, 0, 1}, {0, 1, 0})
     part = Part.new("shutter_#{o.name}", :building, [panel], [%{port | name: "slide"}], sources: [])
@@ -913,7 +996,7 @@ defmodule World.Buildings.Lot do
 
   defp slabs(o, plan, level) do
     hw = o.width / 2
-    front = o.depth / 2
+    front = o.front
     step_role = if o.finish == :granite, do: :tile_granite, else: :concrete
 
     # The step over the width of the opening, and the ramp at its middle.
@@ -941,7 +1024,7 @@ defmodule World.Buildings.Lot do
     # A sunshade over the opening of the ground floor.
     over =
       if plan.sunshade and level != :far,
-        do: [Shape.box({-hw, front, @opening + 0.2}, {hw, front + 0.6, @opening + 0.28}, :concrete)],
+        do: [Shape.box({-hw, front, o.opening + 0.2}, {hw, front + 0.6, o.opening + 0.28}, :concrete)],
         else: []
 
     terrace =
@@ -955,7 +1038,115 @@ defmodule World.Buildings.Lot do
         ],
         else: []
 
-    Enum.map(step ++ upper ++ over ++ terrace, &Mesh.matter(&1, :concrete))
+    Enum.map(step ++ upper ++ over ++ terrace ++ balusters(o, plan, level), &Mesh.matter(&1, :concrete))
+  end
+
+  # The balustrade of a balcony of a villa: balusters (con tiện) of
+  # cement, a rail on them and a plinth under them at near, one wall at
+  # mid (by eye).
+  defp balusters(%{kind: :villa} = o, plan, level) when level != :far do
+    hw = o.width / 2
+
+    for {:balcony, i} <- Enum.with_index(plan.balconies, 1) do
+      z = Enum.at(plan.floors, i)
+      y = o.front + plan.reach
+
+      if level == :mid do
+        [Shape.box({-hw, y - 0.15, z}, {hw, y, z + 1.0}, :plaster)]
+      else
+        n = round(2 * hw / 0.2)
+
+        posts =
+          for k <- 1..(n - 1)//1, x = -hw + k * 2 * hw / n do
+            Shape.box({x - 0.04, y - 0.12, z + 0.1}, {x + 0.04, y - 0.04, z + 0.88}, :plaster)
+          end
+
+        [
+          Shape.box({-hw, y - 0.15, z}, {hw, y, z + 0.1}, :plaster),
+          Shape.box({-hw, y - 0.15, z + 0.88}, {hw, y, z + 1.0}, :plaster)
+          | posts
+        ]
+      end
+    end
+    |> List.flatten()
+  end
+
+  defp balusters(_o, _plan, _level), do: []
+
+  # --- The yard of a villa ----------------------------------------------------
+
+  # The yard between the street and a villa: a floor of tiles, a low
+  # wall with iron bars over it on the front and the sides of the lot
+  # (1.8 m in all), two piers and a gate of 2.4 m at the middle (by eye).
+  defp yard(%{yard: yard} = o, _plan, level) when yard > 0 do
+    hw = o.width / 2
+    {y0, y1} = {o.front, o.depth / 2}
+    gate = min(2.4, o.width - 1.2)
+    t = 0.15
+
+    walls = [
+      Shape.box({gate / 2 + 0.3, y1 - t, 0.0}, {hw, y1, 0.6}, :plaster),
+      Shape.box({-hw, y1 - t, 0.0}, {-gate / 2 - 0.3, y1, 0.6}, :plaster),
+      Shape.box({hw - t, y0, 0.0}, {hw, y1 - t, 0.6}, :plaster),
+      Shape.box({-hw, y0, 0.0}, {-hw + t, y1 - t, 0.6}, :plaster)
+    ]
+
+    piers = for x <- [gate / 2, -gate / 2 - 0.3], do: Shape.box({x, y1 - 0.3, 0.0}, {x + 0.3, y1, 1.9}, :plaster)
+    # The floor of the yard starts behind the step and the ramp.
+    floor = Shape.box({-hw + t, y0 + 0.8, 0.0}, {hw - t, y1 - t, 0.1}, :tile_granite)
+    # At far: the low walls only.
+    masonry = if level == :far, do: walls, else: [floor | walls ++ piers]
+    Enum.map(masonry, &Mesh.matter(&1, :brick)) ++ fence(o, gate, level)
+  end
+
+  defp yard(_o, _plan, _level), do: []
+
+  # The iron of the fence and the gate: bars at near, panels at mid.
+  defp fence(_o, _gate, :far), do: []
+
+  defp fence(o, gate, level) do
+    hw = o.width / 2
+    {y0, y1} = {o.front, o.depth / 2}
+    {z0, z1} = {0.6, 1.8}
+
+    runs = [
+      {{gate / 2 + 0.3, y1 - 0.08}, {hw, y1 - 0.08}},
+      {{-hw, y1 - 0.08}, {-gate / 2 - 0.3, y1 - 0.08}},
+      {{hw - 0.08, y0}, {hw - 0.08, y1 - 0.15}},
+      {{-hw + 0.08, y0}, {-hw + 0.08, y1 - 0.15}}
+    ]
+
+    gate_run = {{-gate / 2, y1 - 0.15}, {gate / 2, y1 - 0.15}}
+
+    for {{xa, ya}, {xb, yb}} <- [gate_run | runs] do
+      {g0, g1} = if {{xa, ya}, {xb, yb}} == gate_run, do: {0.05, 1.7}, else: {z0, z1}
+
+      if level == :mid do
+        [Shape.box({min(xa, xb) - 0.01, min(ya, yb) - 0.01, g0}, {max(xa, xb) + 0.01, max(ya, yb) + 0.01, g1}, :iron)]
+      else
+        len = abs(xb - xa) + abs(yb - ya)
+        n = max(round(len / 0.12), 2)
+
+        bars =
+          for k <- 1..(n - 1) do
+            {x, y} = {xa + (xb - xa) * k / n, ya + (yb - ya) * k / n}
+            Shape.box({x - 0.007, y - 0.007, g0}, {x + 0.007, y + 0.007, g1}, :iron)
+          end
+
+        flats =
+          for z <- [g0, g1 - 0.03],
+              do:
+                Shape.box(
+                  {min(xa, xb) - 0.01, min(ya, yb) - 0.01, z},
+                  {max(xa, xb) + 0.01, max(ya, yb) + 0.01, z + 0.03},
+                  :iron
+                )
+
+        bars ++ flats
+      end
+    end
+    |> List.flatten()
+    |> Enum.map(&Mesh.matter(&1, :steel))
   end
 
   # The ramp for the scooters: a wedge from the street to the floor, 0.8 m
@@ -977,7 +1168,7 @@ defmodule World.Buildings.Lot do
         z = Enum.at(plan.floors, i)
         # The sheet goes from the left (+x) to the right: u is -x.
         {x0, x1} = {hw - u1, hw - u0}
-        y = o.depth / 2 - depth
+        y = o.front - depth
         pane(o.style, {x0, y, z + v0}, {x1, y, z + v1}, level, v0 == 0.0)
       end
       |> List.flatten()
@@ -993,7 +1184,7 @@ defmodule World.Buildings.Lot do
     at = fn d -> if level == :near, do: d, else: -0.006 end
     len = side_length(o, plan)
     y0 = plan.back + @front_wall
-    y1 = o.depth / 2 - @front_wall
+    y1 = o.front - @front_wall
 
     left =
       if o.left == :free,
@@ -1073,7 +1264,7 @@ defmodule World.Buildings.Lot do
     hw = o.width / 2
 
     for {u0, v0, u1, v1, depth} <- door_gate_holes(o) do
-      pane(o.style, {hw - u1, o.depth / 2 - depth, v0}, {hw - u0, o.depth / 2 - depth, v1}, level, v0 == @plinth)
+      pane(o.style, {hw - u1, o.front - depth, v0}, {hw - u0, o.front - depth, v1}, level, v0 == @plinth)
     end
     |> List.flatten()
   end
@@ -1087,7 +1278,7 @@ defmodule World.Buildings.Lot do
       []
     else
       hw = o.width / 2
-      front = o.depth / 2
+      front = o.front
 
       balcony =
         for {:balcony, i} <- Enum.with_index(plan.balconies, 1) do
@@ -1095,7 +1286,7 @@ defmodule World.Buildings.Lot do
           z_next = Enum.at(plan.floors, i + 1)
           y = front + plan.reach
 
-          rail(o.style, {-hw, y, z + 0.002}, {hw, y, z + @rail}, level) ++
+          if(o.kind == :villa, do: [], else: rail(o.style, {-hw, y, z + 0.002}, {hw, y, z + @rail}, level)) ++
             if(plan.cage, do: cage({-hw, front, z + 0.002}, {hw, y, z_next - 0.122}, level), else: [])
         end
 
@@ -1191,8 +1382,8 @@ defmodule World.Buildings.Lot do
   # crossed bars) in the opening, or a gate of bars in front of the door.
   defp gate(%{ground: :cua_xep} = o, level) do
     {x0, x1} = {-o.width / 2 + @pier, o.width / 2 - @pier}
-    y = o.depth / 2 - 0.06
-    {z0, z1} = {@plinth, @opening}
+    y = o.front - 0.06
+    {z0, z1} = {@plinth, o.opening}
 
     if level == :mid do
       [Shape.box({x0, y - 0.02, z0}, {x1, y, z1}, :iron)]
@@ -1213,7 +1404,7 @@ defmodule World.Buildings.Lot do
   defp gate(%{ground: :door_gate} = o, level) do
     hw = o.width / 2
     [{u0, v0, u1, v1, _} | _] = door_gate_holes(o)
-    y = o.depth / 2 + 0.02
+    y = o.front + 0.02
 
     if level == :mid,
       do: [Shape.box({hw - u1, y, v0}, {hw - u0, y + 0.02, v1}, :iron)],
@@ -1227,7 +1418,7 @@ defmodule World.Buildings.Lot do
   defp rebar(o, plan) do
     hw = o.width / 2
 
-    for x <- [-hw + 0.05, hw - 0.1], y <- [o.depth / 2 - 0.1, plan.back + 0.05], dx <- [0.0, 0.05] do
+    for x <- [-hw + 0.05, hw - 0.1], y <- [o.front - 0.1, plan.back + 0.05], dx <- [0.0, 0.05] do
       Shape.box({x + dx, y, plan.top + @rail}, {x + dx + 0.012, y + 0.012, plan.top + @rail + 0.8}, :iron)
     end
   end
@@ -1241,7 +1432,7 @@ defmodule World.Buildings.Lot do
     a = @pitch[o.roof] * :math.pi() / 180
     slope = hw / :math.cos(a)
     over = 0.15
-    {y0, y1} = {plan.back - over, o.depth / 2 + over}
+    {y0, y1} = {plan.back - over, o.front + over}
     role = if o.roof == :clay, do: :roof_clay, else: :roof_corrugated
     {skin, matter} = if o.roof == :clay, do: {0.015, :terracotta}, else: {0.0004, :steel}
 
@@ -1279,7 +1470,7 @@ defmodule World.Buildings.Lot do
     # A coat of plaster of 2 cm on the walls of the house, and a floor of
     # light ceramic tiles (by eye).
     hw = o.width / 2 - @side_wall - 0.02
-    front = o.depth / 2 - @front_wall
+    front = o.front - @front_wall
     back = max(front - 5.0, plan.back + 0.5)
     z1 = Enum.at(plan.floors, 1, plan.top) - 0.15
     h = z1 - @plinth
@@ -1321,43 +1512,54 @@ defmodule World.Buildings.Lot do
     a = 8.0 * :math.pi() / 180
     len = (y1 - y0 + 0.3) / :math.cos(a)
 
-    [
-      sheet(
-        {-hw, y0, 0.0},
-        {1.0, 0.0, 0.0},
-        {0.0, 0.0, 1.0},
-        o.width,
-        h,
-        if(level == :far, do: [], else: [{o.width / 2 - 0.45, 1.0, o.width / 2 + 0.45, 3.1, 0.12}]),
-        :plaster,
-        skin: {@side_wall, :brick}
-      ),
-      sheet({hw, y0 + @side_wall, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, y1 - y0 - @side_wall, h, [], role.(o.left),
-        skin: {@side_wall, :brick}
-      ),
-      sheet({-hw, y1, 0.0}, {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, y1 - y0 - @side_wall, h, [], role.(o.right),
-        skin: {@side_wall, :brick}
-      ),
-      sheet(
-        {-hw - 0.1, y0 - 0.3, h},
-        {1.0, 0.0, 0.0},
-        {0.0, :math.cos(a), :math.sin(a)},
-        o.width + 0.2,
-        len,
-        [],
-        :roof_corrugated,
-        us: if(level == :near, do: ribs(o.width + 0.2, 0.25), else: []),
-        relief: if(level == :near, do: fn u, _v -> if rem(round(u / 0.125), 2) == 0, do: 0.0, else: 0.025 end),
-        skin: {0.0004, :steel}
-      )
-    ]
+    # At far, the walls are one box.
+    walls =
+      if level == :far,
+        do: [Shape.box({-hw, y0, 0.0}, {hw, y1, h}, :plaster) |> Mesh.matter(:brick)],
+        else: [
+          sheet(
+            {-hw, y0, 0.0},
+            {1.0, 0.0, 0.0},
+            {0.0, 0.0, 1.0},
+            o.width,
+            h,
+            [{o.width / 2 - 0.45, 1.0, o.width / 2 + 0.45, 3.1, 0.12}],
+            :plaster, skin: {@side_wall, :brick}),
+          sheet(
+            {hw, y0 + @side_wall, 0.0},
+            {0.0, 1.0, 0.0},
+            {0.0, 0.0, 1.0},
+            y1 - y0 - @side_wall,
+            h,
+            [],
+            role.(o.left), skin: {@side_wall, :brick}),
+          sheet({-hw, y1, 0.0}, {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, y1 - y0 - @side_wall, h, [], role.(o.right),
+            skin: {@side_wall, :brick}
+          )
+        ]
+
+    walls ++
+      [
+        sheet(
+          {-hw - 0.1, y0 - 0.3, h},
+          {1.0, 0.0, 0.0},
+          {0.0, :math.cos(a), :math.sin(a)},
+          o.width + 0.2,
+          len,
+          [],
+          :roof_corrugated,
+          us: if(level == :near, do: ribs(o.width + 0.2, 0.25), else: []),
+          relief: if(level == :near, do: fn u, _v -> if rem(round(u / 0.125), 2) == 0, do: 0.0, else: 0.025 end),
+          skin: {0.0004, :steel}
+        )
+      ]
   end
 
   # A room at the back of a flat terrace (the room of the stairs), with a
   # door to the terrace and a flat roof.
   defp terrace_room(%{terrace_room: true, roof: :flat} = o, plan, level) do
     hw = o.width / 2 - @side_wall
-    {y0, y1} = {plan.back + @side_wall, min(plan.back + 3.0, o.depth / 2 - 1.0)}
+    {y0, y1} = {plan.back + @side_wall, min(plan.back + 3.0, o.front - 1.0)}
     {z0, h} = {plan.top, 2.6}
     door = if level == :far, do: [], else: [{0.3, 0.0, 1.1, 2.1, 0.1}]
 
