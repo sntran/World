@@ -374,3 +374,47 @@ and no logo on them.
   scooter, 1,500 for a person, 300 for a stool: the game shows rows of
   40 parked scooters and groups of people. The far scooter has about
   4,000 triangles now.
+- **Houses for the lots (W17 to W23, plan 0009).** Plan 0009 of Vung_Tau
+  puts thousands of houses on the real lots, so one house must be cheap
+  and must come in many shapes. W1 and W2 are the first part of this.
+  - **A whole house from a lot (W17).** One order makes one house from
+    these options: width 3 to 6 m, depth 8 to 25 m, floors 1 to 8, kind
+    (tube house, shop house, villa, mini-hotel), style (old or new), roof
+    (flat terrace with a parapet, corrugated metal, clay tiles), ground
+    floor (cửa cuốn, cửa xếp, door and gate, open shop), front finish
+    (plain, granite, patterned tiles), paint age, a seed, and for each
+    side wall: shared with a neighbor, free, or bare brick above a lower
+    neighbor. Optional: a back extension and a room on the terrace. The
+    same order gives the same bytes.
+  - **Ports in `parts.json` (W18).** The game puts the small parts with
+    a MultiMesh, so each house lists its ports: a position, a normal, a
+    size, and a kind. Front ports: AC unit, rail, pot, sign (with the
+    size of the text), number plate, altar of the earth god. Roof ports:
+    water tank, dish, antenna, laundry pole. Wire ports on the front,
+    where the game attaches the cables from the power poles.
+  - **A family of houses (W19).** One list of orders gives a set of
+    variants (for example 30 tube houses of 4 m, by seed). The game
+    makes a library from the set, and picks one by the size of the lot.
+  - **One room you can enter (W20).** An option `interior: front_room`
+    for the homestay and the shops: an open ground floor with a door of
+    0.9 × 2.1 m, a floor 20 cm above the street, a ceiling of 3 m, and
+    the stairs. Every house also has simple collision boxes (walls, the
+    step, the ramp) as named nodes in the GLB, so the game does not
+    use the visible mesh for collision.
+  - **The street kit (W21).** Straight pieces of 2 m, corners, and
+    junctions of: the sidewalk with the curb and tiles, the gutter with
+    covers, a ramp cut for scooters, the concrete paving of a hẻm with
+    cracks and patches. The concrete power pole with crossarms, bundles
+    of cables, a transformer, and meter boxes (with wire ports). The
+    street lamp. A trash bin.
+  - **Levels for a town (W22).** For a whole house: near at most about
+    40,000 triangles, mid at most 3,000, far at most 300 (a box with the
+    right roof). At most 6 materials in one house, by role, so the game
+    needs few draw calls. The far level keeps the roof, because the
+    player sees roofs from Núi Lớn and Núi Nhỏ.
+  - **Roles and UVs for the wall shader (W23).** The roles `plaster`,
+    `brick_ong`, `tile_granite`, `tile_pattern`, `metal_shutter`,
+    `iron`, `roof_corrugated`, `roof_clay`, `concrete`, and `glass`.
+    The UVs of a wall are in meters. A vertex color on the walls gives
+    the height above the ground and the distance to a corner, so the
+    game can put damp at the bottom and streaks at the corners.
