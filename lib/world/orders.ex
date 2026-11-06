@@ -271,7 +271,7 @@ defmodule World.Orders do
     end)
   end
 
-  defp parts(item), do: encode(%{"name" => item.name, "parts" => Build.parts(item)})
+  defp parts(item), do: encode(Build.parts_file(item.name, item))
 
   defp receipt(order, level, scene) do
     encode(%{

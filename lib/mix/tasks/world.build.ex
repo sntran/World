@@ -38,7 +38,7 @@ defmodule Mix.Tasks.World.Build do
             {Path.join(dir, name <> ext <> ".glb"), World.Build.glb(item, level: level)}
           end
 
-        parts = %{"name" => name, "parts" => World.Build.parts(fun.())}
+        parts = World.Build.parts_file(name, fun.())
         [{Path.join(dir, name <> ".parts.json"), JSON.encode!(parts)} | glbs]
       end)
 

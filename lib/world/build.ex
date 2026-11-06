@@ -68,7 +68,9 @@ defmodule World.Build do
       "limbs" => acc.limbs
     }
 
-    extras = Map.merge(extras, Map.get(item, :extras, %{}))
+    # The ports of the small parts go into the list of the parts
+    # (`parts_file/2`), not into the GLB.
+    extras = Map.merge(extras, Map.drop(Map.get(item, :extras, %{}), ["ports"]))
 
     case extras do
       %{"surface" => %{"corners" => corners}} -> %{World.Surface.apply(scene, corners) | extras: extras}
@@ -573,6 +575,37 @@ defmodule World.Build do
     # Two parts can have one name with other params: all the fields fix the order.
     |> Enum.sort_by(&{&1["name"], &1["kind"], &1["params"], &1["sources"]})
   end
+
+  @doc """
+  The data of the file `NAME.parts.json` of a model: its name, the list
+  of its parts (`parts/1`) and, for a model with `"ports"` in its extras
+  (a house, W18 of Vũng Tàu), its ports in the axes of the GLB (glTF: +y
+  up, the front to +z): each with its kind, its `position` and its
+  `normal`, its `size` and the other fields of the model.
+  """
+  def parts_file(name, item) do
+    base = %{"name" => name, "parts" => parts(item)}
+
+    case Map.get(item, :extras, %{}) do
+      %{"ports" => ports} -> Map.put(base, "ports", Enum.map(ports, &gltf_port/1))
+      _ -> base
+    end
+  end
+
+  # Each point and direction (a tuple) of a port goes into glTF; `at` is
+  # its `position`.
+  defp gltf_port(p) do
+    for {k, v} <- p, into: %{} do
+      case {k, v} do
+        {"at", v} -> {"position", gltf(v)}
+        {k, {_, _, _}} -> {k, gltf(v)}
+        kv -> kv
+      end
+    end
+  end
+
+  # A point of World (x, y, z) in glTF is (-x, z, y) (`World.GLB`).
+  defp gltf({x, y, z}), do: Enum.map([-x, z, y], &(Float.round(&1 / 1, 4) + 0.0))
 
   defp mass(%Part{} = p), do: with(%{mass: m} <- World.Mass.part(p), do: Float.round(m, 4))
 

@@ -268,8 +268,128 @@ defmodule World.Buildings.Lot do
         "height" => Float.round(plan.top + if(o.roof == :flat, do: @rail, else: 0.0), 3)
       },
       "paint_age" => o.paint_age,
-      "seed" => o.seed
+      "seed" => o.seed,
+      "ports" => ports(o, plan)
     }
+  end
+
+  # --- The ports for the small parts of the game (W18) ----------------------
+
+  # The size of the thing on each kind of port: across the front, up, and
+  # out of the wall (or along the lot for a port that looks up). By eye
+  # from photos, and the sizes of common products of 2019 (`sources/1`).
+  @port_sizes %{
+    "ac" => [0.7, 0.55, 0.28],
+    "rail" => nil,
+    "pot" => [0.35, 0.5, 0.35],
+    "sign" => nil,
+    "number" => [0.3, 0.2, 0.01],
+    "altar" => [0.45, 0.5, 0.35],
+    "water_tank" => [1.0, 1.6, 1.0],
+    "dish" => [0.6, 0.7, 0.4],
+    "antenna" => [0.3, 2.5, 0.3],
+    "laundry" => [2.0, 1.6, 0.6],
+    "wire" => [0.1, 0.1, 0.05]
+  }
+
+  @doc "The kinds of the ports of a house (W18)."
+  def port_kinds, do: @port_sizes |> Map.keys() |> Enum.sort()
+
+  # The ports of a house, in the axes of the house. A port on a wall is
+  # at the middle of the thing on the face of the wall; a port that looks
+  # up is at the middle of the base of the thing. The front ports (an
+  # AC unit over a window of each floor, the rail and two pots of each
+  # balcony, the sign over the opening of the ground floor and the size
+  # of its text, the plate of the house number on a pier, the altar of
+  # the earth god on the floor inside the door), the roof ports (the
+  # water tank, a dish, an antenna, a laundry pole) and the wire ports
+  # (where the cables from the power poles come to the front).
+  defp ports(o, plan) do
+    front_ports(o, plan) ++ roof_ports(o, plan)
+  end
+
+  defp port(kind, at, normal, extra \\ %{}) do
+    Map.merge(%{"kind" => kind, "at" => at, "normal" => normal, "size" => @port_sizes[kind]}, extra)
+  end
+
+  defp front_ports(o, plan) do
+    hw = o.width / 2
+    front = o.depth / 2
+    out = {0.0, 1.0, 0.0}
+    up = {0.0, 0.0, 1.0}
+
+    ac =
+      for i <- 1..(o.floors - 1)//1 do
+        z = Enum.at(plan.floors, i)
+        # Over the window, else over the door (u from the left, x = hw - u).
+        [{d0, _, d1, _, _} | rest] = front_holes(o, plan, i)
+        {u0, u1} = with([{w0, _, w1, _, _}] <- rest, do: {w0, w1}, else: (_ -> {d0, d1}))
+        port("ac", {hw - (u0 + u1) / 2, front, z + 2.75}, out, %{"floor" => i})
+      end
+
+    balconies =
+      for {:balcony, i} <- Enum.with_index(plan.balconies, 1) do
+        z = Enum.at(plan.floors, i)
+        y = front + plan.reach
+
+        [
+          port("rail", {0.0, y, z + @rail / 2}, out, %{"floor" => i, "size" => [o.width, @rail, 0.04]})
+          | for(x <- [hw - 0.3, -hw + 0.3], do: port("pot", {x, y - 0.25, z}, up, %{"floor" => i}))
+        ]
+      end
+
+    # The sign on the band between the opening and the first floor, over
+    # the sunshade.
+    z1 = Enum.at(plan.floors, 1, plan.top)
+    {s0, s1} = {@opening + 0.3, z1 - 0.1}
+    sign_w = o.width - 2 * @pier
+
+    sign =
+      port("sign", {0.0, front, (s0 + s1) / 2}, out, %{
+        "size" => [sign_w, Float.round(s1 - s0, 3), 0.05],
+        "text" => [Float.round(sign_w - 0.3, 3), Float.round((s1 - s0) * 0.6, 3)]
+      })
+
+    # The plate of the number on the pier away from the door of the floors
+    # over it; the altar inside, at that side.
+    side = if plan.door_left, do: -1.0, else: 1.0
+    number = port("number", {side * (hw - @pier / 2), front, 2.0}, out)
+    altar = port("altar", {side * (hw - @side_wall - 0.3), front - @front_wall - 0.25, @plinth}, up, %{"facing" => out})
+    wires = for x <- [hw - 0.15, -hw + 0.15], do: port("wire", {x, front, z1 - 0.3}, out)
+    ac ++ List.flatten(balconies) ++ [sign, number, altar] ++ wires
+  end
+
+  defp roof_ports(%{roof: :flat} = o, plan) do
+    hw = o.width / 2
+    {front, back, top} = {o.depth / 2, plan.back, plan.top}
+    up = {0.0, 0.0, 1.0}
+
+    # On a room on the terrace the tank is on its roof.
+    tank =
+      if o.terrace_room,
+        do: {0.0, plan.back + @side_wall + 1.0, top + 2.7},
+        else: {0.0, back + @front_wall + 0.7, top}
+
+    [
+      port("water_tank", tank, up),
+      port("dish", {hw - 0.5, front - @front_wall - 0.5, top}, up),
+      port("antenna", {-hw + 0.06, back + 0.06, top + @rail}, up),
+      port("laundry", {0.0, (front + back) / 2, top}, up)
+    ]
+  end
+
+  # A roof of two slopes: the tank on a stand at the back, the dish on the
+  # front gable and the antenna on the back gable, at the ridge.
+  defp roof_ports(o, plan) do
+    rise = o.width / 2 * :math.tan(@pitch[o.roof] * :math.pi() / 180)
+    ridge = Float.round(plan.top + rise, 4)
+    up = {0.0, 0.0, 1.0}
+
+    [
+      port("water_tank", {0.0, plan.back + 1.0, ridge}, up),
+      port("dish", {0.0, o.depth / 2 - 0.3, ridge}, up),
+      port("antenna", {0.0, plan.back + 0.1, ridge}, up)
+    ]
   end
 
   defp sources(o) do
@@ -277,7 +397,8 @@ defmodule World.Buildings.Lot do
       "A #{o.kind} house of Vũng Tàu, 2019: #{o.floors} floors on a lot of #{o.width} by #{o.depth} m (World.Buildings.Lot).",
       "The ground floor: 3.6 m clear at the least (TCVN 9411:2012, nhà ở liên kế); its floor 0.2 m over the street (Vũng Tàu, W20).",
       "A balcony: 0.6 to 1.2 m out (Vũng Tàu, plan 0004, R7). A rail and a parapet: 1.1 m.",
-      "The heights of the floors over the ground floor, the walls, the slopes of the roofs and the details: by eye, from the photos of the streets of Vũng Tàu of the owner."
+      "The heights of the floors over the ground floor, the walls, the slopes of the roofs and the details: by eye, from the photos of the streets of Vũng Tàu of the owner.",
+      "The ports (W18): the boxes of an outdoor unit of an AC of 9,000 BTU/h, a water tank of 1,000 L, a dish of 60 cm, a TV antenna, a plate of a house number, an altar of the earth god and a laundry pole are by eye, from photos and the sizes of common products of 2019."
     ]
   end
 

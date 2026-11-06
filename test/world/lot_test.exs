@@ -213,6 +213,57 @@ defmodule World.Buildings.LotTest do
              Orders.check(%{"blueprint" => "lot_house", "options" => %{"width" => 7}})
   end
 
+  test "the ports of the small parts: on the front, on the roof, and the wires, in the axes of the GLB" do
+    file = Build.parts_file("h", Lot.house(floors: 3, seed: 1))
+    ports = file["ports"]
+    kinds = ports |> Enum.map(& &1["kind"]) |> Enum.uniq() |> Enum.sort()
+    assert kinds -- Lot.port_kinds() == []
+    assert ~w(ac altar antenna dish laundry number sign water_tank wire) -- kinds == []
+    assert Enum.all?(ports, &(is_list(&1["position"]) and is_list(&1["size"]) and not Map.has_key?(&1, "at")))
+
+    # One AC unit for each floor over the ground floor, on the face of the
+    # front wall (z of glTF is y of World: the front at 8 m), looking out.
+    acs = Enum.filter(ports, &(&1["kind"] == "ac"))
+    assert Enum.map(acs, & &1["floor"]) == [1, 2]
+    assert Enum.all?(acs, &(Enum.at(&1["position"], 2) == 8.0 and &1["normal"] == [0.0, 0.0, 1.0]))
+
+    # The text of the sign is in the sign; the roof ports look up.
+    [sign] = Enum.filter(ports, &(&1["kind"] == "sign"))
+    [tw, th] = sign["text"]
+    [sw, sh, _] = sign["size"]
+    assert tw < sw and th < sh
+
+    for p <- ports,
+        p["kind"] in ~w(water_tank dish antenna laundry pot altar),
+        do: assert(p["normal"] == [0.0, 1.0, 0.0])
+
+    [altar] = Enum.filter(ports, &(&1["kind"] == "altar"))
+    assert altar["facing"] == [0.0, 0.0, 1.0]
+
+    # Each balcony has a rail and two pots at its edge.
+    house = Lot.house(seed: 1)
+    balconies = Enum.count(Enum.filter(ports, &(&1["kind"] == "rail")))
+    assert Enum.count(ports, &(&1["kind"] == "pot")) == 2 * balconies
+
+    # The GLB has no ports; the list of the parts of an order has them.
+    refute Map.has_key?(Build.scene(house).extras, "ports")
+    {:ok, json} = Orders.build(%{"blueprint" => "lot_house", "options" => %{"roof" => "clay"}}, "far", "parts")
+    pitched = JSON.decode!(json)["ports"]
+    refute Enum.any?(pitched, &(&1["kind"] == "laundry"))
+    [tank] = Enum.filter(pitched, &(&1["kind"] == "water_tank"))
+    assert Enum.at(tank["position"], 1) > house.extras["house"]["height"] - 1.1
+
+    # On a room on the terrace the tank is on its roof; one floor has no AC.
+    [roomy] =
+      for p <- Build.parts_file("h", Lot.house(terrace_room: true, floors: 1))["ports"],
+          p["kind"] == "water_tank",
+          do: p
+
+    assert_in_delta Enum.at(roomy["position"], 1), 0.2 + 3.8 + 2.7, 1.0e-6
+    refute Enum.any?(Build.parts_file("h", Lot.house(floors: 1))["ports"], &(&1["kind"] == "ac"))
+    refute Map.has_key?(Build.parts_file("b", World.Buildings.brick_vn()), "ports")
+  end
+
   test "the houses of the catalog" do
     for {name, fun} <- Lot.models() do
       house = fun.()
