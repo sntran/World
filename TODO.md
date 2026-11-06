@@ -475,5 +475,6 @@ and no logo on them.
     columns, roofs in tiers with curved ends of the ridges and ceramic
     figures on them, the gate (tam quan), and the altars (Miếu Hòn Bà
     is small, so it is the first one).
-  - **A stone jetty.** Blocks of stone along a path, with the edge
-    (Cầu Đá).
+  - **Pieces for a stone jetty.** Pieces of 2 m of the stone deck with
+    its edge, as in the street kit: the game lays them along the line
+    of Cầu Đá on the real ground.
