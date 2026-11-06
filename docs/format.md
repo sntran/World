@@ -243,6 +243,36 @@ The axes of a wall: along x from 0 to its length, its outside face at
 y = 0, z up. An opening is `{kind, x, width, z, height}` in the axes of
 the wall: the rough opening.
 
+### A house on a lot
+
+A whole house on a lot of a town of Việt Nam (`World.Buildings.Lot`,
+the blueprint `lot_house`) is cheaper: each wall is one closed slab of
+its thickness with the holes of its windows and its doors, not a wall
+of bricks. A town has thousands of them.
+
+- **The axes.** The origin is at the center of the front of the lot, on
+  the street. x is across the front (+x at the left as seen from the
+  street), y goes to the street (the front of the lot is at y = depth /
+  2), z is up. The balconies, the sunshades and the step go out of the
+  lot, over the sidewalk, as on the real street.
+- **The levels.** Near: the bars, the louvers, the ribs of the metal and
+  the courses of the tiles. Mid: panels, and the glass of the windows of
+  the side walls and the back wall on the wall (no holes). Far: the box
+  of the walls (up to the top of the parapet of a flat terrace) with its
+  roof, at most 300 triangles. The roll-up shutter is a slide (the role
+  `open`) at near and mid only.
+- **The roles.** `plaster`, `brick_ong` (a bare side wall), `tile_granite`
+  (the front of the ground floor, the step, the floor of an open ground
+  floor), `tile_pattern`, `metal_shutter`, `iron`, `roof_corrugated`,
+  `roof_clay`, `concrete` and `glass`, and `wood` and `aluminum` for the
+  shutters, the doors and the frames. The app merges them into its own
+  materials.
+- **The extras.** `lot` (`width`, `depth`), `house` (the kind, the
+  style, the roof, the ground floor, the finish, the floors, the sides
+  and the height), `paint_age` (0 to 1, for the shader of the app: it
+  changes no shape), `seed` (it picks the details) and `surface` (below,
+  "GLB").
+
 ## The materials
 
 A material is a role, not a color:
@@ -1434,6 +1464,17 @@ The build gives the same bytes for the same model.
   extensions that the materials and the nodes use. A primitive of a material with a
   normal texture has a tangent for each point (`TANGENT`: the direction
   of +u, and the sign of +v), from its UVs.
+- **The data of a wall.** A model with `"surface" => %{"corners" =>
+  [[x, y], ...]}` in its extras (the vertical edges of the building in
+  plan) gets the data of `World.Surface` on each point: `TEXCOORD_0` in
+  meters (a box projection on the axis of the normal), `TEXCOORD_1` the
+  height over the ground and the horizontal distance to the nearest
+  corner in meters, and `COLOR_0` (four floats, linear) with red = the
+  height / 32 m and green = the distance / 4 m (each 1 at most), blue 0
+  and alpha 1. These are numbers for a shader (the damp at the bottom of
+  a wall, the streaks at its corners), not colors. Each wall has points
+  at its corners, 4 m from them and at its middle. A node with
+  instances has no data.
 - **`extras` of the root.** `name`, `kind`, `size` (the box), `sources`,
   `level` (`near`, `mid` or `far`).
 - **The check.** The Khronos glTF validator checks each file in CI: no

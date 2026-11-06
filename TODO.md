@@ -386,6 +386,12 @@ and no logo on them.
     side wall: shared with a neighbor, free, or bare brick above a lower
     neighbor. Optional: a back extension and a room on the terrace. The
     same order gives the same bytes.
+    Done for the tube house: `World.Buildings.Lot` and the blueprint
+    `lot_house` (a bare side wall is brick from the ground to the roof:
+    the owner chose this). Still to do: the shop house, the villa and the
+    mini-hotel; a lower neighbor of its own height for a bare wall; the
+    sizes of the floors, the balconies and the details from photos of
+    the houses of Vũng Tàu next to the renders (now by eye).
   - **Ports in `parts.json` (W18).** The game puts the small parts with
     a MultiMesh, so each house lists its ports: a position, a normal, a
     size, and a kind. Front ports: AC unit, rail, pot, sign (with the
@@ -418,3 +424,6 @@ and no logo on them.
     The UVs of a wall are in meters. A vertex color on the walls gives
     the height above the ground and the distance to a corner, so the
     game can put damp at the bottom and streaks at the corners.
+    Done: `World.Surface` (the UVs in meters, `TEXCOORD_1` and `COLOR_0`;
+    `docs/format.md`, "GLB"). A house keeps all its roles: the game
+    merges them into its 6 materials (the owner chose this).

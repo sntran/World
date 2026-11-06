@@ -64,8 +64,9 @@ An error tells the path of the wrong value and the rule:
 `{"errors": [{"path": "options.length", "message": "must be from 0.05 to 6.1 m"}]}`.
 
 The blueprints now: `catalog` (each model of the catalog, with colors
-and joints), `drawing`, `person`, `traveler`, `exercise`, `animal`, `house`, `van`,
-`extrusion`, `strut` and `l_track`.
+and joints), `drawing`, `person`, `traveler`, `exercise`, `animal`, `house`,
+`lot_house` (a whole house on a lot of Vũng Tàu, `docs/format.md`, "A
+house on a lot"), `van`, `extrusion`, `strut` and `l_track`.
 
 The joints of a person are in the order too: `"joints": {"elbow_r":
 120, "shoulder_r.spread": 80}` for a person, `"traveler/elbow_r"` for
