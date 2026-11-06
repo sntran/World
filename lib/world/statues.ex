@@ -54,6 +54,8 @@ defmodule World.Statues do
     robe: true,
     halo: true,
     rays: 9,
+    head: nil,
+    beard: false,
     material: :concrete,
     hollow: false,
     wall: 0.3,
@@ -89,6 +91,7 @@ defmodule World.Statues do
     span: "m",
     hand: "m",
     lift: "deg",
+    head: "m",
     wall: "m",
     steps: "steps",
     well: "m",
@@ -182,6 +185,8 @@ defmodule World.Statues do
       height: 32.0,
       span: 18.4,
       hand: 2.2,
+      head: 4.0,
+      beard: true,
       hollow: true,
       steps: 133,
       plaza_radius: 10.5,
@@ -206,6 +211,8 @@ defmodule World.Statues do
       sources: %{
         "height" => "#{vi}: 32 m. The owner: from the feet to the top of the halo.",
         "span" => "#{vi}: the arms 18.4 m wide.",
+        "head" =>
+          "#{lm}, photo 3: about 4 m from the top of the head to the end of the beard, the face about 1.6 m wide; the hair to the shoulders, a beard.",
         "hand" => "#{av}: each hand 2.2 m long (the middle finger 1.1 m).",
         "lift" => photo <> ": the arms a little over the level.",
         "steps" => "#{vi}: 133 steps in a spiral from the base to the shoulders.",
@@ -285,15 +292,165 @@ defmodule World.Statues do
 
     surfaces = for {ps, tris, mat} <- surfaces, do: {Enum.map(ps, move), tris, mat}
     marks = Map.new(marks, fn {k, p} -> {k, squeeze.(p)} end)
+    {detail, head_top} = head(o, detail(o, surfaces, move), marks, s, top * s)
 
     %{
       surfaces: surfaces,
+      detail: detail,
       hands: hands(surfaces, marks, o),
       marks: marks,
       scale: s,
-      top: top * s,
+      top: head_top,
       halo: {halo_r * s, Vec.scale(halo_c, s)}
     }
+  end
+
+  # The surfaces of the figure for the fine casts of the head and of the
+  # hands (in a robe): of the person at near (the full mesh of MakeHuman,
+  # with the shapes of the face) at the level near, else of the figure.
+  defp detail(%{robe: false}, _surfaces, _move), do: nil
+
+  defp detail(o, surfaces, move) do
+    if Detail.level() == :near do
+      f =
+        Detail.with(:near, fn ->
+          Human.person(o.name, gender: o.gender, age: o.age, hair: o.hair, clothes: [], pose: pose(o))
+        end)
+
+      f = if o.pose == "arms_out", do: Figure.pose(f, %{}, arm_targets(f, o.lift)), else: f
+      frames = Scene.world_frames(%Scene{nodes: f.nodes})
+      for {ps, tris, mat} <- skin(f, frames), do: {Enum.map(ps, move), tris, mat}
+    else
+      surfaces
+    end
+  end
+
+  # The head of a statue in a robe: with `head`, smaller than the head of
+  # the person, so that `head` m go from its top to the end of its beard
+  # (a beard of 0.32 of the head, from the chin): each point over the head
+  # bone moves to it (the jaw and the chin too, the neck under them a
+  # little less, the hair all of it). The hair is a solid mass to the shoulders (the cards of the hair
+  # of a person cast as thin sheets), and with `beard` a beard goes on the
+  # chin. Gives the surfaces, with the solids of the hair and the beard,
+  # and the new top.
+  defp head(_o, nil, _marks, _s, top), do: {nil, top}
+
+  defp head(o, detail, marks, s, top) do
+    {px, py, pz} = pivot = marks["head"]
+    skin = for {ps, _, :skin} <- detail, p <- ps, do: p
+
+    chin =
+      skin
+      |> Enum.filter(fn {x, y, z} -> abs(x - px) < 0.015 * s and y > py + 0.03 * s and z > pz - 0.02 * s end)
+      |> Enum.map(&elem(&1, 2))
+      |> Enum.min()
+
+    k = if o.head, do: o.head / (1.32 * (top - chin)), else: 1.0
+
+    move = fn {_, _, z} = p, mat ->
+      w = if mat == :hair, do: 1.0, else: min(max((z - pz + 0.1 * s) / (0.06 * s), 0.0), 1.0)
+      Vec.add(p, Vec.scale(Vec.sub(p, pivot), w * (k - 1)))
+    end
+
+    detail = for {ps, tris, mat} <- detail, do: {Enum.map(ps, &move.(&1, mat)), tris, mat}
+    {top, chin} = {pz + k * (top - pz), pz + k * (chin - pz)}
+    hair = for {ps, _, :hair} <- detail, p <- ps, do: p
+    skull = for {ps, _, :skin} <- detail, {_, _, z} = p <- ps, z > pz, do: p
+    mass = hair_mass(hair, skull, {py, elem(marks["upperarm_l"], 2), chin, top}, s)
+
+    front =
+      for(
+        {ps, _, :skin} <- detail,
+        {x, y, z} <- ps,
+        abs(x - px) < 0.015 * s and z > chin and z < chin + 0.05 * k * s,
+        do: y
+      )
+      |> Enum.max()
+
+    beard = if o.beard and o.head, do: Enum.map(beard(px, front, chin, top - o.head, k * s), &{:solid, &1}), else: []
+    {Enum.reject(detail, &(elem(&1, 2) == :hair)) ++ [{:solid, core(pivot, top, k * s, s)}] ++ mass ++ beard, top}
+  end
+
+  # The mass of the hair, a hood round the skull: a loft of an ellipse for
+  # each slab of the skull from the shoulders to its top, out of it by the
+  # thickness of the hair (0.012 of the figure); over the ears round the
+  # slab of the skull, under them straight down to the shoulders as wide
+  # as the skull; its front at the hairline over the brow, else behind the
+  # cheeks (the face shows); a cap over the top.
+  defp hair_mass([], _, _, _), do: []
+
+  defp hair_mass(_hair, skull, {py, shoulders, chin, top}, s) do
+    t = 0.012 * s
+    n = 12
+    {brow, ears} = {chin + 0.82 * (top - chin), chin + 0.45 * (top - chin)}
+    {{sx0, sy0, _}, {sx1, sy1, sz1}} = Vec.bounds(skull)
+    dz = (top - shoulders) / n
+
+    # The points of the skull in a slab; a slab over the skull takes the
+    # top of the skull.
+    slab = fn z0, z1 ->
+      {{x0, y0, _}, {x1, y1, _}} =
+        skull |> Enum.filter(fn {_, _, z} -> z >= min(z0, sz1 - dz) and (z < z1 or z1 > sz1) end) |> Vec.bounds()
+
+      {x0, x1, y0, y1}
+    end
+
+    sections =
+      for i <- 0..(n - 1) do
+        {z0, z1} = {shoulders + i * dz, shoulders + (i + 1) * dz}
+        z = (z0 + z1) / 2
+        {x0, x1, y0, y1} = if z > ears, do: slab.(z0, z1), else: {sx0, sx1, sy0, sy1}
+        front = if z > brow, do: y1 - 0.02 * s, else: py + 0.015 * s
+        {x0, x1, y0} = {x0 - t, x1 + t, y0 - t}
+        {{(x0 + x1) / 2, (y0 + front) / 2, z}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, (x1 - x0) / 2, (front - y0) / 2, 2.0}
+      end
+
+    {{cx, cy, _}, u, v, hx, hy, p} = List.last(sections)
+    cap = [{{cx, cy, top + 0.6 * t}, u, v, 0.55 * hx, 0.55 * hy, p}, {{cx, cy, top + t}, u, v, 0.1 * hx, 0.1 * hy, p}]
+    [{:solid, Shape.loft(sections ++ cap, :concrete, sides: 32)}]
+  end
+
+  # The core of the head: a solid in the neck and the skull, so that the
+  # cast fills the head behind the face (the skin of the head is open at
+  # the neck).
+  defp core({x, y, z}, top, u, s) do
+    [
+      {z - 0.07 * s, 0.045 * s, 0.045 * s},
+      {z, 0.055 * s, 0.06 * s},
+      {(z + top) / 2, 0.055 * u, 0.065 * u},
+      {top - 0.035 * u, 0.035 * u, 0.045 * u}
+    ]
+    |> Enum.map(fn {zz, hx, hy} -> {{x, y + 0.01 * s, zz}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx, hy, 2.0} end)
+    |> Shape.loft(:concrete, sides: 32)
+  end
+
+  # The beard (by eye from photo 3 of Vung_Tau landmarks.md): along the
+  # jaw behind the lips, over the chin, down to a point at `tip`; and a
+  # mustache over the upper lip (a thin tube). In units of the head (`u`).
+  defp beard(x, front, chin, tip, u) do
+    beard =
+      [
+        {chin + 0.025 * u, front - 0.075 * u, 0.056 * u, 0.034 * u},
+        {chin + 0.005 * u, front - 0.04 * u, 0.047 * u, 0.036 * u},
+        {chin - 0.03 * u, front - 0.032 * u, 0.034 * u, 0.03 * u},
+        {(chin + tip) / 2, front - 0.032 * u, 0.02 * u, 0.02 * u},
+        {tip, front - 0.035 * u, 0.005 * u, 0.005 * u}
+      ]
+      |> Enum.map(fn {z, y, hx, hy} -> {{x, y, z}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx, hy, 2.0} end)
+      |> Shape.loft(:concrete, sides: 32)
+
+    zm = chin + 0.042 * u
+    ym = front - 0.004 * u
+
+    mustache =
+      Shape.sweep(
+        [{x - 0.038 * u, ym - 0.012 * u, zm - 0.014 * u}, {x, ym, zm}, {x + 0.038 * u, ym - 0.012 * u, zm - 0.014 * u}],
+        0.008 * u,
+        :concrete,
+        sides: 12
+      )
+
+    [beard, mustache]
   end
 
   # The box of the points of each hand of the pose `arms_out`, out from
@@ -325,9 +482,14 @@ defmodule World.Statues do
     end
   end
 
-  # The triangles of the skin and the hair of the posed person.
+  # The triangles of the skin, the hair and the eyes (they close the holes
+  # of the skin for the cast) of the posed person.
   defp skin(%Figure{nodes: nodes, skins: skins}, frames) do
-    for n <- nodes, n.skin != nil, skin = Enum.at(skins, n.skin), p <- n.primitives, p.material in [:skin, :hair] do
+    for n <- nodes,
+        n.skin != nil,
+        skin = Enum.at(skins, n.skin),
+        p <- n.primitives,
+        p.material in [:skin, :hair, :eyes] do
       bones =
         skin.joints
         |> Enum.zip(skin.inverse_bind)
@@ -380,8 +542,20 @@ defmodule World.Statues do
   defp statue_shapes(fig, o, level) do
     {look, matter} = @materials[o.material]
     step = if level == :near, do: o.height / 100, else: o.height / 56
-    robe = robe(fig, o)
-    grid = Cast.solid(uncovered(fig, robe) ++ robe, step)
+    {robe, mitts} = robe(fig, o)
+
+    # In a robe, the head and the hands are casts of their own on a fine
+    # grid (about 3 cm for a statue of 32 m at near, 10 cm at mid), and
+    # the robe is the cast of the figure; else the person is one cast.
+    {main, details} =
+      if robe == [] do
+        {uncovered(fig), []}
+      else
+        fine = if level == :near, do: o.height / 1000, else: o.height / 320
+        {robe, Enum.map(details(fig, mitts), &(Cast.solid(&1, fine) |> Cast.mesh(look) |> Mesh.matter(matter)))}
+      end
+
+    grid = Cast.solid(main, step)
 
     grid =
       if o.hollow and level == :near,
@@ -390,7 +564,7 @@ defmodule World.Statues do
 
     shell = Cast.mesh(grid, look) |> Mesh.matter(matter)
     grilles = if o.hollow and level == :near, do: Enum.flat_map(o.windows, &grille(shell, &1, look, matter)), else: []
-    {[shell | grilles ++ halo(fig, o, level)], grid}
+    {[shell | details ++ grilles ++ halo(fig, o, level)], grid}
   end
 
   # The grille of a window (by eye from the photos: a square pattern in
@@ -418,21 +592,33 @@ defmodule World.Statues do
     |> Enum.map(fn {a, b} -> Shape.box(a, b, look) |> Mesh.matter(matter) end)
   end
 
-  # The surfaces of the person that the cast takes: with no robe, all of
-  # them; in a robe, the hair, the head and the neck over the collar, and
-  # the hands out of the sleeves (the robe, its sleeves and its panels are
-  # the rest of the figure: a statue is a column, not a body in clothes).
-  defp uncovered(%{surfaces: surfaces}, []), do: Enum.map(surfaces, fn {ps, tris, _} -> {ps, tris} end)
+  # The surfaces of the person with no robe: all of them, in one cast.
+  defp uncovered(%{surfaces: surfaces}), do: Enum.map(surfaces, fn {ps, tris, _} -> {ps, tris} end)
 
-  defp uncovered(%{surfaces: surfaces, marks: m, scale: s}, _robe) do
-    neck = elem(m["head"], 2) - 0.03 * s
-    {wl, wr} = {elem(m["hand_l"], 0) + 0.01 * s, elem(m["hand_r"], 0) - 0.01 * s}
+  # The surfaces of the fine casts of a figure in a robe: the head (the
+  # mass of the hair, the head and the neck, its core, the beard), and each
+  # hand out of its sleeve.
+  defp details(%{detail: detail, marks: m, scale: s}, mitts) do
+    {hx, _, hz} = m["head"]
 
-    for {points, tris, mat} <- surfaces do
-      out = points |> Enum.map(fn {x, _, z} -> z > neck or x < wl or x > wr end) |> List.to_tuple()
-      keep = if mat == :hair, do: tris, else: Enum.filter(tris, fn t -> Enum.any?(t, &elem(out, &1)) end)
-      {points, keep}
+    pick = fn test ->
+      for {ps, tris, _} <- detail do
+        t = ps |> Enum.map(test) |> List.to_tuple()
+        {ps, Enum.filter(tris, fn tri -> Enum.any?(tri, &elem(t, &1)) end)}
+      end
     end
+
+    solids = for {:solid, mesh} <- detail, do: mesh
+    # The head with its jaw, and the neck under it (not the shoulders: the
+    # robe has them).
+    head =
+      solids ++
+        pick.(fn {x, _, z} ->
+          (z > hz - 0.04 * s and abs(x - hx) < 0.09 * s) or (z > hz - 0.07 * s and abs(x - hx) < 0.05 * s)
+        end)
+
+    # Each hand is its mitt: it covers the fingers of the person.
+    [head | Enum.map(mitts, &[&1])]
   end
 
   # The robe: a straight column with a flat front from the neck to the
@@ -440,7 +626,7 @@ defmodule World.Statues do
   # at its sides to a little over the feet (Vung_Tau landmarks.md: the
   # column 3.7 m to 4.5 m wide at the feet and 4.5 m to 5 m at the top).
   # In units of the person.
-  defp robe(%{scale: _}, %{robe: false}), do: []
+  defp robe(%{scale: _}, %{robe: false}), do: {[], []}
 
   defp robe(%{scale: s, marks: m, hands: hands}, _o) do
     sh = elem(m["upperarm_l"], 2) / s
@@ -475,7 +661,7 @@ defmodule World.Statues do
       end
 
     sleeves = for side <- ~w(l r), do: sleeve(m["upperarm_" <> side], m["lowerarm_" <> side], m["hand_" <> side], s)
-    [column | panels ++ sleeves ++ Enum.map(hands, &mitt/1)]
+    {[column | panels ++ sleeves], Enum.map(hands, &mitt/1)}
   end
 
   # A mitt round the points of a hand out to the side: from the wrist to

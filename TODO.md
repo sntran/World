@@ -467,8 +467,10 @@ and no logo on them.
     `tuong_chua_kito_vua` (`docs/format.md`, "A statue"). The review of
     the owner (2026-11-06, Vung_Tau `landmarks.md`): done, the base (the
     plaza, the block with the panel of gold, the band of letters and the
-    windows with grilles, the terrace, the dome with its stair) and the
-    robe to the sizes of the photos. Not yet: the pattern of the grilles
+    windows with grilles, the terrace, the dome with its stair), the
+    robe to the sizes of the photos, and the head (4 m to the end of the
+    beard, the face, the hair to the shoulders and the beard on a grid of
+    3 cm at near; the limit of near is 400,000 triangles). Not yet: the pattern of the grilles
     of the windows (chữ thọ), the figures of the reliefs as figures of
     people, the letters of the band as real text, the inside of the base
     (a room), and the hollow at mid.

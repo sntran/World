@@ -30,7 +30,7 @@ defmodule World.StatuesTest do
     assert_in_delta pz1, 0.45, 1.0e-6
     {{_, _, feet}, _} = Mesh.bounds(hd(part(near, "tuong_chua_kito_vua").shapes))
     assert feet > 9.95 - 0.5 and feet < 9.95 + 0.5
-    assert Scene.triangles(s) < 150_000
+    assert Scene.triangles(s) < 400_000
     assert ~w(stone_wash steel gold dark)a -- roles(s) == []
     assert part(near, "lan_can").shapes |> length() > 50
 
@@ -51,6 +51,17 @@ defmodule World.StatuesTest do
     assert length(near.extras["collision"]) == 6
     assert sizes["base_height"]["source"] =~ "measured from photos (Vung_Tau landmarks.md)"
     assert sizes["dome_sides"]["value"] == 8
+    assert sizes["head"]["value"] == 4.0 and sizes["head"]["source"] =~ "photo 3"
+
+    # The head: a cast of its own on the fine grid, from its top down past
+    # the end of the beard (4 m) to the neck.
+    [{{hx0, _, hz0}, {hx1, _, hz1}}] =
+      for sh <- part(near, "tuong_chua_kito_vua").shapes,
+          {{x0, _, z0}, {x1, _, z1}} = b = World.Vec.bounds(sh.points),
+          x1 - x0 < 3.5 and z1 > 40.0 and z0 < 37.0,
+          do: b
+
+    assert hx1 - hx0 > 2.0 and hz1 < 41.5 and hz1 - hz0 > 4.0
 
     # Hollow at near only: the mid level weighs more.
     mid = at(:mid, &Statues.nui_nho/0)
@@ -86,6 +97,10 @@ defmodule World.StatuesTest do
     far = at(:far, fn -> Statues.statue(o ++ [halo: true, rays: 4, terrace_rail: 0.0, base_height: 1.0]) end)
     assert Scene.triangles(scene(far, :far)) <= 300
 
+    # A robe with no hair and the head of the person, at mid.
+    bald = at(:mid, fn -> Statues.statue([height: 3.0, hair: nil] ++ @no_base) end)
+    assert Check.model(bald) == :ok
+
     # The rays: an even count has no ray up.
     near = at(:mid, fn -> Statues.statue([height: 3.0, rays: 4] ++ @no_base) end)
     assert Enum.count(part(near, "tuong").shapes, &(&1.material == :steel)) == 4
@@ -119,12 +134,15 @@ defmodule World.StatuesTest do
         "windows" => [%{"z" => 6.0}],
         "reliefs" => [%{"side" => "front", "figures" => 4, "title" => "A"}],
         "hair" => "none",
+        "head" => 2.0,
+        "beard" => true,
         "sources" => %{"height" => "A drawing of 2026."}
       }
     }
 
     assert {:ok, full} = Orders.check(order)
     assert full["options"]["material"] == "concrete" and full["options"]["steps"] == 133
+    assert {:ok, _} = Orders.build(order, "mid", "glb")
     assert {:ok, receipt} = Orders.build(order, "far", "receipt")
     sizes = JSON.decode!(receipt)["sizes"]
 

@@ -338,6 +338,13 @@ ground at the center of the base, and the figure looks to +y.
   finger), the arms out to the sides become shorter or longer along x
   from the shoulders: a statue has the proportions of its sculptor. A
   mitt goes round each hand (the fingers together).
+- **The head.** In a robe, with `head`, the head is smaller than the
+  head of the person, so that `head` m go from its top to the end of its
+  beard (with `beard`; the beard is 0.32 of the head under the chin). At
+  near the face comes from the full mesh of the person (its eyes, its
+  nose, its lips, its ears). The hair is a solid mass round the skull
+  down to the shoulders, with the face open; with `beard`, a beard along
+  the jaw to a point, and a mustache.
 - **The robe.** A straight column with a flat front from the neck to the
   feet, wide sleeves along the bones of the arms, and two long panels at
   its sides to a little over the feet. In a robe, the cast takes only the
@@ -345,7 +352,9 @@ ground at the center of the base, and the figure looks to +y.
   sleeves from the person: a statue is a column, not a body in clothes.
 - **The cast.** One closed shell of the role `stone_wash` (concrete
   with a render of washed stone) or `stone` (granite), on a grid of cells
-  of 1/100 of the height at near and 1/56 at mid. Each triangle marks the
+  of 1/100 of the height at near and 1/56 at mid. In a robe, the head and
+  each hand are casts of their own on a finer grid: 1/1000 of the height
+  at near (3 cm for 32 m) and 1/320 at mid (10 cm). Each triangle marks the
   cells round its points; a fill from the edge of the grid gives the
   outside, and the rest is the solid. Near the surface each cell has its
   signed distance: the distance to the plane of the nearest triangle
@@ -398,7 +407,7 @@ statue has the list `sizes`.
 
 The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
 from the feet to the top of the halo, the hands 18.4 m apart, the hands
-2.2 m, 133 steps inside; a plaza of 21 m with 3 steps, a block of 13 by
+2.2 m, the head 4 m with the beard, 133 steps inside; a plaza of 21 m with 3 steps, a block of 13 by
 13 by 6.5 m with four reliefs, and a dome of 8 faces, 8 m wide and 3 m
 high. The sizes of the base are measured from photos (Vung_Tau
 `landmarks.md`, about 15%), and the receipt says so.

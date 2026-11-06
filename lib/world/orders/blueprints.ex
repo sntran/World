@@ -672,6 +672,17 @@ defmodule World.Orders.Blueprints do
         option("age", :number, default: 35.0, min: 25.0, max: 90.0, unit: "years"),
         option("hair", :choice, default: Data.name!("hair", "long01"), values: ["none" | hair]),
         option("robe", :boolean, default: true, doc: "A long robe with wide sleeves and two long panels at its sides."),
+        m.(
+          "head",
+          nil,
+          0.1,
+          20.0,
+          "In a robe: from the top of the head to the end of the beard. None: the head of the person."
+        ),
+        option("beard", :boolean,
+          default: false,
+          doc: "In a robe, with head: a beard along the jaw to a point, and a mustache."
+        ),
         option("halo", :boolean, default: true, doc: "A ring behind the head with a cross."),
         option("rays", :integer, default: 9, min: 0, max: 17, doc: "The metal rays of the halo (lightning rods)."),
         option("material", :choice,
@@ -763,6 +774,8 @@ defmodule World.Orders.Blueprints do
           age: o["age"],
           hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
           robe: o["robe"],
+          head: o["head"],
+          beard: o["beard"],
           halo: o["halo"],
           rays: o["rays"],
           material: String.to_existing_atom(o["material"]),
