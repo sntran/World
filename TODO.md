@@ -362,10 +362,6 @@ and no logo on them.
   Also the Tết plants (mai in a glazed pot, kumquat trees, marigolds,
   chrysanthemums), the garden plants (rice on terraces, herbs, mãng cầu,
   đu đủ, chuối, xoài, dừa), and the plants in pots.
-- **Statues and known places (W13).** A large figure of a person (an
-  option of scale, robes, a stone material) for the statues, and a
-  drawing for each known place of Vũng Tàu (plan 0008 there), with the
-  sources of its sizes.
 - **Pinned files for a game (W14).** The same order at the same commit
   gives the same bytes on the site and with `mix world.order` in a clone
   (the workspace of Vung_Tau cannot reach the site). A field `license` in
