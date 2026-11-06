@@ -53,7 +53,8 @@ defmodule World.Statues do
     hair: "long01",
     robe: true,
     halo: true,
-    rays: 9,
+    rays: 3,
+    rods: 3,
     head: nil,
     beard: false,
     mantle: nil,
@@ -131,7 +132,8 @@ defmodule World.Statues do
   A statue. The options (with their defaults): `name`, `height` (32 m),
   `span` and `hand` (nil: the proportions of the person), `pose`
   ("arms_out"), `lift` (8 degrees), `gender`, `age` and `hair` (of the
-  person), `robe` (true), `halo` (true) with `rays` (9 metal rays),
+  person), `robe` (true), `halo` (true) with `rays` (the metal rays at
+  each side, 3) and `rods` (the thin rods at its top, 3),
   `material` (`:concrete` with a render of washed stone, or `:stone`),
   `hollow` (false) with `wall`, `steps`, `well` (the open well in the
   middle of the stair) and `windows` (a list of `{z, width, height}`: the center of an
@@ -242,7 +244,9 @@ defmodule World.Statues do
           "#{lm}, photo 1: about 3 m with its drum of 0.6 m, from the face of the dome and the view down of about 45 degrees; ±15%.",
         "dome_sides" => "#{lm}: a low dome with 8 faces.",
         "dome_stair" => "#{lm}: a narrow stair up the front of the dome to the feet (1.2 m, an estimate).",
-        "rays" => "#{av}: 9 rays of metal in the halo, which are also lightning rods.",
+        "rays" =>
+          "#{lm}, photos 1, 3, 4: 3 or 4 straight rays at the left and at the right of the ring, out to about 7 m across. #{av}: 9 rays of metal in the halo, which are also lightning rods (3 at each side and 3 at the top).",
+        "rods" => "#{lm}, photos 1, 3, 4: 2 or 3 thin rods at the top of the ring. #{av}: 9 rays of metal in all.",
         "material" => "#{av}: reinforced concrete with a render of washed stone.",
         "reliefs" =>
           "#{av}: front the Last Supper, back the keys to Peter, the sides Christ before Pilate and the three Magi.",
@@ -253,7 +257,7 @@ defmodule World.Statues do
   end
 
   @doc "The names of the sizes and the choices that an order can give a source for."
-  def sized, do: Enum.map(Keyword.keys(@sizes), &Atom.to_string/1) ++ ~w(rays material reliefs windows)
+  def sized, do: Enum.map(Keyword.keys(@sizes), &Atom.to_string/1) ++ ~w(rays rods material reliefs windows)
 
   @doc "A check of the sources of an order: a map of the name of a size to a text."
   def check_sources(raw, path), do: World.Sizes.check(raw, path, sized())
@@ -849,7 +853,7 @@ defmodule World.Statues do
   end
 
   # The halo: a ring behind the head with the three arms of a cross to
-  # the head, and the metal rays out of it (round the top half).
+  # the head, the metal rays at its sides and the rods at its top.
   defp halo(_, %{halo: false}, _), do: []
 
   defp halo(%{halo: {r, {_, y, zc}}, scale: s}, o, level) do
@@ -869,26 +873,27 @@ defmodule World.Statues do
         Shape.box({x0, y0, z0}, {x1, y1, z1}, look) |> Mesh.matter(matter)
       end
 
-    arms ++ [ring | rays(r, {0.0, y - t, zc}, s, o.rays, level)]
+    arms ++ [ring | rays(r, {0.0, y - t, zc}, s, {o.rays, o.rods}, level)]
   end
 
-  # The rays: one up (the lightning rod) when their count is odd, the rest
-  # to each side, 10 degrees apart from 10 under the level (by eye from
-  # the photos).
+  # The rays (by eye from photos 1, 3 and 4 of Vung_Tau landmarks.md): `n`
+  # straight rays at each side of the ring, 10 degrees apart round the
+  # level, out to 1.52 of the radius of the ring (7 m across a ring of
+  # 4.6 m on the photos); and `m` thin rods up from the top of the ring, 10
+  # degrees apart round the vertical, 0.55 of its radius long (the
+  # lightning rods).
   defp rays(_, _, _, _, :far), do: []
 
-  defp rays(r, c, s, n, _level) do
-    up = if rem(n, 2) == 1, do: [{90.0, 0.12}], else: []
-    side = for i <- 0..(div(n, 2) - 1)//1, a = -10.0 + 10.0 * i, deg <- [a, 180.0 - a], do: {deg, 0.08}
+  defp rays(r, c, s, {n, m}, _level) do
+    spread = fn k, mid -> for i <- 0..(k - 1)//1, do: mid + 10.0 * (i - (k - 1) / 2) end
+    side = for a <- spread.(n, 0.0), deg <- [a, 180.0 - a], do: {deg, 0.52 * r, 0.0016 * s}
+    top = for a <- spread.(m, 90.0), do: {a, 0.55 * r, 0.001 * s}
 
-    for {deg, len} <- up ++ side do
+    for {deg, len, radius} <- side ++ top do
       a = deg * :math.pi() / 180
       d = {:math.cos(a), 0.0, :math.sin(a)}
 
-      Shape.cylinder(0.0016 * s, len * s, :steel,
-        sides: 6,
-        frame: Frame.new(Vec.add(c, Vec.scale(d, r)), d, {0.0, 1.0, 0.0})
-      )
+      Shape.cylinder(radius, len, :steel, sides: 6, frame: Frame.new(Vec.add(c, Vec.scale(d, r)), d, {0.0, 1.0, 0.0}))
       |> Mesh.matter(:steel)
     end
   end
@@ -1334,7 +1339,7 @@ defmodule World.Statues do
     sizes = World.Sizes.list(o, @sizes, o.sources)
 
     rest =
-      for name <- ~w(rays material reliefs windows),
+      for name <- ~w(rays rods material reliefs windows),
           do: %{"name" => name, "value" => choice(o, name), "source" => o.sources[name] || World.Sizes.none()}
 
     {hw, hd} = {o.base_width / 2, o.base_depth / 2}

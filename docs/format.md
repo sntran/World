@@ -385,7 +385,10 @@ ground at the center of the base, and the figure looks to +y.
   face, with a square lattice of bars (3 up, 5 across) in the opening of
   a hollow statue at near; else a dark panel in the frame.
 - **The halo.** A ring behind the head with the three arms of a cross,
-  and `rays` metal rays (role `steel`) round its top half.
+  `rays` straight metal rays (role `steel`) at each side of the ring, 10
+  degrees apart round the level, out to 1.52 of its radius (7 m across a
+  ring of 4.6 m on the photos), and `rods` thin rods up from its top,
+  10 degrees apart round the vertical (the lightning rods).
 - **The base**, from the ground up (each part can be 0: none):
   - the plaza (`plaza_radius`): a round floor with `plaza_steps` steps in
     rings up to the block, each `plaza_rise` high and `plaza_tread` deep;

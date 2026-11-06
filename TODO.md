@@ -474,7 +474,10 @@ and no logo on them.
     mantle (the cape with its level edge at 21.5 m, the point and the
     collar; the sleeves with the cuff and the triangle of cloth), and
     the Sacred Heart with its flame (1.6 m, 24.5 m over the feet), and
-    the 3 windows of 0.5 by 0.8 m with a square lattice. Not yet: the pattern of the grilles
+    the 3 windows of 0.5 by 0.8 m with a square lattice, and the rays of
+    the halo (3 at each side, out to 1.52 of the radius of the ring, and
+    3 rods at the top).
+    Not yet: the pattern of the grilles
     of the windows (chữ thọ), the figures of the reliefs as figures of
     people, the letters of the band as real text, the inside of the base
     (a room), and the hollow at mid.

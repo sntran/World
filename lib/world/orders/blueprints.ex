@@ -698,7 +698,13 @@ defmodule World.Orders.Blueprints do
           doc: "In a robe, with head: a beard along the jaw to a point, and a mustache."
         ),
         option("halo", :boolean, default: true, doc: "A ring behind the head with a cross."),
-        option("rays", :integer, default: 9, min: 0, max: 17, doc: "The metal rays of the halo (lightning rods)."),
+        option("rays", :integer, default: 3, min: 0, max: 8, doc: "The straight metal rays at each side of the halo."),
+        option("rods", :integer,
+          default: 3,
+          min: 0,
+          max: 5,
+          doc: "The thin metal rods at the top of the halo (lightning rods)."
+        ),
         option("material", :choice,
           default: "concrete",
           values: Enum.map(World.Statues.materials(), &Atom.to_string/1),
@@ -794,6 +800,7 @@ defmodule World.Orders.Blueprints do
           heart: o["heart"],
           halo: o["halo"],
           rays: o["rays"],
+          rods: o["rods"],
           material: String.to_existing_atom(o["material"]),
           hollow: o["hollow"],
           wall: o["wall"],

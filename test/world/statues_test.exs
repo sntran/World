@@ -47,6 +47,22 @@ defmodule World.StatuesTest do
     assert sizes["wall"]["source"] == "estimate (no source)"
     assert sizes["windows"]["value"] == [[20.0, 0.5, 0.8], [17.25, 0.5, 0.8], [14.5, 0.5, 0.8]]
     assert sizes["windows"]["source"] =~ "square lattice"
+    assert sizes["rays"]["value"] == 3 and sizes["rods"]["value"] == 3
+
+    # The rays at the sides of the ring only, out to 1.52 of its radius (7 m
+    # across a ring of 4.6 m on the photos).
+    shapes = part(near, "tuong_chua_kito_vua").shapes
+    steel = for sh <- shapes, sh.material == :steel, do: World.Vec.bounds(sh.points)
+    assert length(steel) == 9
+    {{rx0, _, _}, {rx1, _, _}} = steel |> Enum.flat_map(&Tuple.to_list/1) |> World.Vec.bounds()
+
+    [{{hx0, _, _}, {hx1, _, _}}] =
+      for sh <- shapes,
+          {{x0, _, z0}, {x1, _, _}} = b = World.Vec.bounds(sh.points),
+          x1 - x0 > 4.0 and x1 - x0 < 8.0 and z0 > 35.0,
+          do: b
+
+    assert_in_delta (rx1 - rx0) / (hx1 - hx0), 1.52, 0.02
     assert sizes["material"]["value"] == "concrete"
     assert ~w(door light stair view) -- Enum.map(near.extras["ports"], & &1["kind"]) == []
     assert length(near.extras["collision"]) == 6
@@ -118,9 +134,9 @@ defmodule World.StatuesTest do
     bald = at(:mid, fn -> Statues.statue([height: 3.0, hair: nil] ++ @no_base) end)
     assert Check.model(bald) == :ok
 
-    # The rays: an even count has no ray up.
-    near = at(:mid, fn -> Statues.statue([height: 3.0, rays: 4] ++ @no_base) end)
-    assert Enum.count(part(near, "tuong").shapes, &(&1.material == :steel)) == 4
+    # The rays at each side of the halo and the rods at its top.
+    near = at(:mid, fn -> Statues.statue([height: 3.0, rays: 2, rods: 1] ++ @no_base) end)
+    assert Enum.count(part(near, "tuong").shapes, &(&1.material == :steel)) == 5
 
     # The defaults: a statue of 32 m with its arms out, on a base.
     assert Scene.triangles(scene(at(:far, fn -> Statues.statue() end), :far)) <= 300
