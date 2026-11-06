@@ -11,6 +11,7 @@ defmodule World.Orders.Blueprints do
   - `house`: a house of `World.Buildings`;
   - `lot_house`: a whole house on a lot of Vũng Tàu (`World.Buildings.Lot`);
   - `statue`: a statue cast from a figure of a person (`World.Statues`);
+  - `tower`: a tower of masonry, a lighthouse (`World.Towers`);
   - `van`: a van of `World.Vehicles.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `World.Framing`.
   """
@@ -36,6 +37,7 @@ defmodule World.Orders.Blueprints do
           house(),
           lot_house(),
           statue(),
+          tower(),
           van(),
           extrusion(),
           strut(),
@@ -768,6 +770,108 @@ defmodule World.Orders.Blueprints do
       sources: [
         "MakeHuman (CC0): the person of the figure. The sources of each size come with the order; the receipt lists them."
       ]
+    }
+  end
+
+  # --- A tower -------------------------------------------------------------------------------
+
+  defp tower do
+    m = fn name, default, min, max, doc ->
+      option(name, :number, default: default, min: min, max: max, unit: "m", doc: doc)
+    end
+
+    %Blueprint{
+      name: "tower",
+      doc:
+        "A tower of masonry on a round platform: a lighthouse (a round body with pilasters that flare at the foot, bands, a cove under the gallery, the gallery and its rail, the drum, the lantern with its panes and its lens, the dome, a lightning rod), with a house next to it from its outline. The option hollow gives the wall and a spiral stair inside at the near level. The ledge, the bands and the flare are over the platform, the other heights over the ground. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the platform.",
+      options: [
+        m.("height", 18.0, 3.0, 80.0, "From the ground to the top of the dome."),
+        m.("platform_width", 7.8, 0.0, 40.0, "The round platform."),
+        m.("platform_height", 0.3, 0.0, 3.0, ""),
+        m.("body", 3.2, 0.5, 20.0, "The round body at its foot."),
+        m.("top", 3.2, 0.5, 20.0, "The round body at the cornice."),
+        m.("ledge", 0.8, 0.0, 5.0, "The ledge round the foot of the body."),
+        option("bands", :list,
+          default: [4.1, 7.5],
+          max: 8,
+          item: option("band", :number, min: 0.0, max: 80.0, unit: "m"),
+          doc: "The heights of the bands round the body."
+        ),
+        option("pilasters", :integer, default: 4, min: 0, max: 16),
+        m.("pilaster_width", 0.7, 0.1, 3.0, ""),
+        m.("across", 5.1, 0.5, 30.0, "Across the pilasters."),
+        m.("foot", 6.4, 0.5, 40.0, "Across the flared foot of the pilasters."),
+        m.("flare", 3.1, 0.0, 30.0, "The height of the flare."),
+        m.("cornice", 10.2, 1.0, 80.0, "The foot of the cove under the gallery."),
+        m.("gallery", 12.7, 1.0, 80.0, "The floor of the gallery."),
+        m.("gallery_width", 5.6, 0.5, 30.0, ""),
+        m.("rail", 1.0, 0.5, 2.0, "The rail of the gallery."),
+        m.("drum", 2.5, 0.5, 20.0, "The drum under the lantern (the watch room)."),
+        m.("lantern_from", 15.4, 1.0, 80.0, ""),
+        m.("lantern_to", 17.3, 1.0, 80.0, ""),
+        m.("lantern_width", 2.2, 0.3, 10.0, ""),
+        option("panes", :integer, default: 10, min: 6, max: 24),
+        m.("rod", 21.0, 1.0, 100.0, "The top of the lightning rod."),
+        m.("door_width", 0.9, 0.5, 3.0, ""),
+        m.("door_height", 2.1, 1.5, 5.0, ""),
+        option("door_angle", :number,
+          default: 270.0,
+          min: 0.0,
+          max: 360.0,
+          unit: "deg",
+          doc: "The side of the door: 0 to +x (the east), 90 to +y."
+        ),
+        option("hollow", :boolean, default: false, doc: "The wall and a spiral stair inside (at the near level)."),
+        m.("wall", 0.5, 0.1, 3.0, ""),
+        option("steps", :integer, default: 55, min: 5, max: 500),
+        option("house", :data,
+          default: nil,
+          check: &World.Towers.check_house/2,
+          doc: "A house next to the tower: {outline: [[x, y], ...] (m, on the ground), height}."
+        ),
+        option("light", :data,
+          default: nil,
+          check: &World.Towers.check_light/2,
+          doc: "The light for the app: {color, flashes, period (s), range (nm)}."
+        ),
+        option("sources", :data,
+          default: %{},
+          check: &World.Towers.check_sources/2,
+          doc: "The source of each size, by its name."
+        )
+      ],
+      build: fn o ->
+        World.Towers.tower(
+          height: o["height"],
+          platform: {o["platform_width"], o["platform_height"]},
+          body: o["body"],
+          top: o["top"],
+          ledge: o["ledge"],
+          bands: o["bands"],
+          pilasters: o["pilasters"],
+          pilaster_width: o["pilaster_width"],
+          across: o["across"],
+          foot: o["foot"],
+          flare: o["flare"],
+          cornice: o["cornice"],
+          gallery: o["gallery"],
+          gallery_width: o["gallery_width"],
+          rail: o["rail"],
+          drum: o["drum"],
+          lantern: {o["lantern_from"], o["lantern_to"], o["lantern_width"]},
+          panes: o["panes"],
+          rod: o["rod"],
+          door: {o["door_width"], o["door_height"]},
+          door_angle: o["door_angle"],
+          hollow: o["hollow"],
+          wall: o["wall"],
+          steps: o["steps"],
+          house: o["house"],
+          light: o["light"],
+          sources: o["sources"]
+        )
+      end,
+      sources: ["The sources of each size come with the order; the receipt lists them."]
     }
   end
 
