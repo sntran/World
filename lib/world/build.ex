@@ -15,7 +15,7 @@ defmodule World.Build do
     is only in mid and far: it stands in for many small parts (one wall
     in place of its bricks).
   """
-  alias World.{Assembly, Detail, Figure, Frame, GLB, Joint, Mesh, Mirror, Part, Port, Scene, Vec}
+  alias World.{Assembly, Detail, Figure, Frame, GLB, Joint, Mesh, Mirror, Part, Port, Scene, Shape, Vec}
   alias World.Assembly.Connection
 
   @limits %{near: {0.0, 0.0}, mid: {0.02, 0.003}, far: {0.10, 0.01}}
@@ -69,13 +69,51 @@ defmodule World.Build do
     }
 
     # The ports of the small parts go into the list of the parts
-    # (`parts_file/2`), not into the GLB.
-    extras = Map.merge(extras, Map.drop(Map.get(item, :extras, %{}), ["ports"]))
+    # (`parts_file/2`), not into the GLB; the collision boxes are nodes.
+    own = Map.get(item, :extras, %{})
+    extras = Map.merge(extras, Map.drop(own, ["ports", "collision"]))
 
-    case extras do
-      %{"surface" => %{"corners" => corners}} -> %{World.Surface.apply(scene, corners) | extras: extras}
-      _ -> %{scene | extras: extras}
-    end
+    scene =
+      case extras do
+        %{"surface" => %{"corners" => corners}} -> %{World.Surface.apply(scene, corners) | extras: extras}
+        _ -> %{scene | extras: extras}
+      end
+
+    collision(scene, Map.get(own, "collision", []))
+  end
+
+  # The collision boxes of a model (a house, W20 of Vũng Tàu): each a node
+  # of its own with the name `NAME-colonly` (Godot makes a collision
+  # shape of such a node, and shows no mesh), a box of the role
+  # `collision`, and `extras.collision` and `extras.size` (in glTF) for an
+  # app that reads them. A box is `%{"name", "at", "size"}` in the axes of
+  # the model, with `axis` and `up` (its z and y axes) when it is turned,
+  # and `node` (the name of the node that it moves with: a shutter). They
+  # are not in the size of the model, and not in its triangles
+  # (`World.Scene.triangles/1`).
+  defp collision(scene, []), do: scene
+
+  defp collision(scene, boxes) do
+    frames = Scene.world_frames(scene)
+    index = scene.nodes |> Enum.with_index() |> Map.new(fn {n, i} -> {n.name, i} end)
+
+    nodes =
+      for b <- boxes do
+        {sx, sy, sz} = b["size"]
+        at = Frame.new(b["at"], Map.get(b, "axis", {0.0, 0.0, 1.0}), Map.get(b, "up", {0.0, 1.0, 0.0}))
+        parent = Map.get(index, b["node"], 0)
+        box = Shape.box({-sx / 2, -sy / 2, -sz / 2}, {sx / 2, sy / 2, sz / 2}, :collision)
+
+        %Scene.Node{
+          name: b["name"] <> "-colonly",
+          parent: parent,
+          frame: Frame.compose(Frame.invert(frames[parent]), at),
+          primitives: [Scene.primitive(:collision, Mesh.triangles(box))],
+          extras: %{"collision" => "box", "size" => Enum.map([sx, sz, sy], &Float.round(&1 / 1, 4))}
+        }
+      end
+
+    %{scene | nodes: scene.nodes ++ nodes}
   end
 
   # The start of a walk of a model: the root node, and no parts yet.

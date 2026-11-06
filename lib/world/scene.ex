@@ -91,9 +91,12 @@ defmodule World.Scene do
 
   defp round6({x, y, z}), do: {Float.round(x / 1, 6), Float.round(y / 1, 6), Float.round(z / 1, 6)}
 
-  @doc "The number of triangles of a scene: each instance of a node counts."
+  @doc """
+  The number of triangles that a scene draws: each instance of a node
+  counts, and a collision box (`extras.collision`) does not.
+  """
   def triangles(%__MODULE__{nodes: nodes}) do
-    for n <- nodes, p <- n.primitives, reduce: 0 do
+    for n <- nodes, not Map.has_key?(n.extras, "collision"), p <- n.primitives, reduce: 0 do
       sum -> sum + div(length(p.indices), 3) * length(n.instances || [nil])
     end
   end
@@ -120,7 +123,8 @@ defmodule World.Scene do
 
   @doc """
   The box of all points of the scene, in its axes: `{min, max}`. The
-  points of a skinned mesh move with their bones.
+  points of a skinned mesh move with their bones. A collision box
+  (`extras.collision`) is not in it.
   """
   def bounds(%__MODULE__{nodes: nodes, skins: skins} = scene) do
     frames = world_frames(scene)
@@ -128,6 +132,9 @@ defmodule World.Scene do
     nodes
     |> Enum.with_index()
     |> Enum.flat_map(fn
+      {%{extras: %{"collision" => _}}, _} ->
+        []
+
       {%{skin: nil} = n, i} ->
         for f <- places(frames[i], n.instances), p <- n.primitives, pt <- p.positions, do: Frame.point(f, pt)
 
