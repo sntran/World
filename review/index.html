@@ -99,6 +99,8 @@ async function load(remember) {
   current = gltf.scene;
   scene.add(current);
   const extras = gltf.scene.userData;
+  // The COLOR_0 of a building is data for a shader (World.Surface), not a color.
+  if (extras.surface) current.traverse((o) => { if (o.isMesh) o.material.vertexColors = false; });
   let tris = 0;
   // A mesh with instances (EXT_mesh_gpu_instancing) draws each instance.
   current.traverse((o) => { if (o.isMesh) tris += (o.geometry.index.count / 3) * (o.isInstancedMesh ? o.count : 1); });
@@ -210,7 +212,16 @@ function frame(yaw) {
   const center = focus ? new THREE.Vector3(-focus[0], focus[2], focus[1]) : box.getCenter(new THREE.Vector3());
   const r = (box.getSize(new THREE.Vector3()).length() / 2 || 1) / Number(params.get('zoom') ?? 1);
   const a = THREE.MathUtils.degToRad(Number(yaw ?? 35));
-  camera.position.set(center.x + 3.2 * r * Math.sin(a), center.y + 1.4 * r, center.z + 3.2 * r * Math.cos(a));
+  // `pitch` (degrees) puts the camera at that height over the horizon: 90
+  // looks down from the top.
+  const pitch = params.get('pitch');
+  if (pitch === null) {
+    camera.position.set(center.x + 3.2 * r * Math.sin(a), center.y + 1.4 * r, center.z + 3.2 * r * Math.cos(a));
+  } else {
+    const p = THREE.MathUtils.degToRad(Math.min(Number(pitch), 89.9));
+    const h = 3.5 * r * Math.cos(p);
+    camera.position.set(center.x + h * Math.sin(a), center.y + 3.5 * r * Math.sin(p), center.z + h * Math.cos(a));
+  }
   // A big model (a street of 200 m) is out of the far plane of 200 m.
   camera.far = Math.max(200, 10 * r);
   camera.updateProjectionMatrix();
