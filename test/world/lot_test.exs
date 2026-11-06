@@ -7,7 +7,8 @@ defmodule World.Buildings.LotTest do
 
   defp scene(opts, level), do: Detail.with(level, fn -> Build.scene(Lot.house(opts), level: level) end)
 
-  defp roles(scene), do: for(n <- scene.nodes, p <- n.primitives, uniq: true, do: p.material)
+  defp roles(scene),
+    do: for(n <- scene.nodes, not Map.has_key?(n.extras, "collision"), p <- n.primitives, uniq: true, do: p.material)
 
   test "a tube house: its parts, its roles, its extras, a check that passes" do
     house = Lot.house()
@@ -69,7 +70,7 @@ defmodule World.Buildings.LotTest do
 
   test "the walls have UVs in meters and the height and the distance to a corner in their data" do
     s = scene([], :mid)
-    prims = for n <- s.nodes, p <- n.primitives, do: p
+    prims = for n <- s.nodes, not Map.has_key?(n.extras, "collision"), p <- n.primitives, do: p
     assert Enum.all?(prims, &(&1.uvs != nil and &1.uvs2 != nil and &1.data != nil))
 
     # Each point of the data: red is the height over 32 m, green the
@@ -88,7 +89,13 @@ defmodule World.Buildings.LotTest do
 
     # The GLB has the two sets and the data.
     json = s |> GLB.encode() |> glb_json()
-    attrs = for m <- json["meshes"], p <- m["primitives"], do: p["attributes"]
+
+    attrs =
+      for m <- json["meshes"],
+          p <- m["primitives"],
+          Enum.at(json["materials"], p["material"])["name"] != "collision",
+          do: p["attributes"]
+
     assert Enum.all?(attrs, &Map.has_key?(&1, "TEXCOORD_1")) and Enum.all?(attrs, &Map.has_key?(&1, "COLOR_0"))
   end
 
@@ -259,6 +266,77 @@ defmodule World.Buildings.LotTest do
     assert_in_delta Enum.at(roomy["position"], 1), 0.2 + 3.8 + 2.7, 1.0e-6
     refute Enum.any?(Build.parts_file("h", Lot.house(floors: 1))["ports"], &(&1["kind"] == "ac"))
     refute Map.has_key?(Build.parts_file("b", World.Buildings.brick_vn()), "ports")
+  end
+
+  test "each house has collision boxes as named nodes, at each level; the shutter box moves with the shutter" do
+    for opts <- [[], [ground: :cua_xep], [ground: :door_gate, extension: true], [ground: :open_shop]],
+        level <- [:near, :far] do
+      s = scene(opts, level)
+      boxes = Enum.filter(s.nodes, &Map.has_key?(&1.extras, "collision"))
+      names = Enum.map(boxes, & &1.name)
+      assert Enum.all?(names, &String.ends_with?(&1, "-colonly"))
+      assert ~w(wall_left-colonly wall_right-colonly wall_back-colonly floor-colonly ramp-colonly) -- names == []
+      assert Enum.all?(boxes, &(&1.extras["collision"] == "box" and length(&1.extras["size"]) == 3))
+      # They are not drawn: the triangles of the scene do not count them.
+      drawn = %{s | nodes: Enum.reject(s.nodes, &Map.has_key?(&1.extras, "collision"))}
+      assert Scene.triangles(s) == Scene.triangles(drawn)
+    end
+
+    s = scene([], :near)
+    shutter = Enum.find_index(s.nodes, &(&1.name == "shutter_nha_ong"))
+    assert %{parent: ^shutter} = Enum.find(s.nodes, &(&1.name == "shutter-colonly"))
+    names = fn opts -> for n <- scene(opts, :mid).nodes, n.extras["collision"], do: n.name end
+    assert "door-colonly" in names.(ground: :door_gate) and "gate-colonly" in names.(ground: :cua_xep)
+    assert "room_back-colonly" in names.(ground: :open_shop) and "extension-colonly" in names.(extension: true)
+    refute "room_back-colonly" in names.(ground: :open_shop, interior: :front_room)
+
+    # The ramp is a box turned to its slope: 0.2 m up in 0.8 m.
+    ramp = Enum.find(s.nodes, &(&1.name == "ramp-colonly"))
+    assert_in_delta Enum.at(ramp.extras["size"], 2), :math.sqrt(0.8 * 0.8 + 0.2 * 0.2), 1.0e-3
+
+    json = s |> GLB.encode() |> glb_json()
+    assert Enum.any?(json["nodes"], &(&1["name"] == "wall_left-colonly" and &1["extras"]["collision"] == "box"))
+  end
+
+  test "the front room: a floor 0.2 m over the street, a ceiling 3 m over it, the stairs, a door of 0.9 by 2.1 m" do
+    for seed <- [1, 2], level <- [:near, :mid, :far] do
+      house = Detail.with(level, fn -> Lot.house(interior: :front_room, ground: :open_shop, seed: seed) end)
+      assert Check.model(house) == :ok, "#{seed} #{level}"
+      room = List.keyfind(house.nodes, "front_room_nha_ong", 0)
+      if level == :far, do: assert(room == nil), else: assert({_, %{shapes: [_ | _]}, _} = room)
+      s = Build.scene(house, level: level)
+      names = for n <- s.nodes, n.extras["collision"], do: n.name
+
+      assert ~w(stairs-colonly ceiling_back-colonly ceiling_front-colonly ceiling_side-colonly room_back_top-colonly) --
+               names == []
+
+      assert Scene.triangles(s) <= Lot.limits()[level]
+    end
+
+    {_, room, _} = List.keyfind(Lot.house(interior: :front_room).nodes, "front_room_nha_ong", 0)
+    [floor | _] = room.shapes
+    {{_, _, 0.0}, {_, _, top}} = World.Mesh.bounds(floor)
+    assert_in_delta top, 0.2, 1.0e-9
+    # Each step: a riser of 18 cm at the most, a tread of 26 cm at the most.
+    steps = Enum.filter(room.shapes, &(&1.material == :tile_granite)) |> tl()
+    assert length(steps) == 22
+
+    for {a, b} <- Enum.zip(steps, tl(steps)) do
+      {{_, _, _}, {_, ya, za}} = World.Mesh.bounds(a)
+      {{_, _, _}, {_, yb, zb}} = World.Mesh.bounds(b)
+      assert zb - za <= 0.18 + 1.0e-9 and ya - yb <= 0.26 + 1.0e-9
+    end
+
+    # The ceiling, and the door in the wall at the back of the room.
+    boxes = for b <- Lot.house(interior: :front_room).extras["collision"], into: %{}, do: {b["name"], b}
+    {_, _, zc} = boxes["ceiling_front"]["at"]
+    assert_in_delta zc, 0.2 + 3.0 + 0.05, 1.0e-9
+    {_, _, dz} = boxes["room_back_top"]["size"]
+    assert_in_delta dz, 3.0 - 2.1, 1.0e-9
+    {lx, _, _} = boxes["room_back_left"]["size"]
+    {rx, _, _} = boxes["room_back_right"]["size"]
+    assert_in_delta lx + rx + 0.9, 4.0 - 2 * 0.13, 1.0e-6
+    assert_raise ArgumentError, ~r/interior/, fn -> Lot.house(interior: :hall) end
   end
 
   test "the houses of the catalog" do

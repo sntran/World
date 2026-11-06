@@ -566,6 +566,12 @@ defmodule World.Orders.Blueprints do
         option("right", :choice, default: "shared", values: names.(:side), doc: "The right side wall, as the left."),
         option("extension", :boolean, default: false, doc: "A room of one floor at the back."),
         option("terrace_room", :boolean, default: false, doc: "A room on a flat terrace."),
+        option("interior", :choice,
+          default: "none",
+          values: names.(:interior),
+          doc:
+            "front_room: a room on the ground floor that a player can enter from the street: its floor 0.2 m over the street, a ceiling 3 m over the floor, the stairs, and a door of 0.9 by 2.1 m at its back."
+        ),
         option("paint_age", :number,
           default: 0.3,
           min: 0.0,
@@ -595,6 +601,7 @@ defmodule World.Orders.Blueprints do
           right: atom.("right"),
           extension: o["extension"],
           terrace_room: o["terrace_room"],
+          interior: atom.("interior"),
           paint_age: o["paint_age"],
           seed: o["seed"]
         )

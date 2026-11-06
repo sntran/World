@@ -75,15 +75,25 @@ defmodule World.Buildings.Lot do
   @grounds [:cua_cuon, :cua_xep, :door_gate, :open_shop]
   @finishes [:plain, :granite, :pattern]
   @sides [:shared, :free, :bare]
+  @interiors [:none, :front_room]
 
   @doc "The values of each choice of a house: `kind`, `style`, `roof`, `ground`, `finish` and the sides."
   def choices,
-    do: %{kind: @kinds, style: @styles, roof: @roofs, ground: @grounds, finish: @finishes, side: @sides}
+    do: %{
+      kind: @kinds,
+      style: @styles,
+      roof: @roofs,
+      ground: @grounds,
+      finish: @finishes,
+      side: @sides,
+      interior: @interiors
+    }
 
   @doc """
   The houses of the catalog: a new tube house of 4 by 16 m, an old one
   of 4 by 18 m with a bare wall and a free wall, and a house of 5 by 20 m
-  with two floors and a roof of clay tiles.
+  with two floors and a roof of clay tiles, and a homestay of 4 by 14 m
+  with an open front room.
   """
   def models do
     [
@@ -118,6 +128,17 @@ defmodule World.Buildings.Lot do
            right: :free,
            seed: 4
          )
+       end},
+      {"nha_ong_homestay_4x14",
+       fn ->
+         house(
+           name: "nha_ong_homestay_4x14",
+           depth: 14.0,
+           floors: 4,
+           ground: :open_shop,
+           interior: :front_room,
+           seed: 5
+         )
        end}
     ]
   end
@@ -140,6 +161,7 @@ defmodule World.Buildings.Lot do
         part("iron", iron(o, plan, level)),
         part("roof", roof(o, plan, level)),
         part("inside", inside(o, plan, level)),
+        part("front_room", front_room(o, plan, level)),
         part("extension", extension(o, plan, level)),
         part("terrace_room", terrace_room(o, plan, level))
       ]
@@ -179,6 +201,7 @@ defmodule World.Buildings.Lot do
       right: get.(:right, :shared),
       extension: get.(:extension, false),
       terrace_room: get.(:terrace_room, false),
+      interior: get.(:interior, :none),
       paint_age: get.(:paint_age, 0.3) / 1,
       seed: get.(:seed, 1)
     }
@@ -190,7 +213,8 @@ defmodule World.Buildings.Lot do
           ground: o.ground,
           finish: o.finish,
           left: o.left,
-          right: o.right
+          right: o.right,
+          interior: o.interior
         ],
         not Enum.member?(Map.fetch!(choices(), if(k in [:left, :right], do: :side, else: k)), v),
         do: raise(ArgumentError, "a house has no #{k} #{inspect(v)}")
@@ -269,8 +293,270 @@ defmodule World.Buildings.Lot do
       },
       "paint_age" => o.paint_age,
       "seed" => o.seed,
-      "ports" => ports(o, plan)
+      "ports" => ports(o, plan),
+      "collision" => collision(o, plan)
     }
+  end
+
+  # --- The collision boxes (W20) --------------------------------------------
+
+  # The simple boxes that the game uses in place of the mesh: the walls,
+  # the front of the ground floor (the piers, the beam, the parts of a
+  # wall with a door, the closed shutter or gate), the floor, the step,
+  # the ramp, the room at the back, and the front room. The same at each
+  # level. `World.Build` makes a node of each.
+  defp collision(o, plan) do
+    hw = o.width / 2
+    {front, back} = {o.depth / 2, plan.back}
+    top = wall_top(o, plan, :far)
+    z1 = Enum.at(plan.floors, 1, plan.top)
+    box = fn name, {x0, y0, z0}, {x1, y1, z1} -> cbox(name, {x0, y0, z0}, {x1, y1, z1}) end
+
+    walls = [
+      box.("wall_left", {hw - @side_wall, back, 0.0}, {hw, front, top}),
+      box.("wall_right", {-hw, back, 0.0}, {-hw + @side_wall, front, top}),
+      box.("wall_back", {-hw + @side_wall, back, 0.0}, {hw - @side_wall, back + @front_wall, top}),
+      box.("front_beam", {-hw + @side_wall, front - @front_wall, @opening}, {hw - @side_wall, front, z1}),
+      box.("floor", {-hw + @side_wall, back + @front_wall, 0.0}, {hw - @side_wall, front, @plinth})
+    ]
+
+    upper =
+      if top > z1,
+        do: [box.("front_upper", {-hw + @side_wall, front - @front_wall, z1}, {hw - @side_wall, front, top})],
+        else: []
+
+    ramp_w = min(1.0, o.width - 2 * @pier - 0.6)
+
+    step = [
+      box.("step_left", {ramp_w / 2, front, 0.0}, {hw - @pier, front + 0.3, @plinth}),
+      box.("step_right", {-hw + @pier, front, 0.0}, {-ramp_w / 2, front + 0.3, @plinth}),
+      ramp_box(ramp_w, front)
+    ]
+
+    ext =
+      if plan.ext > 0,
+        do: [box.("extension", {-hw, -o.depth / 2, 0.0}, {hw, back, @plinth + @storey})],
+        else: []
+
+    walls ++ upper ++ ground_boxes(o, plan) ++ step ++ ext ++ room_boxes(o, plan)
+  end
+
+  # A box between two corners (in any order).
+  defp cbox(name, {a0, b0, c0}, {a1, b1, c1}) do
+    r = &Float.round(&1 / 1, 4)
+    {x0, x1, y0, y1, z0, z1} = {min(a0, a1), max(a0, a1), min(b0, b1), max(b0, b1), min(c0, c1), max(c0, c1)}
+
+    %{
+      "name" => name,
+      "at" => {r.((x0 + x1) / 2), r.((y0 + y1) / 2), r.((z0 + z1) / 2)},
+      "size" => {r.(x1 - x0), r.(y1 - y0), r.(z1 - z0)}
+    }
+  end
+
+  # A box turned about x: from the point `{y0, z0}` to `{y1, z1}` (its top
+  # face), `w` wide and `t` thick under it.
+  defp slope_box(name, w, {y0, z0}, {y1, z1}, t, x \\ 0.0) do
+    {dy, dz} = {y1 - y0, z1 - z0}
+    len = :math.sqrt(dy * dy + dz * dz)
+    up = {0.0, dy / len, dz / len}
+    # The normal up from the face, on the side of +z.
+    n = if dy >= 0, do: {0.0, -dz / len, dy / len}, else: {0.0, dz / len, -dy / len}
+    mid = Vec.sub({x, (y0 + y1) / 2, (z0 + z1) / 2}, Vec.scale(n, t / 2))
+    r = &Float.round(&1 / 1, 4)
+    {mx, my, mz} = mid
+
+    %{
+      "name" => name,
+      "at" => {r.(mx), r.(my), r.(mz)},
+      "size" => {r.(w), r.(len), r.(t)},
+      "axis" => n,
+      "up" => up
+    }
+  end
+
+  defp ramp_box(w, front), do: slope_box("ramp", w, {front, @plinth}, {front + 0.8, 0.0}, 0.05)
+
+  # The front of the ground floor: the piers, and the closed shutter (it
+  # moves with its node), the gate, or the wall round a door.
+  defp ground_boxes(o, _plan) do
+    hw = o.width / 2
+    front = o.depth / 2
+    {y0, y1} = {front - @front_wall, front}
+
+    piers = [
+      cbox("pier_left", {hw - @pier, y0, 0.0}, {hw, y1, @opening}),
+      cbox("pier_right", {-hw, y0, 0.0}, {-hw + @pier, y1, @opening})
+    ]
+
+    piers ++
+      case o.ground do
+        :cua_cuon ->
+          [
+            Map.put(
+              cbox("shutter", {-hw + @pier, y1 - 0.12, @plinth}, {hw - @pier, y1 - 0.08, @opening}),
+              "node",
+              "shutter_#{o.name}"
+            )
+          ]
+
+        :cua_xep ->
+          [cbox("gate", {-hw + @pier, y1 - 0.09, @plinth}, {hw - @pier, y1 - 0.03, @opening})]
+
+        :door_gate ->
+          [{d0, _, d1, top, _} | _] = door_gate_holes(o)
+
+          [
+            cbox("wall_door_left", {hw - d0, y0, 0.0}, {hw - @pier, y1, @opening}),
+            cbox("wall_door_right", {-hw + @pier, y0, 0.0}, {hw - d1, y1, @opening}),
+            cbox("wall_door_top", {hw - d1, y0, top}, {hw - d0, y1, @opening}),
+            cbox("door", {hw - d1, y0, @plinth}, {hw - d0, y1, top})
+          ]
+
+        :open_shop ->
+          []
+      end
+  end
+
+  # The back of the room behind an open front (no front room), and the
+  # front room: the wall at its back round its door, its ceiling and the
+  # stairs.
+  defp room_boxes(%{interior: :front_room} = o, plan) do
+    r = room(o, plan)
+    {d0, d1} = r.door
+    hw = r.hw
+    {y0, y1} = {r.back - 0.1, r.back}
+
+    [
+      cbox("room_back_left", {d1, y0, @plinth}, {hw, y1, r.ceiling}),
+      cbox("room_back_right", {-hw, y0, @plinth}, {d0, y1, r.ceiling}),
+      cbox("room_back_top", {d0, y0, @plinth + 2.1}, {d1, y1, r.ceiling}),
+      # The ceiling round its hole over the top of the stairs.
+      cbox("ceiling_back", {-hw, r.back, r.ceiling}, {hw, r.hole.y0, r.ceiling + 0.1}),
+      cbox("ceiling_front", {-hw, r.hole.y1, r.ceiling}, {hw, r.front, r.ceiling + 0.1}),
+      cbox("ceiling_side", side_of_hole(r, -hw), side_of_hole(r, hw) |> then(fn {x, y, z} -> {x, y, z + 0.1} end)),
+      slope_box(
+        "stairs",
+        r.stair.x1 - r.stair.x0,
+        {r.stair.y0, @plinth},
+        {r.stair.y1, r.stair.z1},
+        0.2,
+        (r.stair.x0 + r.stair.x1) / 2
+      )
+    ]
+  end
+
+  defp room_boxes(%{ground: ground} = o, plan) when ground in [:cua_xep, :open_shop] do
+    hw = o.width / 2 - @side_wall
+    back = max(o.depth / 2 - @front_wall - 5.0, plan.back + 0.5)
+    [cbox("room_back", {-hw, back - 0.02, @plinth}, {hw, back, Enum.at(plan.floors, 1, plan.top)})]
+  end
+
+  defp room_boxes(_o, _plan), do: []
+
+  # --- The front room (W20) -------------------------------------------------
+
+  # The room that a player can enter from the street: its floor 20 cm
+  # over the street, a ceiling 3 m over the floor, a wall at its back
+  # with a door of 0.9 by 2.1 m (to the back of the house), and the
+  # stairs along the side wall away from the door, up to the first floor
+  # (each riser 18 cm at the most, each tread 26 cm at the most: by eye).
+  defp room(o, plan) do
+    hw = o.width / 2 - @side_wall - 0.02
+    front = o.depth / 2 - @front_wall
+    back = front - min(7.0, front - (plan.back + @front_wall) - 0.3)
+    z1 = Enum.at(plan.floors, 1, plan.top)
+    rise = z1 - @plinth
+    n = ceil(rise / 0.18)
+    run = min(0.26 * (n - 1), front - back - 1.0)
+    # The door at the side of the door of the floors over it, the stairs
+    # at the other side.
+    s = if plan.door_left, do: -1.0, else: 1.0
+    {x0, x1} = if s > 0, do: {hw - 0.9, hw}, else: {-hw, -hw + 0.9}
+    d = if s > 0, do: -hw + 0.3, else: hw - 1.2
+    y0 = front - 1.0
+    y1 = y0 - run
+
+    %{
+      hw: hw,
+      front: front,
+      back: back,
+      ceiling: @plinth + 3.0,
+      door: {d, d + 0.9},
+      stair: %{x0: x0, x1: x1, y0: y0, y1: y1, z1: z1, n: n, tread: run / (n - 1), riser: rise / n},
+      # The hole of the ceiling over the top of the stairs: 2.6 m long
+      # (2.2 m of head room under the slab over it, by eye).
+      hole: %{x0: x0, x1: x1, y0: y1, y1: min(y1 + 2.6, front)}
+    }
+  end
+
+  # A corner of the box of the ceiling beside its hole: `x` at the side
+  # wall away from the hole, else at the edge of the hole.
+  defp side_of_hole(r, x) do
+    stairs_left = r.hole.x1 >= r.hw
+    edge = if stairs_left, do: r.hole.x0, else: r.hole.x1
+    if x > 0 == stairs_left, do: {edge, r.hole.y1, r.ceiling}, else: {x, r.hole.y0, r.ceiling}
+  end
+
+  defp front_room(%{interior: :front_room} = o, plan, level) when level != :far do
+    r = room(o, plan)
+    {d0, d1} = r.door
+    hw = r.hw
+    st = r.stair
+    h = r.ceiling - @plinth
+
+    coat = fn at, u, v, len, ht, holes ->
+      sheet(at, u, v, len, ht, holes, :plaster, inward: true, skin: {0.02, :brick})
+    end
+
+    {open_from, open_to} = {r.hole.y0, r.hole.y1}
+    hole_u = {r.hole.x0 + hw, r.hole.x1 + hw}
+
+    [
+      Shape.box({-hw, r.back, 0.0}, {hw, r.front, @plinth}, :tile_granite) |> Mesh.matter(:concrete),
+      coat.({hw, r.back, @plinth}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, r.front - r.back, h, []),
+      coat.({-hw, r.front, @plinth}, {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, r.front - r.back, h, []),
+      # The wall at the back of the room, from the room side, with its door.
+      sheet(
+        {hw, r.back, @plinth},
+        {-1.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0},
+        2 * hw,
+        h,
+        [{hw - d1, 0.0, hw - d0, 2.1, 0.05}],
+        :plaster,
+        skin: {0.1, :brick}
+      ),
+      sheet(
+        {-hw, r.back, r.ceiling},
+        {1.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0},
+        2 * hw,
+        r.front - r.back,
+        [{elem(hole_u, 0), open_from - r.back, elem(hole_u, 1), open_to - r.back, 0.0}],
+        :plaster,
+        inward: true,
+        skin: {0.1, :concrete}
+      )
+    ] ++ stairs(st, level)
+  end
+
+  defp front_room(_o, _plan, _level), do: []
+
+  # The stairs: a box for each step at near, one wedge at mid.
+  defp stairs(st, :near) do
+    for k <- 0..(st.n - 1) do
+      y = st.y0 - k * st.tread
+
+      Shape.box({st.x0, y - st.tread, @plinth}, {st.x1, y, @plinth + (k + 1) * st.riser}, :tile_granite)
+      |> Mesh.matter(:concrete)
+    end
+  end
+
+  defp stairs(st, :mid) do
+    # The loop in y and z (the frame has its z along x).
+    loop = [{st.y0, @plinth}, {st.y1, st.z1}, {st.y1, @plinth}]
+    frame = World.Frame.new({st.x0, 0.0, 0.0}, {1, 0, 0}, {0, 0, 1})
+    [loop |> Shape.prism(st.x1 - st.x0, :tile_granite, frame: frame) |> Mesh.matter(:concrete)]
   end
 
   # --- The ports for the small parts of the game (W18) ----------------------
@@ -988,7 +1274,8 @@ defmodule World.Buildings.Lot do
   # The room behind a cửa xếp or an open shop: a floor of tiles, a back
   # wall 5 m in, the side walls and a ceiling, so that the street sees a
   # room and not the sky.
-  defp inside(%{ground: ground} = o, plan, level) when ground in [:cua_xep, :open_shop] and level != :far do
+  defp inside(%{ground: ground, interior: :none} = o, plan, level)
+       when ground in [:cua_xep, :open_shop] and level != :far do
     # A coat of plaster of 2 cm on the walls of the house, and a floor of
     # light ceramic tiles (by eye).
     hw = o.width / 2 - @side_wall - 0.02

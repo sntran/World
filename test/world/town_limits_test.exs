@@ -14,7 +14,10 @@ defmodule World.TownLimitsTest do
   defp measure(name, fun) do
     for level <- [:near, :mid, :far] do
       scene = Detail.with(level, fn -> Build.scene(fun.(), level: level) end)
-      roles = for n <- scene.nodes, p <- n.primitives, uniq: true, do: p.material
+
+      roles =
+        for n <- scene.nodes, not Map.has_key?(n.extras, "collision"), p <- n.primitives, uniq: true, do: p.material
+
       {name, level, Scene.triangles(scene), roles}
     end
   end
@@ -35,7 +38,7 @@ defmodule World.TownLimitsTest do
 
   test "each house of the catalog is in the limits at each level" do
     rows = Enum.flat_map(Lot.models(), fn {name, fun} -> measure(name, fun) end)
-    assert length(rows) == 9
+    assert length(rows) == 3 * length(Lot.models())
     check(rows)
   end
 
