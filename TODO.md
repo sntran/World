@@ -463,6 +463,11 @@ and no logo on them.
     Nhỏ is 32 m high, its arms 18.4 m from hand to hand, and 133 steps
     go up inside to its shoulders, where visitors look out). A base
     with panels of figures in relief (Christ and the twelve apostles).
+    Done: `World.Cast`, `World.Statues`, the blueprint `statue`, and
+    `tuong_chua_kito_vua` (`docs/format.md`, "A statue"). Not yet: the
+    pattern of the grilles of the windows (chữ thọ), the figures of the
+    reliefs as figures of people, the inside of the base (a room), and
+    the hollow at mid.
   - **A tower.** A tapered body of masonry or concrete, a gallery with a
     rail, the lantern room, and the cap (the lighthouse of Vũng Tàu,
     about 18 m).

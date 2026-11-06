@@ -322,6 +322,67 @@ of the parts:
   (`den_duong`) and the bin of 240 L (`thung_rac_240l`, its lid on a
   hinge of the role `open`).
 
+## A statue
+
+A statue (`World.Statues`, W13 of Vũng Tàu; the blueprint `statue`) is a
+figure of a person (`World.People.Human`, at the level `mid`) in a pose,
+in a long robe, cast as one solid by `World.Cast`, on a round plinth and
+a base. The kind is `statue`. The origin is on the ground at the center
+of the base, and the figure looks to +y.
+
+- **The figure.** The pose `arms_out` puts the hands straight out to
+  the sides, `lift` degrees over the level; any other pose is a pose of
+  a person. The figure is scaled so that its top (the top of the halo,
+  when it has one) is `height` over its feet. With `span` (the hands, tip
+  to tip) and `hand` (a hand from the wrist to the tip of the middle
+  finger), the arms out to the sides become shorter or longer along x
+  from the shoulders: a statue has the proportions of its sculptor. A
+  mitt goes round each hand (the fingers together).
+- **The robe.** A column from the neck to the feet, wide sleeves along
+  the bones of the arms, and two long panels at its sides. The triangles
+  of the person that the robe covers go out of the cast.
+- **The cast.** One closed shell of the role `stone_wash` (concrete
+  with a render of washed stone) or `stone` (granite), on a grid of cells
+  of 1/100 of the height at near and 1/56 at mid. Each triangle marks the
+  cells round its points; a fill from the edge of the grid gives the
+  outside, and the rest is the solid. Near the surface each cell has its
+  signed distance: the distance to the plane of the nearest triangle
+  that its foot falls in, or else the distance to the nearest point with
+  the side of the sum of the normals near it. Surface nets give the mesh,
+  after a repair of the field so that each edge is in two faces. A part
+  thicker than one cell stays.
+- **Hollow** (near only). A wall of `wall` m (at the least two cells), a
+  spiral stair (the part `cau_thang`: `steps` treads, 12 to a turn, round
+  an open well of `well` m with a rail at its edge, each tread from the
+  well 0.1 m into the wall, from the plinth to the floor of the
+  shoulders), the `windows`
+  in the front of the robe with a grille, a balcony in the top of each
+  arm, and the shaft of the stair down to the plinth. Mid and far are
+  solid: the inside is closed to the player.
+- **The halo.** A ring behind the head with the three arms of a cross,
+  and `rays` metal rays (role `steel`) round its top half.
+- **The base.** A block with round corners (`corner`), a band at its
+  foot and at its top, a frame round a panel on each side, and on each
+  side of `reliefs` a row of figures in relief (near only); the rail
+  round its top (`lan_can`: a low wall at mid, rails and balusters at
+  near), and the round plinth on it.
+- **The far form.** The robe, the arms from hand to hand, the head, the
+  halo ring and the base: at most 300 triangles (R9 of plan 0008).
+
+The extras: `"sizes"` (each size of the order with its value, its unit
+and its source; a size with no source has the source `"estimate (no
+source)"`), `"weathering"` (0 to 1, the stains of the sea air, for the
+shader of an app), `"site"` (a statue is cast fixed to its site: no check
+of a stand), the ports (`light` at the corners of the base, `door` at its
+back, and with `hollow` the `stair` and a `view` at each balcony), the
+collision boxes (the base, the plinth, the robe, the arms, the head), and
+the corners of the base for `World.Surface`. The receipt of an order of a
+statue has the list `sizes`.
+
+The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
+from the feet to the top of the halo, the hands 18.4 m apart, the hands
+2.2 m, 133 steps inside, a base of 12 by 12 by 4 m with four reliefs.
+
 ## The materials
 
 A material is a role, not a color:
