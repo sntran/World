@@ -159,7 +159,7 @@ defmodule World.DrawingTest do
       {base.("sources", "a"), ["#{d}.sources"]},
       {base.("sources", [String.duplicate("a", 501)]), ["#{d}.sources.0"]},
       {base.("materials", []), ["#{d}.materials"]},
-      {base.("materials", %{"gold" => %{}}), ["#{d}.materials.gold"]},
+      {base.("materials", %{"silver" => %{}}), ["#{d}.materials.silver"]},
       {base.("materials", %{"wood" => 1}), ["#{d}.materials.wood"]},
       {base.("materials", %{"wood" => %{"color" => "red", "roughness" => 2, "shine" => 1}}),
        ["#{d}.materials.wood.shine", "#{d}.materials.wood.color", "#{d}.materials.wood.roughness"]},
@@ -174,7 +174,7 @@ defmodule World.DrawingTest do
       {shape.(%{
          "sphere" => %{"radius" => 1},
          "size" => 1,
-         "material" => "gold",
+         "material" => "silver",
          "at" => [1],
          "axis" => [0, 0, 0],
          "up" => [0, 0, 99]

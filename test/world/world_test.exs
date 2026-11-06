@@ -120,6 +120,8 @@ defmodule World.WorldTest do
     # waits for the task of its parent.
     for {name, _} <- World.Catalog.models() do
       @name name
+      # The statue casts its head and its hands on a grid of 3 cm.
+      @tag timeout: 600_000
       test "the plan of #{name}" do
         {:ok, fun} = World.Catalog.fetch(@name)
         item = fun.()

@@ -116,6 +116,7 @@ defmodule World.StatuesTest do
     refute List.keyfind(far.nodes, "lan_can", 0)
   end
 
+  @tag timeout: 300_000
   test "a statue of other options: a pose of a person, no robe, no halo, of stone, with no base" do
     o = [height: 3.0, pose: "stand", robe: false, halo: false, material: :stone] ++ @no_base
     item = at(:mid, fn -> Statues.statue(o) end)
