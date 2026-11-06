@@ -447,3 +447,33 @@ and no logo on them.
     Done: `World.Surface` (the UVs in meters, `TEXCOORD_1` and `COLOR_0`;
     `docs/format.md`, "GLB"). A house keeps all its roles: the game
     merges them into its 6 materials (the owner chose this).
+- **Buildings and statues (W13, plan 0008).** The known places of Vũng
+  Tàu, and the temples and statues of other projects (Tre), are one of
+  a kind, but each one is an assembly of parts with a grammar, like a
+  house. A system for them, with the same materials, parts, physics,
+  roles, levels, ports, and collision boxes as the houses (W17 to W23).
+  An order gives the outline (from OpenStreetMap), the sizes, and a
+  source for each size. The game makes the stairs and the paths on the
+  ground; World makes the building or the statue.
+  - **A statue (first).** A figure of the person blueprint at any size,
+    in a pose from its joints, cast as one solid: the body and the
+    clothes are one shell, with no gaps, of concrete, stone, or bronze,
+    with the stains of the weather. The option `hollow`: walls of a real
+    thickness, a spiral stair inside, and openings (the statue on Núi
+    Nhỏ is 32 m high, its arms 18.4 m from hand to hand, and 133 steps
+    go up inside to its shoulders, where visitors look out). A base
+    with panels of figures in relief (Christ and the twelve apostles).
+  - **A tower.** A tapered body of masonry or concrete, a gallery with a
+    rail, the lantern room, and the cap (the lighthouse of Vũng Tàu,
+    about 18 m).
+  - **A French villa.** Walls with openings, verandas with arches and
+    columns, balustrades, a hip roof of clay tiles, and a band of tiles
+    under the roof (Bạch Dinh, 1898 to 1916).
+  - **A church.** The nave, the steep gable, the bell tower, and the
+    windows with arches.
+  - **A Southern temple (đình, chùa, miếu).** A hall on a base of steps,
+    columns, roofs in tiers with curved ends of the ridges and ceramic
+    figures on them, the gate (tam quan), and the altars (Miếu Hòn Bà
+    is small, so it is the first one).
+  - **A stone jetty.** Blocks of stone along a path, with the edge
+    (Cầu Đá).
