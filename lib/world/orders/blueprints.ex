@@ -783,7 +783,7 @@ defmodule World.Orders.Blueprints do
     %Blueprint{
       name: "tower",
       doc:
-        "A tower of masonry on a round platform: a lighthouse (a round body with pilasters that flare at the foot, bands, a cove under the gallery, the gallery and its rail, the drum, the lantern with its panes and its lens, the dome, a lightning rod), with a house next to it from its outline. The option hollow gives the wall and a spiral stair inside at the near level. The ledge, the bands and the flare are over the platform, the other heights over the ground. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the platform.",
+        "A tower of masonry on a round platform: a lighthouse (a round body with pilasters that flare at the foot, bands, a cove under the gallery, the gallery and its rail, the drum, the lantern with its panes and its lens, the dome, a lightning rod). A house next to it is a model of its own. The option hollow gives the wall and a spiral stair inside at the near level. The ledge, the bands and the flare are over the platform, the other heights over the ground. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the platform.",
       options: [
         m.("height", 18.0, 3.0, 80.0, "From the ground to the top of the dome."),
         m.("platform_width", 7.8, 0.0, 40.0, "The round platform."),
@@ -824,11 +824,6 @@ defmodule World.Orders.Blueprints do
         option("hollow", :boolean, default: false, doc: "The wall and a spiral stair inside (at the near level)."),
         m.("wall", 0.5, 0.1, 3.0, ""),
         option("steps", :integer, default: 55, min: 5, max: 500),
-        option("house", :data,
-          default: nil,
-          check: &World.Towers.check_house/2,
-          doc: "A house next to the tower: {outline: [[x, y], ...] (m, on the ground), height}."
-        ),
         option("light", :data,
           default: nil,
           check: &World.Towers.check_light/2,
@@ -866,7 +861,6 @@ defmodule World.Orders.Blueprints do
           hollow: o["hollow"],
           wall: o["wall"],
           steps: o["steps"],
-          house: o["house"],
           light: o["light"],
           sources: o["sources"]
         )

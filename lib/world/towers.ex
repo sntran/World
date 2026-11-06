@@ -20,14 +20,12 @@ defmodule World.Towers do
     it), the dome to `height` m, a ball, and a lightning rod to `rod` m;
   - a door at the foot (`door`), and with `hollow` at near the wall of
     `wall` m and a spiral stair of `steps` steps round a column, to the
-    gallery floor;
-  - a house next to it (`house`: the points of its outline on the ground
-    and its height; a hip roof of clay tiles).
+    gallery floor.
 
-  The origin is on the ground at the center of the platform; the axes are
-  those of the order (x to the east and y to the north for the outline of
-  a house from OpenStreetMap). Each size can have its source, in the
-  extras (`"sizes"`) and in the receipt (`World.Sizes`).
+  The tower only: a house next to it is a model of its own (a house of
+  `World.Buildings.Lot`), and the game puts the two together. The origin
+  is on the ground at the center of the platform. Each size can have its
+  source, in the extras (`"sizes"`) and in the receipt (`World.Sizes`).
   """
   alias World.{Assembly, Detail, Frame, Mesh, Part, Shape, Sizes, Vec}
 
@@ -59,7 +57,6 @@ defmodule World.Towers do
     hollow: false,
     wall: 0.5,
     steps: 55,
-    house: nil,
     light: nil,
     sources: %{}
   ]
@@ -86,8 +83,7 @@ defmodule World.Towers do
     rod: "m",
     door: "m",
     wall: "m",
-    steps: "steps",
-    house: "m"
+    steps: "steps"
   ]
 
   @doc "The names of the sizes that an order can give a source for."
@@ -95,16 +91,6 @@ defmodule World.Towers do
 
   @doc "A check of the sources of an order (`World.Sizes.check/3`)."
   def check_sources(raw, path), do: Sizes.check(raw, path, sized())
-
-  @doc "A check of a house of an order: an outline of 3 to 32 points `[x, y]` (within 60 m) and a height of 2 to 12 m."
-  def check_house(%{"outline" => [_, _, _ | _] = pts, "height" => h} = raw, path)
-      when length(pts) <= 32 and is_number(h) and h >= 2 and h <= 12 do
-    if Enum.all?(pts, &match?([x, y] when is_number(x) and is_number(y) and abs(x) <= 60 and abs(y) <= 60, &1)),
-      do: {:ok, Map.take(raw, ["outline", "height"])},
-      else: {:error, [{path <> ".outline", "must be points [x, y] within 60 m"}]}
-  end
-
-  def check_house(_, path), do: {:error, [{path, "must be {outline: 3 to 32 points [x, y], height: 2 to 12 m}"}]}
 
   @doc "A check of a light of an order: a color, a count of flashes, a period (s) and a range (nm)."
   def check_light(%{"color" => c, "flashes" => f, "period" => p, "range" => r} = raw, _path)
@@ -130,18 +116,17 @@ defmodule World.Towers do
 
     tower = Part.new(o.name, :tower, platform(o) ++ body(o, level) ++ top(o, level), [@o], sources: sources(o))
     stair = if o.hollow and level == :near, do: [stair(o, ph)], else: []
-    house = if o.house, do: [house(o, level)], else: []
 
     asm = Assembly.new(o.name, tower, root: tower.name, kind: :tower, sources: sources(o), extras: extras(o))
-    Enum.reduce(stair ++ house, asm, fn p, a -> Assembly.add(a, p.name, p, at: "o", port: "o") end)
+    Enum.reduce(stair, asm, fn p, a -> Assembly.add(a, p.name, p, at: "o", port: "o") end)
   end
 
   @doc """
   The lighthouse of Vũng Tàu on Núi Nhỏ (Hải đăng Vũng Tàu, the tower of
   1913): 18 m from the ground to the top of its dome, a round body of 3 m,
-  four pilasters, the gallery, the lantern and the keeper's house to its
-  north-west. Each size has its source: a text, a measure on a photo, or
-  an estimate.
+  four pilasters, the gallery and the lantern (the keeper's house next
+  to it is a model of its own). Each size has its source: a text, a
+  measure on a photo, or an estimate.
   """
   def vung_tau do
     vi = "vi.wikipedia, Hải đăng Vũng Tàu"
@@ -154,18 +139,6 @@ defmodule World.Towers do
     tower(
       name: "hai_dang_vung_tau",
       hollow: true,
-      house: %{
-        "outline" => [
-          [-4.18, 4.9],
-          [-2.74, 6.32],
-          [-0.18, 8.54],
-          [0.25, 3.61],
-          [-0.93, 3.51],
-          [-2.01, 3.07],
-          [-2.92, 2.33]
-        ],
-        "height" => 3.2
-      },
       light: %{"color" => "white", "flashes" => 2, "period" => 10.0, "range" => 23},
       sources: %{
         "height" =>
@@ -187,8 +160,6 @@ defmodule World.Towers do
         "lantern" => photo,
         "rod" => photo,
         "steps" => "Tinhte (a forum), the lighthouses of Việt Nam: 55 steps in a spiral (a weak source).",
-        "house" =>
-          "OpenStreetMap, way 790529527: the outline (its inner wall on the edge of the platform); the photo: brick walls and a roof of clay tiles.",
         "light" => "#{ld}: two white flashes each 10 seconds; #{osm}: seamark:light, white, period 10 s, range 23 nm."
       }
     )
@@ -406,55 +377,6 @@ defmodule World.Towers do
     )
   end
 
-  # The house: walls of brick on the outline, a door on its longest side
-  # away from the tower, and a hip roof of clay tiles over eaves of 0.4 m.
-  defp house(o, level) do
-    pts = Enum.map(o.house["outline"], fn [x, y] -> {x / 1, y / 1} end)
-    h = o.house["height"] / 1
-    {cx, cy} = centroid(pts)
-    walls = Shape.prism(ccw(pts), h, :brick) |> Mesh.matter(:brick)
-    eave = for {x, y} <- ccw(pts), do: {cx + (x - cx) * 1.12, cy + (y - cy) * 1.12}
-    roof = pyramid(eave, h, {cx, cy, h + 1.2}) |> Mesh.matter(:tile)
-    door = if level == :far, do: [], else: [door(pts, {cx, cy})]
-    Part.new("nha_quan_dang", :tower, [walls, roof | door], [@o], sources: [o.sources["house"] || Sizes.none()])
-  end
-
-  defp centroid(pts) do
-    n = length(pts)
-    {Enum.sum(Enum.map(pts, &elem(&1, 0))) / n, Enum.sum(Enum.map(pts, &elem(&1, 1))) / n}
-  end
-
-  # The loop counterclockwise from +z.
-  defp ccw(pts) do
-    area =
-      pts |> Enum.zip(tl(pts) ++ [hd(pts)]) |> Enum.map(fn {{x0, y0}, {x1, y1}} -> x0 * y1 - x1 * y0 end) |> Enum.sum()
-
-    if area >= 0, do: pts, else: Enum.reverse(pts)
-  end
-
-  # A hip roof: the eaves at `z`, each side up to the apex.
-  defp pyramid(loop, z, apex) do
-    n = length(loop)
-    points = Enum.map(loop, fn {x, y} -> {x, y, z} end) ++ [apex]
-    sides = for i <- 0..(n - 1), do: [i, rem(i + 1, n), n]
-    Mesh.new(points, Mesh.outside(points, [Enum.reverse(Enum.to_list(0..(n - 1))) | sides]), :roof_clay)
-  end
-
-  # The door of the house: in the middle of its longest side, the side
-  # that is farthest from the tower.
-  defp door(pts, {cx, cy}) do
-    {{x0, y0}, {x1, y1}} =
-      pts
-      |> Enum.zip(tl(pts) ++ [hd(pts)])
-      |> Enum.max_by(fn {{a, b}, {c, d}} -> Vec.len({c - a, d - b, 0.0}) * Vec.len({(a + c) / 2, (b + d) / 2, 0.0}) end)
-
-    {mx, my} = {(x0 + x1) / 2, (y0 + y1) / 2}
-    out = Vec.norm({mx - cx, my - cy, 0.0})
-    at = Vec.add({mx, my, 0.0}, Vec.scale(out, 0.02))
-    frame = Frame.new(at, out, {0.0, 0.0, 1.0})
-    Shape.box({-0.45, 0.0, 0.0}, {0.45, 2.1, 0.05}, :wood) |> Mesh.transform(frame) |> Mesh.matter(:wood)
-  end
-
   # --- The data of the model --------------------------------------------------------------
 
   defp sources(o) do
@@ -465,7 +387,6 @@ defmodule World.Towers do
   defp extras(o) do
     {d, _} = o.platform
     r = d / 2
-    house = if o.house, do: Enum.map(o.house["outline"], fn [x, y] -> [x / 1, y / 1] end), else: []
 
     light =
       if o.light,
@@ -478,7 +399,7 @@ defmodule World.Towers do
       "light" => o.light,
       "ports" => ports(o),
       "collision" => collision(o),
-      "surface" => %{"corners" => [[-r, -r], [r, -r], [-r, r], [r, r]] ++ house}
+      "surface" => %{"corners" => [[-r, -r], [r, -r], [-r, r], [r, r]]}
     }
   end
 
@@ -486,7 +407,7 @@ defmodule World.Towers do
     do: %{"kind" => kind, "at" => Vec.float(at), "normal" => Vec.float(normal), "size" => size}
 
   # The ports: the light in the lantern, the door at the foot, a view on
-  # the gallery, and the door of the house.
+  # the gallery.
   defp ports(o) do
     {la, lb, _} = o.lantern
     {_, z0} = o.platform
@@ -502,7 +423,7 @@ defmodule World.Towers do
   end
 
   # The collision boxes: the platform, the body with its pilasters, the
-  # gallery, the top, and the house.
+  # gallery and the top.
   defp collision(o) do
     {d, ph} = o.platform
     {_, lb, ld} = o.lantern
@@ -513,25 +434,12 @@ defmodule World.Towers do
 
     {f, a, g} = {o.foot / 2, o.across / 2, o.gallery_width / 2}
 
-    house =
-      if o.house do
-        {{x0, y0}, {x1, y1}} =
-          o.house["outline"]
-          |> Enum.map(fn [x, y] -> {x / 1, y / 1, 0.0} end)
-          |> Vec.bounds()
-          |> then(fn {{a0, b0, _}, {a1, b1, _}} -> {{a0, b0}, {a1, b1}} end)
-
-        [box.("nha", {x0, y0, 0.0}, {x1, y1, o.house["height"] / 1})]
-      else
-        []
-      end
-
     [
       box.("nen", {-d / 2, -d / 2, 0.0}, {d / 2, d / 2, ph}),
       box.("chan", {-f, -f, ph}, {f, f, ph + o.flare}),
       box.("than", {-a, -a, ph + o.flare}, {a, a, o.gallery}),
       box.("ban_cong", {-g, -g, o.gallery - 0.3}, {g, g, o.gallery + o.rail}),
       box.("den", {-ld / 2, -ld / 2, o.gallery}, {ld / 2, ld / 2, max(lb, o.height)})
-    ] ++ house
+    ]
   end
 end

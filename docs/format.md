@@ -387,9 +387,9 @@ from the feet to the top of the halo, the hands 18.4 m apart, the hands
 
 A tower (`World.Towers`, W13 of Vũng Tàu; the blueprint `tower`) is a
 lighthouse of masonry on a round platform. The kind is `tower`; the
-origin is on the ground at the center of the platform, and the axes are
-those of the order (x to the east and y to the north for an outline from
-OpenStreetMap).
+origin is on the ground at the center of the platform. The tower only: a
+house next to it is a model of its own (`lot_house`), and the game puts
+the two models together.
 
 - **The body.** A round body (`body` m across at its foot, `top` at the
   cornice), a ledge round its foot, bands round it, and `pilasters` that
@@ -404,22 +404,18 @@ OpenStreetMap).
 - **Hollow** (near only). The wall of `wall` m with the door through it,
   and a spiral stair (`cau_thang`: a column and `steps` treads, 10 to a
   turn) from the platform to the floor of the gallery.
-- **The house** (`house`). Walls of brick on its outline, a hip roof of
-  clay tiles over eaves, and a door on its longest side, away from the
-  tower (`nha_quan_dang`).
 - **The far form.** The body, the cove and the gallery, the drum, the
-  lantern, the dome and the house: at most 300 triangles.
+  lantern and the dome: at most 300 triangles.
 
 The extras: `"sizes"` (as a statue, `World.Sizes`), `"light"` (its
 color, flashes, period in s and range in nm, for the app), `"site"`, the
 ports (`light` in the lantern, `door` at the foot, `view` on the
 gallery), the collision boxes (the platform, the foot, the body, the
-gallery, the top, the house) and the corners for `World.Surface`.
+gallery, the top) and the corners for `World.Surface`.
 
 The lighthouse of Vũng Tàu (`hai_dang_vung_tau`) is the first order:
 18 m from the ground to the top of the dome, a round body of 3.2 m, four
-pilasters, 55 steps, the keeper's house from its outline in
-OpenStreetMap. Most of its sizes are measured on a photo (±10%) and say
+pilasters, 55 steps. Most of its sizes are measured on a photo (±10%) and say
 so in the receipt.
 
 ## The materials
