@@ -470,7 +470,11 @@ and no logo on them.
     the hollow at mid.
   - **A tower.** A tapered body of masonry or concrete, a gallery with a
     rail, the lantern room, and the cap (the lighthouse of Vũng Tàu,
-    about 18 m).
+    about 18 m). Done: `World.Towers`, the blueprint `tower`, and
+    `hai_dang_vung_tau` (`docs/format.md`, "A tower"). Not yet: sizes
+    from a drawing of the tower in place of the measures on a photo, the
+    inside of the house, and the other buildings near it in
+    OpenStreetMap (two round buildings and the office under the ground).
   - **A French villa.** Walls with openings, verandas with arches and
     columns, balustrades, a hip roof of clay tiles, and a band of tiles
     under the roof (Bạch Dinh, 1898 to 1916).
