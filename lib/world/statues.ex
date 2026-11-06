@@ -783,7 +783,7 @@ defmodule World.Statues do
   # An open hand, flat, the palm to the front (by eye from photos 1 and 3
   # of Vung_Tau landmarks.md): out from the wrist to the tip of the box of
   # the points of the hand of the person, in units of its length `l`. The
-  # palm (0.5 of the length, 0.45 wide, 0.16 thick), the four fingers
+  # palm (0.5 of the length, 0.54 wide, 0.16 thick), the four fingers
   # together side by side in front of it (the middle one to the tip), and
   # the thumb up and out from the top of the palm, near the wrist.
   defp hand({{x0, _, _}, {x1, _, _}}, {wx, wy, wz}) do
@@ -793,20 +793,20 @@ defmodule World.Statues do
     at = fn x, z, hy, hz, power -> {{side * x, wy, z}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, hy, hz, power} end
 
     palm =
-      [{-0.05, 0.075, 0.2}, {0.25, 0.08, 0.22}, {0.5, 0.075, 0.225}]
+      [{-0.05, 0.075, 0.24}, {0.25, 0.08, 0.265}, {0.5, 0.075, 0.27}]
       |> Enum.map(fn {x, hy, hz} -> at.(a + x * l, zc, hy * l, hz * l, 4.0) end)
       |> Shape.loft(:concrete, sides: 24)
 
     # The index, the middle, the ring and the little finger, from the top.
     fingers =
       for {len, k} <- Enum.with_index([0.46, 0.5, 0.47, 0.38]) do
-        z = zc + (0.225 - (k + 0.5) * 0.1125) * l
+        z = zc + (0.27 - (k + 0.5) * 0.135) * l
 
         [
-          {0.46, 0.065, 0.056},
-          {0.5 + 0.5 * len, 0.058, 0.052},
-          {0.5 + 0.92 * len, 0.045, 0.042},
-          {0.5 + len, 0.022, 0.02}
+          {0.46, 0.068, 0.068},
+          {0.5 + 0.5 * len, 0.06, 0.063},
+          {0.5 + 0.92 * len, 0.046, 0.05},
+          {0.5 + len, 0.022, 0.024}
         ]
         |> Enum.map(fn {x, hy, hz} -> at.(a + x * l, z, hy * l, hz * l, 2.5) end)
         |> Shape.loft(:concrete, sides: 16)
@@ -814,10 +814,10 @@ defmodule World.Statues do
 
     d = Vec.norm({side * 0.7, 0.2, 0.69})
     u = Vec.norm(Vec.sub({0.0, 1.0, 0.0}, Vec.scale(d, Vec.dot(d, {0.0, 1.0, 0.0}))))
-    base = {side * (a + 0.1 * l), wy + 0.01 * l, zc + 0.17 * l}
+    base = {side * (a + 0.1 * l), wy + 0.01 * l, zc + 0.2 * l}
 
     thumb =
-      [{0.0, 0.06}, {0.2, 0.058}, {0.35, 0.05}, {0.4, 0.025}]
+      [{0.0, 0.085}, {0.2, 0.075}, {0.36, 0.06}, {0.42, 0.03}]
       |> Enum.map(fn {t, r} -> {Vec.add(base, Vec.scale(d, t * l)), u, Vec.cross(d, u), r * l, r * l, 2.5} end)
       |> Shape.loft(:concrete, sides: 16)
 

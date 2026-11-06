@@ -339,7 +339,7 @@ ground at the center of the base, and the figure looks to +y.
   from the shoulders: a statue has the proportions of its sculptor. In a
   robe, each hand is open and flat, the palm to the front, from the wrist
   to the tip of the hand of the person: a palm (0.5 of the length of the
-  hand, 0.45 wide), the four fingers together side by side (the middle
+  hand, 0.54 wide), the four fingers together side by side (the middle
   one to the tip), and the thumb up and out from the top of the palm,
   each a cast of its own on the fine grid.
 - **The head.** In a robe, with `head`, the head is smaller than the
