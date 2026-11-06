@@ -11,6 +11,10 @@ defmodule World.Service do
     store of the orders (`World.Orders.place/2`): 200 with `{"hash",
     "order", "files", "replay"}`, 422 with `{"errors"}`, or 503 when the
     store failed.
+  - `POST /sets`: a set of orders in the body (`World.Orders.Set`): each
+    order goes into the store, 200 with `{"set", "variants"}` (each
+    variant with its hash, its full order, its files and its lot), 422
+    with `{"errors"}`, or 503 when the store failed.
   - `POST /build?level=near&file=glb`: an order in the body, or
     `&hash=HASH` with no body for an order of `POST /orders` (404 when
     the store has no order of the hash). 200 with the file
@@ -29,7 +33,7 @@ defmodule World.Service do
   use Plug.Router
 
   alias World.{MCP, Orders}
-  alias World.Orders.{Blueprint, Blueprints, Store}
+  alias World.Orders.{Blueprint, Blueprints, Set, Store}
 
   plug(:match)
   plug(:dispatch)
@@ -58,6 +62,21 @@ defmodule World.Service do
   post "/orders" do
     with_order(conn, fn order ->
       case Orders.place(order, origin(conn)) do
+        {:ok, placed} ->
+          json(conn, 200, placed)
+
+        {:error, :store} ->
+          json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+        {:error, errors} ->
+          json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
+  post "/sets" do
+    with_order(conn, fn set ->
+      case Set.place(set, origin(conn)) do
         {:ok, placed} ->
           json(conn, 200, placed)
 
