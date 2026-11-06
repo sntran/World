@@ -473,8 +473,8 @@ and no logo on them.
     3 cm at near; the limit of near is 400,000 triangles), and the
     mantle (the cape with its level edge at 21.5 m, the point and the
     collar; the sleeves with the cuff and the triangle of cloth), and
-    the Sacred Heart with its flame (1.6 m, 24.5 m over the feet). Not
-    yet: the pattern of the grilles
+    the Sacred Heart with its flame (1.6 m, 24.5 m over the feet), and
+    the 3 windows of 0.5 by 0.8 m with a square lattice. Not yet: the pattern of the grilles
     of the windows (chữ thọ), the figures of the reliefs as figures of
     people, the letters of the band as real text, the inside of the base
     (a room), and the hollow at mid.

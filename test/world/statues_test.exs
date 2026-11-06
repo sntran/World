@@ -45,7 +45,8 @@ defmodule World.StatuesTest do
     assert sizes["height"]["value"] == 32.0 and sizes["height"]["source"] =~ "32 m"
     assert sizes["span"]["source"] =~ "18.4"
     assert sizes["wall"]["source"] == "estimate (no source)"
-    assert sizes["windows"]["value"] |> length() == 3
+    assert sizes["windows"]["value"] == [[20.0, 0.5, 0.8], [17.25, 0.5, 0.8], [14.5, 0.5, 0.8]]
+    assert sizes["windows"]["source"] =~ "square lattice"
     assert sizes["material"]["value"] == "concrete"
     assert ~w(door light stair view) -- Enum.map(near.extras["ports"], & &1["kind"]) == []
     assert length(near.extras["collision"]) == 6
@@ -79,8 +80,10 @@ defmodule World.StatuesTest do
 
     # Hollow at near only: the mid level weighs more.
     mid = at(:mid, &Statues.nui_nho/0)
-    assert Mass.of(mid).mass > Mass.of(near).mass
+    assert Mass.of(mid).mass > Mass.of(near).mass and Mass.of(mid).unknown == []
     refute List.keyfind(mid.nodes, "cau_thang", 0)
+    # The windows at mid: no opening, a dark panel in each frame.
+    assert :dark in roles(scene(mid, :mid))
     assert Scene.triangles(scene(mid, :mid)) < Scene.triangles(s)
 
     # The far form: at most 300 triangles (R9 of plan 0008), the same size.

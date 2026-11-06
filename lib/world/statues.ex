@@ -207,7 +207,7 @@ defmodule World.Statues do
       dome_width: 8.0,
       dome_height: 3.0,
       dome_sides: 8,
-      windows: [{0.585 * 32.0, 1.2, 1.2}, {0.495 * 32.0, 1.2, 1.2}, {0.39 * 32.0, 1.2, 1.2}],
+      windows: [{20.0, 0.5, 0.8}, {17.25, 0.5, 0.8}, {14.5, 0.5, 0.8}],
       reliefs: [
         %{"side" => "front", "figures" => 13, "title" => "The Last Supper"},
         %{"side" => "back", "figures" => 2, "title" => "The keys to Peter"},
@@ -247,7 +247,7 @@ defmodule World.Statues do
         "reliefs" =>
           "#{av}: front the Last Supper, back the keys to Peter, the sides Christ before Pilate and the three Magi.",
         "windows" =>
-          photo <> ": three square openings down the front of the robe, at 0.585, 0.495 and 0.39 of the height."
+          "#{lm}, photos 1, 3, 4, 5: 3 small rectangular windows in one line down the center of the robe, each about 0.5 m wide and 0.8 m high, about 2.5 m to 3 m apart, with a square lattice grille; the first one about 20 m over the feet."
       }
     )
   end
@@ -575,7 +575,8 @@ defmodule World.Statues do
         else: grid
 
     shell = Cast.mesh(grid, look) |> Mesh.matter(matter)
-    grilles = if o.hollow and level == :near, do: Enum.flat_map(o.windows, &grille(shell, &1, look, matter)), else: []
+    open = o.hollow and level == :near
+    grilles = if o.robe, do: Enum.flat_map(o.windows, &window(shell, &1, open, look, matter)), else: []
     heart = if o.heart, do: [cast.(heart(shell, o.heart, fig.scale))], else: []
     {[shell | details ++ heart ++ grilles ++ halo(fig, o, level)], grid}
   end
@@ -624,29 +625,38 @@ defmodule World.Statues do
     [lobe.(-0.17), lobe.(0.17), point, fire]
   end
 
-  # The grille of a window (by eye from the photos: a square pattern in
-  # each opening): a frame and a cross of bars, 0.15 m in from the front
-  # of the robe round the opening.
-  defp grille(shell, {z, w, h}, look, matter) do
+  # A window of the robe (by eye from photos 1, 3, 4 and 5 of Vung_Tau
+  # landmarks.md: small rectangles in one line down the center of the
+  # robe): a frame of 0.25 m round the opening, out of the face of the
+  # shell; in the opening of a hollow statue (`open`, at near) a square
+  # lattice of bars (3 up, 5 across), else a dark panel in the frame.
+  defp window(shell, {z, w, h}, open, look, matter) do
     front =
       shell.points
       |> Enum.filter(fn {x, y, pz} -> abs(x) < w / 2 + 0.5 and abs(pz - z) < h / 2 + 0.5 and y > 0 end)
       |> Enum.map(&elem(&1, 1))
       |> Enum.max()
 
-    {y0, y1, t} = {front - 0.25, front - 0.15, 0.1}
+    {t, b, y0, y1} = {0.04, 0.25, front - 0.45, front + 0.06}
     {x0, x1, z0, z1} = {-w / 2, w / 2, z - h / 2, z + h / 2}
 
-    [
-      {{x0, y0, z0}, {x1, y1, z0 + t}},
-      {{x0, y0, z1 - t}, {x1, y1, z1}},
-      {{x0, y0, z0 + t}, {x0 + t, y1, z1 - t}},
-      {{x1 - t, y0, z0 + t}, {x1, y1, z1 - t}},
-      {{-t / 2, y0, z0 + t}, {t / 2, y1, z1 - t}},
-      {{x0 + t, y0, z - t / 2}, {-t / 2, y1, z + t / 2}},
-      {{t / 2, y0, z - t / 2}, {x1 - t, y1, z + t / 2}}
+    frame = [
+      {{x0 - b, y0, z0 - b}, {x1 + b, y1, z0}},
+      {{x0 - b, y0, z1}, {x1 + b, y1, z1 + b}},
+      {{x0 - b, y0, z0}, {x0, y1, z1}},
+      {{x1, y0, z0}, {x1 + b, y1, z1}}
     ]
-    |> Enum.map(fn {a, b} -> Shape.box(a, b, look) |> Mesh.matter(matter) end)
+
+    yg = front - 0.12
+
+    lattice =
+      for(i <- 1..3, x = x0 + i * w / 4, do: {{x - t / 2, yg - t / 2, z0}, {x + t / 2, yg + t / 2, z1}}) ++
+        for j <- 1..5, zz = z0 + j * h / 6, do: {{x0, yg - t / 2, zz - t / 2}, {x1, yg + t / 2, zz + t / 2}}
+
+    boxes =
+      Enum.map(frame ++ if(open, do: lattice, else: []), fn {a, c} -> Shape.box(a, c, look) |> Mesh.matter(matter) end)
+
+    if open, do: boxes, else: [Shape.box({x0, front, z0}, {x1, front + 0.03, z1}, :dark) |> Mesh.matter(matter) | boxes]
   end
 
   # The surfaces of the person with no robe: all of them, in one cast.
@@ -750,7 +760,7 @@ defmodule World.Statues do
       |> Shape.loft(:concrete, sides: 24)
 
     point =
-      [{edge + 0.005, 0.04, 0.014}, {edge - 0.065, 0.002, 0.008}]
+      [{edge + 0.005, 0.04, 0.014}, {edge - 0.05, 0.002, 0.008}]
       |> Enum.map(fn {z, hx, hy} ->
         {{0.0, yc + 0.1 * s, z * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx * s, hy * s, 2.0}
       end)
@@ -822,7 +832,10 @@ defmodule World.Statues do
     za = elem(m["upperarm_l"], 2)
     r = o.well / 2 + 0.8
 
-    windows = for {z, w, h} <- o.windows, do: {{-w / 2, 0.0, z - h / 2}, {w / 2, 50.0, z + h / 2}}
+    # Each window 0.12 m wider at each side than its opening, so that a
+    # small window has cells to cut; its frame covers the edge of the cut.
+    windows =
+      for {z, w, h} <- o.windows, do: {{-w / 2 - 0.12, 0.0, z - h / 2 - 0.12}, {w / 2 + 0.12, 50.0, z + h / 2 + 0.12}}
 
     balconies =
       for side <- [-1.0, 1.0] do

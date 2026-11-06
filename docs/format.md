@@ -376,10 +376,14 @@ ground at the center of the base, and the figure looks to +y.
   spiral stair (the part `cau_thang`: `steps` treads, 12 to a turn, round
   an open well of `well` m with a rail at its edge, each tread from the
   well 0.1 m into the wall, from the dome to the floor of the
-  shoulders), the `windows`
-  in the front of the robe with a grille, a balcony in the top of each
-  arm, and the shaft of the stair down to the dome. Mid and far are
-  solid: the inside is closed to the player.
+  shoulders), the openings of the `windows` (each cut 0.12 m wider at
+  each side than the window, so that a small window has cells to cut), a
+  balcony in the top of each arm, and the shaft of the stair down to the
+  dome. Mid and far are solid: the inside is closed to the player.
+- **The windows** (`windows`, a list of `{z, width, height}` in a line
+  down the center of the robe): a frame of 0.25 m round each, out of the
+  face, with a square lattice of bars (3 up, 5 across) in the opening of
+  a hollow statue at near; else a dark panel in the frame.
 - **The halo.** A ring behind the head with the three arms of a cross,
   and `rays` metal rays (role `steel`) round its top half.
 - **The base**, from the ground up (each part can be 0: none):
@@ -418,7 +422,8 @@ statue has the list `sizes`.
 The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
 from the feet to the top of the halo, the hands 18.4 m apart, the hands
 2.2 m, the head 4 m with the beard, the edge of the mantle 21.5 m over
-the feet, the Sacred Heart 24.5 m over the feet, 133 steps inside; a plaza of 21 m with 3 steps, a block of 13 by
+the feet, the Sacred Heart 24.5 m over the feet, 3 windows of 0.5 by
+0.8 m at 20, 17.25 and 14.5 m over the feet, 133 steps inside; a plaza of 21 m with 3 steps, a block of 13 by
 13 by 6.5 m with four reliefs, and a dome of 8 faces, 8 m wide and 3 m
 high. The sizes of the base are measured from photos (Vung_Tau
 `landmarks.md`, about 15%), and the receipt says so.
