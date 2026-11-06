@@ -17,7 +17,7 @@ defmodule World.Check do
   - `joints/2`: each value of a pose in the limits of its joint.
   - `fits/2`: the model goes through a door (a width and a height, in
     meters): its two smaller sizes, turned as the door needs. `model/2`
-    does not check a house, a wall or a statue: they are built on their site. A
+    does not check a house, a wall, a statue or a tower: they are built on their site. A
     vehicle goes through the drive-in door of its plant (`drive_in/0`); a
     thing put together on its site (`"site"` in its extras) goes through
     the door in its parts.
@@ -79,7 +79,7 @@ defmodule World.Check do
   # door. A
   # thing put together on its site (an overhead door: `"site"` in its
   # extras) goes through the door in its parts.
-  defp door(%Assembly{kind: kind}) when kind in [:wall, :house, :boat, :street, :plant, :statue], do: :ok
+  defp door(%Assembly{kind: kind}) when kind in [:wall, :house, :boat, :street, :plant, :statue, :tower], do: :ok
   defp door(%Assembly{kind: :vehicle} = item), do: fits(item, @drive_in)
 
   defp door(%Assembly{extras: %{"site" => true}} = item),
