@@ -271,7 +271,8 @@ of bricks. A town has thousands of them.
   style, the roof, the ground floor, the finish, the floors, the sides
   and the height), `paint_age` (0 to 1, for the shader of the app: it
   changes no shape), `seed` (it picks the details) and `surface` (below,
-  "GLB").
+  "GLB"), and `ports` (the ports of the small parts, in the list of the
+  parts: "The list of the parts").
 
 ## The materials
 
@@ -1496,6 +1497,25 @@ with no density, a paint or a color, has no mass), in a fixed order:
     {"name": "tire_80_90_14", "kind": "tire", "count": 1, "params": {"code": "80/90-14"}, "sources": ["ETRTO"]}
   ]
 }
+```
+
+A model with ports for small parts (a house on a lot, W18 of Vũng Tàu)
+also has `ports`: the places where an app puts the small parts of a
+MultiMesh. They are in the axes of the GLB (glTF: +y up, the front to
++z), in meters. Each port has its `kind`, its `position`, its `normal`
+and the `size` of the thing on it (across, up, and out of the wall; for
+a port that looks up: across, up, and along the lot). A port on a wall
+is at the middle of the thing on the face of the wall; a port that looks
+up is at the middle of the base of the thing. The kinds: `ac` (an
+outdoor unit, with its `floor`), `rail` and `pot` (a balcony, with its
+`floor`), `sign` (with `text`, the size of the text), `number` (the
+plate of the house number), `altar` (the altar of the earth god on the
+floor inside the door, with `facing`), `water_tank`, `dish`, `antenna`,
+`laundry` (on a flat terrace only), and `wire` (where the cables from the
+power poles come to the front). The GLB does not have them.
+
+```json
+{"kind": "ac", "floor": 1, "position": [0.8, 6.75, 8.0], "normal": [0.0, 0.0, 1.0], "size": [0.7, 0.55, 0.28]}
 ```
 
 ## Wings files

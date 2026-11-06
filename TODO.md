@@ -398,6 +398,9 @@ and no logo on them.
     size of the text), number plate, altar of the earth god. Roof ports:
     water tank, dish, antenna, laundry pole. Wire ports on the front,
     where the game attaches the cables from the power poles.
+    Done for the tube house (`docs/format.md`, "The list of the parts").
+    Still to do: the models of the small parts (W2), and an AC on a side
+    wall or on the roof of a house of one floor.
   - **A family of houses (W19).** One list of orders gives a set of
     variants (for example 30 tube houses of 4 m, by seed). The game
     makes a library from the set, and picks one by the size of the lot.
