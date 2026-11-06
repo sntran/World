@@ -468,8 +468,9 @@ defmodule World.Statues do
   end
 
   # The box of the points of each hand of the pose `arms_out`, out from
-  # its wrist: the fingers of a person are too thin for a cast, so a mitt
-  # (the fingers together, as a sculptor makes them) goes round them.
+  # its wrist: the fingers of a person are too thin for a cast, so the
+  # hand of the statue (`hand/2`, the fingers together, as a sculptor
+  # makes them) goes to the tip of the box.
   defp hands(surfaces, marks, %{pose: "arms_out"}) do
     points = Enum.flat_map(surfaces, &elem(&1, 0))
 
@@ -556,7 +557,7 @@ defmodule World.Statues do
   defp statue_shapes(fig, o, level) do
     {look, matter} = @materials[o.material]
     step = if level == :near, do: o.height / 100, else: o.height / 56
-    {robe, mitts} = robe(fig, o)
+    {robe, hands} = robe(fig, o)
 
     # In a robe, the head and the hands are casts of their own on a fine
     # grid (about 3 cm for a statue of 32 m at near, 10 cm at mid), and
@@ -568,7 +569,7 @@ defmodule World.Statues do
       if robe == [] do
         {uncovered(fig), []}
       else
-        {robe, Enum.map(details(fig, mitts), cast)}
+        {robe, Enum.map(details(fig, hands), cast)}
       end
 
     grid = Cast.solid(main, step)
@@ -669,7 +670,7 @@ defmodule World.Statues do
   # The surfaces of the fine casts of a figure in a robe: the head (the
   # mass of the hair, the head and the neck, its core, the beard), and each
   # hand out of its sleeve.
-  defp details(%{detail: detail, marks: m, scale: s}, mitts) do
+  defp details(%{detail: detail, marks: m, scale: s}, hands) do
     {hx, _, hz} = m["head"]
 
     pick = fn test ->
@@ -688,8 +689,8 @@ defmodule World.Statues do
           (z > hz - 0.04 * s and abs(x - hx) < 0.09 * s) or (z > hz - 0.07 * s and abs(x - hx) < 0.05 * s)
         end)
 
-    # Each hand is its mitt: it covers the fingers of the person.
-    [head | Enum.map(mitts, &[&1])]
+    # Each hand: the palm, the fingers and the thumb of `hand/2`.
+    [head | hands]
   end
 
   # The robe: a straight column with a flat front from the neck to the
@@ -737,7 +738,8 @@ defmodule World.Statues do
     sleeves =
       for side <- ~w(l r), do: sleeve(m["upperarm_" <> side], m["hand_" <> side], edge * s, s)
 
-    {[column | panels ++ mantle(sh, edge, yc, s) ++ Enum.concat(sleeves)], Enum.map(hands, &mitt/1)}
+    hands = for {box, side} <- Enum.zip(hands, ~w(l r)), do: hand(box, m["hand_" <> side])
+    {[column | panels ++ mantle(sh, edge, yc, s) ++ Enum.concat(sleeves)], hands}
   end
 
   # The mantle (by eye from photos 1, 3 and 4 of Vung_Tau landmarks.md):
@@ -778,16 +780,48 @@ defmodule World.Statues do
     [cape, point, collar]
   end
 
-  # A mitt round the points of a hand out to the side: from the wrist to
-  # the tip, a little narrower at the tip.
-  defp mitt({{x0, y0, z0}, {x1, y1, z1}}) do
-    {c, hy, hz} = {fn x -> {x, (y0 + y1) / 2, (z0 + z1) / 2} end, (y1 - y0) / 2 + 0.02, (z1 - z0) / 2 + 0.02}
-    {inner, outer} = if abs(x0) < abs(x1), do: {x0, x1}, else: {x1, x0}
-    mid = inner + 0.7 * (outer - inner)
+  # An open hand, flat, the palm to the front (by eye from photos 1 and 3
+  # of Vung_Tau landmarks.md): out from the wrist to the tip of the box of
+  # the points of the hand of the person, in units of its length `l`. The
+  # palm (0.5 of the length, 0.45 wide, 0.16 thick), the four fingers
+  # together side by side in front of it (the middle one to the tip), and
+  # the thumb up and out from the top of the palm, near the wrist.
+  defp hand({{x0, _, _}, {x1, _, _}}, {wx, wy, wz}) do
+    {side, a} = {if(wx < 0, do: -1.0, else: 1.0), abs(wx)}
+    l = max(abs(x0), abs(x1)) - a
+    zc = wz - 0.045 * l
+    at = fn x, z, hy, hz, power -> {{side * x, wy, z}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, hy, hz, power} end
 
-    [{inner, 1.0}, {mid, 1.0}, {outer, 0.75}]
-    |> Enum.map(fn {x, k} -> {c.(x), {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, hy * k, hz * k, 4.0} end)
-    |> Shape.loft(:concrete, sides: 16)
+    palm =
+      [{-0.05, 0.075, 0.2}, {0.25, 0.08, 0.22}, {0.5, 0.075, 0.225}]
+      |> Enum.map(fn {x, hy, hz} -> at.(a + x * l, zc, hy * l, hz * l, 4.0) end)
+      |> Shape.loft(:concrete, sides: 24)
+
+    # The index, the middle, the ring and the little finger, from the top.
+    fingers =
+      for {len, k} <- Enum.with_index([0.46, 0.5, 0.47, 0.38]) do
+        z = zc + (0.225 - (k + 0.5) * 0.1125) * l
+
+        [
+          {0.46, 0.065, 0.056},
+          {0.5 + 0.5 * len, 0.058, 0.052},
+          {0.5 + 0.92 * len, 0.045, 0.042},
+          {0.5 + len, 0.022, 0.02}
+        ]
+        |> Enum.map(fn {x, hy, hz} -> at.(a + x * l, z, hy * l, hz * l, 2.5) end)
+        |> Shape.loft(:concrete, sides: 16)
+      end
+
+    d = Vec.norm({side * 0.7, 0.2, 0.69})
+    u = Vec.norm(Vec.sub({0.0, 1.0, 0.0}, Vec.scale(d, Vec.dot(d, {0.0, 1.0, 0.0}))))
+    base = {side * (a + 0.1 * l), wy + 0.01 * l, zc + 0.17 * l}
+
+    thumb =
+      [{0.0, 0.06}, {0.2, 0.058}, {0.35, 0.05}, {0.4, 0.025}]
+      |> Enum.map(fn {t, r} -> {Vec.add(base, Vec.scale(d, t * l)), u, Vec.cross(d, u), r * l, r * l, 2.5} end)
+      |> Shape.loft(:concrete, sides: 16)
+
+    [palm, thumb | fingers]
   end
 
   # A sleeve (by eye from photos 1 and 3 of Vung_Tau landmarks.md): its top

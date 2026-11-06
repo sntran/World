@@ -336,8 +336,12 @@ ground at the center of the base, and the figure looks to +y.
   when it has one) is `height` over its feet. With `span` (the hands, tip
   to tip) and `hand` (a hand from the wrist to the tip of the middle
   finger), the arms out to the sides become shorter or longer along x
-  from the shoulders: a statue has the proportions of its sculptor. A
-  mitt goes round each hand (the fingers together).
+  from the shoulders: a statue has the proportions of its sculptor. In a
+  robe, each hand is open and flat, the palm to the front, from the wrist
+  to the tip of the hand of the person: a palm (0.5 of the length of the
+  hand, 0.45 wide), the four fingers together side by side (the middle
+  one to the tip), and the thumb up and out from the top of the palm,
+  each a cast of its own on the fine grid.
 - **The head.** In a robe, with `head`, the head is smaller than the
   head of the person, so that `head` m go from its top to the end of its
   beard (with `beard`; the beard is 0.32 of the head under the chin). At
