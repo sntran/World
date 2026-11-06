@@ -246,7 +246,14 @@ the wall: the rough opening.
 ### A house on a lot
 
 A whole house on a lot of a town of Việt Nam (`World.Buildings.Lot`,
-the blueprint `lot_house`) is cheaper: each wall is one closed slab of
+the blueprint `lot_house`) is one of four kinds: a tube house (nhà
+ống, 1 to 8 floors), a shop house (nhà phố, 2 to 6 floors, a ground
+floor of 4.5 m and a balcony on each floor), a villa (biệt thự, 1 to 3
+floors, 3 m back from the street behind a yard with a low wall, iron
+bars and a gate, free side walls, a roof of clay tiles and balusters on
+its balconies) or a mini-hotel (khách sạn mini, 5 to 8 floors, a
+balcony for each room, a vertical sign and a room on the terrace). An
+option with no value has the default of the kind. It is cheaper: each wall is one closed slab of
 its thickness with the holes of its windows and its doors, not a wall
 of bricks. A town has thousands of them.
 

@@ -386,10 +386,12 @@ and no logo on them.
     side wall: shared with a neighbor, free, or bare brick above a lower
     neighbor. Optional: a back extension and a room on the terrace. The
     same order gives the same bytes.
-    Done for the tube house: `World.Buildings.Lot` and the blueprint
-    `lot_house` (a bare side wall is brick from the ground to the roof:
-    the owner chose this). Still to do: the shop house, the villa and the
-    mini-hotel; a lower neighbor of its own height for a bare wall; the
+    Done: the tube house, the shop house, the villa and the mini-hotel
+    (`World.Buildings.Lot` and the blueprint `lot_house`; a bare side
+    wall is brick from the ground to the roof: the owner chose this).
+    Still to do: a villa wider than 6 m with a yard at its sides (W17
+    gives 3 to 6 m for each kind), a mezzanine in a shop house, a lower
+    neighbor of its own height for a bare wall; the
     sizes of the floors, the balconies and the details from photos of
     the houses of Vũng Tàu next to the renders (now by eye).
   - **Ports in `parts.json` (W18).** The game puts the small parts with
