@@ -421,6 +421,10 @@ and no logo on them.
     right roof). At most 6 materials in one house, by role, so the game
     needs few draw calls. The far level keeps the roof, because the
     player sees roofs from Núi Lớn and Núi Nhỏ.
+    Done: `test/world/town_limits_test.exs` fails when a house is over a
+    limit or has a role that is not of a house. A house keeps its 12
+    roles; the game merges them into its 6 materials (the owner chose
+    this).
   - **Roles and UVs for the wall shader (W23).** The roles `plaster`,
     `brick_ong`, `tile_granite`, `tile_pattern`, `metal_shutter`,
     `iron`, `roof_corrugated`, `roof_clay`, `concrete`, and `glass`.

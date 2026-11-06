@@ -259,7 +259,10 @@ of bricks. A town has thousands of them.
   the courses of the tiles. Mid: panels, and the glass of the windows of
   the side walls and the back wall on the wall (no holes). Far: the box
   of the walls (up to the top of the parapet of a flat terrace) with its
-  roof, at most 300 triangles. The roll-up shutter is a slide (the role
+  roof. The limits of a whole house (W22, `World.Buildings.Lot.limits/0`):
+  near 40,000, mid 3,000 and far 300 triangles; `test/world/town_limits_test.exs`
+  measures each house of the catalog and the heaviest house of each
+  style, roof and ground floor at each level. The roll-up shutter is a slide (the role
   `open`) at near and mid only.
 - **The roles.** `plaster`, `brick_ong` (a bare side wall), `tile_granite`
   (the front of the ground floor, the step, the floor of an open ground
