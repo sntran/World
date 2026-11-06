@@ -404,6 +404,9 @@ and no logo on them.
   - **A family of houses (W19).** One list of orders gives a set of
     variants (for example 30 tube houses of 4 m, by seed). The game
     makes a library from the set, and picks one by the size of the lot.
+    Done: `POST /sets` (`World.Orders.Set`, `docs/factory.md`). Still to
+    do: a tool of the MCP server for a set; the time of a set of 64 at
+    the edge (each order is checked: a build at far).
   - **One room you can enter (W20).** An option `interior: front_room`
     for the homestay and the shops: an open ground floor with a door of
     0.9 × 2.1 m, a floor 20 cm above the street, a ceiling of 3 m, and
