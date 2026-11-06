@@ -101,9 +101,11 @@ async function load(remember) {
   const extras = gltf.scene.userData;
   // The COLOR_0 of a building is data for a shader (World.Surface), not a color.
   if (extras.surface) current.traverse((o) => { if (o.isMesh) o.material.vertexColors = false; });
+  // The collision boxes of a house (W20) show only with ?collision=1.
+  current.traverse((o) => { if (o.userData.collision) o.visible = params.get('collision') === '1'; });
   let tris = 0;
   // A mesh with instances (EXT_mesh_gpu_instancing) draws each instance.
-  current.traverse((o) => { if (o.isMesh) tris += (o.geometry.index.count / 3) * (o.isInstancedMesh ? o.count : 1); });
+  current.traverse((o) => { if (o.isMesh && !o.parent?.userData.collision && !o.userData.collision) tris += (o.geometry.index.count / 3) * (o.isInstancedMesh ? o.count : 1); });
   document.getElementById('info').textContent = `Size: ${(extras.size ?? []).map((v) => v.toFixed(3)).join(' × ')} m. Triangles: ${tris}.`;
   joints(current);
   animations(gltf);
