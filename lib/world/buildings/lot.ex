@@ -1513,29 +1513,18 @@ defmodule World.Buildings.Lot do
     len = (y1 - y0 + 0.3) / :math.cos(a)
 
     # At far, the walls are one box.
+    skin = [skin: {@side_wall, :brick}]
+    door = [{o.width / 2 - 0.45, 1.0, o.width / 2 + 0.45, 3.1, 0.12}]
+    side = y1 - y0 - @side_wall
+    {x, z} = {{1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}}
+
     walls =
       if level == :far,
         do: [Shape.box({-hw, y0, 0.0}, {hw, y1, h}, :plaster) |> Mesh.matter(:brick)],
         else: [
-          sheet(
-            {-hw, y0, 0.0},
-            {1.0, 0.0, 0.0},
-            {0.0, 0.0, 1.0},
-            o.width,
-            h,
-            [{o.width / 2 - 0.45, 1.0, o.width / 2 + 0.45, 3.1, 0.12}],
-            :plaster, skin: {@side_wall, :brick}),
-          sheet(
-            {hw, y0 + @side_wall, 0.0},
-            {0.0, 1.0, 0.0},
-            {0.0, 0.0, 1.0},
-            y1 - y0 - @side_wall,
-            h,
-            [],
-            role.(o.left), skin: {@side_wall, :brick}),
-          sheet({-hw, y1, 0.0}, {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, y1 - y0 - @side_wall, h, [], role.(o.right),
-            skin: {@side_wall, :brick}
-          )
+          sheet({-hw, y0, 0.0}, x, z, o.width, h, door, :plaster, skin),
+          sheet({hw, y0 + @side_wall, 0.0}, {0.0, 1.0, 0.0}, z, side, h, [], role.(o.left), skin),
+          sheet({-hw, y1, 0.0}, {0.0, -1.0, 0.0}, z, side, h, [], role.(o.right), skin)
         ]
 
     walls ++
