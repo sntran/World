@@ -57,6 +57,7 @@ defmodule World.Statues do
     head: nil,
     beard: false,
     mantle: nil,
+    heart: nil,
     material: :concrete,
     hollow: false,
     wall: 0.3,
@@ -94,6 +95,7 @@ defmodule World.Statues do
     lift: "deg",
     head: "m",
     mantle: "m",
+    heart: "m",
     wall: "m",
     steps: "steps",
     well: "m",
@@ -190,6 +192,7 @@ defmodule World.Statues do
       head: 4.0,
       beard: true,
       mantle: 21.5,
+      heart: 24.5,
       hollow: true,
       steps: 133,
       plaza_radius: 10.5,
@@ -218,6 +221,8 @@ defmodule World.Statues do
           "#{lm}, photo 3: about 4 m from the top of the head to the end of the beard, the face about 1.6 m wide; the hair to the shoulders, a beard.",
         "mantle" =>
           "#{lm}, photos 1, 3, 4: the lower edge of the mantle level, about 21 m to 22 m over the feet, with a point at the front center; about 5.5 m to 6.5 m wide at its edge.",
+        "heart" =>
+          "#{lm}, photos 1, 3, 5: the Sacred Heart in relief on the chest, about 0.7 m wide and 1.6 m high with its flame, about 24 m to 25 m over the feet.",
         "hand" => "#{av}: each hand 2.2 m long (the middle finger 1.1 m).",
         "lift" => photo <> ": the arms a little over the level.",
         "steps" => "#{vi}: 133 steps in a spiral from the base to the shoulders.",
@@ -552,12 +557,14 @@ defmodule World.Statues do
     # In a robe, the head and the hands are casts of their own on a fine
     # grid (about 3 cm for a statue of 32 m at near, 10 cm at mid), and
     # the robe is the cast of the figure; else the person is one cast.
+    fine = if level == :near, do: o.height / 1000, else: o.height / 320
+    cast = &(Cast.solid(&1, fine) |> Cast.mesh(look) |> Mesh.matter(matter))
+
     {main, details} =
       if robe == [] do
         {uncovered(fig), []}
       else
-        fine = if level == :near, do: o.height / 1000, else: o.height / 320
-        {robe, Enum.map(details(fig, mitts), &(Cast.solid(&1, fine) |> Cast.mesh(look) |> Mesh.matter(matter)))}
+        {robe, Enum.map(details(fig, mitts), cast)}
       end
 
     grid = Cast.solid(main, step)
@@ -569,7 +576,52 @@ defmodule World.Statues do
 
     shell = Cast.mesh(grid, look) |> Mesh.matter(matter)
     grilles = if o.hollow and level == :near, do: Enum.flat_map(o.windows, &grille(shell, &1, look, matter)), else: []
-    {[shell | details ++ grilles ++ halo(fig, o, level)], grid}
+    heart = if o.heart, do: [cast.(heart(shell, o.heart, fig.scale))], else: []
+    {[shell | details ++ heart ++ grilles ++ halo(fig, o, level)], grid}
+  end
+
+  # The Sacred Heart (by eye from photos 1, 3 and 5 of Vung_Tau
+  # landmarks.md): a heart in relief on the chest, its center at `z` over
+  # the feet, with a flame over it: 0.0846 of the figure high in all
+  # (1.6 m on Núi Nhỏ) and 0.037 wide (0.7 m). The two lobes and the point
+  # of the heart, and the flame, each half out of the face of the shell;
+  # the flame follows the face back as the chest goes up to the collar.
+  # The surfaces for a cast of its own on the fine grid.
+  defp heart(shell, z, s) do
+    k = 0.0846 * s / 1.6
+
+    front = fn zz ->
+      shell.points
+      |> Enum.filter(fn {x, _, pz} -> abs(x) < 0.3 * k and abs(pz - zz) < 0.3 * k end)
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.max()
+    end
+
+    {body, flame} = {front.(z), front.(z + 0.7 * k)}
+    section = fn y, zz, hx, hy -> {{0.0, y, z + zz * k}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx * k, hy * k, 2.0} end
+
+    lobe = fn x ->
+      for i <- 0..6 do
+        a = :math.pi() * i / 6
+        r = max(:math.sin(a), 0.05)
+
+        {{x * k, body, z + (0.2 - 0.19 * :math.cos(a)) * k}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, 0.19 * r * k,
+         0.15 * r * k, 2.0}
+      end
+      |> Shape.loft(:concrete, sides: 16)
+    end
+
+    point =
+      [{-0.45, 0.02}, {-0.25, 0.17}, {-0.05, 0.3}, {0.15, 0.33}, {0.25, 0.25}]
+      |> Enum.map(fn {zz, hx} -> section.(body, zz, hx, 0.15) end)
+      |> Shape.loft(:concrete, sides: 16)
+
+    fire =
+      [{0.3, 0.12}, {0.5, 0.15}, {0.75, 0.11}, {0.95, 0.05}, {1.15, 0.005}]
+      |> Enum.map(fn {zz, hx} -> section.(flame, zz, hx, 0.07) end)
+      |> Shape.loft(:concrete, sides: 16)
+
+    [lobe.(-0.17), lobe.(0.17), point, fire]
   end
 
   # The grille of a window (by eye from the photos: a square pattern in

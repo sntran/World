@@ -53,6 +53,19 @@ defmodule World.StatuesTest do
     assert sizes["dome_sides"]["value"] == 8
     assert sizes["head"]["value"] == 4.0 and sizes["head"]["source"] =~ "photo 3"
     assert sizes["mantle"]["value"] == 21.5 and sizes["mantle"]["source"] =~ "photos 1, 3, 4"
+    assert sizes["heart"]["value"] == 24.5
+
+    # The Sacred Heart: a cast of its own on the chest, 0.7 m by 1.6 m.
+    assert [{{cx0, _, cz0}, {cx1, _, cz1}}] =
+             for(
+               sh <- part(near, "tuong_chua_kito_vua").shapes,
+               {{x0, _, z0}, {x1, _, z1}} = b = World.Vec.bounds(sh.points),
+               x1 - x0 < 1.0 and z0 > 33.0 and z1 < 36.5,
+               do: b
+             )
+
+    assert_in_delta cx1 - cx0, 0.72, 0.1
+    assert_in_delta cz1 - cz0, 1.6, 0.1
 
     # The head: a cast of its own on the fine grid, from its top down past
     # the end of the beard (4 m) to the neck.
