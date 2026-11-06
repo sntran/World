@@ -9,6 +9,7 @@ defmodule World.Orders.Blueprints do
   - `animal`: an animal of a species (`World.Animals.animal/2`);
   - `drawing`: a model in the data of the order (`World.Drawing`);
   - `house`: a house of `World.Buildings`;
+  - `lot_house`: a whole house on a lot of Vũng Tàu (`World.Buildings.Lot`);
   - `van`: a van of `World.Vehicles.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `World.Framing`.
   """
@@ -32,6 +33,7 @@ defmodule World.Orders.Blueprints do
           exercise(),
           animal(),
           house(),
+          lot_house(),
           van(),
           extrusion(),
           strut(),
@@ -505,6 +507,102 @@ defmodule World.Orders.Blueprints do
         ],
         message != nil,
         do: {"options.openings.#{i}", message}
+  end
+
+  # --- A house on a lot --------------------------------------------------------------------
+
+  defp lot_house do
+    c = Buildings.Lot.choices()
+    names = fn key -> Enum.map(c[key], &Atom.to_string/1) end
+
+    %Blueprint{
+      name: "lot_house",
+      doc:
+        "A whole house on a lot of a town of Việt Nam, as the houses of Vũng Tàu were in 2019: a tube house (nhà ống) on a narrow, deep lot, with its ground floor, its balconies, its roof and its side walls. The origin is at the center of the front of the lot, on the street; the front looks to +y. Three levels for a town: near, mid and far.",
+      options: [
+        option("kind", :choice, default: "tube", values: names.(:kind)),
+        option("width", :number,
+          default: 4.0,
+          min: 3.0,
+          max: 6.0,
+          unit: "m",
+          doc: "The front of the lot, on the street."
+        ),
+        option("depth", :number,
+          default: 16.0,
+          min: 8.0,
+          max: 25.0,
+          unit: "m",
+          doc: "The lot from the street to its back."
+        ),
+        option("floors", :integer, default: 3, min: 1, max: 8),
+        option("style", :choice,
+          default: "new",
+          values: names.(:style),
+          doc: "Old: wood shutters, rails of bars, a folding gate. New: glass in aluminum frames, rails of tubes."
+        ),
+        option("roof", :choice,
+          default: "flat",
+          values: names.(:roof),
+          doc: "A flat terrace with a parapet, corrugated metal, or clay tiles."
+        ),
+        option("ground", :choice,
+          default: "cua_cuon",
+          values: names.(:ground),
+          doc:
+            "The front of the ground floor: a roll-up shutter, a folding iron gate, a door with an iron gate, or an open shop."
+        ),
+        option("finish", :choice,
+          default: "granite",
+          values: names.(:finish),
+          doc: "The front of the ground floor plain or of polished granite, or all the front of patterned tiles."
+        ),
+        option("left", :choice,
+          default: "shared",
+          values: names.(:side),
+          doc:
+            "The left side wall, as seen from the street: shared with a neighbor, free with windows, or bare brick over a lower neighbor."
+        ),
+        option("right", :choice, default: "shared", values: names.(:side), doc: "The right side wall, as the left."),
+        option("extension", :boolean, default: false, doc: "A room of one floor at the back."),
+        option("terrace_room", :boolean, default: false, doc: "A room on a flat terrace."),
+        option("paint_age", :number,
+          default: 0.3,
+          min: 0.0,
+          max: 1.0,
+          doc: "The age of the paint, for the shader of the app: no change of the shape."
+        ),
+        option("seed", :integer,
+          default: 1,
+          min: 0,
+          max: 1_000_000,
+          doc: "The details: the balconies, the cages, the places of the doors and the windows."
+        )
+      ],
+      build: fn o ->
+        atom = fn key -> String.to_existing_atom(o[key]) end
+
+        Buildings.Lot.house(
+          kind: atom.("kind"),
+          width: o["width"],
+          depth: o["depth"],
+          floors: o["floors"],
+          style: atom.("style"),
+          roof: atom.("roof"),
+          ground: atom.("ground"),
+          finish: atom.("finish"),
+          left: atom.("left"),
+          right: atom.("right"),
+          extension: o["extension"],
+          terrace_room: o["terrace_room"],
+          paint_age: o["paint_age"],
+          seed: o["seed"]
+        )
+      end,
+      sources: [
+        "TCVN 9411:2012 (nhà ở liên kế): the ground floor 3.6 m clear at the least. The other sizes: by eye, from the photos of the streets of Vũng Tàu (World.Buildings.Lot)."
+      ]
+    }
   end
 
   # --- A van -------------------------------------------------------------------------------
