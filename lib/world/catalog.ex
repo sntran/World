@@ -38,6 +38,7 @@ defmodule World.Catalog do
         World.Sewing.Cushion.models() ++
         World.Buildings.Lot.models() ++
         World.Places.StreetKit.models() ++
+        World.Statues.models() ++
         for(name <- World.Drawing.names(), do: {name, fn -> World.Drawing.file(name) end}),
       &elem(&1, 0)
     )

@@ -68,6 +68,10 @@
         2400,
         "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): concrete, dense 2.0-2.4 (normal concrete)."
       ],
+      "stone": [
+        2700,
+        "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): granite 2.6-2.8 (the middle)."
+      ],
       "mortar": [
         1600,
         "The Engineering ToolBox, Densities of solids (https://www.engineeringtoolbox.com/density-solids-d_1265.html): brickwork in mortar 1.6."

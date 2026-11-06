@@ -51,6 +51,8 @@
     "stainless": {"color": [192, 195, 198], "roughness": 0.28, "metalness": 1.0},
     "terracotta": {"color": [176, 92, 58], "roughness": 0.85, "metalness": 0.0},
     "steel": {"color": [168, 172, 178], "roughness": 0.4, "metalness": 1.0},
+    "stone": {"color": [150, 148, 142], "roughness": 0.8, "metalness": 0.0},
+    "stone_wash": {"color": [222, 214, 196], "roughness": 0.9, "metalness": 0.0},
     "tile_granite": {"color": [146, 136, 134], "roughness": 0.25, "metalness": 0.0},
     "tile_pattern": {"color": [204, 198, 186], "roughness": 0.35, "metalness": 0.0},
     "tile": {"color": [176, 84, 52], "roughness": 0.8, "metalness": 0.0},
