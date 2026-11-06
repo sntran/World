@@ -410,6 +410,13 @@ and no logo on them.
     the stairs. Every house also has simple collision boxes (walls, the
     step, the ramp) as named nodes in the GLB, so the game does not
     use the visible mesh for collision.
+    Done: the collision boxes of each house, and `interior: front_room`
+    (a room behind the front, its stairs, and the door of 0.9 by 2.1 m
+    in the wall at its back: `docs/format.md`, "A house on a lot"; the
+    owner can change this reading). Still to do: the doors of a door
+    with a gate and the cửa xếp do not move yet, so a player enters an
+    open shop or under a raised shutter; the floors over the ground
+    floor have no rooms.
   - **The street kit (W21).** Straight pieces of 2 m, corners, and
     junctions of: the sidewalk with the curb and tiles, the gutter with
     covers, a ramp cut for scooters, the concrete paving of a hẻm with

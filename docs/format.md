@@ -274,8 +274,23 @@ of bricks. A town has thousands of them.
   style, the roof, the ground floor, the finish, the floors, the sides
   and the height), `paint_age` (0 to 1, for the shader of the app: it
   changes no shape), `seed` (it picks the details) and `surface` (below,
-  "GLB"), and `ports` (the ports of the small parts, in the list of the
-  parts: "The list of the parts").
+  "GLB"), `ports` (the ports of the small parts, in the list of the
+  parts: "The list of the parts") and `collision` (below).
+- **The collision boxes (W20).** Each house has simple boxes in place of
+  its mesh for the collision of the game: the side walls, the back wall,
+  the front over the ground floor and its beam, the piers, the closed
+  shutter (it moves with the node of the shutter), the gate or the wall
+  round a door, the floor, the step, the ramp (a box turned to its
+  slope), the room at the back, and the boxes of the front room. Each
+  box is a node of its own (below, "GLB"), the same at each level.
+- **The front room (W20).** With `interior: front_room` the ground floor
+  is a room that a player can enter from the street (an open shop, or
+  under a shutter that opens): its floor 0.2 m over the street, a
+  ceiling 3 m over the floor with a hole over the top of the stairs,
+  the stairs along a side wall up to the first floor (a riser of 18 cm
+  and a tread of 26 cm at the most), and a wall at its back with a door
+  of 0.9 by 2.1 m. The front room is at near and mid; its collision
+  boxes are at each level.
 
 ## The materials
 
@@ -1479,6 +1494,13 @@ The build gives the same bytes for the same model.
   a wall, the streaks at its corners), not colors. Each wall has points
   at its corners, 4 m from them and at its middle. A node with
   instances has no data.
+- **The collision boxes.** A model with `"collision"` in its extras (a
+  house) has a node for each box, a child of the root (or of the node
+  that the box moves with), with the name `NAME-colonly`: Godot makes a
+  collision shape of such a node and shows no mesh. The mesh is a box
+  of the role `collision`; `extras.collision` is `"box"` and
+  `extras.size` its size in glTF. The size of the model and its
+  triangles do not count them.
 - **`extras` of the root.** `name`, `kind`, `size` (the box), `sources`,
   `level` (`near`, `mid` or `far`).
 - **The check.** The Khronos glTF validator checks each file in CI: no
