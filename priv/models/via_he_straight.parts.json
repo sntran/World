@@ -1,0 +1,1 @@
+{"name":"via_he_straight","parts":[{"count":1,"kind":"street","mass":2151.3773,"name":"via_he_straight","params":{},"sources":[]}],"ports":[{"kind":"join","normal":[1.0,0.0,0.0],"position":[0.0,0.0,0.0],"size":[0.0,0.0,0.0]},{"kind":"join","normal":[-1.0,0.0,0.0],"position":[-2.0,0.0,0.0],"size":[0.0,0.0,0.0]}]}

@@ -1,0 +1,1 @@
+{"name":"via_he_ram","parts":[{"count":1,"kind":"street","mass":1819.5898,"name":"via_he_ram","params":{},"sources":[]}],"ports":[{"kind":"join","normal":[1.0,0.0,0.0],"position":[0.0,0.0,0.0],"size":[0.0,0.0,0.0]},{"kind":"join","normal":[-1.0,0.0,0.0],"position":[-2.0,0.0,0.0],"size":[0.0,0.0,0.0]}]}

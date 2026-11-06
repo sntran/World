@@ -1,0 +1,1 @@
+{"name":"via_he_corner","parts":[{"count":1,"kind":"street","mass":3238.7432,"name":"via_he_corner","params":{},"sources":[]}],"ports":[{"kind":"join","normal":[-1.0,0.0,0.0],"position":[-3.0,0.0,0.0],"size":[0.0,0.0,0.0]},{"kind":"join","normal":[0.0,0.0,1.0],"position":[0.0,0.0,3.0],"size":[0.0,0.0,0.0]}]}

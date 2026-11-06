@@ -1,0 +1,1 @@
+{"name":"muong_corner","parts":[{"count":1,"kind":"street","mass":129.9157,"name":"muong_corner","params":{},"sources":[]}],"ports":[{"kind":"join","normal":[-1.0,0.0,0.0],"position":[-0.5,0.0,0.0],"size":[0.0,0.0,0.0]},{"kind":"join","normal":[0.0,0.0,1.0],"position":[0.0,0.0,0.5],"size":[0.0,0.0,0.0]}]}
