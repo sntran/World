@@ -44,7 +44,10 @@ defmodule World.Scene do
     a change of each normal: the shapes of a face). The moves (or the
     changes) can also be a map of the index of a point to its move: the
     points not in the map do not move (a shape of the face moves few of
-    the points of a body).
+    the points of a body). `uvs2` is a second UV set (`TEXCOORD_1`), and
+    `data` a list of `{r, g, b, a}` (0 to 1) for each point that goes
+    into `COLOR_0` as it is: numbers for a shader of an app, not colors
+    (`World.Surface`).
     """
     defstruct material: :paint,
               positions: [],
@@ -56,7 +59,9 @@ defmodule World.Scene do
               colors: nil,
               fur: nil,
               fur_dirs: nil,
-              targets: nil
+              targets: nil,
+              uvs2: nil,
+              data: nil
   end
 
   @doc """

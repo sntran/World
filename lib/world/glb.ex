@@ -162,6 +162,9 @@ defmodule World.GLB do
       if p.uvs, do: with_attr(attrs, "TEXCOORD_0", floats(buf, p.uvs, "VEC2", 34962, false)), else: {attrs, buf}
 
     {attrs, buf} =
+      if p.uvs2, do: with_attr(attrs, "TEXCOORD_1", floats(buf, p.uvs2, "VEC2", 34962, false)), else: {attrs, buf}
+
+    {attrs, buf} =
       if p.uvs && MapSet.member?(bumpy, p.material),
         do: with_attr(attrs, "TANGENT", floats(buf, tangents(p), "VEC4", 34962, false)),
         else: {attrs, buf}
@@ -173,9 +176,13 @@ defmodule World.GLB do
       if p.weights, do: with_attr(attrs, "WEIGHTS_0", floats(buf, p.weights, "VEC4", 34962, false)), else: {attrs, buf}
 
     # The colors of the vertices: sRGB 0 to 255 in, linear 0 to 1 out;
-    # with a fourth number, the alpha (0 to 1) of each vertex.
+    # with a fourth number, the alpha (0 to 1) of each vertex. Data for a
+    # shader (`data`) goes in as it is.
     {attrs, buf} =
       case p.colors do
+        nil when p.data != nil ->
+          with_attr(attrs, "COLOR_0", floats(buf, p.data, "VEC4", 34962, false))
+
         nil ->
           {attrs, buf}
 

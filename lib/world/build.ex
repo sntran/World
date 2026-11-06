@@ -68,7 +68,12 @@ defmodule World.Build do
       "limbs" => acc.limbs
     }
 
-    %{scene | extras: Map.merge(extras, Map.get(item, :extras, %{}))}
+    extras = Map.merge(extras, Map.get(item, :extras, %{}))
+
+    case extras do
+      %{"surface" => %{"corners" => corners}} -> %{World.Surface.apply(scene, corners) | extras: extras}
+      _ -> %{scene | extras: extras}
+    end
   end
 
   # The start of a walk of a model: the root node, and no parts yet.
