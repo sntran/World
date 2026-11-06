@@ -181,16 +181,7 @@ defmodule World.Statues do
   def sized, do: Enum.map(Keyword.keys(@sizes), &Atom.to_string/1) ++ ~w(rays material reliefs windows)
 
   @doc "A check of the sources of an order: a map of the name of a size to a text."
-  def check_sources(raw, path) when is_map(raw) do
-    errors =
-      for {k, v} <- raw, not (k in sized() and is_binary(v) and String.length(v) <= 500) do
-        {"#{path}.#{k}", "must be a size (#{Enum.join(sized(), ", ")}) with a text of at most 500 characters"}
-      end
-
-    if errors == [], do: {:ok, raw}, else: {:error, errors}
-  end
-
-  def check_sources(_, path), do: {:error, [{path, "must be a map of the name of a size to its source"}]}
+  def check_sources(raw, path), do: World.Sizes.check(raw, path, sized())
 
   @doc "A check of a short text (the title of a relief)."
   def check_text(raw, _path) when is_binary(raw) and byte_size(raw) <= 200, do: {:ok, raw}
@@ -766,15 +757,11 @@ defmodule World.Statues do
   # The sizes with their sources, the ports, the collision boxes, the
   # corners of the base for the surface data, the stains.
   defp extras(fig, o, lift) do
-    sizes =
-      for {key, unit} <- @sizes, v = Map.fetch!(o, key), v != nil do
-        name = Atom.to_string(key)
-        %{"name" => name, "value" => v, "unit" => unit, "source" => o.sources[name] || "estimate (no source)"}
-      end
+    sizes = World.Sizes.list(o, @sizes, o.sources)
 
     rest =
       for name <- ~w(rays material reliefs windows),
-          do: %{"name" => name, "value" => choice(o, name), "source" => o.sources[name] || "estimate (no source)"}
+          do: %{"name" => name, "value" => choice(o, name), "source" => o.sources[name] || World.Sizes.none()}
 
     {hw, hd} = {o.base_width / 2, o.base_depth / 2}
 
