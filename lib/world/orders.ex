@@ -273,18 +273,24 @@ defmodule World.Orders do
 
   defp parts(item), do: encode(Build.parts_file(item.name, item))
 
+  # The receipt of an order; a model with sizes from an order (a statue)
+  # gives each size with its source.
   defp receipt(order, level, scene) do
-    encode(%{
-      "order" => order,
-      "hash" => hash(order),
-      "level" => Atom.to_string(level),
-      "world" => to_string(Application.spec(:world, :vsn)),
-      "name" => scene.extras["name"],
-      "kind" => scene.extras["kind"],
-      "size" => scene.extras["size"],
-      "joints" => scene.extras["joints"],
-      "limbs" => scene.extras["limbs"],
-      "sources" => scene.extras["sources"]
-    })
+    sizes = if scene.extras["sizes"], do: %{"sizes" => scene.extras["sizes"]}, else: %{}
+
+    encode(
+      Map.merge(sizes, %{
+        "order" => order,
+        "hash" => hash(order),
+        "level" => Atom.to_string(level),
+        "world" => to_string(Application.spec(:world, :vsn)),
+        "name" => scene.extras["name"],
+        "kind" => scene.extras["kind"],
+        "size" => scene.extras["size"],
+        "joints" => scene.extras["joints"],
+        "limbs" => scene.extras["limbs"],
+        "sources" => scene.extras["sources"]
+      })
+    )
   end
 end
