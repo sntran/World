@@ -428,6 +428,11 @@ and no logo on them.
     cracks and patches. The concrete power pole with crossarms, bundles
     of cables, a transformer, and meter boxes (with wire ports). The
     street lamp. A trash bin.
+    Done: `World.Places.StreetKit` (`docs/format.md`, "The street kit").
+    Still to do: the round corner of a curb, the cables between two
+    poles (the game draws them from the `wire` ports), a pole with a
+    transformer on a platform between two poles, the photos of the
+    streets of Vũng Tàu next to the renders (now by eye).
   - **Levels for a town (W22).** For a whole house: near at most about
     40,000 triangles, mid at most 3,000, far at most 300 (a box with the
     right roof). At most 6 materials in one house, by role, so the game

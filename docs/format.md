@@ -299,6 +299,29 @@ of bricks. A town has thousands of them.
   of 0.9 by 2.1 m. The front room is at near and mid; its collision
   boxes are at each level.
 
+### The street kit
+
+The pieces of a street of Vũng Tàu (`World.Places.StreetKit`, W21), each
+a model of the kind `street` in the catalog, with its ports in its list
+of the parts:
+
+- **The strips.** The sidewalk (`via_he_*`: a curb of 0.18 m, tiles of
+  terrazzo of 0.4 m, its top 0.15 m over the street), the gutter
+  (`muong_*`: a channel under covers and a grate of iron) and the
+  paving of a hẻm (`hem_*`: cracks and a patch by its seed), each
+  `straight` (2 m along x), `corner` (a square of its width with an edge
+  on two sides) or `junction` (a square with an edge on one side), and
+  the ramp cut (`via_he_ram`). The street side is at y = 0. A `join`
+  port is at each side that the next piece meets.
+- **The things on the sidewalk.** The concrete pole of 12 m
+  (`cot_dien_12m`, 10 m over the ground: `wire` ports at its insulators,
+  `line` `high`, and at its clamp, `line` `low`; `meter`, `transformer`
+  and `lamp` ports for the things on it), the transformer
+  (`may_bien_ap`) and the meter boxes (`hop_cong_to`, four `wire` ports
+  with `line` `house`) that hang on it (`"site"`), the street lamp
+  (`den_duong`) and the bin of 240 L (`thung_rac_240l`, its lid on a
+  hinge of the role `open`).
+
 ## The materials
 
 A material is a role, not a color:
