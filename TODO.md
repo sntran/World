@@ -10,8 +10,10 @@ into the steps of `AGENTS.md`.
   sends.
 - **The crew van of the Transit.** Ford does not sell it for 2024 to
   2027. The owner wants it in the line: its sizes come from the earlier
-  years. It comes with the Sprinter and the ProMaster (`docs/world.md`,
-  step W7).
+  years. The Sprinter and the ProMaster are on the line now
+  (`docs/world.md`, step W8); the crew van waits for photos. No photo
+  shows its left side: its window of the second row is the window of
+  the passenger van.
 - **The engineers and the architects of the world.** People that read
   the log of the world and propose a new process, a new component or a
   new model. A population of plans that compete (genetic programming),
@@ -28,9 +30,10 @@ into the steps of `AGENTS.md`.
   hẻm: a row of houses on each side, the sidewalks with their curbs, the
   paving of the street. A reference: the 3D chess game "Xóm Cờ Vua,
   Hẻm Nắng".
-- **Plants from rules.** A trunk, branches, leaves and flowers from a
-  few numbers (L-systems or space colonization): the plants in pots and
-  the vines of the houses, the trees and the rocks along a road.
+- **More plants from rules.** The nursery grows four species from their
+  rules (step P7). Next: the plants in pots and the vines of the houses,
+  and the trees and the rocks along a road (L-systems or space
+  colonization).
 - **Decals and lights.** A texture or a printed panel on the paint (the
   stripe and the star of life of an ambulance, a sign), and materials
   that glow (lamps, the light bar).
@@ -129,13 +132,14 @@ into the steps of `AGENTS.md`.
 - **Paint the weights of a skin in the Wings plugin.** The people have
   the weights of MakeHuman. A shaped part that bends (a seat cushion, a
   cable) needs a tool for its own weights.
-- **More animations of people.** "walk" is the only clip: a run, a sit
-  down, the hands that turn the bars of a scooter. Each clip is a
-  function of the turns of the bones in time (`World.People.Pose`).
-- **Clothes in their own colors at mid and far.** A low-poly body has
-  the mean color of each piece of clothes: a suit of a shirt and jeans
-  is all one color. The color of each face can come from the texture
-  of the clothes.
+- **More animations of people.** The clips are "walk", "wave", "point"
+  and the routines of a morning of exercise. Next: a run, a sit down,
+  the hands that turn the bars of a scooter. Each clip is a function of
+  the turns of the bones in time (`World.People.Pose`).
+- **The patterns of clothes at mid and far.** A face of a low-poly body
+  under a piece of clothes has the mean color of that piece, so a check
+  or a print is one color there. The color of each face can come from
+  the texture of the clothes.
 - **More people.** Children (the targets of a child are not in the
   folder yet), more hair and clothes from the packs of MakeHuman.
 - **More of a house.** Floors of joists, a ceiling, inner walls, stairs,
@@ -146,28 +150,23 @@ into the steps of `AGENTS.md`.
   across the two wythes; the wall of World has two wythes of stretchers.
 - **Loops of connections.** A frame with two struts to one part: the
   tree takes one strut, and a fixed connection closes the loop.
-- **Vertex colors and textures.** The core of Wings keeps UV and vertex
-  colors (`wings_color` must come into `wings/` for the colors). The GLB
-  writer writes them.
+- **The colors and the UVs of a `.wings` file.** The GLB writer writes
+  UVs, textures and vertex colors (the animals, the skin and the clothes
+  of people). The core of Wings keeps the UVs and the vertex colors of
+  a shaped part too, but `wings_color` must come into `wings/` for the
+  colors.
 - **A 3MF file for a print with colors.** One file with the color of
   each material, for a printer with more than one filament.
 - **An SVG of any mesh.** The painter of DIY sorts its parts (boxes and
   prisms). A mesh of Wings needs a sort of its triangles.
-- **A catalog of makes and models.** Real vehicles with their real
-  sizes and sources: the Chevy Bolt, the Honda Wave, the Honda Vision. A
-  person chooses a vehicle in Phượt.
-- **The other vans of DIY.** The Ram ProMaster (136, 159, 159 extended)
-  and the Mercedes-Benz Sprinter (144, 170, 170 extended), each with its
-  engine bay, as makes of `priv/data/vans.json`. First the photos of
-  dealers and the drawings of the maker (the sizes, the traces, the
-  windows): not a memory.
+- **The engine bays of the other vans.** The ProMaster and the Sprinter
+  are on the line (step W8) with the bay of the Transit: the engine, the
+  radiator and the parts of the bay of each make need their own
+  sources.
 - **The heights of the passenger van.** Ford gives 97.1 in (medium
   roof) and 108.4 in (high roof) for the passenger van, and 101.3 in and
   109.6 in for the cargo van. The van uses the heights of the cargo van.
   Find the cause (the load, the tires, a rail) in the drawings of Ford.
-- **The crew van at the left side.** No photo shows the left side of the
-  crew van: its window of the second row is the window of the passenger
-  van. A photo can correct it.
 - **A belt for the second alternator.** The second alternator of the van
   has no belt and no bracket on the engine. The kit of Ford for the
   Transit has its own bracket: its shape needs a source.
@@ -291,10 +290,10 @@ and no logo on them.
   cm and of about 45 cm, and their stacks. Low tables of stainless steel
   and of plastic. A market stall: plastic baskets, aluminum basins, tanks
   with air pumps, a dial scale, a tarp umbrella, boxes of polystyrene.
-  The round pan of bánh khọt. A hammock.
-- **Boats and the beach (W10).** A small wooden fishing boat (ghe, 8 to
-  12 m: the length, the colors, a cabin, flags, the load of rope, nets,
-  baskets and floats), the round basket boat (thúng chai, 1.5 to 2 m, of
+  The round pan of bánh khọt.
+- **Boats and the beach (W10).** The ghe is in the boatyard
+  (`World.Boats.Ghe`, its next steps above). Still to do: its flags and
+  its load (rope, nets, baskets and floats), the round basket boat (thúng chai, 1.5 to 2 m, of
   bamboo with a dark coat, one oar), rows of fishing stakes with nets,
   ships at anchor (the far level only), a fast ferry, swim rings, beach
   umbrellas, canvas chairs, thatched huts.
