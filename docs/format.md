@@ -346,8 +346,14 @@ ground at the center of the base, and the figure looks to +y.
   down to the shoulders, with the face open; with `beard`, a beard along
   the jaw to a point, and a mustache.
 - **The robe.** A straight column with a flat front from the neck to the
-  feet, wide sleeves along the bones of the arms, and two long panels at
-  its sides to a little over the feet. In a robe, the cast takes only the
+  feet; the mantle, a cape on the shoulders with its lower edge level at
+  `mantle` m over the feet (by default 0.886 of the height of the
+  shoulders), a point at the front center under the edge, and a square
+  collar band round the foot of the neck; the sleeves, with their top
+  along the arm, a cuff band at the wrist, and a large triangle of cloth
+  that falls from the cuff to the side of the body at the edge of the
+  mantle; and two long panels at its sides, from the edge of the mantle
+  to a little over the feet. In a robe, the cast takes only the
   hair, the head and the neck over the collar, and the hands out of the
   sleeves from the person: a statue is a column, not a body in clothes.
 - **The cast.** One closed shell of the role `stone_wash` (concrete
@@ -407,7 +413,8 @@ statue has the list `sizes`.
 
 The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
 from the feet to the top of the halo, the hands 18.4 m apart, the hands
-2.2 m, the head 4 m with the beard, 133 steps inside; a plaza of 21 m with 3 steps, a block of 13 by
+2.2 m, the head 4 m with the beard, the edge of the mantle 21.5 m over
+the feet, 133 steps inside; a plaza of 21 m with 3 steps, a block of 13 by
 13 by 6.5 m with four reliefs, and a dome of 8 faces, 8 m wide and 3 m
 high. The sizes of the base are measured from photos (Vung_Tau
 `landmarks.md`, about 15%), and the receipt says so.

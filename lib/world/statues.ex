@@ -56,6 +56,7 @@ defmodule World.Statues do
     rays: 9,
     head: nil,
     beard: false,
+    mantle: nil,
     material: :concrete,
     hollow: false,
     wall: 0.3,
@@ -92,6 +93,7 @@ defmodule World.Statues do
     hand: "m",
     lift: "deg",
     head: "m",
+    mantle: "m",
     wall: "m",
     steps: "steps",
     well: "m",
@@ -187,6 +189,7 @@ defmodule World.Statues do
       hand: 2.2,
       head: 4.0,
       beard: true,
+      mantle: 21.5,
       hollow: true,
       steps: 133,
       plaza_radius: 10.5,
@@ -213,6 +216,8 @@ defmodule World.Statues do
         "span" => "#{vi}: the arms 18.4 m wide.",
         "head" =>
           "#{lm}, photo 3: about 4 m from the top of the head to the end of the beard, the face about 1.6 m wide; the hair to the shoulders, a beard.",
+        "mantle" =>
+          "#{lm}, photos 1, 3, 4: the lower edge of the mantle level, about 21 m to 22 m over the feet, with a point at the front center; about 5.5 m to 6.5 m wide at its edge.",
         "hand" => "#{av}: each hand 2.2 m long (the middle finger 1.1 m).",
         "lift" => photo <> ": the arms a little over the level.",
         "steps" => "#{vi}: 133 steps in a spiral from the base to the shoulders.",
@@ -628,10 +633,13 @@ defmodule World.Statues do
   # In units of the person.
   defp robe(%{scale: _}, %{robe: false}), do: {[], []}
 
-  defp robe(%{scale: s, marks: m, hands: hands}, _o) do
+  defp robe(%{scale: s, marks: m, hands: hands}, o) do
     sh = elem(m["upperarm_l"], 2) / s
     neck = elem(m["head"], 2) / s
     yc = 0.01 * s
+    edge = min(max((o.mantle || 0.886 * sh * s) / s, 0.96), sh - 0.05)
+
+    section = fn {z, hx, hy}, power -> {{0.0, yc, z * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx * s, hy * s, power} end
 
     column =
       [
@@ -640,19 +648,19 @@ defmodule World.Statues do
         {0.07, 0.117, 0.083},
         {0.5, 0.122, 0.085},
         {0.95, 0.128, 0.088},
-        {sh - 0.12, 0.134, 0.092},
-        {sh, 0.136, 0.09},
-        {sh + 0.05, 0.11, 0.075},
+        {edge - 0.003, 0.13, 0.0905},
+        {edge + 0.02, 0.095, 0.062},
+        {sh + 0.05, 0.08, 0.055},
         {neck, 0.055, 0.055}
       ]
-      |> Enum.map(fn {z, hx, hy} -> {{0.0, yc, z * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx * s, hy * s, 3.5} end)
+      |> Enum.map(&section.(&1, 3.5))
       |> Shape.loft(:concrete, sides: 24)
 
     panels =
       for side <- [-1.0, 1.0] do
         Shape.loft(
           [
-            {{side * 0.148 * s, yc, (sh - 0.02) * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, 0.02 * s, 0.08 * s, 4.0},
+            {{side * 0.148 * s, yc, (edge - 0.02) * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, 0.02 * s, 0.08 * s, 4.0},
             {{side * 0.139 * s, yc, 0.03 * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, 0.02 * s, 0.075 * s, 4.0}
           ],
           :concrete,
@@ -660,8 +668,48 @@ defmodule World.Statues do
         )
       end
 
-    sleeves = for side <- ~w(l r), do: sleeve(m["upperarm_" <> side], m["lowerarm_" <> side], m["hand_" <> side], s)
-    {[column | panels ++ sleeves], Enum.map(hands, &mitt/1)}
+    sleeves =
+      for side <- ~w(l r), do: sleeve(m["upperarm_" <> side], m["hand_" <> side], edge * s, s)
+
+    {[column | panels ++ mantle(sh, edge, yc, s) ++ Enum.concat(sleeves)], Enum.map(hands, &mitt/1)}
+  end
+
+  # The mantle (by eye from photos 1, 3 and 4 of Vung_Tau landmarks.md):
+  # a cape on the shoulders, out of the robe by 0.021 of the figure (0.4 m
+  # on Núi Nhỏ), with its lower edge level at `edge`, 0.317 of the figure
+  # wide there (6 m); a point at the front center under the edge; and a
+  # square collar band round the foot of the neck. In units of the figure
+  # (`s`). Over the edge the column of the robe is deep in the cape, and
+  # the cape stops under the collar: a surface in a solid near its face
+  # (less than 1.5 cells) gives the distances of the cast as an outer
+  # surface does, and makes a ridge.
+  defp mantle(sh, edge, yc, s) do
+    section = fn {z, hx, hy, power} -> {{0.0, yc, z * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx * s, hy * s, power} end
+
+    cape =
+      [
+        {edge, 0.1585, 0.112},
+        {sh - 0.05, 0.165, 0.112},
+        {sh, 0.165, 0.108},
+        {sh + 0.05, 0.14, 0.093},
+        {sh + 0.085, 0.105, 0.078}
+      ]
+      |> Enum.map(fn {z, hx, hy} -> section.({z, hx, hy, 3.5}) end)
+      |> Shape.loft(:concrete, sides: 24)
+
+    point =
+      [{edge + 0.005, 0.04, 0.014}, {edge - 0.065, 0.002, 0.008}]
+      |> Enum.map(fn {z, hx, hy} ->
+        {{0.0, yc + 0.1 * s, z * s}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, hx * s, hy * s, 2.0}
+      end)
+      |> Shape.loft(:concrete, sides: 12)
+
+    collar =
+      [{sh + 0.095, 0.1, 0.083}, {sh + 0.135, 0.1, 0.083}]
+      |> Enum.map(fn {z, hx, hy} -> section.({z, hx, hy, 6.0}) end)
+      |> Shape.loft(:concrete, sides: 24)
+
+    [cape, point, collar]
   end
 
   # A mitt round the points of a hand out to the side: from the wrist to
@@ -676,31 +724,42 @@ defmodule World.Statues do
     |> Shape.loft(:concrete, sides: 16)
   end
 
-  # A sleeve: wide at the shoulder (and lower, as it hangs), narrow at the
-  # wrist.
-  defp sleeve(shoulder, elbow, wrist, s) do
-    d1 = Vec.norm(Vec.sub(elbow, shoulder))
-    d2 = Vec.norm(Vec.sub(wrist, elbow))
+  # A sleeve (by eye from photos 1 and 3 of Vung_Tau landmarks.md): its top
+  # along the arm, from the shoulder to the wrist; a large triangle of
+  # cloth that falls from the cuff to the side of the body at the edge of
+  # the mantle; and a cuff band at the wrist, 0.037 of the figure wide
+  # (0.7 m on Núi Nhỏ) and 0.122 high (2.3 m), out of the sleeve. In units
+  # of the figure (`s`); the sections go across x, from the body out.
+  defp sleeve({sx, _, _}, {wx, wy, wz}, edge, s) do
+    side = if wx < 0, do: -1.0, else: 1.0
+    slope = (wz - edge) / (abs(wx) - abs(sx))
+    top = fn x -> wz + 0.061 * s - (abs(wx) - x) * 0.14 end
 
-    [
-      {Vec.sub(shoulder, Vec.scale(d1, 0.04 * s)), d1, 0.1, 0.14, -0.08},
-      {shoulder, d1, 0.1, 0.14, -0.08},
-      {elbow, Vec.norm(Vec.add(d1, d2)), 0.075, 0.095, -0.035},
-      {Vec.sub(wrist, Vec.scale(d2, 0.01 * s)), d2, 0.06, 0.055, 0.0}
-    ]
-    |> Enum.map(fn {at, d, hu, hv, down} ->
-      v = across(d)
-      u = Vec.cross(v, d)
-      {Vec.add(at, Vec.scale(v, down * s)), u, v, hu * s, hv * s, 4.0}
-    end)
-    |> Shape.loft(:concrete, sides: 16)
-  end
+    at = fn x, z0, z1, hy ->
+      {{side * x, wy, (z0 + z1) / 2}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, hy, (z1 - z0) / 2, 4.0}
+    end
 
-  # The direction across a bone toward the top (or the front, for a bone
-  # that goes up or down).
-  defp across(d) do
-    hint = if abs(Vec.dot(d, {0.0, 0.0, 1.0})) > 0.9, do: {0.0, 1.0, 0.0}, else: {0.0, 0.0, 1.0}
-    Vec.norm(Vec.sub(hint, Vec.scale(d, Vec.dot(hint, d))))
+    inner = abs(sx) - 0.06 * s
+    corner = abs(sx) - 0.016 * s
+    cuff = abs(wx) - 0.037 * s
+    low = fn x -> min(edge + (x - corner) * slope * 0.85, wz - 0.05 * s) end
+
+    cloth =
+      [
+        at.(inner, edge, top.(inner), 0.065 * s),
+        at.(corner, edge, top.(corner), 0.065 * s),
+        at.(cuff - 0.003 * s, low.(cuff), top.(cuff) - 0.01 * s, 0.045 * s)
+      ]
+      |> Shape.loft(:concrete, sides: 16)
+
+    band =
+      [
+        at.(cuff, wz - 0.061 * s, wz + 0.061 * s, 0.052 * s),
+        at.(abs(wx) + 0.004 * s, wz - 0.061 * s, wz + 0.061 * s, 0.052 * s)
+      ]
+      |> Shape.loft(:concrete, sides: 16)
+
+    [cloth, band]
   end
 
   # The openings of a hollow statue: the windows in the front of the robe,

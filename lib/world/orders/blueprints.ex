@@ -679,6 +679,13 @@ defmodule World.Orders.Blueprints do
           20.0,
           "In a robe: from the top of the head to the end of the beard. None: the head of the person."
         ),
+        m.(
+          "mantle",
+          nil,
+          0.5,
+          100.0,
+          "In a robe: the lower edge of the mantle over the feet. None: 0.886 of the shoulders."
+        ),
         option("beard", :boolean,
           default: false,
           doc: "In a robe, with head: a beard along the jaw to a point, and a mustache."
@@ -776,6 +783,7 @@ defmodule World.Orders.Blueprints do
           robe: o["robe"],
           head: o["head"],
           beard: o["beard"],
+          mantle: o["mantle"],
           halo: o["halo"],
           rays: o["rays"],
           material: String.to_existing_atom(o["material"]),

@@ -52,6 +52,7 @@ defmodule World.StatuesTest do
     assert sizes["base_height"]["source"] =~ "measured from photos (Vung_Tau landmarks.md)"
     assert sizes["dome_sides"]["value"] == 8
     assert sizes["head"]["value"] == 4.0 and sizes["head"]["source"] =~ "photo 3"
+    assert sizes["mantle"]["value"] == 21.5 and sizes["mantle"]["source"] =~ "photos 1, 3, 4"
 
     # The head: a cast of its own on the fine grid, from its top down past
     # the end of the beard (4 m) to the neck.

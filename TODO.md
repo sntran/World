@@ -470,7 +470,9 @@ and no logo on them.
     windows with grilles, the terrace, the dome with its stair), the
     robe to the sizes of the photos, and the head (4 m to the end of the
     beard, the face, the hair to the shoulders and the beard on a grid of
-    3 cm at near; the limit of near is 400,000 triangles). Not yet: the pattern of the grilles
+    3 cm at near; the limit of near is 400,000 triangles), and the
+    mantle (the cape with its level edge at 21.5 m, the point and the
+    collar; the sleeves with the cuff and the triangle of cloth). Not yet: the pattern of the grilles
     of the windows (chữ thọ), the figures of the reliefs as figures of
     people, the letters of the band as real text, the inside of the base
     (a room), and the hollow at mid.
