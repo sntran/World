@@ -111,7 +111,7 @@ defmodule World.StreamTest do
     end
 
     # The next part of the response, from a socket in active mode.
-    defp chunk(socket, timeout \\ 5_000) do
+    defp chunk(socket, timeout) do
       receive do
         {:tcp, ^socket, data} -> data
       after

@@ -15,6 +15,12 @@ defmodule World.Construction do
   4. The work of a task is real: the person makes the triangles of the
      meshes of its element and the GLB of the element alone
      (`task_started`, `task_done`, `element`).
+  A job with a drawing (`drawing`, `World.Orders.Blueprints.drawing/1`)
+  has one task for each node of the drawing (`World.Plan.of_drawing/1`):
+  the person makes the node (the skill of the node, `World.Skill`, with
+  the data of its nodes `from`), and the elements of the nodes go to the
+  watchers in the order of the nodes.
+
   5. When each task is done, it lets its people go and joins the model:
      one `World.Build.scene/2` with the triangles that the people made,
      so the file has the bytes of a build with no world (`done`,
@@ -45,8 +51,9 @@ defmodule World.Construction do
   Start a construction under the node. The job: `id` (a text), `item` (a
   function of a level that gives the item), `scene` (a function of the
   item and the options of `World.Build.scene/2`; `World.Build.scene/2` by
-  default), `level` (`:near` by default), `pose`, `budget` (a map), and
-  `reply` (the process that gets the result).
+  default), `level` (`:near` by default), `pose`, `budget` (a map),
+  `drawing` (nil, or the drawing of the item: the people make it node by
+  node), and `reply` (the process that gets the result).
   """
   def start(job), do: DynamicSupervisor.start_child(World.Constructions, {__MODULE__, job})
 
@@ -84,6 +91,7 @@ defmodule World.Construction do
       |> Map.put_new(:level, :near)
       |> Map.put_new(:pose, %{})
       |> Map.put_new(:budget, %{})
+      |> Map.put_new(:drawing, nil)
 
     budget = job.budget
     clock = Clock.new()
@@ -118,9 +126,9 @@ defmodule World.Construction do
   def handle_continue(:plan, s) do
     case fit(s.job, s.job.budget["triangles"]) do
       {:ok, level, item} ->
-        plan = Plan.flat(item)
-        elements = Build.elements(item, level, s.job.pose)
-        keys = elements |> Enum.map(&elem(&1, 3)) |> Enum.uniq() |> Enum.with_index() |> Map.new()
+        drawing = s.job.drawing
+        plan = if drawing, do: Plan.of_drawing(drawing), else: Plan.flat(item)
+        elements = if drawing, do: [], else: Build.elements(item, level, s.job.pose)
 
         s =
           Map.merge(s, %{
@@ -128,7 +136,8 @@ defmodule World.Construction do
             item: item,
             plan: plan,
             elements: Enum.group_by(elements, &elem(&1, 0), &Tuple.delete_at(&1, 0)),
-            keys: keys,
+            made: %{},
+            placed: 0,
             waiting: plan.tasks,
             done: MapSet.new(),
             running: %{},
@@ -150,16 +159,29 @@ defmodule World.Construction do
 
   # The item at the level of the job, or at a lower level, with no more
   # triangles than the budget: `{:ok, level, item}`, or the triangles of
-  # the far level.
-  defp fit(job, limit) do
+  # the far level. The item of a drawing is not made yet (nil): the
+  # estimate of the drawing counts.
+  defp fit(%{drawing: nil} = job, limit) do
+    each_level(job, limit, fn level ->
+      item = job.item.(level)
+      {item, estimate(item, level, job.pose)}
+    end)
+  end
+
+  defp fit(job, limit), do: each_level(job, limit, &{nil, World.Drawing.estimate(job.drawing, &1)})
+
+  defp each_level(job, limit, fun) do
     levels = Enum.drop_while(@levels, &(&1 != job.level))
 
     Enum.reduce_while(levels, nil, fn level, _ ->
-      item = job.item.(level)
-      n = estimate(item, level, job.pose)
+      {item, n} = if limit, do: fun.(level), else: {if(job.drawing, do: nil, else: job.item.(level)), 0}
       if limit == nil or n <= limit, do: {:halt, {:ok, level, item}}, else: {:cont, {:error, n}}
     end)
   end
+
+  @doc "The key of the GLB of an element: a hash of the meshes that it shows."
+  def key(shown),
+    do: :crypto.hash(:sha256, :erlang.term_to_binary(shown)) |> binary_part(0, 8) |> Base.encode16(case: :lower)
 
   @doc "The triangles of the meshes of an item at a level: each face of n corners is n - 2."
   def estimate(item, level, pose \\ %{}) do
@@ -208,23 +230,12 @@ defmodule World.Construction do
         idle: s.idle ++ [p],
         done: MapSet.put(s.done, id),
         triangles: Map.merge(s.triangles, result.triangles),
-        glbs: Map.merge(s.glbs, result.glbs)
+        glbs: Map.merge(s.glbs, result.glbs),
+        made: if(result[:made], do: Map.put(s.made, id, result.made), else: s.made)
     }
 
     s = record(s, "task_done", p, task_data(task))
-
-    s =
-      Enum.reduce(Map.get(s.elements, id, []), s, fn {frame, part, shown}, s ->
-        data = %{
-          "task" => id,
-          "part" => part.name,
-          "glb" => s.keys[shown],
-          "matrix" => Frame.matrix(GLB.gl_frame(frame))
-        }
-
-        record(s, "element", p, data)
-      end)
-
+    s = if s.job.drawing, do: place(s, p), else: elements(s, p, id, Map.get(s.elements, id, []))
     finish(assign(s))
   end
 
@@ -256,6 +267,36 @@ defmodule World.Construction do
   def handle_info(:deadline, s), do: stop(s, %{"reason" => "seconds", "done" => MapSet.size(s.done)})
 
   def handle_info(:close, s), do: {:stop, :normal, s}
+
+  defp elements(s, p, id, elements) do
+    Enum.reduce(elements, s, fn {frame, part, shown}, s ->
+      data = %{"task" => id, "part" => part.name, "glb" => key(shown), "matrix" => Frame.matrix(GLB.gl_frame(frame))}
+      record(s, "element", p, data)
+    end)
+  end
+
+  # The elements of the nodes of a drawing, in the order of the nodes: each
+  # node made after the nodes before it, in the model of the nodes so far.
+  defp place(s, p) do
+    names = Enum.map(s.job.drawing["nodes"], & &1["name"])
+    ready = names |> Enum.drop(s.placed) |> Enum.take_while(&Map.has_key?(s.made, &1))
+
+    if ready == [] or not Enum.any?(Map.values(s.made), &elem(&1, 0)) do
+      s
+    else
+      made = Map.take(s.made, Enum.take(names, s.placed + length(ready)))
+      elements = Build.elements(World.Drawing.assemble(s.job.drawing, made), s.level, s.job.pose)
+
+      own = fn name ->
+        for {path, f, part, shown} <- elements,
+            path == name or String.starts_with?(path, name <> "/"),
+            do: {f, part, shown}
+      end
+
+      s = Enum.reduce(ready, s, fn name, s -> elements(s, p, name, own.(name)) end)
+      %{s | placed: s.placed + length(ready)}
+    end
+  end
 
   defp stop(s, data) do
     s = record(s, "stopped", nil, data)
@@ -289,13 +330,11 @@ defmodule World.Construction do
 
   # The work of a task: the triangles of the meshes of its element that
   # nobody made yet, and the GLB of each part of the element that is new.
-  defp work(s, task) do
+  # For a node of a drawing, the person makes the node first.
+  defp work(%{job: %{drawing: nil}} = s, task) do
     elements = Map.get(s.elements, task.id, [])
     meshes = for {_, _, {shapes, _}} <- elements, m <- shapes, not Map.has_key?(s.triangles, m), uniq: true, do: m
-
-    parts =
-      for {_, part, shown} <- elements, not Map.has_key?(s.glbs, s.keys[shown]), uniq: true, do: {s.keys[shown], part}
-
+    parts = for {_, part, shown} <- elements, not Map.has_key?(s.glbs, key(shown)), uniq: true, do: {key(shown), part}
     known = Map.take(s.triangles, for({_, _, {shapes, _}} <- elements, m <- shapes, do: m))
     level = s.level
 
@@ -304,6 +343,29 @@ defmodule World.Construction do
       all = Map.merge(known, triangles)
       glbs = Map.new(parts, fn {key, part} -> {key, Build.glb(part, level: level, triangles: all)} end)
       %{triangles: triangles, glbs: glbs}
+    end
+  end
+
+  defp work(s, task) do
+    {drawing, level, made} = {s.job.drawing, s.level, s.made}
+
+    fn ->
+      {thing, _, _} =
+        result =
+        World.Detail.with(level, fn ->
+          World.Drawing.make(drawing, task.id, World.Drawing.inputs(drawing, task.id, made))
+        end)
+
+      elements = if thing, do: Build.elements(thing, level), else: []
+      meshes = for {_, _, _, {shapes, _}} <- elements, m <- shapes, uniq: true, do: m
+      triangles = Map.new(meshes, &{&1, Mesh.triangles(&1)})
+
+      glbs =
+        Map.new(elements, fn {_, _, part, shown} ->
+          {key(shown), Build.glb(part, level: level, triangles: triangles)}
+        end)
+
+      %{triangles: triangles, glbs: glbs, made: result}
     end
   end
 
@@ -336,6 +398,7 @@ defmodule World.Construction do
   # The end: each task done, the people go, and the model is joined.
   defp finish(%{waiting: [], running: running} = s) when running == %{} do
     s = Enum.reduce(s.idle, s, &let_go(&2, &1))
+    s = if s.job.drawing, do: %{s | item: World.Drawing.assemble(s.job.drawing, s.made)}, else: s
     glb = GLB.encode(s.job.scene.(s.item, level: s.level, triangles: s.triangles))
     s = record(s, "done", nil, %{"bytes" => byte_size(glb), "level" => Atom.to_string(s.level)})
     send(s.sampler, :peak)
@@ -361,7 +424,7 @@ defmodule World.Construction do
       {:ok, _} ->
         linger = Keyword.get(Application.get_env(:world, __MODULE__, []), :linger, 300_000)
         Process.send_after(self(), :close, linger)
-        {:noreply, %{s | item: nil, triangles: %{}, elements: %{}, over: true}}
+        {:noreply, %{s | item: nil, triangles: %{}, elements: %{}, made: %{}, over: true}}
 
       {:error, {:already_registered, _}} ->
         {:stop, :normal, s}

@@ -1,0 +1,63 @@
+{
+  "blueprint": "statue",
+  "options": {
+    "name": "tuong_chua_kito_vua",
+    "height": 32.0,
+    "span": 18.4,
+    "hand": 2.2,
+    "hollow": true,
+    "steps": 133,
+    "windows": [
+      {
+        "z": 18.72,
+        "width": 1.2,
+        "height": 1.2
+      },
+      {
+        "z": 15.84,
+        "width": 1.2,
+        "height": 1.2
+      },
+      {
+        "z": 12.48,
+        "width": 1.2,
+        "height": 1.2
+      }
+    ],
+    "reliefs": [
+      {
+        "side": "front",
+        "figures": 13,
+        "title": "The Last Supper"
+      },
+      {
+        "side": "back",
+        "figures": 2,
+        "title": "The keys to Peter"
+      },
+      {
+        "side": "left",
+        "figures": 3,
+        "title": "Christ before Pilate"
+      },
+      {
+        "side": "right",
+        "figures": 5,
+        "title": "The three Magi"
+      }
+    ],
+    "sources": {
+      "height": "vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu): 32 m. The owner: from the feet to the top of the halo.",
+      "span": "vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu): the arms 18.4 m wide.",
+      "hand": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: each hand 2.2 m long (the middle finger 1.1 m).",
+      "lift": "by eye from the photo Statue_of_Jesus_in_Vung_Tau.jpg (Wikimedia Commons, Category:Christ of Vung Tau): the arms a little over the level.",
+      "steps": "vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu): 133 steps in a spiral from the base to the shoulders.",
+      "base_height": "en.wikipedia, Christ of Vũng Tàu: a platform of 4 m (36 m in all). The owner: keep 4 m.",
+      "base_width": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: the base 12 m long.",
+      "rays": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: 9 rays of metal in the halo, which are also lightning rods.",
+      "material": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: reinforced concrete with a render of washed stone.",
+      "reliefs": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: front the Last Supper, back the keys to Peter, the sides Christ before Pilate and the three Magi.",
+      "windows": "by eye from the photo Statue_of_Jesus_in_Vung_Tau.jpg (Wikimedia Commons, Category:Christ of Vung Tau): three square openings down the front of the robe, at 0.585, 0.495 and 0.39 of the height."
+    }
+  }
+}

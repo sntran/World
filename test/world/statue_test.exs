@@ -1,16 +1,24 @@
-defmodule World.StatuesTest do
+defmodule World.StatueTest do
   use ExUnit.Case, async: true
 
-  alias World.{Build, Check, Detail, Mass, Mesh, Orders, Scene, Statues}
+  alias World.{Build, Check, Detail, Drawing, Mass, Mesh, Orders, Scene}
+  alias World.Orders.Blueprints
 
-  defp at(level, fun), do: Detail.with(level, fun)
   defp scene(item, level), do: Build.scene(item, level: level)
   defp roles(s), do: for(n <- s.nodes, p <- n.primitives, uniq: true, do: p.material)
   defp part(item, name), do: item.nodes |> List.keyfind(name, 0) |> elem(1)
+  defp nui_nho(level), do: Detail.with(level, fn -> Drawing.file("tuong_chua_kito_vua") end)
+
+  # A statue of the blueprint in data, with the options of an order.
+  defp statue(level, options) do
+    {:ok, full} = Orders.check(%{"blueprint" => "statue", "options" => options})
+    {:ok, b} = Blueprints.fetch("statue")
+    Detail.with(level, fn -> b.build.(full["options"]) end)
+  end
 
   @tag timeout: 300_000
   test "the statue on Núi Nhỏ: 32 m from the feet to the halo, the hands 18.4 m apart, hollow at near, the checks" do
-    near = at(:near, &Statues.nui_nho/0)
+    near = nui_nho(:near)
     assert near.kind == :statue and Check.model(near) == :ok
     s = scene(near, :near)
     {{x0, _, z0}, {x1, _, _}} = Scene.bounds(s)
@@ -38,13 +46,13 @@ defmodule World.StatuesTest do
     assert length(near.extras["collision"]) == 5
 
     # Hollow at near only: the mid level weighs more.
-    mid = at(:mid, &Statues.nui_nho/0)
+    mid = nui_nho(:mid)
     assert Mass.of(mid).mass > Mass.of(near).mass
     refute List.keyfind(mid.nodes, "cau_thang", 0)
     assert Scene.triangles(scene(mid, :mid)) < Scene.triangles(s)
 
     # The far form: at most 300 triangles (R9 of plan 0008), the same size.
-    far = at(:far, &Statues.nui_nho/0)
+    far = nui_nho(:far)
     fs = scene(far, :far)
     assert Scene.triangles(fs) <= 300
     {{fx0, _, _}, {fx1, _, fz1}} = Scene.bounds(fs)
@@ -54,27 +62,46 @@ defmodule World.StatuesTest do
   end
 
   test "a statue of other options: a pose of a person, no robe, no halo, of stone, with no base" do
-    o = [height: 3.0, pose: "stand", robe: false, halo: false, material: :stone, base_height: 0.0, plinth_height: 0.0]
-    item = at(:mid, fn -> Statues.statue(o) end)
+    o = %{
+      "height" => 3.0,
+      "pose" => "stand",
+      "robe" => false,
+      "halo" => false,
+      "material" => "stone",
+      "base_height" => 0.0,
+      "plinth_height" => 0.0
+    }
+
+    item = statue(:mid, o)
     assert Check.model(item) == :ok
     s = scene(item, :mid)
     {{_, _, z0}, {_, _, z1}} = Scene.bounds(s)
     assert_in_delta z1 - z0, 3.0, 0.1
     assert roles(s) -- [:collision] == [:stone]
-    assert [_] = item.nodes
+    # No base and no plinth: the statue is the root, and the only node.
+    assert [{"tuong", _, nil}] = item.nodes
     assert length(item.extras["collision"]) == 3
 
-    far = at(:far, fn -> Statues.statue(o ++ [halo: true, rays: 4, rail: 0.0, base_height: 1.0]) end)
+    far = statue(:far, Map.merge(o, %{"halo" => true, "rays" => 4, "rail" => 0.0, "base_height" => 1.0}))
     assert Scene.triangles(scene(far, :far)) <= 300
 
     # The rays: an even count has no ray up.
-    near = at(:mid, fn -> Statues.statue(height: 3.0, rays: 4, base_height: 0.0, plinth_height: 0.0) end)
+    near = statue(:mid, %{"height" => 3.0, "rays" => 4, "base_height" => 0.0, "plinth_height" => 0.0})
     assert Enum.count(part(near, "tuong").shapes, &(&1.material == :steel)) == 4
 
     # The defaults: a statue of 32 m with its arms out, on a base.
-    assert Scene.triangles(scene(at(:far, fn -> Statues.statue() end), :far)) <= 300
+    assert Scene.triangles(scene(statue(:far, %{}), :far)) <= 300
 
-    assert_raise ArgumentError, ~r/span/, fn -> at(:far, fn -> Statues.statue(span: 1.0, hand: 0.5) end) end
+    assert_raise ArgumentError, ~r/span/, fn -> statue(:far, %{"span" => 1.0, "hand" => 0.5}) end
+  end
+
+  test "the choices of the blueprint in data are the hair and the poses of a person" do
+    {:ok, b} = Blueprints.fetch("statue")
+    values = Map.new(b.options, &{&1.name, &1.values})
+    hair = World.People.Data.assets() |> Map.fetch!("hair") |> Map.keys() |> Enum.sort()
+    assert values["hair"] == ["none" | hair]
+    assert values["pose"] == ["arms_out" | World.People.Pose.names()]
+    assert values["material"] == Enum.map(World.Skills.Statue.materials(), &Atom.to_string/1)
   end
 
   test "the blueprint statue: an order, its receipt with the sizes and their sources, the errors" do

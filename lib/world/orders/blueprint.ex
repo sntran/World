@@ -54,6 +54,56 @@ defmodule World.Orders.Blueprint do
   def option(name, type, opts \\ []), do: struct!(Option, [name: name, type: type] ++ opts)
 
   @doc """
+  A blueprint in data (`priv/blueprints/NAME.json`, `docs/format.md`): its
+  `name`, `doc`, `sources`, `params` (the options) and `drawing`, a
+  drawing whose values can be `{"param": NAME}` (`World.Drawing.fill/2`).
+  A param has the keys of an option (`type`, `default`, `min`, `max`,
+  `unit`, `values`, `item`, `fields`, `doc`); with no `default`, an order
+  must give it. Two types are for data only: `text` (at most `max` bytes,
+  200 by default) and `sources` (the source of each name of the
+  `sizes` of the blueprint: `World.Sizes`).
+  """
+  def from_data(raw) do
+    sized = for s <- Map.get(raw, "sizes", []), do: s["name"]
+
+    %__MODULE__{
+      name: raw["name"],
+      doc: Map.get(raw, "doc", ""),
+      options: for(p <- Map.get(raw, "params", []), do: param(p, sized)),
+      build: fn o -> World.Drawing.build(World.Drawing.fill(raw, o)) end,
+      check: fn o ->
+        case World.Drawing.check(World.Drawing.fill(raw, o), "drawing") do
+          {:ok, _} -> []
+          {:error, errors} -> errors
+        end
+      end,
+      sources: Map.get(raw, "sources", [])
+    }
+  end
+
+  defp param(p, sized) do
+    opts = [
+      default: Map.get(p, "default", :required),
+      unit: p["unit"],
+      min: p["min"],
+      max: p["max"],
+      values: p["values"],
+      doc: Map.get(p, "doc", "")
+    ]
+
+    case p["type"] do
+      "list" -> option(p["name"], :list, opts ++ [item: param(p["item"], sized)])
+      "object" -> option(p["name"], :object, opts ++ [fields: for(f <- p["fields"], do: param(f, sized))])
+      "text" -> option(p["name"], :data, opts ++ [check: &text(&1, &2, p["max"] || 200)])
+      "sources" -> option(p["name"], :data, opts ++ [check: &World.Sizes.check(&1, &2, sized)])
+      type -> option(p["name"], String.to_existing_atom(type), opts)
+    end
+  end
+
+  defp text(raw, _path, max) when is_binary(raw) and byte_size(raw) <= max, do: {:ok, raw}
+  defp text(_, path, max), do: {:error, [{path, "must be a text of at most #{max} bytes"}]}
+
+  @doc """
   Check the options of an order (a map with string keys) against the
   options of a blueprint. Gives `{:ok, options}` with a value for each
   option, or `{:error, errors}`: each error is `{path, message}`, with

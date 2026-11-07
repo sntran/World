@@ -174,8 +174,7 @@ defmodule World.Service do
 
   get "/builds/:id/elements/:file" do
     with [key, "glb"] <- String.split(file, "."),
-         {n, ""} <- Integer.parse(key),
-         {:ok, glb} <- Construction.element(id, n) do
+         {:ok, glb} <- Construction.element(id, key) do
       conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
     else
       _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such element"}]})

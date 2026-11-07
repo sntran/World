@@ -241,7 +241,8 @@ defmodule World.ConstructionTest do
     {:ok, id} = World.build(job("wall_brick_sample", level: :far, budget: %{"seconds" => 1}))
     assert {:ok, %{glbs: glbs}} = World.await(id)
     [{pid, _}] = Registry.lookup(World.Names, {:elements, id})
-    assert Construction.element(id, 0) == {:ok, glbs[0]}
+    [key | _] = Map.keys(glbs)
+    assert Construction.element(id, key) == {:ok, glbs[key]}
     assert Construction.element(id, 999) == :none
 
     # The deadline comes after the end: the construction keeps going until its time.

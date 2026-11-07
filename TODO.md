@@ -40,6 +40,13 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **A cast in pours.** The cast of a statue is one task now (plan 0001,
+  D30): its pass of the distances depends on the order of the
+  triangles. A pass with records that do not depend on the order (the
+  nearest sample with the least index of its triangle, and the sums of
+  the normals of all the samples) lets the casters pour from the feet up
+  at the same time, and merge the pours. The files of the statue change
+  with it.
 - **More of the bamboo shop.** The fan of three spokes at the top of a
   back, the curved top rail, the seat of slats that bends between its
   rails, the culms that taper and are not quite straight, the hole of

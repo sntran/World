@@ -216,9 +216,15 @@ defmodule World.Orders do
       level: lvl,
       item: fn level -> Detail.with(level, fn -> blueprint.build.(order["options"]) end) end,
       scene: scene,
-      pose: order["joints"]
+      pose: order["joints"],
+      drawing: skilled(Blueprints.drawing(order))
     }
   end
+
+  # A drawing with a node that a skill makes: the people make it node by
+  # node (`World.Construction`).
+  defp skilled(%{"nodes" => nodes} = d), do: if(Enum.any?(nodes, &Map.has_key?(&1, "skill")), do: d)
+  defp skilled(nil), do: nil
 
   defp make(file, _order, _lvl, _item, job) when file in ["glb", "log"] do
     {glb, log} = world(job)

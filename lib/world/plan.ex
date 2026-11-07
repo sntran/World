@@ -80,6 +80,14 @@ defmodule World.Plan do
   def trade(%Assembly{kind: kind}), do: Map.get(@trades, kind)
   def trade(_item), do: nil
 
+  @doc "The names of the trades of the people: of the kinds, of the skills (`World.Skills`), and `builder`."
+  def trades do
+    (Map.values(@trades) ++ World.Skills.trades() ++ [:builder])
+    |> Enum.uniq()
+    |> Enum.map(&Atom.to_string/1)
+    |> Enum.sort()
+  end
+
   @doc "A plan: its tasks, and its parts (`parts`, the count of each name)."
   defstruct name: nil, tasks: [], parts: %{}
 
@@ -171,6 +179,43 @@ defmodule World.Plan do
   defp flat(item, prefix) do
     plan = of(item)
     %{plan | tasks: for(t <- plan.tasks, do: %{t | id: prefix <> t.id})}
+  end
+
+  @doc """
+  The plan of a drawing, node by node (`World.Construction`): one task
+  `:make` for each node, in the order of the nodes, that waits for the
+  nodes of `World.Drawing.waits/1`. Its trade is the `trade` of the node,
+  the trade of its skill, or `:builder`.
+  """
+  def of_drawing(raw) do
+    tasks =
+      for n <- raw["nodes"] do
+        trade =
+          case n do
+            %{"trade" => t} ->
+              String.to_existing_atom(t)
+
+            %{"skill" => skill} ->
+              {:ok, mod} = World.Skills.fetch(hd(Map.keys(skill)))
+              mod.trade()
+
+            _ ->
+              :builder
+          end
+
+        root = hd(raw["nodes"])["name"]
+
+        %Task{
+          id: n["name"],
+          action: :make,
+          item: n["name"],
+          to: n["to"],
+          waits: World.Drawing.waits(n, root),
+          trade: trade
+        }
+      end
+
+    %__MODULE__{name: Map.get(raw, "name", "drawing"), tasks: tasks}
   end
 
   @doc "The plan as data for the log: the id, the action, the station, the waits, the part and the trade of each task."

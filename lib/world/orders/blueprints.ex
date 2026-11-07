@@ -10,7 +10,8 @@ defmodule World.Orders.Blueprints do
   - `drawing`: a model in the data of the order (`World.Drawing`);
   - `house`: a house of `World.Buildings`;
   - `lot_house`: a whole house on a lot of Vũng Tàu (`World.Buildings.Lot`);
-  - `statue`: a statue cast from a figure of a person (`World.Statues`);
+  - `statue`: a statue cast from a figure of a person, in data
+    (`priv/blueprints/statue.json`, the skills of `World.Skills`);
   - `tower`: a tower of masonry, a lighthouse (`World.Towers`);
   - `van`: a van of `World.Vehicles.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `World.Framing`.
@@ -23,26 +24,67 @@ defmodule World.Orders.Blueprints do
   alias World.Vehicles.Van
   import Blueprint, only: [option: 3]
 
+  # The blueprints in data (`priv/blueprints/NAME.json`), read when the
+  # module compiles (a new file compiles the module again).
+  @root Path.expand("../../../priv/blueprints", __DIR__)
+  @files Path.wildcard(Path.join(@root, "*.json"))
+  for f <- @files, do: @external_resource(f)
+  @data Enum.map(@files, fn f -> f |> File.read!() |> JSON.decode!() end)
+  @hash :erlang.md5(Enum.join(@files))
+
+  @doc false
+  def __mix_recompile__?, do: :erlang.md5(Enum.join(Path.wildcard(Path.join(@root, "*.json")))) != @hash
+
+  @doc "The blueprints in data, as they are in their files."
+  def data, do: @data
+
+  @doc """
+  The drawing of the people for a full order (`World.Orders.check/1`): the
+  drawing of a blueprint in data with the options of the order, the
+  drawing of the blueprint `drawing`, or the drawing of a model of the
+  catalog that is an order of them; nil for a model with no drawing. A
+  construction builds a drawing node by node (`World.Construction`).
+  """
+  def drawing(%{"blueprint" => "drawing", "options" => %{"drawing" => d}}), do: d
+
+  def drawing(%{"blueprint" => "catalog", "options" => %{"name" => name}}) do
+    case World.Drawing.raw(name) do
+      %{"blueprint" => _} = order ->
+        {:ok, full} = World.Orders.check(order)
+        drawing(full)
+
+      raw ->
+        raw
+    end
+  end
+
+  def drawing(%{"blueprint" => name, "options" => o}) do
+    case Enum.find(@data, &(&1["name"] == name)) do
+      nil -> nil
+      raw -> World.Drawing.fill(raw, o)
+    end
+  end
+
   @doc "The blueprints, in the order of their names."
   def all,
     do:
       Enum.sort_by(
-        [
-          catalog(),
-          drawing(),
-          person(),
-          traveler(),
-          exercise(),
-          animal(),
-          house(),
-          lot_house(),
-          statue(),
-          tower(),
-          van(),
-          extrusion(),
-          strut(),
-          l_track()
-        ],
+        Enum.map(@data, &Blueprint.from_data/1) ++
+          [
+            catalog(),
+            drawing(),
+            person(),
+            traveler(),
+            exercise(),
+            animal(),
+            house(),
+            lot_house(),
+            tower(),
+            van(),
+            extrusion(),
+            strut(),
+            l_track()
+          ],
         & &1.name
       )
 
@@ -623,152 +665,6 @@ defmodule World.Orders.Blueprints do
       end,
       sources: [
         "TCVN 9411:2012 (nhà ở liên kế): the ground floor 3.6 m clear at the least. The other sizes: by eye, from the photos of the streets of Vũng Tàu (World.Buildings.Lot)."
-      ]
-    }
-  end
-
-  # --- A statue ------------------------------------------------------------------------------
-
-  defp statue do
-    hair = Data.assets() |> Map.fetch!("hair") |> Map.keys() |> Enum.sort()
-
-    m = fn name, default, min, max, doc ->
-      option(name, :number, default: default, min: min, max: max, unit: "m", doc: doc)
-    end
-
-    %Blueprint{
-      name: "statue",
-      doc:
-        "A statue: a figure of a person at any size and in a pose, in a long robe, cast as one solid of concrete or stone, with a halo, on a round plinth and a base with panels of figures in relief. The option hollow gives walls, a spiral stair and openings inside, at the near level. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the base; the figure looks to +y.",
-      options: [
-        m.(
-          "height",
-          32.0,
-          1.0,
-          100.0,
-          "From the feet to the top of the figure (the top of the halo, when it has one)."
-        ),
-        m.(
-          "span",
-          nil,
-          0.5,
-          100.0,
-          "The hands, tip to tip, with the pose arms_out. None: the proportions of the person."
-        ),
-        m.("hand", nil, 0.1, 10.0, "A hand, from the wrist to the tip of the middle finger, with the pose arms_out."),
-        option("pose", :choice,
-          default: "arms_out",
-          values: ["arms_out" | Pose.names()],
-          doc: "arms_out: the arms straight out to the sides. Else a pose of a person."
-        ),
-        option("lift", :number,
-          default: 8.0,
-          min: -45.0,
-          max: 60.0,
-          unit: "deg",
-          doc: "The arms of arms_out over the level."
-        ),
-        option("gender", :number, default: 1.0, min: 0.0, max: 1.0, doc: "0 is a woman, 1 is a man."),
-        option("age", :number, default: 35.0, min: 25.0, max: 90.0, unit: "years"),
-        option("hair", :choice, default: Data.name!("hair", "long01"), values: ["none" | hair]),
-        option("robe", :boolean, default: true, doc: "A long robe with wide sleeves and two long panels at its sides."),
-        option("halo", :boolean, default: true, doc: "A ring behind the head with a cross."),
-        option("rays", :integer, default: 9, min: 0, max: 17, doc: "The metal rays of the halo (lightning rods)."),
-        option("material", :choice,
-          default: "concrete",
-          values: Enum.map(World.Statues.materials(), &Atom.to_string/1),
-          doc: "Concrete with a render of washed stone, or stone (granite)."
-        ),
-        option("hollow", :boolean,
-          default: false,
-          doc: "Walls, a spiral stair and openings inside (at the near level)."
-        ),
-        m.("wall", 0.3, 0.1, 2.0, "The wall of a hollow statue (at the least two cells of the cast)."),
-        option("steps", :integer,
-          default: 133,
-          min: 10,
-          max: 1000,
-          doc: "The steps of the spiral stair, to the shoulders."
-        ),
-        m.("well", 1.0, 0.3, 4.0, "The open well in the middle of the spiral stair."),
-        option("windows", :list,
-          default: [],
-          max: 12,
-          item:
-            option("window", :object,
-              fields: [
-                m.("z", :required, 0.0, 100.0, "Its center, over the feet."),
-                m.("width", 1.2, 0.2, 5.0, ""),
-                m.("height", 1.2, 0.2, 5.0, "")
-              ]
-            ),
-          doc: "The openings in the front of the robe of a hollow statue."
-        ),
-        m.("plinth_radius", 4.5, 0.0, 50.0, "The round plinth under the feet."),
-        m.("plinth_height", 1.2, 0.0, 20.0, "0: no plinth."),
-        m.("base_width", 12.0, 1.0, 100.0, "The base, along x."),
-        m.("base_depth", 12.0, 1.0, 100.0, "The base, along y."),
-        m.("base_height", 4.0, 0.0, 50.0, "0: no base."),
-        m.("corner", 1.5, 0.1, 10.0, "The radius of the round corners of the base."),
-        option("reliefs", :list,
-          default: [],
-          max: 4,
-          item:
-            option("relief", :object,
-              fields: [
-                option("side", :choice, values: ~w(front back left right)),
-                option("figures", :integer, default: 3, min: 1, max: 20),
-                option("title", :data, default: "", check: &World.Statues.check_text/2)
-              ]
-            ),
-          doc: "The panels of figures in relief on the sides of the base."
-        ),
-        m.("rail", 1.0, 0.0, 3.0, "The rail round the top of the base. 0: no rail."),
-        option("weathering", :number,
-          default: 0.5,
-          min: 0.0,
-          max: 1.0,
-          doc: "The stains of the sea air, for the shader of an app: no change of the shape."
-        ),
-        option("sources", :data,
-          default: %{},
-          check: &World.Statues.check_sources/2,
-          doc: "The source of each size or choice, by its name (height, span, steps, base_width, ...)."
-        )
-      ],
-      build: fn o ->
-        World.Statues.statue(
-          height: o["height"],
-          span: o["span"],
-          hand: o["hand"],
-          pose: o["pose"],
-          lift: o["lift"],
-          gender: o["gender"],
-          age: o["age"],
-          hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
-          robe: o["robe"],
-          halo: o["halo"],
-          rays: o["rays"],
-          material: String.to_existing_atom(o["material"]),
-          hollow: o["hollow"],
-          wall: o["wall"],
-          steps: o["steps"],
-          well: o["well"],
-          windows: for(w <- o["windows"], do: {w["z"], w["width"], w["height"]}),
-          plinth_radius: o["plinth_radius"],
-          plinth_height: o["plinth_height"],
-          base_width: o["base_width"],
-          base_depth: o["base_depth"],
-          base_height: o["base_height"],
-          corner: o["corner"],
-          reliefs: o["reliefs"],
-          rail: o["rail"],
-          weathering: o["weathering"],
-          sources: o["sources"]
-        )
-      end,
-      sources: [
-        "MakeHuman (CC0): the person of the figure. The sources of each size come with the order; the receipt lists them."
       ]
     }
   end

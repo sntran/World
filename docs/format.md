@@ -322,9 +322,35 @@ of the parts:
   (`den_duong`) and the bin of 240 L (`thung_rac_240l`, its lid on a
   hinge of the role `open`).
 
+## A blueprint in data
+
+A blueprint can be data (`priv/blueprints/NAME.json`,
+`World.Orders.Blueprint.from_data/1`): an architect writes it, and World
+needs no new code for it. It has a `name`, a `doc`, `sources`, `params`
+(the options of an order), `sizes` and a `drawing`.
+
+- **A param** has the keys of an option (`name`, `type`, `default`,
+  `min`, `max`, `unit`, `values`, `item`, `fields`, `doc`). The types:
+  `number`, `integer`, `choice`, `boolean`, `color`, `list`, `object`,
+  `text` (at most `max` bytes, 200 by default) and `sources` (the source
+  of each name of the `sizes`). A param with no `default` is required.
+- **In the drawing**, a value `{"param": NAME}` takes the value of the
+  option, and `{"sum": [...]}` the sum of its numbers.
+- **The sizes** go into the extras of the model (`"sizes"`, `World.Sizes`):
+  each with its value, its `unit` and its source, or "estimate (no
+  source)". A size with `row` gives each item of a list as the list of
+  the values of its fields. The texts of the sources also go after the
+  `sources` of the drawing, in the order of their names.
+
+A model of the catalog can be an order of a blueprint
+(`priv/drawings/NAME.json` with `blueprint` and `options`): the statue on
+Núi Nhỏ is `priv/drawings/tuong_chua_kito_vua.json`, an order of the
+blueprint `statue`.
+
 ## A statue
 
-A statue (`World.Statues`, W13 of Vũng Tàu; the blueprint `statue`) is a
+A statue (`priv/blueprints/statue.json`, W13 of Vũng Tàu; the blueprint
+`statue`, the skills of `World.Skills.Statue`) is a
 figure of a person (`World.People.Human`, at the level `mid`) in a pose,
 in a long robe, cast as one solid by `World.Cast`, on a round plinth and
 a base. The kind is `statue`. The origin is on the ground at the center
@@ -382,6 +408,26 @@ statue has the list `sizes`.
 The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
 from the feet to the top of the halo, the hands 18.4 m apart, the hands
 2.2 m, 133 steps inside, a base of 12 by 12 by 4 m with four reliefs.
+
+The people make a statue as on a site, one node of the drawing each:
+
+| Node | Skill | Trade | What it makes |
+|---|---|---|---|
+| `be` | `base` | mason | The base and the plinth (the root). |
+| `figure` | `figure` | sculptor | The posed and scaled person: data only. |
+| `robe` | `robe` | sculptor | The robe and the mitts: data only. |
+| `shell` | `shell` | caster | The cast (or the far form): data only. |
+| `grille` | `grille` | smith | The grilles of the windows: data only. |
+| `halo` | `halo` | smith | The halo and its rays: data only. |
+| NAME | `set` | sculptor | The part of the statue: the shell, the grilles and the halo on the plinth. |
+| `cau_thang` | `stair` | mason | The spiral stair, in the cells of the cast. |
+| `lan_can` | `rail` | mason | The rail round the top of the base. |
+| `site` | `site` | surveyor | The ports, the collision boxes and the corners of the base, into the extras. |
+
+The cast is one task. Its distances depend on the order of its
+triangles (the first nearest sample wins, and a sample adds to the sums
+of the loose cells only when it is not the nearest at that time), so the
+cast in parallel pours does not give the same bytes.
 
 ## A tower
 
@@ -1477,11 +1523,12 @@ the catalog: `banh_mi_cart`).
 
 | Key | What it is |
 |---|---|
-| `name`, `kind`, `sources` | The name of the model (a to z, 0 to 9 and _), its kind (`appliance`, `building`, `electrical`, `furniture`, `item`, `prop`, `vehicle`; `item` by default), and where its data comes from. |
+| `name`, `kind`, `sources` | The name of the model (a to z, 0 to 9 and _), its kind (`appliance`, `building`, `electrical`, `furniture`, `house`, `item`, `prop`, `statue`, `tower`, `vehicle`; `item` by default), and where its data comes from. |
 | `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model. A drawing makes no new role. |
 | `parts` | A name to a part: its `shapes`, its `ports` (a name to `at`, `axis`, `up`), its `sources`; or a standard part: `standard` (`"bolt M8x40"`, `"cap_screw M6x20"`, `"nut M8"`, `"washer M8"`, `"bearing 6204"`), with the ports of the standard part (a bolt has `head` and `tip`). |
 | `nodes` | The tree of the model, the root first. |
 | `clips` | The animations of the joints. |
+| `extras` | The data of the model for an app: `site`, `ports` and `collision` (points as `[x, y, z]`), `surface`, `weathering` (`docs/format.md`, "GLB"). |
 
 A shape has one of these keys, with its `material` (a role of the
 palette, `gray` by default) and its frame: `at` (its origin), `axis`
@@ -1509,8 +1556,32 @@ person has `grip_r` and the others: a node can be in a hand), or a port
 in the data (`at`, `axis`, `up`); the origin by default. A node can have
 a `turn` (degrees) and an `offset` (meters), and be a `joint`: `kind`
 (`hinge` or `slide`), `role` (`crank`, `door`, `drawer`, `handle`,
-`knob`, `lid`, `pedal`, `recline`, `slide`, `spin`, `stand`, `steer`,
-`suspension`, `vane`, `wheel`) and `limits`.
+`knob`, `lid`, `open`, `pedal`, `recline`, `slide`, `spin`, `stand`,
+`steer`, `suspension`, `vane`, `wheel`) and `limits`.
+
+A node can also be an element that a person of a trade makes with a
+skill (`World.Skill`, `World.Skills`): `skill` is `{NAME: data}`, with
+the data of the skill. Each skill checks its data (each error with its
+path). The keys of such a node:
+
+| Key | What it is |
+|---|---|
+| `skill` | One skill and its data: `{"shell": {"height": 32.0, "hollow": true}}`. |
+| `trade` | The trade of the person that makes it (`mason`, `caster`, `sculptor`, `smith`, `surveyor`, `builder`, and the trades of the kinds); the trade of the skill by default. |
+| `from` | The nodes whose data it takes: the shell takes the figure and the robe. |
+| `after` | The nodes that it comes after, as on a real site (the rail after the cast). |
+
+A skill gives the part of its node (or nothing: a node of data only,
+which is not in the model), its data for the nodes that take it, and
+extras for the model, which go in in the order of the nodes. A node
+with no `to` goes to the root; a node to a node with no part goes to the
+parent of that node, or to the root. The root is the first node with a
+part. Each node waits for its parent, its `after` and its `from`, and no
+node waits for itself (a graph with no cycle: `:graph` of Erlang/OTP).
+In a construction (`World.Construction`), each node is one task: the
+person of its trade runs the skill, and the element goes to the
+watchers when the nodes before it are made. With no world,
+`World.Drawing.build/1` makes the nodes in the order of their waits.
 
 A clip has a `name`, a `length` in seconds and `keys`: each a time `t`
 and the values of some `joints` of the drawing. Between two keys a value

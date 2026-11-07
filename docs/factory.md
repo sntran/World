@@ -260,6 +260,7 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 | `get_blueprint` | The options of one blueprint (`name`), as `GET /blueprints` gives them. |
 | `check_order` | Checks an `order` and does not keep it: the hash and the full order, or the errors. |
 | `place_order` | Checks an `order` and keeps it, as `POST /orders`: the hash, the full order, the URLs of its files and of its replay page, or the errors. |
+| `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for the owner. |
 
 The result of a tool has the data as JSON text and as structured
 content. A wrong order is a result with `isError` and the errors, each
