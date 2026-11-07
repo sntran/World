@@ -194,6 +194,11 @@ defmodule World.Construction do
     end
   end
 
+  # The result of a person that stopped after it sent it: its DOWN (a
+  # message of priority) came first and gave the task back, so another
+  # person makes it.
+  def handle_info({:done, p, _id, _result}, s) when not is_map_key(s.running, p), do: {:noreply, s}
+
   def handle_info({:done, p, id, result}, s) do
     task = s.running[p]
 

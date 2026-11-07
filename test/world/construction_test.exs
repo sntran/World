@@ -188,6 +188,15 @@ defmodule World.ConstructionTest do
     assert r.glb == glb("wall_brick_sample", :near)
   end
 
+  test "the result of a person that stopped after it sent it does not count: another person makes the task" do
+    j = job("wall_brick_sample", budget: %{"workers" => 1})
+    {:ok, id} = World.build(j)
+    [{pid, _}] = Registry.lookup(World.Names, id)
+    send(pid, {:done, spawn(fn -> :ok end), "origin", %{triangles: %{}, glbs: %{}}})
+    assert {:ok, r} = World.await(id)
+    assert r.glb == glb("wall_brick_sample", :near)
+  end
+
   test "a second job of the same build gets the same result; a person that it does not need goes back" do
     j = job("wall_brick_sample", budget: %{"workers" => 1})
     {:ok, id} = World.build(j)
