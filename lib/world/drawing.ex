@@ -74,6 +74,7 @@ defmodule World.Drawing do
   errors}`: each error is `{path, message}`, with the path from `path`.
   """
   def check(raw, path) when is_map(raw) do
+    raw = expand(raw)
     depth = Process.get(:world_drawing, 0)
 
     if depth >= @depth do
@@ -101,6 +102,42 @@ defmodule World.Drawing do
   end
 
   def check(_raw, path), do: {:error, [{path, "must be an object"}]}
+
+  @doc """
+  The drawing with each repeat of a node expanded: `{"repeat": {"for":
+  NAME, "in": [values]}, "node": {...}}`, or `"in": {"count": n}` (1 to
+  n, at most #{128}), gives one copy of the node for each value. In a
+  copy, `{"var": NAME}` is the value, and `{NAME}` in a text is the value
+  as a text (`"course_{floor}"`). A repeat can hold a repeat. A wrong
+  repeat stays as it is, and the check gives its error. The check
+  expands a drawing first: the paths of its errors are in the copies.
+  """
+  def expand(%{"nodes" => nodes} = raw) when is_list(nodes), do: %{raw | "nodes" => Enum.flat_map(nodes, &copies/1)}
+  def expand(raw), do: raw
+
+  defp copies(%{"repeat" => %{"for" => var, "in" => values} = r, "node" => node} = n)
+       when map_size(n) == 2 and map_size(r) == 2 and is_binary(var) do
+    case values(values) do
+      {:ok, values} -> Enum.flat_map(values, &copies(bind(node, var, &1)))
+      :error -> [n]
+    end
+  end
+
+  defp copies(node), do: [node]
+
+  defp values(%{"count" => n}) when :erlang.is_integer(n, 0, 128), do: {:ok, Enum.to_list(1..n//1)}
+  defp values(l) when is_list(l) and length(l) <= 128, do: {:ok, l}
+  defp values(_), do: :error
+
+  defp bind(%{"var" => var} = m, var, v) when map_size(m) == 1, do: v
+  defp bind(%{} = m, var, v), do: Map.new(m, fn {k, x} -> {k, bind(x, var, v)} end)
+  defp bind(l, var, v) when is_list(l), do: Enum.map(l, &bind(&1, var, v))
+  defp bind(s, var, v) when is_binary(s), do: String.replace(s, "{" <> var <> "}", text(v))
+  defp bind(x, _var, _v), do: x
+
+  defp text(v) when is_binary(v), do: v
+  defp text(v) when is_integer(v), do: Integer.to_string(v)
+  defp text(v), do: JSON.encode!(v)
 
   # --- The checks ---------------------------------------------------------------------------
 
@@ -353,6 +390,11 @@ defmodule World.Drawing do
   defp node(node, path, i, parts, known) when is_map(node) do
     keys = ~w(name part item skill trade after from to at port joint turn offset)
 
+    keys =
+      if Map.has_key?(node, "repeat"),
+        do: keys ++ ~w(repeat node),
+        else: keys
+
     base =
       unknown(node, keys, path) ++
         required(node, "name", path, &name/2) ++ optional(node, "trade", path, &choice(&1, &2, World.Plan.trades()))
@@ -366,6 +408,9 @@ defmodule World.Drawing do
 
     {errors, item} =
       case {node["part"], node["item"], node["skill"]} do
+        _ when is_map_key(node, "repeat") ->
+          {[{"#{path}.repeat", "must be {\"for\": NAME, \"in\": a list or {\"count\": 0 to 128}} with a node"}], nil}
+
         {part, nil, nil} when is_binary(part) ->
           if Map.has_key?(parts, part),
             do: {[], {:part, parts[part]}},
@@ -624,7 +669,7 @@ defmodule World.Drawing do
   options the list of their values.
   """
   def fill(blueprint, options) do
-    drawing = put(blueprint["drawing"], options)
+    drawing = expand(put(blueprint["drawing"], options))
     params = Map.get(blueprint, "params", [])
     sources = Enum.find_value(params, %{}, &(&1["type"] == "sources" && options[&1["name"]]))
 

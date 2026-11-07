@@ -252,4 +252,73 @@ defmodule World.SkillTest do
              "options.drawing.nodes.1.skill.base.reliefs.0.title"
            ]
   end
+
+  test "a repeat of a node: copies over a count and over a list, a repeat in a repeat, and its errors" do
+    d = %{
+      "nodes" => [
+        %{"name" => "root", "skill" => %{"block" => %{"size" => 1.0}}},
+        %{
+          "repeat" => %{"for" => "i", "in" => %{"count" => 3}},
+          "node" => %{"name" => "b_{i}", "skill" => %{"note" => %{"size" => %{"var" => "i"}}}}
+        },
+        %{
+          "repeat" => %{"for" => "side", "in" => ["l", "r"]},
+          "node" => %{
+            "repeat" => %{"for" => "k", "in" => %{"count" => 2}},
+            "node" => %{"name" => "w_{side}_{k}", "skill" => %{"note" => %{}}, "after" => ["b_{k}"]}
+          }
+        }
+      ]
+    }
+
+    e = Drawing.expand(d)
+    assert Enum.map(e["nodes"], & &1["name"]) == ~w(root b_1 b_2 b_3 w_l_1 w_l_2 w_r_1 w_r_2)
+    assert Enum.at(e["nodes"], 2)["skill"]["note"]["size"] == 2
+    assert {:ok, ^e} = Drawing.check(d, "d")
+
+    assert Enum.find(Plan.of_drawing(e).tasks, &(&1.id == "w_r_2")).waits == ["root", "b_2"]
+
+    assert Drawing.expand(%{"name" => "x"}) == %{"name" => "x"}
+
+    # A value that is not a text or a whole number goes into a text as JSON.
+    one = %{"repeat" => %{"for" => "v", "in" => [%{"a" => 1}]}, "node" => %{"name" => "n", "part" => "{v}"}}
+    assert [%{"part" => ~s({"a":1})}] = Drawing.expand(%{"nodes" => [one]})["nodes"]
+
+    for bad <- [%{"count" => 200}, "many", List.duplicate(1, 129)] do
+      wrong = put_in(d, ["nodes", Access.at(1), "repeat", "in"], bad)
+      assert {:error, errors} = Drawing.check(wrong, "d")
+      assert {"d.nodes.1.repeat", _} = List.keyfind(errors, "d.nodes.1.repeat", 0)
+    end
+  end
+
+  test "the people make the copies of a repeat at the same time: four slow blocks, with one person and with four" do
+    d = %{
+      "nodes" => [
+        %{"name" => "root", "skill" => %{"block" => %{"size" => 1.0}}},
+        %{
+          "repeat" => %{"for" => "i", "in" => %{"count" => 4}},
+          "node" => %{
+            "name" => "b_{i}",
+            "skill" => %{"block" => %{"size" => 0.2, "wait" => 400}},
+            "to" => "root",
+            "at" => "top"
+          }
+        }
+      ]
+    }
+
+    {:ok, d} = Drawing.check(d, "d")
+    item = fn level -> Detail.with(level, fn -> Drawing.build(d) end) end
+
+    [one, four] =
+      for workers <- [1, 4] do
+        id = "repeat-#{workers}-#{System.unique_integer([:positive])}"
+        {:ok, ^id} = World.build(%{id: id, item: item, drawing: d, level: :far, budget: %{"workers" => workers}})
+        assert {:ok, r} = World.await(id, 30_000)
+        %{data: %{"ms" => ms}} = Enum.find(Log.events(r.log), &(&1.kind == "run_done"))
+        ms
+      end
+
+    assert one >= 1_600 and four < one / 2
+  end
 end

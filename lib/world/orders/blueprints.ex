@@ -55,7 +55,7 @@ defmodule World.Orders.Blueprints do
         drawing(full)
 
       raw ->
-        raw
+        World.Drawing.expand(raw)
     end
   end
 

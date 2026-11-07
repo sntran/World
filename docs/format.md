@@ -1590,6 +1590,15 @@ path). The keys of such a node:
 | `from` | The nodes whose data it takes: the shell takes the figure and the robe. |
 | `after` | The nodes that it comes after, as on a real site (the rail after the cast). |
 
+A drawing can repeat a node: `{"repeat": {"for": NAME, "in": [values]},
+"node": {...}}`, or `"in": {"count": n}` (1 to n, at most 128). Each value
+gives a copy of the node: in it, `{"var": NAME}` is the value, and
+`{NAME}` in a text is the value as a text (`"course_{floor}"`). A repeat
+can hold a repeat (`"wall_{side}_{floor}"`). The copies are tasks that
+people do at the same time: the floors of a house, the courses of a wall,
+the pours of a cast, the wheels of a vehicle. The check expands the
+repeats first, so the paths of its errors are in the copies.
+
 A skill gives the part of its node (or nothing: a node of data only,
 which is not in the model), its data for the nodes that take it, and
 extras for the model, which go in in the order of the nodes. A node
