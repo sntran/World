@@ -9,10 +9,12 @@ defmodule World.Skills do
   alias World.Skills.{Base, Figure, Grille, Halo, Rail, Robe, Set, Shell, Site, Stair}
   alias World.Skills.{Lantern, SpiralStair, Tower, TowerBody, TowerSite}
   alias World.Skills.{CastField, CastOutside, CastSurvey, Formwork, Pour, ShellSlab}
+  alias World.Skills.{Column, Course, Flight, Footing, HousePlan, Iron, Opening, Paint, Plaster, Roof, Slab}
 
   @skills [Base, Figure, Grille, Halo, Rail, Robe, Set, Shell, Site, Stair] ++
             [Lantern, SpiralStair, Tower, TowerBody, TowerSite] ++
-            [CastField, CastOutside, CastSurvey, Formwork, Pour, ShellSlab]
+            [CastField, CastOutside, CastSurvey, Formwork, Pour, ShellSlab] ++
+            [Column, Course, Flight, Footing, HousePlan, Iron, Opening, Paint, Plaster, Roof, Slab]
 
   @doc "The skill of a name: `{:ok, module}` or `:error`."
   def fetch(name), do: Map.fetch(all(), name)

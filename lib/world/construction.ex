@@ -142,7 +142,7 @@ defmodule World.Construction do
             plan: plan,
             elements: Enum.group_by(elements, &elem(&1, 0), &Tuple.delete_at(&1, 0)),
             made: %{},
-            placed: 0,
+            placed: MapSet.new(),
             waiting: plan.tasks,
             done: MapSet.new(),
             running: %{},
@@ -328,17 +328,20 @@ defmodule World.Construction do
     end)
   end
 
-  # The elements of the nodes of a drawing, in the order of the nodes: each
-  # node made after the nodes before it, in the model of the nodes so far.
+  # The elements of the nodes of a drawing, each node when it is made, in
+  # the model of the nodes so far (with the nodes that are temporary). The
+  # root must be known first: each node up to the first with a part is
+  # made.
   defp place(s, p) do
-    names = Enum.map(s.job.drawing["nodes"], & &1["name"])
-    ready = names |> Enum.drop(s.placed) |> Enum.take_while(&Map.has_key?(s.made, &1))
+    nodes = s.job.drawing["nodes"]
+    {before, root} = Enum.split_while(nodes, &(not part?(s.made[&1["name"]], &1)))
+    known = root != [] and Enum.all?(before ++ [hd(root)], &Map.has_key?(s.made, &1["name"]))
+    ready = for n <- nodes, Map.has_key?(s.made, n["name"]), not MapSet.member?(s.placed, n["name"]), do: n["name"]
 
-    if ready == [] or not Enum.any?(Map.values(s.made), &elem(&1, 0)) do
+    if not known or ready == [] do
       s
     else
-      made = Map.take(s.made, Enum.take(names, s.placed + length(ready)))
-      elements = Build.elements(World.Drawing.assemble(s.job.drawing, made), s.level, s.job.pose)
+      elements = Build.elements(World.Drawing.assemble(s.job.drawing, s.made, stream: true), s.level, s.job.pose)
 
       own = fn name ->
         for {path, f, part, shown} <- elements,
@@ -347,9 +350,15 @@ defmodule World.Construction do
       end
 
       s = Enum.reduce(ready, s, fn name, s -> elements(s, p, name, own.(name)) end)
-      %{s | placed: s.placed + length(ready)}
+      %{s | placed: MapSet.union(s.placed, MapSet.new(ready))}
     end
   end
+
+  # A node made with a part, that is not temporary: a root of the model.
+  defp part?({thing, data, _}, node),
+    do: thing != nil and not Map.get(node, "temporary", false) and not Map.get(data, "temporary", false)
+
+  defp part?(nil, _node), do: false
 
   defp stop(s, data) do
     s = record(s, "stopped", nil, data)
@@ -443,7 +452,7 @@ defmodule World.Construction do
     done = MapSet.difference(s.done, MapSet.new(changed))
     in_hand = for {_, t} <- running, do: t.id
     waiting = for t <- plan.tasks, not MapSet.member?(done, t.id), t.id not in in_hand, do: t
-    placed = min(s.placed, names |> Enum.take_while(&(&1 not in changed)) |> length())
+    placed = MapSet.difference(s.placed, MapSet.new(changed))
     keep = Map.take(job, [:drawing, :item, :scene, :pose, :hash])
 
     s = %{

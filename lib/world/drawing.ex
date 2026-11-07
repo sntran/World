@@ -37,7 +37,7 @@ defmodule World.Drawing do
   node with no part goes to the root, the first node with a part.
 
   The limits keep a drawing small for the builder at the edge: 64 parts,
-  256 shapes, 128 nodes, 64 points in a list, 8 clips of 64 keys, points
+  256 shapes, 512 nodes (a house of many floors), 64 points in a list, 8 clips of 64 keys, points
   within 50 m, and 3 drawings one in the other.
   """
   alias World.{Assembly, Detail, Frame, GLB, Part, Port, Shape, Vec}
@@ -110,7 +110,8 @@ defmodule World.Drawing do
   ..., "item": X}` in any other list gives copies of X (the names of the
   pours in a `from`: `"pour_{i}"`). In a
   copy, `{"var": NAME}` is the value, and `{NAME}` in a text is the value
-  as a text (`"course_{floor}"`). A repeat can hold a repeat. A wrong
+  as a text (`"course_{floor}"`), and `{NAME-1}` or `{NAME+1}` a whole
+  number less or more (`"slab_{floor-1}"`). A repeat can hold a repeat. A wrong
   repeat stays as it is, and the check gives its error. The check
   expands a drawing first: the paths of its errors are in the copies.
   """
@@ -140,7 +141,15 @@ defmodule World.Drawing do
   defp bind(%{"var" => var} = m, var, v) when map_size(m) == 1, do: v
   defp bind(%{} = m, var, v), do: Map.new(m, fn {k, x} -> {k, bind(x, var, v)} end)
   defp bind(l, var, v) when is_list(l), do: Enum.map(l, &bind(&1, var, v))
-  defp bind(s, var, v) when is_binary(s), do: String.replace(s, "{" <> var <> "}", text(v))
+
+  defp bind(s, var, v) when is_binary(s) do
+    Regex.replace(~r/\{#{Regex.escape(var)}([+-]\d+)?\}/, s, fn
+      _, "" -> text(v)
+      _, n when is_integer(v) -> Integer.to_string(v + String.to_integer(n))
+      all, _ -> all
+    end)
+  end
+
   defp bind(x, _var, _v), do: x
 
   defp text(v) when is_binary(v), do: v
@@ -365,7 +374,7 @@ defmodule World.Drawing do
 
   defp nodes(raw, path) do
     case Map.get(raw, "nodes") do
-      nodes when is_list(nodes) and nodes != [] and length(nodes) <= 128 ->
+      nodes when is_list(nodes) and nodes != [] and length(nodes) <= 512 ->
         parts = Map.get(raw, "parts", %{})
 
         {errors, known} =
@@ -388,7 +397,7 @@ defmodule World.Drawing do
         errors ++ if(errors == [], do: optional(raw, "clips", path, &clips(&1, &2, joints(known))), else: [])
 
       _ ->
-        [{"#{path}.nodes", "must be a list of 1 to 128 nodes, the root first"}]
+        [{"#{path}.nodes", "must be a list of 1 to 512 nodes, the root first"}]
     end
   end
 
@@ -396,7 +405,7 @@ defmodule World.Drawing do
 
   # A node: its errors, and its item (the part, or the item of the order).
   defp node(node, path, i, parts, known) when is_map(node) do
-    keys = ~w(name part item skill trade after from to at port joint turn offset)
+    keys = ~w(name part item skill trade after from to at port joint turn offset temporary)
 
     keys =
       if Map.has_key?(node, "repeat"),
@@ -405,7 +414,9 @@ defmodule World.Drawing do
 
     base =
       unknown(node, keys, path) ++
-        required(node, "name", path, &name/2) ++ optional(node, "trade", path, &choice(&1, &2, World.Plan.trades()))
+        required(node, "name", path, &name/2) ++
+        optional(node, "trade", path, &choice(&1, &2, World.Plan.trades())) ++
+        optional(node, "temporary", path, &choice(&1, &2, [true, false]))
 
     name = node["name"]
 
@@ -677,7 +688,9 @@ defmodule World.Drawing do
   options the list of their values.
   """
   def fill(blueprint, options) do
-    drawing = expand(put(blueprint["drawing"], options))
+    # The params, the repeats, then the params that a repeat names
+    # (`{"param": "finish_{side}"}`).
+    drawing = blueprint["drawing"] |> put(options) |> expand() |> put(options)
     params = Map.get(blueprint, "params", [])
     sources = Enum.find_value(params, %{}, &(&1["type"] == "sources" && options[&1["name"]]))
 
@@ -697,7 +710,7 @@ defmodule World.Drawing do
   defp size(%{"of" => names}, options), do: for(n <- names, do: options[n])
   defp size(s, options), do: options[s["name"]]
 
-  defp put(%{"param" => name} = m, o) when map_size(m) == 1, do: Map.fetch!(o, name)
+  defp put(%{"param" => name} = m, o) when map_size(m) == 1, do: Map.get(o, name, m)
   defp put(%{"sum" => l} = m, o) when map_size(m) == 1, do: l |> Enum.map(&put(&1, o)) |> Enum.sum()
   defp put(%{} = m, o), do: Map.new(m, fn {k, v} -> {k, put(v, o)} end)
   defp put(l, o) when is_list(l), do: Enum.map(l, &put(&1, o))
@@ -757,7 +770,14 @@ defmodule World.Drawing do
       %{"skill" => skill} ->
         [{skill, data}] = Map.to_list(skill)
         {:ok, mod} = World.Skills.fetch(skill)
-        context = %{level: Detail.level(), sources: Map.get(raw, "sources", []), from: Map.get(node, "from", [])}
+
+        context = %{
+          level: Detail.level(),
+          sources: Map.get(raw, "sources", []),
+          from: Map.get(node, "from", []),
+          name: node["name"]
+        }
+
         mod.make(data, inputs, context)
 
       %{"part" => p} ->
@@ -793,11 +813,27 @@ defmodule World.Drawing do
   The assembly of the nodes made (`made`: a name to `{thing, data,
   extras}`), in the order of the nodes: each node with a thing, the extras
   of the drawing and of each node in order. A node to a node with no
-  thing goes to the parent of that node, or to the root.
+  thing goes to the parent of that node, or to the root. A node with
+  `temporary`, or whose skill gives `"temporary" => true` in its data
+  (the plaster under the paint), is not in the model: the people make it, and a watcher sees it
+  in the stream (`stream: true` gives the model with them, for the
+  stream).
   """
-  def assemble(raw, made) do
-    nodes = for n <- raw["nodes"], Map.has_key?(made, n["name"]), elem(made[n["name"]], 0) != nil, do: n
-    [root | rest] = nodes
+  def assemble(raw, made, opts \\ []) do
+    stream = Keyword.get(opts, :stream, false)
+
+    temporary? = fn n -> Map.get(n, "temporary", false) or match?({_, %{"temporary" => true}, _}, made[n["name"]]) end
+
+    nodes =
+      for n <- raw["nodes"],
+          Map.has_key?(made, n["name"]),
+          elem(made[n["name"]], 0) != nil,
+          stream or not temporary?.(n),
+          do: n
+
+    # The root is the first node that is not temporary.
+    root = Enum.find(nodes, &(not temporary?.(&1)))
+    rest = List.delete(nodes, root)
     by_name = Map.new(raw["nodes"], &{&1["name"], &1})
     thing = fn n -> elem(made[n["name"]], 0) end
 
@@ -853,8 +889,11 @@ defmodule World.Drawing do
 
   defp parent(name, by_name, made, root) do
     case made[name] do
-      {nil, _, _} -> parent(by_name[name]["to"], by_name, made, root)
-      _ -> name
+      {nil, _, _} ->
+        parent(by_name[name]["to"], by_name, made, root)
+
+      _ ->
+        if Map.get(by_name[name], "temporary", false), do: parent(by_name[name]["to"], by_name, made, root), else: name
     end
   end
 

@@ -188,7 +188,7 @@ defmodule World.SkillTest do
     assert Blueprints.drawing(%{"blueprint" => "strut", "options" => %{}}) == nil
     statue = Blueprints.drawing(%{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua"}})
     assert statue["name"] == "tuong_chua_kito_vua" and length(statue["nodes"]) == 37
-    assert Enum.map(Blueprints.data(), & &1["name"]) == ["statue", "tower"]
+    assert Enum.map(Blueprints.data(), & &1["name"]) == ["statue", "tower", "tube_house"]
     refute Blueprints.__mix_recompile__?()
 
     # An order of the catalog: its check, and its errors.
@@ -320,5 +320,42 @@ defmodule World.SkillTest do
       end
 
     assert one >= 1_600 and four < one / 2
+  end
+
+  test "a temporary node: in the stream, not in the model; a node to it goes to its parent; a number less one in a name",
+       %{tmp_dir: dir} do
+    d = %{
+      "nodes" => [
+        %{"name" => "root", "skill" => %{"block" => %{"size" => 1.0}}},
+        %{
+          "name" => "scaffold",
+          "skill" => %{"block" => %{"size" => 0.5}},
+          "temporary" => true,
+          "to" => "root",
+          "at" => "top"
+        },
+        %{"name" => "flag", "skill" => %{"block" => %{"size" => 0.1}}, "to" => "scaffold", "at" => "top"},
+        %{
+          "repeat" => %{"for" => "k", "in" => [2, "b"]},
+          "node" => %{"name" => "n_{k}", "skill" => %{"note" => %{}}, "after" => ["x_{k-1}"]}
+        }
+      ]
+    }
+
+    e = Drawing.expand(d)
+    assert [%{"after" => ["x_1"]}, %{"after" => ["x_{k-1}"]}] = Enum.drop(e["nodes"], 3)
+    d = %{d | "nodes" => Enum.take(d["nodes"], 3)}
+    item = Detail.with(:far, fn -> Drawing.build(d) end)
+    assert Enum.map(item.nodes, &elem(&1, 0)) == ["root", "flag"]
+    assert {_, _, %{to: "root"}} = List.keyfind(item.nodes, "flag", 0)
+
+    id = "temporary-#{System.unique_integer([:positive])}"
+
+    {:ok, ^id} =
+      World.build(%{id: id, item: fn l -> Detail.with(l, fn -> Drawing.build(d) end) end, drawing: d, level: :far})
+
+    assert {:ok, r} = World.await(id, 30_000)
+    assert "scaffold" in for(%{kind: "element", data: x} <- Log.events(r.log), do: x["task"])
+    assert BuildSpec.replay([r.log], dir) == :ok
   end
 end

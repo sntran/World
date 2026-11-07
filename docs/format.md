@@ -299,6 +299,35 @@ of bricks. A town has thousands of them.
   of 0.9 by 2.1 m. The front room is at near and mid; its collision
   boxes are at each level.
 
+### A tube house that the people build
+
+A tube house (`priv/blueprints/tube_house.json`, the skills of
+`World.Skills.House`; plan 0002, D4) is built as on a real site in Việt
+Nam. The kind is `house`; the origin is on the ground at the center of
+the lot, the front to +y. Its nodes, with `repeat` over the floors and
+the sides:
+
+| Node | Skill | Trade | What it makes |
+|---|---|---|---|
+| `plan` | `house_plan` | engineer | The sizes, the grid of the columns, the openings: data only. |
+| `slab_0` | `footing` | concreter | The footings (at near), the ground beams and the ground slab: the root. |
+| `col_F` | `column` | concreter | The columns of floor F, after the slab under it. |
+| `slab_F` | `slab` | concreter | The beams and the slab over floor F, with the well of the stair and the balcony. |
+| `wall_S_F_1` to `_3` | `course` | mason | The three bands of the infill of bricks of side S of floor F, a band after the band under it; all the walls at the same time. |
+| `plaster_S_F` | `plaster` | plasterer | The render of the wall. |
+| `paint_S_F` | `paint` | painter | The paint on the render. |
+| `opening_S_F` | `opening` | joiner | The doors, the windows and the shutter of the wall. |
+| `flight_F` | `flight` | concreter | The stair to the floor over it (at near). |
+| `iron_F` | `iron` | smith | The rail of the balcony over floor F (not at far). |
+| `roof` | `roof` | roofer | The parapet, and a roof of corrugated steel. |
+
+The frame of a floor goes up while the masons lay the walls of the floor
+under it. The bricks under a render and the render under the paint are
+temporary: the stream shows them, and the model leaves them out. At far
+the model is the faces of the walls from the ground to the roof, the
+slab of the roof and the roof: at most 300 triangles for a house of
+three floors.
+
 ### The street kit
 
 The pieces of a street of Vũng Tàu (`World.Places.StreetKit`, W21), each
@@ -1607,8 +1636,14 @@ can hold a repeat (`"wall_{side}_{floor}"`). The copies are tasks that
 people do at the same time: the floors of a house, the courses of a wall,
 the pours of a cast, the wheels of a vehicle. `{"repeat": ..., "item":
 X}` in any other list gives copies of X (the names of the pours in a
-`from`). The check expands the repeats first, so the paths of its errors
-are in the copies.
+`from`), and `{NAME-1}` in a text is the value less one
+(`"slab_{floor-1}"`). The check expands the repeats first, so the paths
+of its errors are in the copies; the fill of a blueprint puts its params
+before and after the repeats (`{"param": "finish_{side}"}`).
+
+A node with `"temporary": true`, or whose skill gives `"temporary" =>
+true` in its data, is not in the model: the people make it, and the
+stream shows it (the bricks under a render, the render under the paint).
 
 A skill gives the part of its node (or nothing: a node of data only,
 which is not in the model), its data for the nodes that take it, and

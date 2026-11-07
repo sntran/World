@@ -15,9 +15,9 @@ defmodule World.Skill do
 
   @typedoc """
   The context of a make: the level of detail, the sources of the model,
-  and the names of the nodes `from`, in their order.
+  the names of the nodes `from`, in their order, and the name of the node.
   """
-  @type context :: %{level: :near | :mid | :far, sources: [String.t()], from: [String.t()]}
+  @type context :: %{level: :near | :mid | :far, sources: [String.t()], from: [String.t()], name: String.t()}
 
   @doc "The name of the skill in a drawing."
   @callback name() :: String.t()
