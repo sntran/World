@@ -74,4 +74,15 @@ defmodule World.VehiclesTest do
     assert ~w(electrician mechanic sheet_metal_worker welder wheelwright) --
              built("motorcycle", %{}, Path.join(dir, "m")) == []
   end
+
+  test "a car from its body and its corners: the Chevrolet Bolt of the catalog, and other tires", %{tmp_dir: dir} do
+    for level <- [:near, :mid, :far] do
+      car = model("car", level)
+      assert car.kind == :vehicle and Check.model(car) == :ok
+      same(shape(car, level), shape(Detail.with(level, &World.Vehicles.ChevyBolt.model/0), level))
+    end
+
+    assert Check.model(model("car", :far, %{"tire" => "215/55R17"})) == :ok
+    assert ~w(electrician glazier mechanic molder sheet_metal_worker wheelwright) -- built("car", %{}, dir) == []
+  end
 end

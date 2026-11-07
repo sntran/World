@@ -1,0 +1,828 @@
+{
+  "doc": "A car built by the people of each trade at the same time, from the skills of the vehicle trades: a sheet metal worker makes the body on lofts with the arches of its wheels, a glazier the glass, a molder the bumpers and the trim, an electrician the lamps, mechanics the four knuckles with their discs, wheelwrights the four wheels. The shapes are the data of a Chevrolet Bolt EV (2022); another car is another blueprint with its own shapes. The front knuckles steer, the wheels turn. The origin is on the ground at the center of the car; the front is to +y.",
+  "drawing": {
+    "extras": {
+      "place": [
+        0.0,
+        -2.0725,
+        0.0
+      ]
+    },
+    "kind": "vehicle",
+    "name": {
+      "param": "name"
+    },
+    "nodes": [
+      {
+        "name": "body",
+        "skill": {
+          "body": {
+            "ports": {
+              "corner_front_left": {
+                "at": [
+                  -0.75,
+                  3.3810000000000002,
+                  0.3234
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              },
+              "corner_front_right": {
+                "at": [
+                  0.75,
+                  3.3810000000000002,
+                  0.3234
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              },
+              "corner_rear_left": {
+                "at": [
+                  -0.75,
+                  0.78,
+                  0.3234
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              },
+              "corner_rear_right": {
+                "at": [
+                  0.75,
+                  0.78,
+                  0.3234
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              },
+              "origin": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "body": {
+                  "arches": [
+                    [
+                      0.78,
+                      0.3234,
+                      0.375
+                    ],
+                    [
+                      3.3810000000000002,
+                      0.3234,
+                      0.375
+                    ]
+                  ],
+                  "rows": [
+                    [
+                      0.0,
+                      0.42,
+                      0.92,
+                      0.78,
+                      3.0
+                    ],
+                    [
+                      0.08,
+                      0.3,
+                      1.0,
+                      0.86,
+                      5.0
+                    ],
+                    [
+                      0.4,
+                      0.27,
+                      1.04,
+                      0.88,
+                      6.0
+                    ],
+                    [
+                      1.5,
+                      0.24,
+                      1.04,
+                      0.882,
+                      6.0
+                    ],
+                    [
+                      2.8,
+                      0.26,
+                      1.02,
+                      0.88,
+                      6.0
+                    ],
+                    [
+                      3.3,
+                      0.28,
+                      0.96,
+                      0.87,
+                      6.0
+                    ],
+                    [
+                      3.8,
+                      0.3,
+                      0.87,
+                      0.85,
+                      5.0
+                    ],
+                    [
+                      4.05,
+                      0.34,
+                      0.79,
+                      0.8,
+                      4.0
+                    ],
+                    [
+                      4.145,
+                      0.42,
+                      0.7,
+                      0.7,
+                      3.0
+                    ]
+                  ]
+                },
+                "material": "paint"
+              },
+              {
+                "body": {
+                  "rows": [
+                    [
+                      0.5,
+                      1.585,
+                      1.605,
+                      0.64,
+                      4.0
+                    ],
+                    [
+                      2.0,
+                      1.59,
+                      1.616,
+                      0.66,
+                      4.0
+                    ]
+                  ],
+                  "step": 0.4
+                },
+                "material": "black",
+                "sides": 16
+              }
+            ],
+            "sources": [
+              "By eye, from photos of the car."
+            ]
+          }
+        }
+      },
+      {
+        "at": "origin",
+        "name": "glass",
+        "port": "origin",
+        "skill": {
+          "glass": {
+            "ports": {
+              "origin": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "body": {
+                  "rows": [
+                    [
+                      0.1,
+                      0.97,
+                      1.06,
+                      0.7,
+                      3.0
+                    ],
+                    [
+                      0.3,
+                      0.99,
+                      1.5,
+                      0.75,
+                      4.0
+                    ],
+                    [
+                      0.6,
+                      1.0,
+                      1.59,
+                      0.76,
+                      4.0
+                    ],
+                    [
+                      1.6,
+                      1.01,
+                      1.611,
+                      0.77,
+                      4.0
+                    ],
+                    [
+                      2.2,
+                      1.0,
+                      1.56,
+                      0.76,
+                      4.0
+                    ],
+                    [
+                      2.75,
+                      0.99,
+                      1.16,
+                      0.73,
+                      3.5
+                    ],
+                    [
+                      2.95,
+                      0.98,
+                      1.02,
+                      0.7,
+                      3.0
+                    ]
+                  ]
+                },
+                "material": "glass_dark",
+                "sides": 16
+              }
+            ]
+          }
+        }
+      },
+      {
+        "at": "origin",
+        "name": "trim",
+        "port": "origin",
+        "skill": {
+          "panel": {
+            "ports": {
+              "origin": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "box": {
+                  "from": [
+                    -0.8,
+                    4.0,
+                    0.3
+                  ],
+                  "to": [
+                    0.8,
+                    4.154999999999999,
+                    0.52
+                  ]
+                },
+                "material": "trim",
+                "round": 0.25,
+                "smooth": 2
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.8,
+                    -0.01,
+                    0.32
+                  ],
+                  "to": [
+                    0.8,
+                    0.12,
+                    0.55
+                  ]
+                },
+                "material": "trim",
+                "round": 0.25,
+                "smooth": 2
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.42,
+                    4.125,
+                    0.56
+                  ],
+                  "to": [
+                    0.42,
+                    4.156999999999999,
+                    0.66
+                  ]
+                },
+                "material": "black",
+                "round": 0.3,
+                "smooth": 2
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.26,
+                    4.154999999999999,
+                    0.36
+                  ],
+                  "to": [
+                    0.26,
+                    4.164999999999999,
+                    0.47
+                  ]
+                },
+                "material": "white"
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.26,
+                    -0.025,
+                    0.62
+                  ],
+                  "to": [
+                    0.26,
+                    -0.015,
+                    0.73
+                  ]
+                },
+                "material": "white"
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.99,
+                    2.8,
+                    1.02
+                  ],
+                  "to": [
+                    -0.8700000000000001,
+                    2.9,
+                    1.11
+                  ]
+                },
+                "material": "black",
+                "round": 0.3,
+                "smooth": 2
+              },
+              {
+                "material": "black",
+                "sides": 6,
+                "tube": {
+                  "line": [
+                    [
+                      -0.8,
+                      2.86,
+                      1.03
+                    ],
+                    [
+                      -0.88,
+                      2.86,
+                      1.05
+                    ]
+                  ],
+                  "radius": 0.012
+                }
+              },
+              {
+                "box": {
+                  "from": [
+                    0.8700000000000001,
+                    2.8,
+                    1.02
+                  ],
+                  "to": [
+                    0.99,
+                    2.9,
+                    1.11
+                  ]
+                },
+                "material": "black",
+                "round": 0.3,
+                "smooth": 2
+              },
+              {
+                "material": "black",
+                "sides": 6,
+                "tube": {
+                  "line": [
+                    [
+                      0.8,
+                      2.86,
+                      1.03
+                    ],
+                    [
+                      0.88,
+                      2.86,
+                      1.05
+                    ]
+                  ],
+                  "radius": 0.012
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "at": "origin",
+        "name": "lights",
+        "port": "origin",
+        "skill": {
+          "lamp": {
+            "ports": {
+              "origin": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      3.88,
+                      0.8,
+                      0.86,
+                      0.15,
+                      3
+                    ],
+                    [
+                      3.99,
+                      0.78,
+                      0.84,
+                      0.13,
+                      3
+                    ],
+                    [
+                      4.07,
+                      0.76,
+                      0.81,
+                      0.09,
+                      3
+                    ]
+                  ],
+                  "x": 0.6
+                },
+                "material": "light_front",
+                "sides": 12,
+                "smooth": 1
+              },
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      3.88,
+                      0.8,
+                      0.86,
+                      0.15,
+                      3
+                    ],
+                    [
+                      3.99,
+                      0.78,
+                      0.84,
+                      0.13,
+                      3
+                    ],
+                    [
+                      4.07,
+                      0.76,
+                      0.81,
+                      0.09,
+                      3
+                    ]
+                  ],
+                  "x": -0.6
+                },
+                "material": "light_front",
+                "sides": 12,
+                "smooth": 1
+              },
+              {
+                "loft": {
+                  "along": "z",
+                  "rows": [
+                    [
+                      0.9,
+                      0.0,
+                      0.14,
+                      0.07,
+                      3
+                    ],
+                    [
+                      1.04,
+                      0.02,
+                      0.14,
+                      0.08,
+                      3
+                    ],
+                    [
+                      1.14,
+                      0.06,
+                      0.14,
+                      0.06,
+                      3
+                    ]
+                  ],
+                  "x": 0.74
+                },
+                "material": "light_back",
+                "sides": 12,
+                "smooth": 1
+              },
+              {
+                "loft": {
+                  "along": "z",
+                  "rows": [
+                    [
+                      0.9,
+                      0.0,
+                      0.14,
+                      0.07,
+                      3
+                    ],
+                    [
+                      1.04,
+                      0.02,
+                      0.14,
+                      0.08,
+                      3
+                    ],
+                    [
+                      1.14,
+                      0.06,
+                      0.14,
+                      0.06,
+                      3
+                    ]
+                  ],
+                  "x": -0.74
+                },
+                "material": "light_back",
+                "sides": 12,
+                "smooth": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "at": "corner_front_right",
+        "joint": {
+          "kind": "hinge",
+          "limits": [
+            -35,
+            35
+          ],
+          "role": "steer"
+        },
+        "name": "front_right_knuckle",
+        "port": "steer",
+        "skill": {
+          "knuckle": {
+            "at": [
+              0.75,
+              3.3810000000000002,
+              0.3234
+            ],
+            "disc": 0.276
+          }
+        }
+      },
+      {
+        "at": "axle",
+        "joint": {
+          "kind": "hinge",
+          "role": "wheel"
+        },
+        "name": "front_right_wheel",
+        "port": "hub",
+        "skill": {
+          "wheel": {
+            "build": "car",
+            "pcd": 0.105,
+            "rim": "aluminum",
+            "tire": {
+              "param": "tire"
+            }
+          }
+        },
+        "to": "front_right_knuckle"
+      },
+      {
+        "at": "corner_front_left",
+        "joint": {
+          "kind": "hinge",
+          "limits": [
+            -35,
+            35
+          ],
+          "role": "steer"
+        },
+        "name": "front_left_knuckle",
+        "port": "steer",
+        "skill": {
+          "knuckle": {
+            "at": [
+              -0.75,
+              3.3810000000000002,
+              0.3234
+            ],
+            "disc": 0.276
+          }
+        }
+      },
+      {
+        "at": "axle",
+        "joint": {
+          "kind": "hinge",
+          "role": "wheel"
+        },
+        "name": "front_left_wheel",
+        "port": "hub",
+        "skill": {
+          "wheel": {
+            "build": "car",
+            "pcd": 0.105,
+            "rim": "aluminum",
+            "tire": {
+              "param": "tire"
+            }
+          }
+        },
+        "to": "front_left_knuckle"
+      },
+      {
+        "at": "corner_rear_right",
+        "name": "rear_right_knuckle",
+        "port": "steer",
+        "skill": {
+          "knuckle": {
+            "at": [
+              0.75,
+              0.78,
+              0.3234
+            ],
+            "disc": 0.264
+          }
+        }
+      },
+      {
+        "at": "axle",
+        "joint": {
+          "kind": "hinge",
+          "role": "wheel"
+        },
+        "name": "rear_right_wheel",
+        "port": "hub",
+        "skill": {
+          "wheel": {
+            "build": "car",
+            "pcd": 0.105,
+            "rim": "aluminum",
+            "tire": {
+              "param": "tire"
+            }
+          }
+        },
+        "to": "rear_right_knuckle"
+      },
+      {
+        "at": "corner_rear_left",
+        "name": "rear_left_knuckle",
+        "port": "steer",
+        "skill": {
+          "knuckle": {
+            "at": [
+              -0.75,
+              0.78,
+              0.3234
+            ],
+            "disc": 0.264
+          }
+        }
+      },
+      {
+        "at": "axle",
+        "joint": {
+          "kind": "hinge",
+          "role": "wheel"
+        },
+        "name": "rear_left_wheel",
+        "port": "hub",
+        "skill": {
+          "wheel": {
+            "build": "car",
+            "pcd": 0.105,
+            "rim": "aluminum",
+            "tire": {
+              "param": "tire"
+            }
+          }
+        },
+        "to": "rear_left_knuckle"
+      }
+    ]
+  },
+  "name": "car",
+  "params": [
+    {
+      "default": "car",
+      "doc": "The name of the model: a to z, 0 to 9 and _.",
+      "max": 40,
+      "name": "name",
+      "type": "text"
+    },
+    {
+      "default": "215/50R17",
+      "doc": "The code of the tires (the arches stay: a tire of the same diameter).",
+      "max": 20,
+      "name": "tire",
+      "type": "text"
+    }
+  ],
+  "sources": [
+    "Chevrolet Bolt EV (2022): length 4145 mm, width 1765 mm (with no mirrors), height 1611 mm, wheelbase 2601 mm.",
+    "Tracks 1500 mm (front) and 1490 mm (rear); tires 215/50R17; wheels 5 x 105 mm.",
+    "The shape of the body: by eye, from photos of the car."
+  ]
+}

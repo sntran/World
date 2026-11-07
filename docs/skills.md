@@ -139,7 +139,7 @@ No skill names a model. The joints are in the drawing.
 | `fastener` | mechanic | `kind` (`bolt`, `nut`, `washer`), `thread`, `length` | A bolt, a nut or a washer of ISO metric sizes. |
 
 The blueprints `bicycle.json` (its params are the numbers of its
-geometry sheet), `scooter.json` and `motorcycle.json` are vehicles from
+geometry sheet), `scooter.json`, `motorcycle.json` and `car.json` are vehicles from
 these skills (`docs/format.md`, "The vehicles that the people build").
 
 ## A van, as on the line of its maker (`World.Skills.Van`)

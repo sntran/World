@@ -423,6 +423,7 @@ cores), on 2026-11-07:
 | A bicycle (`bicycle`, its geometry sheet) | 7 | 0.64 s | 0.37 s | |
 | A scooter (`scooter`) | 17 | 1.2 s | 0.58 s | The panels of the body. |
 | A motorcycle (`motorcycle`) | 17 | 1.1 s | 0.49 s | |
+| A car (`car`) | 12 | 1.7 s | 1.1 s | The body on its lofts. |
 
 Before plan 0002 the statue was one task of the cast (16 s with one
 person or with 16), and the join of a model waited for a full
