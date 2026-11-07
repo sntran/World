@@ -97,6 +97,9 @@ defmodule World.Construction do
     clock = Clock.new()
     Process.set_label({:construction, job.id})
     urgent = :erlang.alias([:priority])
+    # The alias is the value of the name: World.pause/1 and the others send
+    # to it.
+    {_, _} = Registry.update_value(World.Names, job.id, fn _ -> urgent end)
     # The memory of the VM, each 25 ms of the construction: its most.
     me = self()
     sampler = spawn_link(fn -> sample(me, World.memory()) end)
@@ -110,7 +113,9 @@ defmodule World.Construction do
       sampler: sampler,
       urgent: urgent,
       watched: %{},
-      over: false
+      over: false,
+      paused: false,
+      stale: %{}
     }
 
     s = record(s, "requested", nil, %{"budget" => budget, "level" => Atom.to_string(job.level)})
@@ -193,6 +198,26 @@ defmodule World.Construction do
   @impl true
   def handle_call({:join, pid}, _from, s), do: {:reply, :ok, %{s | replies: Enum.uniq(s.replies ++ [pid])}}
 
+  # A change of the job in a pause: the nodes of the new drawing are the
+  # nodes of the old one, and each node whose key is the same stays made
+  # (World.Drawing.keys/1). The nodes that change are made again; a
+  # person that works on one ends it for nobody (task_dropped).
+  def handle_call({:change, _job}, _from, %{paused: false} = s), do: {:reply, {:error, :not_paused}, s}
+
+  def handle_call({:change, job}, _from, s) when s.job.drawing == nil or job.drawing == nil,
+    do: {:reply, {:error, :not_a_drawing}, s}
+
+  def handle_call({:change, job}, _from, s) do
+    {old, new} = {s.job.drawing, job.drawing}
+    names = Enum.map(new["nodes"], & &1["name"])
+
+    if names != Enum.map(old["nodes"], & &1["name"]) do
+      {:reply, {:error, :other_nodes}, s}
+    else
+      {:reply, :ok, change(s, job, names)}
+    end
+  end
+
   def handle_call({:element, key}, _from, s) do
     case Map.fetch(Map.get(s, :glbs, %{}), key) do
       {:ok, glb} -> {:reply, {:ok, glb}, s}
@@ -205,7 +230,8 @@ defmodule World.Construction do
     {trade, requests} = Map.pop(s.requests, ref)
     s = %{s | requests: requests}
 
-    if trade != nil and Enum.any?(ready(s), &(&1.trade == trade)) and not Enum.any?(s.idle, &(s.workers[&1] == trade)) do
+    if trade != nil and not s.paused and Enum.any?(ready(s), &(&1.trade == trade)) and
+         not Enum.any?(s.idle, &(s.workers[&1] == trade)) do
       watched = Map.put(s.watched, p, :erlang.monitor(:process, p, [:priority]))
       s = %{s | workers: Map.put(s.workers, p, trade), idle: s.idle ++ [p], watched: watched}
       {:noreply, s |> record("hired", p, %{"trade" => Atom.to_string(trade)}) |> assign()}
@@ -214,6 +240,14 @@ defmodule World.Construction do
       Person.release(p)
       {:noreply, assign(s)}
     end
+  end
+
+  # The result of a task that a change made again: it goes to nobody, and
+  # the person is free.
+  def handle_info({result, p, id, _}, s) when result in [:done, :failed] and is_map_key(s.stale, p) do
+    s = %{s | stale: Map.delete(s.stale, p), idle: s.idle ++ [p]}
+    s = record(s, "task_dropped", p, %{"task" => id})
+    finish(assign(s))
   end
 
   # The result of a person that stopped after it sent it: its DOWN (a
@@ -256,11 +290,30 @@ defmodule World.Construction do
         waiting: waiting,
         workers: Map.delete(s.workers, p),
         idle: List.delete(s.idle, p),
-        watched: Map.delete(s.watched, p)
+        watched: Map.delete(s.watched, p),
+        stale: Map.delete(s.stale, p)
     }
 
+    finish(assign(s))
+  end
+
+  # A client pauses the construction: it gives no task, and its free
+  # people go; the people end the tasks in hand. A pause, a resume and a
+  # cancel are messages of priority (`World.pause/1`).
+  def handle_info(:pause, %{over: false, paused: false} = s) do
+    s = record(%{s | paused: true}, "paused", nil, %{"in_hand" => map_size(s.running)})
     {:noreply, assign(s)}
   end
+
+  def handle_info(:pause, s), do: {:noreply, s}
+
+  def handle_info(:resume, %{over: false, paused: true} = s),
+    do: %{s | paused: false} |> record("resumed", nil, %{}) |> assign() |> finish()
+
+  def handle_info(:resume, s), do: {:noreply, s}
+
+  def handle_info(:cancel, %{over: true} = s), do: {:noreply, s}
+  def handle_info(:cancel, s), do: stop(s, %{"reason" => "cancelled", "done" => MapSet.size(s.done)})
 
   # The plan comes before any message, so the deadline finds it.
   def handle_info(:deadline, %{over: true} = s), do: {:noreply, s}
@@ -309,6 +362,8 @@ defmodule World.Construction do
 
   # Give each task that can start to a free person of its trade; hire for
   # the trades with no free person, in the budget.
+  defp assign(%{paused: true} = s), do: Enum.reduce(s.idle, s, &let_go(&2, &1))
+
   defp assign(s) do
     {s, wanted} =
       Enum.reduce(ready(s), {s, []}, fn t, {s, wanted} ->
@@ -369,6 +424,36 @@ defmodule World.Construction do
     end
   end
 
+  defp change(s, job, names) do
+    {old, new} = {World.Drawing.keys(s.job.drawing), World.Drawing.keys(job.drawing)}
+    changed = for n <- names, old[n] != new[n], do: n
+    started = MapSet.union(s.done, MapSet.new(Map.values(s.running), & &1.id))
+    # The tasks that wait for a task are made again before it.
+    redo = for n <- Enum.reverse(World.Drawing.order(job.drawing)), n in changed, MapSet.member?(started, n), do: n
+    stale = for {p, t} <- s.running, t.id in changed, into: %{}, do: {p, t.id}
+    running = Map.drop(s.running, Map.keys(stale))
+    plan = Plan.of_drawing(job.drawing)
+    done = MapSet.difference(s.done, MapSet.new(changed))
+    in_hand = for {_, t} <- running, do: t.id
+    waiting = for t <- plan.tasks, not MapSet.member?(done, t.id), t.id not in in_hand, do: t
+    placed = min(s.placed, names |> Enum.take_while(&(&1 not in changed)) |> length())
+    keep = Map.take(job, [:drawing, :item, :scene, :pose, :hash])
+
+    s = %{
+      s
+      | job: Map.merge(s.job, keep),
+        plan: plan,
+        done: done,
+        running: running,
+        waiting: waiting,
+        stale: Map.merge(s.stale, stale),
+        made: Map.drop(s.made, changed),
+        placed: placed
+    }
+
+    record(s, "changed", nil, %{"redo" => redo, "keep" => names -- changed})
+  end
+
   # The trades that wait for a person: hire in the budget. When a trade
   # that a task needs has nobody here, the free people of the trades that
   # no task needs now go back: they make room in the budget, and in the
@@ -396,7 +481,7 @@ defmodule World.Construction do
   end
 
   # The end: each task done, the people go, and the model is joined.
-  defp finish(%{waiting: [], running: running} = s) when running == %{} do
+  defp finish(%{waiting: [], running: running, stale: stale} = s) when running == %{} and stale == %{} do
     s = Enum.reduce(s.idle, s, &let_go(&2, &1))
     s = if s.job.drawing, do: %{s | item: World.Drawing.assemble(s.job.drawing, s.made)}, else: s
     glb = GLB.encode(s.job.scene.(s.item, level: s.level, triangles: s.triangles))

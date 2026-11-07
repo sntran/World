@@ -2,7 +2,7 @@ defmodule World.ToySkills do
   @moduledoc """
   Two small skills for the tests of the skills (`World.Skill`): `block`
   (a mason lays a block of `size` m, as high as the blocks of its nodes
-  `from` together) and `note` (a surveyor writes data, and makes no part).
+  `from` together, in `wait` ms: a test can pause it in hand) and `note` (a surveyor writes data, and makes no part).
   `test/test_helper.exs` adds them to `World.Skills`.
   """
 
@@ -19,7 +19,7 @@ defmodule World.ToySkills do
 
     @impl true
     def check(data, path) do
-      case World.Skill.keys(data, path, ~w(size), ~w(size)) do
+      case World.Skill.keys(data, path, ~w(size wait), ~w(size)) do
         [] ->
           if is_number(data["size"]) and data["size"] > 0, do: [], else: [{"#{path}.size", "must be a number over 0"}]
 
@@ -32,7 +32,8 @@ defmodule World.ToySkills do
     def estimate(_data, _level), do: 12
 
     @impl true
-    def make(%{"size" => s}, inputs, %{from: from}) do
+    def make(%{"size" => s} = data, inputs, %{from: from}) do
+      Process.sleep(Map.get(data, "wait", 0))
       h = s + Enum.sum(for name <- from, do: inputs[name]["size"] || 0)
       ports = [Port.new("o", {0.0, 0.0, 0.0}, {0, 0, 1}), Port.new("top", {0.0, 0.0, h / 1}, {0, 0, 1})]
       part = Part.new("block", :part, [Shape.box({-s / 2, -s / 2, 0.0}, {s / 2, s / 2, h / 1}, :concrete)], ports)

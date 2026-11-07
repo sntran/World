@@ -49,6 +49,8 @@ An order is data, never code. World runs no code from an order.
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
+| `POST /builds/ID/pause`, `/resume`, `/cancel` | A pause (the people end the tasks in hand, and no task starts), a resume, or a cancel (the event `stopped` with the reason `cancelled`): 202, or 404. |
+| `POST /builds/ID/change` | In a pause, a new order of the same blueprint in data (the same nodes): each node whose data is the same stays made, and the people make the others again at the resume (the event `changed`, with `redo` and `keep`). 200, 409 when the build is not in a pause or has other nodes, 422, or 404. |
 | `/builds/ID/elements/KEY.glb` | The GLB of one element of a build, while the build goes on and for 5 minutes after its end. |
 | `/events` | The events of the whole node as a stream: each construction, each hire, each element. |
 | `/census` | The people of the node by trade, free and busy, and the constructions that wait for a person. |
@@ -565,8 +567,9 @@ person), `at` (the milliseconds from the start of the build), `wall`
 and `data`. The kinds: `requested`, `plan_made` (the tasks, each with
 its trade and the tasks that it waits for), `hired`, `task_started`,
 `task_done`, `element` (the part of a task: its node, its GLB key and
-its matrix), `released`, `done` (the model is complete), `stopped`,
-`failed` and `run_done` (the time and the memory). A comment line
+its matrix), `released`, `paused`, `resumed`, `changed`, `task_dropped`,
+`done` (the model is complete), `stopped`, `failed` and `run_done` (the
+time and the memory). A comment line
 (`: ping`) comes each 15 s when there is no event.
 
 A game shows the elements as they come (the GLB of each key once, and

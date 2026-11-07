@@ -4,8 +4,10 @@
 (* two trades. The house has a wall of a mason, then a rail of a           *)
 (* steelworker on the wall; the shed has two walls of a mason. The house  *)
 (* holds two people at most, the shed one. MCBuild.cfg checks it;          *)
-(* MCBuildFault.cfg checks the fault model where a task starts again, and *)
-(* MCBuildHire.cfg the fault model where a busy person is hired.           *)
+(* Each construction can pause once. MCBuildFault.cfg checks the fault     *)
+(* model where a task starts again, MCBuildHire.cfg where a busy person is *)
+(* hired, MCBuildPause.cfg where a task starts in a pause, and             *)
+(* MCBuildKeep.cfg where a change forgets a task that it keeps.            *)
 (***************************************************************************)
 EXTENDS Build, TLC
 

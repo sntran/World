@@ -7,6 +7,8 @@ defmodule World do
   - `watch/1` sends each event of a construction, or of the whole world
     (`:world`), to the process that calls: `{:world, event}`.
   - `await/2` waits for the result of a job.
+  - `pause/1`, `resume/1` and `cancel/1` go to a construction as messages
+    of priority; `change/2` gives it a new job in a pause.
   - `census/0` gives the people of the node.
   """
   alias World.Construction
@@ -33,6 +35,41 @@ defmodule World do
     Construction.join(job.id, job.reply)
   catch
     :exit, _ -> :gone
+  end
+
+  @doc """
+  Pause a construction: it gives no task, its free people go, and the
+  people end the tasks in hand. `:ok`, or `{:error, :none}` when no
+  construction of the id runs.
+  """
+  def pause(id), do: urgent(id, :pause)
+
+  @doc "Resume a construction after a pause: `:ok` or `{:error, :none}`."
+  def resume(id), do: urgent(id, :resume)
+
+  @doc "Cancel a construction: it stops (`stopped`, the reason `cancelled`) and keeps nothing."
+  def cancel(id), do: urgent(id, :cancel)
+
+  # A message of priority to the alias of the construction, the value of
+  # its name (World.Construction).
+  defp urgent(id, message) do
+    case Registry.lookup(World.Names, id) do
+      [{_, alias}] when is_reference(alias) -> :erlang.send(alias, message, [:priority]) && :ok
+      _ -> {:error, :none}
+    end
+  end
+
+  @doc """
+  Change the job of a construction in a pause (a new order of the same
+  blueprint in data): each node whose data is the same stays made, and
+  the people make the others again when the construction resumes. `:ok`,
+  or `{:error, reason}`: `:not_paused`, `:not_a_drawing`, `:other_nodes`
+  (the nodes of the drawing are not the same) or `:none`.
+  """
+  def change(id, job) do
+    GenServer.call({:via, Registry, {World.Names, id}}, {:change, job})
+  catch
+    :exit, _ -> {:error, :none}
   end
 
   @doc "Send each event of a construction (its id), or of the world (`:world`), to the process that calls."

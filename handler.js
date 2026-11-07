@@ -189,6 +189,9 @@ async function route(request, env, { vm, commit }) {
   // The constructions of the people of the node, and the streams.
   if (path === '/builds' && request.method === 'POST') return forward(request, vm, url.origin, '/builds');
 
+  // A pause, a resume, a cancel or a change of a construction.
+  if (/^\/builds\/[^/]+\/(pause|resume|cancel|change)$/.test(path) && request.method === 'POST') return forward(request, vm, url.origin, path);
+
   if (request.method !== 'GET' && request.method !== 'HEAD') return errors(405, 'the method is not allowed');
 
   if (path.startsWith('/o/')) {

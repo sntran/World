@@ -167,6 +167,32 @@ defmodule World.Service do
     end
   end
 
+  # A pause, a resume or a cancel: messages of priority to the construction.
+  post "/builds/:id/:act" when act in ["pause", "resume", "cancel"] do
+    fun = %{"pause" => &World.pause/1, "resume" => &World.resume/1, "cancel" => &World.cancel/1}[act]
+
+    case fun.(id) do
+      :ok -> json(conn, 202, %{"build" => id, "asked" => act})
+      {:error, :none} -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such construction"}]})
+    end
+  end
+
+  # A change in a pause: a new order, into the store, for the construction.
+  post "/builds/:id/change" do
+    with_order(conn, fn body ->
+      case Orders.construction(body, origin(conn)) do
+        {:ok, job, placed} ->
+          changed(conn, id, World.change(id, job), placed)
+
+        {:error, :store} ->
+          json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+        {:error, errors} ->
+          json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
   get "/builds/:id/events" do
     conn = conn |> fetch_query_params() |> Stream.open(id)
     Stream.follow(conn, id, after_id(conn), &over?/1)
@@ -192,6 +218,22 @@ defmodule World.Service do
 
   match _ do
     json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such page"}]})
+  end
+
+  defp changed(conn, id, :ok, placed),
+    do: json(conn, 200, %{"build" => id, "hash" => placed["hash"], "files" => placed["files"]})
+
+  defp changed(conn, _id, {:error, :none}, _),
+    do: json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such construction"}]})
+
+  defp changed(conn, _id, {:error, reason}, _) do
+    message = %{
+      not_paused: "the construction is not in a pause",
+      not_a_drawing: "the construction is not a drawing",
+      other_nodes: "the drawing has other nodes"
+    }
+
+    json(conn, 409, %{"errors" => [%{"path" => "", "message" => message[reason]}]})
   end
 
   # A job of a request: its order into the store, then a construction.
@@ -246,13 +288,23 @@ defmodule World.Service do
 
         %{
           "build" => id,
-          "status" => if(over, do: over["kind"], else: "building"),
+          "status" => status(run, over),
           "level" => (plan || requested)["data"]["level"],
           "tasks" => if(plan, do: length(plan["data"]["tasks"]), else: 0),
           "done" => Enum.count(run, &(&1["kind"] == "task_done")),
           "elements" => for(e <- run, e["kind"] == "element", do: Map.take(e["data"], ~w(task part glb matrix))),
           "last" => last["id"]
         }
+    end
+  end
+
+  # The state of a construction: the kind of its end, or paused, or building.
+  defp status(_run, %{"kind" => kind}), do: kind
+
+  defp status(run, nil) do
+    case Enum.find(Enum.reverse(run), &(&1["kind"] in ~w(paused resumed))) do
+      %{"kind" => "paused"} -> "paused"
+      _ -> "building"
     end
   end
 

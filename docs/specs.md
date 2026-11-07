@@ -24,7 +24,7 @@ design. The check 4 runs on each log that the site gives.
 
 | Specification | The flow | The code |
 |---|---|---|
-| `specs/Build.tla` | The constructions, their tasks, and the people that they share: a hire, the start and the end of a task, a release, the end of a construction, its deadline. | `World.Construction`, `World.Census` |
+| `specs/Build.tla` | The constructions, their tasks, and the people that they share: a hire, the start and the end of a task, a release, the end of a construction, its deadline or a cancel, a pause, a resume, and a change that makes tasks again. | `World.Construction`, `World.Census` |
 | `specs/Census.tla` | The people of the node at its limit: a construction asks for a person of a trade, and the census gives a free person, a new one, or a new one in the place of a free person of another trade. | `World.Census`, `World.Construction` |
 | `specs/Stream.tla` | A stream to one client: it watches, reads the events of the past, then follows the new events. | `World.Stream`, `World.Log.Server` |
 | `specs/LogStore.tla` | The log of the node and its store: the batches, a stop of the VM, a new log. | `World.Log.Server`, `World.Log.Store` |
@@ -34,7 +34,8 @@ design. The check 4 runs on each log that the site gives.
 The constants: the constructions (`Builds`), the tasks of all of them
 (`Tasks`, `BuildOf`, `Waits`, `Trade`), the people and their trades
 (`People`, `Skill`), the budget of workers of each construction
-(`Budget`), and two guards for the fault models.
+(`Budget`), the most pauses of a construction (`Pauses`, a bound of the
+model), and four guards for the fault models.
 
 | Action | When it can occur | Event of the log |
 |---|---|---|
@@ -43,7 +44,11 @@ The constants: the constructions (`Builds`), the tasks of all of them
 | `Finish(p, t)` | `p` does `t`. | `task_done` |
 | `Release(b, p)` | `p` is free, and `b` has no task of its trade to start; or no task of its trade can start now, and a task that can start needs a trade that `b` holds nobody of. | `released` |
 | `Done(b)` | Each task of `b` is done, and `b` holds nobody. | `done` |
-| `Deadline(b)` | Any time before the end: `b` stops, its people go back at once, and a person that works ends its task for nobody. | `stopped` |
+| `Deadline(b)` | Any time before the end, also for a cancel: `b` stops, its people go back at once, and a person that works ends its task for nobody. | `stopped` |
+| `Pause(b)` | Before the end: `b` gives no task and hires nobody; it lets its free people go. | `paused` |
+| `Resume(b)` | `b` is in a pause. | `resumed` |
+| `Redo(b, t)` | In a pause, `t` started, and each task that waits for `t` did not start: `t` is not started and not done, and a person that works on it ends it for nobody (stale). | `changed` (one `Redo` for each task of `redo`) |
+| `Drop(p)` | `p` ends a task that a change made again. | `task_dropped` |
 
 | Invariant | What it says | The fault that it stops |
 |---|---|---|
@@ -52,16 +57,21 @@ The constants: the constructions (`Builds`), the tasks of all of them
 | `MadeOnce` | A task that is done is never made again. | Work done two times. |
 | `OnePlace` | A busy person works for the construction that holds it, or for one that stopped. | A person at two constructions. |
 | `InBudget` | A construction never holds more people than its budget. | A build that takes the people of the node. |
+| `QuietPause` | In a pause, the tasks in work are the tasks in work at its start, or fewer. | A task that starts in a pause. |
+| `KeepsWhatIsSame` | A task that started is done, or a person works on it. | A change that forgets the work of a task that it keeps. |
 
 The liveness property `Delivers`: each construction is done in the end
 (or stops).
 
 The small model (`specs/MCBuild.tla`): a house (a wall of a mason, then
 a rail of a steelworker) and a shed (two walls of a mason), three people
-of two trades. `MCBuildFault.cfg` lets a task start again: the checker
-must find `MadeOnce` violated. `MCBuildHire.cfg` lets a construction hire
-a person that another construction holds: the checker must find
-`OnePlace` violated.
+of two trades; each construction can pause once. `MCBuildFault.cfg`
+lets a task start again: the checker must find `MadeOnce` violated.
+`MCBuildHire.cfg` lets a construction hire a person that another
+construction holds: the checker must find `OnePlace` violated.
+`MCBuildPause.cfg` lets a task start in a pause: `QuietPause` violated.
+`MCBuildKeep.cfg` lets a change forget that a task it keeps is done:
+`KeepsWhatIsSame` violated.
 
 ### `specs/Census.tla`
 
@@ -147,6 +157,9 @@ The result is `:ok`, `{:error, {:diverged, event}}` when the
 specification has no step for an event, or `{:error, {:violated,
 invariant, event}}`.
 
+`test/world/change_test.exs` replays the logs of a pause, of a change
+of a task in hand (its result goes to nobody: `task_dropped`), and of
+the statue at far whose height changes after its base: the base stays.
 `test/world/construction_test.exs` replays the log of the wall of
 bricks with one worker and with eight, of two constructions at one
 time, of a construction of two trades with a budget of one person (it

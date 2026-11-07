@@ -245,7 +245,9 @@ defmodule World.ConstructionTest do
     assert Construction.element(id, key) == {:ok, glbs[key]}
     assert Construction.element(id, 999) == :none
 
-    # The deadline comes after the end: the construction keeps going until its time.
+    # The deadline and a cancel come after the end: the construction keeps
+    # going until its time.
+    send(pid, :cancel)
     ref = Process.monitor(pid)
     Process.sleep(1_100)
     assert Process.alive?(pid)

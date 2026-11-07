@@ -661,6 +661,25 @@ defmodule World.Drawing do
     assemble(raw, made)
   end
 
+  @doc "The names of the nodes in the order of their waits: each node after the nodes that it waits for."
+  def order(raw), do: :graph.topsort(graph(raw["nodes"]))
+
+  @doc """
+  The key of each node of a drawing, by its name: a hash of its data and
+  of the keys of the nodes that it waits for. A change of a node changes
+  the key of each node that waits for it.
+  """
+  def keys(raw) do
+    root = hd(raw["nodes"])["name"]
+    by_name = Map.new(raw["nodes"], &{&1["name"], &1})
+
+    Enum.reduce(order(raw), %{}, fn name, keys ->
+      node = by_name[name]
+      waits = for w <- waits(node, root), do: keys[w]
+      Map.put(keys, name, :erlang.phash2({Map.delete(node, "name"), waits}, 4_294_967_296))
+    end)
+  end
+
   @doc "The data of the nodes `from` of a node, by their names, from the nodes made."
   def inputs(raw, name, made) do
     node = Enum.find(raw["nodes"], &(&1["name"] == name))

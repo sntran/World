@@ -16,6 +16,16 @@ defmodule World.BuildSpecTest do
              Checker.check(@model, config: Path.rootname(@model) <> "Fault.cfg")
   end
 
+  test "in the fault model of a task that starts in a pause, the checker finds work that was not in hand" do
+    assert {:error, %{kind: :invariant, property: "QuietPause"}, _} =
+             Checker.check(@model, config: Path.rootname(@model) <> "Pause.cfg")
+  end
+
+  test "in the fault model of a change that forgets a task, the checker finds a task that nobody makes" do
+    assert {:error, %{kind: :invariant, property: "KeepsWhatIsSame"}, _} =
+             Checker.check(@model, config: Path.rootname(@model) <> "Keep.cfg")
+  end
+
   test "in the fault model of a busy person that can be hired, the checker finds a person at the wrong construction" do
     assert {:error, %{kind: :invariant, property: "OnePlace"}, _} =
              Checker.check(@model, config: Path.rootname(@model) <> "Hire.cfg")

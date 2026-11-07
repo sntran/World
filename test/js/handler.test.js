@@ -194,6 +194,11 @@ test('the constructions and the streams go to the VM, with Last-Event-ID, and co
   }
   assert.deepEqual(v.calls.slice(-6), ['/builds', '/events?after=4', '/census', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']);
   assert.equal((await handler(req('/builds', { method: 'PUT' }), env, { vm: v, commit: 'c1' })).status, 405);
+  for (const act of ['pause', 'resume', 'cancel', 'change']) {
+    await handler(req(`/builds/abc-far/${act}`, { method: 'POST', body: '{}' }), env, { vm: v, commit: 'c1' });
+  }
+  assert.deepEqual(v.calls.slice(-4), ['/builds/abc-far/pause', '/builds/abc-far/resume', '/builds/abc-far/cancel', '/builds/abc-far/change']);
+  assert.equal((await handler(req('/builds/abc-far/stop', { method: 'POST' }), env, { vm: v, commit: 'c1' })).status, 405);
 });
 
 test('the other routes', async () => {

@@ -59,6 +59,51 @@ defmodule World.StreamTest do
     assert call(:get, "/builds/nothing").status == 404
   end
 
+  test "POST /builds/ID/pause, change, resume and cancel" do
+    blocks = fn size ->
+      nodes = [
+        %{"name" => "root", "skill" => %{"block" => %{"size" => size, "wait" => 2_000}}},
+        %{"name" => "upper", "skill" => %{"block" => %{"size" => 0.5}}, "to" => "root", "at" => "top"}
+      ]
+
+      JSON.encode!(%{"order" => %{"blueprint" => "drawing", "options" => %{"drawing" => %{"nodes" => nodes}}}})
+    end
+
+    %{"build" => id} = json(call(:post, "/builds", blocks.(1.0)))
+    World.watch(id)
+    assert json(call(:post, "/builds/#{id}/pause")) == %{"build" => id, "asked" => "pause"}
+    assert_receive {:world, %{"kind" => "paused"}}, 5_000
+    assert json(call(:get, "/builds/#{id}"))["status"] == "paused"
+
+    changed = call(:post, "/builds/#{id}/change", blocks.(2.0))
+    assert changed.status == 200 and json(changed)["build"] == id
+
+    one = %{
+      "order" => %{
+        "blueprint" => "drawing",
+        "options" => %{
+          "drawing" => %{
+            "nodes" => [%{"name" => "root", "part" => "a"}],
+            "parts" => %{"a" => %{"shapes" => [%{"box" => %{"from" => [0, 0, 0], "to" => [1, 1, 1]}}]}}
+          }
+        }
+      }
+    }
+
+    assert call(:post, "/builds/#{id}/change", JSON.encode!(one)).status == 409
+    assert call(:post, "/builds/#{id}/change", "{").status == 400
+    assert call(:post, "/builds/#{id}/change", ~s({"order": {"blueprint": "ball"}})).status == 422
+    assert call(:post, "/builds/#{id}/resume").status == 202
+    # The resume is a message: the state changes with its event.
+    assert_receive {:world, %{"kind" => "resumed"}}, 5_000
+    assert json(call(:get, "/builds/#{id}"))["status"] == "building"
+    assert {:ok, _} = World.await(id, 10_000)
+    assert json(call(:get, "/builds/#{id}"))["status"] == "done"
+
+    assert call(:post, "/builds/nothing/cancel").status == 404
+    assert call(:post, "/builds/nothing/change", blocks.(2.0)).status == 404
+  end
+
   test "POST /builds with accept: text/event-stream gives the stream of the construction at once" do
     conn = call(:post, "/builds", job("far"), [{"accept", "text/event-stream"}])
     assert conn.status == 200
@@ -67,7 +112,13 @@ defmodule World.StreamTest do
   end
 
   test "POST /builds refuses a wrong budget, a wrong order, a job with no order, and a store that fails" do
-    conn = call(:post, "/builds", job("far", %{"workers" => 0, "seconds" => -1, "triangles" => 1.5, "money" => 3}))
+    conn =
+      call(
+        :post,
+        "/builds",
+        job("far", %{"workers" => 0, "seconds" => -1, "triangles" => 1.5, "money" => 3})
+      )
+
     assert conn.status == 422
 
     assert Enum.map(json(conn)["errors"], & &1["path"]) == [
@@ -89,6 +140,7 @@ defmodule World.StreamTest do
     Application.put_env(:world, World.Orders.Store, program: "/bin/false")
     on_exit(fn -> Application.put_env(:world, World.Orders.Store, old) end)
     assert call(:post, "/builds", job("far")).status == 503
+    assert call(:post, "/builds/x/change", job("far")).status == 503
 
     # The tool build of the MCP server, with the same store.
     message = %{"jsonrpc" => "2.0", "id" => 1, "method" => "tools/call"}

@@ -11,7 +11,7 @@ defmodule World.BuildSpec do
   alias Accord.TLA.Checker.Machine
 
   @specs Path.expand("../../specs", __DIR__)
-  @invariants ~w(OneWorkerOneTask WaitsFirst MadeOnce OnePlace InBudget)
+  @invariants ~w(OneWorkerOneTask WaitsFirst MadeOnce OnePlace InBudget QuietPause KeepsWhatIsSame)
 
   @doc """
   Replay the logs (`World.Log`) of constructions, in the folder `dir`.
@@ -30,10 +30,14 @@ defmodule World.BuildSpec do
 
     events
     |> Enum.reduce_while({:ok, init}, fn e, {:ok, states} ->
-      case action(e) do
-        nil -> {:cont, {:ok, states}}
-        {name, args} -> step(m, states, name, args, e)
-      end
+      e
+      |> actions()
+      |> Enum.reduce_while({:cont, {:ok, states}}, fn {name, args}, {:cont, {:ok, states}} ->
+        case step(m, states, name, args, e) do
+          {:cont, _} = next -> {:cont, next}
+          halt -> {:halt, halt}
+        end
+      end)
     end)
     |> case do
       {:ok, _} -> :ok
@@ -58,13 +62,26 @@ defmodule World.BuildSpec do
     end
   end
 
-  # The action of an event, with its arguments.
+  # The actions of an event, with their arguments: a change is one Redo
+  # for each task that it makes again, in the order of the event.
+  defp actions(%{kind: "changed", order: b, data: d}), do: for(t <- d["redo"], do: {"Redo", [b, task(b, t)]})
+
+  defp actions(e) do
+    case action(e) do
+      nil -> []
+      a -> [a]
+    end
+  end
+
   defp action(%{kind: "hired", order: b, who: p}), do: {"Hire", [b, p]}
   defp action(%{kind: "task_started", order: b, who: p, data: d}), do: {"Start", [b, p, task(b, d["task"])]}
   defp action(%{kind: "task_done", order: b, who: p, data: d}), do: {"Finish", [p, task(b, d["task"])]}
   defp action(%{kind: "released", order: b, who: p}), do: {"Release", [b, p]}
   defp action(%{kind: "done", order: b}), do: {"Done", [b]}
   defp action(%{kind: "stopped", order: b}), do: {"Deadline", [b]}
+  defp action(%{kind: "paused", order: b}), do: {"Pause", [b]}
+  defp action(%{kind: "resumed", order: b}), do: {"Resume", [b]}
+  defp action(%{kind: "task_dropped", who: p}), do: {"Drop", [p]}
   defp action(_), do: nil
 
   # A task of the specification: the construction and the id of the task.
@@ -105,8 +122,11 @@ defmodule World.BuildSpec do
         People <- RunPeople
         Skill <- RunSkill
         Budget <- RunBudget
+        Pauses = 1000
         Guard = #{if guard, do: "TRUE", else: "FALSE"}
         HireGuard = TRUE
+        PauseGuard = TRUE
+        KeepGuard = TRUE
     INVARIANT #{Enum.join(@invariants, " ")}
     """
   end

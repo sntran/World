@@ -12,7 +12,7 @@ defmodule World.Log do
   """
   alias World.Clock
 
-  @kinds ~w(requested plan_made hired released task_started task_done element done stopped failed run_done)
+  @kinds ~w(requested plan_made hired released task_started task_done task_dropped element paused resumed changed done stopped failed run_done)
 
   defmodule Event do
     @moduledoc "One thing that happened: its world time, wall time, kind, order, person and data."
@@ -132,6 +132,19 @@ defmodule World.Log do
         "task_started" -> start(orders, order, o, id, waits)
         "task_done" -> finish(orders, order, o, id)
       end
+    end
+  end
+
+  # A change makes its tasks again: they did not start, and are not done.
+  defp task(%Event{kind: "changed", order: order, data: %{"redo" => redo}}, orders) do
+    with {:ok, o} <- Map.fetch(orders, order) |> plan() do
+      o = %{
+        o
+        | started: MapSet.difference(o.started, MapSet.new(redo)),
+          done: MapSet.difference(o.done, MapSet.new(redo))
+      }
+
+      {:ok, Map.put(orders, order, o)}
     end
   end
 
