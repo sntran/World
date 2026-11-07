@@ -33,4 +33,5 @@ builder does not change the requirements: the owner does.
 
 | Number | Name | Status |
 |---|---|---|
-| 0001 | [The people build on demand](0001-people-build-on-demand.md) | In progress |
+| 0001 | [The people build on demand](0001-people-build-on-demand.md) | Done (its steps 4 and 5 moved to 0002) |
+| 0002 | [The people build any blueprint, as on a real site](0002-build-any-blueprint.md) | In progress |

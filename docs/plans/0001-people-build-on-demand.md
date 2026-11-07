@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | In progress: steps 1, 2, 3 and 6 are done, and the tower of step 4 (section 10). |
+| Status | Done: steps 1, 2, 3 and 6, and the tower of step 4 (section 10). The rest of steps 4 and 5 moved to plan 0002, with a new direction of the owner: World builds any blueprint that a project sends, and the cast is pours in parallel (0002, D3, in place of D30). |
 | Depends on | The matter of World as it is (`docs/format.md`), the drawing format (`docs/format.md`, "A drawing"), the MCP server (`World.MCP`), the stores (`World.Store`), the log (`World.Log`). |
 | Changes | `docs/world.md` (the world layer: the run, the foreman, the workers), `specs/Order.tla`, `docs/factory.md` (the calls of the site), plan 0023 of Vũng Tàu (the fetch at compile time) and a new plan of Vũng Tàu (the QA mode). |
 
