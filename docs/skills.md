@@ -126,9 +126,21 @@ No skill names a model. The joints are in the drawing.
 | `bicycle_fork` | welder | the geometry sheet, with `rake` and `bar_width` | The fork, the stem and a drop bar, with its fender: the ports `steer` and `axle`. |
 | `crankset` | mechanic | `arm`, `teeth` | The chainring, the arms and the pedals on their hinges: the port `axle` goes on `bb`. |
 | `stand` | smith | shape data: `shapes`, `ports`, `mass`, `sources`, `detail`, `inside` | A stand, a rack, a guard, from its own port. |
+| `frame` | welder | shape data | The frame of a motor vehicle, with its head tube and its ports. |
+| `swingarm` | welder | shape data | A swing arm, with its ports `pivot`, `axle` and `shock`. |
+| `fork` | mechanic | shape data | A telescopic fork with its fender, or the bars, the grips, the levers and the mirrors of a cockpit. |
+| `engine` | mechanic | shape data, with its `mass` | An engine, with its ports. |
+| `panel` | molder | shape data (a `skin` of ABS) | A panel of plastic: the body of a scooter, a fender. |
+| `body` | sheet_metal_worker | shape data | A body of steel sheet on lofts with arches, a tank. |
+| `glass` | glazier | shape data | The windows of a car, a screen. |
+| `seat` | upholsterer | shape data | A saddle, the seat of a scooter or of a motorcycle. |
+| `lamp` | electrician | shape data (detail `always`) | The lamps. |
+| `spring` | smith | `diameter`, `wire`, `length`, `turns`, `material`, `inside` | A coil spring: a shock, with its ports `end_a` and `end_b`. |
+| `fastener` | mechanic | `kind` (`bolt`, `nut`, `washer`), `thread`, `length` | A bolt, a nut or a washer of ISO metric sizes. |
 
-The blueprint `priv/blueprints/bicycle.json` is a bicycle from these
-skills: its params are the numbers of the sheet.
+The blueprints `bicycle.json` (its params are the numbers of its
+geometry sheet), `scooter.json` and `motorcycle.json` are vehicles from
+these skills (`docs/format.md`, "The vehicles that the people build").
 
 ## A van, as on the line of its maker (`World.Skills.Van`)
 
@@ -146,18 +158,3 @@ node takes it in `from`. The data `group` names one group of a station.
 | `van_seats` | upholsterer | | The seats on their mounts (at near). |
 | `van_chassis` | mechanic | `group`: `engine_bay`, `drive`, `front_right`, `front_left`, `rear_right`, `rear_left` | The engine bay, the drive, or the corner of one wheel. |
 | `van_upfit` | electrician | | The items of DIY on the roof. |
-
-## A scooter, as on the line of its maker (`World.Skills.Scooter`)
-
-Each skill has the data `model` (now `honda_vision`). The drawing joins
-the parts on the ports of the frame (`body`, `seat`, `steer`, `pivot`,
-`stand`), with their joints.
-
-| Skill | Trade | What it makes |
-|---|---|---|
-| `scooter_frame` | welder | The frame of steel tube: the root. |
-| `scooter_body` | molder | The body of plastic panels, with its lights. |
-| `scooter_seat` | upholsterer | The seat on its hinge. |
-| `scooter_fork` | mechanic | The fork, the bars and the front wheel. |
-| `scooter_engine` | mechanic | The engine, the swing arm, the shock and the rear wheel. |
-| `scooter_stand` | smith | The center stand. |

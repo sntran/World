@@ -4,7 +4,7 @@ defmodule World.VehicleSkillsTest do
   use ExUnit.Case, async: true
 
   alias World.{Build, Detail, Drawing, Scene}
-  alias World.Skills.{Knuckle, Vehicle, Wheel}
+  alias World.Skills.{Fastener, Glass, Knuckle, Spring, Vehicle, Wheel}
   alias World.Vehicles.{Corners, Wheels}
 
   defp tris(item, level \\ :near), do: Scene.triangles(Build.scene(item, level: level))
@@ -123,5 +123,34 @@ defmodule World.VehicleSkillsTest do
              ~w(p.x p.shapes p.ports p.mass p.sources p.detail p.inside)
 
     assert Vehicle.check_part(3, "p") == [{"p", "must be an object"}]
+  end
+
+  test "a fastener, a spring and the glass: their parts and the errors of their data" do
+    assert made(Fastener, %{"kind" => "washer", "thread" => "M12"}).ports["face"]
+    assert made(Fastener, %{"kind" => "bolt", "thread" => "M8", "length" => 0.04}).ports["tip"]
+    assert [{"f.thread", _}] = Fastener.check(%{"kind" => "nut", "thread" => "M7.5"}, "f")
+    assert Fastener.estimate(%{}, :far) > 0
+
+    shock =
+      made(Spring, %{"diameter" => 0.05, "wire" => 0.006, "length" => 0.25, "turns" => 7, "inside" => true}, "shock")
+
+    assert shock.inside and shock.name == "shock" and Map.keys(shock.ports) == ["end_a", "end_b"]
+
+    assert Enum.map(Spring.check(%{"diameter" => 2, "turns" => 1}, "s"), &elem(&1, 0)) ==
+             ~w(s.diameter s.wire s.length s.turns)
+
+    assert Spring.estimate(%{}, :near) > 0
+
+    glass = %{
+      "shapes" => [
+        %{
+          "loft" => %{"rows" => [[1.12, 1.62, 1.64, 0.15, 4], [1.32, 1.5, 1.52, 0.13, 4]], "along" => "z"},
+          "material" => "glass"
+        }
+      ]
+    }
+
+    assert Glass.check(glass, "g") == [] and made(Glass, glass).kind == :glass
+    assert Glass.estimate(glass, :far) > 0
   end
 end

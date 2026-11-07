@@ -21,7 +21,7 @@ defmodule World.YardTest do
     start_supervised!({Yard, haul: haul, level: "far"})
 
     # The factory of the vehicles is not open yet: the yard holds the scooter.
-    {:ok, scooter} = Orders.job(%{"blueprint" => "scooter_line", "options" => %{}}, "far")
+    {:ok, scooter} = Orders.job(%{"blueprint" => "scooter", "options" => %{}}, "far")
     {:ok, id} = World.build(scooter)
     # The site is open: a house starts at once.
     {:ok, house} = Orders.job(%{"blueprint" => "tube_house", "options" => %{"floors" => 1}}, "far")
@@ -88,7 +88,7 @@ defmodule World.YardTest do
   end
 
   test "a build with no yard, or with no place for its kind, starts at once" do
-    {:ok, job} = Orders.job(%{"blueprint" => "scooter_line", "options" => %{}}, "far")
+    {:ok, job} = Orders.job(%{"blueprint" => "scooter", "options" => %{}}, "far")
     assert {:start, ^job} = Yard.place(job, :no_yard)
     assert {:start, j} = Yard.place(%{job | drawing: Map.put(job.drawing, "kind", "statue")}, :no_yard)
     assert j.drawing["kind"] == "statue"

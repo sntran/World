@@ -191,7 +191,8 @@ defmodule World.SkillTest do
 
     assert Enum.map(Blueprints.data(), & &1["name"]) == [
              "bicycle",
-             "scooter_line",
+             "motorcycle",
+             "scooter",
              "statue",
              "tower",
              "tube_house",

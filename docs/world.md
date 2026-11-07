@@ -420,7 +420,9 @@ cores), on 2026-11-07:
 | The statue on Núi Nhỏ (`statue`) | 37 | 14.9 s | 8.3 s | The figure, the survey and the field of the cast: one task each. |
 | A tube house of three floors (`tube_house`) | 87 | 0.49 s | 0.30 s | |
 | A van of the line (`van_line`) | 23 | 2.2 s | 1.25 s | The body shop: 0.7 s. |
-| A scooter of the line (`scooter_line`) | 6 | 1.1 s | 0.67 s | The body of plastic. |
+| A bicycle (`bicycle`, its geometry sheet) | 7 | 0.64 s | 0.37 s | |
+| A scooter (`scooter`) | 17 | 1.2 s | 0.58 s | The panels of the body. |
+| A motorcycle (`motorcycle`) | 17 | 1.1 s | 0.49 s | |
 
 Before plan 0002 the statue was one task of the cast (16 s with one
 person or with 16), and the join of a model waited for a full

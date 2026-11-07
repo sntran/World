@@ -57,4 +57,21 @@ defmodule World.VehiclesTest do
     assert {:error, [%{"path" => "drawing.nodes.0.skill.bicycle_frame.tire"} | _]} =
              Orders.check(%{"blueprint" => "bicycle", "options" => %{"tire" => "no tire"}})
   end
+
+  test "a scooter and a motorcycle from their parts: the Honda Vision and the Himalayan of the catalog", %{tmp_dir: dir} do
+    for {blueprint, reference} <- [
+          {"scooter", &World.Vehicles.HondaVision.model/0},
+          {"motorcycle", &World.Vehicles.RoyalEnfieldHimalayan.model/0}
+        ],
+        level <- [:near, :mid, :far] do
+      bike = model(blueprint, level)
+      assert bike.kind == :vehicle and Check.model(bike) == :ok, "#{blueprint} #{level}"
+      same(shape(bike, level), shape(Detail.with(level, reference), level))
+    end
+
+    assert ~w(mechanic molder smith upholsterer welder wheelwright) -- built("scooter", %{}, Path.join(dir, "s")) == []
+
+    assert ~w(electrician mechanic sheet_metal_worker welder wheelwright) --
+             built("motorcycle", %{}, Path.join(dir, "m")) == []
+  end
 end
