@@ -122,6 +122,13 @@ No skill names a model. The joints are in the drawing.
 |---|---|---|---|
 | `wheel` | wheelwright | `tire` (`215/50R17`, `90/90-14`, `37-622`), `build` (`spoked`, `cast`, `car`), `spokes`, `rim_width`, `rim_depth`, `rim`, `hub_width`, `cross`, `disc`, `face`, `holes`, `pcd`, `lugs`, `sides` | A wheel with its tire, its port `hub`. |
 | `knuckle` | mechanic | `at` (the center of the hub), `disc` | The knuckle of a corner with its brake disc: the port `steer` goes on the port `corner_NAME` of the body, the wheel on its port `axle`. |
+| `bicycle_frame` | welder | the geometry sheet (`World.Skills.Bicycle`): `tire`, `wheelbase`, `chainstay`, `bb_drop`, `stack`, `reach`, `head_angle`, `seat_angle`, `seat_tube`, `head_tube`, `seatpost`, `rear_spacing`, the diameter of each tube | A diamond frame with its saddle: the ports `steer`, `rear_axle`, `bb`, `stand`, `rack`; the model moves to its center. |
+| `bicycle_fork` | welder | the geometry sheet, with `rake` and `bar_width` | The fork, the stem and a drop bar, with its fender: the ports `steer` and `axle`. |
+| `crankset` | mechanic | `arm`, `teeth` | The chainring, the arms and the pedals on their hinges: the port `axle` goes on `bb`. |
+| `stand` | smith | shape data: `shapes`, `ports`, `mass`, `sources`, `detail`, `inside` | A stand, a rack, a guard, from its own port. |
+
+The blueprint `priv/blueprints/bicycle.json` is a bicycle from these
+skills: its params are the numbers of the sheet.
 
 ## A van, as on the line of its maker (`World.Skills.Van`)
 

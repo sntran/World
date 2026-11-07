@@ -1,0 +1,505 @@
+{
+  "name": "bicycle",
+  "doc": "A bicycle with a diamond frame from its geometry sheet, built by the people of each trade at the same time: a welder makes the frame and the fork from the numbers of the sheet, wheelwrights the two wheels, a mechanic the crankset with its pedals, smiths the rack and the kickstand. The defaults are a touring frame of 54 cm on tires of 700 x 35c. The origin is on the ground at the center of the bike; the front is to +y.",
+  "sources": [
+    "A touring frame of 54 cm: wheelbase 1030 mm, chainstay 430 mm, bottom bracket drop 70 mm, stack 580 mm, reach 380 mm, head angle 72 degrees, seat angle 73.5 degrees; the numbers of a geometry sheet of a maker are the params."
+  ],
+  "params": [
+    {
+      "name": "name",
+      "type": "text",
+      "default": "bicycle",
+      "max": 40,
+      "doc": "The name of the model: a to z, 0 to 9 and _."
+    },
+    {
+      "name": "tire",
+      "type": "text",
+      "default": "37-622",
+      "doc": "The code of the tires (ETRTO).",
+      "max": 20
+    },
+    {
+      "name": "spokes",
+      "type": "integer",
+      "default": 36,
+      "min": 16,
+      "max": 48,
+      "doc": "The spokes of each wheel."
+    },
+    {
+      "name": "wheelbase",
+      "type": "number",
+      "default": 1.03,
+      "min": 0.8,
+      "max": 1.4,
+      "unit": "m",
+      "doc": "From the rear axle to the front axle."
+    },
+    {
+      "name": "chainstay",
+      "type": "number",
+      "default": 0.43,
+      "min": 0.35,
+      "max": 0.55,
+      "unit": "m",
+      "doc": "From the bottom bracket to the rear axle."
+    },
+    {
+      "name": "bb_drop",
+      "type": "number",
+      "default": 0.07,
+      "min": 0.0,
+      "max": 0.12,
+      "unit": "m",
+      "doc": "The bottom bracket under the axles."
+    },
+    {
+      "name": "stack",
+      "type": "number",
+      "default": 0.58,
+      "min": 0.45,
+      "max": 0.75,
+      "unit": "m",
+      "doc": "The top of the head tube over the bottom bracket."
+    },
+    {
+      "name": "reach",
+      "type": "number",
+      "default": 0.38,
+      "min": 0.3,
+      "max": 0.5,
+      "unit": "m",
+      "doc": "The top of the head tube in front of the bottom bracket."
+    },
+    {
+      "name": "head_angle",
+      "type": "number",
+      "default": 72.0,
+      "min": 60.0,
+      "max": 80.0,
+      "unit": "degrees",
+      "doc": "The head tube from the ground."
+    },
+    {
+      "name": "seat_angle",
+      "type": "number",
+      "default": 73.5,
+      "min": 65.0,
+      "max": 80.0,
+      "unit": "degrees",
+      "doc": "The seat tube from the ground."
+    },
+    {
+      "name": "seat_tube",
+      "type": "number",
+      "default": 0.54,
+      "min": 0.35,
+      "max": 0.7,
+      "unit": "m",
+      "doc": "From the bottom bracket to the top of the seat tube."
+    },
+    {
+      "name": "head_tube",
+      "type": "number",
+      "default": 0.15,
+      "min": 0.06,
+      "max": 0.3,
+      "unit": "m",
+      "doc": "The length of the head tube."
+    },
+    {
+      "name": "bar_width",
+      "type": "number",
+      "default": 0.42,
+      "min": 0.3,
+      "max": 0.8,
+      "unit": "m",
+      "doc": "The width of the drop bar."
+    },
+    {
+      "name": "rake",
+      "type": "number",
+      "default": 0.045,
+      "min": 0.0,
+      "max": 0.08,
+      "unit": "m",
+      "doc": "The offset of the fork."
+    },
+    {
+      "name": "arm",
+      "type": "number",
+      "default": 0.17,
+      "min": 0.14,
+      "max": 0.2,
+      "unit": "m",
+      "doc": "The length of a crank arm."
+    },
+    {
+      "name": "teeth",
+      "type": "integer",
+      "default": 44,
+      "min": 22,
+      "max": 60,
+      "doc": "The teeth of the chainring."
+    }
+  ],
+  "drawing": {
+    "name": {
+      "param": "name"
+    },
+    "kind": "vehicle",
+    "nodes": [
+      {
+        "name": "frame",
+        "skill": {
+          "bicycle_frame": {
+            "tire": {
+              "param": "tire"
+            },
+            "wheelbase": {
+              "param": "wheelbase"
+            },
+            "chainstay": {
+              "param": "chainstay"
+            },
+            "bb_drop": {
+              "param": "bb_drop"
+            },
+            "stack": {
+              "param": "stack"
+            },
+            "reach": {
+              "param": "reach"
+            },
+            "head_angle": {
+              "param": "head_angle"
+            },
+            "seat_angle": {
+              "param": "seat_angle"
+            },
+            "seat_tube": {
+              "param": "seat_tube"
+            },
+            "head_tube": {
+              "param": "head_tube"
+            },
+            "bar_width": {
+              "param": "bar_width"
+            },
+            "rake": {
+              "param": "rake"
+            },
+            "arm": {
+              "param": "arm"
+            },
+            "teeth": {
+              "param": "teeth"
+            }
+          }
+        }
+      },
+      {
+        "name": "rear_wheel",
+        "skill": {
+          "wheel": {
+            "tire": {
+              "param": "tire"
+            },
+            "build": "spoked",
+            "spokes": {
+              "param": "spokes"
+            }
+          }
+        },
+        "at": "rear_axle",
+        "port": "hub",
+        "joint": {
+          "kind": "hinge",
+          "role": "wheel"
+        }
+      },
+      {
+        "name": "steer",
+        "skill": {
+          "bicycle_fork": {
+            "tire": {
+              "param": "tire"
+            },
+            "wheelbase": {
+              "param": "wheelbase"
+            },
+            "chainstay": {
+              "param": "chainstay"
+            },
+            "bb_drop": {
+              "param": "bb_drop"
+            },
+            "stack": {
+              "param": "stack"
+            },
+            "reach": {
+              "param": "reach"
+            },
+            "head_angle": {
+              "param": "head_angle"
+            },
+            "seat_angle": {
+              "param": "seat_angle"
+            },
+            "seat_tube": {
+              "param": "seat_tube"
+            },
+            "head_tube": {
+              "param": "head_tube"
+            },
+            "bar_width": {
+              "param": "bar_width"
+            },
+            "rake": {
+              "param": "rake"
+            },
+            "arm": {
+              "param": "arm"
+            },
+            "teeth": {
+              "param": "teeth"
+            }
+          }
+        },
+        "at": "steer",
+        "port": "steer",
+        "joint": {
+          "kind": "hinge",
+          "role": "steer",
+          "limits": [
+            -60,
+            60
+          ]
+        }
+      },
+      {
+        "name": "front_wheel",
+        "skill": {
+          "wheel": {
+            "tire": {
+              "param": "tire"
+            },
+            "build": "spoked",
+            "spokes": {
+              "param": "spokes"
+            }
+          }
+        },
+        "to": "steer",
+        "at": "axle",
+        "port": "hub",
+        "joint": {
+          "kind": "hinge",
+          "role": "wheel"
+        }
+      },
+      {
+        "name": "crank",
+        "skill": {
+          "crankset": {
+            "arm": {
+              "param": "arm"
+            },
+            "teeth": {
+              "param": "teeth"
+            }
+          }
+        },
+        "at": "bb",
+        "port": "axle",
+        "joint": {
+          "kind": "hinge",
+          "role": "crank"
+        }
+      },
+      {
+        "name": "rack",
+        "skill": {
+          "stand": {
+            "shapes": [
+              {
+                "tube": {
+                  "line": [
+                    [
+                      -0.07,
+                      -0.02,
+                      0.02
+                    ],
+                    [
+                      -0.07,
+                      0.0,
+                      0.06
+                    ],
+                    [
+                      -0.07,
+                      0.32,
+                      0.06
+                    ],
+                    [
+                      -0.035,
+                      0.38,
+                      0.11
+                    ]
+                  ],
+                  "radius": 0.005
+                },
+                "material": "black",
+                "sides": 6
+              },
+              {
+                "tube": {
+                  "line": [
+                    [
+                      0.07,
+                      -0.02,
+                      0.02
+                    ],
+                    [
+                      0.07,
+                      0.0,
+                      0.06
+                    ],
+                    [
+                      0.07,
+                      0.32,
+                      0.06
+                    ],
+                    [
+                      0.035,
+                      0.38,
+                      0.11
+                    ]
+                  ],
+                  "radius": 0.005
+                },
+                "material": "black",
+                "sides": 6
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.21,
+                    -0.08,
+                    -0.05
+                  ],
+                  "to": [
+                    -0.09,
+                    0.25,
+                    0.05
+                  ]
+                },
+                "material": "fabric",
+                "round": 0.2,
+                "smooth": 2
+              },
+              {
+                "box": {
+                  "from": [
+                    0.09,
+                    -0.08,
+                    -0.05
+                  ],
+                  "to": [
+                    0.21,
+                    0.25,
+                    0.05
+                  ]
+                },
+                "material": "fabric",
+                "round": 0.2,
+                "smooth": 2
+              }
+            ],
+            "ports": {
+              "o": {
+                "at": [
+                  0,
+                  0,
+                  0
+                ],
+                "axis": [
+                  0,
+                  0,
+                  1
+                ],
+                "up": [
+                  0,
+                  1,
+                  0
+                ]
+              }
+            },
+            "sources": [
+              "A rear rack of steel rod of 10 mm with two bags: by eye."
+            ]
+          }
+        },
+        "at": "rack",
+        "port": "o"
+      },
+      {
+        "name": "kickstand",
+        "skill": {
+          "stand": {
+            "shapes": [
+              {
+                "tube": {
+                  "line": [
+                    [
+                      0,
+                      0,
+                      0
+                    ],
+                    [
+                      -0.01,
+                      -0.27,
+                      0.02
+                    ]
+                  ],
+                  "radius": 0.008
+                },
+                "material": "aluminum",
+                "sides": 6
+              }
+            ],
+            "ports": {
+              "pivot": {
+                "at": [
+                  0,
+                  0,
+                  0
+                ],
+                "axis": [
+                  1,
+                  0,
+                  0
+                ],
+                "up": [
+                  0,
+                  0,
+                  1
+                ]
+              }
+            }
+          }
+        },
+        "at": "stand",
+        "port": "pivot",
+        "joint": {
+          "kind": "hinge",
+          "role": "stand",
+          "limits": [
+            0,
+            75
+          ]
+        }
+      }
+    ]
+  }
+}
