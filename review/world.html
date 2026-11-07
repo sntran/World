@@ -56,6 +56,8 @@
     <button type="submit">Build</button>
     <p id="answer" role="status"></p>
   </form>
+  <h2>The places</h2>
+  <table id="places"></table>
   <h2>The constructions</h2>
   <table id="builds"></table>
   <h2>The people</h2>
@@ -74,8 +76,14 @@
 // element (a part that a person made) comes as a GLB of its own
 // (/builds/ID/elements/KEY.glb) at its place in the model.
 //
-// ?events=URL reads a recorded stream (one event of JSON on each line) and
-// ?files=URL the folder of its elements, for a test with no server. An
+// The map of the yard (plan 0002, D6 and D7): the places of the node (GET
+// /places) at their points, each construction on a lot at the place of
+// its order (the events of the yard), and the trucks of the haul on their
+// drives: a truck drives to the source of its load, then to its place.
+//
+// ?events=URL reads a recorded stream (one event of JSON on each line),
+// ?places=URL the places, and ?files=URL the folder of its elements, for
+// a test with no server. An
 // element whose GLB the node does not keep now (5 minutes after the end
 // of its construction) does not show.
 import * as THREE from 'three';
@@ -103,18 +111,73 @@ const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 2000);
 camera.position.set(40, 45, 70);
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(20, 0, 10);
-scene.add(new THREE.GridHelper(400, 80, 0x9a927c, 0xc9c2ad));
+const grid = new THREE.GridHelper(400, 80, 0x9a927c, 0xc9c2ad);
+scene.add(grid);
 const mark = new THREE.MeshStandardMaterial({ color: style.getPropertyValue('--mark').trim() });
 const loader = new GLTFLoader();
 
-// A lot for each construction, in rows of four, 30 m apart.
+// The places of the yard: a ground of the color of its kind at its point
+// (x to the right, y of the yard to -z), and a row of the table with its
+// state. A place with a building is closed until the yard opens it.
+const KINDS = { supplier: 0x8f8a7a, warehouse: 0x6f8fa8, factory: 0xb0784a, site: 0x7f9a5c };
+const places = new Map();
+// The name of a place on the map: a sprite of text that faces the camera.
+function label(text, x, z) {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 64;
+  const g = c.getContext('2d');
+  g.font = '600 36px system-ui, sans-serif';
+  g.fillStyle = style.color;
+  g.textAlign = 'center';
+  g.fillText(text, 128, 44);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  sprite.scale.set(80, 20, 1);
+  sprite.position.set(x, 4, z);
+  return sprite;
+}
+const yard = await fetch(params.get('places') ?? '/places').then((r) => r.json()).catch(() => ({ places: [] }));
+for (const p of yard.places) {
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: KINDS[p.kind] ?? 0x999999, transparent: true, opacity: 0.3 }));
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.set(p.at[0], 0.01, -p.at[1]);
+  scene.add(ground);
+  scene.add(label(p.name, p.at[0], -p.at[1] + 42));
+  const row = $('places').insertRow();
+  row.insertCell().textContent = p.name;
+  row.insertCell().textContent = p.kind;
+  const state = row.insertCell();
+  state.textContent = p.building ? 'closed' : 'open';
+  places.set(p.name, { ...p, ground, state, lots: 0 });
+}
+const point = (name) => {
+  const p = places.get(name);
+  return p ? new THREE.Vector3(p.at[0], 0, -p.at[1]) : new THREE.Vector3();
+};
+// The view of the map: the middle of the places, from the front and over.
+if (places.size) {
+  const xs = yard.places.map((p) => p.at[0]);
+  const ys = yard.places.map((p) => p.at[1]);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cz = -(Math.min(...ys) + Math.max(...ys)) / 2;
+  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + 120;
+  grid.position.set(cx, 0, cz);
+  grid.scale.setScalar(span / 400);
+  camera.position.set(cx, span * 1.1, cz + span * 1.25);
+  controls.target.set(cx, 0, cz);
+}
+
+// A lot for each construction, in rows of four, 30 m apart; on the map, a
+// lot at the place of its order.
 const LOT = 30;
 const builds = new Map();
+const at = new Map();
 function lot(id) {
   if (builds.has(id)) return builds.get(id);
   const n = builds.size;
   const group = new THREE.Group();
   group.position.set((n % 4) * LOT, 0, Math.floor(n / 4) * LOT);
+  if (at.has(id)) settle(group, at.get(id));
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(LOT - 4, LOT - 4), new THREE.MeshStandardMaterial({ color: 0xb8ad8f, transparent: true, opacity: 0.35 }));
   ground.rotation.x = -Math.PI / 2;
   group.add(ground);
@@ -125,6 +188,33 @@ function lot(id) {
   const b = { id, group, state, tasks: 0, done: 0, elements: 0, status: 'plan' };
   builds.set(id, b);
   return b;
+}
+
+// A lot at a place: the next lot of the place, 30 m apart.
+function settle(group, name) {
+  const p = places.get(name);
+  if (!p) return;
+  group.position.copy(point(name)).add(new THREE.Vector3((p.lots % 2) * LOT - LOT / 2, 0, -Math.floor(p.lots / 2) * LOT));
+  p.lots += 1;
+}
+
+// The trucks: a box of the size of a van; a drive of 2 s to the source of
+// a load, then to its place. A rented truck goes back to the gate.
+const trucks = new Map();
+const van = new THREE.BoxGeometry(2.1, 2.6, 6);
+function truck(name, place) {
+  if (trucks.has(name)) return trucks.get(name);
+  const mesh = new THREE.Mesh(van, mark);
+  mesh.position.copy(point(place)).setY(1.3);
+  scene.add(mesh);
+  const t = { name, mesh, from: mesh.position.clone(), to: mesh.position.clone(), start: 0 };
+  trucks.set(name, t);
+  return t;
+}
+function drive(t, place) {
+  t.from.copy(t.mesh.position);
+  t.to.copy(point(place)).setY(1.3);
+  t.start = performance.now();
 }
 
 // The GLB of an element, once for each build and key; a copy for each place.
@@ -178,11 +268,46 @@ const say = (e) => {
     case 'stopped': return `The construction stops: ${d.reason}.`;
     case 'failed': return `The construction fails: ${d.message}.`;
     case 'run_done': return `The construction took ${(d.ms / 1000).toFixed(1)} s.`;
+    case 'place_raised': return `The people raise the building of ${d.place}.`;
+    case 'place_open': return `${d.place} opens.`;
+    case 'place_held': return `A construction waits for ${d.place}.`;
+    case 'place_started': return `A construction starts at ${d.place}.`;
+    case 'truck_made': return `${d.truck} joins the haul.`;
+    case 'truck_joined': return `${d.truck} is at ${d.at}.`;
+    case 'parts_asked': return `The materials of ${d.task} go to ${d.place}.`;
+    case 'parts_here': return `The materials of ${d.task} are there.`;
+    case 'haul_asked': return `${d.loads.length} loads from ${d.from} to ${d.to}.`;
+    case 'loaded': return `${d.truck} takes ${d.load} at ${d.at}.`;
+    case 'unloaded': return `${d.truck} puts ${d.load} down at ${d.at}.`;
+    case 'hauled': return `Each load of ${d.for} is there.`;
     default: return e.kind;
   }
 };
 
+// An event of the yard or of the haul: the places, the lots, the trucks.
+function yardEvent(e) {
+  const d = e.data ?? {};
+  const p = places.get(d.place);
+  if (e.kind === 'place_raised' && p) p.state.textContent = 'raised';
+  if (e.kind === 'place_open' && p) p.state.textContent = 'open';
+  if (['place_raised', 'place_held', 'place_started'].includes(e.kind) && !at.has(d.order)) {
+    at.set(d.order, d.place);
+    if (builds.has(d.order)) settle(builds.get(d.order).group, d.place);
+  }
+  if (e.kind === 'truck_joined') truck(d.truck, d.at);
+  if (e.kind === 'loaded') drive(truck(d.truck, 'gate'), d.at);
+  if (e.kind === 'unloaded') {
+    const t = truck(d.truck, d.at);
+    drive(t, d.at);
+    if (d.truck.startsWith('rented_')) t.back = true;
+  }
+}
+
 async function take(e) {
+  if (e.order === 'yard' || e.order === 'haul') {
+    yardEvent(e);
+    return log(e);
+  }
   const b = lot(e.order);
   const d = e.data ?? {};
   if (e.kind === 'plan_made') b.tasks = d.tasks.length;
@@ -221,7 +346,11 @@ async function take(e) {
   }
   if (['done', 'stopped', 'failed'].includes(e.kind)) b.status = e.kind;
   b.state.textContent = `${b.done} of ${b.tasks} tasks, ${b.elements} elements, ${b.status}`;
-  $('counts').textContent = `${people.size} people, ${builds.size} constructions`;
+  log(e);
+}
+
+function log(e) {
+  $('counts').textContent = `${people.size} people, ${builds.size} constructions, ${trucks.size} trucks`;
   const li = document.createElement('li');
   const time = document.createElement('time');
   time.textContent = new Date(e.wall).toLocaleTimeString();
@@ -276,7 +405,7 @@ addEventListener('resize', resize);
 resize();
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // The state of the page, for a test: the lots and the people.
-window.WORLD = { builds, people };
+window.WORLD = { builds, people, places, trucks };
 window.READY = true;
 renderer.setAnimationLoop((now) => {
   for (const p of people.values()) {
@@ -284,6 +413,15 @@ renderer.setAnimationLoop((now) => {
     const f = Math.min((now - p.start) / 3000, 1);
     p.figure.position.lerpVectors(p.from, p.to, still ? 1 : f);
     if (p.task && !still) p.figure.position.y = Math.abs(Math.sin(now / 200)) * 0.15;
+  }
+  for (const t of trucks.values()) {
+    // A drive takes 2 s; a rented truck goes back to the gate after its load.
+    const f = Math.min((now - t.start) / 2000, 1);
+    t.mesh.position.lerpVectors(t.from, t.to, still ? 1 : f);
+    if (f === 1 && t.back) {
+      t.back = false;
+      drive(t, 'gate');
+    }
   }
   controls.update();
   renderer.render(scene, camera);

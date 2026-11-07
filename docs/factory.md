@@ -34,7 +34,7 @@ An order is data, never code. World runs no code from an order.
 
 | URL | What |
 |---|---|
-| `/` | The world page: the people of the node, each construction on its lot with its elements as they come, and a form that orders a build (`review/world.html`, below, "The constructions"). |
+| `/` | The world page: the map of the yard (its places and their states, each construction on a lot at its place, the trucks on their drives), the people of the node, each construction with its elements as they come, and a form that orders a build (`review/world.html`, below, "The constructions"). |
 | `/review.html` | The review page: each model of the catalog, its levels, its joints and its parts. |
 | `/replay.html?order=HASH` | The replay of an order: what each person does, and the model that grows when each task ends (`docs/world.md`). |
 | `/models/list.json` | The names of the models of the catalog. |
@@ -54,6 +54,7 @@ An order is data, never code. World runs no code from an order.
 | `/builds/ID/elements/KEY.glb` | The GLB of one element of a build, while the build goes on and for 5 minutes after its end. |
 | `/events` | The events of the whole node as a stream: each construction, each hire, each element. |
 | `/census` | The people of the node by trade, free and busy, and the constructions that wait for a person. |
+| `/places` | The places of the yard (`World.Places`): each with its kind, its point, the kinds of the models that it makes, and its building; the speed limit of the yard. |
 | `/m/BLUEPRINT.glb?OPTION=VALUE` (and the other files) | An order in the URL: `color.ROLE=%23rrggbb` gives a color, `joint.NAME=50` a joint, `target.LIMB=X,Y,Z` the end of a limb, `A,B` a list, and `OPTION.FIELD=VALUE` a field of an object (`origin.asian=1`: give each field, because a field that is not in the URL has its default). |
 | `POST /sets` | A set of orders in JSON (`World.Orders.Set`): a list of orders (`"orders"`), or one order with `"count"` (1 to 64), `"seed"` and `"vary"` (an option to a list of its values). Each variant has the options of the order, a value of each list, and its own `seed` (`seed * 1000 + i`). The answer gives the hash of the set and each variant: its hash, its full order, the URLs of its files and its `lot` (`width` and `depth`), so a game makes a library from the set and picks a variant by the size of a lot (W19); or 422 with the errors (the path of each starts with `variants.N` or `orders.N`). |
 | `POST /mcp` | The MCP server: the same orders, as the tools of the Model Context Protocol (below, "The MCP server"). |

@@ -189,10 +189,10 @@ test('the constructions and the streams go to the VM, with Last-Event-ID, and co
   const events = await handler(req('/events?after=4', { headers: { 'last-event-id': '7' } }), env, { vm: v, commit: 'c1' });
   assert.equal(events.status, 200);
   assert.equal(v.last.headers.get('last-event-id'), '7');
-  for (const path of ['/census', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']) {
+  for (const path of ['/census', '/places', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']) {
     await handler(req(path), env, { vm: v, commit: 'c1' });
   }
-  assert.deepEqual(v.calls.slice(-6), ['/builds', '/events?after=4', '/census', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']);
+  assert.deepEqual(v.calls.slice(-7), ['/builds', '/events?after=4', '/census', '/places', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']);
   assert.equal((await handler(req('/builds', { method: 'PUT' }), env, { vm: v, commit: 'c1' })).status, 405);
   for (const act of ['pause', 'resume', 'cancel', 'change']) {
     await handler(req(`/builds/abc-far/${act}`, { method: 'POST', body: '{}' }), env, { vm: v, commit: 'c1' });

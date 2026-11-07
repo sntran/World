@@ -216,6 +216,11 @@ defmodule World.Service do
     json(conn, 200, World.census())
   end
 
+  # The places of the yard, for the map of the world page.
+  get "/places" do
+    json(conn, 200, %{"places" => World.Places.all(), "speed_kmh" => World.Places.data()["speed_kmh"]})
+  end
+
   match _ do
     json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such page"}]})
   end

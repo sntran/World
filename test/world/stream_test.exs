@@ -158,6 +158,7 @@ defmodule World.StreamTest do
 
   test "GET /census: the people of the node" do
     assert %{"people" => _, "waiting" => _} = json(call(:get, "/census"))
+    assert %{"places" => [%{"name" => "gate"} | _], "speed_kmh" => 20} = json(call(:get, "/places"))
   end
 
   describe "on a real server" do

@@ -66,7 +66,8 @@ about it.
   (`review/replay.html`) reads the log and the replay GLB of an order:
   `?log=URL&model=URL` for a local test. The world page
   (`review/world.html`, the index of the site) reads the stream of the
-  node: `?events=URL&files=URL` for a local test.
+  node and its places (`GET /places`), and draws the map of the yard:
+  `?events=URL&places=URL&files=URL` for a local test.
 
 ## The contexts
 
