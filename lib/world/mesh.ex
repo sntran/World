@@ -92,7 +92,21 @@ defmodule World.Mesh do
     normals(tris, pos, if(level > 0, do: 180.0, else: m.angle))
   end
 
-  defp wings_triangles(%__MODULE__{points: ps, faces: fs}, level) do
+  # A mesh of triangles only (a cast, a skin of surface nets) needs no
+  # pass of Wings: its faces are its triangles.
+  defp wings_triangles(%__MODULE__{points: ps, faces: fs}, 0)
+       when fs != [] and is_list(hd(fs)) and length(hd(fs)) == 3 do
+    if Enum.all?(fs, &match?([_, _, _], &1)) do
+      t = List.to_tuple(ps)
+      {fs, &elem(t, &1)}
+    else
+      wings(ps, fs, 0)
+    end
+  end
+
+  defp wings_triangles(%__MODULE__{points: ps, faces: fs}, level), do: wings(ps, fs, level)
+
+  defp wings(ps, fs, level) do
     we =
       try do
         :wings_we.build(fs, ps)
