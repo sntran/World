@@ -31,6 +31,13 @@ data is in `docs/format.md` ("A blueprint in data", "A drawing").
    same files. `POST /builds` (or the MCP tool `build`) starts its
    construction, and the stream gives each element as the people make it.
 
+An order of a bicycle of a frame of 58 cm, from its geometry sheet (the
+blueprint `bicycle`):
+
+```text
+{"blueprint": "bicycle", "options": {"stack": 0.62, "reach": 0.39, "seat_tube": 0.58, "wheelbase": 1.06}}
+```
+
 When a blueprint needs a skill that World does not have, World adds it
 (one module of `lib/world/skills/`, with its tests), or the drawing uses
 the shapes and the parts of `docs/format.md` ("A drawing").

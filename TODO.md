@@ -508,9 +508,14 @@ and no logo on them.
 - The survey and the field of the cast of a statue are one task each
   (about 1 s each): a survey of each band, and a field in slabs, would
   make the statue faster.
-- The scooter of the line has one model (the Honda Vision): a scooter
-  from numbers (its wheelbase, its body, its engine) would let Phượt
-  order other scooters with no new code.
+- A scooter, a motorcycle and a car are shape data from the photos of
+  one model each (`scooter.json`, `motorcycle.json`, `car.json`): a spec
+  sheet of each kind (the wheelbase, the rake, the seat height, the
+  tires) that moves the shapes with the numbers would let Phượt order
+  another model of a kind with few numbers, as the bicycle does now.
+- The seats of a car or a van as a skill of an upholsterer from a spec
+  sheet (`World.Furniture.Seats`): the van line makes its seats now
+  (`van_seats`); the car of the catalog has none.
 - The drivers of the trucks are a part of each truck, not people of the
   census: a driver of the census would need a trade `driver` and a hire
   that lasts.
