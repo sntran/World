@@ -23,6 +23,24 @@ defmodule World.Skills.Iron do
   @impl true
   def estimate(_data, _level), do: 500
 
+  @doc """
+  The bars of steel of the rail of the balcony: two rails of 20 by 40 mm
+  along the front, a bar of 16 mm each 0.12 m, and the two ends (7,850
+  kg/m³), in bars of 9.2 kg; none where the floor has no rail.
+  """
+  @impl true
+  def materials(data, %{"plan" => %{"plan" => plan}}) do
+    o = House.o(data, @names)
+
+    if o.floor >= plan.floors or plan.balcony <= 0 do
+      %{}
+    else
+      n = round(plan.width / 0.12)
+      m3 = 2 * plan.width * 0.02 * 0.04 + (n - 1) * 0.016 * 0.016 * 0.92 + 2 * 0.02 * 0.02 * plan.balcony
+      %{"steel" => ceil(m3 * 7850 / 9.2)}
+    end
+  end
+
   @impl true
   def make(data, %{"plan" => %{"plan" => plan}}, %{name: name, level: level}) do
     o = House.o(data, @names)

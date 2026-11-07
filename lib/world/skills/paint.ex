@@ -22,6 +22,13 @@ defmodule World.Skills.Paint do
   @impl true
   def estimate(_data, _level), do: 60
 
+  @doc "The cans of paint: two coats of 0.12 L for each m²; none on a wall with no paint."
+  @impl true
+  def materials(data, %{"plan" => %{"plan" => plan}}) do
+    o = House.o(data, @names)
+    if o.finish == "paint", do: %{"paint" => ceil(House.wall_area(plan, o.side, o.floor) * 0.24 / 18)}, else: %{}
+  end
+
   @impl true
   def make(data, %{"plan" => %{"plan" => plan}}, %{name: name, level: level}) do
     o = House.o(data, @names)

@@ -1,0 +1,260 @@
+{
+  "doc": "The places of the yard of the node (plan 0002, D6): the gate of the suppliers, the warehouse, a factory for the families of things, and the site where the houses, the statues and the towers stand. The positions are in meters on one flat plane; a truck drives on the yard at its speed limit. The people build the warehouse and the factories as houses of one floor with a shutter of the size of their products (D7).",
+  "speed_kmh": 20,
+  "places": [
+    {
+      "name": "gate",
+      "kind": "supplier",
+      "at": [
+        -300.0,
+        0.0
+      ],
+      "doc": "The gate of the yard: the suppliers bring the materials, and rent a truck with its driver until the yard has its own trucks."
+    },
+    {
+      "name": "warehouse",
+      "kind": "warehouse",
+      "at": [
+        0.0,
+        0.0
+      ],
+      "doc": "The stock of the materials.",
+      "building": {
+        "blueprint": "tube_house",
+        "options": {
+          "name": "kho",
+          "width": 12.0,
+          "depth": 24.0,
+          "floors": 1,
+          "ground": 6.0,
+          "bays": 4,
+          "balcony": 0.0,
+          "roof": "metal",
+          "finish_front": "paint",
+          "finish_back": "plaster",
+          "finish_left": "plaster",
+          "finish_right": "plaster",
+          "openings": [
+            {
+              "side": "front",
+              "floor": 1,
+              "kind": "shutter",
+              "x": 0.0,
+              "width": 4.0,
+              "height": 4.5,
+              "sill": 0.0
+            },
+            {
+              "side": "left",
+              "floor": 1,
+              "kind": "window",
+              "x": 0.0,
+              "width": 1.6,
+              "height": 1.2,
+              "sill": 2.4
+            },
+            {
+              "side": "right",
+              "floor": 1,
+              "kind": "window",
+              "x": 0.0,
+              "width": 1.6,
+              "height": 1.2,
+              "sill": 2.4
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "vehicles",
+      "kind": "factory",
+      "at": [
+        160.0,
+        0.0
+      ],
+      "kinds": [
+        "vehicle"
+      ],
+      "doc": "The line of the vehicles: the vans and the scooters.",
+      "building": {
+        "blueprint": "tube_house",
+        "options": {
+          "name": "xuong_xe",
+          "width": 12.0,
+          "depth": 30.0,
+          "floors": 1,
+          "ground": 6.0,
+          "bays": 5,
+          "balcony": 0.0,
+          "roof": "metal",
+          "finish_front": "paint",
+          "finish_back": "plaster",
+          "finish_left": "plaster",
+          "finish_right": "plaster",
+          "openings": [
+            {
+              "side": "front",
+              "floor": 1,
+              "kind": "shutter",
+              "x": 0.0,
+              "width": 4.0,
+              "height": 4.5,
+              "sill": 0.0
+            },
+            {
+              "side": "left",
+              "floor": 1,
+              "kind": "window",
+              "x": 0.0,
+              "width": 1.6,
+              "height": 1.2,
+              "sill": 2.4
+            },
+            {
+              "side": "right",
+              "floor": 1,
+              "kind": "window",
+              "x": 0.0,
+              "width": 1.6,
+              "height": 1.2,
+              "sill": 2.4
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "workshop",
+      "kind": "factory",
+      "at": [
+        0.0,
+        120.0
+      ],
+      "kinds": [
+        "appliance",
+        "electrical",
+        "furniture",
+        "item",
+        "prop"
+      ],
+      "doc": "The workshop of the small things: the furniture, the items and the appliances.",
+      "building": {
+        "blueprint": "tube_house",
+        "options": {
+          "name": "xuong_moc",
+          "width": 10.0,
+          "depth": 16.0,
+          "floors": 1,
+          "ground": 6.0,
+          "bays": 3,
+          "balcony": 0.0,
+          "roof": "metal",
+          "finish_front": "paint",
+          "finish_back": "plaster",
+          "finish_left": "plaster",
+          "finish_right": "plaster",
+          "openings": [
+            {
+              "side": "front",
+              "floor": 1,
+              "kind": "shutter",
+              "x": 0.0,
+              "width": 3.0,
+              "height": 3.5,
+              "sill": 0.0
+            },
+            {
+              "side": "left",
+              "floor": 1,
+              "kind": "window",
+              "x": 0.0,
+              "width": 1.6,
+              "height": 1.2,
+              "sill": 2.4
+            },
+            {
+              "side": "right",
+              "floor": 1,
+              "kind": "window",
+              "x": 0.0,
+              "width": 1.6,
+              "height": 1.2,
+              "sill": 2.4
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "site",
+      "kind": "site",
+      "at": [
+        160.0,
+        160.0
+      ],
+      "kinds": [
+        "building",
+        "house",
+        "statue",
+        "tower"
+      ],
+      "doc": "The site: a house, a statue or a tower is built where it stands."
+    }
+  ],
+  "stock": {
+    "brick": {
+      "count": 200000,
+      "unit": "brick",
+      "kg": 1.6,
+      "source": "A hollow clay brick of TCVN 1451:1998, 220 by 105 by 60 mm: about 1.6 kg (a data sheet of a maker of Việt Nam)."
+    },
+    "cement": {
+      "count": 20000,
+      "unit": "bag of 50 kg",
+      "kg": 50.0,
+      "source": "PCB40 cement in bags of 50 kg; 7 bags for 1 m3 of concrete of B20 (an estimate of a mix of a site; the sand and the gravel are at the site)."
+    },
+    "rebar": {
+      "count": 20000,
+      "unit": "bar of 11.7 m",
+      "kg": 10.4,
+      "source": "A steel bar of 12 mm of TCVN 1651-2:2018, 11.7 m long: 0.888 kg/m."
+    },
+    "mortar": {
+      "count": 20000,
+      "unit": "bag of 40 kg",
+      "kg": 40.0,
+      "source": "A dry mortar for the render in bags of 40 kg: about 18 kg for 1 m2 of 10 mm (a data sheet)."
+    },
+    "paint": {
+      "count": 4000,
+      "unit": "can of 18 L",
+      "kg": 23.4,
+      "source": "An emulsion paint for the walls in cans of 18 L, about 1.3 kg/L; 0.12 L/m2 for each coat, two coats (a data sheet)."
+    },
+    "roof_sheet": {
+      "count": 4000,
+      "unit": "sheet of 1.07 by 6 m",
+      "kg": 27.0,
+      "source": "A corrugated steel sheet of 0.45 mm, 1.07 by 6 m with its coat: about 4.2 kg/m2 (a data sheet)."
+    },
+    "steel": {
+      "count": 6000,
+      "unit": "bar of 6 m",
+      "kg": 9.2,
+      "source": "A square steel bar of 14 mm, 6 m long: 1.54 kg/m."
+    }
+  },
+  "trucks": {
+    "count": 2,
+    "load_kg": 1500.0,
+    "order": {
+      "blueprint": "van_line",
+      "options": {
+        "name": "truck"
+      }
+    },
+    "source": "The payload of a Ford Transit cargo van of 148 in: about 1,500 kg (Ford gives 3,000 to 4,000 lb by the model; an estimate)."
+  }
+}

@@ -23,6 +23,20 @@ defmodule World.Skills.Roof do
   @impl true
   def estimate(_data, _level), do: 200
 
+  @doc """
+  The sheets of a metal roof (its area and 10% for the laps, in sheets
+  of 6.42 m²) and the bricks of the parapet; a terrace has its parapet
+  only.
+  """
+  @impl true
+  def materials(_data, %{"plan" => %{"plan" => plan}}) do
+    sheets =
+      if plan.roof == "metal", do: %{"roof_sheet" => ceil((plan.width + 0.4) * plan.depth * 1.1 / 6.42)}, else: %{}
+
+    bricks = ceil(2 * (plan.width + plan.depth) * plan.parapet * 62.1)
+    if bricks > 0, do: Map.put(sheets, "brick", bricks), else: sheets
+  end
+
   @impl true
   def make(_data, %{"plan" => %{"plan" => plan}}, %{name: name, level: level}) do
     {hw, hd, z} = {plan.width / 2, plan.depth / 2, House.top(plan, plan.floors)}

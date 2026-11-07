@@ -94,6 +94,17 @@ back as blueprints in data, built one time by the people of the node.
 | A supplier | A gate: the parts come from outside. | None. |
 | The site of a customer | Where a delivery ends: Phượt, DIY, Vũng Tàu, Humans Must Die. | None. |
 
+Plan 0002 (D6) brings the places back in data: `priv/places.json` has
+the gate of the suppliers, the warehouse, the factory of the vehicles,
+the workshop of the small things, and the site of the houses, the
+statues and the towers (`World.Places`), the stock of the warehouse in
+the units of a site (`World.Stock`), and the trucks. A skill gives the
+takeoff of its task (`materials/2`): a band of courses its bricks, a
+column or a slab its bags of cement and bars of rebar, a render its
+bags of mortar, the paint its cans. The takeoff of the frame and of the
+walls of a tube house agrees with the volume of the elements that the
+people make.
+
 Each place has a position in meters, in one flat frame: the yard of
 World. Later, a place can have a latitude and a longitude, so the world
 of Phượt puts the factory on its map.

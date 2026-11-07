@@ -22,6 +22,14 @@ defmodule World.Skills.Column do
   @impl true
   def estimate(_data, _level), do: 12 * 10
 
+  @doc "The concrete of the columns of the floor, with 150 kg of rebar in each m³ (an estimate)."
+  @impl true
+  def materials(data, %{"plan" => %{"plan" => plan}}) do
+    o = House.o(data, @names)
+    h = House.top(plan, o.floor) - plan.beam - House.bottom(plan, o.floor)
+    House.concrete(length(House.columns(plan)) * plan.column * plan.column * h, 150)
+  end
+
   @impl true
   def make(_data, _inputs, %{level: :far}), do: {nil, %{}, %{}}
 

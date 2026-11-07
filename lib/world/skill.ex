@@ -41,6 +41,17 @@ defmodule World.Skill do
   @callback estimate(data :: map(), level :: atom()) :: non_neg_integer()
 
   @doc """
+  The takeoff of the task: the materials of the stock of the warehouse
+  that it needs (a name of `priv/places.json` to a count of its units),
+  from its data and the data of its nodes `from`. The trucks bring them
+  to the place of the construction before the task starts (plan 0002,
+  D6). A skill with no takeoff needs nothing of the stock.
+  """
+  @callback materials(data :: map(), inputs :: %{String.t() => map()}) :: %{String.t() => non_neg_integer()}
+
+  @optional_callbacks materials: 2
+
+  @doc """
   The errors of the data of a skill: an object with only the keys
   `known`, and each key of `required`.
   """

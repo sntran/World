@@ -133,6 +133,21 @@ defmodule World.Skills.House do
   @doc "The openings of a wall of a floor."
   def openings(plan, side, floor), do: for(%{"side" => ^side, "floor" => ^floor} = w <- plan.openings, do: w)
 
+  @doc """
+  The takeoff of `m3` of reinforced concrete with `kg` of rebar in each
+  m3: the bags of cement (7 for 1 m3 of B20; the sand and the gravel are
+  at the site) and the bars of rebar of 10.4 kg (`priv/places.json`).
+  """
+  def concrete(m3, kg), do: %{"cement" => ceil(m3 * 7), "rebar" => ceil(m3 * kg / 10.4)}
+
+  @doc "The area (m²) of the outer face of a wall of a floor, less its openings."
+  def wall_area(plan, side, floor) do
+    {_, _, len} = face(plan, side)
+
+    len * (top(plan, floor) - bottom(plan, floor)) -
+      Enum.sum(for w <- openings(plan, side, floor), do: w["width"] * w["height"])
+  end
+
   @doc "A box of a material role, with its matter (`World.Mass`)."
   def box(a, b, role, matter), do: Shape.box(a, b, role) |> Mesh.matter(matter)
 

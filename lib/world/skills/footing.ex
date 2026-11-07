@@ -24,6 +24,17 @@ defmodule World.Skills.Footing do
   @impl true
   def estimate(_data, _level), do: 600
 
+  @doc """
+  The concrete of the ground slab, the pads, the stubs and the ground
+  beams, with 80 kg of rebar in each m³ (an estimate).
+  """
+  @impl true
+  def materials(_data, %{"plan" => %{"plan" => plan}}) do
+    c = plan.column
+    n = length(House.columns(plan))
+    House.concrete(plan.width * plan.depth * 0.1 + n * (0.9 * 0.9 * 0.3 + c * c * 0.5) + 2 * c * plan.depth * 0.3, 80)
+  end
+
   @impl true
   def make(_data, %{"plan" => %{"plan" => plan}}, %{level: level, name: name}) do
     {hw, hd, c} = {plan.width / 2, plan.depth / 2, plan.column}

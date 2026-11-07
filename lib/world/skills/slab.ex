@@ -25,6 +25,29 @@ defmodule World.Skills.Slab do
   @impl true
   def estimate(_data, _level), do: 300
 
+  @doc """
+  The concrete of the slab (less the well of the stair, with the
+  balcony) and of the beams under it, with 90 kg of rebar in each m³ (an
+  estimate).
+  """
+  @impl true
+  def materials(data, %{"plan" => %{"plan" => plan}}) do
+    o = House.o(data, @names)
+    {c, d} = {plan.column, plan.beam - plan.slab}
+
+    {well, balcony} =
+      if o.floor >= plan.floors do
+        {0.0, 0.0}
+      else
+        {x0, x1, y0, y1} = Flight.well(plan, o.floor)
+        {(x1 - x0) * (y1 - y0), plan.balcony * plan.width}
+      end
+
+    ys = length(Enum.uniq(for {_, y} <- House.columns(plan), do: y))
+    beams = 2 * c * plan.depth * d + ys * (plan.width - 2 * c) * c * d
+    House.concrete((plan.width * plan.depth - well + balcony) * plan.slab + beams, 90)
+  end
+
   @impl true
   def make(data, %{"plan" => %{"plan" => plan}} = inputs, %{level: :far} = ctx) do
     if House.o(data, @names).floor >= plan.floors, do: make(data, inputs, %{ctx | level: :mid}), else: {nil, %{}, %{}}

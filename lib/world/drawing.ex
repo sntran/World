@@ -758,6 +758,24 @@ defmodule World.Drawing do
   end
 
   @doc """
+  The takeoff of one node of a drawing (`World.Skill`, `materials/2`):
+  the materials of the stock that its skill needs, with the data of its
+  nodes `from`. Nothing for a node that is not a skill, or a skill with
+  no takeoff.
+  """
+  def materials(raw, name, inputs) do
+    with %{"skill" => skill} <- Enum.find(raw["nodes"], &(&1["name"] == name)),
+         [{skill, data}] = Map.to_list(skill),
+         {:ok, mod} = World.Skills.fetch(skill),
+         {:module, _} = Code.ensure_loaded(mod),
+         true <- function_exported?(mod, :materials, 2) do
+      mod.materials(data, inputs)
+    else
+      _ -> %{}
+    end
+  end
+
+  @doc """
   Make one node of a drawing, at the level of detail of the process, with
   the data of its nodes `from` (`inputs`): `{thing, data, extras}`. The
   thing is the part or the item of the node, or what its skill makes (nil:

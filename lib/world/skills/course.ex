@@ -52,6 +52,31 @@ defmodule World.Skills.Course do
     {House.part(name, meshes, sources), %{"temporary" => o.finish != "bare"}, %{}}
   end
 
+  @doc """
+  The bricks of the band: its area between the columns less its
+  openings, at 62 bricks for each m² of each layer of 105 mm (a brick of
+  220 by 60 mm with joints of 10 mm).
+  """
+  @impl true
+  def materials(data, %{"plan" => %{"plan" => plan}}) do
+    o = House.o(data, @names)
+    h = House.top(plan, o.floor) - plan.beam - House.bottom(plan, o.floor)
+    {v0, v1} = {(o.band - 1) * h / o.bands, o.band * h / o.bands}
+
+    area =
+      Enum.sum(
+        for {a, b} <- segments(plan, o.side) do
+          cut =
+            for {u0, w0, u1, w1, _} <- House.holes(plan, o.side, o.floor, a, v0, v1),
+                do: max(0.0, min(u1, b - a) - max(u0, 0.0)) * (w1 - w0)
+
+          (b - a) * (v1 - v0) - Enum.sum(cut)
+        end
+      )
+
+    %{"brick" => ceil(area * 62.1 * max(1, round(plan.wall / 0.105)))}
+  end
+
   @doc "The lengths of a wall between its columns, along its face: `{from, to}`."
   def segments(plan, side) when side in ["front", "back"], do: [{plan.column, plan.width - plan.column}]
 

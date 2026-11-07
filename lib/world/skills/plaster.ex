@@ -26,6 +26,13 @@ defmodule World.Skills.Plaster do
   @impl true
   def estimate(_data, _level), do: 60
 
+  @doc "The bags of dry mortar of the render: 27 kg for each m² of 15 mm; none on a bare wall."
+  @impl true
+  def materials(data, %{"plan" => %{"plan" => plan}}) do
+    o = House.o(data, @names)
+    if o.finish == "bare", do: %{}, else: %{"mortar" => ceil(House.wall_area(plan, o.side, o.floor) * 27 / 40)}
+  end
+
   @impl true
   def make(data, %{"plan" => %{"plan" => plan}}, %{name: name, level: level}) do
     o = House.o(data, @names)
