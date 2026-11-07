@@ -76,7 +76,7 @@ defmodule World.HangingTest do
       item = fun.()
       assert World.Check.model(item) == :ok, name
       assert %{unknown: []} = Mass.of(item)
-      assert World.Places.family_of(item) == :hanging
+      assert World.Plan.trade(item) == :rigger
 
       # A person (World.People) has its own triangles: 44 000 at near.
       person? = Enum.any?(item.nodes, &match?({_, %World.Figure{}, _}, &1))

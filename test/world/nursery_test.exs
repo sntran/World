@@ -7,7 +7,7 @@ defmodule World.NurseryTest do
     for {name, fun} <- Plants.models() do
       near = Detail.with(:near, fun)
       assert World.Check.model(near) == :ok, name
-      assert World.Places.family_of(near) == :nursery
+      assert World.Plan.trade(near) == :gardener
       tris = for l <- [:near, :mid, :far], do: Scene.triangles(Build.scene(Detail.with(l, fun), level: l))
       assert tris == Enum.sort(tris, :desc), "#{name}: #{inspect(tris)}"
       [_, _, h] = Build.scene(near, level: :near).extras["size"]

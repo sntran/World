@@ -1,9 +1,8 @@
 defmodule World.Store do
   @moduledoc """
   The store of the files of a warehouse (`docs/world.md`, "What is
-  real"). The stock of a warehouse (`World.Stock`) counts its items; the
-  store keeps the files of each model, by the name of the model. Three
-  kinds:
+  real"): it keeps the files of each model, by the name of the model.
+  Three kinds:
 
   - `:memory`: the memory of the VM. The files are in the process of the
     storekeeper.

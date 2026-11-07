@@ -100,7 +100,7 @@ defmodule World.FootwearTest do
   test "each model of the shoe shop is a true pair, with a mass for each part (the mark between the shoes has none: 0)" do
     for {name, fun} <- Footwear.models() do
       s = fun.()
-      assert World.Places.family_of(s) == :footwear, name
+      assert World.Plan.trade(s) == :shoemaker, name
       assert World.Check.model(s) == :ok, name
       %{mass: mass, unknown: unknown} = World.Mass.of(s)
       assert unknown == [] and s.extras["pair"]

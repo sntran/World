@@ -17,7 +17,7 @@ defmodule World.BoatsTest do
 
   test "the ghe of BV-92479-TS: its length and breadth at the waterline, and its members to QCVN 91 and TCVN 1075" do
     g = Ghe.ghe()
-    assert g.kind == :boat and World.Places.family_of(g) == :boats
+    assert g.kind == :boat and World.Plan.trade(g) == :shipwright
 
     # Lmax 20.7 m: L at the waterline is under the first band of the
     # rules (21 m), so the sizes are those of the first band.

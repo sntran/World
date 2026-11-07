@@ -61,7 +61,7 @@ defmodule World.LatheTest do
 
   test "a turned part is of the family of the turnery, and stands on its foot" do
     a = Turned.pot()
-    assert a.kind == :turned and World.Places.family_of(a) == :turned
+    assert a.kind == :turned and World.Plan.trade(a) == :turner
     [{_, part, _}] = a.nodes
     assert part.ports["foot"].axis == {0.0, 0.0, -1.0}
   end

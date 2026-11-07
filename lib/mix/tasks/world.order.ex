@@ -19,7 +19,7 @@ defmodule Mix.Tasks.World.Order do
   @impl true
   def run(args) do
     {opts, files} = OptionParser.parse!(args, strict: [dir: :string])
-    Mix.Task.run("compile")
+    Mix.Task.run("app.start")
     dir = Keyword.get(opts, :dir, "out")
 
     file =

@@ -93,16 +93,10 @@ defmodule World.Sewing.CushionTest do
     assert part.params["mass"] > 0.4 * 0.4 * 0.012 * 540
   end
 
-  test "the sewing shop of the run makes the mattresses" do
-    yard = World.Run.yard()
-    assert yard.places["sewing_shop"].family == :sewing
-    assert :sewing in World.Places.families()
-  end
-
   test "the mattresses of the sewing shop are true models" do
     for {name, fun} <- Cushion.models() do
       item = fun.()
-      assert item.kind == :mattress and World.Places.family_of(item) == :sewing, name
+      assert item.kind == :mattress and World.Plan.trade(item) == :sewer, name
       assert World.Check.model(item) == :ok, name
     end
   end

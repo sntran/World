@@ -215,17 +215,17 @@ defmodule World.FactoryTest do
       assert JSON.decode!(file.("parts"))["parts"] != []
     end
 
-    test "the log of an order: the people of a yard build it, and the replay has a node for each task" do
+    test "the log of an order: the people of the node build it, and the replay has a node for each task" do
       order = %{"blueprint" => "strut", "options" => %{"length" => 0.3}}
       {:ok, json} = Orders.build(order, "far", "log")
       {:ok, log} = World.Log.from_json(json)
-      assert %{"kind" => "warehouse"} = Enum.find(log.yard["places"], &(&1["name"] == "warehouse"))
       events = World.Log.events(log)
-      assert hd(events).kind == "order_received"
-      # The last event is the measure of the run, after the delivery.
-      assert Enum.map(Enum.take(events, -2), & &1.kind) == ["delivered", "run_done"]
+      assert hd(events).kind == "requested"
+      # The last event is the measure of the construction, after the model.
+      assert Enum.map(Enum.take(events, -2), & &1.kind) == ["done", "run_done"]
       hash = Orders.hash(elem(Orders.check(order), 1))
-      assert Enum.all?(events, &(&1.order == hash))
+      assert Enum.all?(events, &(&1.order == "#{hash}-far"))
+      assert "hired" in Enum.map(events, & &1.kind)
 
       tasks =
         for %{kind: "plan_made", data: %{"tasks" => tasks}} <- events, t <- tasks, t["uses"], do: t["id"]

@@ -31,8 +31,7 @@ defmodule World.Check do
   """
   alias World.{Assembly, Build, Frame, Joint, Mass, Part, Vec}
 
-  # The overhead door of a factory of the world (World.Buildings.Plants):
-  # 9 by 8 ft.
+  # The overhead door of a factory of the world: 9 by 8 ft.
   @door {9 * 12 * 0.0254, 8 * 12 * 0.0254}
 
   # The kinds of the fasteners: a fastener goes through its parts.

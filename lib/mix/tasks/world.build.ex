@@ -24,7 +24,7 @@ defmodule Mix.Tasks.World.Build do
   @impl true
   def run(args) do
     {opts, names} = OptionParser.parse!(args, strict: [check: :boolean, dir: :string, kit: :string])
-    Mix.Task.run("compile")
+    Mix.Task.run("app.start")
     dir = Keyword.get(opts, :dir, "priv/models")
     models = World.Catalog.models()
     chosen = if names == [], do: models, else: Enum.map(names, &{&1, fetch!(&1)})

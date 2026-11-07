@@ -28,8 +28,8 @@
 // - /mcp: the MCP server (the VM, World.MCP).
 // - GET /o/HASH.glb, .mid.glb, .far.glb, .parts.json, .receipt.json,
 //   .log.json, .replay.glb: the files of an order of POST /orders. The
-//   people of the world build the model (World.Run): the log tells what
-//   each one did, and the replay GLB has a node for each part.
+//   people of the node build the model (World.Construction): the log
+//   tells what each one did, and the replay GLB has a node for each part.
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
 //   %23rrggbb&joint.NAME=DEGREES&target.LIMB=X,Y,Z: an order in the URL. A list is
 //   VALUE,VALUE, and OPTION.FIELD=VALUE is a field of an object.

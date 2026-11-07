@@ -1,0 +1,76 @@
+defmodule World do
+  @moduledoc """
+  The door of the node (`docs/plans/0001-people-build-on-demand.md`, R1):
+  the people of the node build each model, and a game watches them.
+
+  - `build/1` opens a construction for a job (`World.Construction`).
+  - `watch/1` sends each event of a construction, or of the whole world
+    (`:world`), to the process that calls: `{:world, event}`.
+  - `await/2` waits for the result of a job.
+  - `census/0` gives the people of the node.
+  """
+  alias World.Construction
+
+  @doc """
+  Open a construction for a job (`World.Construction.start/1`; `reply`
+  is the process that calls, by default). `{:ok, id}`; a construction
+  with the same id that runs now is the same build.
+  """
+  def build(job) do
+    job = Map.put_new(job, :reply, self())
+
+    with {:error, {:already_started, _}} <- Construction.start(job),
+         :ok <- join(job) do
+      {:ok, job.id}
+    else
+      {:ok, _} -> {:ok, job.id}
+      # The construction ended before the join: a new one builds again.
+      :gone -> build(job)
+    end
+  end
+
+  defp join(job) do
+    Construction.join(job.id, job.reply)
+  catch
+    :exit, _ -> :gone
+  end
+
+  @doc "Send each event of a construction (its id), or of the world (`:world`), to the process that calls."
+  def watch(key) do
+    {:ok, _} = Registry.register(World.Events, key, nil)
+    :ok
+  end
+
+  @doc """
+  Wait for the result of a job: `{:ok, result}` (the files and the log),
+  `{:error, {:failed, message}}` or `{:error, {:stopped, reason}}`.
+  """
+  def await(id, timeout \\ :infinity) do
+    receive do
+      {:built, ^id, result} -> {:ok, result}
+      {:failed, ^id, message} -> {:error, {:failed, message}}
+      {:stopped, ^id, reason} -> {:error, {:stopped, reason}}
+    after
+      timeout -> {:error, :timeout}
+    end
+  end
+
+  @doc """
+  The memory of the VM, in bytes: `{"total", bytes}` (`:erlang.memory/1`).
+  An emulator with no allocators of ERTS (`-Mea min`, at the edge) does
+  not have it: then `{"processes", bytes}`, the memory of each process
+  and of each binary that a process holds (one time each). `total` is
+  the function of the memory of all of the VM.
+  """
+  def memory(total \\ &:erlang.memory/1) do
+    {"total", total.(:total)}
+  rescue
+    ErlangError ->
+      infos = for p <- Process.list(), info = Process.info(p, [:memory, :binary]), do: info
+      binaries = for info <- infos, {id, size, _} <- info[:binary], into: %{}, do: {id, size}
+      {"processes", Enum.sum(for info <- infos, do: info[:memory]) + Enum.sum(Map.values(binaries))}
+  end
+
+  @doc "The people of the node and the requests that wait (`World.Census.people/1`)."
+  def census, do: World.Census.people()
+end

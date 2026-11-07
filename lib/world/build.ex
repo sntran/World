@@ -43,6 +43,18 @@ defmodule World.Build do
   in one node (a wall of bricks) are one node with instances.
   """
   def scene(item, opts \\ []) do
+    # The triangles that the people of a construction made (a map of a
+    # mesh to its triangles): the build takes them, and makes the others.
+    old = Process.put(:world_triangles, Keyword.get(opts, :triangles, %{}))
+
+    try do
+      build(item, opts)
+    after
+      if old, do: Process.put(:world_triangles, old), else: Process.delete(:world_triangles)
+    end
+  end
+
+  defp build(item, opts) do
     level = Keyword.get(opts, :level, :near)
     pose = Keyword.get(opts, :pose, %{})
     targets = Keyword.get(opts, :targets, %{})
@@ -142,15 +154,31 @@ defmodule World.Build do
   """
   def placed(item, pose \\ %{}) do
     acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), :near, pose)
-
-    frames =
-      acc.nodes
-      |> Enum.with_index()
-      |> Enum.reduce(%{}, fn {n, i}, frames ->
-        Map.put(frames, i, if(n.parent, do: Frame.compose(frames[n.parent], n.frame), else: n.frame))
-      end)
+    frames = frames(acc.nodes)
 
     for {i, parts} <- Enum.sort(acc.parts), {f, p, _} <- Enum.reverse(parts), do: {Frame.compose(frames[i], f), p}
+  end
+
+  @doc """
+  The elements of a model at a level, in a pose: for each node with
+  meshes, its path (the id of its task in `World.Plan.flat/1`), its frame
+  in the axes of the model, its part, and the meshes that it shows (the
+  meshes of the source of a mirror) with the scale of the mirror. A part
+  that the level drops is not an element.
+  """
+  def elements(item, level, pose \\ %{}) do
+    acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), level, pose)
+    frames = frames(acc.nodes)
+    for {i, f, p, path, shown} <- all_placed(acc.nodes, acc.parts), do: {path, Frame.compose(frames[i], f), p, shown}
+  end
+
+  # The frame of each node in the axes of the model.
+  defp frames(nodes) do
+    nodes
+    |> Enum.with_index()
+    |> Enum.reduce(%{}, fn {n, i}, frames ->
+      Map.put(frames, i, if(n.parent, do: Frame.compose(frames[n.parent], n.frame), else: n.frame))
+    end)
   end
 
   @doc "Write the GLB of a model at a level, in a pose."
@@ -510,9 +538,11 @@ defmodule World.Build do
     |> Enum.map(fn {mat, shapes} ->
       # The triangles of a mesh, kept for the next part with the same
       # mesh, for this material only.
+      given = Process.get(:world_triangles, %{})
+
       {corners, _} =
         Enum.flat_map_reduce(shapes, %{}, fn {f, m}, memo ->
-          tris = Map.get_lazy(memo, m, fn -> Mesh.triangles(m) end)
+          tris = Map.get_lazy(memo, m, fn -> Map.get_lazy(given, m, fn -> Mesh.triangles(m) end) end)
           {place(tris, f), Map.put(memo, m, tris)}
         end)
 

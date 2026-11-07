@@ -18,7 +18,7 @@ defmodule World.Orders do
   keys in one order. `hash/1` is the name of its files: the same order
   gives the same hash, and the same files.
   """
-  alias World.{Build, Detail, GLB, Log, Run}
+  alias World.{Build, Detail, GLB, Log}
   alias World.Orders.{Blueprint, Blueprints}
   @keys ~w(blueprint options colors joints targets)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
@@ -165,9 +165,10 @@ defmodule World.Orders do
   Build a file of an order at a level (`"near"`, `"mid"` or `"far"`). The
   files (`files/0`):
 
-  - `"glb"`: the model. The people of the world build it (`World.Run`):
-    the foreman makes the files with the pose and the colors of the order.
-  - `"log"`: the log of a run of the order, in JSON (`World.Log`).
+  - `"glb"`: the model. The people of the node build it
+    (`World.Construction`), with the pose and the colors of the order.
+  - `"log"`: the log of the construction of the order, in JSON
+    (`World.Log`).
   - `"replay"`: the model with each part in a node of its own, with the id
     of its task, for the replay of the log.
   - `"parts"`: the list of the parts. `"receipt"`: the receipt.
@@ -187,7 +188,8 @@ defmodule World.Orders do
 
       scene = fn item, opts ->
         targets = Map.new(Map.get(order, "targets", %{}), fn {k, [x, y, z]} -> {k, {x, y, z}} end)
-        s = Build.scene(item, [level: lvl, pose: order["joints"], targets: targets] ++ opts)
+        # The options of the call come first: a construction gives its level.
+        s = Build.scene(item, opts ++ [level: lvl, pose: order["joints"], targets: targets])
         %{s | materials: Map.merge(s.materials, materials(order["colors"]))}
       end
 
@@ -197,8 +199,8 @@ defmodule World.Orders do
     end
   end
 
-  defp make(file, order, _lvl, item, scene) when file in ["glb", "log"] do
-    {glb, log} = world(order, item, scene)
+  defp make(file, order, lvl, _item, scene) when file in ["glb", "log"] do
+    {glb, log} = world(order, lvl, scene)
     if file == "glb", do: glb, else: log
   end
 
@@ -206,16 +208,23 @@ defmodule World.Orders do
   defp make("parts", _order, _lvl, item, _scene), do: parts(item.())
   defp make("receipt", order, lvl, item, scene), do: receipt(order, lvl, scene.(item.(), []))
 
-  # A run of the world for the order: the files of the model and the log,
-  # with the time and the memory of the run (run_done).
-  defp world(order, item, scene) do
-    run = Run.start()
-    hash = hash(order)
-    order = fn -> Run.order(run, item, hash, files: &GLB.encode(scene.(&1, []))) end
-    {:ok, result} = Run.measure(run, hash, order)
-    log = Run.log(run)
-    Run.stop(run)
-    {result.glb, Log.to_json(log)}
+  # A construction of the order by the people of the node: the files of
+  # the model and the log of the construction, with its time (run_done).
+  # Two requests of one order at one level are one construction.
+  defp world(order, lvl, scene) do
+    {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
+
+    job = %{
+      id: "#{hash(order)}-#{lvl}",
+      level: lvl,
+      item: fn level -> Detail.with(level, fn -> blueprint.build.(order["options"]) end) end,
+      scene: scene,
+      pose: order["joints"]
+    }
+
+    {:ok, id} = World.build(job)
+    {:ok, result} = World.await(id)
+    {result.glb, Log.to_json(result.log)}
   end
 
   # The checks of a true model, on the item at the level far.

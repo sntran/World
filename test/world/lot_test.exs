@@ -13,7 +13,7 @@ defmodule World.Buildings.LotTest do
   test "a tube house: its parts, its roles, its extras, a check that passes" do
     house = Lot.house()
     assert house.kind == :house and house.name == "nha_ong"
-    assert World.Places.family_of(house) == :houses
+    assert World.Plan.trade(house) == :mason
     assert Check.model(house) == :ok
     assert %{"surface" => %{"corners" => corners}, "lot" => lot, "house" => info} = house.extras
     assert lot == %{"width" => 4.0, "depth" => 16.0}

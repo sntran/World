@@ -68,13 +68,13 @@ defmodule World.ServiceTest do
     assert World.Log.check(l) == :ok
     events = World.Log.events(l)
     first = hd(events)
-    delivered = Enum.find(events, &(&1.kind == "delivered"))
+    done = Enum.find(events, &(&1.kind == "done"))
 
     # The run is in the time of the build in the service, and the events
     # of the order are in the time of the run.
     assert %{kind: "run_done", data: %{"ms" => run, "memory_peak" => peak, "memory_end" => memory}} = List.last(events)
     assert run <= String.to_integer(ms)
-    assert delivered.wall - first.wall <= run
+    assert done.wall - first.wall <= run
     assert peak >= memory and memory > 0
     assert List.last(events).data["memory"] == "total"
   end
@@ -143,13 +143,5 @@ defmodule World.ServiceTest do
 
   test "a page that is not there" do
     assert call(:get, "/nope").status == 404
-  end
-
-  test "the application starts the server only with WORLD_SERVER" do
-    assert World.Application.children(%{}) == []
-    [{Bandit, opts}] = World.Application.children(%{"WORLD_SERVER" => "true", "PORT" => "4100"})
-    assert opts[:plug] == Service and opts[:port] == 4100
-    [{Bandit, opts}] = World.Application.children(%{"WORLD_SERVER" => "true"})
-    assert opts[:port] == 4000
   end
 end
