@@ -64,15 +64,38 @@ defmodule World.Cast do
 
   @doc """
   The bands of a cast from the feet up: the indices of its triangles in
-  `n` groups by the height of their centers, as the pours of a real cast.
+  `n` groups by the height of their centers, as the pours of a real cast,
+  each with about the same work (the samples of its triangles: a long
+  triangle has more of them).
   """
-  def bands(%{tris: tris}, n) do
-    tris
-    |> Tuple.to_list()
-    |> Enum.with_index()
-    |> Enum.sort_by(fn {{{_, _, a}, {_, _, b}, {_, _, c}}, i} -> {a + b + c, i} end)
-    |> Enum.map(&elem(&1, 1))
-    |> then(&Enum.chunk_every(&1, max(ceil(length(&1) / n), 1)))
+  def bands(%{tris: tris, step: step}, n) do
+    sorted =
+      tris
+      |> Tuple.to_list()
+      |> Enum.with_index()
+      |> Enum.sort_by(fn {{{_, _, a}, {_, _, b}, {_, _, c}}, i} -> {a + b + c, i} end)
+      |> Enum.map(fn {t, i} -> {i, work(t, step)} end)
+
+    total = sorted |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+    share = max(total / n, 1)
+
+    sorted
+    |> Enum.chunk_while(
+      {[], 0},
+      fn {i, w}, {band, sum} ->
+        if sum + w > share and band != [],
+          do: {:cont, Enum.reverse(band), {[i], w}},
+          else: {:cont, {[i | band], sum + w}}
+      end,
+      fn {band, _} -> {:cont, Enum.reverse(band), nil} end
+    )
+    |> Enum.reject(&(&1 == []))
+  end
+
+  # The samples of a triangle each `step` m: its work in a pour.
+  defp work({a, b, c}, step) do
+    m = max(1, ceil(Enum.max([Vec.len(Vec.sub(b, a)), Vec.len(Vec.sub(c, a)), Vec.len(Vec.sub(c, b))]) / step))
+    div((m + 1) * (m + 2), 2)
   end
 
   @doc """

@@ -187,7 +187,7 @@ defmodule World.SkillTest do
     assert Blueprints.drawing(%{"blueprint" => "catalog", "options" => %{"name" => "wall_brick_sample"}}) == nil
     assert Blueprints.drawing(%{"blueprint" => "strut", "options" => %{}}) == nil
     statue = Blueprints.drawing(%{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua"}})
-    assert statue["name"] == "tuong_chua_kito_vua" and length(statue["nodes"]) == 10
+    assert statue["name"] == "tuong_chua_kito_vua" and length(statue["nodes"]) == 37
     assert Enum.map(Blueprints.data(), & &1["name"]) == ["statue", "tower"]
     refute Blueprints.__mix_recompile__?()
 
@@ -233,7 +233,7 @@ defmodule World.SkillTest do
     assert {:ok, r} = World.await(id, 300_000)
     assert r.glb == File.read!("priv/models/tuong_chua_kito_vua.far.glb")
     trades = for %{kind: "hired", data: %{"trade" => t}} <- Log.events(r.log), uniq: true, do: t
-    assert Enum.sort(trades) == ~w(caster mason sculptor smith surveyor)
+    assert Enum.sort(trades) == ~w(carpenter caster finisher mason sculptor smith surveyor)
     estimates = for level <- [:near, :mid, :far], do: Drawing.estimate(job.drawing, level)
     assert estimates == Enum.sort(estimates, :desc) and Enum.uniq(estimates) == estimates
     assert Drawing.estimate(Map.update!(job.drawing, "nodes", &Enum.take(&1, 1)), :far) == 100

@@ -106,24 +106,32 @@ defmodule World.Drawing do
   @doc """
   The drawing with each repeat of a node expanded: `{"repeat": {"for":
   NAME, "in": [values]}, "node": {...}}`, or `"in": {"count": n}` (1 to
-  n, at most #{128}), gives one copy of the node for each value. In a
+  n, at most #{128}), gives one copy of the node for each value; `{"repeat":
+  ..., "item": X}` in any other list gives copies of X (the names of the
+  pours in a `from`: `"pour_{i}"`). In a
   copy, `{"var": NAME}` is the value, and `{NAME}` in a text is the value
   as a text (`"course_{floor}"`). A repeat can hold a repeat. A wrong
   repeat stays as it is, and the check gives its error. The check
   expands a drawing first: the paths of its errors are in the copies.
   """
-  def expand(%{"nodes" => nodes} = raw) when is_list(nodes), do: %{raw | "nodes" => Enum.flat_map(nodes, &copies/1)}
-  def expand(raw), do: raw
+  def expand(%{} = m), do: Map.new(m, fn {k, v} -> {k, expand(v)} end)
+  def expand(l) when is_list(l), do: Enum.flat_map(l, &copies/1)
+  def expand(v), do: v
 
-  defp copies(%{"repeat" => %{"for" => var, "in" => values} = r, "node" => node} = n)
-       when map_size(n) == 2 and map_size(r) == 2 and is_binary(var) do
+  # A repeat in a list: of a node (`node`), or of any item (`item`: the
+  # names of the pours in a `from`).
+  defp copies(%{"repeat" => %{"for" => var, "in" => values} = r} = n)
+       when map_size(n) == 2 and map_size(r) == 2 and is_binary(var) and
+              (is_map_key(n, "node") or is_map_key(n, "item")) do
+    item = n["node"] || n["item"]
+
     case values(values) do
-      {:ok, values} -> Enum.flat_map(values, &copies(bind(node, var, &1)))
+      {:ok, values} -> Enum.flat_map(values, &copies(bind(item, var, &1)))
       :error -> [n]
     end
   end
 
-  defp copies(node), do: [node]
+  defp copies(x), do: [expand(x)]
 
   defp values(%{"count" => n}) when :erlang.is_integer(n, 0, 128), do: {:ok, Enum.to_list(1..n//1)}
   defp values(l) when is_list(l) and length(l) <= 128, do: {:ok, l}

@@ -1,8 +1,10 @@
 defmodule World.Skills.Statue do
   @moduledoc """
   The data that the skills of a statue share (`World.Skills.Figure`,
-  `Robe`, `Shell`, `Grille`, `Halo`, `Set`, `Base`, `Stair`, `Rail`,
-  `Site`; the blueprint `priv/blueprints/statue.json`): the options of
+  `Robe`, the cast in pours of `CastSurvey`, `Formwork`, `CastOutside`,
+  `Pour`, `CastField`, `ShellSlab` and `Shell`, `Grille`, `Halo`, `Set`,
+  `Base`, `Stair`, `Rail`, `Site`; the blueprint
+  `priv/blueprints/statue.json`): the options of
   the data of their nodes, with their defaults, ranges and units, the
   materials and the port of a part.
 
@@ -82,7 +84,9 @@ defmodule World.Skills.Statue do
           )
       ),
       m.("rail", 1.0, 0.0, 3.0),
-      m.("feet", 5.2, 0.0, 70.0)
+      m.("feet", 5.2, 0.0, 70.0),
+      option("band", :integer, default: 1, min: 1, max: 64),
+      option("bands", :integer, default: 1, min: 1, max: 64)
     ]
   end
 

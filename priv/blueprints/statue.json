@@ -1,6 +1,6 @@
 {
   "name": "statue",
-  "doc": "A statue: a figure of a person at any size and in a pose, in a long robe, cast as one solid of concrete or stone, with a halo, on a round plinth and a base with panels of figures in relief. The option hollow gives walls, a spiral stair and openings inside, at the near level. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the base; the figure looks to +y. The people build it as on a site: a mason lays the base, a sculptor makes the figure and its robe, a caster casts the shell, a smith makes the grilles and the halo, a mason makes the stair and the rail, and a surveyor marks the site.",
+  "doc": "A statue: a figure of a person at any size and in a pose, in a long robe, cast as one solid of concrete or stone, with a halo, on a round plinth and a base with panels of figures in relief. The option hollow gives walls, a spiral stair and openings inside, at the near level. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the base; the figure looks to +y. The people build it as on a site: a mason lays the base, a sculptor makes the figure and its robe, carpenters set the forms of the cast and casters pour it in bands from the feet up, all at the same time, then finishers make the slabs of its surface, a smith makes the grilles and the halo, a mason makes the stair and the rail, and a surveyor marks the site.",
   "sources": [
     "MakeHuman (CC0): the person of the figure. The sources of each size come with the order; the receipt lists them."
   ],
@@ -484,18 +484,86 @@
         ]
       },
       {
-        "name": "shell",
+        "name": "survey",
         "skill": {
-          "shell": {
+          "cast_survey": {
             "height": {
               "param": "height"
+            }
+          }
+        },
+        "from": [
+          "figure",
+          "robe"
+        ]
+      },
+      {
+        "repeat": {
+          "for": "i",
+          "in": {
+            "count": 8
+          }
+        },
+        "node": {
+          "name": "form_{i}",
+          "skill": {
+            "formwork": {
+              "band": {
+                "var": "i"
+              },
+              "bands": 8
+            }
+          },
+          "from": [
+            "survey"
+          ]
+        }
+      },
+      {
+        "name": "outside",
+        "skill": {
+          "cast_outside": {}
+        },
+        "from": [
+          "survey",
+          {
+            "repeat": {
+              "for": "i",
+              "in": {
+                "count": 8
+              }
             },
-            "hand": {
-              "param": "hand"
-            },
-            "material": {
-              "param": "material"
-            },
+            "item": "form_{i}"
+          }
+        ]
+      },
+      {
+        "repeat": {
+          "for": "i",
+          "in": {
+            "count": 8
+          }
+        },
+        "node": {
+          "name": "pour_{i}",
+          "skill": {
+            "pour": {
+              "band": {
+                "var": "i"
+              },
+              "bands": 8
+            }
+          },
+          "from": [
+            "survey",
+            "outside"
+          ]
+        }
+      },
+      {
+        "name": "field",
+        "skill": {
+          "cast_field": {
             "hollow": {
               "param": "hollow"
             },
@@ -512,7 +580,65 @@
         },
         "from": [
           "figure",
-          "robe"
+          "survey",
+          "outside",
+          {
+            "repeat": {
+              "for": "i",
+              "in": {
+                "count": 8
+              }
+            },
+            "item": "pour_{i}"
+          }
+        ]
+      },
+      {
+        "repeat": {
+          "for": "j",
+          "in": {
+            "count": 8
+          }
+        },
+        "node": {
+          "name": "slab_{j}",
+          "skill": {
+            "shell_slab": {
+              "band": {
+                "var": "j"
+              },
+              "bands": 8
+            }
+          },
+          "from": [
+            "field"
+          ]
+        }
+      },
+      {
+        "name": "shell",
+        "skill": {
+          "shell": {
+            "hand": {
+              "param": "hand"
+            },
+            "material": {
+              "param": "material"
+            }
+          }
+        },
+        "from": [
+          "figure",
+          "field",
+          {
+            "repeat": {
+              "for": "j",
+              "in": {
+                "count": 8
+              }
+            },
+            "item": "slab_{j}"
+          }
         ]
       },
       {

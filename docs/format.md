@@ -436,7 +436,13 @@ The people make a statue as on a site, one node of the drawing each:
 | `be` | `base` | mason | The base and the plinth (the root). |
 | `figure` | `figure` | sculptor | The posed and scaled person: data only. |
 | `robe` | `robe` | sculptor | The robe and the mitts: data only. |
-| `shell` | `shell` | caster | The cast (or the far form): data only. |
+| `survey` | `cast_survey` | surveyor | The grid of the cast: data only. |
+| `form_1` to `form_8` | `formwork` | carpenter | The forms of a band of the cast, from the feet up, all at the same time. |
+| `outside` | `cast_outside` | caster | The outside of the cast. |
+| `pour_1` to `pour_8` | `pour` | caster | The pour of a band, all at the same time, in any order. |
+| `field` | `cast_field` | caster | The field of the cast, with the walls and the openings of a hollow statue. |
+| `slab_1` to `slab_8` | `shell_slab` | finisher | The surface of a slab of the shell, all at the same time. |
+| `shell` | `shell` | caster | The shell from its slabs (or the far form): data only. |
 | `grille` | `grille` | smith | The grilles of the windows: data only. |
 | `halo` | `halo` | smith | The halo and its rays: data only. |
 | NAME | `set` | sculptor | The part of the statue: the shell, the grilles and the halo on the plinth. |
@@ -444,10 +450,9 @@ The people make a statue as on a site, one node of the drawing each:
 | `lan_can` | `rail` | mason | The rail round the top of the base. |
 | `site` | `site` | surveyor | The ports, the collision boxes and the corners of the base, into the extras. |
 
-The cast is one task. Its distances depend on the order of its
-triangles (the first nearest sample wins, and a sample adds to the sums
-of the loose cells only when it is not the nearest at that time), so the
-cast in parallel pours does not give the same bytes.
+The cast is many tasks: the forms and the pours of its bands from the
+feet up (each band with about the same work), and the slabs of its
+surface. Any order of the pours gives one field (`World.Cast`).
 
 ## A tower
 
@@ -1600,8 +1605,10 @@ gives a copy of the node: in it, `{"var": NAME}` is the value, and
 `{NAME}` in a text is the value as a text (`"course_{floor}"`). A repeat
 can hold a repeat (`"wall_{side}_{floor}"`). The copies are tasks that
 people do at the same time: the floors of a house, the courses of a wall,
-the pours of a cast, the wheels of a vehicle. The check expands the
-repeats first, so the paths of its errors are in the copies.
+the pours of a cast, the wheels of a vehicle. `{"repeat": ..., "item":
+X}` in any other list gives copies of X (the names of the pours in a
+`from`). The check expands the repeats first, so the paths of its errors
+are in the copies.
 
 A skill gives the part of its node (or nothing: a node of data only,
 which is not in the model), its data for the nodes that take it, and

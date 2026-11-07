@@ -96,7 +96,7 @@ defmodule World.MCPTest do
     # A drawing with skills: a task for each node, and the estimate of the skills.
     statue = %{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua"}}
     r = tool("plan_build", %{"order" => statue})["structuredContent"]
-    assert r["level"] == "near" and length(r["tasks"]) == 10 and r["trades"]["caster"] == 1
+    assert r["level"] == "near" and length(r["tasks"]) == 37 and r["trades"]["caster"] == 11
     assert tool("plan_build", %{"order" => @strut, "level" => "huge"})["isError"] == true
 
     b = tool("build", %{"order" => @strut, "level" => "far", "budget" => %{"workers" => 2}})["structuredContent"]
