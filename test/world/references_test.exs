@@ -61,6 +61,8 @@ defmodule World.ReferencesTest do
   test "the references of priv/references: each number of each is in its tolerance" do
     for ref <- References.all(), r <- References.run(ref), do: assert(r["ok"], "#{ref["name"]}: #{inspect(r)}")
     assert References.fetch("no such thing") == :error
+    assert {:ok, %{"title" => "Surly Long Haul Trucker" <> _}} = References.fetch("surly_long_haul_trucker_26_54")
+    assert capture_io(fn -> Mix.Tasks.World.References.run(["surly_long_haul_trucker_26_54"]) end) =~ "wheelbase"
     refute References.__mix_recompile__?()
   end
 

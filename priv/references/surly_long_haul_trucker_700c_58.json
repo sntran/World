@@ -1,0 +1,204 @@
+{
+  "name": "surly_long_haul_trucker_700c_58",
+  "title": "Surly Long Haul Trucker, 700c, 58 cm",
+  "sources": [
+    {
+      "name": "Surly Bikes, Long Haul Trucker, the geometry chart",
+      "url": "https://surlybikes.com/bikes/long_haul_trucker",
+      "license": "facts"
+    }
+  ],
+  "level": "far",
+  "order": {
+    "blueprint": "bicycle",
+    "options": {
+      "tire": "42-622",
+      "stack": 0.6061,
+      "reach": 0.3944,
+      "head_angle": 72.0,
+      "seat_angle": 72.5,
+      "chainstay": 0.46,
+      "bb_drop": 0.078,
+      "seat_tube": 0.58,
+      "head_tube": 0.171,
+      "rake": 0.045
+    }
+  },
+  "numbers": [
+    {
+      "name": "stack",
+      "value": 0.6061,
+      "unit": "m",
+      "source": 0,
+      "standard": "The stack of a frame: the top of the head tube over the bottom bracket.",
+      "measure": {
+        "along": "z",
+        "from": [
+          "frame",
+          "bb"
+        ],
+        "to": [
+          "frame",
+          "head_top"
+        ]
+      },
+      "tolerance": {
+        "abs": 0.0005
+      }
+    },
+    {
+      "name": "reach",
+      "value": 0.3944,
+      "unit": "m",
+      "source": 0,
+      "standard": "The reach of a frame: the top of the head tube in front of the bottom bracket.",
+      "measure": {
+        "along": "y",
+        "from": [
+          "frame",
+          "bb"
+        ],
+        "to": [
+          "frame",
+          "head_top"
+        ]
+      },
+      "tolerance": {
+        "abs": 0.0005
+      }
+    },
+    {
+      "name": "head tube angle",
+      "value": 72.0,
+      "unit": "degrees",
+      "source": 0,
+      "standard": "The head tube from the ground.",
+      "measure": {
+        "angle": [
+          "frame",
+          "steer"
+        ]
+      },
+      "tolerance": {
+        "abs": 0.05
+      }
+    },
+    {
+      "name": "seat tube angle",
+      "value": 72.5,
+      "unit": "degrees",
+      "source": 0,
+      "standard": "The seat tube from the ground.",
+      "measure": {
+        "angle": [
+          "frame",
+          "seat_top"
+        ]
+      },
+      "tolerance": {
+        "abs": 0.05
+      }
+    },
+    {
+      "name": "chainstay length",
+      "value": 0.46,
+      "unit": "m",
+      "source": 0,
+      "standard": "From the center of the bottom bracket to the rear axle.",
+      "measure": {
+        "distance": [
+          [
+            "frame",
+            "bb"
+          ],
+          [
+            "frame",
+            "rear_axle"
+          ]
+        ]
+      },
+      "tolerance": {
+        "abs": 0.0005
+      }
+    },
+    {
+      "name": "bottom bracket drop",
+      "value": 0.078,
+      "unit": "m",
+      "source": 0,
+      "standard": "The bottom bracket under the line of the axles.",
+      "measure": {
+        "along": "z",
+        "from": [
+          "frame",
+          "bb"
+        ],
+        "to": [
+          "frame",
+          "rear_axle"
+        ]
+      },
+      "tolerance": {
+        "abs": 0.0005
+      }
+    },
+    {
+      "name": "wheelbase",
+      "value": 1.0667,
+      "unit": "m",
+      "source": 0,
+      "standard": "From the rear axle to the front axle: a result of the other numbers (the front axle at the rake in front of the steering axis).",
+      "measure": {
+        "wheelbase": true
+      },
+      "tolerance": {
+        "abs": 0.001
+      }
+    },
+    {
+      "name": "head tube length",
+      "value": 0.171,
+      "unit": "m",
+      "source": 0,
+      "standard": "The length of the head tube.",
+      "measure": {
+        "distance": [
+          [
+            "frame",
+            "steer"
+          ],
+          [
+            "frame",
+            "head_top"
+          ]
+        ]
+      },
+      "tolerance": {
+        "abs": 0.0005
+      }
+    },
+    {
+      "name": "seat tube length",
+      "value": 0.58,
+      "unit": "m",
+      "source": 0,
+      "standard": "From the bottom bracket to the top of the seat tube.",
+      "measure": {
+        "distance": [
+          [
+            "frame",
+            "bb"
+          ],
+          [
+            "frame",
+            "seat_top"
+          ]
+        ]
+      },
+      "tolerance": {
+        "abs": 0.0005
+      }
+    }
+  ],
+  "note": "The complete bike is not on the chart: its tires are an estimate of the clearance of the frame (they do not change the geometry)."
+}

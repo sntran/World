@@ -41,4 +41,7 @@ The measures (`World.References.value/3`):
 
 ## The references now
 
-None yet: plan 0003, step 2 adds the spec sheets of the vehicles.
+| Reference | The real thing | Its numbers | The result |
+|---|---|---|---|
+| `surly_long_haul_trucker_700c_58` | The Surly Long Haul Trucker, 700c, 58 cm: the geometry chart of Surly. | Stack, reach, the head and the seat tube angles, the chainstay, the bottom bracket drop, the wheelbase, the head and the seat tube lengths. | Each in its tolerance. The wheelbase is a result of the other numbers (the front axle at the rake in front of the steering axis): 1066.6 mm, the chart 1066.7 mm. |
+| `surly_long_haul_trucker_26_54` | The same bicycle, 26 in, 54 cm. | The same. | Each in its tolerance; the wheelbase 1064.1 mm, the chart 1064.0 mm. |
