@@ -179,49 +179,60 @@ defmodule World.Orders do
     with {:ok, order} <- check(order),
          {:ok, lvl} <- level(level),
          :ok <- file(file) do
-      {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
+      job = new_job(order, lvl)
+      # The item is a function: a construction makes it, so the memory
+      # holds one item only (the edge has 128 MB).
+      item = fn -> job.item.(lvl) end
 
-      # The item and its scene are functions: in a run of the world, the
-      # foreman makes the item, so the memory holds one item only (the edge
-      # has 128 MB).
-      item = fn -> Detail.with(lvl, fn -> blueprint.build.(order["options"]) end) end
-
-      scene = fn item, opts ->
-        targets = Map.new(Map.get(order, "targets", %{}), fn {k, [x, y, z]} -> {k, {x, y, z}} end)
-        # The options of the call come first: a construction gives its level.
-        s = Build.scene(item, opts ++ [level: lvl, pose: order["joints"], targets: targets])
-        %{s | materials: Map.merge(s.materials, materials(order["colors"]))}
-      end
-
-      with :ok <- known(order, fn opts -> scene.(item.(), opts) end) do
-        {:ok, make(file, order, lvl, item, scene)}
+      with :ok <- known(order, fn opts -> job.scene.(item.(), opts) end) do
+        {:ok, make(file, order, lvl, item, job)}
       end
     end
   end
 
-  defp make(file, order, lvl, _item, scene) when file in ["glb", "log"] do
-    {glb, log} = world(order, lvl, scene)
-    if file == "glb", do: glb, else: log
+  @doc """
+  The job of an order at a level, for a construction (`World.build/1`):
+  its id (the hash of the order and the level), the item at a level, the
+  scene with the pose and the colors of the order, and the hash.
+  `{:ok, job}`, or `{:error, errors}` as `check/1`.
+  """
+  def job(order, level) do
+    with {:ok, order} <- check(order), {:ok, lvl} <- level(level), do: {:ok, new_job(order, lvl)}
   end
 
-  defp make("replay", _order, _lvl, item, scene), do: GLB.encode(scene.(item.(), split: true))
-  defp make("parts", _order, _lvl, item, _scene), do: parts(item.())
-  defp make("receipt", order, lvl, item, scene), do: receipt(order, lvl, scene.(item.(), []))
-
-  # A construction of the order by the people of the node: the files of
-  # the model and the log of the construction, with its time (run_done).
-  # Two requests of one order at one level are one construction.
-  defp world(order, lvl, scene) do
+  defp new_job(order, lvl) do
     {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
+    targets = Map.new(Map.get(order, "targets", %{}), fn {k, [x, y, z]} -> {k, {x, y, z}} end)
 
-    job = %{
+    scene = fn item, opts ->
+      # The options of the call come first: a construction gives its level.
+      s = Build.scene(item, opts ++ [level: lvl, pose: order["joints"], targets: targets])
+      %{s | materials: Map.merge(s.materials, materials(order["colors"]))}
+    end
+
+    %{
       id: "#{hash(order)}-#{lvl}",
+      hash: hash(order),
       level: lvl,
       item: fn level -> Detail.with(level, fn -> blueprint.build.(order["options"]) end) end,
       scene: scene,
       pose: order["joints"]
     }
+  end
 
+  defp make(file, _order, _lvl, _item, job) when file in ["glb", "log"] do
+    {glb, log} = world(job)
+    if file == "glb", do: glb, else: log
+  end
+
+  defp make("replay", _order, _lvl, item, job), do: GLB.encode(job.scene.(item.(), split: true))
+  defp make("parts", _order, _lvl, item, _job), do: parts(item.())
+  defp make("receipt", order, lvl, item, job), do: receipt(order, lvl, job.scene.(item.(), []))
+
+  # A construction of the order by the people of the node: the files of
+  # the model and the log of the construction, with its time (run_done).
+  # Two requests of one order at one level are one construction.
+  defp world(job) do
     {:ok, id} = World.build(job)
     {:ok, result} = World.await(id)
     {result.glb, Log.to_json(result.log)}

@@ -45,6 +45,10 @@ export function vm() {
       if (!('id' in message)) return new Response('', { status: 202 });
       return Response.json({ jsonrpc: '2.0', id: message.id, result: { version: request.headers.get('mcp-protocol-version') } });
     }
+    // The constructions and the streams: a stream of one event.
+    if (url.pathname === '/events' || url.pathname === '/census' || url.pathname.startsWith('/builds')) {
+      return new Response('id: 1\ndata: {"id":1}\n\n', { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' } });
+    }
     if (url.searchParams.has('hash')) {
       if (!orders.has(url.searchParams.get('hash'))) return Response.json({ errors: [{ path: '', message: 'no such order' }] }, { status: 404 });
       return new Response(`${url.searchParams.get('level')} ${url.searchParams.get('file')}`);

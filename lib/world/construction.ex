@@ -50,6 +50,26 @@ defmodule World.Construction do
   """
   def start(job), do: DynamicSupervisor.start_child(World.Constructions, {__MODULE__, job})
 
+  @doc """
+  The GLB of an element of the construction `id` (a key of its elements):
+  `{:ok, glb}`, or `:none` when no construction of the id runs now or
+  keeps its elements: a construction keeps them for 5 minutes after its
+  end, for a watcher that comes late (`:linger` of the application
+  environment for this module, in ms).
+  """
+  def element(id, key) do
+    Enum.find_value([id, {:elements, id}], :none, fn name ->
+      with [{pid, _}] <- Registry.lookup(World.Names, name),
+           {:ok, glb} <- GenServer.call(pid, {:element, key}) do
+        {:ok, glb}
+      else
+        _ -> nil
+      end
+    end)
+  catch
+    :exit, _ -> :none
+  end
+
   @doc "Send the result of the construction `id` to `pid` too: a second job of the same build."
   def join(id, pid), do: GenServer.call({:via, Registry, {World.Names, id}}, {:join, pid})
 
@@ -81,7 +101,8 @@ defmodule World.Construction do
       replies: [job.reply],
       sampler: sampler,
       urgent: urgent,
-      watched: %{}
+      watched: %{},
+      over: false
     }
 
     s = record(s, "requested", nil, %{"budget" => budget, "level" => Atom.to_string(job.level)})
@@ -149,6 +170,13 @@ defmodule World.Construction do
 
   @impl true
   def handle_call({:join, pid}, _from, s), do: {:reply, :ok, %{s | replies: Enum.uniq(s.replies ++ [pid])}}
+
+  def handle_call({:element, key}, _from, s) do
+    case Map.fetch(Map.get(s, :glbs, %{}), key) do
+      {:ok, glb} -> {:reply, {:ok, glb}, s}
+      :error -> {:reply, :none, s}
+    end
+  end
 
   @impl true
   def handle_info({:hired, ref, p}, s) do
@@ -219,7 +247,10 @@ defmodule World.Construction do
   end
 
   # The plan comes before any message, so the deadline finds it.
+  def handle_info(:deadline, %{over: true} = s), do: {:noreply, s}
   def handle_info(:deadline, s), do: stop(s, %{"reason" => "seconds", "done" => MapSet.size(s.done)})
+
+  def handle_info(:close, s), do: {:stop, :normal, s}
 
   defp stop(s, data) do
     s = record(s, "stopped", nil, data)
@@ -315,7 +346,21 @@ defmodule World.Construction do
       })
 
     reply(s, {:built, s.id, %{glb: glb, log: s.log, level: s.level, plan: s.plan, glbs: s.glbs}})
-    {:stop, :normal, s}
+
+    # The construction keeps the GLBs of its elements for a while, under
+    # a name of its own, so a new build of the same id can start. When an
+    # earlier build of the id keeps them now, it has the same elements.
+    Registry.unregister(World.Names, s.id)
+
+    case Registry.register(World.Names, {:elements, s.id}, nil) do
+      {:ok, _} ->
+        linger = Keyword.get(Application.get_env(:world, __MODULE__, []), :linger, 300_000)
+        Process.send_after(self(), :close, linger)
+        {:noreply, %{s | item: nil, triangles: %{}, elements: %{}, over: true}}
+
+      {:error, {:already_registered, _}} ->
+        {:stop, :normal, s}
+    end
   end
 
   defp finish(s), do: {:noreply, s}

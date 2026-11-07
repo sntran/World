@@ -176,6 +176,26 @@ test('GET /m/ of a URL that the factory knows needs no VM', async () => {
   assert.equal(v.calls.length, calls + 1);
 });
 
+test('the constructions and the streams go to the VM, with Last-Event-ID, and come back as they come', async () => {
+  const env = { ORDERS: bucket() };
+  const v = vm();
+  const post = await handler(req('/builds', { method: 'POST', headers: { accept: 'text/event-stream', 'content-type': 'application/json' }, body: '{}' }), env, { vm: v, commit: 'c1' });
+  assert.equal(post.headers.get('content-type'), 'text/event-stream');
+  assert.equal(post.headers.get('cache-control'), 'no-cache');
+  assert.equal(await post.text(), 'id: 1\ndata: {"id":1}\n\n');
+  assert.equal(v.last.headers.get('accept'), 'text/event-stream');
+  assert.equal(v.last.headers.get('x-world-origin'), 'https://world.mkfifo.com');
+
+  const events = await handler(req('/events?after=4', { headers: { 'last-event-id': '7' } }), env, { vm: v, commit: 'c1' });
+  assert.equal(events.status, 200);
+  assert.equal(v.last.headers.get('last-event-id'), '7');
+  for (const path of ['/census', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']) {
+    await handler(req(path), env, { vm: v, commit: 'c1' });
+  }
+  assert.deepEqual(v.calls.slice(-6), ['/builds', '/events?after=4', '/census', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']);
+  assert.equal((await handler(req('/builds', { method: 'PUT' }), env, { vm: v, commit: 'c1' })).status, 405);
+});
+
 test('the other routes', async () => {
   const env = { ORDERS: bucket() };
   const blueprints = await handler(req('/blueprints'), env, { vm: vm(), commit: 'c1' });

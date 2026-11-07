@@ -25,6 +25,22 @@ defmodule World.Service do
     the full order (the Worker keeps the file of a URL `/m/` by it).
   - `POST /mcp`: the MCP server (`World.MCP`). The other methods give
     405.
+  - `POST /builds`: a job in the body: `{"order", "level", "budget"}`
+    (`World.budget/1`). The order goes into the store of the orders, and
+    a construction of the people of the node builds it
+    (`World.build/1`). With `accept: text/event-stream`, the response is
+    the stream of the construction until its end; else 202 with
+    `{"build", "hash", "after", "events", "files"}`. 422 with
+    `{"errors"}`, or 503 when the store failed.
+  - `GET /builds/ID`: the state of a construction from the log of the
+    node: its status, its tasks, the tasks done and its elements (404
+    when the log has none).
+  - `GET /builds/ID/events`: the stream of a construction until its end,
+    after the id of `Last-Event-ID` or of `?after=N`.
+  - `GET /builds/ID/elements/KEY.glb`: the GLB of an element.
+  - `GET /events`: the stream of the whole world, after the id of
+    `Last-Event-ID` or of `?after=N`.
+  - `GET /census`: the people of the node (`World.census/0`).
 
   A body that is not JSON gives 400. A body of more than 1 MB gives 413.
   The header `x-world-origin` (from the Worker) is the start of the URLs
@@ -32,7 +48,7 @@ defmodule World.Service do
   """
   use Plug.Router
 
-  alias World.{MCP, Orders}
+  alias World.{Construction, MCP, Orders, Stream}
   alias World.Orders.{Blueprint, Blueprints, Set, Store}
 
   plug(:match)
@@ -140,8 +156,116 @@ defmodule World.Service do
     end)
   end
 
+  post "/builds" do
+    with_order(conn, fn job -> builds(conn, job) end)
+  end
+
+  get "/builds/:id" do
+    case summary(id) do
+      nil -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such construction"}]})
+      state -> json(conn, 200, state)
+    end
+  end
+
+  get "/builds/:id/events" do
+    conn = conn |> fetch_query_params() |> Stream.open(id)
+    Stream.follow(conn, id, after_id(conn), &over?/1)
+  end
+
+  get "/builds/:id/elements/:file" do
+    with [key, "glb"] <- String.split(file, "."),
+         {n, ""} <- Integer.parse(key),
+         {:ok, glb} <- Construction.element(id, n) do
+      conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
+    else
+      _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such element"}]})
+    end
+  end
+
+  get "/events" do
+    conn = conn |> fetch_query_params() |> Stream.open(:world)
+    Stream.follow(conn, :world, after_id(conn))
+  end
+
+  get "/census" do
+    json(conn, 200, World.census())
+  end
+
   match _ do
     json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such page"}]})
+  end
+
+  # A job of a request: its order into the store, then a construction.
+  defp builds(conn, %{"order" => order} = body) do
+    with {:ok, budget} <- World.budget(body["budget"]),
+         {:ok, placed} <- Orders.place(order, origin(conn)),
+         {:ok, job} <- Orders.job(placed["order"], Map.get(body, "level", "near")) do
+      job = Map.put(job, :budget, budget)
+      after_id = World.Log.Server.last()
+
+      if "text/event-stream" in get_req_header(conn, "accept") do
+        conn = Stream.open(conn, job.id)
+        {:ok, id} = World.build(job)
+        Stream.follow(conn, id, after_id, &over?/1)
+      else
+        {:ok, id} = World.build(job)
+
+        json(conn, 202, %{
+          "build" => id,
+          "hash" => placed["hash"],
+          "after" => after_id,
+          "events" => "/builds/#{id}/events?after=#{after_id}",
+          "files" => placed["files"]
+        })
+      end
+    else
+      {:error, :store} ->
+        json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+      {:error, errors} ->
+        json(conn, 422, %{"errors" => errors})
+    end
+  end
+
+  defp builds(conn, _body), do: json(conn, 422, %{"errors" => [%{"path" => "order", "message" => "is required"}]})
+
+  # The end of a construction.
+  defp over?(e), do: e["kind"] in ~w(done stopped failed)
+
+  # The id after which a stream starts: `Last-Event-ID`, else `?after=N`, else 0.
+  defp after_id(conn) do
+    text = List.first(get_req_header(conn, "last-event-id")) || conn.query_params["after"] || "0"
+
+    case Integer.parse(text) do
+      {n, ""} when n >= 0 -> n
+      _ -> 0
+    end
+  end
+
+  # The state of a construction: its last run in the log of the node.
+  defp summary(id) do
+    events = for e <- World.Log.Server.history(0), e["order"] == id, do: e
+
+    case Enum.split_while(Enum.reverse(events), &(&1["kind"] != "requested")) do
+      {_, []} ->
+        nil
+
+      {after_request, [requested | _]} ->
+        run = [requested | Enum.reverse(after_request)]
+        plan = Enum.find(run, &(&1["kind"] == "plan_made"))
+        last = List.last(run)
+        over = Enum.find(Enum.reverse(run), &over?/1)
+
+        %{
+          "build" => id,
+          "status" => if(over, do: over["kind"], else: "building"),
+          "level" => (plan || requested)["data"]["level"],
+          "tasks" => if(plan, do: length(plan["data"]["tasks"]), else: 0),
+          "done" => Enum.count(run, &(&1["kind"] == "task_done")),
+          "elements" => for(e <- run, e["kind"] == "element", do: Map.take(e["data"], ~w(task part glb matrix))),
+          "last" => last["id"]
+        }
+    end
   end
 
   # One build at a time in the VM: the edge has 128 MB, and two builds of

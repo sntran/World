@@ -56,6 +56,33 @@ defmodule World do
   end
 
   @doc """
+  The budget of a job from its data (`docs/plans/0001-people-build-on-demand.md`,
+  D2): `"workers"` (1 to 64), `"seconds"` (more than 0) and `"triangles"`
+  (1 to 10,000,000), each one optional. `{:ok, budget}`, or `{:error,
+  errors}` with the path of each error.
+  """
+  def budget(nil), do: {:ok, %{}}
+
+  def budget(raw) when is_map(raw) do
+    errors =
+      for {key, value} <- Enum.sort(raw),
+          message = wrong(key, value),
+          do: %{"path" => "budget.#{key}", "message" => message}
+
+    if errors == [], do: {:ok, raw}, else: {:error, errors}
+  end
+
+  def budget(_raw), do: {:error, [%{"path" => "budget", "message" => "must be an object"}]}
+
+  defp wrong("workers", n) when :erlang.is_integer(n, 1, 64), do: nil
+  defp wrong("workers", _), do: "must be a whole number from 1 to 64"
+  defp wrong("seconds", n) when is_number(n) and n > 0, do: nil
+  defp wrong("seconds", _), do: "must be a number of seconds more than 0"
+  defp wrong("triangles", n) when :erlang.is_integer(n, 1, 10_000_000), do: nil
+  defp wrong("triangles", _), do: "must be a whole number from 1 to 10,000,000"
+  defp wrong(_key, _), do: "is not a part of a budget: workers, seconds, triangles"
+
+  @doc """
   The memory of the VM, in bytes: `{"total", bytes}` (`:erlang.memory/1`).
   An emulator with no allocators of ERTS (`-Mea min`, at the edge) does
   not have it: then `{"processes", bytes}`, the memory of each process

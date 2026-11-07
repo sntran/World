@@ -94,14 +94,15 @@ export function orderOf(blueprint, params) {
 }
 
 // A request of the client to the VM, with its method, its body, the
-// headers that the VM reads, and the origin of the URLs.
+// headers that the VM reads, and the origin of the URLs. A stream of
+// events (text/event-stream) goes back as it comes.
 async function forward(request, vm, origin, path) {
-  const keep = ['content-type', 'mcp-protocol-version'].filter((name) => request.headers.has(name));
+  const keep = ['content-type', 'accept', 'mcp-protocol-version', 'last-event-id'].filter((name) => request.headers.has(name));
   const ask = new Headers(keep.map((name) => [name, request.headers.get(name)]));
   ask.set('x-world-origin', origin);
   const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer();
   const r = await vm(new Request(`http://vm${path}`, { method: request.method, headers: ask, body }));
-  const extra = Object.fromEntries(['content-type', 'allow'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
+  const extra = Object.fromEntries(['content-type', 'allow', 'cache-control'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
   return new Response(r.status === 202 ? null : r.body, { status: r.status, headers: headers(extra) });
 }
 
@@ -185,6 +186,9 @@ async function route(request, env, { vm, commit }) {
 
   if (path === '/mcp') return forward(request, vm, url.origin, '/mcp');
 
+  // The constructions of the people of the node, and the streams.
+  if (path === '/builds' && request.method === 'POST') return forward(request, vm, url.origin, '/builds');
+
   if (request.method !== 'GET' && request.method !== 'HEAD') return errors(405, 'the method is not allowed');
 
   if (path.startsWith('/o/')) {
@@ -192,6 +196,8 @@ async function route(request, env, { vm, commit }) {
     if (!parts || !HASH.test(parts[0])) return errors(404, 'no such file');
     return file(request, env, vm, commit, parts[0], parts[1]);
   }
+
+  if (path === '/events' || path === '/census' || path.startsWith('/builds/')) return forward(request, vm, url.origin, path + url.search);
 
   if (path.startsWith('/m/')) {
     const parts = split(path.slice(3));

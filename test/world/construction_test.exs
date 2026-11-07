@@ -182,6 +182,40 @@ defmodule World.ConstructionTest do
     assert {:ok, _} = World.await(id)
   end
 
+  test "after its end, a construction keeps its elements for a time, and a deadline then changes nothing" do
+    Application.put_env(:world, Construction, linger: 1_500)
+    on_exit(fn -> Application.delete_env(:world, Construction) end)
+    {:ok, id} = World.build(job("wall_brick_sample", level: :far, budget: %{"seconds" => 1}))
+    assert {:ok, %{glbs: glbs}} = World.await(id)
+    [{pid, _}] = Registry.lookup(World.Names, {:elements, id})
+    assert Construction.element(id, 0) == {:ok, glbs[0]}
+    assert Construction.element(id, 999) == :none
+
+    # The deadline comes after the end: the construction keeps going until its time.
+    ref = Process.monitor(pid)
+    Process.sleep(1_100)
+    assert Process.alive?(pid)
+    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 2_000
+    assert Construction.element(id, 0) == :none
+  end
+
+  test "an element of a construction that ends at the request is not there" do
+    id = "ends-#{System.unique_integer([:positive])}"
+    me = self()
+
+    spawn(fn ->
+      Registry.register(World.Names, id, nil)
+      send(me, :named)
+
+      receive do
+        {:"$gen_call", _, _} -> exit(:normal)
+      end
+    end)
+
+    assert_receive :named
+    assert Construction.element(id, 0) == :none
+  end
+
   test "await gives a timeout when no result comes" do
     assert World.await("nothing", 0) == {:error, :timeout}
   end
