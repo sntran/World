@@ -81,4 +81,34 @@ defmodule World.CastTest do
       for {a, b} <- Enum.zip(Tuple.to_list(World.Vec.sub(hi, lo)), [x, y, z]), do: assert_in_delta(a, b, 0.02)
     end
   end
+
+  property "the pours of a cast in any order, and the slabs of its mesh, give the cast of one pour" do
+    check all boxes <-
+                list_of(
+                  tuple(
+                    {float(min: -1.0, max: 1.0), float(min: -1.0, max: 1.0), float(min: 0.0, max: 1.0),
+                     float(min: 0.2, max: 0.8)}
+                  ),
+                  min_length: 1,
+                  max_length: 3
+                ),
+              n <- integer(1..5),
+              seed <- integer(1..1_000),
+              max_runs: 6 do
+      shapes = for {x, y, z, w} <- boxes, do: box({x, y, z}, {x + w, y + w, z + w})
+      whole = Cast.solid(shapes, 0.1)
+
+      s = Cast.survey(shapes, 0.1)
+      :rand.seed(:exsss, {seed, 1, 2})
+      bands = s |> Cast.bands(n) |> Enum.shuffle()
+      marks = bands |> Enum.map(&Cast.marks(s, &1)) |> Enum.reduce(&MapSet.union/2)
+      outside = Cast.outside(s, marks)
+      d = bands |> Enum.map(&Cast.distances(s, marks, outside, &1)) |> Enum.shuffle() |> Cast.merge()
+      assert Cast.field(s, marks, outside, d) == whole
+
+      grid = Cast.surface(whole)
+      pieces = for slab <- Cast.slabs(grid, n), do: Cast.quads(grid, slab)
+      assert Cast.join(grid, pieces, :concrete) == Cast.mesh(whole, :concrete)
+    end
+  end
 end

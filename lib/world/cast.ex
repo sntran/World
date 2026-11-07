@@ -29,132 +29,221 @@ defmodule World.Cast do
   a list of three indices, or `World.Mesh` structs, their faces to the
   outside) on a grid of `step` m. Gives the grid: `cells` is a tuple of
   0 (outside) and 1 (solid), `field` the signed distance (m) at the
-  center of each cell.
+  center of each cell. It is the steps of a cast in one: `survey/2`, the
+  `marks/2` and the `distances/4` of all the triangles, `outside/2` and
+  `field/4`. People can do the marks and the distances of the bands of
+  `bands/2` at the same time, in any order: `merge/1` gives one result.
   """
   def solid(surfaces, step) do
+    s = survey(surfaces, step)
+    all = Enum.to_list(0..(tuple_size(s.tris) - 1)//1)
+    marks = marks(s, all)
+    outside = outside(s, marks)
+    field(s, marks, outside, distances(s, marks, outside, all))
+  end
+
+  @doc """
+  The survey of a cast: its triangles (a tuple of `{a, b, c}`), the
+  corner `lo` of the grid, its `step` and its `dims`, with three cells of
+  room round the solid (its marks go one cell out), so that the fill
+  goes all round it.
+  """
+  def survey(surfaces, step) do
     tris = Enum.flat_map(surfaces, &triangles/1)
     {lo, hi} = tris |> Enum.flat_map(&Tuple.to_list/1) |> Vec.bounds()
-    # Three cells of room round the solid (its marks go one cell out), so
-    # the fill goes all round it.
     lo = Vec.sub(lo, {3 * step, 3 * step, 3 * step})
     {sx, sy, sz} = Vec.sub(hi, lo)
-    dims = {ceil(sx / step) + 4, ceil(sy / step) + 4, ceil(sz / step) + 4}
-    {nx, ny, nz} = dims
-    size = nx * ny * nz
-    marks = :atomics.new(size, [])
-    # For each cell: the distance to the plane of the nearest triangle
-    # that its foot falls in (true, with its sign), and else the distance
-    # to the nearest sample with the vote of the samples near it for its
-    # side (out of the edge or the corner of a face); in micrometers.
-    near = :atomics.new(size, [])
-    plane = :atomics.new(size, [])
-    loose = :atomics.new(size, [])
-    # The sum of the normals of the samples near a loose cell, and its
-    # nearest sample (micrometers): their pseudo-normal gives the side.
-    normals = :atomics.new(3 * size, [])
-    nearest = :atomics.new(3 * size, [])
-    index = fn {i, j, k} -> (i * ny + j) * nz + k + 1 end
 
-    # The samples of each triangle: a point each `gap` m over it, its
-    # normal, and a test that a point of its plane is in it.
-    samples = fn gap, f ->
-      for {a, b, c} <- tris, n = normal(a, b, c), n != nil do
-        longest = Enum.max([Vec.len(Vec.sub(b, a)), Vec.len(Vec.sub(c, a)), Vec.len(Vec.sub(c, b))])
-        m = max(1, ceil(longest / gap))
-        inside = within(a, b, c)
+    %{
+      tris: List.to_tuple(tris),
+      lo: lo,
+      step: step,
+      dims: {ceil(sx / step) + 4, ceil(sy / step) + 4, ceil(sz / step) + 4}
+    }
+  end
 
-        for u <- 0..m, v <- 0..(m - u) do
-          f.(a |> Vec.add(Vec.scale(Vec.sub(b, a), u / m)) |> Vec.add(Vec.scale(Vec.sub(c, a), v / m)), n, inside)
-        end
-      end
-    end
+  @doc """
+  The bands of a cast from the feet up: the indices of its triangles in
+  `n` groups by the height of their centers, as the pours of a real cast.
+  """
+  def bands(%{tris: tris}, n) do
+    tris
+    |> Tuple.to_list()
+    |> Enum.with_index()
+    |> Enum.sort_by(fn {{{_, _, a}, {_, _, b}, {_, _, c}}, i} -> {a + b + c, i} end)
+    |> Enum.map(&elem(&1, 1))
+    |> then(&Enum.chunk_every(&1, max(ceil(length(&1) / n), 1)))
+  end
 
-    cell = fn p ->
-      {x, y, z} = Vec.sub(p, lo)
-      {floor(x / step), floor(y / step), floor(z / step)}
-    end
+  @doc """
+  The marks of the triangles `indices` of a survey: the cells round each
+  sample of each triangle (a sample each half cell), so that the marks
+  have no hole for the fill. A set of the indices of the cells; the marks
+  of the bands merge as a union.
+  """
+  def marks(s, indices) do
+    for i <- indices,
+        {p, _, _} <- samples(elem(s.tris, i), s.step / 2),
+        x <- eight(s, p),
+        into: MapSet.new(),
+        do: index(s, x)
+  end
 
-    # The eight cells whose centers are round a point: as many on each side.
-    around = fn p ->
-      {x, y, z} = Vec.sub(p, lo)
-      {i, j, k} = {floor(x / step - 0.5), floor(y / step - 0.5), floor(z / step - 0.5)}
-      for a <- 0..1, b <- 0..1, c <- 0..1, do: {i + a, j + b, k + c}
-    end
+  @doc """
+  The cells outside the cast: a fill from the corner of the grid through
+  the cells with no mark (6 neighbors). A binary of a byte for each cell
+  (1 outside).
+  """
+  def outside(%{dims: {nx, ny, nz}} = s, marks) do
+    m = :atomics.new(nx * ny * nz, [])
+    for x <- marks, do: :atomics.put(m, x, 1)
+    out = fill(m, s.dims)
+    for x <- 1..(nx * ny * nz), into: <<>>, do: <<:atomics.get(out, x)>>
+  end
 
-    # The 27 cells round the nearest center of a point.
-    block = fn p ->
-      {x, y, z} = Vec.sub(p, lo)
-      {i, j, k} = {round(x / step - 0.5), round(y / step - 0.5), round(z / step - 0.5)}
-      for a <- -1..1, b <- -1..1, c <- -1..1, do: {i + a, j + b, k + c}
-    end
+  @doc """
+  The distances of the triangles `indices` near the outer surface: only
+  the samples (one a cell) whose point out along the normal is outside
+  give one. For each marked cell round a sample: the distance to the
+  plane of the triangle when its foot falls in it (with its sign), else
+  the distance to the sample and the normal of the sample, weighted by
+  the distance, for the side. Each record has a key (the distance in
+  micrometers, the index of the triangle, the index of the sample), and
+  the least key wins: the result does not depend on the order of the
+  triangles or of the bands (`merge/1`).
+  """
+  def distances(s, marks, outside, indices) do
+    step = s.step
+    out? = fn x -> :binary.at(outside, x - 1) == 1 end
 
-    # Each sample marks the cells round it (so the marks have no hole for
-    # the fill).
-    samples.(step / 2, fn p, _, _ -> for x <- around.(p), do: :atomics.put(marks, index.(x), 1) end)
-    outside = fill(marks, dims)
-    out? = fn x -> :atomics.get(outside, x) == 1 end
+    Enum.reduce(indices, %{near: %{}, loose: %{}, normals: %{}}, fn i, acc ->
+      {a, b, c} = elem(s.tris, i)
+      inside = within(a, b, c)
 
-    # The distances come only from the samples of the outer surface: a
-    # point out along the normal is outside. The surface of a shape in
-    # another (a robe in a sleeve) gives none.
-    # (A sample each cell is enough: each marked cell gets the samples of
-    # the 27 cells round it.)
-    samples.(step, fn p, n, inside ->
-      outer? = Enum.any?([1.5, 2.5], fn t -> out?.(index.(cell.(Vec.add(p, Vec.scale(n, t * step))))) end)
-
-      if outer? do
-        for x <- block.(p), i = index.(x), :atomics.get(marks, i) == 1 do
-          c = center(lo, step, x)
+      for {p, n, k} <- samples({a, b, c}, step),
+          Enum.any?([1.5, 2.5], fn t -> out?.(index(s, cell(s, Vec.add(p, Vec.scale(n, t * step))))) end),
+          x <- block(s, p),
+          ix = index(s, x),
+          MapSet.member?(marks, ix),
+          reduce: acc do
+        acc ->
+          c = center(s.lo, step, x)
           d = Vec.sub(c, p)
           side = Vec.dot(d, n)
-          best = :atomics.get(near, i)
 
-          if (best == 0 or abs(side) * 1.0e6 < best) and inside.(Vec.sub(c, Vec.scale(n, side))) do
-            keep(near, plane, i, abs(side), side)
+          if inside.(Vec.sub(c, Vec.scale(n, side))) do
+            least(acc, :near, ix, {round(abs(side) * 1.0e6), i, k}, round(side * 1.0e6))
           else
-            if keep(loose, nil, i, Vec.len(d), nil), do: put3(nearest, i, p)
             w = 1.0 / (Vec.dot(d, d) + 0.01 * step * step)
-            {nx1, ny1, nz1} = Vec.scale(n, w * step * step * 1.0e3)
-            for {v, k} <- [{nx1, 0}, {ny1, 1}, {nz1, 2}], do: :atomics.add(normals, 3 * (i - 1) + k + 1, round(v))
+            {wx, wy, wz} = Vec.scale(n, w * step * step * 1.0e3)
+            sum = {round(wx), round(wy), round(wz)}
+            acc = least(acc, :loose, ix, {round(Vec.len(d) * 1.0e6), i, k}, p)
+            %{acc | normals: Map.update(acc.normals, ix, sum, &add(&1, sum))}
           end
-        end
       end
     end)
+  end
 
-    # The band: each marked cell next to the outside, or next to one that
-    # is; the surface goes through it. Deeper cells are in the solid.
-    band1 = band(marks, dims, out?)
-    band2 = band(marks, dims, fn x -> out?.(x) or :atomics.get(band1, x) == 1 end)
+  defp least(acc, kind, ix, key, value) do
+    Map.update!(acc, kind, fn m ->
+      Map.update(m, ix, {key, value}, fn {old, _} = was -> if key < old, do: {key, value}, else: was end)
+    end)
+  end
+
+  defp add({a, b, c}, {d, e, f}), do: {a + d, b + e, c + f}
+
+  @doc "The distances of the bands of a cast as one: the least key of each cell, the sums of the normals."
+  def merge(parts) do
+    pick = fn _ix, {k1, _} = a, {k2, _} = b -> if k1 <= k2, do: a, else: b end
+
+    Enum.reduce(parts, %{near: %{}, loose: %{}, normals: %{}}, fn d, acc ->
+      %{
+        near: Map.merge(acc.near, d.near, pick),
+        loose: Map.merge(acc.loose, d.loose, pick),
+        normals: Map.merge(acc.normals, d.normals, fn _, x, y -> add(x, y) end)
+      }
+    end)
+  end
+
+  @doc """
+  The grid of a cast from its marks, its outside and its distances. The
+  band: each marked cell next to the outside, or next to one that is; the
+  surface goes through it. Deeper cells are in the solid.
+  """
+  def field(%{dims: {nx, ny, nz} = dims, step: step, lo: lo}, marks, outside, d) do
+    size = nx * ny * nz
+    m = :atomics.new(size, [])
+    for x <- marks, do: :atomics.put(m, x, 1)
+    out? = fn x -> :binary.at(outside, x - 1) == 1 end
+    band1 = band(m, dims, out?)
+    band2 = band(m, dims, fn x -> out?.(x) or :atomics.get(band1, x) == 1 end)
     far = 1.5 * step
 
     field =
       for x <- 1..size do
-        d =
-          cond do
-            :atomics.get(near, x) > 0 ->
-              :atomics.get(plane, x) / 1.0e6
+        v =
+          case {d.near[x], d.loose[x]} do
+            {{_, plane}, _} ->
+              plane / 1.0e6
 
-            :atomics.get(loose, x) > 0 ->
-              c = center(lo, step, cell_of(x - 1, dims))
-              n = for k <- 0..2, do: :atomics.get(normals, 3 * (x - 1) + k + 1)
-              side = Vec.dot(Vec.sub(c, get3(nearest, x)), List.to_tuple(n))
-              (:atomics.get(loose, x) - 1) / 1.0e6 * sign(side)
+            {nil, {{um, _, _}, p}} ->
+              side = Vec.dot(Vec.sub(center(lo, step, cell_of(x - 1, dims)), p), d.normals[x])
+              um / 1.0e6 * sign(side)
 
-            true ->
+            _ ->
               nil
           end
 
         cond do
-          out?.(x) -> if d, do: abs(d), else: far
-          :atomics.get(band2, x) == 1 and d != nil -> d
+          out?.(x) -> if v, do: abs(v), else: far
+          :atomics.get(band2, x) == 1 and v != nil -> v
           :atomics.get(band1, x) == 1 -> 0.5 * step
-          true -> if d, do: -abs(d), else: -far
+          true -> if v, do: -abs(v), else: -far
         end
       end
       |> List.to_tuple()
 
     field = alone(field, dims, step)
     %__MODULE__{lo: lo, step: step, dims: dims, cells: signs(field), field: field}
+  end
+
+  # The samples of a triangle each `gap` m over it: their point, the
+  # normal of the triangle and their index; none for a triangle with no
+  # area.
+  defp samples({a, b, c}, gap) do
+    case normal(a, b, c) do
+      nil ->
+        []
+
+      n ->
+        longest = Enum.max([Vec.len(Vec.sub(b, a)), Vec.len(Vec.sub(c, a)), Vec.len(Vec.sub(c, b))])
+        m = max(1, ceil(longest / gap))
+
+        for {{u, v}, k} <- Enum.with_index(for u <- 0..m, v <- 0..(m - u), do: {u, v}) do
+          {a |> Vec.add(Vec.scale(Vec.sub(b, a), u / m)) |> Vec.add(Vec.scale(Vec.sub(c, a), v / m)), n, k}
+        end
+    end
+  end
+
+  defp index(%{dims: {_, ny, nz}}, {i, j, k}), do: (i * ny + j) * nz + k + 1
+
+  defp cell(%{lo: lo, step: step}, p) do
+    {x, y, z} = Vec.sub(p, lo)
+    {floor(x / step), floor(y / step), floor(z / step)}
+  end
+
+  # The eight cells whose centers are round a point: as many on each side.
+  defp eight(%{lo: lo, step: step}, p) do
+    {x, y, z} = Vec.sub(p, lo)
+    {i, j, k} = {floor(x / step - 0.5), floor(y / step - 0.5), floor(z / step - 0.5)}
+    for a <- 0..1, b <- 0..1, c <- 0..1, do: {i + a, j + b, k + c}
+  end
+
+  # The 27 cells round the nearest center of a point.
+  defp block(%{lo: lo, step: step}, p) do
+    {x, y, z} = Vec.sub(p, lo)
+    {i, j, k} = {round(x / step - 0.5), round(y / step - 0.5), round(z / step - 0.5)}
+    for a <- -1..1, b <- -1..1, c <- -1..1, do: {i + a, j + b, k + c}
   end
 
   # The field with no solid cell alone (with no solid neighbor): near the
@@ -171,27 +260,6 @@ defmodule World.Cast do
       end
     )
   end
-
-  # The smallest distance of a cell so far (+1, so 0 is none), and its
-  # signed value: true when it is a new smallest.
-  defp keep(best, value, i, dist, signed) do
-    um = round(dist * 1.0e6) + 1
-    old = :atomics.get(best, i)
-
-    if old == 0 or um < old do
-      :atomics.put(best, i, um)
-      if value, do: :atomics.put(value, i, round(signed * 1.0e6))
-      true
-    else
-      false
-    end
-  end
-
-  defp put3(a, i, {x, y, z}) do
-    for {v, k} <- [{x, 0}, {y, 1}, {z, 2}], do: :atomics.put(a, 3 * (i - 1) + k + 1, round(v * 1.0e6))
-  end
-
-  defp get3(a, i), do: List.to_tuple(for(k <- 0..2, do: :atomics.get(a, 3 * (i - 1) + k + 1) / 1.0e6))
 
   defp cell_of(x, {_, ny, nz}), do: {div(div(x, nz), ny), rem(div(x, nz), ny), rem(x, nz)}
 
@@ -354,20 +422,38 @@ defmodule World.Cast do
   @doc """
   The closed surface of the solid of the grid: a `World.Mesh` of the
   role `material` (each face a triangle, its outside away from the
-  solid).
+  solid). It is `surface/1`, the `quads/2` of all the grid, and `join/3`:
+  people can make the quads of the slabs of `slabs/2` at the same time.
   """
-  def mesh(%__MODULE__{dims: {nx, ny, nz} = dims, step: s, lo: lo, field: field}, material) do
-    field = manifold(field, dims, s)
+  def mesh(%__MODULE__{dims: {nx, _, _}} = grid, material) do
+    grid = surface(grid)
+    join(grid, [quads(grid, {0, nx - 2})], material)
+  end
 
+  @doc "The grid with no saddle in its field: one sheet of the surface in each cell of 8 values."
+  def surface(%__MODULE__{dims: dims, step: s, field: field} = grid), do: %{grid | field: manifold(field, dims, s)}
+
+  @doc "The slabs of a grid along x for `n` people: ranges of the first index of a cell of 8 values."
+  def slabs(%__MODULE__{dims: {nx, _, _}}, n) do
+    last = nx - 2
+    size = max(ceil((last + 1) / n), 1)
+    for a <- 0..last//size, do: {a, min(a + size - 1, last)}
+  end
+
+  @doc """
+  The quads of a slab of a grid after `surface/1`: a quad across each
+  edge of the grid of values that the surface cuts (the solid is never at
+  the edge of the grid), from the points of the four cells round it, its
+  outside to the larger value; and the point of each of its cells: the
+  mean of the cuts on the edges of the cell.
+  """
+  def quads(%__MODULE__{dims: {nx, ny, nz}, step: s, lo: lo, field: field}, {a0, a1}) do
     value = fn i, j, k ->
       if i < 0 or j < 0 or k < 0 or i >= nx or j >= ny or k >= nz, do: 1.5 * s, else: elem(field, (i * ny + j) * nz + k)
     end
 
-    # A quad across each edge of the grid of values that the surface cuts
-    # (the solid is never at the edge of the grid), from the points of the
-    # four cells round it; its outside to the larger value.
     quads =
-      for a <- 0..(nx - 2),
+      for a <- a0..a1//1,
           b <- 0..(ny - 2),
           c <- 0..(nz - 2),
           axis <- 0..2,
@@ -379,13 +465,8 @@ defmodule World.Cast do
         if v1 > v0, do: round, else: Enum.reverse(round)
       end
 
-    keys = quads |> Enum.concat() |> Enum.uniq()
-    ids = keys |> Enum.with_index() |> Map.new()
-
-    # A point in each cell of 8 values that the surface goes through: the
-    # mean of the cuts on its edges.
     points =
-      for {i, j, k} <- keys do
+      for {i, j, k} = key <- quads |> Enum.concat() |> Enum.uniq(), into: %{} do
         corners =
           for c <- 0..7, do: {i + Bitwise.band(c, 1), j + Bitwise.band(Bitwise.bsr(c, 1), 1), k + Bitwise.bsr(c, 2)}
 
@@ -397,11 +478,20 @@ defmodule World.Cast do
             Vec.lerp(center(lo, s, elem(cs, c0)), center(lo, s, elem(cs, c1)), v0 / (v0 - v1))
           end
 
-        Vec.mean(cuts)
+        {key, Vec.mean(cuts)}
       end
 
+    {quads, points}
+  end
+
+  @doc "The mesh of the quads of the slabs of a grid, in the order of the slabs."
+  def join(_grid, pieces, material) do
+    quads = Enum.flat_map(pieces, &elem(&1, 0))
+    points = Enum.reduce(pieces, %{}, &Map.merge(&2, elem(&1, 1)))
+    keys = quads |> Enum.concat() |> Enum.uniq()
+    ids = keys |> Enum.with_index() |> Map.new()
     faces = for q <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: f
-    Mesh.new(points, faces, material)
+    Mesh.new(Enum.map(keys, &points[&1]), faces, material)
   end
 
   # The field with no saddle: where two solid values touch only at an

@@ -392,7 +392,11 @@ of the base, and the figure looks to +y.
   that its foot falls in, or else the distance to the nearest point with
   the side of the sum of the normals near it. Surface nets give the mesh,
   after a repair of the field so that each edge is in two faces. A part
-  thicker than one cell stays.
+  thicker than one cell stays. The cast is steps that casters do at the
+  same time: the marks and the distances of the bands of triangles from
+  the feet up (the pours), in any order, with one result (the least
+  distance wins, then the least index of the triangle and of its
+  sample); one fill of the outside and one field; the mesh in slabs.
 - **Hollow** (near only). A wall of `wall` m (at the least two cells), a
   spiral stair (the part `cau_thang`: `steps` treads, 12 to a turn, round
   an open well of `well` m with a rail at its edge, each tread from the
