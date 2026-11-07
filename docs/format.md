@@ -322,6 +322,20 @@ of the parts:
   (`den_duong`) and the bin of 240 L (`thung_rac_240l`, its lid on a
   hinge of the role `open`).
 
+### The words of IFC
+
+The words of a construction are the words of IFC (ISO 16739, the format
+of the data of buildings), so that a model can go to IFC later:
+
+| World | IFC |
+|---|---|
+| A node of a drawing (an element) | `IfcElement` (a part of a node: `IfcBuildingElementPart`) |
+| An assembly | `IfcElementAssembly` |
+| The task of a node | `IfcTask` |
+| `after` and the waits of a node | `IfcRelSequence` |
+| The person of a trade | `IfcLaborResource` |
+| A construction | `IfcWorkSchedule` |
+
 ## A blueprint in data
 
 A blueprint can be data (`priv/blueprints/NAME.json`,

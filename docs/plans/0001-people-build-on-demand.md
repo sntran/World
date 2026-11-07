@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | In progress: steps 1, 2, 3 and 6 are done, and the tower of step 4 (section 10). |
 | Depends on | The matter of World as it is (`docs/format.md`), the drawing format (`docs/format.md`, "A drawing"), the MCP server (`World.MCP`), the stores (`World.Store`), the log (`World.Log`). |
 | Changes | `docs/world.md` (the world layer: the run, the foreman, the workers), `specs/Order.tla`, `docs/factory.md` (the calls of the site), plan 0023 of Vũng Tàu (the fetch at compile time) and a new plan of Vũng Tàu (the QA mode). |
 
@@ -328,3 +328,17 @@ the risks are in the sizes, not in the idea.
   the yard of `World.Run` today, or new ones)?
   Answered (the owner, 2026-11-07): the PID of the process
   (`"<0.123.0>"`).
+
+## 10. The state of the work
+
+On the branch `feat/0001-people-build-on-demand`:
+
+| Step | State |
+|---|---|
+| 1. The people build the model, and anyone can watch | Done. The node, the census, the people, the constructions, the log of the node and its store, the stream, the world page, and four specifications (`docs/specs.md`). |
+| 2. The statue as data, with the skills | Done: `priv/blueprints/statue.json`, ten skills, the MCP tools `plan_build` and `build`. The cast is one task (D30). |
+| 3. Pause, resume, change, cancel, the memory budget | Done, with `specs/Build.tla` and two more fault models. Not done: the wait for room in the memory, and the estimate of a skill from the log (D33, `TODO.md`). |
+| 4. The other kinds as drawings | The tower is done (D34). The lot house and the van are not: they stay in code (`World.Buildings.Lot`, the van line). |
+| 5. The world builds its own places | Not done. The places of the old yard went with step 1; the warehouse, the factories and the trucks as blueprints in data come after the lot house and the van, because the factories are houses and the trucks are vans (`TODO.md`). |
+| 6. Vũng Tàu | Done: the draft plan 0025 of Vung_Tau ("QA mode: build a house at an address"), on its branch `docs/0025-qa-build-at-address`. |
+

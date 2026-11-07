@@ -176,7 +176,33 @@ The example is a job of the blueprint `strut` at the level far.
    R2. A second request of the same job finds the files in R2.
 
 The budget: the most workers at one time, the seconds (at its deadline
-a construction stops, with `stopped` and no model), and the triangles.
+a construction stops, with `stopped` and no model), the triangles, and
+the memory of the people (`memory_mb`: a task over its part fails).
+
+A client can pause a construction (`paused`: no task starts, the people
+end the tasks in hand, the free people go), change it in the pause (a
+new order of the same blueprint in data: each node whose data is the
+same stays made; `changed`), resume it (`resumed`), or cancel it
+(`stopped`, the reason `cancelled`).
+
+## The plan from a drawing
+
+A drawing with skills (a blueprint in data: the statue, the tower) is
+one task for each node of the drawing (`World.Plan.of_drawing/1`). A
+node waits for its parent, its `after` and its `from`; its trade is the
+trade of its skill. The person of the trade runs the skill with the
+data of the nodes `from`, and makes the GLB of each mesh of the part.
+The elements go to the watchers in the order of the nodes.
+
+| The statue | Its people |
+|---|---|
+| The base and the plinth | A mason. |
+| The figure and its robe | A sculptor. |
+| The cast | A caster: one task (plan 0001, D30). |
+| The grilles and the halo | A smith. |
+| The part of the statue | A sculptor sets the pieces. |
+| The stair and the rail | A mason. |
+| The ports and the collision boxes | A surveyor. |
 
 ## The plan from an assembly
 

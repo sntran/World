@@ -40,6 +40,17 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **The rest of plan 0001.** The lot house as a blueprint in data
+  (the skills of the trades of a house from `World.Buildings.Lot`), the
+  van line as skills (station by station, each with the same bytes), and
+  then the places of the world (a warehouse, a factory for each trade, a
+  yard and the trucks) built once at the first start of a node, with the
+  log read at a later start (plan 0001, step 5, Q2).
+- **More of the world of plan 0001.** A WebSocket for a client that
+  sends a change while it watches; the engineers of the world; a crane
+  and a scaffold on a site; the materials by the cubic meter; the export
+  of a model to IFC (the words of the elements are its words already);
+  the skills as tools of an MCP server outside the repository.
 - **The memory and the time from the log.** A construction opens when
   the memory of the VM has room for the estimate of its job, and a
   skill gets its estimate of time from the builds of the log (plan 0001,
