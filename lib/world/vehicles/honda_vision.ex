@@ -40,6 +40,23 @@ defmodule World.Vehicles.HondaVision do
     |> Assembly.add("stand", stand(), at: "stand", port: "pivot", kind: :hinge, role: :stand, limits: [0, 92])
   end
 
+  @doc """
+  A part of the scooter, by its name: `frame` (with the ports `body`,
+  `seat`, `steer`, `pivot` and `stand`), `body`, `seat`, `fork`,
+  `engine` or `stand`. Each is made with the back of the scooter at
+  y = 0, as in `model/0`.
+  """
+  def part("frame"), do: frame()
+  def part("body"), do: body()
+  def part("seat"), do: seat()
+  def part("fork"), do: fork()
+  def part("engine"), do: engine()
+  def part("stand"), do: stand()
+
+  @doc "The length of the scooter (m), and the sources of its sizes."
+  def length, do: @length
+  def sources, do: @sources
+
   # The same port on two parts: the child stays where its shapes are.
   defp same(name, at, axis, up), do: Part.port(name, at, axis, up)
   defp origin(name), do: same(name, {0, 0, 0}, {0, 0, 1}, {0, 1, 0})

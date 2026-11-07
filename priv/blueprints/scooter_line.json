@@ -1,0 +1,135 @@
+{
+  "name": "scooter_line",
+  "doc": "A scooter built as on the line of its maker, by the people of each trade at the same time: a welder makes the frame, a molder the body of plastic with its lights, an upholsterer the seat, mechanics the fork with the front wheel and the engine with the rear wheel, and a smith the center stand; the drawing joins them on the ports of the frame. The seat turns up, the fork steers, the engine and its swing arm move on the shock, the stand turns down, the wheels turn. The origin is on the ground at the center of the scooter; the front is to +y.",
+  "sources": [
+    "The model of the scooter: World.Vehicles.HondaVision, the sizes of its data page and its shapes by eye from photos."
+  ],
+  "params": [
+    {
+      "name": "name",
+      "type": "text",
+      "default": "scooter",
+      "max": 40,
+      "doc": "The name of the model: a to z, 0 to 9 and _."
+    },
+    {
+      "name": "model",
+      "type": "choice",
+      "default": "honda_vision",
+      "values": [
+        "honda_vision"
+      ],
+      "doc": "The model of the scooter: the Honda Vision 110 (2021, Việt Nam)."
+    }
+  ],
+  "drawing": {
+    "name": {
+      "param": "name"
+    },
+    "kind": "vehicle",
+    "nodes": [
+      {
+        "name": "frame",
+        "skill": {
+          "scooter_frame": {
+            "model": {
+              "param": "model"
+            }
+          }
+        }
+      },
+      {
+        "name": "body",
+        "skill": {
+          "scooter_body": {
+            "model": {
+              "param": "model"
+            }
+          }
+        },
+        "at": "body",
+        "port": "body"
+      },
+      {
+        "name": "seat",
+        "skill": {
+          "scooter_seat": {
+            "model": {
+              "param": "model"
+            }
+          }
+        },
+        "at": "seat",
+        "port": "hinge",
+        "joint": {
+          "kind": "hinge",
+          "role": "lid",
+          "limits": [
+            0,
+            75
+          ]
+        }
+      },
+      {
+        "name": "fork",
+        "skill": {
+          "scooter_fork": {
+            "model": {
+              "param": "model"
+            }
+          }
+        },
+        "at": "steer",
+        "port": "steer",
+        "joint": {
+          "kind": "hinge",
+          "role": "steer",
+          "limits": [
+            -38,
+            38
+          ]
+        }
+      },
+      {
+        "name": "engine",
+        "skill": {
+          "scooter_engine": {
+            "model": {
+              "param": "model"
+            }
+          }
+        },
+        "at": "pivot",
+        "port": "pivot",
+        "joint": {
+          "kind": "hinge",
+          "role": "suspension",
+          "limits": [
+            -4,
+            8
+          ]
+        }
+      },
+      {
+        "name": "stand",
+        "skill": {
+          "scooter_stand": {
+            "model": {
+              "param": "model"
+            }
+          }
+        },
+        "at": "stand",
+        "port": "pivot",
+        "joint": {
+          "kind": "hinge",
+          "role": "stand",
+          "limits": [
+            0,
+            92
+          ]
+        }
+      }
+    ]
+  }
+}

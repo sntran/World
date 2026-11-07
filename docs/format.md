@@ -549,6 +549,27 @@ size as the van of the blueprint `van` at each level. The extras
 `place` (a move of the whole model) and `sources` (more sources of the
 model) of a node go to the model, not into its extras.
 
+## A scooter that the people build
+
+A scooter of the line (`priv/blueprints/scooter_line.json`, the skills
+of `World.Skills.Scooter`; plan 0002, D5) is built by the people of each
+trade at the same time, and the drawing joins the parts on the ports of
+the frame with their joints. The kind is `vehicle`; the origin is on the
+ground at the center of the scooter, the front to +y. Each skill has the
+data `model` (now only `honda_vision`, `World.Vehicles.HondaVision`).
+
+| Node | Skill | Trade | What it makes | Joint |
+|---|---|---|---|---|
+| `frame` | `scooter_frame` | welder | The frame of steel tube: the root, with the ports `body`, `seat`, `steer`, `pivot`, `stand`. | |
+| `body` | `scooter_body` | molder | The body of plastic panels, with its lights. | |
+| `seat` | `scooter_seat` | upholsterer | The seat. | a hinge, `lid`, 0 to 75 |
+| `fork` | `scooter_fork` | mechanic | The fork, the bars and the front wheel. | a hinge, `steer`, -38 to 38 |
+| `engine` | `scooter_engine` | mechanic | The engine, the swing arm, the shock and the rear wheel. | a hinge, `suspension`, -4 to 8 |
+| `stand` | `scooter_stand` | smith | The center stand. | a hinge, `stand`, 0 to 92 |
+
+The scooter of the line has the same triangles, joints and size as the
+Honda Vision of the catalog at each level.
+
 ## The materials
 
 A material is a role, not a color:
