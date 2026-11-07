@@ -817,7 +817,8 @@ defmodule World.Drawing do
   `temporary`, or whose skill gives `"temporary" => true` in its data
   (the plaster under the paint), is not in the model: the people make it, and a watcher sees it
   in the stream (`stream: true` gives the model with them, for the
-  stream).
+  stream). The extras `place` (`[x, y, z]`: a move of the whole model)
+  and `sources` of a node are of the model, not of its extras.
   """
   def assemble(raw, made, opts \\ []) do
     stream = Keyword.get(opts, :stream, false)
@@ -844,6 +845,12 @@ defmodule World.Drawing do
         &Map.merge(&2, elem(Map.get(made, &1["name"], {nil, nil, %{}}), 2))
       )
 
+    # The extras `place` and `sources` of a node are of the model: the move
+    # of the whole model and more of its sources (a van to its center, with
+    # the sources of its make).
+    {place, extras} = Map.pop(extras, "place")
+    {more, extras} = Map.pop(extras, "sources", [])
+
     materials =
       Map.new(Map.get(raw, "materials", %{}), fn {role, spec} ->
         spec = if spec["color"], do: Map.put(spec, "color", rgb(spec["color"])), else: spec
@@ -855,9 +862,10 @@ defmodule World.Drawing do
         root: root["name"],
         kind: Map.fetch!(@atoms, Map.get(raw, "kind", "item")),
         materials: materials,
-        sources: Map.get(raw, "sources", []),
+        sources: Map.get(raw, "sources", []) ++ more,
         clips: for(c <- Map.get(raw, "clips", []), do: clip(c)),
-        extras: extras
+        extras: extras,
+        place: if(place, do: World.Frame.move(List.to_tuple(place)), else: World.Frame.identity())
       )
 
     Enum.reduce(rest, a, fn node, a ->

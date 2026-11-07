@@ -156,7 +156,7 @@ defmodule World.Vehicles.Van do
   those of the model: `sizes/1`).
   """
   def build(model_name, opts \\ []) do
-    van = order(model_name, opts)
+    van = line(model_name, opts)
 
     Assembly.new(Keyword.get(opts, :name, "van_" <> model_name), BodyShop.body(van),
       root: "body",
@@ -192,9 +192,13 @@ defmodule World.Vehicles.Van do
       else: sizes
   end
 
-  # The order on the line: the model with the sizes and the doors of the
-  # order, its make, its hull, its windows and its rows of seats.
-  defp order(model_name, opts) do
+  @doc """
+  The order on the line, for each station: the model with the sizes and
+  the doors of the order (`m`), its make, its hull (`h`), its length
+  (`l`), its front axle (`f`), its windows (`glass`) and its rows of
+  seats. The options are those of `build/2`.
+  """
+  def line(model_name, opts) do
     order = %{"size" => Keyword.get(opts, :size, %{}), "doors" => Keyword.get(opts, :doors, %{})}
     m = model(model_name, order)
     h = hull(model_name, order)

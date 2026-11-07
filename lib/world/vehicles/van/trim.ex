@@ -20,15 +20,21 @@ defmodule World.Vehicles.Van.Trim do
   @wall {:plastic, 0.0025}
   @plastic Map.new(~w(black dark white chrome blue orange red light_back light_front glass_dark)a, &{&1, @wall})
 
+  @doc """
+  The groups of the work of the station, in their order: each a task.
+  The small parts, the cab and the seats are only in the near level.
+  """
+  def groups, do: ~w(plastic windows lamps grille details cab seats)
+
   @doc "The van with its trim."
-  def fit(asm, van) do
-    asm
-    |> Assembly.add("trim", plastic(van), at: "origin", port: "origin")
-    |> windows(van)
-    |> Assembly.add("lamps", lamps(van), at: "origin", port: "origin")
-    |> Assembly.add("grille", grille(van), at: "origin", port: "origin")
-    |> near(van)
-  end
+  def fit(asm, van), do: Enum.reduce(groups(), asm, &group(&2, van, &1))
+
+  @doc "The van with one group of the station (`groups/0`)."
+  def group(asm, van, "plastic"), do: Assembly.add(asm, "trim", plastic(van), at: "origin", port: "origin")
+  def group(asm, van, "windows"), do: windows(asm, van)
+  def group(asm, van, "lamps"), do: Assembly.add(asm, "lamps", lamps(van), at: "origin", port: "origin")
+  def group(asm, van, "grille"), do: Assembly.add(asm, "grille", grille(van), at: "origin", port: "origin")
+  def group(asm, van, group), do: if(Detail.level() == :near, do: near(asm, van, group), else: asm)
 
   # The windshield and the windows of the body, from the openings factory.
   defp windows(asm, van) do
@@ -39,16 +45,9 @@ defmodule World.Vehicles.Van.Trim do
     end)
   end
 
-  defp near(asm, van) do
-    if Detail.level() == :near do
-      asm
-      |> Assembly.add("details", small_parts(van), at: "origin", port: "origin")
-      |> Assembly.add("cab", cab(van), at: "origin", port: "origin")
-      |> seats(van)
-    else
-      asm
-    end
-  end
+  defp near(asm, van, "details"), do: Assembly.add(asm, "details", small_parts(van), at: "origin", port: "origin")
+  defp near(asm, van, "cab"), do: Assembly.add(asm, "cab", cab(van), at: "origin", port: "origin")
+  defp near(asm, van, "seats"), do: seats(asm, van)
 
   # --- The black plastic ------------------------------------------------------------------
 

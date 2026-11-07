@@ -188,7 +188,7 @@ defmodule World.SkillTest do
     assert Blueprints.drawing(%{"blueprint" => "strut", "options" => %{}}) == nil
     statue = Blueprints.drawing(%{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua"}})
     assert statue["name"] == "tuong_chua_kito_vua" and length(statue["nodes"]) == 37
-    assert Enum.map(Blueprints.data(), & &1["name"]) == ["statue", "tower", "tube_house"]
+    assert Enum.map(Blueprints.data(), & &1["name"]) == ["statue", "tower", "tube_house", "van_line"]
     refute Blueprints.__mix_recompile__?()
 
     # An order of the catalog: its check, and its errors.

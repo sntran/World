@@ -23,9 +23,21 @@ defmodule World.Vehicles.Van.Chassis do
 
   @station "chassis"
 
+  @doc "The groups of the work of the station, in their order: each a task for a mechanic."
+  def groups, do: ~w(engine_bay drive front_right front_left rear_right rear_left)
+
   @doc "The van with its engine bay (and the `items` of DIY in it) and its wheels."
-  def marry(asm, van, items) do
-    %{m: m, l: l, f: f} = van
+  def marry(asm, van, items), do: Enum.reduce(groups(), asm, &group(&2, van, &1, items))
+
+  @doc """
+  The van with one group of the station (`groups/0`): the engine bay
+  (with the `items` of DIY in it), the drive under the body, or the
+  corner of one wheel.
+  """
+  def group(asm, van, "engine_bay", items), do: engine_bay(asm, van, items)
+  def group(asm, van, "drive", _items), do: drive(asm, van)
+
+  def group(asm, %{m: m, l: l, f: f}, corner, _items) do
     wb = m["wheelbase"] / 1
     [tf, tr] = m["track"]
 
@@ -36,24 +48,20 @@ defmodule World.Vehicles.Van.Chassis do
       )
 
     rz = Wheels.tire_radius(m["tire"])
+    steer = [steer: true, limits: [-38, 38]]
 
-    asm
-    |> engine_bay(van, items)
-    |> drive(van)
-    |> Corners.corner("front_right", wheel, {tf / 2, l - f, rz},
-      steer: true,
-      limits: [-38, 38],
-      disc: 0.30,
-      station: @station
-    )
-    |> Corners.corner("front_left", wheel, {-tf / 2, l - f, rz},
-      steer: true,
-      limits: [-38, 38],
-      disc: 0.30,
-      station: @station
-    )
-    |> Corners.corner("rear_right", wheel, {tr / 2, l - f - wb, rz}, disc: 0.30, station: @station)
-    |> Corners.corner("rear_left", wheel, {-tr / 2, l - f - wb, rz}, disc: 0.30, station: @station)
+    {at, opts} =
+      Map.fetch!(
+        %{
+          "front_right" => {{tf / 2, l - f, rz}, steer},
+          "front_left" => {{-tf / 2, l - f, rz}, steer},
+          "rear_right" => {{tr / 2, l - f - wb, rz}, []},
+          "rear_left" => {{-tr / 2, l - f - wb, rz}, []}
+        },
+        corner
+      )
+
+    Corners.corner(asm, corner, wheel, at, opts ++ [disc: 0.30, station: @station])
   end
 
   # The parts in the bay are `inside`: they are only in the near level.
@@ -321,11 +329,11 @@ defmodule World.Vehicles.Van.Chassis do
       )
 
     asm
-    |> Assembly.add("transmission", hidden.(transmission), to: "engine", at: "origin", port: "origin")
+    |> Assembly.add("transmission", hidden.(transmission), at: "origin", port: "origin")
     |> Assembly.add("propeller_shaft", hidden.(shaft), to: "transmission", at: "origin", port: "origin")
     |> Assembly.add("rear_axle", hidden.(axle), to: "propeller_shaft", at: "origin", port: "origin")
     |> Assembly.add("leaf_springs", hidden.(springs), to: "rear_axle", at: "origin", port: "origin")
-    |> Assembly.add("front_suspension", hidden.(front), to: "engine", at: "origin", port: "origin")
+    |> Assembly.add("front_suspension", hidden.(front), at: "origin", port: "origin")
     |> Assembly.add("fuel_tank", hidden.(tank), at: "origin", port: "origin")
     |> Assembly.add("battery", hidden.(battery), at: "origin", port: "origin")
     |> Assembly.add("exhaust", hidden.(exhaust), at: "origin", port: "origin")

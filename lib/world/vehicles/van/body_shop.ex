@@ -72,6 +72,14 @@ defmodule World.Vehicles.Van.BodyShop do
     {nose, nose_params} = Sheet.stamp(nose, @sheet, :steel)
     {cab_and_cargo, params} = Sheet.stamp(cab_and_cargo, @sheet, :steel, faces: faces)
 
+    Kit.part(@station, "body_" <> m["make"], :body, nose ++ cab_and_cargo, ports(van),
+      params: %{params | "sheet" => Float.round(params["sheet"] + nose_params["sheet"], 4)},
+      sources: van.make["openings"]["sources"]
+    )
+  end
+
+  @doc "The ports of the body: `origin`, and a corner at each wheel (`corner_front_right`, ...)."
+  def ports(%{h: h, m: m}) do
     {f, wb, [tf, tr]} = {m["front"], m["wheelbase"], m["track"]}
     rz = Wheels.tire_radius(m["tire"])
 
@@ -84,10 +92,7 @@ defmodule World.Vehicles.Van.BodyShop do
           ],
           do: Corners.corner_port("corner_#{name}", {x, h.length - d, rz})
 
-    Kit.part(@station, "body_" <> m["make"], :body, nose ++ cab_and_cargo, [Kit.origin() | corners],
-      params: %{params | "sheet" => Float.round(params["sheet"] + nose_params["sheet"], 4)},
-      sources: van.make["openings"]["sources"]
-    )
+    [Kit.origin() | corners]
   end
 
   @doc """

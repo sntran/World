@@ -521,6 +521,34 @@ The lighthouse of Vũng Tàu (`hai_dang_vung_tau`) is the first order:
 pilasters, 55 steps. Most of its sizes are measured on a photo (±10%) and say
 so in the receipt.
 
+## A van that the people build
+
+A van of the line (`priv/blueprints/van_line.json`, the skills of
+`World.Skills.Van`; plan 0002, D5) is built as on the line of its maker
+(`World.Vehicles.Van`), by the people of each trade at the same time. The
+kind is `vehicle`; the origin is on the ground at the center of the van,
+the front to +y. The options are those of the blueprint `van`; the skill
+`van_order` checks them.
+
+| Node | Skill | Trade | What it makes |
+|---|---|---|---|
+| `order` | `van_order` | engineer | The order of the line: the model, its sizes, its doors, its windows, its rows, the items of DIY. Data only; the extras `place` move the model to its center. |
+| `body` | `van_body` | sheet_metal_worker | The body in white, with its openings at near: the root. |
+| `inside` | `van_inside` | trimmer | The floors, the wells of the wheels and the pillar (at near). |
+| `closure_G` | `van_closure` | fitter | The hood, or one door on its hinges or its rail. |
+| `trim_G` | `van_trim` | trimmer | The black plastic, the lamps, the grille, and at near the small parts and the cab. |
+| `glass` | `van_glass` | glazier | The windshield and the windows of the body. |
+| `seats` | `van_seats` | upholsterer | The seats on their mounts (at near). |
+| `chassis_G` | `van_chassis` | mechanic | The engine bay, the drive, or the corner of one wheel on its knuckle. |
+| `upfit` | `van_upfit` | electrician | The items on the roof; none when the order has none. |
+
+Each group is a small assembly on a mark (a part with no mesh, with the
+ports of the body at the origin of the van), so each part is where the
+line puts it. The van of the line has the same triangles, joints and
+size as the van of the blueprint `van` at each level. The extras
+`place` (a move of the whole model) and `sources` (more sources of the
+model) of a node go to the model, not into its extras.
+
 ## The materials
 
 A material is a role, not a color:
