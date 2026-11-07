@@ -537,7 +537,11 @@ A van of the line (`priv/blueprints/van_line.json`, the skills of
 (`World.Vehicles.Van`), by the people of each trade at the same time. The
 kind is `vehicle`; the origin is on the ground at the center of the van,
 the front to +y. The options are those of the blueprint `van`; the skill
-`van_order` checks them.
+`van_order` checks them. The `model` can be the data of a model in the
+format of `priv/data/vans.json`, with the data of its make in `make` (its
+traces, its hull, its front, its openings, its seats, its sources): a van
+of a project, with no change of World. Its keys are checked, and its
+data must make a hull.
 
 | Node | Skill | Trade | What it makes |
 |---|---|---|---|

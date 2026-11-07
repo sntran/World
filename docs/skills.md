@@ -149,7 +149,7 @@ node takes it in `from`. The data `group` names one group of a station.
 
 | Skill | Trade | Data | What it makes |
 |---|---|---|---|
-| `van_order` | engineer | the options of the blueprint `van`: `model`, `windows`, `rows`, `doors`, `engine_bay`, `roof`, `size` | The order of the line: data only, and the move of the model to its center. |
+| `van_order` | engineer | the options of the blueprint `van`: `model` (a name of `priv/data/vans.json`, or the data of a model in its format with the data of its make in `make`: a van of a project), `windows`, `rows`, `doors`, `engine_bay`, `roof`, `size` | The order of the line: data only, and the move of the model to its center. |
 | `van_body` | sheet_metal_worker | | The body in white, with its openings at near. |
 | `van_inside` | trimmer | | The floors, the wells of the wheels and the pillar (at near). |
 | `van_closure` | fitter | `group`: `hood`, `front_door_right`, `front_door_left`, `sliding_door`, `rear_door_right`, `rear_door_left` | The hood or one door, on its hinges or its rail. |

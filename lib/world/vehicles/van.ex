@@ -47,23 +47,26 @@ defmodule World.Vehicles.Van do
   @sizes %{"length" => 0.05, "width" => 0.05, "height" => 0.3}
 
   @doc """
-  The data of a model, with its make. The `openings` of a model (a
+  The data of a model, with its make: a name of `priv/data/vans.json`,
+  or the data of a model in its format, with the data of its make in
+  `make` (a van of a project; its `id` names the parts, `van` by
+  default). The `openings` of a model (a
   standard roof has lower doors) replace those of its make: each key of
   a map, or the full value of the key. An order (a map) replaces more:
   its `size` (`length`, `width`, `height`, in meters; nil for the size
   of the model) and its `doors` (`World.Vehicles.Van.Order`).
   """
   def model(name, order \\ %{}) do
-    m = Map.fetch!(@data["models"], name)
+    m = if is_map(name), do: name, else: Map.fetch!(@data["models"], name)
     m = for {k, v} <- order["size"] || %{}, Map.has_key?(@sizes, k), v != nil, into: m, do: {k, v / 1}
     own = Map.get(m, "openings", %{})
+    # A make in data names the parts by its `id` (`van` by default).
+    {base, m} =
+      if is_map(m["make"]),
+        do: {m["make"], %{m | "make" => Map.get(m["make"], "id", "van")}},
+        else: {Map.fetch!(@data["makes"], m["make"]), m}
 
-    make =
-      Map.update!(
-        Map.fetch!(@data["makes"], m["make"]),
-        "openings",
-        &Map.merge(&1, own, fn _k, a, b -> merge(a, b) end)
-      )
+    make = Map.update!(base, "openings", &Map.merge(&1, own, fn _k, a, b -> merge(a, b) end))
 
     m = Map.put(m, "make_data", make)
     if Map.has_key?(order, "doors"), do: Order.put_doors(m, order["doors"]), else: m

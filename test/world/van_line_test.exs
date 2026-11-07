@@ -113,4 +113,34 @@ defmodule World.VanLineTest do
     assert {:error, [%{"path" => "options.model"}]} =
              Orders.check(%{"blueprint" => "van_line", "options" => %{"model" => "bus"}})
   end
+
+  @tag timeout: 300_000
+  test "a van from the data of its model in the order: the same van as its name, and a van of other numbers" do
+    vans = "priv/data/vans.json" |> File.read!() |> JSON.decode!()
+    transit = vans["models"]["transit_148"]
+    data = Map.put(transit, "make", vans["makes"][transit["make"]])
+
+    for level <- [:mid, :far] do
+      assert shape(van(level, %{"model" => data}), level) == shape(van(level, %{}), level)
+    end
+
+    other = %{data | "length" => 5.6, "wheelbase" => 3.4, "name" => "A van of 3.4 m"}
+    short = van(:far, %{"model" => other})
+    assert Check.model(short) == :ok
+    {_, _, {{_, y0, _}, {_, y1, _}}} = shape(short, :far)
+    assert_in_delta y1 - y0, 5.6, 0.2
+
+    bad = fn model -> elem(Orders.check(%{"blueprint" => "van_line", "options" => %{"model" => model}}), 1) end
+    assert [%{"path" => "options.model.length"} | _] = bad.(Map.delete(data, "length"))
+    assert [%{"path" => "options.model.make"}] = bad.(%{data | "make" => "ford_transit"})
+    assert [%{"path" => "options.model.make.traces"}] = bad.(%{data | "make" => Map.delete(data["make"], "traces")})
+
+    assert [%{"path" => "options.model", "message" => "does not make the hull of a van" <> _}] =
+             bad.(put_in(data, ["make", "traces"], %{}))
+
+    assert [%{"path" => "options.rows"}] =
+             elem(Orders.check(%{"blueprint" => "van_line", "options" => %{"model" => data, "rows" => 9}}), 1)
+
+    assert [{"o.rows", _}] = World.Skills.Van.check(%{"model" => data, "rows" => 9}, "o")
+  end
 end
