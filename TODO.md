@@ -502,3 +502,21 @@ and no logo on them.
   - **Pieces for a stone jetty.** Pieces of 2 m of the stone deck with
     its edge, as in the street kit: the game lays them along the line
     of Cầu Đá on the real ground.
+
+## From plan 0002
+
+- The survey and the field of the cast of a statue are one task each
+  (about 1 s each): a survey of each band, and a field in slabs, would
+  make the statue faster.
+- The scooter of the line has one model (the Honda Vision): a scooter
+  from numbers (its wheelbase, its body, its engine) would let Phượt
+  order other scooters with no new code.
+- The drivers of the trucks are a part of each truck, not people of the
+  census: a driver of the census would need a trade `driver` and a hire
+  that lasts.
+- The people of a construction at a factory do not walk to the factory
+  on the map of the world page: the lot is at the place, the people at
+  the gate of the page.
+- The memory of a node with the yard (the warehouse, the factories, the
+  trucks) at the edge (128 MB) is not measured.
+

@@ -76,8 +76,9 @@ brought by truck.
 1. **The parallel pieces.** R1, R2: the repeat of a node, the cast in
    pours, the statue with its pours.
 2. **Houses.** R3: the skills of a site, `priv/blueprints/tube_house.json`.
-3. **Vehicles.** R4: the skills of a line, `priv/blueprints/van.json`
-   and `scooter.json`.
+3. **Vehicles.** R4: the skills of a line, `priv/blueprints/van_line.json`
+   and `scooter_line.json` (the blueprints `van` and the Honda Vision of
+   the catalog stay until step 6).
 4. **The places and the real flow.** R5, R6, with `specs/Haul.tla` and
    `specs/Places.tla`, and the map of the world on the web page.
 5. **Any blueprint from any project.** R7, `docs/skills.md`, plan 0025
@@ -96,3 +97,24 @@ brought by truck.
 ## 7. Open questions
 
 None now.
+
+## 8. State (2026-11-07)
+
+Steps 1 to 5 are done, on the branch `feat/0002-build-any-blueprint`;
+step 6 waits until Vũng Tàu and Phượt order by blueprint.
+
+| Step | Commits | What the people do now |
+|---|---|---|
+| 1 | `feat(drawing): repeat a node`, `feat(cast)`, `perf(mesh)`, `feat(statue)` | The statue: 37 tasks; eight casters pour its eight bands at one time, eight finishers make the slabs of its surface. |
+| 2 | `feat(house)` | A tube house as on a real site: 87 tasks for three floors. |
+| 3 | `feat(van)`, `perf(construction)`, `feat(scooter)` | A van on the line: 23 tasks; a scooter: 6 tasks, with the joints in the drawing. The join of the model is in parallel. |
+| 4 | `feat(places)`, `feat(haul)`, `feat(yard)`, `feat(site)` | The yard: the takeoff of each task, the trucks that bring it, the first start that builds the warehouse, the factories and the trucks, and the map on the world page. `specs/Haul.tla` and `specs/Places.tla`, with their fault models and the replay of the logs. |
+| 5 | `feat(orders)` | A blueprint of a project in the order or by its hash, `POST /blueprints`, the MCP tool `check_blueprint`, `docs/skills.md`; plan 0025 of Vũng Tàu sends the blueprints of the game. |
+
+The times are in `docs/world.md` ("The measures of the people of plan
+0002"). The acceptance criteria: the model checks and the fault models
+pass (`test/world/build_spec_test.exs`, `haul_test.exs`,
+`yard_test.exs`); a house goes up at the site with its materials brought
+by truck, and a scooter waits for its factory and goes up there
+(`yard_test.exs`); R8 and R9 hold for the four examples. The memory at
+the edge is not measured yet (D4 of the owner: later).

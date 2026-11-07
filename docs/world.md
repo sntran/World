@@ -409,6 +409,23 @@ The native checker of Accord checks a small model of each one in the
 tests, and a fault model of each must fail. The log of a real
 construction replays as a behavior of `specs/Build.tla`.
 
+## The measures of the people of plan 0002
+
+The time of a construction (`run_done`) at the near level, with one
+person and with 16, natively on the computer of the development (4
+cores), on 2026-11-07:
+
+| Model | Tasks | One person | 16 people | The path that is left |
+|---|---|---|---|---|
+| The statue on Núi Nhỏ (`statue`) | 37 | 14.9 s | 8.3 s | The figure, the survey and the field of the cast: one task each. |
+| A tube house of three floors (`tube_house`) | 87 | 0.49 s | 0.30 s | |
+| A van of the line (`van_line`) | 23 | 2.2 s | 1.25 s | The body shop: 0.7 s. |
+| A scooter of the line (`scooter_line`) | 6 | 1.1 s | 0.67 s | The body of plastic. |
+
+Before plan 0002 the statue was one task of the cast (16 s with one
+person or with 16), and the join of a model waited for a full
+collection after each primitive: the van took 3.3 s with 16 people.
+
 ## The measures of a run
 
 Step W7. The run of an order through the world, with the measures of
