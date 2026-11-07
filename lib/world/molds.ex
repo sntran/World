@@ -1,7 +1,7 @@
 defmodule World.Molds do
   @moduledoc """
-  The things of the mold shop (`docs/world.md`, step P6; the family
-  `:molds`): shells from molds, each made with `World.Loft`.
+  The things of the mold shop (`docs/world.md`, step P6; the trade
+  `molder`): shells from molds, each made with `World.Loft`.
 
   - `headform/1`: a headform (dạng đầu) of QCVN 2:2021/BKHCN, from the
     polar coordinates of its sections (`priv/standards/helmet.json`).

@@ -1,6 +1,6 @@
 defmodule World.Furniture.Hanging do
   @moduledoc """
-  The hammock shop of the world (the family `:hanging`): the things that
+  The hammock shop of the world (the trade `rigger`): the things that
   hang and swing, each from the same parts:
 
   - a bed (`World.Furniture.Hanging.Bed`): cloth or a net of cords, its

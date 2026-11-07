@@ -1,7 +1,7 @@
 defmodule World.Plants do
   @moduledoc """
-  The nursery of the world (`docs/world.md`, step P7; the family
-  `:nursery`): a plant grows from the rules of its species, the numbers
+  The nursery of the world (`docs/world.md`, step P7; the trade
+  `gardener`): a plant grows from the rules of its species, the numbers
   of `priv/plants/species.json`, each with its source.
 
   - `coconut/1`: the coconut palm (dừa): a trunk that leans and curves, a

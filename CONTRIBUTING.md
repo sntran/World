@@ -23,7 +23,7 @@ From step 1, in the directory of the project:
 ```sh
 mix.com deps.get
 mix.com test --cover            # the coverage must be 100%; it checks specs/ too
-mix.com accord.check --extra specs/MCOrder.tla   # the model check alone
+mix.com accord.check --extra specs/MCBuild.tla   # one model check alone
 mix.com world.build             # the files of priv/models
 mix.com world.build --check     # build again and compare, as CI does
 npm install && npm test         # the Khronos validator on each GLB

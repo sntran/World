@@ -21,12 +21,14 @@ World is also a factory: a web service at <https://world.mkfifo.com>. Each
 model has a URL, and a correction of World reaches each project with no
 new deploy of the project. `docs/factory.md` tells how it works.
 
-The world (`docs/world.md`) builds each order: people, warehouses,
-factories and vehicles build the models as in the real world, from the
-ground up, with real times in a log. The replay page shows the log of
-an order. The flow of an order is a TLA+ specification, and the log of
-each run of the code replays as one of its behaviors
-(`docs/specs.md`).
+The world (`docs/world.md`) builds each order: the people of the
+Erlang node are processes of a trade, and they build each element of a
+model at the same time, as in the real world, with real times in a log.
+Many constructions share the people. A game or a page watches a build as
+a stream of its events, and sees the model grow (`POST /builds`); the
+web page of the site is the world. The flows of the node are TLA+
+specifications, and the log of each construction replays as one of
+their behaviors (`docs/specs.md`).
 
 ## Why
 
@@ -121,6 +123,7 @@ models").
 | W7. The world: the measures | Each run has its time and its memory in its log. An order of Phượt gives its files and its log, and the times agree with the service. The release is 31 MB (no catalog files in it), so the site can deploy again. | Done |
 | W8. The world: the other vans | The ProMaster with a high roof (136 in, 159 in, 159 in extended) and a standard roof (118 in, 136 in), from the renders and the sizes of Ram; the Sprinter with a high roof (144 in, 170 in, 170 in extended), from the drawing and the tables of the guide of Mercedes-Benz, and a standard roof (144 in), from the drawings of Mercedes-Benz Australia. The crew van waits for photos. The order of a van gives its windows (a list, with the presets cargo, crew and passenger), its doors and its rows of seats as numbers; the openings factory makes the doors and the windows as sub-orders. | In progress |
 | W9. The world: the engineers | The second world: engineers that propose new processes and models (step P9 has the first tools). | Later, with the owner |
+| W10. The world: the people build on demand | Plan 0001 (`docs/plans/0001-people-build-on-demand.md`): the node is the world. The people are processes of a trade (`World.Person`), the census shares them (`World.Census`), a construction builds each element of a model with them (`World.Construction`), and a client watches the stream of the events (`POST /builds`, `/events`). This takes the place of the yard, the factories by family and the run of W1 to W7. The flows in TLA+: `specs/Build.tla`, `Census.tla`, `Stream.tla`, `LogStore.tla`. | In progress: step 1 (the people, the constructions, the log of the node, the stream, the world page) |
 | P1. The real world: sewing | `World.Sewing`: garments from patterns, seams and layers; a bra, the áo dài, a T-shirt and pants (`docs/world.md`, "The real world"). | Done: the garments, the layers, the drape and the bra; the renders next to photos (the faults that they found are in `TODO.md`) |
 | P2. The real world: turning | `World.Lathe`: cups, bowls, bottles, posts and pots from a profile; the turnery of the world turns them. | Done: the lathe, five parts, the turnery and the renders next to photos |
 | P3. The real world: the standards | Bolts, nuts, lumber, pipe, tires, bricks, doors and windows as data, by their standard names. | Done: the fasteners, the lumber of the US and of Việt Nam, the bearings, the steel pipe, the bricks, the tires (the rims of ISO 4000-1, the load indexes, the speed symbols, the tires of the data sheets of the makers), the doors and the windows (the sizes of the US, the garage doors, the least door of an exit in Việt Nam) |
@@ -157,6 +160,7 @@ const gltf = await new GLTFLoader().loadAsync('https://world.mkfifo.com/models/f
 | `/blueprints` | The blueprints and their options. |
 | `POST /orders`, `/o/HASH.glb` | An order in JSON, and the files of the order. |
 | `/o/HASH.log.json`, `/replay.html?order=HASH` | The log of the people that built the order, and its replay. |
+| `POST /builds`, `/builds/ID/events`, `/events` | A build that anyone can watch, as a stream of its events (`text/event-stream`), and the stream of the whole node. |
 | `/m/BLUEPRINT.glb?OPTION=VALUE` | An order in the URL, for example `/m/strut.glb?length=0.6&kind=solid`. |
 | `/mcp` | The MCP server (Streamable HTTP): the tools `list_blueprints`, `get_blueprint`, `check_order` and `place_order`. |
 

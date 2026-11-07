@@ -1,7 +1,7 @@
 defmodule World.Boats do
   @moduledoc """
   The boats of the world (`docs/world.md`, step P6), built by the
-  boatyard (the family `:boats`) on its slipway: each an assembly of the
+  boatyard (the trade `shipwright`) on its slipway: each an assembly of the
   kind `:boat`.
 
   - `World.Boats.Ghe`: the ghe of Vũng Tàu, a wooden fishing boat to the

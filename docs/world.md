@@ -2,11 +2,12 @@
 
 The factory of World (`docs/factory.md`) takes an order and gives the
 files of a model. In the world, people make the model, as in the real
-world. A storekeeper picks the parts from a
-warehouse. A driver brings them to the factory. The workers on the
-line put them together. The places of the world are buildings, and
-people build them too, from bricks, studs and the other materials of
-World.
+world. The node of World (one Erlang node) is a city of people: each
+person is a process. A job comes in, the node opens a construction, and
+the construction hires people of the trades from the census of the
+node. Each person makes one element at a time (a part of the model), and
+the construction joins the elements into the model. Many constructions
+run at one time and share the people (`docs/plans/0001-people-build-on-demand.md`).
 
 The world is not a picture on top of the factory. Each thing in it has
 a real thing of the computer behind it. A warehouse is a store of
@@ -28,22 +29,28 @@ work starts. The code is the source of truth after that (`AGENTS.md`).
 
 | Word | What it is |
 |---|---|
-| **World** | The places, the roads, the people, the vehicles, the stock and the clock, in one assembly. |
+| **World** | The node: its people, its constructions, its stores, its log and its clock. |
+| **Node** | One Erlang node: a city of people, each person a process. At the edge, one Durable Object. |
+| **Construction** | One build of a model by the people of the node, from its job to its model. |
+| **Element** | The part of a node of the model that one person makes in one task. |
+| **Census** | The people of the node, their trades, and the construction that holds each one. |
+| **Trade** | What a worker makes: a mason, a joiner, a wheelwright, a mechanic, and the trade of each workshop. |
 | **Place** | A building with a position: a warehouse, a factory, a supplier, a yard, the site of a customer. A place is a model of World (`World.Buildings`): people build it. |
 | **Warehouse** | A place that keeps stock. Its size is the limit of its store. |
 | **Factory** | A place with lines and stations, where the workers build one family of things: vehicles, wheels, seats, slabs, houses, clothes. A sub-order goes to the factory of its family. |
 | **Supplier** | A place outside the world that gives a part the world cannot make: the data of MakeHuman, the drawings of a maker, a supplied part of an order. |
 | **Road** | The way from one place to another, with its length in meters. A vehicle drives on it at its speed, and a person walks on it. |
 | **Stock** | The parts and the models that are in a warehouse now, each with its count. |
-| **Person** | A figure (`World.Figure`) with a job, at a place, with one task at a time. |
-| **Job** | What a person does: storekeeper, driver, worker of a station, foreman. Later: engineer, architect. |
+| **Person** | A process of the node with a job and a trade, with one task at a time. Its body is a figure of World on the page of the world. |
+| **Job** | What a person does: a worker of a trade now. Later: engineer, architect, driver, storekeeper. A job of the node is also a request for a model: an order, a level and a budget. |
 | **Vehicle** | A model of World that moves parts: a van, a truck, a cart. A driver controls it, and it has a position on the yard at each time. |
-| **Order** | A request for a model: the order of the factory (`docs/factory.md`), or an order of the world for a part, a delivery or a building. |
-| **Plan** | The list of the tasks of an order, from the tree of its assembly, with the station of each task and what it waits for. |
-| **Task** | One step of a plan for one person: pick a part, load, drive, unload, connect a part to its parent, store. |
-| **Event** | One thing that happened, with its time, its place, its person or vehicle, and its order. |
+| **Order** | A request for a model: the order of the factory (`docs/factory.md`). |
+| **Plan** | The list of the tasks of a construction, from the tree of its assembly, with the trade of each task and what it waits for. |
+| **Task** | One step of a plan for one person: make the element of a node. |
+| **Budget** | The limits of a construction: its workers at one time, its seconds, its triangles. |
+| **Event** | One thing that happened, with its time, its construction, its person, and its data. |
 | **Log** | The events in the order of their time. The log is the truth of the world: the replay and the statistics come from it. |
-| **Replay** | The world in 3D from the log, at any speed: the vehicles drive, the people walk and carry, the model grows on the line. |
+| **Replay** | The world in 3D from the log: the people walk to the lots and work, and each model grows on its lot. |
 | **Clock** | The wall clock. The time of a task is the real time the code took. |
 
 ## What is real
@@ -54,28 +61,21 @@ does not come.
 
 | In the world | In the computer |
 |---|---|
-| A warehouse | A store of files: the R2 bucket of the orders (`world`), the catalog in the release (`priv/models`), the memory of the VM (the cache next to the line), the cache of a project (the R2 of Phượt). |
-| The size of a warehouse | The limit of its store: the plan of R2 that the owner sets, the size of the release, the memory of the VM. The stock can not pass it. |
-| The stock of a warehouse | The files in the store, by the hash of their order. A part in stock is built: nobody builds it again. |
-| A factory | The processes that build one family of things, from the modules of that family: the vehicle factory from `World.Vehicles.Van` and the other vehicles, the wheel factory from `World.Vehicles.Wheels`, the seat factory from `World.Furniture.Seats`. In the first world, all the factories are in one VM; later, each factory can have its own VM (its own Durable Object). |
-| A line and its stations | The stations of a model (`params.station` of each part): the body shop, the closures, the paint, the trim, the chassis, the upfit of a van. |
-| A worker | A process of the BEAM that runs the tasks of one station. Two workers are two processes: they build two parts at one time. |
-| A storekeeper | The process that reads and writes the store. |
-| A driver and a vehicle | A person (a process) that drives a model of a vehicle on a road, at the speed of the vehicle, with the parts on board. The files of the parts travel with the vehicle: the store at the end of the road gets them when the vehicle arrives. That arrival is the transfer of the files (from R2 to the VM, from the VM to R2, from World to a project), and one event. |
-| A road and its length | A line between two places on the yard, in meters. The time of a drive is the length of the road over the speed of the vehicle, on the wall clock: the world waits for the vehicle. The transfer of the bytes takes milliseconds; the drive is the time of the world. |
-| A supplier | A source outside: a file of `priv/`, a URL, a supplied part in an order. |
+| The node | One Erlang node: `World.Supervisor` and its children. At the edge, one Durable Object with the name `world`. |
+| A person | A process (`World.Person`, a `GenServer`) with a job and a trade. Its name is its PID (`"<0.123.0>"`). Two people are two processes: they make two elements at one time. |
+| The census | The process that knows each person, its trade and the construction that holds it (`World.Census`): the pool of the people of the node. |
+| A construction | The process of one build (`World.Construction`): its plan, the people that it holds, the elements that they made, and its log. It joins the elements into the model at the end. |
+| An element | The part of a node of the model that one person makes in one task: the triangles of its meshes (the pass of Wings, the real cost of a build) and its GLB alone. |
+| The work of a task | The real work of the code: a person makes the triangles of the meshes of its element. The time of the task is the time of that code. |
+| A warehouse | A store of files: the R2 bucket of the orders (`world`), the catalog in the release (`priv/models`), the memory of the VM (`World.Store`). |
+| The log of the node | The events of each construction in the order that they come, each with an id (`World.Log.Server`); in the SQLite of the Durable Object at the edge (`World.Log.Store`). |
+| A watcher | A process that gets the events of a construction, or of the world: the stream of a client over HTTP (`World.Stream`). |
 | The clock | The wall clock of the VM. Each event has its real time. |
-| The time of a task | The real time that the code of the task took: the build of a part, a transfer, a read of the store. |
-| A person | A process (`GenServer`) with a mailbox. Its body is a figure of World, with the poses `walk`, `carry` and `work`. |
-| The foreman | The process that makes the plan of an order from its assembly, and gives each task to a person. |
 
-The replay shows the real log. A person that walks across the factory
-in the replay is a process that walked there, at the speed of a person,
-to its next task. A truck on the road carries the files of its parts,
-and the store at the end gets them when it arrives. Nothing in the
-replay is invented. The length of a road and the speed of a vehicle are
-data of the world. The time of the drive is real time on the wall
-clock.
+The replay shows the real log. A person that works on a task in the
+replay is a process that ran that task, and an element that comes in
+the model is the element that the person made. Nothing in the replay is
+invented.
 
 ## The places
 
@@ -83,7 +83,9 @@ A place is a building. The materials of World make it: bricks and
 concrete blocks, lumber studs, OSB, siding, metal panels, doors and
 windows (`World.Buildings`, `World.Materials.Construction`). A place is an
 order too: the people of the world build it from its materials, and the
-log has its build.
+log has its build. The places of the first world (a yard of factories,
+warehouses and roads) went with plan 0001; its step 5 brings the places
+back as blueprints in data, built one time by the people of the node.
 
 | Place | What it has | Its size |
 |---|---|---|
@@ -123,60 +125,58 @@ materials and the houses factories.
 
 ## The people
 
-A person is a figure of World (`World.People`), with a name, a
-job and a place. A person does one task at a time, and walks between
-the tasks. The time of a walk is real: the person walks while the
-process waits.
+A person is a process of the node (`World.Person`), with a job (a
+worker, for now) and a trade (`World.Plan.trade/1`): a mason for a
+house, a street, a statue or a tower; a wheelwright for a wheel; a
+joiner for a door or a window; a mechanic for a vehicle; and the trade
+of each workshop (a turner, a shipwright, a molder, a shoemaker, a
+gardener, a bamboo worker, a rigger, a sewer, a sheet metal worker). A
+task of no trade goes to a builder.
 
-| Job | The tasks |
-|---|---|
-| Storekeeper | Check the stock. Pick a part from a rack. Put a model on a rack. Refuse a part when the warehouse is full. |
-| Driver | Load a vehicle at a dock. Drive on a road. Unload at a dock. |
-| Worker | The tasks of one station of a line: connect a part to its parent at its port, in the order of the plan. |
-| Foreman | Make the plan of an order. Give each task to a free person. Ask a supplier or another factory for a part that is not in stock. |
-| Engineer, architect (later) | Read the log. Propose a new process, a new part or a new model. |
+The census (`World.Census`) knows each person. A construction asks for a
+person of a trade; the census gives a free person of the trade, or a
+new person while the node has fewer people than its limit, or, at the
+limit, a free person of another trade leaves and a new person of the
+trade comes. With no free person, the construction waits. The census
+gives the next free person to the construction that waits and holds the
+fewest people. So the constructions of the node share the people.
 
-A person is a process. Its mailbox holds its tasks. A person with no
-task stands at its place. The world does not stop when a person waits:
-the other people work.
+A person does one task at a time, and gives its element back to its
+construction. A construction lets a person go when it has no task of
+its trade, or when a task needs a trade that it holds nobody of: then
+it gives back its free people of the trades that no task needs now, so
+two constructions never wait for each other at the limit of the node
+(`specs/Census.tla`).
 
-## An order, from start to end
+## A job, from start to end
 
-The example is a van of the blueprint `van`.
+The example is a job of the blueprint `strut` at the level far.
 
-1. **The order comes in.** `POST /orders`, or an order from the world
-   itself (a building, a part for another order). The log gets
-   `order_received`.
-2. **The foreman makes the plan.** The tree of the assembly gives the
-   tasks. Each node after the root is one task: "connect this part to
-   that node at that port", at the station of the part. A task waits for
-   the task of its parent node. Two tasks that do not wait for each
-   other can run at one time. The parts list of the assembly gives the
-   parts to get.
-3. **The storekeeper checks the stock.** A part with its hash in the
-   store is in stock: the storekeeper picks it. A part that is not in
-   stock becomes an order of its own, to the factory of its family, or
-   to a supplier. The wheels of the van are an order of four wheels to
-   the wheel factory; the seats are an order to the seat factory.
-4. **The driver brings the parts.** The driver loads the parts on a
-   vehicle at the dock of the warehouse or of the other factory. The
-   driver drives on the road to the vehicle factory, at the speed of
-   the vehicle, and unloads at its dock. The files of the parts arrive with the vehicle.
-   The time is the time of the drive.
-5. **The workers build.** Each station takes its tasks in the order of
-   the plan. The body shop makes the body on the hull. The closures hang
-   the doors. The trim puts the glass, the lamps and the seats. The
-   chassis marries the engine bay and the wheels. The time of each task
-   is the time the code took to make that part.
-6. **The model goes to the warehouse.** The storekeeper puts the files in
-   the store, under the hash of the order. The log gets `model_done` and
-   `stored`.
-7. **The delivery.** A driver brings the model to the site of the
-   customer: the project reads the files. The log gets `delivered`.
+1. **The job comes in.** `POST /builds` with the order, the level and
+   the budget; or an order of the site (`/o/HASH.glb`), which a
+   construction builds too. The node opens a construction with the id
+   of the job: the hash of the order and the level. The log gets
+   `requested` (the budget and the level).
+2. **The plan.** The construction makes the item at the level that fits
+   the triangles of the budget, and the plan from the tree of its
+   assembly: one task for each node, each with its trade (`plan_made`).
+3. **The people.** For each task that can start, the construction gives
+   it to a free person of its trade that it holds, or asks the census
+   for one, in its budget of workers (`hired`).
+4. **The work.** Each person makes the element of its task
+   (`task_started`, `task_done`), and the log gets each part of the
+   element at its place in the model (`element`): a watcher draws it at
+   once.
+5. **The model.** When each task is done, the construction lets its
+   people go (`released`) and joins the model: one build of the scene
+   with the triangles that the people made, so the file has the bytes of
+   a build with no world (`done`). The log gets the time and the memory
+   of the construction (`run_done`).
+6. **The files.** The files go to the job, and through the Worker into
+   R2. A second request of the same job finds the files in R2.
 
-A second order of the same van finds it in stock: step 3 picks it, and
-the order ends at step 7. That is the cache of the factory today, seen
-as a warehouse.
+The budget: the most workers at one time, the seconds (at its deadline
+a construction stops, with `stopped` and no model), and the triangles.
 
 ## The plan from an assembly
 
@@ -186,17 +186,13 @@ work, with no new data:
 
 | In the assembly | In the plan |
 |---|---|
-| The root item | The first task: make the root part, or get it from stock. |
-| A node with a `fixed` connection | A task: connect the part to its parent at the two ports. |
-| A node with a joint (`turns`, `slides`) | The same task, and the joint goes into the log of the model. |
-| A node that holds a smaller assembly | An order of its own, in the same factory or in another, then one task to connect it. |
-| `params.station` of a part | The station of the task. |
-| The parts list (`World.Build.parts/1`) | The parts to get from stock. |
+| The root item | The first task: make the root part. |
+| A node with a part | A task: make the element of the part, after the task of its parent. |
+| A node that holds a smaller assembly | Its tasks, with the name of its node before their ids (`wheel/rim`), and a task `wheel/order` that waits for each of them. |
+| The kind of the nearest assembly | The trade of the task (`World.Plan.trade/1`). |
 
 The time of a task is not in the assembly. The world measures it when
-a worker does the task, and the log keeps it. The second plan of the
-same model knows the times of the first, and the foreman can give the
-long tasks first.
+a person does the task, and the log keeps it.
 
 ## Time
 
@@ -263,30 +259,29 @@ and the output of a bricklayer
 
 ## The events and the log
 
-An event is one line of JSON. The log is the events in the order of
-their time, in the SQLite of the VM, and in R2 as one file for each
-order (`/o/HASH.log.json`).
+An event is one line of JSON. The log of a construction is its events in
+the order of their time, as one file for each order in R2
+(`/o/HASH.log.json`). The log of the node has the events of each
+construction, each with an id that grows by one, in the SQLite of the
+Durable Object at the edge (`World.Log.Server`, `World.Log.Store`).
 
-| Event | Who and where | Data |
+| Event | Who | Data |
 |---|---|---|
-| `order_received` | The factory | The order and its hash. |
-| `plan_made` | The foreman | The tasks and their stations. |
-| `stock_checked` | The storekeeper, the warehouse | Each part: in stock or not. |
-| `part_ordered` | The foreman | The order of the part, to which factory or supplier. |
-| `picked`, `stored`, `refused` | The storekeeper, the warehouse | The part (`item` and `count`) or the files of a model (`model` and `bytes`), the reason of a refusal (`full`, `read_only`), and the bytes in the store after (`used`) with its limit. |
-| `loaded`, `departed`, `arrived`, `unloaded` | The driver, the vehicle, the road | The parts on the vehicle, the time of the road. |
-| `received` | The foreman, the factory | An item of an order of the factory arrives from another factory: the item, the count, the order of that factory. |
-| `task_started`, `task_done` | The worker, the station | The task, its part, the time it took. |
-| `model_done` | The factory | The hash, the size of the files. |
-| `delivered` | The driver, the site of the customer | The project that reads the files. |
-| `build_started`, `build_done` | A place | A new building of the world, from its own order. |
-| `run_done` | The run (`World.Run.measure/3`) | The time of the run on the wall clock (`ms`), and the memory of the VM: the most (`memory_peak`) and at the end (`memory_end`), in bytes, with what they count (`memory`: `total`, or `processes` at the edge). |
+| `requested` | The construction | Its budget and its level. |
+| `plan_made` | The construction | The tasks with their waits, parts and trades, and the level. |
+| `hired`, `released` | A person | Its trade. |
+| `task_started`, `task_done` | A person | The task, its trade, its station. |
+| `element` | A person | The task, the part, the key of its GLB, and its frame in the axes of glTF. |
+| `done` | The construction | The bytes of the model, its level. |
+| `stopped`, `failed` | The construction | The reason (`seconds`, `triangles`), or the message of the error. |
+| `run_done` | The construction | The time of the wall clock (`ms`), and the memory of the VM: the most (`memory_peak`) and at the end (`memory_end`), with what they count (`memory`). |
+| `started` | The log of the node | A new log after a stop of the VM: it leaves 50 ids after the last id of its store (`specs/LogStore.tla`). |
 
-Each event has: `at` (the time), `order` (the hash), `place`, `person`
-or `vehicle`, `kind`, and the data of its kind. A test reads a log and
-checks three things: the events are in order; the stock after each
-event is never less than zero and never more than the size; each task
-started after the task it waits for ended.
+Each event of a construction has: `at` (the time of the world), `wall`,
+`order` (the id of the construction), `who` (the name of a person), its
+`kind`, and the data of its kind. A test reads a log and checks: the
+events are in order, and each task starts once, after the tasks that it
+waits for.
 
 ## The replay
 
@@ -334,45 +329,23 @@ that compete (genetic programming), flocks of people that move as one
 (boids). That work comes after the first world, and it is research:
 the owner decides each step of it.
 
-## The order flow in TLA+
+## The flows in TLA+
 
-`specs/Order.tla` is the flow of one order: the supplier, the
-warehouse and its storekeeper, the truck and its driver on the road,
-the dock of the factory, the workers and the tasks of the plan, the
-files of the model, and the delivery. Its invariants:
-
-| Invariant | What it says |
-|---|---|
-| `InLimit` | The warehouse never holds more than its size. |
-| `Conservation` | A part is at one place only: in the store, at a dock, on the truck, or in the model. |
-| `InCapacity` | The truck never carries more than its capacity. |
-| `OneWorkerOneTask` | Two workers never do one task. |
-| `WaitsFirst` | A task starts only after each task that it waits for is done. |
-
-Its liveness property, `Delivers`: each order is delivered in the end.
-`docs/specs.md` tells each action, each invariant, the fault models and
-the limits of the specification.
-
-The checks, in the tests (`test/world/order_spec_test.exs`):
-
-- `specs/MCOrder.tla` with `MCOrder.cfg`: a small model (a body, a
-  door, a wheel of a rim and a tire, a seat from another factory, two
-  workers): about 14,000 states.
-  Each invariant holds, and each order is delivered.
-- `MCOrderFault.cfg`: a task can start twice. The checker must find two
-  workers on one task.
-- `MCOrderSmall.cfg`: the files of the model do not fit in the
-  warehouse. The checker must find the dead end.
-
-The replay (`test/support/order_spec.ex`, `test/world/run_test.exs`):
-the log of a real run of the van (343 events) is a behavior of the
-specification, with the plan of the van as its constants. A log with an
-event less, or with two workers on one task, is not.
+The flows of the node are specifications (`docs/specs.md`):
+`specs/Build.tla` (the constructions and the people that they share),
+`specs/Census.tla` (the people at the limit of the node),
+`specs/Stream.tla` (a stream that watches, reads the past and follows)
+and `specs/LogStore.tla` (the ids of the log after a stop of the VM).
+The native checker of Accord checks a small model of each one in the
+tests, and a fault model of each must fail. The log of a real
+construction replays as a behavior of `specs/Build.tla`.
 
 ## The measures of a run
 
 Step W7. The run of an order through the world, with the measures of
-its log (`run_done`). Native: BEAM.com 0.1.0-rc.6 on the computer of the
+its log (`run_done`), before plan 0001 (the run of the yard, not a
+construction: the measures of a construction come in step 3 of the
+plan). Native: BEAM.com 0.1.0-rc.6 on the computer of the
 development, `mix run`. WebAssembly: the same `edge.com` in `wrangler
 dev` (workerd on the same computer, with no limit of memory), the first
 request of each order.
@@ -419,16 +392,16 @@ What they tell:
 | Real, not invented | Each thing of the world is one thing of the computer, and each time is a measured time. | The replay is a record, and the statistics are true. |
 | The log is the truth | The replay, the statistics and the engineers read the log only. | One source. A test reads a log. |
 | A place is a model | A warehouse and a factory are orders, built by the people from the materials of World. | The world builds itself from the ground up. |
-| People are processes | One `GenServer` for each person, one mailbox of tasks. | The BEAM is made for this. A person that waits does not stop the world. |
-| The plan comes from the assembly | No new data for the plan: the tree, the stations and the parts list of the assembly. | Each model of World is buildable in the world with no change. |
-| The driver drives | A driver is a person that drives a vehicle on a road from one place to the other, at the speed of the vehicle, with the parts on board. The files arrive with the vehicle. | This is how the world operates. The time of the drive is real time on the wall clock. |
-| Many factories | One factory for each family of things. A sub-order goes to the factory of its family, and a vehicle brings the part. | The real world has a clothes factory, a slab factory and a car factory, not one factory. |
+| People are processes | One `GenServer` for each person, one mailbox of tasks; the people of the node are one pool that the constructions share (`World.Census`). | The BEAM is made for this. A person that waits does not stop the world, and a node holds millions of processes. |
+| The plan comes from the assembly | No new data for the plan: the tree and the kinds of the assembly give the tasks and their trades. | Each model of World is buildable in the world with no change. |
+| The people build | A person makes the element of its task, and the construction joins the elements with no second build (plan 0001). The yard of the first world, with its factories, its trucks and its stock, went with plan 0001. | The work of the people is the real work of the build. |
+| Many constructions | Many constructions at one time on one node, each in its budget. | A node is a city, not one factory. |
 | No scale | The world has no scale of its own. Each project takes what it needs. | The world powers all the projects of the owner, at their own scales. |
 | The clock | One second of the wall clock is one day of the world (86,400). The speeds are real speeds in world time: 1.4 m/s for a person, 20 km/h on the yard. | The code builds about 20,000 times (at the edge) to 650,000 times (native) faster than people. One day is between the two, and the real speeds keep a walk short and a build long, as in the real world. |
 | The yard | The positions of the places are in meters, on one flat yard. A map comes later. | The simplest world first. |
 | One bucket for each warehouse | A warehouse is one R2 bucket. A new warehouse is a new bucket. | In the game, a new warehouse is a collaboration with another city or country. |
-| The flow in TLA+ | `specs/Order.tla` is the specification of the flow of an order. The native checker of Accord (`sntran/accord`, the branch `feat/native-tla-checker`, no Java) checks a small model of it in the tests: its invariants, and that each order is delivered in the end. Two fault models must fail: a task that starts twice, and a warehouse too small for the files of the model. The log of a real run replays as a behavior of the same specification (`Accord.TLA.Checker.Machine`). | The people are processes: the order of their acts changes from run to run. A model check finds the races and the dead ends that a test does not find, and the replay keeps the code and the specification the same. |
-| The replay page | A static page (three.js and an SVG map) that reads the log and the replay GLB of an order from the site. No Phoenix LiveView. | The log is a file that does not change: a page that reads it needs no server and no socket. The Worker stays a plug (`World.Service`) in one VM of 128 MB. A live view of the world as it runs comes when the world runs for a long time (W4 and later); then a socket from the Durable Object can send the new lines of the log to the same page. |
+| The flows in TLA+ | Each asynchronous flow of the node is a specification (`docs/specs.md`): the constructions and their people, the census at its limit, a stream, and the log after a stop of the VM. The native checker of Accord (`sntran/accord`, the branch `feat/native-tla-checker`, no Java) checks a small model of each in the tests, a fault model of each must fail, and the log of a real construction replays as a behavior of `specs/Build.tla`. | The people are processes: the order of their acts changes from run to run. A model check finds the races and the dead ends that a test does not find: it found the dead end of two constructions at the limit of the node, and an id of the log that named two events after two stops. |
+| The pages | Static pages (three.js) that read the stream of the world (`/events`, server-sent events) and the log of an order. No Phoenix LiveView. | The Worker stays a plug (`World.Service`) in one VM of 128 MB; a stream needs no socket of two ways. |
 | The crew van of the Transit | It comes with the Sprinter and the ProMaster, after the first world. | The owner wants the crew van in the line. Ford does not sell it for 2024 to 2027: its sizes come from the earlier years. |
 
 ## The real world
@@ -499,6 +472,12 @@ for each choice.
 
 Each step is a small series of commits on `main`, with tests at 100%
 and a picture of the replay where there is one.
+
+The rows W1 to W7 are the history of the first world. Plan 0001
+(`docs/plans/0001-people-build-on-demand.md`) took the place of its
+yard, its stock, its factories by family and its run (their code is
+gone): the node, the census, the people by trade and the constructions
+of this document.
 
 | Step | Result | Check |
 |---|---|---|

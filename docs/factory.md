@@ -34,8 +34,9 @@ An order is data, never code. World runs no code from an order.
 
 | URL | What |
 |---|---|
-| `/` | The review page: each model of the catalog, its levels, its joints and its parts. |
-| `/replay.html?order=HASH` | The replay of an order: the map of the yard with the truck on its road, what each person does, and the model that grows when each task ends (`docs/world.md`, step W3). |
+| `/` | The world page: the people of the node, each construction on its lot with its elements as they come, and a form that orders a build (`review/world.html`, below, "The constructions"). |
+| `/review.html` | The review page: each model of the catalog, its levels, its joints and its parts. |
+| `/replay.html?order=HASH` | The replay of an order: what each person does, and the model that grows when each task ends (`docs/world.md`). |
 | `/models/list.json` | The names of the models of the catalog. |
 | `/models/NAME.glb`, `NAME.mid.glb`, `NAME.far.glb` | A model of the catalog at each level. |
 | `/models/NAME.parts.json` | The list of its parts. |
@@ -43,8 +44,14 @@ An order is data, never code. World runs no code from an order.
 | `/version.json` | The commit of World that the site has. |
 | `/blueprints` | Each blueprint with its options: the type, the default, the unit, the range or the values. |
 | `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. |
-| `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the world build the GLB at each level (`World.Run`). |
-| `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the run of the world that built the near level (`World.Log`: one line for the clock and the yard, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. |
+| `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the node build the GLB at each level (`World.Construction`). |
+| `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. |
+| `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
+| `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
+| `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
+| `/builds/ID/elements/KEY.glb` | The GLB of one element of a build, while the build goes on and for 5 minutes after its end. |
+| `/events` | The events of the whole node as a stream: each construction, each hire, each element. |
+| `/census` | The people of the node by trade, free and busy, and the constructions that wait for a person. |
 | `/m/BLUEPRINT.glb?OPTION=VALUE` (and the other files) | An order in the URL: `color.ROLE=%23rrggbb` gives a color, `joint.NAME=50` a joint, `target.LIMB=X,Y,Z` the end of a limb, `A,B` a list, and `OPTION.FIELD=VALUE` a field of an object (`origin.asian=1`: give each field, because a field that is not in the URL has its default). |
 | `POST /sets` | A set of orders in JSON (`World.Orders.Set`): a list of orders (`"orders"`), or one order with `"count"` (1 to 64), `"seed"` and `"vary"` (an option to a list of its values). Each variant has the options of the order, a value of each list, and its own `seed` (`seed * 1000 + i`). The answer gives the hash of the set and each variant: its hash, its full order, the URLs of its files and its `lot` (`width` and `depth`), so a game makes a library from the set and picks a variant by the size of a lot (W19); or 422 with the errors (the path of each starts with `variants.N` or `orders.N`). |
 | `POST /mcp` | The MCP server: the same orders, as the tools of the Model Context Protocol (below, "The MCP server"). |
@@ -170,7 +177,7 @@ A `person` can hold a prop in each hand (`right_hand`, `left_hand`:
 the hands in the pose and in the animations, and they are in the list of
 the parts.
 At the edge, a group of more than 3 people needs more memory than the
-builder has (`AGENTS.md`, "Known problems"): order each person, or build
+VM has (`AGENTS.md`, "Known problems"): order each person, or build
 the group with `mix world.order`.
 
 An order of a van:
@@ -348,7 +355,7 @@ version of the blueprint (`van@2`): the old version stays.
 | Order | Where |
 |---|---|
 | A model of the catalog | CI builds it natively (`mix world.build --check`), and the files are in the repository. The Worker serves them as static files: no build at a request. |
-| An order at a request | The VM of World (beam.com, WebAssembly) in a Durable Object of the Worker builds it (`worker.js`, `handler.js`, `World.Service`). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
+| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 The VM has the orders: their check, their store and the MCP server
 (`World.Service`, `World.Orders.place/2`, `World.MCP`). `POST /orders`
@@ -533,6 +540,46 @@ So the two agree in two ways:
    (`World.Mesh.clean/1`), and kept as a supplied part (step F6) with its
    text as its source. It is not a measured shape: the receipt says so.
    Read the license of the weights before a use.
+
+## The constructions
+
+A build of `POST /builds` is a construction of the node
+(`World.Construction`, `docs/world.md`): the people of the node build
+each element of the model at the same time, and each act is an event
+that a client can watch. The body is an order (`blueprint` and
+`options`, or `drawing`), with:
+
+| Field | What |
+|---|---|
+| `level` | `near` (the default), `mid` or `far`. |
+| `budget.workers` | The most people that the construction holds at one time: 1 to 64, 4 by default. |
+| `budget.seconds` | The deadline: after it, the construction stops (the event `stopped`) and keeps nothing. No deadline by default. |
+| `budget.triangles` | The most triangles of the model: the construction takes the most detailed level that fits (from `level` down), or stops (the event `stopped`, with the reason `triangles`). 1 to 10,000,000. |
+
+Each event of the stream is `id: N` and `data: JSON`, with the fields
+`id`, `kind`, `order` (the id of the build), `who` (the PID of the
+person), `at` (the milliseconds from the start of the build), `wall`
+and `data`. The kinds: `requested`, `plan_made` (the tasks, each with
+its trade and the tasks that it waits for), `hired`, `task_started`,
+`task_done`, `element` (the part of a task: its node, its GLB key and
+its matrix), `released`, `done` (the model is complete), `stopped`,
+`failed` and `run_done` (the time and the memory). A comment line
+(`: ping`) comes each 15 s when there is no event.
+
+A game shows the elements as they come (the GLB of each key once, and
+an instance of it for each `element` event), then at `done` reads the
+model of the order (`/o/HASH.glb`) in their place. A client that comes
+late, or that loses its connection, sends `Last-Event-ID`: it gets the
+events after that id from the store of the log (the SQLite of the
+Durable Object, through the port `/env/LOG_STORE`), then the new
+events. `specs/Stream.tla` proves that it gets each event one time, in
+order, with no gap (`docs/specs.md`).
+
+```sh
+curl -N -H 'accept: text/event-stream' \
+  -d '{"blueprint": "catalog", "options": {"name": "house_brick_vn"}, "level": "far", "budget": {"workers": 8}}' \
+  https://world.mkfifo.com/builds
+```
 
 ## The steps
 

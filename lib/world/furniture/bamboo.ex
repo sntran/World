@@ -1,6 +1,6 @@
 defmodule World.Furniture.Bamboo do
   @moduledoc """
-  The bamboo shop of the world (the family `:bamboo`): furniture of culms
+  The bamboo shop of the world (the trade `bamboo_worker`): furniture of culms
   of bamboo (bàn ghế tre), from the same parts in each variant:
 
   - the pieces of `World.Furniture.Bamboo.Culm`: a culm with its nodes

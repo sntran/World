@@ -1,6 +1,6 @@
 defmodule World.Footwear do
   @moduledoc """
-  The shoe shop of the world (the family `:footwear`): footwear on the
+  The shoe shop of the world (the trade `shoemaker`): footwear on the
   last of the right foot of a person (`World.Footwear.Last`), each a
   stack of soles (`World.Footwear.Sole`) and the straps of its upper
   (`World.Footwear.Upper`, of the straps and the hardware of
