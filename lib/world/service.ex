@@ -195,29 +195,20 @@ defmodule World.Service do
   end
 
   # A job of a request: its order into the store, then a construction.
-  defp builds(conn, %{"order" => order} = body) do
-    with {:ok, budget} <- World.budget(body["budget"]),
-         {:ok, placed} <- Orders.place(order, origin(conn)),
-         {:ok, job} <- Orders.job(placed["order"], Map.get(body, "level", "near")) do
-      job = Map.put(job, :budget, budget)
-      after_id = World.Log.Server.last()
+  defp builds(conn, body) do
+    case Orders.construction(body, origin(conn)) do
+      {:ok, job, placed} ->
+        after_id = World.Log.Server.last()
 
-      if "text/event-stream" in get_req_header(conn, "accept") do
-        conn = Stream.open(conn, job.id)
-        {:ok, id} = World.build(job)
-        Stream.follow(conn, id, after_id, &over?/1)
-      else
-        {:ok, id} = World.build(job)
+        if "text/event-stream" in get_req_header(conn, "accept") do
+          conn = Stream.open(conn, job.id)
+          {:ok, id} = World.build(job)
+          Stream.follow(conn, id, after_id, &over?/1)
+        else
+          {:ok, id} = World.build(job)
+          json(conn, 202, Orders.started(id, placed, after_id))
+        end
 
-        json(conn, 202, %{
-          "build" => id,
-          "hash" => placed["hash"],
-          "after" => after_id,
-          "events" => "/builds/#{id}/events?after=#{after_id}",
-          "files" => placed["files"]
-        })
-      end
-    else
       {:error, :store} ->
         json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
 
@@ -225,8 +216,6 @@ defmodule World.Service do
         json(conn, 422, %{"errors" => errors})
     end
   end
-
-  defp builds(conn, _body), do: json(conn, 422, %{"errors" => [%{"path" => "order", "message" => "is required"}]})
 
   # The end of a construction.
   defp over?(e), do: e["kind"] in ~w(done stopped failed)

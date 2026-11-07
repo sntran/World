@@ -261,6 +261,8 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 | `check_order` | Checks an `order` and does not keep it: the hash and the full order, or the errors. |
 | `place_order` | Checks an `order` and keeps it, as `POST /orders`: the hash, the full order, the URLs of its files and of its replay page, or the errors. |
 | `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for the owner. |
+| `plan_build` | The plan of the people for an `order` at a `level`, with no build: each task with its trade and its waits, the tasks of each trade, and the estimate of the triangles. |
+| `build` | Keeps an `order` and starts its construction in its `budget`, as `POST /builds`: the id of the build, the URL of the stream of its events, and the URLs of its files. |
 
 The result of a tool has the data as JSON text and as structured
 content. A wrong order is a result with `isError` and the errors, each

@@ -89,6 +89,12 @@ defmodule World.StreamTest do
     Application.put_env(:world, World.Orders.Store, program: "/bin/false")
     on_exit(fn -> Application.put_env(:world, World.Orders.Store, old) end)
     assert call(:post, "/builds", job("far")).status == 503
+
+    # The tool build of the MCP server, with the same store.
+    message = %{"jsonrpc" => "2.0", "id" => 1, "method" => "tools/call"}
+    params = %{"name" => "build", "arguments" => %{"order" => JSON.decode!(@strut)}}
+    {200, %{"result" => r}} = World.MCP.answer(JSON.encode!(Map.put(message, "params", params)), nil, "https://x")
+    assert r["isError"] == true and hd(r["content"])["text"] =~ "the store of the orders failed"
   end
 
   test "a budget of workers, seconds and triangles" do

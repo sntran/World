@@ -200,6 +200,63 @@ defmodule World.Orders do
     with {:ok, order} <- check(order), {:ok, lvl} <- level(level), do: {:ok, new_job(order, lvl)}
   end
 
+  @doc """
+  A construction of a request (`POST /builds`, the MCP tool `build`): the
+  budget of `body` (`World.budget/1`), its `order` into the store, and the
+  job at its `level` (`near` by default): `{:ok, job, placed}`, or
+  `{:error, errors}` (`{:error, :store}` when the store fails).
+  """
+  def construction(%{"order" => order} = body, origin) do
+    with {:ok, budget} <- World.budget(body["budget"]),
+         {:ok, placed} <- place(order, origin),
+         {:ok, job} <- job(placed["order"], Map.get(body, "level", "near")) do
+      {:ok, Map.put(job, :budget, budget), placed}
+    end
+  end
+
+  def construction(_body, _origin), do: {:error, [%{"path" => "order", "message" => "is required"}]}
+
+  @doc "The answer of a construction that started: its id, its hash, its events after `after_id`, its files."
+  def started(id, placed, after_id) do
+    %{
+      "build" => id,
+      "hash" => placed["hash"],
+      "after" => after_id,
+      "events" => "/builds/#{id}/events?after=#{after_id}",
+      "files" => placed["files"]
+    }
+  end
+
+  @doc """
+  The plan of the people for an order at a level, before a build (the MCP
+  tool `plan_build`): the tasks (each with its trade and the tasks it
+  waits for), the people of each trade that it needs at most, and the
+  estimate of its triangles. A drawing with skills is not made for it:
+  the estimate of each skill counts.
+  """
+  def plan(order, level) do
+    with {:ok, job} <- job(order, level) do
+      {plan, triangles} =
+        if job.drawing do
+          {World.Plan.of_drawing(job.drawing), World.Drawing.estimate(job.drawing, job.level)}
+        else
+          item = job.item.(job.level)
+          {World.Plan.flat(item), World.Construction.estimate(item, job.level, job.pose)}
+        end
+
+      tasks = World.Plan.to_data(plan)["tasks"]
+
+      {:ok,
+       %{
+         "hash" => job.hash,
+         "level" => Atom.to_string(job.level),
+         "tasks" => tasks,
+         "trades" => Enum.frequencies(for t <- tasks, do: t["trade"]),
+         "triangles" => triangles
+       }}
+    end
+  end
+
   defp new_job(order, lvl) do
     {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
     targets = Map.new(Map.get(order, "targets", %{}), fn {k, [x, y, z]} -> {k, {x, y, z}} end)

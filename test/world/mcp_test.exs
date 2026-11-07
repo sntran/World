@@ -37,7 +37,7 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_order place_order check_drawing propose_drawing)
+             ~w(list_blueprints get_blueprint check_order place_order check_drawing plan_build build propose_drawing)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()
@@ -86,6 +86,27 @@ defmodule World.MCPTest do
     assert <<"glTF", _::binary>> = glb.resp_body
 
     assert tool("place_order", %{"order" => %{"blueprint" => "ball"}})["isError"] == true
+  end
+
+  test "plan_build gives the tasks, the trades and the triangles of an order; build starts a construction to watch" do
+    r = tool("plan_build", %{"order" => @strut, "level" => "far"})["structuredContent"]
+    assert r["level"] == "far" and r["triangles"] > 0
+    assert Enum.sum(Map.values(r["trades"])) == length(r["tasks"])
+
+    # A drawing with skills: a task for each node, and the estimate of the skills.
+    statue = %{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua"}}
+    r = tool("plan_build", %{"order" => statue})["structuredContent"]
+    assert r["level"] == "near" and length(r["tasks"]) == 10 and r["trades"]["caster"] == 1
+    assert tool("plan_build", %{"order" => @strut, "level" => "huge"})["isError"] == true
+
+    b = tool("build", %{"order" => @strut, "level" => "far", "budget" => %{"workers" => 2}})["structuredContent"]
+    assert b["events"] == "/builds/#{b["build"]}/events?after=#{b["after"]}"
+    assert b["files"]["glb"] =~ b["hash"]
+    assert {:ok, %{level: :far}} = World.await(b["build"])
+
+    r = tool("build", %{"order" => @strut, "budget" => %{"workers" => 0}})
+    assert r["isError"] == true
+    assert [%{"path" => "budget.workers"}] = r["structuredContent"]["errors"]
   end
 
   test "an order that is not a JSON object is a tool error" do

@@ -22,6 +22,7 @@ defmodule World.MCP do
   2. Call check_order with the order until it has no errors. Each error has the path of the wrong value and the rule.
   3. Call place_order. The answer has the hash of the order and the URLs of its files: the GLB at the near, mid and far levels, the list of the parts, the receipt, and the log of the people of the world that built it.
   The factory builds each file at its first GET (this can take some seconds; 503 means that the order needs more memory than the edge has), and keeps it. The same order always gives the same hash and the same URLs.
+  To watch the people build a model: call plan_build for the tasks, the trades and the triangles of an order at a level, then build with a budget. The answer has the URL of the stream of the events of the construction (server-sent events), and each element as it comes.
   A new model for the catalog (an engineer): get_blueprint drawing gives the format of a drawing (its shapes, their materials and matter, standard parts, nodes and joints). Call check_drawing until the drawing has no errors and passes the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop, each part has a mass). Then call propose_drawing with the request: the owner reviews the proposal, and accepts or refuses it.
   """
 
@@ -44,6 +45,14 @@ defmodule World.MCP do
   }
 
   @read %{"readOnlyHint" => true, "openWorldHint" => false}
+
+  @level %{"type" => "string", "enum" => ~w(near mid far), "description" => "The level of detail: near by default."}
+
+  @budget %{
+    "type" => "object",
+    "description" =>
+      "The budget of the construction: workers (the most people at one time, 1 to 64, 4 by default), seconds (the deadline; no model after it), triangles (the most triangles: the most detailed level that fits)."
+  }
 
   @drawing %{
     "type" => "object",
@@ -100,6 +109,35 @@ defmodule World.MCP do
         "Checks a drawing of a new model and does not keep it: the errors of the data (each with its path), then the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop), its mass (and the parts with no mass), its size and its parts.",
       "inputSchema" => %{"type" => "object", "properties" => %{"drawing" => @drawing}, "required" => ["drawing"]},
       "annotations" => @read
+    },
+    %{
+      "name" => "plan_build",
+      "title" => "Plan a build",
+      "description" =>
+        "Gives the plan of the people for an order at a level, with no build: each task with its trade and the tasks that it waits for, the count of the tasks of each trade, and the estimate of the triangles of the model. A node of a drawing that a skill makes is one task.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{"order" => @order, "level" => @level},
+        "required" => ["order"]
+      },
+      "annotations" => @read
+    },
+    %{
+      "name" => "build",
+      "title" => "Build an order",
+      "description" =>
+        "Keeps an order and starts its construction: the people of the node build it element by element, in its budget. Gives the id of the build, the hash of the order, the URL of the stream of its events (server-sent events: plan_made, hired, task_started, element, done, stopped), and the URLs of its files; or the errors.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{"order" => @order, "level" => @level, "budget" => @budget},
+        "required" => ["order"]
+      },
+      "annotations" => %{
+        "readOnlyHint" => false,
+        "destructiveHint" => false,
+        "idempotentHint" => true,
+        "openWorldHint" => false
+      }
     },
     %{
       "name" => "propose_drawing",
@@ -220,6 +258,28 @@ defmodule World.MCP do
       {:ok, data} -> result(data)
       {:error, :store} -> wrong("the store of the proposals failed; try again later")
       {:error, review} -> result(review, true)
+    end
+  end
+
+  defp call("plan_build", %{"order" => order} = args, _origin) when is_map(order) do
+    case Orders.plan(order, Map.get(args, "level", "near")) do
+      {:ok, data} -> result(data)
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("build", %{"order" => order} = args, origin) when is_map(order) do
+    case Orders.construction(args, origin) do
+      {:ok, job, placed} ->
+        after_id = World.Log.Server.last()
+        {:ok, id} = World.build(job)
+        result(Orders.started(id, placed, after_id))
+
+      {:error, :store} ->
+        wrong("the store of the orders failed; try again later")
+
+      {:error, errors} ->
+        result(%{"errors" => errors}, true)
     end
   end
 
