@@ -33,4 +33,4 @@ builder does not change the requirements: the owner does.
 
 | Number | Name | Status |
 |---|---|---|
-| 0001 | [The people build on demand](0001-people-build-on-demand.md) | Draft |
+| 0001 | [The people build on demand](0001-people-build-on-demand.md) | In progress |

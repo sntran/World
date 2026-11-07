@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Draft |
+| Status | In progress |
 | Depends on | The matter of World as it is (`docs/format.md`), the drawing format (`docs/format.md`, "A drawing"), the MCP server (`World.MCP`), the stores (`World.Store`), the log (`World.Log`). |
 | Changes | `docs/world.md` (the world layer: the run, the foreman, the workers), `specs/Order.tla`, `docs/factory.md` (the calls of the site), plan 0023 of Vũng Tàu (the fetch at compile time) and a new plan of Vũng Tàu (the QA mode). |
 
@@ -79,6 +79,17 @@ code.
 | D10 | There is no line between a building and another thing. A camper van is a house on wheels: its cabinets, its insulation, its wires and its appliances are elements of the same kinds as in a house. A cup is one element of one task. One drawing holds every thing. | The owner, 2026-11-07. |
 | D11 | The drawing of World stays its own small JSON. It takes the words of IFC (element, storey, material, task, sequence) and the names of elements of IFC where IFC has one (a wall, a slab, a stair, a cabinet), and the word of World where IFC has none (a wheel, a hull, a robe). An export to IFC can come later. | The full IFC is hundreds of kinds of things, too big for the builder at the edge. A person who knows BIM reads the drawing. |
 | D12 | The clock stays: one second of the wall clock is one day of the world. The log of a construction is the truth: the web page and the statistics read it. | `docs/world.md`. |
+| D13 | `World.Supervisor` is the module of the supervisor of the node, and `World.Application` starts it. Its children: `World.Census`, the registries `World.Names` (a construction by its id) and `World.Events` (the watchers), the dynamic supervisors with the names `World.Persons` and `World.Constructions` (names, not modules), the log of the node, and Bandit when `WORLD_SERVER` is set. | Flat names. A supervisor decides nothing. |
+| D14 | `World.Census` keeps the pool of the people: the free people of each trade, the people that each construction holds, and the queue of the constructions that wait. The construction that holds fewer workers gets the next free person first. A construction hires and lets go through `World.Person.hire/2` and `World.Person.release/2`. | D6 and R5. |
+| D15 | In step 1, the work of a worker is the triangles of the meshes of its element (`World.Mesh.triangles/1`, the pass of Wings: the cost of a build). `World.Build.scene/2` takes them with the option `triangles`, in place of its own memo, so the file has the same bytes. From step 2, a worker also runs the skill of its element. | The worker does real work, and the construction joins the elements with no second pass. |
+| D16 | At the edge, one Durable Object with the name `world` is the node: the people, the constructions, the stream and the log. The four builders of today go. A file that R2 has still goes out with no VM. | One node, one census. The memory budget (R22) keeps one or two builds at one time there. |
+| D17 | `POST /builds` with `accept: text/event-stream` gives the stream at once: the request keeps the Durable Object alive while the people build. With `accept: application/json` it gives the id and the plan. | A Durable Object with no open request can stop. A client that watches keeps it. |
+| D18 | The log of the node goes into the SQLite of the Durable Object through the port `/env/LOG_STORE`, in batches, as the orders go to R2 through `/env/ORDER_STORE`. The full log of a build also goes to R2 as `/o/HASH.log.json`. | A page that opens later replays the history (with `Last-Event-ID`), then follows the stream. A deploy starts the Durable Object again. |
+| D19 | A blueprint in data has parameters: `params`, with the types of the options of `World.Orders.Blueprint` (a default, a minimum, a maximum, a unit, a text). A value of a drawing can be `{"param": "height"}`. The files are in `priv/blueprints/`, next to the blueprints in code. A model of the catalog is an order of a blueprint (`priv/drawings/NAME.json` with `blueprint` and `options`). | Vũng Tàu orders the statue, the tower and the lot house with options. A drawing with no options cannot do that. |
+| D20 | A node of a drawing can be an element made by a skill: `{"name", "skill": {"cast": {...}}, "trade", "after", "from"}`. `from` names the elements whose data it takes. A skill gives the part (or the smaller assembly) of the element, its data for the elements that take it, and model extras, which go into the model in the order of the nodes. A drawing also gets `extras`, the kinds `statue`, `tower` and `house`, and the role `open`. | A statue needs the data of its figure, a lot house the data of its plan, a van the data of its hull. The extras hold `site`, `sizes`, `ports`, `collision` and `surface`. |
+| D21 | The code of a kind does not go away: it becomes skills of the trades in `lib/world/skills/`. What goes is the module of the kind and its blueprint in code. The elements, their sequence and their numbers become data. | The lot house has 1,639 lines of rules, and the line of the vans has about 2,500 lines. A skill keeps them, so another person can make a better skill. |
+| D22 | `World.Places.family_of/1` becomes `World.Plan.trade/1`: the kind of an item gives the trade of its workers. | The new world has trades, not factories by family. |
+| D23 | A person has its PID as its name in the log (`"<0.123.0>"`). | The owner, 2026-11-07 (Q3). |
 
 ## 5. Requirements
 
@@ -293,8 +304,14 @@ the risks are in the sizes, not in the idea.
 
 - **Q1.** The first estimate of a skill (R21): a fixed guess in the
   skill, or a first build with no limit of seconds that fills the log?
+  Answered (the owner, 2026-11-07): a first build with no time limit.
+  Its log gives the estimate of the next builds.
 - **Q2.** The web page at the start of a node (R24, step 5): the people
   build the places at each start of the Durable Object, or only once,
   with the log of that first build kept in the SQLite?
+  Answered (the owner, 2026-11-07): once. A later start reads the log of
+  that first build from the store.
 - **Q3.** The names of the first people (the figures and the names of
   the yard of `World.Run` today, or new ones)?
+  Answered (the owner, 2026-11-07): the PID of the process
+  (`"<0.123.0>"`).
