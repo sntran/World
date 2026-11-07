@@ -28,6 +28,7 @@ design. The check 4 runs on each log that the site gives.
 | `specs/Census.tla` | The people of the node at its limit: a construction asks for a person of a trade, and the census gives a free person, a new one, or a new one in the place of a free person of another trade. | `World.Census`, `World.Construction` |
 | `specs/Stream.tla` | A stream to one client: it watches, reads the events of the past, then follows the new events. | `World.Stream`, `World.Log.Server` |
 | `specs/LogStore.tla` | The log of the node and its store: the batches, a stop of the VM, a new log. | `World.Log.Server`, `World.Log.Store` |
+| `specs/Places.tla` | The first start of the node: the yard raises the buildings of its plan, a place opens when its building is done, and a construction starts at its place when the place is open (the yard holds it until then). | `World.Yard` |
 | `specs/Haul.tla` | The haul of the materials of the tasks: the loads of a takeoff, a truck for each load, the drive to the source and to the place, and the word to the construction when each load is there. | `World.Haul`, `World.Truck` |
 
 ### `specs/Build.tla`
@@ -175,6 +176,37 @@ of the haul with the logs of the constructions that asked it:
 `test/world/haul_test.exs` replays the haul of a band in rented trucks,
 of a slab on one truck of the yard, and of a house of one floor at the
 site, and a log with a lost load diverges.
+
+### `specs/Places.tla`
+
+The constants: the places (`Places`), the places with a building
+(`Built`: closed at the start), the buildings that the yard raises at
+its first start (`Plan`), the constructions of the models and of the
+trucks (`Builds`, `At`), and a guard for a fault model.
+
+| Action | When it can occur | Event of the log |
+|---|---|---|
+| `Raise(p)` | `p` is in the plan, closed, and not raised. | `place_raised` |
+| `Open(p)` | The building of `p` is done. | `place_open` |
+| `Hold(c)` | The place of `c` is not open: the yard holds it. | `place_held` |
+| `Start(c)` | The place of `c` is open. | `place_started` |
+| `Done(c)` | `c` started. | `done` |
+
+| Invariant or property | What it says | The fault that it stops |
+|---|---|---|
+| `AtOpen` | A construction works only at a place that is open. | A van on the line of a factory that is not there. |
+| `Bootstrap` | The first start ends: each place opens. | |
+| `AllDone` | No construction waits for a place that nobody builds. | A model whose factory is not in the plan. |
+
+The small model (`specs/MCPlaces.tla`): the warehouse and the factory of
+the vehicles have a building; a truck and a scooter are at the factory,
+a house at the site. `MCPlacesLost.cfg` has no factory of the vehicles
+in the plan: the checker finds that the truck waits forever.
+`MCPlacesEarly.cfg` lets a construction start before its place is open:
+`AtOpen` violated. `World.PlacesSpec.replay/3`
+(`test/support/places_spec.ex`) replays the log of the yard of a first
+start with the logs of a scooter that waited for its factory and of a
+house at the site (`test/world/yard_test.exs`).
 
 ## The replay: the code against the specification
 

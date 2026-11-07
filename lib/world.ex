@@ -16,18 +16,25 @@ defmodule World do
   @doc """
   Open a construction for a job (`World.Construction.start/1`; `reply`
   is the process that calls, by default). `{:ok, id}`; a construction
-  with the same id that runs now is the same build.
+  with the same id that runs now is the same build. When the yard runs
+  (`World.Yard`), a model in data goes to the place of its kind, and
+  waits until the place is open.
   """
   def build(job) do
-    job = Map.put_new(job, :reply, self())
+    case World.Yard.place(Map.put_new(job, :reply, self())) do
+      {:held, id} -> {:ok, id}
+      {:start, job} -> start(job)
+    end
+  end
 
+  defp start(job) do
     with {:error, {:already_started, _}} <- Construction.start(job),
          :ok <- join(job) do
       {:ok, job.id}
     else
       {:ok, _} -> {:ok, job.id}
       # The construction ended before the join: a new one builds again.
-      :gone -> build(job)
+      :gone -> start(job)
     end
   end
 

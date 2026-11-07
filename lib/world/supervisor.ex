@@ -2,9 +2,11 @@ defmodule World.Supervisor do
   @moduledoc """
   The supervisor of the node (`docs/plans/0001-people-build-on-demand.md`,
   D13). It starts the registries of the node, the people, the
-  constructions, the census, and the HTTP server of `World.Service` when
-  `WORLD_SERVER` is `"true"` (on `PORT`, 4000 by default). It decides
-  nothing: `World` and `World.Census` decide.
+  constructions, the census, the haul and the yard (`World.Haul`,
+  `World.Yard`: the first start builds the places) when `WORLD_YARD` is
+  `"true"`, and the HTTP server of `World.Service` when `WORLD_SERVER` is
+  `"true"` (on `PORT`, 4000 by default). It decides nothing: `World`,
+  `World.Census` and `World.Yard` decide.
 
   - `World.Names`: a construction by its id (unique keys).
   - `World.Events`: the processes that watch a construction, or the whole
@@ -31,8 +33,12 @@ defmodule World.Supervisor do
       {DynamicSupervisor, name: World.Persons, strategy: :one_for_one},
       {DynamicSupervisor, name: World.Constructions, strategy: :one_for_one},
       World.Census
-    ] ++ server(env)
+    ] ++ yard(env) ++ server(env)
   end
+
+  @doc "The haul and the yard for the environment `env`, or nothing."
+  def yard(%{"WORLD_YARD" => "true"}), do: [World.Haul, World.Yard]
+  def yard(_env), do: []
 
   @doc "The HTTP server for the environment `env`, or nothing."
   def server(%{"WORLD_SERVER" => "true"} = env),

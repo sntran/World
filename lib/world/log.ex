@@ -12,7 +12,7 @@ defmodule World.Log do
   """
   alias World.Clock
 
-  @kinds ~w(requested plan_made hired released task_started task_done task_dropped element paused resumed changed done stopped failed run_done parts_asked parts_here haul_asked loaded unloaded hauled truck_joined)
+  @kinds ~w(requested plan_made hired released task_started task_done task_dropped element paused resumed changed done stopped failed run_done parts_asked parts_here haul_asked loaded unloaded hauled truck_joined place_raised place_open place_held place_started truck_made)
 
   defmodule Event do
     @moduledoc "One thing that happened: its world time, wall time, kind, order, person and data."

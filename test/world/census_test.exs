@@ -143,6 +143,8 @@ defmodule World.CensusTest do
     names = for {_, _, _, _} = c <- Supervisor.which_children(World.Supervisor), do: elem(c, 0)
     assert World.Census in names
     assert World.Supervisor.server(%{}) == []
+    assert World.Supervisor.yard(%{}) == []
+    assert World.Supervisor.yard(%{"WORLD_YARD" => "true"}) == [World.Haul, World.Yard]
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true", "PORT" => "4100"})
     assert opts[:plug] == World.Service and opts[:port] == 4100
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true"})

@@ -120,6 +120,19 @@ the loads are there (`parts_here`). The model is the same as with no
 haul. `specs/Haul.tla` and `specs/Build.tla` (`Arrive`, `PartsHere`)
 specify it.
 
+The first start of the node builds the places (D7; `World.Yard`, with
+`WORLD_YARD=true`). The warehouse and the factories are closed at the
+start; the gate and the site are open. The people build the building of
+each as a house of one floor on its lot, with a shutter of the size of
+its products, and the place opens when its building is done; then the
+haul takes the materials from the stock of the warehouse. When the
+factory of the vehicles opens, the people build the two trucks there
+(vans), and the haul rents no more trucks. A model in data goes to the
+place of its kind (a van and a scooter to the factory of the vehicles; a
+house, a statue and a tower to the site); the yard holds it until the
+place is open. `specs/Places.tla` specifies it: no construction waits
+for a place that nobody builds, and the first start ends.
+
 Each place has a position in meters, in one flat frame: the yard of
 World. Later, a place can have a latitude and a longitude, so the world
 of Phượt puts the factory on its map.
