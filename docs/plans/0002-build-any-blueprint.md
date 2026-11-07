@@ -39,7 +39,7 @@ brought by truck.
 | D2 | A drawing can repeat a node: `{"repeat": {"for": "floor", "in": [1, 2, 3]}, "node": {...}}` or `"in": {"count": 8}`; the name and the values of the node take `{"var": "floor"}`. The fill expands it before the check. | Floors, courses, pours, wheels, rows of seats: many tasks of one kind, for many people at one time. |
 | D3 | A big task splits into pieces in the drawing (D2): the cast of a statue is pours by bands from the feet up, in parallel, then one merge. `World.Cast` gets a pass of the distances that does not depend on the order (the least distance, then the least index of the triangle, then of the sample; the sums of the normals of all the samples near a loose cell), so any order of pours gives one field. The files of the statue keep their bytes: the new pass gives the same field. | The owner: one big task is a bottleneck (plan 0001, D30 goes). |
 | D4 | The skills of a house are the work of a real site: `footing`, `column` and `beam` (formwork, rebar, pour), `slab`, `course` (one band of courses of a wall of a unit, with the openings and lintels: the mason), `stair`, `roof` (purlins, tiles or sheets), `opening` (a door or a window: the joiner), `iron` (rails, cages, gates: the smith), `plaster` and `paint` (the plasterer, the painter). The model shows plaster where a wall is plastered, and bricks where it is bare. | The owner: as on a real site. A tube house of Vũng Tàu is a frame of concrete with an infill of bricks. |
-| D5 | The skills of a vehicle are the work of a line: `hull` (data), `frame` (a welder: tubes of a frame), `panel` (a sheet metal worker: a panel on a hull or a loft), `door` (hung on its hinges), `glass`, `seat` (the upholsterer), `wheel` and `corner` (the wheelwright, the mechanic), `engine`, `lamp`, `paint`. | Phượt sends the blueprints of scooters and vans. |
+| D5 | The skills of a vehicle are the work of the trades of a line, for any vehicle, and no skill names a model (the owner, 2026-11-07: "vehicles, not vans"). Where a trade has a spec sheet, its skill takes its numbers: `wheel` (a wheelwright: a tire code), `knuckle` (a mechanic: a corner, its disc, its steer), `bicycle_frame` and `bicycle_fork` (a welder: the geometry of a frame), `crankset`, `seats` (an upholsterer: the seats of a car or a van). The free shapes from the photos are shape data (lofts of key rows, tubes on points, lathes, boxes, arcs): `frame`, `fork`, `panel` (a molder), `body` (a sheet metal worker), `glass`, `seat`, `lamp`, `engine`, `stand`, `swingarm`. The joints are in the drawing. The van line keeps its stations (`van_*`), with the data of a model in the order. | Phượt sends the blueprints of scooters, motorcycles, bicycles, cars and vans. |
 | D6 | The places are real: `World.Places` (a warehouse, a factory for each trade, a site for each house), the roads of a yard, `World.Stock`, and trucks (vans of the van blueprint) with their drivers. A construction of a model of a trade goes to the factory of its trade, and waits until the factory stands. Its parts go from the warehouse to the factory by truck, with the time of the drive on the world clock. A house, a statue and a tower are built on their site. | The owner (2026-11-07): the real flow. |
 | D7 | The first start of a node builds the places once (plan 0001, Q2): the people build the warehouse and the factories as houses (`priv/blueprints/factory.json`, with a door of the size of its products) and the trucks as vans; then the factories open. A later start reads the log and the files of the store. | Houses and vehicles first, then the factories, then the models. |
 | D8 | Each new flow has a TLA+ specification with fault models, and the logs replay in it: `specs/Haul.tla` (a part arrives at its factory once; a truck holds at most its load; a task starts only after its parts are at its factory) and `specs/Places.tla` (no construction waits for a factory that nobody builds; the bootstrap ends). | A test sees one order of the acts; the checker sees all. |
@@ -56,7 +56,7 @@ brought by truck.
   courses of the walls by many masons, the stair, the roof, the openings
   and the iron, then the plaster and the paint. Each element goes to
   the stream when it is made.
-- **R4.** The people build a van and a scooter as on a line (D5).
+- **R4.** The people build each vehicle of World as on a line, from the general skills of D5: a bicycle, a scooter, a motorcycle, a car and a van, each a blueprint in data with the same triangles, joints and size as the model of the catalog; another vehicle from other numbers passes the checks of a true model.
 - **R5.** The places, the stock, the trucks and the drivers are
   processes; a construction of a trade is at its factory, and its parts
   come by truck (D6, D8).
@@ -76,9 +76,10 @@ brought by truck.
 1. **The parallel pieces.** R1, R2: the repeat of a node, the cast in
    pours, the statue with its pours.
 2. **Houses.** R3: the skills of a site, `priv/blueprints/tube_house.json`.
-3. **Vehicles.** R4: the skills of a line, `priv/blueprints/van_line.json`
-   and `scooter_line.json` (the blueprints `van` and the Honda Vision of
-   the catalog stay until step 6).
+3. **Vehicles.** R4: the skills of the vehicle trades (D5) and the
+   blueprints `bicycle.json`, `scooter.json`, `motorcycle.json`,
+   `car.json` and `van_line.json` (the modules of the catalog stay until
+   step 6, as the reference of the tests).
 4. **The places and the real flow.** R5, R6, with `specs/Haul.tla` and
    `specs/Places.tla`, and the map of the world on the web page.
 5. **Any blueprint from any project.** R7, `docs/skills.md`, plan 0025
@@ -107,7 +108,7 @@ step 6 waits until Vũng Tàu and Phượt order by blueprint.
 |---|---|---|
 | 1 | `feat(drawing): repeat a node`, `feat(cast)`, `perf(mesh)`, `feat(statue)` | The statue: 37 tasks; eight casters pour its eight bands at one time, eight finishers make the slabs of its surface. |
 | 2 | `feat(house)` | A tube house as on a real site: 87 tasks for three floors. |
-| 3 | `feat(van)`, `perf(construction)`, `feat(scooter)` | A van on the line: 23 tasks; a scooter: 6 tasks, with the joints in the drawing. The join of the model is in parallel. |
+| 3 | `feat(van)`, `perf(construction)`, `feat(scooter)` | A van on the line: 23 tasks; a scooter: 6 tasks, with the joints in the drawing. The join of the model is in parallel. This first step 3 made the skills of two models (the stations of the Ford Transit, the parts of the Honda Vision), not of vehicles: it is done again (D5). |
 | 4 | `feat(places)`, `feat(haul)`, `feat(yard)`, `feat(site)` | The yard: the takeoff of each task, the trucks that bring it, the first start that builds the warehouse, the factories and the trucks, and the map on the world page. `specs/Haul.tla` and `specs/Places.tla`, with their fault models and the replay of the logs. |
 | 5 | `feat(orders)` | A blueprint of a project in the order or by its hash, `POST /blueprints`, the MCP tool `check_blueprint`, `docs/skills.md`; plan 0025 of Vũng Tàu sends the blueprints of the game. |
 
