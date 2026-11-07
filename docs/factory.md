@@ -560,6 +560,7 @@ that a client can watch. The body is an order (`blueprint` and
 | `budget.workers` | The most people that the construction holds at one time: 1 to 64, 4 by default. |
 | `budget.seconds` | The deadline: after it, the construction stops (the event `stopped`) and keeps nothing. No deadline by default. |
 | `budget.triangles` | The most triangles of the model: the construction takes the most detailed level that fits (from `level` down), or stops (the event `stopped`, with the reason `triangles`). 1 to 10,000,000. |
+| `budget.memory_mb` | The memory of the people: each person has its part for the heap of a task (`max_heap_size`, with the binaries that it holds). A task over it fails (the event `failed`, the message `memory`). 1 to 4,096. |
 
 Each event of the stream is `id: N` and `data: JSON`, with the fields
 `id`, `kind`, `order` (the id of the build), `who` (the PID of the

@@ -376,10 +376,17 @@ defmodule World.Construction do
     hire(s, wanted)
   end
 
+  # The heap of a person for one task, in words: its part of the memory of
+  # the budget (`"memory_mb"`), or no limit.
+  defp heap(%{job: %{budget: %{"memory_mb" => mb}}, workers_limit: n}),
+    do: div(mb * 1_048_576, n * :erlang.system_info(:wordsize))
+
+  defp heap(_s), do: nil
+
   defp give(s, p, task) do
     s = %{s | idle: List.delete(s.idle, p), running: Map.put(s.running, p, task), waiting: List.delete(s.waiting, task)}
     s = record(s, "task_started", p, task_data(task))
-    Person.work(p, task.id, work(s, task))
+    Person.work(p, task.id, work(s, task), heap(s))
     s
   end
 

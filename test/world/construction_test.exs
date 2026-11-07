@@ -19,6 +19,12 @@ defmodule World.ConstructionTest do
 
   defp kinds(log), do: Enum.map(Log.events(log), & &1.kind)
 
+  # A part of a fine sphere: its triangles need about 7.6 MB of heap.
+  defp heavy do
+    sphere = Detail.with(:near, fn -> World.Shape.sphere(1.0, :concrete, rings: 48, sides: 48) end)
+    Part.new("heavy", :part, [sphere], [Port.new("o", {0.0, 0.0, 0.0}, {0, 0, 1})])
+  end
+
   # The most tasks that ran at one time in a log.
   defp most(log) do
     {_, most} =
@@ -176,6 +182,19 @@ defmodule World.ConstructionTest do
     {:ok, id} = World.build(%{id: "bad-#{System.unique_integer()}", item: fn _ -> item end})
     assert {:error, {:failed, message}} = World.await(id)
     assert is_binary(message)
+  end
+
+  test "the budget of memory: each person has its part for the heap of a task, and a task over it fails" do
+    {:ok, id} = World.build(job("wall_brick_sample", budget: %{"workers" => 2, "memory_mb" => 256}))
+    assert {:ok, r} = World.await(id)
+    assert r.glb == glb("wall_brick_sample", :near)
+
+    big = fn _ -> Assembly.new("heavy", heavy(), root: "heavy") end
+
+    {:ok, id} =
+      World.build(%{id: "heavy-#{System.unique_integer([:positive])}", item: big, budget: %{"memory_mb" => 1}})
+
+    assert World.await(id, 60_000) == {:error, {:failed, "memory"}}
   end
 
   test "a person that stops gives its task back, and another person makes it" do

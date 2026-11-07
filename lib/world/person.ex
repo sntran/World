@@ -34,9 +34,13 @@ defmodule World.Person do
   @doc """
   Give a task to a person: `work` is a function with no arguments. The
   person sends `{:done, person, id, result}` to the process that calls,
-  or `{:failed, person, id, message}` when the work raises.
+  or `{:failed, person, id, message}` when the work raises. With `heap`
+  (words), the work runs in a process of its own with that limit of its
+  heap and of the binaries that it holds (`max_heap_size`, Erlang/OTP
+  27): over it, the work stops alone, and the message is `"memory"`.
   """
-  def work(person, id, work) when is_function(work, 0), do: GenServer.cast(person, {:work, self(), id, work})
+  def work(person, id, work, heap \\ nil) when is_function(work, 0),
+    do: GenServer.cast(person, {:work, self(), id, work, heap})
 
   @doc "The job and the trade of a person."
   def info(person), do: GenServer.call(person, :info)
@@ -52,17 +56,43 @@ defmodule World.Person do
   def handle_call(:info, _from, s), do: {:reply, s, s}
 
   @impl true
-  def handle_cast({:work, from, id, work}, s) do
-    result =
-      try do
-        {:done, self(), id, work.()}
-      rescue
-        e -> {:failed, self(), id, Exception.message(e)}
-      end
-
-    send(from, result)
+  def handle_cast({:work, from, id, work, heap}, s) do
+    send(from, run(id, work, heap))
     # The result is with the construction now: the person gives its
     # memory back before the next task (the edge has 128 MB).
     {:noreply, s, :hibernate}
   end
+
+  defp run(id, work, nil), do: tag(outcome(work), id)
+
+  defp run(id, work, heap) do
+    me = self()
+
+    {pid, ref} =
+      spawn_monitor(fn ->
+        Process.flag(:max_heap_size, %{size: heap, kill: true, error_logger: false, include_shared_binaries: true})
+        send(me, {self(), outcome(work)})
+      end)
+
+    receive do
+      {^pid, outcome} ->
+        Process.demonitor(ref, [:flush])
+        tag(outcome, id)
+
+      {:DOWN, ^ref, :process, ^pid, :killed} ->
+        {:failed, me, id, "memory"}
+
+      {:DOWN, ^ref, :process, ^pid, reason} ->
+        {:failed, me, id, inspect(reason)}
+    end
+  end
+
+  defp outcome(work) do
+    {:ok, work.()}
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  defp tag({:ok, result}, id), do: {:done, self(), id, result}
+  defp tag({:error, message}, id), do: {:failed, self(), id, message}
 end

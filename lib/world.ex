@@ -94,8 +94,9 @@ defmodule World do
 
   @doc """
   The budget of a job from its data (`docs/plans/0001-people-build-on-demand.md`,
-  D2): `"workers"` (1 to 64), `"seconds"` (more than 0) and `"triangles"`
-  (1 to 10,000,000), each one optional. `{:ok, budget}`, or `{:error,
+  D2): `"workers"` (1 to 64), `"seconds"` (more than 0), `"triangles"`
+  (1 to 10,000,000) and `"memory_mb"` (1 to 4,096: each person has its
+  part for the heap of a task), each one optional. `{:ok, budget}`, or `{:error,
   errors}` with the path of each error.
   """
   def budget(nil), do: {:ok, %{}}
@@ -117,7 +118,9 @@ defmodule World do
   defp wrong("seconds", _), do: "must be a number of seconds more than 0"
   defp wrong("triangles", n) when :erlang.is_integer(n, 1, 10_000_000), do: nil
   defp wrong("triangles", _), do: "must be a whole number from 1 to 10,000,000"
-  defp wrong(_key, _), do: "is not a part of a budget: workers, seconds, triangles"
+  defp wrong("memory_mb", n) when :erlang.is_integer(n, 1, 4096), do: nil
+  defp wrong("memory_mb", _), do: "must be a whole number of MB from 1 to 4,096"
+  defp wrong(_key, _), do: "is not a part of a budget: workers, seconds, triangles, memory_mb"
 
   @doc """
   The memory of the VM, in bytes: `{"total", bytes}` (`:erlang.memory/1`).

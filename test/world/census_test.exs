@@ -108,10 +108,20 @@ defmodule World.CensusTest do
     ref = hire(s, :mason, self())
     assert_receive {:hired, ^ref, p}
     Person.work(p, "wall", fn -> 6 * 7 end)
-    assert_receive {:done, ^p, "wall", 42}
+    assert_receive {:done, ^p, "wall", 42}, 5_000
     Person.work(p, "roof", fn -> raise "no tiles" end)
-    assert_receive {:failed, ^p, "roof", "no tiles"}
+    assert_receive {:failed, ^p, "roof", "no tiles"}, 5_000
     assert Person.name(p) =~ ~r/^<\d+\.\d+\.\d+>$/
+
+    # With a limit of the heap: the work in a process of its own.
+    Person.work(p, "wall", fn -> 6 * 7 end, 100_000)
+    assert_receive {:done, ^p, "wall", 42}, 5_000
+    Person.work(p, "roof", fn -> raise "no tiles" end, 100_000)
+    assert_receive {:failed, ^p, "roof", "no tiles"}, 5_000
+    Person.work(p, "big", fn -> Enum.to_list(1..1_000_000) end, 10_000)
+    assert_receive {:failed, ^p, "big", "memory"}, 5_000
+    Person.work(p, "out", fn -> exit(:no_room) end, 100_000)
+    assert_receive {:failed, ^p, "out", ":no_room"}, 5_000
   end
 
   test "the memory of the VM with no allocators of ERTS: the processes and their binaries" do

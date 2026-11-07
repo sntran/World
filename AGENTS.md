@@ -129,7 +129,7 @@ The node of `docs/world.md` (plan 0001):
 | `World.Supervisor` | The supervisor of the node: the registries `World.Names` (a construction by its id) and `World.Events` (the watchers), the log of the node, the dynamic supervisors `World.Persons` and `World.Constructions`, the census, and Bandit when `WORLD_SERVER` is `true`. |
 | `World.Census` | The people of the node: the free people by trade, the person that each construction holds, the constructions that wait (the one that holds fewer people first), and the limit of the node. At the limit, a free person of another trade leaves for a new one. |
 | `World.Person` | A person of a trade: a process with its PID as its name. It does one task at a time for the construction that hires it, and sends the result back. |
-| `World.Construction` | A construction: the plan of a job (`World.Plan.flat/1`, the level that fits the budget of triangles), a hire for each ready task, the elements that its people make (a GLB for each new mesh), the join of the model, the deadline, and the log. Its urgent messages (the deadline, a person that stops, a pause, a resume, a cancel) are messages of priority (OTP 28), to the alias that is the value of its name; a change comes in a pause. |
+| `World.Construction` | A construction: the plan of a job (`World.Plan.flat/1`, the level that fits the budget of triangles), a hire for each ready task, the elements that its people make (a GLB for each new mesh), the join of the model, the deadline, and the log. Its urgent messages (the deadline, a person that stops, a pause, a resume, a cancel) are messages of priority (OTP 28), to the alias that is the value of its name; a change comes in a pause. With `memory_mb`, each task has a limit of its heap. |
 | `World.Plan` | The tasks of a model, from the tree of its assembly, each with its trade (`trade/1`: the kind of an item to the trade of its people). |
 | `World.Log` | The events of a construction in the order of their time, in JSON, and their checks. `World.Log.Server`: the log of the node, with an id for each event, its watchers, and its store (`World.Log.Store`, the SQLite of the Durable Object through the port `/env/LOG_STORE`). |
 | `World.Stream` | The stream of the events to one client (`text/event-stream`): it watches, sends the events of the past after `Last-Event-ID`, then follows. |
@@ -230,8 +230,10 @@ trees from Blender:
   stops the VM: build it on a computer (`mix world.order`) until F4.
 - **One build at a time in a VM.** Two cold builds at one time in one
   VM stopped it (128 MB). `POST /build` still builds one file at a
-  time (`:global.trans`); `POST /builds` has the budget of its job
-  only, until the memory budget (plan 0001, step 3). A near level of the
+  time (`:global.trans`); `POST /builds` has the budget of its job: give
+  it `memory_mb`, so that a task over its part fails alone. The node
+  does not wait for room in the memory before it opens a construction
+  yet. A near level of the
   car or the van, alone, still stops the VM (F4). F4 part 1 took the
   peak of a near person from 132 to 90 MB natively (`docs/factory.md`);
   it is not measured at the edge yet.

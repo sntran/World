@@ -116,12 +116,13 @@ defmodule World.StreamTest do
       call(
         :post,
         "/builds",
-        job("far", %{"workers" => 0, "seconds" => -1, "triangles" => 1.5, "money" => 3})
+        job("far", %{"workers" => 0, "seconds" => -1, "triangles" => 1.5, "money" => 3, "memory_mb" => 0})
       )
 
     assert conn.status == 422
 
     assert Enum.map(json(conn)["errors"], & &1["path"]) == [
+             "budget.memory_mb",
              "budget.money",
              "budget.seconds",
              "budget.triangles",
@@ -150,7 +151,7 @@ defmodule World.StreamTest do
   end
 
   test "a budget of workers, seconds and triangles" do
-    budget = %{"workers" => 2, "seconds" => 1.5, "triangles" => 100}
+    budget = %{"workers" => 2, "seconds" => 1.5, "triangles" => 100, "memory_mb" => 64}
     assert World.budget(budget) == {:ok, budget}
     assert World.budget(nil) == {:ok, %{}}
   end

@@ -40,6 +40,10 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **The memory and the time from the log.** A construction opens when
+  the memory of the VM has room for the estimate of its job, and a
+  skill gets its estimate of time from the builds of the log (plan 0001,
+  R21, R22, Q1, D33). Now a job has `memory_mb` only.
 - **A cast in pours.** The cast of a statue is one task now (plan 0001,
   D30): its pass of the distances depends on the order of the
   triangles. A pass with records that do not depend on the order (the
