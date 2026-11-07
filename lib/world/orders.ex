@@ -4,7 +4,12 @@ defmodule World.Orders do
 
   An order is a map (from JSON):
 
-  - `"blueprint"`: the name of a blueprint (`World.Orders.Blueprints`);
+  - `"blueprint"`: the name of a blueprint (`World.Orders.Blueprints`),
+    or a blueprint in data from a project (`docs/format.md`, "A
+    blueprint in data"; `World.Orders.Blueprint.check_data/2`), or
+    `{"hash": HASH}` of a blueprint that `POST /blueprints` keeps (plan
+    0002, D1). The full order has the blueprint in data itself, so its
+    hash names the blueprint and its options;
   - `"options"`: the options of the blueprint;
   - `"colors"`: a color `#rrggbb` for a material role (`"paint"`);
   - `"joints"`: the value of a joint at rest, in degrees or meters
@@ -19,7 +24,7 @@ defmodule World.Orders do
   gives the same hash, and the same files.
   """
   alias World.{Build, Detail, GLB, Log}
-  alias World.Orders.{Blueprint, Blueprints}
+  alias World.Orders.{Blueprint, Blueprints, Store}
   @keys ~w(blueprint options colors joints targets)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
   @files ~w(glb log replay parts receipt)
@@ -44,13 +49,13 @@ defmodule World.Orders do
     unknown = for key <- Enum.sort(Map.keys(order)), key not in @keys, do: {key, "is not a key of an order"}
 
     with [] <- unknown,
-         {:ok, blueprint} <- blueprint(order["blueprint"]),
+         {:ok, blueprint, given} <- blueprint(order["blueprint"]),
          {:ok, options} <- Blueprint.check_options(blueprint.options, Map.get(order, "options", %{}), "options"),
          [] <- if(blueprint.check, do: blueprint.check.(options), else: []),
          {:ok, colors} <- colors(Map.get(order, "colors", %{})),
          {:ok, joints} <- joints(Map.get(order, "joints", %{})),
          {:ok, targets} <- targets(Map.get(order, "targets", %{})) do
-      full = %{"blueprint" => blueprint.name, "options" => options, "colors" => colors, "joints" => joints}
+      full = %{"blueprint" => given, "options" => options, "colors" => colors, "joints" => joints}
       {:ok, if(targets == %{}, do: full, else: Map.put(full, "targets", targets))}
     else
       errors when is_list(errors) -> {:error, errors}
@@ -58,10 +63,50 @@ defmodule World.Orders do
     end
   end
 
+  defp blueprint(%{"hash" => hash} = given) when map_size(given) == 1 do
+    with true <- is_binary(hash) and hash =~ ~r/^[0-9a-f]{32}$/,
+         {:ok, json} <- Store.get_key(Store.blueprint(hash)) do
+      blueprint(JSON.decode!(json))
+    else
+      :error -> {:error, [{"blueprint.hash", "the store of the blueprints failed"}]}
+      _ -> {:error, [{"blueprint.hash", "is not a blueprint of the store: send it to POST /blueprints"}]}
+    end
+  end
+
+  defp blueprint(%{} = raw) do
+    case Blueprint.check_data(raw, "blueprint") do
+      [] -> {:ok, Blueprint.from_data(raw), raw}
+      errors -> {:error, errors}
+    end
+  end
+
   defp blueprint(name) do
     case Blueprints.fetch(name) do
-      {:ok, b} -> {:ok, b}
-      :error -> {:error, [{"blueprint", "must be one of: #{Enum.join(Blueprints.names(), ", ")}"}]}
+      {:ok, b} ->
+        {:ok, b, b.name}
+
+      :error ->
+        {:error, [{"blueprint", "must be one of: #{Enum.join(Blueprints.names(), ", ")}, or a blueprint in data"}]}
+    end
+  end
+
+  @doc """
+  Keep a blueprint in data of a project (`POST /blueprints`): `{:ok,
+  %{"hash", "name"}}`, `{:error, errors}`, or `{:error, :store}`. An order
+  can then give `{"hash": HASH}` as its blueprint.
+  """
+  def keep_blueprint(raw) do
+    case Blueprint.check_data(raw, "blueprint") do
+      [] ->
+        hash = hash(raw)
+
+        case Store.put_key(Store.blueprint(hash), encode(raw)) do
+          :ok -> {:ok, %{"hash" => hash, "name" => raw["name"]}}
+          :error -> {:error, :store}
+        end
+
+      errors ->
+        {:error, for({path, message} <- errors, do: %{"path" => path, "message" => message})}
     end
   end
 

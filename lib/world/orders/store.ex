@@ -18,6 +18,9 @@ defmodule World.Orders.Store do
 
   @script Path.expand("../../../scripts/order-store.mjs", __DIR__)
 
+  @doc "The key of a blueprint in data of a project of a hash (`POST /blueprints`)."
+  def blueprint(hash), do: "blueprints/#{hash}.json"
+
   @doc "The key of the full order of a hash."
   def key(hash), do: "orders/#{hash}.json"
 

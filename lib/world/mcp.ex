@@ -32,7 +32,11 @@ defmodule World.MCP do
     "description" =>
       ~s(An order: {"blueprint": NAME, "options": {...}, "colors": {ROLE: "#rrggbb"}, "joints": {NAME: DEGREES}, "targets": {LIMB: [X, Y, Z]}}. Only "blueprint" is necessary: each option that the order does not give has its default.),
     "properties" => %{
-      "blueprint" => %{"type" => "string", "description" => "The name of a blueprint (list_blueprints)."},
+      "blueprint" => %{
+        "type" => ["string", "object"],
+        "description" =>
+          ~s[The name of a blueprint (list_blueprints), or a blueprint in data of the project (check_blueprint), or {"hash": HASH} of a blueprint that POST /blueprints keeps.]
+      },
       "options" => %{
         "type" => "object",
         "description" => "The options of the blueprint (get_blueprint), by their names."
@@ -78,6 +82,23 @@ defmodule World.MCP do
         "type" => "object",
         "properties" => %{"name" => %{"type" => "string", "description" => "The name of the blueprint."}},
         "required" => ["name"]
+      },
+      "annotations" => @read
+    },
+    %{
+      "name" => "check_blueprint",
+      "title" => "Check a blueprint in data",
+      "description" =>
+        "Checks a blueprint in data of a project (docs/format.md, \"A blueprint in data\"; the skills of the trades: docs/skills.md) and does not keep it: its params, and its drawing with the default of each param, each error with its path. Gives its options, the hash, and the plan of the people at the level far; an order can give the blueprint itself as its blueprint.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "blueprint" => %{
+            "type" => "object",
+            "description" => "A blueprint in data: name, doc, sources, params, drawing."
+          }
+        },
+        "required" => ["blueprint"]
       },
       "annotations" => @read
     },
@@ -245,6 +266,22 @@ defmodule World.MCP do
         wrong("no blueprint #{args["name"]}; the blueprints are #{Enum.map_join(Blueprints.all(), ", ", & &1.name)}")
     end
   end
+
+  defp call("check_blueprint", %{"blueprint" => %{} = raw}, _origin) do
+    case World.Orders.Blueprint.check_data(raw, "blueprint") do
+      [] ->
+        b = World.Orders.Blueprint.from_data(raw)
+        # A blueprint with a param that has no default: no plan before an order gives it.
+        plan = with {:error, _} <- Orders.plan(%{"blueprint" => raw}, "far"), do: nil
+        plan = with {:ok, p} <- plan, do: p
+        result(Map.merge(Blueprint.describe(b), %{"hash" => Orders.hash(raw), "plan" => plan}))
+
+      errors ->
+        result(%{"errors" => for({path, message} <- errors, do: %{"path" => path, "message" => message})}, true)
+    end
+  end
+
+  defp call("check_blueprint", _args, _origin), do: wrong(~s(the argument "blueprint" must be a JSON object))
 
   defp call("check_drawing", %{"drawing" => drawing}, _origin) do
     case World.Engineers.review(drawing) do

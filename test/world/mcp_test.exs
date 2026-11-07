@@ -37,7 +37,7 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_order place_order check_drawing plan_build build propose_drawing)
+             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()
@@ -123,7 +123,7 @@ defmodule World.MCPTest do
 
     {200, %{"error" => e}} = rpc("tools/call", %{"name" => "build_house"})
     assert e["code"] == -32602
-    assert e["message"] =~ "the tools are list_blueprints, get_blueprint, check_order, place_order"
+    assert e["message"] =~ "the tools are list_blueprints, get_blueprint, check_blueprint, check_order, place_order"
     assert {200, %{"error" => %{"code" => -32602}}} = rpc("tools/call", "x")
 
     assert {400, %{"error" => %{"code" => -32700}}} = MCP.answer("nope", nil, @origin)

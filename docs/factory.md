@@ -43,6 +43,7 @@ An order is data, never code. World runs no code from an order.
 | `/palette.json` | The default color of each material role. |
 | `/version.json` | The commit of World that the site has. |
 | `/blueprints` | Each blueprint with its options: the type, the default, the unit, the range or the values. |
+| `POST /blueprints` | A blueprint in data of a project (`docs/skills.md`): 201 with its `hash` (an order gives `{"blueprint": {"hash": HASH}}`), or 422 with the errors, each with its path. |
 | `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. |
 | `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the node build the GLB at each level (`World.Construction`). |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. |

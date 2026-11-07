@@ -19,6 +19,7 @@
 // The routes:
 //
 // - GET /blueprints: the blueprints and their options (the VM).
+// - POST /blueprints: a blueprint in data of a project (the VM keeps it).
 // - POST /orders: an order in JSON (the VM). 200 with the hash, the full
 //   order, the URLs of its files and the URL of its replay page; 422
 //   with the errors.
@@ -181,6 +182,8 @@ async function route(request, env, { vm, commit }) {
   }
 
   if (path === '/orders' && request.method === 'POST') return forward(request, vm, url.origin, '/orders');
+
+  if (path === '/blueprints' && request.method === 'POST') return forward(request, vm, url.origin, '/blueprints');
 
   if (path === '/sets' && request.method === 'POST') return forward(request, vm, url.origin, '/sets');
 

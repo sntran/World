@@ -66,6 +66,23 @@ defmodule World.Service do
     json(conn, 200, Enum.map(Blueprints.all(), &Blueprint.describe/1))
   end
 
+  # A blueprint in data of a project (plan 0002, D1): the store keeps it,
+  # and an order gives {"hash": HASH} as its blueprint.
+  post "/blueprints" do
+    with_order(conn, fn raw ->
+      case Orders.keep_blueprint(raw) do
+        {:ok, kept} ->
+          json(conn, 201, kept)
+
+        {:error, :store} ->
+          json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the blueprints failed"}]})
+
+        {:error, errors} ->
+          json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
   post "/check" do
     with_order(conn, fn order ->
       case Orders.check(order) do

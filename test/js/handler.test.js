@@ -176,6 +176,13 @@ test('GET /m/ of a URL that the factory knows needs no VM', async () => {
   assert.equal(v.calls.length, calls + 1);
 });
 
+test('a blueprint in data of a project goes to the VM', async () => {
+  const v = vm();
+  await handler(req('/blueprints', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }), { ORDERS: bucket() }, { vm: v, commit: 'c1' });
+  assert.equal(v.calls.at(-1), '/blueprints');
+  assert.equal(v.last.method, 'POST');
+});
+
 test('the constructions and the streams go to the VM, with Last-Event-ID, and come back as they come', async () => {
   const env = { ORDERS: bucket() };
   const v = vm();

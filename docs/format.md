@@ -387,6 +387,15 @@ needs no new code for it. It has a `name`, a `doc`, `sources`, `params`
   of their values (the platform of a tower: its width and its height). The texts of the sources also go after the
   `sources` of the drawing, in the order of their names.
 
+A project can give its own blueprint in data (plan 0002, D1): in the
+order itself (`{"blueprint": {...}, "options": {...}}`), or by its hash
+after `POST /blueprints` keeps it (`{"blueprint": {"hash": HASH}}`).
+`World.Orders.Blueprint.check_data/2` checks it: its keys, its name, each
+param, and its drawing with the default of each param (the data of each
+skill), each error with its path from `blueprint`. The full order has the
+blueprint itself, so its hash names the blueprint and its options. The
+skills that a blueprint can use are in `docs/skills.md`.
+
 A model of the catalog can be an order of a blueprint
 (`priv/drawings/NAME.json` with `blueprint` and `options`): the statue on
 Núi Nhỏ is `priv/drawings/tuong_chua_kito_vua.json`, an order of the

@@ -59,6 +59,8 @@ defmodule World.Orders.Blueprints do
     end
   end
 
+  def drawing(%{"blueprint" => %{} = raw, "options" => o}), do: World.Drawing.fill(raw, o)
+
   def drawing(%{"blueprint" => name, "options" => o}) do
     case Enum.find(@data, &(&1["name"] == name)) do
       nil -> nil
@@ -91,7 +93,12 @@ defmodule World.Orders.Blueprints do
   @doc "The names of the blueprints."
   def names, do: Enum.map(all(), & &1.name)
 
-  @doc "A blueprint by its name."
+  @doc """
+  A blueprint by its name, or a blueprint in data of an order that its
+  check passed (`World.Orders.Blueprint.check_data/2`).
+  """
+  def fetch(%{} = raw), do: {:ok, Blueprint.from_data(raw)}
+
   def fetch(name) do
     case Enum.find(all(), &(&1.name == name)) do
       nil -> :error

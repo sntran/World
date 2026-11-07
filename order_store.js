@@ -11,9 +11,10 @@
 //
 // An error ends the port with the exit status 1.
 
-// The keys of World.Orders.Store: orders/HASH.json, and the proposals of
-// new drawings, proposals/HASH.json.
-const KEY = /^(orders|proposals)\/[0-9a-f]{32}\.json$/;
+// The keys of World.Orders.Store: orders/HASH.json, the proposals of new
+// drawings, proposals/HASH.json, and the blueprints in data of the
+// projects, blueprints/HASH.json.
+const KEY = /^(orders|proposals|blueprints)\/[0-9a-f]{32}\.json$/;
 
 const key = (value) => {
   if (!KEY.test(value ?? '')) throw new Error(`not a key of an order: ${value}`);
