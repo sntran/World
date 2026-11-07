@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World</title>
+<style>
+  :root { --paper: #f4f1e6; --ink: #222; --line: #c9c2ad; --soft: #6b6656; --mark: #c8551b; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #1d1f22; --ink: #e8e6df; --line: #45484d; --soft: #a19d92; --mark: #f08a4b; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: var(--paper); color: var(--ink); display: grid; grid-template-columns: 340px 1fr; grid-template-rows: auto 1fr; height: 100vh; }
+  header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; }
+  header nav a { color: inherit; margin-right: 12px; }
+  #counts { color: var(--soft); font-variant-numeric: tabular-nums; }
+  aside { padding: 8px 16px; overflow: auto; border-right: 1px solid var(--line); }
+  aside h2 { font-size: 13px; margin: 14px 0 4px; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; }
+  form { display: grid; gap: 6px; }
+  label { display: grid; gap: 2px; font-size: 12px; color: var(--soft); }
+  input, select, textarea, button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; min-height: 32px; }
+  textarea { min-height: 64px; font-family: ui-monospace, monospace; font-size: 12px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { border-top: 1px solid var(--line); padding: 2px 4px; vertical-align: top; }
+  td.n { font-variant-numeric: tabular-nums; }
+  ol { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+  ol li { border-top: 1px solid var(--line); padding: 3px 0; }
+  ol li time { color: var(--soft); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  main { position: relative; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #message { position: absolute; left: 16px; bottom: 12px; margin: 0; color: var(--soft); }
+  @media (max-width: 700px) {
+    body { grid-template-columns: 1fr; grid-template-rows: auto 55vh auto; height: auto; }
+    main { grid-row: 2; height: 55vh; }
+    aside { grid-row: 3; border: 0; }
+  }
+</style>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header>
+  <h1>World</h1>
+  <nav><a href="review.html">The models</a><a href="replay.html">A replay</a></nav>
+  <span id="counts" aria-live="polite"></span>
+</header>
+<aside>
+  <h2>Build a model</h2>
+  <form id="job">
+    <label>Blueprint <select id="blueprint" required></select></label>
+    <label>Options (JSON) <textarea id="options">{}</textarea></label>
+    <div class="row">
+      <label>Level <select id="level"><option>near</option><option>mid</option><option selected>far</option></select></label>
+      <label>Workers <input id="workers" type="number" min="1" max="64" value="4"></label>
+      <label>Seconds <input id="seconds" type="number" min="1" placeholder="no limit"></label>
+    </div>
+    <button type="submit">Build</button>
+    <p id="answer" role="status"></p>
+  </form>
+  <h2>The constructions</h2>
+  <table id="builds"></table>
+  <h2>The people</h2>
+  <table id="people"></table>
+  <h2>The events</h2>
+  <ol id="events"></ol>
+</aside>
+<main><canvas id="view"></canvas><p id="message">The world starts.</p></main>
+<script type="module">
+// The world (docs/plans/0001-people-build-on-demand.md, R24): the people of
+// the node, and each construction on its lot as its elements arrive. The
+// page reads the stream of the world (GET /events): first the events of
+// the past from the log of the node, then each new event. A person is a
+// figure on the lot of the construction that holds it: it walks to the
+// lot when a construction hires it, and works when it has a task. Each
+// element (a part that a person made) comes as a GLB of its own
+// (/builds/ID/elements/KEY.glb) at its place in the model.
+//
+// ?events=URL reads a recorded stream (one event of JSON on each line) and
+// ?files=URL the folder of its elements, for a test with no server. An
+// element whose GLB the node does not keep now (5 minutes after the end
+// of its construction) does not show.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const params = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const files = params.get('files') ?? '';
+
+// The scene: a ground with a lot for each construction.
+const canvas = $('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+const scene = new THREE.Scene();
+const style = getComputedStyle(document.body);
+scene.background = new THREE.Color(style.backgroundColor);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8070, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+sun.position.set(30, 60, 40);
+scene.add(sun);
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 2000);
+camera.position.set(40, 45, 70);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(20, 0, 10);
+scene.add(new THREE.GridHelper(400, 80, 0x9a927c, 0xc9c2ad));
+const mark = new THREE.MeshStandardMaterial({ color: style.getPropertyValue('--mark').trim() });
+const loader = new GLTFLoader();
+
+// A lot for each construction, in rows of four, 30 m apart.
+const LOT = 30;
+const builds = new Map();
+function lot(id) {
+  if (builds.has(id)) return builds.get(id);
+  const n = builds.size;
+  const group = new THREE.Group();
+  group.position.set((n % 4) * LOT, 0, Math.floor(n / 4) * LOT);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(LOT - 4, LOT - 4), new THREE.MeshStandardMaterial({ color: 0xb8ad8f, transparent: true, opacity: 0.35 }));
+  ground.rotation.x = -Math.PI / 2;
+  group.add(ground);
+  scene.add(group);
+  const row = $('builds').insertRow();
+  row.insertCell().textContent = id.slice(0, 12);
+  const state = row.insertCell();
+  const b = { id, group, state, tasks: 0, done: 0, elements: 0, status: 'plan' };
+  builds.set(id, b);
+  return b;
+}
+
+// The GLB of an element, once for each build and key; a copy for each place.
+const glbs = new Map();
+function element(id, key) {
+  const url = `${files}/builds/${id}/elements/${key}.glb`;
+  if (!glbs.has(url)) glbs.set(url, loader.loadAsync(url).then((g) => g.scene));
+  return glbs.get(url);
+}
+
+// The people: a figure each, from the catalog (a person at the level far),
+// or a plain body when the catalog is not there.
+const body = loader.loadAsync(`${files}/m/catalog.far.glb?name=man`).then((g) => g.scene).catch(() => {
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.2, 4, 8), mark);
+  m.position.y = 0.85;
+  const g = new THREE.Group();
+  g.add(m);
+  return g;
+});
+const people = new Map();
+const gate = new THREE.Vector3(-20, 0, -20);
+async function person(name) {
+  if (people.has(name)) return people.get(name);
+  const p = { name, figure: (await body).clone(), from: gate.clone(), to: gate.clone(), start: 0, task: null, build: null, row: $('people').insertRow() };
+  p.row.insertCell().textContent = name;
+  p.trade = p.row.insertCell();
+  p.status = p.row.insertCell();
+  p.figure.position.copy(gate);
+  scene.add(p.figure);
+  people.set(name, p);
+  return p;
+}
+function walk(p, to) {
+  p.from.copy(p.figure.position);
+  p.to.copy(to);
+  p.start = performance.now();
+}
+
+// What an event tells, in words.
+const say = (e) => {
+  const d = e.data ?? {};
+  switch (e.kind) {
+    case 'requested': return `A construction opens, at the level ${d.level}.`;
+    case 'plan_made': return `The plan: ${d.tasks.length} tasks.`;
+    case 'hired': return `${e.who} (${d.trade}) comes to the construction.`;
+    case 'released': return `${e.who} goes back.`;
+    case 'task_started': return `${e.who} starts ${d.task}.`;
+    case 'task_done': return `${e.who} ends ${d.task}.`;
+    case 'element': return `${d.part} is in place.`;
+    case 'done': return `The model is done (${Math.round(d.bytes / 1024)} KB).`;
+    case 'stopped': return `The construction stops: ${d.reason}.`;
+    case 'failed': return `The construction fails: ${d.message}.`;
+    case 'run_done': return `The construction took ${(d.ms / 1000).toFixed(1)} s.`;
+    default: return e.kind;
+  }
+};
+
+async function take(e) {
+  const b = lot(e.order);
+  const d = e.data ?? {};
+  if (e.kind === 'plan_made') b.tasks = d.tasks.length;
+  if (e.kind === 'hired') {
+    const p = await person(e.who);
+    p.trade.textContent = d.trade;
+    p.build = b;
+    p.status.textContent = `at ${b.id.slice(0, 12)}`;
+    walk(p, b.group.position.clone().add(new THREE.Vector3(-LOT / 2 + 3, 0, LOT / 2 - 3 - (people.size % 6))));
+  }
+  if (e.kind === 'released') {
+    const p = await person(e.who);
+    p.build = null;
+    p.status.textContent = 'free';
+    walk(p, gate);
+  }
+  if (e.kind === 'task_started') {
+    const p = await person(e.who);
+    p.task = d.task;
+    p.status.textContent = `works on ${d.task}`;
+  }
+  if (e.kind === 'task_done') {
+    b.done += 1;
+    const p = await person(e.who);
+    p.task = null;
+  }
+  if (e.kind === 'element') {
+    b.elements += 1;
+    const glb = await element(e.order, d.glb).catch(() => null);
+    if (glb) {
+      const part = glb.clone();
+      part.matrixAutoUpdate = false;
+      part.matrix.fromArray(d.matrix);
+      b.group.add(part);
+    }
+  }
+  if (['done', 'stopped', 'failed'].includes(e.kind)) b.status = e.kind;
+  b.state.textContent = `${b.done} of ${b.tasks} tasks, ${b.elements} elements, ${b.status}`;
+  $('counts').textContent = `${people.size} people, ${builds.size} constructions`;
+  const li = document.createElement('li');
+  const time = document.createElement('time');
+  time.textContent = new Date(e.wall).toLocaleTimeString();
+  li.append(time, say(e));
+  $('events').prepend(li);
+  while ($('events').children.length > 40) $('events').lastChild.remove();
+}
+
+// The events in the order of their ids, one at a time.
+let queue = Promise.resolve();
+const events = [];
+const next = (e) => { events.push(e); queue = queue.then(() => take(e)).catch((err) => console.error(err)); };
+
+if (params.get('events')) {
+  const text = await (await fetch(params.get('events'))).text();
+  for (const line of text.split('\n').filter(Boolean)) next(JSON.parse(line));
+} else {
+  const source = new EventSource('/events');
+  source.onmessage = (m) => next(JSON.parse(m.data));
+  source.onerror = () => { $('message').textContent = 'The stream of the world stops; the page tries again.'; };
+  source.onopen = () => { $('message').textContent = ''; };
+  fetch('/blueprints').then((r) => r.json()).then((list) => {
+    for (const b of list) $('blueprint').add(new Option(b.name, b.name));
+  }).catch(() => {});
+}
+await queue;
+$('message').textContent = events.length ? '' : 'No construction yet.';
+
+// A job from the page: POST /builds.
+$('job').onsubmit = async (ev) => {
+  ev.preventDefault();
+  let options;
+  try { options = JSON.parse($('options').value || '{}'); } catch { $('answer').textContent = 'The options are not JSON.'; return; }
+  const budget = { workers: Number($('workers').value) };
+  if ($('seconds').value) budget.seconds = Number($('seconds').value);
+  const r = await fetch('/builds', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ order: { blueprint: $('blueprint').value, options }, level: $('level').value, budget }),
+  });
+  const answer = await r.json();
+  $('answer').textContent = r.ok ? `The construction ${answer.build} opens.` : answer.errors.map((x) => `${x.path}: ${x.message}`).join('; ');
+};
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = canvas.parentElement;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// The state of the page, for a test: the lots and the people.
+window.WORLD = { builds, people };
+window.READY = true;
+renderer.setAnimationLoop((now) => {
+  for (const p of people.values()) {
+    // A walk takes 3 s; a person at work bobs, unless the reader asks for no motion.
+    const f = Math.min((now - p.start) / 3000, 1);
+    p.figure.position.lerpVectors(p.from, p.to, still ? 1 : f);
+    if (p.task && !still) p.figure.position.y = Math.abs(Math.sin(now / 200)) * 0.15;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

@@ -61,11 +61,12 @@
 </aside>
 <main><canvas id="view"></canvas><p id="message">Loading.</p></main>
 <script type="module">
-// The replay of an order (docs/world.md, step W3): the log of the run
-// (World.Log, HASH.log.json) and the model with each part in a node of its
-// own (HASH.replay.glb). The page reads the log only: the map of the yard
-// shows the truck on its road, the table shows what each person does, and
-// the model grows when each task of the plan ends.
+// The replay of an order (docs/world.md, step W3): the log of its
+// construction (World.Log, HASH.log.json) and the model with each part in
+// a node of its own (HASH.replay.glb). The page reads the log only: the
+// table shows what each person does (each person that the construction
+// hires, by its name), and the model grows when each task of the plan
+// ends. A log of a yard (before the people of the node) also has its map.
 //
 // ?order=HASH reads /o/HASH.log.json and /o/HASH.replay.glb (an order of
 // POST /orders). ?log=URL&model=URL reads other files, for a local test.
@@ -91,7 +92,10 @@ if (!logURL || !modelURL) {
 const [headLine, ...lines] = (await fetchOk(logURL).then((r) => r.text())).split('\n').filter(Boolean);
 const head = JSON.parse(headLine);
 const events = lines.map((l) => JSON.parse(l));
-const yard = head.yard ?? { places: [], roads: [], people: [], vehicles: [] };
+// The people of a construction: each person that it hires.
+const hired = [...new Map(events.filter((e) => e.kind === 'hired').map((e) => [e.who, { name: e.who, job: e.data.trade, place: 'the census' }])).values()];
+const yard = head.yard ?? { places: [], roads: [], people: hired, vehicles: [] };
+if (!yard.places.length) document.querySelector('#map').previousElementSibling.textContent = 'The construction';
 const t0 = events[0].at;
 const t1 = events.at(-1).at;
 const span = Math.max(t1 - t0, 1);
@@ -120,6 +124,13 @@ function say(e) {
   const d = e.data ?? {};
   const n = (k) => `${d.count ?? ''} ${d[k] ?? ''}`.trim();
   switch (e.kind) {
+    case 'requested': return `The construction opens, at the level ${d.level}.`;
+    case 'hired': return `${e.who} (${d.trade}) comes to the construction.`;
+    case 'released': return `${e.who} goes back.`;
+    case 'element': return `${d.part} is in place.`;
+    case 'done': return `The model is done (${Math.round(d.bytes / 1024)} KB).`;
+    case 'stopped': return `The construction stops: ${d.reason}.`;
+    case 'failed': return `The construction fails: ${d.message}.`;
     case 'order_received': return d.items ? `${e.who} gets the order of the ${d.for} for ${d.items.join(', ')}.` : `${e.who} gets the order of ${d.item}.`;
     case 'build_started': return `The building of the ${e.place} starts${d.racks ? `: ${d.racks} racks` : ''}.`;
     case 'run_done': return `The run ends: ${(d.ms / 1000).toFixed(1)} s of the wall clock, ${Math.round(d.memory_peak / 1048576)} MB of memory at most.`;
@@ -127,7 +138,7 @@ function say(e) {
     case 'part_ordered': return `${e.who} orders ${Object.entries(d.items).map(([i, c]) => `${c} ${i}`).join(', ')} from the ${d.factory}.`;
     case 'received': return `${n('item')} arrives at the ${e.place} from the ${d.order.split('/').pop()}.`;
     case 'stock_checked': return `${e.who} checks the stock: ${Object.values(d.missing ?? {}).reduce((a, b) => a + b, 0)} missing.`;
-    case 'plan_made': return `${e.who} makes the plan: ${d.tasks.length} tasks.`;
+    case 'plan_made': return `The plan: ${d.tasks.length} tasks.`;
     case 'stored': return d.model ? `${e.who} puts the files of the model in the ${e.place}.` : `${e.who} puts ${n('item')} from the ${d.from} in the ${e.place}.`;
     case 'refused': return `${e.who} refuses ${d.item ?? d.model}: the ${e.place} is ${d.reason === 'read_only' ? 'read only' : 'full'}.`;
     case 'picked': return d.model ? `${e.who} takes the files of the model from the ${e.place}.` : `${e.who} picks ${n('item')} to the dock.`;
@@ -152,7 +163,8 @@ const ys = yard.places.map((p) => -p.at[1]);
 // A margin for the marks, and more at the right for the names.
 const pad = 80;
 const right = 300;
-svg.setAttribute('viewBox', `${Math.min(...xs) - pad} ${Math.min(...ys) - pad} ${Math.max(...xs) - Math.min(...xs) + pad + right} ${Math.max(...ys) - Math.min(...ys) + 2 * pad}`);
+if (yard.places.length) svg.setAttribute('viewBox', `${Math.min(...xs) - pad} ${Math.min(...ys) - pad} ${Math.max(...xs) - Math.min(...xs) + pad + right} ${Math.max(...ys) - Math.min(...ys) + 2 * pad}`);
+else svg.remove();
 const el = (name, attrs, text) => {
   const node = document.createElementNS(NS, name);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
@@ -292,8 +304,8 @@ function draw(t) {
     p.node.visible = started.has(p.task);
     for (const [m, own] of p.meshes) m.material = done.has(p.task) ? own : mark;
   }
-  const last = events[n - 1];
-  $('order').textContent = `${hash ?? ''} ${done.size} of ${total} tasks done.${last?.kind === 'delivered' ? ' Delivered.' : ''}`.trim();
+  const over = events.slice(0, n).some((e) => e.kind === 'done' || e.kind === 'delivered');
+  $('order').textContent = `${hash ?? ''} ${done.size} of ${total} tasks done.${over ? ' Done.' : ''}`.trim();
   const list = $('events');
   list.replaceChildren(...events.slice(Math.max(0, n - 12), n).reverse().map((e) => {
     const li = document.createElement('li');
