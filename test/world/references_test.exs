@@ -14,7 +14,7 @@ defmodule World.ReferencesTest do
     "level" => "far",
     "order" => %{"blueprint" => "bicycle", "options" => %{}},
     "numbers" => [
-      %{"name" => "wheelbase", "value" => 1.03, "measure" => %{"wheelbase" => true}},
+      %{"name" => "wheelbase", "value" => 1.0173, "measure" => %{"wheelbase" => true}},
       %{
         "name" => "chainstay",
         "value" => 0.43,

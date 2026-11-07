@@ -6,13 +6,16 @@ defmodule World.Vehicles.Bicycle do
   `World.Vehicles.TouringBicycle` is one sheet (`touring/0`).
 
   The sheet (meters and degrees): `tire` (its code: the axle height is
-  its radius less the `sag` of the tire under the rider), `wheelbase`,
-  `chainstay`, `bb_drop`, `stack`, `reach`, `head_angle`, `seat_angle`,
+  its radius less the `sag` of the tire under the rider), `chainstay`,
+  `bb_drop`, `stack`, `reach`, `head_angle`, `seat_angle`,
   `seat_tube`, `head_tube`, `seatpost`, `rear_spacing`, the outside
   diameter of each tube (`top_tube_d`, `down_tube_d`, `head_tube_d`,
   `chainstay_d`, `seatstay_d`), `bar_width`, `arm` (the crank) and
-  `teeth` (the chainring). The parts are made with the back of the bike
-  at y = 0, the front to +y.
+  `teeth` (the chainring). The front axle is where the fork puts it: at
+  the height of the rear axle, `rake` in front of the steering axis (at a
+  right angle to it), so the wheelbase is a result of the sheet, as on
+  the drawing of a frame builder. The parts are made with the back of the
+  bike at y = 0, the front to +y.
   """
   alias World.{Assembly, Frame, Part, Shape, Vec}
   alias World.Vehicles.Wheels
@@ -20,7 +23,6 @@ defmodule World.Vehicles.Bicycle do
   @touring %{
     "tire" => "37-622",
     "sag" => 0.003,
-    "wheelbase" => 1.03,
     "chainstay" => 0.43,
     "bb_drop" => 0.07,
     "stack" => 0.58,
@@ -49,20 +51,25 @@ defmodule World.Vehicles.Bicycle do
   The points of a sheet: `r` (the axle height), `rear` and `front` (the
   axles), `bb` (the bottom bracket), `axis` (the steering axis, up),
   `head_top`, `head_bottom` and `seat_top`, and `seat_dir` (along the
-  seat tube, up).
+  seat tube, up). The front axle is on the line `rake` in front of the
+  steering axis, at the height of the rear axle.
   """
   def points(s) do
     r = Wheels.tire_radius(s["tire"]) - s["sag"]
     bb_y = r + :math.sqrt(s["chainstay"] ** 2 - s["bb_drop"] ** 2)
     bb = {0.0, bb_y, r - s["bb_drop"]}
-    axis = dir(s["head_angle"])
+    axis = {_, ay, az} = dir(s["head_angle"])
     seat_dir = dir(s["seat_angle"])
-    head_top = Vec.add(bb, {0.0, s["reach"], s["stack"]})
+    head_top = {_, hy, hz} = Vec.add(bb, {0.0, s["reach"], s["stack"]})
+    # The offset of the fork: at a right angle to the axis, to the front.
+    {oy, oz} = {az * s["rake"], -ay * s["rake"]}
+    # Down the axis from the top of the head tube to the height of the axle.
+    t = (hz + oz - r) / az
 
     %{
       r: r,
       rear: {0.0, r, r},
-      front: {0.0, r + s["wheelbase"], r},
+      front: {0.0, hy - ay * t + oy, r},
       bb: bb,
       axis: axis,
       seat_dir: seat_dir,
@@ -150,6 +157,8 @@ defmodule World.Vehicles.Bicycle do
         port("origin", {0, 0, 0}, {0, 0, 1}, {0, 1, 0}),
         steer_port(s),
         port("rear_axle", rear, {1, 0, 0}, {0, 0, 1}),
+        port("head_top", ht, Vec.neg(points(s).axis), {0, 1, 0}),
+        port("seat_top", st, Vec.neg(sd), {0, 1, 0}),
         port("rack", rear, {0, 0, 1}, {0, 1, 0}),
         port("bb", bb, {1, 0, 0}, {0, 0, 1}),
         port("stand", Vec.add(bb, {-0.05, -0.08, 0.0}), {1, 0, 0}, {0, 0, 1})

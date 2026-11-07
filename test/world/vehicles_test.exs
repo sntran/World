@@ -47,10 +47,10 @@ defmodule World.VehiclesTest do
       same(shape(bike, level), shape(Detail.with(level, &World.Vehicles.TouringBicycle.model/0), level))
     end
 
-    big = %{"stack" => 0.62, "reach" => 0.39, "seat_tube" => 0.58, "wheelbase" => 1.06, "head_angle" => 72.5}
+    big = %{"stack" => 0.62, "reach" => 0.39, "seat_tube" => 0.58, "head_angle" => 72.5}
     assert Check.model(model("bicycle", :near, big)) == :ok
     {_, _, {{_, y0, _}, {_, y1, _}}} = shape(model("bicycle", :far, big), :far)
-    assert y1 - y0 > 1.06
+    assert y1 - y0 > 1.7
 
     assert Enum.sort(built("bicycle", %{}, dir)) == ~w(mechanic smith welder wheelwright)
 

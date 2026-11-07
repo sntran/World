@@ -2,7 +2,7 @@
   "name": "bicycle",
   "doc": "A bicycle with a diamond frame from its geometry sheet, built by the people of each trade at the same time: a welder makes the frame and the fork from the numbers of the sheet, wheelwrights the two wheels, a mechanic the crankset with its pedals, smiths the rack and the kickstand. The defaults are a touring frame of 54 cm on tires of 700 x 35c. The origin is on the ground at the center of the bike; the front is to +y.",
   "sources": [
-    "A touring frame of 54 cm: wheelbase 1030 mm, chainstay 430 mm, bottom bracket drop 70 mm, stack 580 mm, reach 380 mm, head angle 72 degrees, seat angle 73.5 degrees; the numbers of a geometry sheet of a maker are the params."
+    "A touring frame of 54 cm: chainstay 430 mm, bottom bracket drop 70 mm, stack 580 mm, reach 380 mm, head angle 72 degrees, seat angle 73.5 degrees, rake 45 mm; the numbers of a geometry sheet of a maker are the params, and the wheelbase is a result of them."
   ],
   "params": [
     {
@@ -26,15 +26,6 @@
       "min": 16,
       "max": 48,
       "doc": "The spokes of each wheel."
-    },
-    {
-      "name": "wheelbase",
-      "type": "number",
-      "default": 1.03,
-      "min": 0.8,
-      "max": 1.4,
-      "unit": "m",
-      "doc": "From the rear axle to the front axle."
     },
     {
       "name": "chainstay",
@@ -157,9 +148,6 @@
             "tire": {
               "param": "tire"
             },
-            "wheelbase": {
-              "param": "wheelbase"
-            },
             "chainstay": {
               "param": "chainstay"
             },
@@ -225,9 +213,6 @@
           "bicycle_fork": {
             "tire": {
               "param": "tire"
-            },
-            "wheelbase": {
-              "param": "wheelbase"
             },
             "chainstay": {
               "param": "chainstay"

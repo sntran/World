@@ -12,7 +12,7 @@ defmodule World.Vehicles.TouringBicycle do
   alias World.Vehicles.{Bicycle, Wheels}
 
   @sources [
-    "A touring frame of 54 cm: wheelbase 1030 mm, chainstay 430 mm, bottom bracket drop 70 mm, stack 580 mm, reach 380 mm, head angle 72 degrees, seat angle 73.5 degrees.",
+    "A touring frame of 54 cm: chainstay 430 mm, bottom bracket drop 70 mm, stack 580 mm, reach 380 mm, head angle 72 degrees, seat angle 73.5 degrees, rake 45 mm; the wheelbase follows from them (1017 mm).",
     "Tires 37-622 (700 x 35c, ETRTO); a crank of 170 mm; a chainring of 44 teeth (182 mm).",
     "The shapes of the saddle and the bags: by eye."
   ]

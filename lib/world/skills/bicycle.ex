@@ -11,7 +11,6 @@ defmodule World.Skills.Bicycle do
 
   @ranges %{
     "sag" => {0.0, 0.02},
-    "wheelbase" => {0.8, 1.4},
     "chainstay" => {0.35, 0.55},
     "bb_drop" => {0.0, 0.12},
     "stack" => {0.45, 0.75},
