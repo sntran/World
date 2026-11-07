@@ -29,8 +29,8 @@ defmodule World.Construction do
   The budget (`budget`): `"workers"` (the most people at one time, #{4} by
   default), `"seconds"` (the time of the build: then `stopped`, and no
   model) and `"triangles"` (the most triangles of the model). Each event
-  goes into the log of the construction and to its watchers
-  (`World.Events`, by the id of the construction and by `:world`). The
+  goes into the log of the construction and into the log of the node
+  (`World.Log.Server`), which sends it to the watchers. The
   job gets `{:built, id, result}`, `{:failed, id, message}` or
   `{:stopped, id, reason}`.
   """
@@ -342,12 +342,7 @@ defmodule World.Construction do
     wall = max(Clock.wall(), if(last, do: last.wall, else: 0))
     who = who && Person.name(who)
     {:ok, log} = Log.add(s.log, kind, wall: wall, order: s.id, who: who, data: data)
-    event = hd(log.events)
-
-    for key <- [s.id, :world] do
-      Registry.dispatch(World.Events, key, fn watchers -> for {pid, _} <- watchers, do: send(pid, {:world, event}) end)
-    end
-
+    World.Log.Server.publish(hd(log.events))
     %{s | log: log}
   end
 end

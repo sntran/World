@@ -117,7 +117,8 @@ defmodule World.ConstructionTest do
     World.watch(:world)
     {:ok, id} = World.build(job("wall_brick_sample", budget: %{"seconds" => 0}))
     assert World.await(id) == {:error, {:stopped, "seconds"}}
-    assert_receive {:world, %{kind: "stopped", order: ^id, data: %{"reason" => "seconds"}}}
+    assert_receive {:world, %{"kind" => "stopped", "order" => ^id, "data" => %{"reason" => "seconds"}, "id" => n}}
+    assert is_integer(n)
   end
 
   test "a task that fails stops the construction with its message" do
@@ -137,7 +138,7 @@ defmodule World.ConstructionTest do
     j = job("wall_brick_sample", budget: %{"workers" => 1})
     World.watch(j.id)
     {:ok, id} = World.build(j)
-    assert_receive {:world, %{kind: "task_started", who: who}}
+    assert_receive {:world, %{"kind" => "task_started", "who" => who}}
     Process.exit(:erlang.list_to_pid(String.to_charlist(who)), :kill)
     assert {:ok, r} = World.await(id)
     assert r.glb == glb("wall_brick_sample", :near)

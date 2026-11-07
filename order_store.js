@@ -24,7 +24,7 @@ const text = (value) => new Response(value).body;
 
 // The first `total` bytes of the input. The VM does not end the input
 // of a port, so the length comes in the arguments.
-async function read(stdin, total) {
+export async function read(stdin, total) {
   const bytes = new Uint8Array(total);
   const reader = stdin.getReader();
   let n = 0;

@@ -13,13 +13,16 @@ import { Beam as BeamObject, serve } from 'beam.com';
 import version from './site/version.json';
 import { handler } from './handler.js';
 import { orderStore } from './order_store.js';
+import { logStore, sqlTable } from './log_store.js';
 
-// The VM gets one port, a plain object with port(), so it needs no other
+// The VM gets two ports, plain objects with port(), so it needs no other
 // Worker: /env/ORDER_STORE, the store of the orders with the R2 bucket
-// ORDERS (order_store.js, World.Orders.Store).
+// ORDERS (order_store.js, World.Orders.Store), and /env/LOG_STORE, the
+// log of the node in the SQLite of the object (log_store.js,
+// World.Log.Store).
 export class Beam extends BeamObject {
   constructor(ctx, env) {
-    super(ctx, { ...env, ORDER_STORE: orderStore(env.ORDERS) });
+    super(ctx, { ...env, ORDER_STORE: orderStore(env.ORDERS), LOG_STORE: logStore(sqlTable(ctx.storage.sql)) });
   }
 }
 

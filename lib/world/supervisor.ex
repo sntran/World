@@ -10,6 +10,7 @@ defmodule World.Supervisor do
   - `World.Events`: the processes that watch a construction, or the whole
     world with the key `:world` (duplicate keys, in partitions by key: a
     dispatch reads one partition).
+  - `World.Log.Server`: the log of the node, each event with its id.
   - `World.Persons`: the people (a dynamic supervisor).
   - `World.Constructions`: the constructions (a dynamic supervisor).
   """
@@ -26,6 +27,7 @@ defmodule World.Supervisor do
     [
       {Registry, keys: :unique, name: World.Names},
       {Registry, keys: {:duplicate, :key}, name: World.Events, partitions: System.schedulers_online()},
+      World.Log.Server,
       {DynamicSupervisor, name: World.Persons, strategy: :one_for_one},
       {DynamicSupervisor, name: World.Constructions, strategy: :one_for_one},
       World.Census
