@@ -105,6 +105,21 @@ bags of mortar, the paint its cans. The takeoff of the frame and of the
 walls of a tube house agrees with the volume of the elements that the
 people make.
 
+The haul (`World.Haul`) brings the takeoff of a task to the place of its
+construction by truck (`World.Truck`), before the task starts. The
+materials come from the stock of the warehouse when it is open and has
+them; else a supplier brings them from the gate. A takeoff goes into the
+loads of a truck (1,500 kg each). While the yard has no truck of its
+own, the haul rents a truck of a supplier with its driver for each load.
+A drive takes its world time at the speed limit of the yard (20 km/h):
+from the gate to the site, 87 world seconds, 2 ms of the wall clock. A
+construction with a haul and a place (the keys `haul` and `place` of its
+job) asks for the takeoff of each task when the tasks that it waits for
+are done (`parts_asked`), and gives the task when the haul tells it that
+the loads are there (`parts_here`). The model is the same as with no
+haul. `specs/Haul.tla` and `specs/Build.tla` (`Arrive`, `PartsHere`)
+specify it.
+
 Each place has a position in meters, in one flat frame: the yard of
 World. Later, a place can have a latitude and a longitude, so the world
 of Phượt puts the factory on its map.

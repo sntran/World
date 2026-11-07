@@ -11,7 +11,7 @@ defmodule World.BuildSpec do
   alias Accord.TLA.Checker.Machine
 
   @specs Path.expand("../../specs", __DIR__)
-  @invariants ~w(OneWorkerOneTask WaitsFirst MadeOnce OnePlace InBudget QuietPause KeepsWhatIsSame)
+  @invariants ~w(OneWorkerOneTask WaitsFirst MadeOnce OnePlace InBudget QuietPause KeepsWhatIsSame PartsHere)
 
   @doc """
   Replay the logs (`World.Log`) of constructions, in the folder `dir`.
@@ -82,6 +82,7 @@ defmodule World.BuildSpec do
   defp action(%{kind: "paused", order: b}), do: {"Pause", [b]}
   defp action(%{kind: "resumed", order: b}), do: {"Resume", [b]}
   defp action(%{kind: "task_dropped", who: p}), do: {"Drop", [p]}
+  defp action(%{kind: "parts_here", order: b, data: d}), do: {"Arrive", [b, task(b, d["task"])]}
   defp action(_), do: nil
 
   # A task of the specification: the construction and the id of the task.
@@ -106,6 +107,7 @@ defmodule World.BuildSpec do
     RunPeople == #{set(Map.keys(hires))}
     RunSkill == #{fun(hires, &str/1)}
     RunBudget == #{fun(budgets, &Integer.to_string/1)}
+    RunHauled == #{set(for %{kind: "parts_asked", order: b, data: d} <- events, uniq: true, do: task(b, d["task"]))}
     ====
     """
   end
@@ -127,6 +129,8 @@ defmodule World.BuildSpec do
         HireGuard = TRUE
         PauseGuard = TRUE
         KeepGuard = TRUE
+        Hauled <- RunHauled
+        PartsGuard = TRUE
     INVARIANT #{Enum.join(@invariants, " ")}
     """
   end

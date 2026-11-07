@@ -26,6 +26,11 @@ defmodule World.BuildSpecTest do
              Checker.check(@model, config: Path.rootname(@model) <> "Keep.cfg")
   end
 
+  test "in the fault model of a task that starts before its materials, the checker finds a task with no materials" do
+    assert {:error, %{kind: :invariant, property: "PartsHere"}, _} =
+             Checker.check(@model, config: Path.rootname(@model) <> "Parts.cfg")
+  end
+
   test "in the fault model of a busy person that can be hired, the checker finds a person at the wrong construction" do
     assert {:error, %{kind: :invariant, property: "OnePlace"}, _} =
              Checker.check(@model, config: Path.rootname(@model) <> "Hire.cfg")

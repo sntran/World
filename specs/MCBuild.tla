@@ -7,7 +7,9 @@
 (* Each construction can pause once. MCBuildFault.cfg checks the fault     *)
 (* model where a task starts again, MCBuildHire.cfg where a busy person is *)
 (* hired, MCBuildPause.cfg where a task starts in a pause, and             *)
-(* MCBuildKeep.cfg where a change forgets a task that it keeps.            *)
+(* MCBuildKeep.cfg where a change forgets a task that it keeps. The rail   *)
+(* has a takeoff: the trucks bring its steel first. MCBuildParts.cfg is   *)
+(* the fault model where a task starts before its materials.              *)
 (***************************************************************************)
 EXTENDS Build, TLC
 
@@ -19,4 +21,5 @@ MCTrade == ("wall" :> "mason") @@ ("rail" :> "steel") @@ ("left" :> "mason") @@ 
 MCPeople == {"p1", "p2", "p3"}
 MCSkill == ("p1" :> "mason") @@ ("p2" :> "mason") @@ ("p3" :> "steel")
 MCBudget == ("house" :> 2) @@ ("shed" :> 1)
+MCHauled == {"rail"}
 ====

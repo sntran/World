@@ -28,6 +28,7 @@ design. The check 4 runs on each log that the site gives.
 | `specs/Census.tla` | The people of the node at its limit: a construction asks for a person of a trade, and the census gives a free person, a new one, or a new one in the place of a free person of another trade. | `World.Census`, `World.Construction` |
 | `specs/Stream.tla` | A stream to one client: it watches, reads the events of the past, then follows the new events. | `World.Stream`, `World.Log.Server` |
 | `specs/LogStore.tla` | The log of the node and its store: the batches, a stop of the VM, a new log. | `World.Log.Server`, `World.Log.Store` |
+| `specs/Haul.tla` | The haul of the materials of the tasks: the loads of a takeoff, a truck for each load, the drive to the source and to the place, and the word to the construction when each load is there. | `World.Haul`, `World.Truck` |
 
 ### `specs/Build.tla`
 
@@ -49,6 +50,7 @@ model), and four guards for the fault models.
 | `Resume(b)` | `b` is in a pause. | `resumed` |
 | `Redo(b, t)` | In a pause, `t` started, and each task that waits for `t` did not start: `t` is not started and not done, and a person that works on it ends it for nobody (stale). | `changed` (one `Redo` for each task of `redo`) |
 | `Drop(p)` | `p` ends a task that a change made again. | `task_dropped` |
+| `Arrive(b, t)` | `t` has a takeoff (`Hauled`): its materials are at the place of `b` (`specs/Haul.tla`). A task of `Hauled` is ready only after it. | `parts_here` |
 
 | Invariant | What it says | The fault that it stops |
 |---|---|---|
@@ -59,6 +61,7 @@ model), and four guards for the fault models.
 | `InBudget` | A construction never holds more people than its budget. | A build that takes the people of the node. |
 | `QuietPause` | In a pause, the tasks in work are the tasks in work at its start, or fewer. | A task that starts in a pause. |
 | `KeepsWhatIsSame` | A task that started is done, or a person works on it. | A change that forgets the work of a task that it keeps. |
+| `PartsHere` | A task with a takeoff starts only after its materials are at the place. | A wall with no bricks. |
 
 The liveness property `Delivers`: each construction is done in the end
 (or stops).
@@ -71,7 +74,8 @@ lets a task start again: the checker must find `MadeOnce` violated.
 construction holds: the checker must find `OnePlace` violated.
 `MCBuildPause.cfg` lets a task start in a pause: `QuietPause` violated.
 `MCBuildKeep.cfg` lets a change forget that a task it keeps is done:
-`KeepsWhatIsSame` violated.
+`KeepsWhatIsSame` violated. The rail has a takeoff; `MCBuildParts.cfg`
+lets a task start before its materials: `PartsHere` violated.
 
 ### `specs/Census.tla`
 
@@ -137,6 +141,40 @@ id of the store: the id of a lost event goes to a new event) and
 first id: after two stops in a row, one id names two events). Both
 faults were in the design: `World.Log.Server` now leaves 50 ids and puts
 the event `started` into the store when it starts.
+
+### `specs/Haul.tla`
+
+The constants: the tasks with a takeoff (`Tasks`), the loads of all of
+them (`Loads`, `Of`, `Mass`), the trucks (`Trucks`) and the most mass of
+a truck (`Cap`), and two guards for the fault models. The time of a
+drive is not in the model: a drive is the step between a take and a
+drop.
+
+| Action | When it can occur | Event of the log |
+|---|---|---|
+| `Ask(t)` | Once for each task: its loads go into the queue. | `haul_asked` |
+| `Take(k, l)` | `l` is in the queue, and the truck `k` holds no load. | `loaded` |
+| `Drop(k, l)` | `k` holds `l`: it puts it down at the place of its task. | `unloaded` |
+| `Tell(t)` | Each load of `t` is at its place. | `hauled` |
+| `Start(t)` | The haul told the construction of `t`. | `task_started` |
+
+| Invariant or property | What it says | The fault that it stops |
+|---|---|---|
+| `InLoad` | A truck holds at most one load, and a load is never more than a truck holds. | A truck over its load. |
+| `OnePlace` | A load is in the queue, on one truck, or at its place: one at a time. | A load at two places. |
+| `PartsFirst` | A task starts only after each of its loads is at its place. | A wall with half of its bricks. |
+| `AllStarted` | Each task starts in the end. | A load that nobody takes. |
+
+The small model (`specs/MCHaul.tla`): a band of bricks of two loads and
+a slab of one load, two trucks of 1,500 kg. `MCHaulTwo.cfg` lets a truck
+take a load while it holds one: `InLoad` violated. `MCHaulEarly.cfg`
+lets the haul tell a task at its first load: `PartsFirst` violated.
+
+`World.HaulSpec.replay/3` (`test/support/haul_spec.ex`) replays the log
+of the haul with the logs of the constructions that asked it:
+`test/world/haul_test.exs` replays the haul of a band in rented trucks,
+of a slab on one truck of the yard, and of a house of one floor at the
+site, and a log with a lost load diverges.
 
 ## The replay: the code against the specification
 

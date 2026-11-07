@@ -92,6 +92,8 @@ defmodule World.Construction do
       |> Map.put_new(:pose, %{})
       |> Map.put_new(:budget, %{})
       |> Map.put_new(:drawing, nil)
+      |> Map.put_new(:haul, nil)
+      |> Map.put_new(:place, nil)
 
     budget = job.budget
     clock = Clock.new()
@@ -143,6 +145,7 @@ defmodule World.Construction do
             elements: Enum.group_by(elements, &elem(&1, 0), &Tuple.delete_at(&1, 0)),
             made: %{},
             placed: MapSet.new(),
+            hauls: %{},
             waiting: plan.tasks,
             done: MapSet.new(),
             running: %{},
@@ -273,6 +276,17 @@ defmodule World.Construction do
     finish(assign(s))
   end
 
+  # The materials of a task are at the place of the construction.
+  def handle_info({:hauled, ref}, s) do
+    case Enum.find(Map.get(s, :hauls, %{}), fn {_, h} -> h == {:asked, ref} end) do
+      {id, _} ->
+        %{s | hauls: Map.put(s.hauls, id, :here)} |> record("parts_here", nil, %{"task" => id}) |> assign() |> finish()
+
+      nil ->
+        {:noreply, s}
+    end
+  end
+
   def handle_info({:failed, _p, id, message}, s) do
     s = record(s, "failed", nil, %{"task" => id, "message" => message})
     reply(s, {:failed, s.id, message})
@@ -366,14 +380,46 @@ defmodule World.Construction do
     {:stop, :normal, s}
   end
 
-  # The tasks that can start now: not given, and each task they wait for is done.
-  defp ready(s), do: Enum.filter(s.waiting, fn t -> Enum.all?(t.waits, &MapSet.member?(s.done, &1)) end)
+  # The tasks that can start now: not given, each task they wait for is
+  # done, and their materials are at the place.
+  defp ready(%{job: %{haul: haul, drawing: d}} = s) when haul == nil or d == nil, do: waits_done(s)
+  defp ready(s), do: Enum.filter(waits_done(s), &(s.hauls[&1.id] == :here))
+
+  defp waits_done(s), do: Enum.filter(s.waiting, fn t -> Enum.all?(t.waits, &MapSet.member?(s.done, &1)) end)
+
+  # A construction with a haul (`World.Haul`) and a place asks for the
+  # takeoff of each task whose waits are done (World.Drawing.materials/3):
+  # the trucks bring it to the place, and the task starts after it.
+  defp ask(%{job: %{haul: haul, drawing: d}} = s) when haul == nil or d == nil, do: s
+
+  defp ask(s) do
+    drawing = s.job.drawing
+
+    Enum.reduce(waits_done(s), s, fn t, s ->
+      if Map.has_key?(s.hauls, t.id) do
+        s
+      else
+        wants = World.Drawing.materials(drawing, t.id, World.Drawing.inputs(drawing, t.id, s.made))
+
+        if wants == %{} do
+          %{s | hauls: Map.put(s.hauls, t.id, :here)}
+        else
+          ref = make_ref()
+          World.Haul.ask(s.job.haul, ref, s.id <> "|" <> t.id, s.job.place, wants)
+          s = %{s | hauls: Map.put(s.hauls, t.id, {:asked, ref})}
+          record(s, "parts_asked", nil, %{"task" => t.id, "place" => s.job.place, "materials" => wants})
+        end
+      end
+    end)
+  end
 
   # Give each task that can start to a free person of its trade; hire for
   # the trades with no free person, in the budget.
   defp assign(%{paused: true} = s), do: Enum.reduce(s.idle, s, &let_go(&2, &1))
 
   defp assign(s) do
+    s = ask(s)
+
     {s, wanted} =
       Enum.reduce(ready(s), {s, []}, fn t, {s, wanted} ->
         case Enum.find(s.idle, &(s.workers[&1] == t.trade)) do
@@ -472,6 +518,7 @@ defmodule World.Construction do
         waiting: waiting,
         stale: Map.merge(s.stale, stale),
         made: Map.drop(s.made, changed),
+        hauls: Map.drop(s.hauls, changed),
         placed: placed
     }
 

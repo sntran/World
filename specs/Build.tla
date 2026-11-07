@@ -12,7 +12,9 @@
 (* end the tasks in hand, and it lets its free people go. During a pause, a *)
 (* change makes tasks again (Redo): the tasks that wait for a task that a  *)
 (* change makes again are made again first, and a person that works on it  *)
-(* ends it for nobody (stale). Then the client resumes it.                 *)
+(* ends it for nobody (stale). Then the client resumes it. A task with a   *)
+(* takeoff (Hauled) starts only after its materials are at the place of    *)
+(* its construction (Arrive: the trucks of specs/Haul.tla brought them).   *)
 (* World.Construction makes this flow with processes, and the log of each  *)
 (* construction replays as a behavior of this module (World.BuildSpec).    *)
 (***************************************************************************)
@@ -31,7 +33,9 @@ CONSTANTS
     Guard,      \* FALSE: the fault model where a task can start again
     HireGuard,  \* FALSE: the fault model where a busy person can be hired
     PauseGuard, \* FALSE: the fault model where a task can start in a pause
-    KeepGuard   \* FALSE: the fault model where a change forgets a task
+    KeepGuard,  \* FALSE: the fault model where a change forgets a task
+    Hauled,     \* the tasks with a takeoff: the trucks bring their materials
+    PartsGuard  \* FALSE: the fault model where a task starts before its materials
 
 VARIABLES
     held,       \* held[p]: the construction that holds p, or ""
@@ -43,9 +47,10 @@ VARIABLES
     stopped,    \* the constructions that stopped (a deadline, a cancel)
     paused,     \* the constructions in a pause
     pauses,     \* pauses[b]: the pauses of b so far
-    inHand      \* inHand[b]: the tasks of b in work at the start of its pause
+    inHand,     \* inHand[b]: the tasks of b in work at the start of its pause
+    here        \* the tasks whose materials are at the place of their construction
 
-vars == <<held, busy, stale, started, done, finished, stopped, paused, pauses, inHand>>
+vars == <<held, busy, stale, started, done, finished, stopped, paused, pauses, inHand, here>>
 
 TasksOf(b) == {t \in Tasks : BuildOf[t] = b}
 Count(b) == Cardinality({p \in People : held[p] = b})
@@ -53,7 +58,9 @@ Free(p) == busy[p] = "" /\ p \notin stale
 InWork(b) == {t \in TasksOf(b) : \E p \in People : busy[p] = t}
 \* A task that is not started and is not done.
 Pending(b, trade) == {t \in TasksOf(b) : Trade[t] = trade /\ t \notin started}
-Ready(t) == t \notin started /\ Waits[t] \subseteq done
+Parts(t) == t \in Hauled => t \in here
+\* PartsGuard: a task with a takeoff is ready only when its materials are there.
+Ready(t) == t \notin started /\ Waits[t] \subseteq done /\ (PartsGuard => Parts(t))
 \* b holds a person of the trade, and a free one.
 Holds(b, trade) == \E p \in People : held[p] = b /\ Skill[p] = trade
 HoldsFree(b, trade) == \E p \in People : held[p] = b /\ Free(p) /\ Skill[p] = trade
@@ -71,6 +78,7 @@ Init ==
     /\ paused = {}
     /\ pauses = [b \in Builds |-> 0]
     /\ inHand = [b \in Builds |-> {}]
+    /\ here = {}
 
 \* b hires the person p that nobody holds, for a task of its trade that can
 \* start, when b holds no free person of that trade, in its budget, and
@@ -82,7 +90,7 @@ Hire(b, p) ==
     /\ Count(b) < Budget[b]
     /\ ReadyFor(b, Skill[p]) /\ ~HoldsFree(b, Skill[p])
     /\ held' = [held EXCEPT ![p] = b]
-    /\ UNCHANGED <<busy, stale, started, done, finished, stopped, paused, pauses, inHand>>
+    /\ UNCHANGED <<busy, stale, started, done, finished, stopped, paused, pauses, inHand, here>>
 
 \* A free person of b starts a task of b of its trade, after the tasks it
 \* waits for, and not in a pause. Guard keeps a task from a second start,
@@ -93,24 +101,32 @@ Start(b, p, t) ==
     /\ Guard => t \notin started
     /\ PauseGuard => b \notin paused
     /\ Waits[t] \subseteq done
+    /\ PartsGuard => Parts(t)
     /\ b \notin finished
     /\ started' = started \cup {t}
     /\ busy' = [busy EXCEPT ![p] = t]
-    /\ UNCHANGED <<held, stale, done, finished, stopped, paused, pauses, inHand>>
+    /\ UNCHANGED <<held, stale, done, finished, stopped, paused, pauses, inHand, here>>
+
+\* The materials of a task with a takeoff are at the place: the haul
+\* (specs/Haul.tla) brought each load of it.
+Arrive(b, t) ==
+    /\ t \in Hauled /\ BuildOf[t] = b /\ t \notin here
+    /\ here' = here \cup {t}
+    /\ UNCHANGED <<held, busy, stale, started, done, finished, stopped, paused, pauses, inHand>>
 
 \* The person ends its task.
 Finish(p, t) ==
     /\ t /= "" /\ busy[p] = t
     /\ done' = done \cup {t}
     /\ busy' = [busy EXCEPT ![p] = ""]
-    /\ UNCHANGED <<held, stale, started, finished, stopped, paused, pauses, inHand>>
+    /\ UNCHANGED <<held, stale, started, finished, stopped, paused, pauses, inHand, here>>
 
 \* A person ends a task that a change made again: its result goes to
 \* nobody, and the person is free.
 Drop(p) ==
     /\ p \in stale
     /\ stale' = stale \ {p}
-    /\ UNCHANGED <<held, busy, started, done, finished, stopped, paused, pauses, inHand>>
+    /\ UNCHANGED <<held, busy, started, done, finished, stopped, paused, pauses, inHand, here>>
 
 \* b lets a free person go: it is in a pause; or it has no task of its
 \* trade that did not start; or no task of its trade can start now, and a
@@ -123,7 +139,7 @@ Release(b, p) ==
        \/ /\ ~ReadyFor(b, Skill[p])
           /\ \E t \in TasksOf(b) : Ready(t) /\ ~Holds(b, Trade[t])
     /\ held' = [held EXCEPT ![p] = ""]
-    /\ UNCHANGED <<busy, stale, started, done, finished, stopped, paused, pauses, inHand>>
+    /\ UNCHANGED <<busy, stale, started, done, finished, stopped, paused, pauses, inHand, here>>
 
 \* Each task of b is done, and b holds nobody: the model is made.
 Done(b) ==
@@ -132,7 +148,7 @@ Done(b) ==
     /\ \A p \in People : held[p] /= b
     /\ finished' = finished \cup {b}
     /\ paused' = paused \ {b}
-    /\ UNCHANGED <<held, busy, stale, started, done, stopped, pauses, inHand>>
+    /\ UNCHANGED <<held, busy, stale, started, done, stopped, pauses, inHand, here>>
 
 \* The deadline of b, or a cancel: b stops, and its people go back at
 \* once. A person that works ends its task, and its result goes to nobody.
@@ -142,7 +158,7 @@ Deadline(b) ==
     /\ stopped' = stopped \cup {b}
     /\ paused' = paused \ {b}
     /\ held' = [p \in People |-> IF held[p] = b THEN "" ELSE held[p]]
-    /\ UNCHANGED <<busy, stale, started, done, pauses, inHand>>
+    /\ UNCHANGED <<busy, stale, started, done, pauses, inHand, here>>
 
 Cancel(b) == Deadline(b)
 
@@ -153,12 +169,12 @@ Pause(b) ==
     /\ paused' = paused \cup {b}
     /\ pauses' = [pauses EXCEPT ![b] = @ + 1]
     /\ inHand' = [inHand EXCEPT ![b] = InWork(b)]
-    /\ UNCHANGED <<held, busy, stale, started, done, finished, stopped>>
+    /\ UNCHANGED <<held, busy, stale, started, done, finished, stopped, here>>
 
 Resume(b) ==
     /\ b \in paused
     /\ paused' = paused \ {b}
-    /\ UNCHANGED <<held, busy, stale, started, done, finished, stopped, pauses, inHand>>
+    /\ UNCHANGED <<held, busy, stale, started, done, finished, stopped, pauses, inHand, here>>
 
 \* A change in a pause makes the task t of b again, after each task that
 \* waits for it: t is not started and not done, and a person that works
@@ -171,7 +187,7 @@ Redo(b, t) ==
     /\ done' = IF KeepGuard THEN done \ {t} ELSE done \ TasksOf(b)
     /\ stale' = stale \cup {p \in People : busy[p] = t}
     /\ busy' = [p \in People |-> IF busy[p] = t THEN "" ELSE busy[p]]
-    /\ UNCHANGED <<held, finished, stopped, paused, pauses, inHand>>
+    /\ UNCHANGED <<held, finished, stopped, paused, pauses, inHand, here>>
 
 \* Each construction is done: no deadlock at the end.
 Over == finished = Builds /\ UNCHANGED vars
@@ -182,7 +198,7 @@ Next ==
     \/ \E p \in People, t \in Tasks : Finish(p, t)
     \/ \E p \in People : Drop(p)
     \/ \E b \in Builds : Done(b) \/ Deadline(b) \/ Pause(b) \/ Resume(b)
-    \/ \E b \in Builds, t \in Tasks : Redo(b, t)
+    \/ \E b \in Builds, t \in Tasks : Redo(b, t) \/ Arrive(b, t)
     \/ Over
 
 Spec == Init /\ [][Next]_vars /\ WF_vars(Next)
@@ -213,6 +229,9 @@ QuietPause == \A b \in paused : InWork(b) \subseteq inHand[b]
 \* A change keeps the work of each task that it does not make again: a
 \* task that started is done, or a person works on it.
 KeepsWhatIsSame == \A t \in started : t \in done \/ \E p \in People : busy[p] = t
+
+\* A task with a takeoff starts only after its materials are at the place.
+PartsHere == \A t \in started \cap Hauled : t \in here
 
 \* --- Liveness ----------------------------------------------------------
 
