@@ -10,7 +10,10 @@ defmodule World.Log.Server do
   It keeps the last #{2_000} events in its memory, and each event in the
   store of the log when the node has one (`World.Log.Store`), in
   batches: so a watcher that comes later gets the events of the past
-  (`history/2`), and a node that starts again goes on from the last id.
+  (`history/2`). A stop of the VM loses the events of the batch (fewer
+  than #{50}), so a new log leaves #{50} ids after the last id of the
+  store, and puts its first id into the store at once (the event
+  `started`): an id never names two events (`specs/LogStore.tla`).
   """
   use GenServer
 
@@ -50,13 +53,19 @@ defmodule World.Log.Server do
     store = Keyword.get_lazy(opts, :store, &Store.on?/0)
     Process.set_label(:log)
 
-    last =
+    {last, recent} =
       case store && Store.last() do
-        {:ok, n} -> n
-        _ -> 0
+        {:ok, n} ->
+          started = %{"id" => n + @batch, "kind" => "started", "at" => 0, "wall" => World.Clock.wall()}
+          started = Map.merge(started, %{"order" => nil, "who" => nil, "data" => %{}})
+          Store.append([JSON.encode!(started)])
+          {n + @batch, [started]}
+
+        _ ->
+          {0, []}
       end
 
-    {:ok, %{last: last, recent: [], buffer: [], timer: nil, store: store}}
+    {:ok, %{last: last, recent: recent, buffer: [], timer: nil, store: store}}
   end
 
   @impl true

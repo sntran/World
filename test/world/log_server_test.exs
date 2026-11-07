@@ -58,22 +58,25 @@ defmodule World.Log.ServerTest do
     assert Store.on?()
     s = server([])
 
+    # The log starts after 50 ids, and puts its start into the store.
+    assert [%{"id" => 50, "kind" => "started"}] = Server.history(0, s)
+
     # 60 events: a batch of 50 at once, and 10 after the time of a batch.
     for n <- 1..60, do: Server.publish(event("kept", "requested", n), s)
-    assert Server.last(s) == 60
+    assert Server.last(s) == 110
     Process.sleep(400)
-    assert {:ok, 60} = Store.last()
+    assert {:ok, 110} = Store.last()
 
     stop_supervised!(s)
     again = server([])
-    assert Server.last(again) == 60
-    # The memory of the new log is empty: the events come from the store.
-    assert length(Server.history(0, again)) == 60
-    assert [%{"id" => 60}] = Server.history(59, again)
+    assert Server.last(again) == 160
+    # The memory of the new log has its start only: the events come from the store.
+    assert length(Server.history(0, again)) == 62
+    assert [%{"id" => 110}, %{"id" => 160, "kind" => "started"}] = Server.history(109, again)
 
     # An event in the buffer goes into the store before a read of the store.
     Server.publish(event("kept", "done", 61), again)
-    assert length(Server.history(0, again)) == 61
+    assert length(Server.history(0, again)) == 63
   end
 
   test "a store that fails gives no older events, and the log goes on" do

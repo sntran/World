@@ -64,6 +64,7 @@ defmodule World.BuildSpec do
   defp action(%{kind: "task_done", order: b, who: p, data: d}), do: {"Finish", [p, task(b, d["task"])]}
   defp action(%{kind: "released", order: b, who: p}), do: {"Release", [b, p]}
   defp action(%{kind: "done", order: b}), do: {"Done", [b]}
+  defp action(%{kind: "stopped", order: b}), do: {"Deadline", [b]}
   defp action(_), do: nil
 
   # A task of the specification: the construction and the id of the task.
@@ -112,6 +113,9 @@ defmodule World.BuildSpec do
 
   defp str(s), do: ~s("#{s}")
   defp set(names), do: "{" <> Enum.map_join(Enum.sort(names), ", ", &str/1) <> "}"
+
+  # A function of TLA+; with no key, the function of the empty set.
+  defp fun(map, _value) when map == %{}, do: "[x \\in {} |-> 0]"
 
   defp fun(map, value) do
     map

@@ -80,6 +80,31 @@ defmodule World.ConstructionTest do
     assert {:error, {:violated, "MadeOnce", _}} = BuildSpec.replay([twice], Path.join(dir, "twice"), guard: false)
   end
 
+  test "with a budget of one person, a construction gives back its free person for a task of another trade", %{
+    tmp_dir: dir
+  } do
+    o = Port.new("o", {0, 0, 0}, {0, 0, 1})
+    box = fn name -> Part.new(name, :part, [World.Shape.box({0, 0, 0}, {0.1, 0.1, 0.1}, :steel)], [o]) end
+    wheel = %{Assembly.new("wheel", box.("rim"), root: "rim") | kind: :wheel}
+
+    van =
+      %{Assembly.new("van", box.("body"), root: "body") | kind: :vehicle}
+      |> Assembly.add("wheel", wheel, at: "o", port: "o")
+      |> Assembly.add("door", box.("door"), at: "o", port: "o")
+
+    {:ok, id} =
+      World.build(%{id: "van-#{System.unique_integer([:positive])}", item: fn _ -> van end, budget: %{"workers" => 1}})
+
+    assert {:ok, r} = World.await(id)
+    assert r.glb == Build.glb(van)
+
+    # The mechanic, then the wheelwright in its place, then a mechanic again.
+    trades = for %{kind: "hired", data: %{"trade" => t}} <- Log.events(r.log), do: t
+    assert trades == ["mechanic", "wheelwright", "mechanic"]
+    assert "released" in kinds(r.log)
+    assert BuildSpec.replay([r.log], dir) == :ok
+  end
+
   test "two constructions at one time share the people, and each gives its bytes", %{tmp_dir: dir} do
     expected = glb("wall_brick_sample", :near)
     jobs = for _ <- 1..2, do: job("wall_brick_sample", budget: %{"workers" => 2})
@@ -113,12 +138,31 @@ defmodule World.ConstructionTest do
     assert World.await(id) == {:error, {:stopped, "triangles"}}
   end
 
-  test "the budget of seconds: the construction stops at its deadline, with no model" do
+  test "the budget of seconds: the construction stops at its deadline, with no model, and its log replays",
+       %{tmp_dir: dir} do
     World.watch(:world)
     {:ok, id} = World.build(job("wall_brick_sample", budget: %{"seconds" => 0}))
     assert World.await(id) == {:error, {:stopped, "seconds"}}
-    assert_receive {:world, %{"kind" => "stopped", "order" => ^id, "data" => %{"reason" => "seconds"}, "id" => n}}
-    assert is_integer(n)
+
+    # The events of the construction from the stream of the world, as a log.
+    events = collect(id, [])
+    assert %{kind: "stopped", data: %{"reason" => "seconds"}} = List.last(events)
+    log = %Log{clock: World.Clock.new(), events: Enum.reverse(events)}
+    assert BuildSpec.replay([log], dir) == :ok
+  end
+
+  # The events of a construction from the stream of the world, to its stop.
+  defp collect(id, events) do
+    receive do
+      {:world, %{"order" => ^id, "id" => n} = e} when is_integer(n) ->
+        events =
+          events ++
+            [%Log.Event{at: e["at"], wall: e["wall"], kind: e["kind"], order: id, who: e["who"], data: e["data"]}]
+
+        if e["kind"] == "stopped", do: events, else: collect(id, events)
+    after
+      5_000 -> flunk("no stop")
+    end
   end
 
   test "a task that fails stops the construction with its message" do
@@ -197,6 +241,22 @@ defmodule World.ConstructionTest do
     assert Process.alive?(pid)
     assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 2_000
     assert Construction.element(id, 0) == :none
+  end
+
+  test "a second build of the same id ends at once when the first one keeps the elements" do
+    # At near, with one worker: the second build still runs at its lookup.
+    j = job("wall_brick_sample", level: :near, budget: %{"workers" => 1})
+    {:ok, id} = World.build(j)
+    assert {:ok, first} = World.await(id)
+    [{keeper, _}] = Registry.lookup(World.Names, {:elements, id})
+
+    {:ok, ^id} = World.build(j)
+    [{second, _}] = Registry.lookup(World.Names, id)
+    ref = Process.monitor(second)
+    assert {:ok, again} = World.await(id)
+    assert again.glb == first.glb
+    assert_receive {:DOWN, ^ref, :process, ^second, :normal}
+    assert [{^keeper, _}] = Registry.lookup(World.Names, {:elements, id})
   end
 
   test "an element of a construction that ends at the request is not there" do

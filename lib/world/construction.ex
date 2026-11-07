@@ -183,7 +183,7 @@ defmodule World.Construction do
     {trade, requests} = Map.pop(s.requests, ref)
     s = %{s | requests: requests}
 
-    if trade && Enum.any?(ready(s), &(&1.trade == trade)) do
+    if trade != nil and Enum.any?(ready(s), &(&1.trade == trade)) and not Enum.any?(s.idle, &(s.workers[&1] == trade)) do
       watched = Map.put(s.watched, p, :erlang.monitor(:process, p, [:priority]))
       s = %{s | workers: Map.put(s.workers, p, trade), idle: s.idle ++ [p], watched: watched}
       {:noreply, s |> record("hired", p, %{"trade" => Atom.to_string(trade)}) |> assign()}
@@ -302,22 +302,22 @@ defmodule World.Construction do
     end
   end
 
-  # The trades that wait for a person: hire in the budget; at the budget,
-  # let a free person of a trade that nobody wants go.
+  # The trades that wait for a person: hire in the budget. When a trade
+  # that a task needs has nobody here, the free people of the trades that
+  # no task needs now go back: they make room in the budget, and in the
+  # people of the node, so two constructions never wait for each other
+  # (specs/Census.tla).
   defp hire(s, wanted) do
+    wanted = Enum.uniq(wanted)
+    missing = Enum.any?(wanted, &(&1 not in Map.values(s.workers)))
+    spare = if missing, do: Enum.filter(s.idle, &(s.workers[&1] not in wanted)), else: []
+    s = Enum.reduce(spare, s, &let_go(&2, &1))
     asked = Map.values(s.requests)
 
-    Enum.reduce(Enum.uniq(wanted), s, fn trade, s ->
-      held = map_size(s.workers) + map_size(s.requests)
-      spare = Enum.find(s.idle, &(s.workers[&1] not in wanted))
-      none = trade not in Map.values(s.workers)
-
-      cond do
-        trade in asked -> s
-        held < s.workers_limit -> %{s | requests: Map.put(s.requests, Person.hire(trade), trade)}
-        spare && none && map_size(s.requests) == 0 -> s |> let_go(spare) |> hire([trade])
-        true -> s
-      end
+    Enum.reduce(wanted, s, fn trade, s ->
+      if trade not in asked and map_size(s.workers) + map_size(s.requests) < s.workers_limit,
+        do: %{s | requests: Map.put(s.requests, Person.hire(trade), trade)},
+        else: s
     end)
   end
 
