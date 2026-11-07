@@ -35,3 +35,4 @@ builder does not change the requirements: the owner does.
 |---|---|---|
 | 0001 | [The people build on demand](0001-people-build-on-demand.md) | Done (its steps 4 and 5 moved to 0002) |
 | 0002 | [The people build any blueprint, as on a real site](0002-build-any-blueprint.md) | In progress |
+| 0003 | [World builds real blueprints, and the tests compare them](0003-real-blueprints.md) | In progress |
