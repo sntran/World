@@ -20,7 +20,7 @@ defmodule World.VanLineTest do
   # The triangles, the joints and the size of the scene of a model.
   defp shape(item, level) do
     s = Build.scene(item, level: level)
-    {Scene.triangles(s), Enum.sort(for n <- s.nodes, n.extras["joint"], do: n.name), Scene.bounds(s)}
+    {Scene.triangles(s), Enum.sort(s.extras["joints"]), Scene.bounds(s)}
   end
 
   @tag timeout: 300_000
@@ -30,6 +30,7 @@ defmodule World.VanLineTest do
       one = Detail.with(level, fn -> Van.build("transit_148", name: "van") end)
       assert line.kind == :vehicle and Check.model(line) == :ok
       assert shape(line, level) == shape(one, level)
+      assert "front_right_wheel" in elem(shape(line, level), 1)
     end
 
     near = van(:near, %{})

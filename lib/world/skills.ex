@@ -12,13 +12,15 @@ defmodule World.Skills do
   alias World.Skills.{Column, Course, Flight, Footing, HousePlan, Iron, Opening, Paint, Plaster, Roof, Slab}
   alias World.Skills.{VanBody, VanChassis, VanClosure, VanGlass, VanInside, VanOrder, VanSeats, VanTrim, VanUpfit}
   alias World.Skills.{ScooterBody, ScooterEngine, ScooterFork, ScooterFrame, ScooterSeat, ScooterStand}
+  alias World.Skills.{Knuckle, Wheel}
 
   @skills [Base, Figure, Grille, Halo, Rail, Robe, Set, Shell, Site, Stair] ++
             [Lantern, SpiralStair, Tower, TowerBody, TowerSite] ++
             [CastField, CastOutside, CastSurvey, Formwork, Pour, ShellSlab] ++
             [Column, Course, Flight, Footing, HousePlan, Iron, Opening, Paint, Plaster, Roof, Slab] ++
             [VanBody, VanChassis, VanClosure, VanGlass, VanInside, VanOrder, VanSeats, VanTrim, VanUpfit] ++
-            [ScooterBody, ScooterEngine, ScooterFork, ScooterFrame, ScooterSeat, ScooterStand]
+            [ScooterBody, ScooterEngine, ScooterFork, ScooterFrame, ScooterSeat, ScooterStand] ++
+            [Knuckle, Wheel]
 
   @doc "The skill of a name: `{:ok, module}` or `:error`."
   def fetch(name), do: Map.fetch(all(), name)

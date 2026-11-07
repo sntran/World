@@ -111,6 +111,18 @@ plan, and each other node takes it in `from`.
 | `spiral_stair` | mason | `hollow`, `body`, `wall`, `gallery`, `steps`, `platform_height` | The spiral stair inside the tower. |
 | `tower` | mason | `name` | The tower, joined. |
 
+## The vehicle trades (`World.Skills.Vehicle`)
+
+These skills are for any vehicle (plan 0002, D5). A skill takes the
+numbers of a spec sheet where its trade has one, and shape data (the
+shapes of `docs/format.md`, "A drawing") for the free shapes of a model.
+No skill names a model. The joints are in the drawing.
+
+| Skill | Trade | Data | What it makes |
+|---|---|---|---|
+| `wheel` | wheelwright | `tire` (`215/50R17`, `90/90-14`, `37-622`), `build` (`spoked`, `cast`, `car`), `spokes`, `rim_width`, `rim_depth`, `rim`, `hub_width`, `cross`, `disc`, `face`, `holes`, `pcd`, `lugs`, `sides` | A wheel with its tire, its port `hub`. |
+| `knuckle` | mechanic | `at` (the center of the hub), `disc` | The knuckle of a corner with its brake disc: the port `steer` goes on the port `corner_NAME` of the body, the wheel on its port `axle`. |
+
 ## A van, as on the line of its maker (`World.Skills.Van`)
 
 The node `order` of an engineer gives the order of the line; each other

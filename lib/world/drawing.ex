@@ -1029,6 +1029,12 @@ defmodule World.Drawing do
   @doc "The errors of a list of shapes of a drawing at `path` (`check/2` of a part)."
   def check_shapes(v, path), do: list(v, path, 1, 512, &shape/2)
 
+  @doc "The errors of the ports of a part of a drawing (a name to `at`, `axis`, `up`) at `path`."
+  def check_ports(v, path), do: ports(v, path)
+
+  @doc "The ports of a part of a drawing (a name to `at`, `axis`, `up`)."
+  def ports(v), do: for({n, port} <- Enum.sort(v), do: new_port(n, port))
+
   defp shape(s) do
     material = GLB.role(Map.get(s, "material", "gray"))
 
