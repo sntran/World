@@ -45,7 +45,10 @@ defmodule World.Drawing do
 
   @kinds ~w(appliance building electrical furniture house item prop statue tower vehicle)
   @roles ~w(crank door drawer handle knob lid open pedal recline slide spin stand steer suspension vane wheel)
-  @shapes ~w(box cylinder sphere prism lathe tube)
+  @shapes ~w(box cylinder sphere prism lathe tube loft body arc rings)
+  # The options of a shape: the points of each ring, the steps of the
+  # smooth, the round edges of a box, and a lathe that is a ring.
+  @options ~w(sides smooth round ring)
   @standards ~w(bolt cap_screw nut washer bearing)
 
   # The atom of each name of a list of the checks: a drawing names only
@@ -305,7 +308,11 @@ defmodule World.Drawing do
   defp shape(v, path) when is_map(v) do
     case for k <- @shapes, Map.has_key?(v, k), do: k do
       [kind] ->
-        unknown(v, [kind | ~w(material matter skin at axis up)], path) ++
+        unknown(v, [kind | ~w(material matter skin at axis up)] ++ @options, path) ++
+          optional(v, "sides", path, &whole(&1, &2, 3, 128)) ++
+          optional(v, "smooth", path, &whole(&1, &2, 0, 3)) ++
+          optional(v, "round", path, &number(&1, &2, 0.01, 0.49)) ++
+          optional(v, "ring", path, &choice(&1, &2, [true, false])) ++
           optional(v, "material", path, &material/2) ++
           optional(v, "matter", path, &choice(&1, &2, World.Mass.materials())) ++
           optional(v, "skin", path, &number(&1, &2, 0.0001, 0.1)) ++
@@ -364,6 +371,60 @@ defmodule World.Drawing do
         required(d, "line", path, &list(&1, &2, 2, 64, fn x, p -> point(x, p) end)) ++
           required(d, "radius", path, &positive/2)
       end)
+
+  defp dims("loft", v, path),
+    do:
+      object(v, path, ~w(rows along x), fn d ->
+        required(d, "rows", path, &rows/2) ++
+          optional(d, "along", path, &choice(&1, &2, ~w(y z))) ++
+          optional(d, "x", path, &number(&1, &2, -@size, @size))
+      end)
+
+  defp dims("body", v, path),
+    do:
+      object(v, path, ~w(rows arches step x), fn d ->
+        required(d, "rows", path, &rows/2) ++
+          optional(d, "arches", path, &list(&1, &2, 0, 8, fn a, p -> point(a, p) end)) ++
+          optional(d, "step", path, &positive/2) ++
+          optional(d, "x", path, &number(&1, &2, -@size, @size))
+      end)
+
+  defp dims("arc", v, path),
+    do:
+      object(v, path, ~w(center radius from to steps half_width half_height power), fn d ->
+        required(d, "center", path, &pair(&1, &2, -@size)) ++
+          required(d, "radius", path, &positive/2) ++
+          required(d, "from", path, &number(&1, &2, -360, 360)) ++
+          required(d, "to", path, &number(&1, &2, -360, 360)) ++
+          required(d, "steps", path, &whole(&1, &2, 1, 64)) ++
+          required(d, "half_width", path, &positive/2) ++
+          required(d, "half_height", path, &positive/2) ++
+          optional(d, "power", path, &number(&1, &2, 0.5, 16))
+      end)
+
+  defp dims("rings", v, path),
+    do:
+      object(
+        v,
+        path,
+        ~w(rings),
+        &required(&1, "rings", path, fn x, p ->
+          list(x, p, 2, 256, fn ring, q -> list(ring, q, 3, 256, fn pt, r -> point(pt, r) end) end)
+        end)
+      )
+
+  # The key rows of a loft: [a, low, high, half_width, power] (along y:
+  # a = y, low and high in z; along z: a = z, low and high in y).
+  defp rows(v, path), do: list(v, path, 2, 64, &row/2)
+
+  defp row(v, path) do
+    if match?([_, _, _, _, _], v) and Enum.all?(v, &(is_number(&1) and abs(&1) <= @size)) and Enum.at(v, 4) > 0,
+      do: [],
+      else: [{path, "must be a row [a, low, high, half_width, power], in meters, the power more than 0"}]
+  end
+
+  defp whole(v, path, lo, hi),
+    do: if(is_integer(v) and v >= lo and v <= hi, do: [], else: [{path, "must be a whole number from #{lo} to #{hi}"}])
 
   # A point of a plane: [x, y] (a loop), or [r, z] with r from 0 (a profile).
   defp pair(v, path, lo) do
@@ -959,20 +1020,57 @@ defmodule World.Drawing do
     Part.new(name, :part, Enum.map(p["shapes"], &shape/1), ports, sources: Map.get(p, "sources", []))
   end
 
+  @doc """
+  The mesh of a shape of a drawing (`docs/format.md`, "A drawing"): for
+  the skills of the vehicle trades, whose data has shapes too.
+  """
+  def mesh(s), do: shape(s)
+
+  @doc "The errors of a list of shapes of a drawing at `path` (`check/2` of a part)."
+  def check_shapes(v, path), do: list(v, path, 1, 512, &shape/2)
+
   defp shape(s) do
     material = GLB.role(Map.get(s, "material", "gray"))
-    frame = [frame: frame(s)]
+
+    frame =
+      [frame: frame(s)] ++
+        for {k, key} <- [{"sides", :sides}, {"smooth", :smooth}, {"round", :round}], Map.has_key?(s, k), do: {key, s[k]}
+
+    frame = if s["ring"], do: frame ++ [kind: :ring], else: frame
     [kind] = for k <- @shapes, Map.has_key?(s, k), do: k
     d = s[kind]
 
     mesh =
       case kind do
-        "box" -> Shape.box(List.to_tuple(d["from"]), List.to_tuple(d["to"]), material, frame)
-        "cylinder" -> Shape.cylinder(d["radius"], d["length"], material, frame)
-        "sphere" -> Shape.sphere(d["radius"], material, frame)
-        "prism" -> Shape.prism(Enum.map(d["loop"], &List.to_tuple/1), d["length"], material, frame)
-        "lathe" -> Shape.lathe(Enum.map(d["profile"], &List.to_tuple/1), material, frame)
-        "tube" -> Shape.sweep(Enum.map(d["line"], &List.to_tuple/1), d["radius"], material, frame)
+        "box" ->
+          Shape.box(List.to_tuple(d["from"]), List.to_tuple(d["to"]), material, frame)
+
+        "cylinder" ->
+          Shape.cylinder(d["radius"], d["length"], material, frame)
+
+        "sphere" ->
+          Shape.sphere(d["radius"], material, frame)
+
+        "prism" ->
+          Shape.prism(Enum.map(d["loop"], &List.to_tuple/1), d["length"], material, frame)
+
+        "lathe" ->
+          Shape.lathe(Enum.map(d["profile"], &List.to_tuple/1), material, frame)
+
+        "tube" ->
+          Shape.sweep(Enum.map(d["line"], &List.to_tuple/1), d["radius"], material, frame)
+
+        "loft" ->
+          Shape.loft(loft_rows(d), material, frame)
+
+        "body" ->
+          World.Vehicles.Body.loft(tuples(d["rows"]), tuples(Map.get(d, "arches", [])), material, body(d, frame))
+
+        "arc" ->
+          Shape.loft(arc(d), material, frame)
+
+        "rings" ->
+          Shape.rings(for(r <- d["rings"], do: tuples(r)), material, frame)
       end
 
     # The name is one of the list of `World.Mass.materials/0` (the check).
@@ -982,6 +1080,33 @@ defmodule World.Drawing do
       nil -> if s["matter"], do: World.Mesh.matter(mesh, matter), else: mesh
       t -> World.Mesh.skin(mesh, t, matter)
     end
+  end
+
+  defp tuples(list), do: Enum.map(list, &List.to_tuple/1)
+
+  defp loft_rows(%{"rows" => rows} = d) do
+    x = Map.get(d, "x", 0.0) / 1
+    if Map.get(d, "along", "y") == "y", do: Shape.rows_y(tuples(rows), x), else: Shape.rows_z(tuples(rows), x)
+  end
+
+  defp body(d, opts) do
+    extra = for {k, key} <- [{"step", :step}, {"x", :x0}], Map.has_key?(d, k), do: {key, d[k] / 1}
+    opts ++ extra
+  end
+
+  defp arc(d) do
+    [cy, cz] = d["center"]
+
+    Shape.arc(
+      {cy, cz},
+      d["radius"],
+      d["from"],
+      d["to"],
+      d["steps"],
+      d["half_width"],
+      d["half_height"],
+      Map.get(d, "power", 4)
+    )
   end
 
   # The frame of a shape: its origin at `at`, its z on `axis`, its y on

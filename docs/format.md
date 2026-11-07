@@ -1661,6 +1661,15 @@ panel).
 | `prism` | `loop` (points `[x, y]`) and `length` along z from 0. |
 | `lathe` | `profile` (points `[r, z]`): it turns around z. |
 | `tube` | `line` (points `[x, y, z]`) and `radius`. |
+| `loft` | `rows` (each `[a, low, high, half_width, power]`: a superellipse; power 2 is an ellipse, 4 a box with round corners), `along` (`y`, the default: `a` is y, low and high in z; or `z`: `a` is z, low and high in y), `x` (the center). A panel, a seat, a lamp. |
+| `body` | `rows` along y, `arches` (`[y, z, radius]`: the bottom goes over each wheel), `step` (between two sections, 0.1 m), `x`. The body of a car (`World.Vehicles.Body`). |
+| `arc` | `center` (`[y, z]`), `radius`, `from` and `to` (degrees from up, to the front), `steps`, `half_width`, `half_height`, `power`. A fender over a wheel. |
+| `rings` | `rings`: lists of points, each with the same count, joined in order. |
+
+The options of each shape (plan 0002, D5): `sides` (3 to 128: the
+points of each ring), `smooth` (0 to 3 steps), `round` (the round edges
+of a box: 0.01 to 0.49), and `ring` (`true`: a lathe whose profile is a
+closed loop, a tire or a chainring).
 
 A node has a `name` and holds a part (`part`) or an item of another
 blueprint (`item`: an order with only `blueprint` and `options`: a model
