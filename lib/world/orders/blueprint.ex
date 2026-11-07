@@ -60,8 +60,9 @@ defmodule World.Orders.Blueprint do
   A param has the keys of an option (`type`, `default`, `min`, `max`,
   `unit`, `values`, `item`, `fields`, `doc`); with no `default`, an order
   must give it. Two types are for data only: `text` (at most `max` bytes,
-  200 by default) and `sources` (the source of each name of the
-  `sizes` of the blueprint: `World.Sizes`).
+  200 by default), `sources` (the source of each name of the `sizes` of
+  the blueprint: `World.Sizes`) and `skill` (a value that the skill
+  `skill` checks, as the key of the name of the param in its data).
   """
   def from_data(raw) do
     sized = for s <- Map.get(raw, "sizes", []), do: s["name"]
@@ -96,7 +97,19 @@ defmodule World.Orders.Blueprint do
       "object" -> option(p["name"], :object, opts ++ [fields: for(f <- p["fields"], do: param(f, sized))])
       "text" -> option(p["name"], :data, opts ++ [check: &text(&1, &2, p["max"] || 200)])
       "sources" -> option(p["name"], :data, opts ++ [check: &World.Sizes.check(&1, &2, sized)])
+      "skill" -> option(p["name"], :data, opts ++ [check: &by_skill(&1, &2, p)])
       type -> option(p["name"], String.to_existing_atom(type), opts)
+    end
+  end
+
+  # A value that a skill checks as one key of its data (`skill`): the light
+  # of a tower is checked by the skill tower_site.
+  defp by_skill(raw, path, %{"name" => name, "skill" => skill}) do
+    {:ok, mod} = World.Skills.fetch(skill)
+
+    case mod.check(%{name => raw}, String.replace_suffix(path, "." <> name, "")) do
+      [] -> {:ok, raw}
+      errors -> {:error, errors}
     end
   end
 

@@ -161,7 +161,7 @@ defmodule World.Drawing do
 
   defp sources(v, path),
     do:
-      list(v, path, 0, 16, fn s, p ->
+      list(v, path, 0, 64, fn s, p ->
         if is_binary(s) and byte_size(s) <= 500, do: [], else: [{p, "must be a text of at most 500 bytes"}]
       end)
 
@@ -620,7 +620,8 @@ defmodule World.Drawing do
   after the sources of the drawing, and the `sizes` of the blueprint go
   into its extras (`"sizes"`): each with its value, its unit and its
   source, or `World.Sizes.none/0`. A size with `row` gives each item of a
-  list as the list of the values of its fields.
+  list as the list of the values of its fields, and a size `of` some
+  options the list of their values.
   """
   def fill(blueprint, options) do
     drawing = put(blueprint["drawing"], options)
@@ -628,7 +629,7 @@ defmodule World.Drawing do
     sources = Enum.find_value(params, %{}, &(&1["type"] == "sources" && options[&1["name"]]))
 
     sizes =
-      for s <- Map.get(blueprint, "sizes", []), v = options[s["name"]], v != nil do
+      for s <- Map.get(blueprint, "sizes", []), v = size(s, options), v != nil do
         v = if s["row"], do: for(item <- v, do: Enum.map(s["row"], &item[&1])), else: v
         entry = %{"name" => s["name"], "value" => v, "source" => sources[s["name"]] || World.Sizes.none()}
         if s["unit"], do: Map.put(entry, "unit", s["unit"]), else: entry
@@ -638,6 +639,10 @@ defmodule World.Drawing do
     drawing = Map.update(drawing, "sources", texts, &(&1 ++ texts))
     if sizes == [], do: drawing, else: Map.update(drawing, "extras", %{"sizes" => sizes}, &Map.put(&1, "sizes", sizes))
   end
+
+  # A size of one option, or of some (`of`: a list of their values).
+  defp size(%{"of" => names}, options), do: for(n <- names, do: options[n])
+  defp size(s, options), do: options[s["name"]]
 
   defp put(%{"param" => name} = m, o) when map_size(m) == 1, do: Map.fetch!(o, name)
   defp put(%{"sum" => l} = m, o) when map_size(m) == 1, do: l |> Enum.map(&put(&1, o)) |> Enum.sum()

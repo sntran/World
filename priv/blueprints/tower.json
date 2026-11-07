@@ -1,0 +1,603 @@
+{
+  "name": "tower",
+  "doc": "A tower of masonry on a round platform: a lighthouse (a round body with pilasters that flare at the foot, bands, a cove under the gallery, the gallery and its rail, the drum, the lantern with its panes and its lens, the dome, a lightning rod). A house next to it is a model of its own. The option hollow gives the wall and a spiral stair inside at the near level. The ledge, the bands and the flare are over the platform, the other heights over the ground. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the platform. The people build it as on a site: a mason lays the platform and the body, a smith makes the lantern, a mason makes the stair, and a surveyor marks the site.",
+  "sources": [
+    "The sources of each size come with the order; the receipt lists them."
+  ],
+  "params": [
+    {
+      "name": "name",
+      "type": "text",
+      "default": "thap",
+      "max": 40,
+      "doc": "The name of the model and of the node of the tower: a to z, 0 to 9 and _."
+    },
+    {
+      "name": "height",
+      "type": "number",
+      "default": 18.0,
+      "min": 3.0,
+      "max": 80.0,
+      "unit": "m",
+      "doc": "From the ground to the top of the dome."
+    },
+    {
+      "name": "platform_width",
+      "type": "number",
+      "default": 7.8,
+      "min": 0.0,
+      "max": 40.0,
+      "unit": "m",
+      "doc": "The round platform."
+    },
+    {
+      "name": "platform_height",
+      "type": "number",
+      "default": 0.3,
+      "min": 0.0,
+      "max": 3.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "body",
+      "type": "number",
+      "default": 3.2,
+      "min": 0.5,
+      "max": 20.0,
+      "unit": "m",
+      "doc": "The round body at its foot."
+    },
+    {
+      "name": "top",
+      "type": "number",
+      "default": 3.2,
+      "min": 0.5,
+      "max": 20.0,
+      "unit": "m",
+      "doc": "The round body at the cornice."
+    },
+    {
+      "name": "ledge",
+      "type": "number",
+      "default": 0.8,
+      "min": 0.0,
+      "max": 5.0,
+      "unit": "m",
+      "doc": "The ledge round the foot of the body."
+    },
+    {
+      "name": "bands",
+      "type": "list",
+      "default": [
+        4.1,
+        7.5
+      ],
+      "max": 8,
+      "item": {
+        "name": "band",
+        "type": "number",
+        "min": 0.0,
+        "max": 80.0,
+        "unit": "m"
+      },
+      "doc": "The heights of the bands round the body."
+    },
+    {
+      "name": "pilasters",
+      "type": "integer",
+      "default": 4,
+      "min": 0,
+      "max": 16
+    },
+    {
+      "name": "pilaster_width",
+      "type": "number",
+      "default": 0.7,
+      "min": 0.1,
+      "max": 3.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "across",
+      "type": "number",
+      "default": 5.1,
+      "min": 0.5,
+      "max": 30.0,
+      "unit": "m",
+      "doc": "Across the pilasters."
+    },
+    {
+      "name": "foot",
+      "type": "number",
+      "default": 6.4,
+      "min": 0.5,
+      "max": 40.0,
+      "unit": "m",
+      "doc": "Across the flared foot of the pilasters."
+    },
+    {
+      "name": "flare",
+      "type": "number",
+      "default": 3.1,
+      "min": 0.0,
+      "max": 30.0,
+      "unit": "m",
+      "doc": "The height of the flare."
+    },
+    {
+      "name": "cornice",
+      "type": "number",
+      "default": 10.2,
+      "min": 1.0,
+      "max": 80.0,
+      "unit": "m",
+      "doc": "The foot of the cove under the gallery."
+    },
+    {
+      "name": "gallery",
+      "type": "number",
+      "default": 12.7,
+      "min": 1.0,
+      "max": 80.0,
+      "unit": "m",
+      "doc": "The floor of the gallery."
+    },
+    {
+      "name": "gallery_width",
+      "type": "number",
+      "default": 5.6,
+      "min": 0.5,
+      "max": 30.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "rail",
+      "type": "number",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "unit": "m",
+      "doc": "The rail of the gallery."
+    },
+    {
+      "name": "drum",
+      "type": "number",
+      "default": 2.5,
+      "min": 0.5,
+      "max": 20.0,
+      "unit": "m",
+      "doc": "The drum under the lantern (the watch room)."
+    },
+    {
+      "name": "lantern_from",
+      "type": "number",
+      "default": 15.4,
+      "min": 1.0,
+      "max": 80.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "lantern_to",
+      "type": "number",
+      "default": 17.3,
+      "min": 1.0,
+      "max": 80.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "lantern_width",
+      "type": "number",
+      "default": 2.2,
+      "min": 0.3,
+      "max": 10.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "panes",
+      "type": "integer",
+      "default": 10,
+      "min": 6,
+      "max": 24
+    },
+    {
+      "name": "rod",
+      "type": "number",
+      "default": 21.0,
+      "min": 1.0,
+      "max": 100.0,
+      "unit": "m",
+      "doc": "The top of the lightning rod."
+    },
+    {
+      "name": "door_width",
+      "type": "number",
+      "default": 0.9,
+      "min": 0.5,
+      "max": 3.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "door_height",
+      "type": "number",
+      "default": 2.1,
+      "min": 1.5,
+      "max": 5.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "door_angle",
+      "type": "number",
+      "default": 270.0,
+      "min": 0.0,
+      "max": 360.0,
+      "unit": "deg",
+      "doc": "The side of the door: 0 to +x (the east), 90 to +y."
+    },
+    {
+      "name": "hollow",
+      "type": "boolean",
+      "default": false,
+      "doc": "The wall and a spiral stair inside (at the near level)."
+    },
+    {
+      "name": "wall",
+      "type": "number",
+      "default": 0.5,
+      "min": 0.1,
+      "max": 3.0,
+      "unit": "m",
+      "doc": ""
+    },
+    {
+      "name": "steps",
+      "type": "integer",
+      "default": 55,
+      "min": 5,
+      "max": 500
+    },
+    {
+      "name": "light",
+      "type": "skill",
+      "skill": "tower_site",
+      "default": null,
+      "doc": "The light for the app: {color, flashes, period (s), range (nm)}."
+    },
+    {
+      "name": "sources",
+      "type": "sources",
+      "default": {},
+      "doc": "The source of each size, by its name."
+    }
+  ],
+  "sizes": [
+    {
+      "name": "height",
+      "unit": "m"
+    },
+    {
+      "name": "platform",
+      "unit": "m",
+      "of": [
+        "platform_width",
+        "platform_height"
+      ]
+    },
+    {
+      "name": "body",
+      "unit": "m"
+    },
+    {
+      "name": "top",
+      "unit": "m"
+    },
+    {
+      "name": "ledge",
+      "unit": "m"
+    },
+    {
+      "name": "bands",
+      "unit": "m"
+    },
+    {
+      "name": "pilasters"
+    },
+    {
+      "name": "pilaster_width",
+      "unit": "m"
+    },
+    {
+      "name": "across",
+      "unit": "m"
+    },
+    {
+      "name": "foot",
+      "unit": "m"
+    },
+    {
+      "name": "flare",
+      "unit": "m"
+    },
+    {
+      "name": "cornice",
+      "unit": "m"
+    },
+    {
+      "name": "gallery",
+      "unit": "m"
+    },
+    {
+      "name": "gallery_width",
+      "unit": "m"
+    },
+    {
+      "name": "rail",
+      "unit": "m"
+    },
+    {
+      "name": "drum",
+      "unit": "m"
+    },
+    {
+      "name": "lantern",
+      "unit": "m",
+      "of": [
+        "lantern_from",
+        "lantern_to",
+        "lantern_width"
+      ]
+    },
+    {
+      "name": "panes"
+    },
+    {
+      "name": "rod",
+      "unit": "m"
+    },
+    {
+      "name": "door",
+      "unit": "m",
+      "of": [
+        "door_width",
+        "door_height"
+      ]
+    },
+    {
+      "name": "wall",
+      "unit": "m"
+    },
+    {
+      "name": "steps",
+      "unit": "steps"
+    },
+    {
+      "name": "light"
+    }
+  ],
+  "drawing": {
+    "name": {
+      "param": "name"
+    },
+    "kind": "tower",
+    "sources": [
+      "The sizes of the order and their sources are in the extras (\"sizes\"); a size with no source is an estimate."
+    ],
+    "nodes": [
+      {
+        "name": "than",
+        "skill": {
+          "tower_body": {
+            "platform_width": {
+              "param": "platform_width"
+            },
+            "platform_height": {
+              "param": "platform_height"
+            },
+            "body": {
+              "param": "body"
+            },
+            "top": {
+              "param": "top"
+            },
+            "ledge": {
+              "param": "ledge"
+            },
+            "bands": {
+              "param": "bands"
+            },
+            "pilasters": {
+              "param": "pilasters"
+            },
+            "pilaster_width": {
+              "param": "pilaster_width"
+            },
+            "across": {
+              "param": "across"
+            },
+            "foot": {
+              "param": "foot"
+            },
+            "flare": {
+              "param": "flare"
+            },
+            "cornice": {
+              "param": "cornice"
+            },
+            "gallery": {
+              "param": "gallery"
+            },
+            "gallery_width": {
+              "param": "gallery_width"
+            },
+            "door_width": {
+              "param": "door_width"
+            },
+            "door_height": {
+              "param": "door_height"
+            },
+            "door_angle": {
+              "param": "door_angle"
+            },
+            "hollow": {
+              "param": "hollow"
+            },
+            "wall": {
+              "param": "wall"
+            }
+          }
+        }
+      },
+      {
+        "name": "den",
+        "skill": {
+          "lantern": {
+            "height": {
+              "param": "height"
+            },
+            "gallery": {
+              "param": "gallery"
+            },
+            "gallery_width": {
+              "param": "gallery_width"
+            },
+            "rail": {
+              "param": "rail"
+            },
+            "drum": {
+              "param": "drum"
+            },
+            "lantern_from": {
+              "param": "lantern_from"
+            },
+            "lantern_to": {
+              "param": "lantern_to"
+            },
+            "lantern_width": {
+              "param": "lantern_width"
+            },
+            "panes": {
+              "param": "panes"
+            },
+            "rod": {
+              "param": "rod"
+            }
+          }
+        },
+        "after": [
+          "than"
+        ]
+      },
+      {
+        "name": {
+          "param": "name"
+        },
+        "skill": {
+          "tower": {
+            "name": {
+              "param": "name"
+            }
+          }
+        },
+        "from": [
+          "than",
+          "den"
+        ]
+      },
+      {
+        "name": "cau_thang",
+        "skill": {
+          "spiral_stair": {
+            "hollow": {
+              "param": "hollow"
+            },
+            "body": {
+              "param": "body"
+            },
+            "wall": {
+              "param": "wall"
+            },
+            "gallery": {
+              "param": "gallery"
+            },
+            "steps": {
+              "param": "steps"
+            },
+            "platform_height": {
+              "param": "platform_height"
+            }
+          }
+        },
+        "to": {
+          "param": "name"
+        },
+        "at": "o",
+        "port": "o"
+      },
+      {
+        "name": "site",
+        "skill": {
+          "tower_site": {
+            "height": {
+              "param": "height"
+            },
+            "platform_width": {
+              "param": "platform_width"
+            },
+            "platform_height": {
+              "param": "platform_height"
+            },
+            "body": {
+              "param": "body"
+            },
+            "foot": {
+              "param": "foot"
+            },
+            "across": {
+              "param": "across"
+            },
+            "flare": {
+              "param": "flare"
+            },
+            "gallery": {
+              "param": "gallery"
+            },
+            "gallery_width": {
+              "param": "gallery_width"
+            },
+            "rail": {
+              "param": "rail"
+            },
+            "lantern_from": {
+              "param": "lantern_from"
+            },
+            "lantern_to": {
+              "param": "lantern_to"
+            },
+            "lantern_width": {
+              "param": "lantern_width"
+            },
+            "door_width": {
+              "param": "door_width"
+            },
+            "door_height": {
+              "param": "door_height"
+            },
+            "door_angle": {
+              "param": "door_angle"
+            },
+            "light": {
+              "param": "light"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

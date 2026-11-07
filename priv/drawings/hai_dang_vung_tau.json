@@ -1,0 +1,34 @@
+{
+  "blueprint": "tower",
+  "options": {
+    "name": "hai_dang_vung_tau",
+    "hollow": true,
+    "light": {
+      "color": "white",
+      "flashes": 2,
+      "period": 10.0,
+      "range": 23
+    },
+    "sources": {
+      "height": "vi.wikipedia, Hải đăng Vũng Tàu: a round tower 18 m high; Lighthouse Digest, Vung Tau Light (#4244): \"white round tower on dwelling\", 59 (ft); OpenStreetMap, way 229301316 (Hải đăng Vũng Tàu), height=18. The owner: from the ground to the top of the dome.",
+      "body": "vi.wikipedia, Hải đăng Vũng Tàu: 3 m across (\"đường kính 3 m\"); measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%: the round body between the pilasters, 3.2 m.",
+      "top": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%: no taper that the photo shows.",
+      "platform": "OpenStreetMap, way 229301316 (Hải đăng Vũng Tàu): the outline, a circle of 7.8 m; measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%: 0.3 m high.",
+      "ledge": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "bands": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "pilasters": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%: 4 (three show from 45 degrees).",
+      "pilaster_width": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "across": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "foot": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "flare": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "cornice": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "gallery": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "gallery_width": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "drum": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "lantern": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "rod": "measured on the photo Hải đăng Vũng Tàu.JPG (Wikimedia Commons, Category:Vung Tau lighthouse): the scale from the platform of OpenStreetMap and a person, the heights fitted to 18 m; ±10%",
+      "steps": "Tinhte (a forum), the lighthouses of Việt Nam: 55 steps in a spiral (a weak source).",
+      "light": "Lighthouse Digest, Vung Tau Light (#4244): \"white round tower on dwelling\": two white flashes each 10 seconds; OpenStreetMap, way 229301316 (Hải đăng Vũng Tàu): seamark:light, white, period 10 s, range 23 nm."
+    }
+  }
+}

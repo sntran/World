@@ -332,14 +332,16 @@ needs no new code for it. It has a `name`, a `doc`, `sources`, `params`
 - **A param** has the keys of an option (`name`, `type`, `default`,
   `min`, `max`, `unit`, `values`, `item`, `fields`, `doc`). The types:
   `number`, `integer`, `choice`, `boolean`, `color`, `list`, `object`,
-  `text` (at most `max` bytes, 200 by default) and `sources` (the source
-  of each name of the `sizes`). A param with no `default` is required.
+  `text` (at most `max` bytes, 200 by default), `sources` (the source of
+  each name of the `sizes`) and `skill` (a value that the skill `skill`
+  checks: the light of a tower). A param with no `default` is required.
 - **In the drawing**, a value `{"param": NAME}` takes the value of the
   option, and `{"sum": [...]}` the sum of its numbers.
 - **The sizes** go into the extras of the model (`"sizes"`, `World.Sizes`):
   each with its value, its `unit` and its source, or "estimate (no
   source)". A size with `row` gives each item of a list as the list of
-  the values of its fields. The texts of the sources also go after the
+  the values of its fields, and a size `of` some options gives the list
+  of their values (the platform of a tower: its width and its height). The texts of the sources also go after the
   `sources` of the drawing, in the order of their names.
 
 A model of the catalog can be an order of a blueprint
@@ -431,7 +433,10 @@ cast in parallel pours does not give the same bytes.
 
 ## A tower
 
-A tower (`World.Towers`, W13 of Vũng Tàu; the blueprint `tower`) is a
+A tower (`priv/blueprints/tower.json`, W13 of Vũng Tàu; the blueprint
+`tower`, the skills of `World.Skills.Towers`: `tower_body` of a mason,
+`lantern` of a smith, `tower` of a mason that sets them as one part,
+`spiral_stair` of a mason, and `tower_site` of a surveyor) is a
 lighthouse of masonry on a round platform. The kind is `tower`; the
 origin is on the ground at the center of the platform. The tower only: a
 house next to it is a model of its own (`lot_house`), and the game puts
