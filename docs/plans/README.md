@@ -1,0 +1,36 @@
+# Plans
+
+A plan describes one block of work on World. The owner reads it,
+changes it, and approves it. The work of a plan comes after its
+approval, as small commits on `main` (`AGENTS.md`).
+
+## Status values
+
+| Status | Meaning |
+|---|---|
+| Draft | The plan is written. Do not build it. |
+| Approved | The owner approved it. The work can start. |
+| In progress | The work is in progress. |
+| Done | Each step of the plan is done, with its tests and its pictures. |
+
+## Plan file format
+
+Each plan has these sections:
+
+1. Status and dependencies.
+2. Goal: what World has at the end.
+3. Out of scope.
+4. Decisions, with the reason for each decision.
+5. Requirements, numbered `R1`, `R2`, and so on.
+6. Steps.
+7. Acceptance criteria.
+8. Open questions.
+
+The builder writes questions and answers under "Open questions". The
+builder does not change the requirements: the owner does.
+
+## List of plans
+
+| Number | Name | Status |
+|---|---|---|
+| 0001 | [The people build on demand](0001-people-build-on-demand.md) | Draft |
