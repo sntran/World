@@ -8,7 +8,8 @@ defmodule World.Supervisor do
 
   - `World.Names`: a construction by its id (unique keys).
   - `World.Events`: the processes that watch a construction, or the whole
-    world with the key `:world` (duplicate keys).
+    world with the key `:world` (duplicate keys, in partitions by key: a
+    dispatch reads one partition).
   - `World.Persons`: the people (a dynamic supervisor).
   - `World.Constructions`: the constructions (a dynamic supervisor).
   """
@@ -24,7 +25,7 @@ defmodule World.Supervisor do
   def children(env) do
     [
       {Registry, keys: :unique, name: World.Names},
-      {Registry, keys: :duplicate, name: World.Events},
+      {Registry, keys: {:duplicate, :key}, name: World.Events, partitions: System.schedulers_online()},
       {DynamicSupervisor, name: World.Persons, strategy: :one_for_one},
       {DynamicSupervisor, name: World.Constructions, strategy: :one_for_one},
       World.Census

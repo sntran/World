@@ -14,9 +14,10 @@ defmodule World.Census do
   the order of their requests. So the constructions of the node share
   the people.
 
-  The census watches each construction and each person: a construction
-  that stops lets its people go, and a person that stops leaves the
-  census (its construction gets `{:lost, person}`).
+  The census watches each construction and each person with a monitor
+  of priority (Erlang/OTP 28): a construction that stops lets its people
+  go before the next hire, and a person that stops leaves the census
+  (the construction that holds it watches it too).
   """
   use GenServer
 
@@ -88,8 +89,7 @@ defmodule World.Census do
         waiting = Enum.reject(s.waiting, fn {c, _, _, _} -> c == pid end)
         {:noreply, serve(%{s | people: people, waiting: waiting, watched: MapSet.delete(s.watched, pid)})}
 
-      {info, people} ->
-        if info.by, do: send(info.by, {:lost, pid})
+      {_info, people} ->
         {:noreply, serve(%{s | people: people})}
     end
   end
@@ -129,7 +129,8 @@ defmodule World.Census do
 
   defp born(s, trade) do
     {:ok, p} = DynamicSupervisor.start_child(World.Persons, {Person, trade: trade})
-    {p, put_in(s.people[p], %{trade: trade, job: :worker, by: nil, ref: Process.monitor(p)})}
+    ref = :erlang.monitor(:process, p, [:priority])
+    {p, put_in(s.people[p], %{trade: trade, job: :worker, by: nil, ref: ref})}
   end
 
   defp leave(s, p) do
@@ -139,7 +140,7 @@ defmodule World.Census do
   end
 
   defp watch(s, c) do
-    Process.monitor(c)
+    :erlang.monitor(:process, c, [:priority])
     %{s | watched: MapSet.put(s.watched, c)}
   end
 end

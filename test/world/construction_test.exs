@@ -147,6 +147,7 @@ defmodule World.ConstructionTest do
     j = job("wall_brick_sample", budget: %{"workers" => 1})
     {:ok, id} = World.build(j)
     [{pid, _}] = Registry.lookup(World.Names, id)
+    assert Process.get_label(pid) == {:construction, id}
     me = self()
     spawn(fn -> send(me, {:second, World.build(j), World.await(id)}) end)
 

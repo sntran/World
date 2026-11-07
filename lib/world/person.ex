@@ -42,7 +42,11 @@ defmodule World.Person do
   def info(person), do: GenServer.call(person, :info)
 
   @impl true
-  def init(opts), do: {:ok, %{trade: Map.fetch!(opts, :trade), job: Map.get(opts, :job, :worker)}}
+  def init(opts) do
+    s = %{trade: Map.fetch!(opts, :trade), job: Map.get(opts, :job, :worker)}
+    Process.set_label({:person, s.job, s.trade})
+    {:ok, s}
+  end
 
   @impl true
   def handle_call(:info, _from, s), do: {:reply, s, s}

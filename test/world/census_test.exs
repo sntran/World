@@ -35,6 +35,7 @@ defmodule World.CensusTest do
     c = construction()
     p = hired(c, hire(s, :mason, c))
     assert %{trade: :mason, job: :worker} = Person.info(p)
+    assert Process.get_label(p) == {:person, :worker, :mason}
     assert [%{"trade" => :mason, "by" => by}] = Census.people(s)["people"]
     assert by == Person.name(c)
 
@@ -92,12 +93,13 @@ defmodule World.CensusTest do
     assert Census.people(s)["waiting"] == []
   end
 
-  test "a person that stops leaves the census, and its construction gets the news" do
+  test "a person that stops leaves the census" do
     s = census()
     c = construction()
     p = hired(c, hire(s, :mason, c))
+    ref = Process.monitor(p)
     Process.exit(p, :kill)
-    assert_receive {^c, {:lost, ^p}}
+    assert_receive {:DOWN, ^ref, :process, ^p, :killed}
     assert Census.people(s)["people"] == []
   end
 

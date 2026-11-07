@@ -20,6 +20,12 @@ defmodule World.Construction do
      so the file has the bytes of a build with no world (`done`,
      `run_done`).
 
+  The deadline and the people that stop come first (priority messages,
+  Erlang/OTP 28): the deadline goes to a priority alias of the
+  construction, and it watches each person that it holds with a monitor
+  of priority. So they do not wait behind the results of the people in
+  the mailbox (thousands for a house of bricks).
+
   The budget (`budget`): `"workers"` (the most people at one time, #{4} by
   default), `"seconds"` (the time of the build: then `stopped`, and no
   model) and `"triangles"` (the most triangles of the model). Each event
@@ -61,6 +67,8 @@ defmodule World.Construction do
 
     budget = job.budget
     clock = Clock.new()
+    Process.set_label({:construction, job.id})
+    urgent = :erlang.alias([:priority])
     # The memory of the VM, each 25 ms of the construction: its most.
     me = self()
     sampler = spawn_link(fn -> sample(me, World.memory()) end)
@@ -71,11 +79,17 @@ defmodule World.Construction do
       log: Log.new(clock),
       start: System.monotonic_time(:millisecond),
       replies: [job.reply],
-      sampler: sampler
+      sampler: sampler,
+      urgent: urgent,
+      watched: %{}
     }
 
     s = record(s, "requested", nil, %{"budget" => budget, "level" => Atom.to_string(job.level)})
-    if budget["seconds"], do: Process.send_after(self(), :deadline, round(budget["seconds"] * 1000))
+    # A timer cannot send to an alias: the timer server sends it.
+    if budget["seconds"],
+      do:
+        {:ok, _} = :timer.apply_after(round(budget["seconds"] * 1000), :erlang, :send, [urgent, :deadline, [:priority]])
+
     {:ok, s, {:continue, :plan}}
   end
 
@@ -142,7 +156,8 @@ defmodule World.Construction do
     s = %{s | requests: requests}
 
     if trade && Enum.any?(ready(s), &(&1.trade == trade)) do
-      s = %{s | workers: Map.put(s.workers, p, trade), idle: s.idle ++ [p]}
+      watched = Map.put(s.watched, p, :erlang.monitor(:process, p, [:priority]))
+      s = %{s | workers: Map.put(s.workers, p, trade), idle: s.idle ++ [p], watched: watched}
       {:noreply, s |> record("hired", p, %{"trade" => Atom.to_string(trade)}) |> assign()}
     else
       # A person that the construction does not need now goes back.
@@ -187,10 +202,19 @@ defmodule World.Construction do
   end
 
   # A person that stopped: its task goes back to the tasks that wait.
-  def handle_info({:lost, p}, s) do
+  def handle_info({:DOWN, _, :process, p, _}, s) do
     {task, running} = Map.pop(s.running, p)
     waiting = if task, do: [task | s.waiting], else: s.waiting
-    s = %{s | running: running, waiting: waiting, workers: Map.delete(s.workers, p), idle: List.delete(s.idle, p)}
+
+    s = %{
+      s
+      | running: running,
+        waiting: waiting,
+        workers: Map.delete(s.workers, p),
+        idle: List.delete(s.idle, p),
+        watched: Map.delete(s.watched, p)
+    }
+
     {:noreply, assign(s)}
   end
 
@@ -267,8 +291,9 @@ defmodule World.Construction do
   end
 
   defp let_go(s, p) do
+    Process.demonitor(s.watched[p], [:flush])
     Person.release(p)
-    s = %{s | workers: Map.delete(s.workers, p), idle: List.delete(s.idle, p)}
+    s = %{s | workers: Map.delete(s.workers, p), idle: List.delete(s.idle, p), watched: Map.delete(s.watched, p)}
     record(s, "released", p, %{})
   end
 
