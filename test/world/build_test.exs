@@ -90,6 +90,14 @@ defmodule World.BuildTest do
     assert points(many) == points(Build.scene(lefts, instances: false))
   end
 
+  test "a scene in parallel (a process for each material) and with no full collection is the same scene" do
+    a = Assembly.add(row(3), "w", wheel(), at: "o", port: "o")
+    one = Build.scene(a)
+    assert Build.scene(a, parallel: true) == one
+    assert World.Detail.lean(false, fn -> World.Detail.lean(true, fn -> Build.scene(a, parallel: true) end) end) == one
+    assert Process.get(:world_lean) == nil and Process.get(:world_parallel) == nil
+  end
+
   test "a split scene: each part a node with its task, and the copies share a mesh" do
     s = Build.scene(row(16), split: true)
     [_ | parts] = s.nodes

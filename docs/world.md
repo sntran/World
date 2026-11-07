@@ -169,15 +169,19 @@ The example is a job of the blueprint `strut` at the level far.
    once.
 5. **The model.** When each task is done, the construction lets its
    people go (`released`) and joins the model: one build of the scene
-   with the triangles that the people made, so the file has the bytes of
-   a build with no world (`done`). The log gets the time and the memory
-   of the construction (`run_done`).
+   with the triangles that the people made, a process for each
+   material, so the file has the bytes of a build with no world
+   (`done`). The log gets the time and the memory of the construction
+   (`run_done`).
 6. **The files.** The files go to the job, and through the Worker into
    R2. A second request of the same job finds the files in R2.
 
 The budget: the most workers at one time, the seconds (at its deadline
 a construction stops, with `stopped` and no model), the triangles, and
 the memory of the people (`memory_mb`: a task over its part fails).
+Only with `memory_mb` do the people and the join do a full collection
+after each big step (`World.Detail.collect/1`): with no limit, nobody
+waits for it.
 
 A client can pause a construction (`paused`: no task starts, the people
 end the tasks in hand, the free people go), change it in the pause (a

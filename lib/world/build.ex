@@ -33,8 +33,10 @@ defmodule World.Build do
   axes of the figure: `World.Limb`), and
   `split` (`true`: each part in a node of its own, with the id of its task
   of `World.Plan.flat/1` in the `"task"` of its extras, for the replay of
-  a run), and `instances` (`false`: no node with instances, for an app
-  that does not read `EXT_mesh_gpu_instancing`).
+  a run), `instances` (`false`: no node with instances, for an app that
+  does not read `EXT_mesh_gpu_instancing`), `triangles` (the triangles
+  of meshes that are made already) and `parallel` (`true`: a process for
+  each material, for the join of a construction).
 
   A mesh of #{@share} triangles or more that is in the model more than
   once (a wheel, a shoe and its mirror) is in the scene once: each part
@@ -46,13 +48,17 @@ defmodule World.Build do
     # The triangles that the people of a construction made (a map of a
     # mesh to its triangles): the build takes them, and makes the others.
     old = Process.put(:world_triangles, Keyword.get(opts, :triangles, %{}))
+    parallel = Process.put(:world_parallel, Keyword.get(opts, :parallel, false))
 
     try do
       build(item, opts)
     after
-      if old, do: Process.put(:world_triangles, old), else: Process.delete(:world_triangles)
+      restore(:world_triangles, old)
+      restore(:world_parallel, parallel)
     end
   end
+
+  defp restore(key, old), do: if(old == nil, do: Process.delete(key), else: Process.put(key, old))
 
   defp build(item, opts) do
     level = Keyword.get(opts, :level, :near)
@@ -530,24 +536,43 @@ defmodule World.Build do
   # One material at a time: the corners of one material are live, not
   # the corners of all the parts, and a full collection after each
   # primitive keeps the peak low (`World.Detail.collect/1`).
+  #
+  # With `parallel: true` (the join of a construction), a process for each
+  # material makes its primitive, with the triangles of its meshes only.
   defp primitives(placed) do
-    placed
-    |> Enum.flat_map(fn {f, shapes} -> for m <- shapes, do: {m.material, {f, m}} end)
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.sort_by(&elem(&1, 0))
-    |> Enum.map(fn {mat, shapes} ->
-      # The triangles of a mesh, kept for the next part with the same
-      # mesh, for this material only.
-      given = Process.get(:world_triangles, %{})
+    given = Process.get(:world_triangles, %{})
 
-      {corners, _} =
-        Enum.flat_map_reduce(shapes, %{}, fn {f, m}, memo ->
-          tris = Map.get_lazy(memo, m, fn -> Map.get_lazy(given, m, fn -> Mesh.triangles(m) end) end)
-          {place(tris, f), Map.put(memo, m, tris)}
-        end)
+    groups =
+      placed
+      |> Enum.flat_map(fn {f, shapes} -> for m <- shapes, do: {m.material, {f, m}} end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.sort_by(&elem(&1, 0))
 
-      mat |> Scene.primitive(corners) |> Detail.collect()
-    end)
+    if Process.get(:world_parallel, false) do
+      lean = Process.get(:world_lean, true)
+
+      groups
+      |> Enum.map(fn {_, shapes} = g -> {g, Map.take(given, for({_, m} <- shapes, uniq: true, do: m))} end)
+      |> Task.async_stream(fn {g, given} -> Detail.lean(lean, fn -> primitive(g, given) end) end,
+        ordered: true,
+        timeout: :infinity
+      )
+      |> Enum.map(fn {:ok, p} -> p end)
+    else
+      Enum.map(groups, &primitive(&1, given))
+    end
+  end
+
+  defp primitive({mat, shapes}, given) do
+    # The triangles of a mesh, kept for the next part with the same mesh,
+    # for this material only.
+    {corners, _} =
+      Enum.flat_map_reduce(shapes, %{}, fn {f, m}, memo ->
+        tris = Map.get_lazy(memo, m, fn -> Map.get_lazy(given, m, fn -> Mesh.triangles(m) end) end)
+        {place(tris, f), Map.put(memo, m, tris)}
+      end)
+
+    mat |> Scene.primitive(corners) |> Detail.collect()
   end
 
   defp place(corners, f), do: for({p, n} <- corners, do: {Frame.point(f, p), Frame.dir(f, n)})

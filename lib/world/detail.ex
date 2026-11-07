@@ -26,11 +26,24 @@ defmodule World.Detail do
   live data to a new heap, so the peak is some times the live data. A
   big step of a build (a mesh of a person, a primitive of a GLB) calls
   this at its end, when little is live: the peak of the near level of a
-  person goes from 132 MB to less (`docs/factory.md`).
+  person goes from 132 MB to less (`docs/factory.md`). In `lean(false,
+  fun)` there is no collection: the people of a construction with no
+  limit of memory do not wait for it.
   """
   def collect(value) do
-    :erlang.garbage_collect()
+    if Process.get(:world_lean, true), do: :erlang.garbage_collect()
     value
+  end
+
+  @doc "Run `fun` with (`true`, the default) or with no collection after each big step (`collect/1`)."
+  def lean(lean, fun) do
+    old = Process.put(:world_lean, lean)
+
+    try do
+      fun.()
+    after
+      if old == nil, do: Process.delete(:world_lean), else: Process.put(:world_lean, old)
+    end
   end
 
   @doc "The level now (`:near` by default)."

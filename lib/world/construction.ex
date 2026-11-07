@@ -407,38 +407,46 @@ defmodule World.Construction do
     meshes = for {_, _, {shapes, _}} <- elements, m <- shapes, not Map.has_key?(s.triangles, m), uniq: true, do: m
     parts = for {_, part, shown} <- elements, not Map.has_key?(s.glbs, key(shown)), uniq: true, do: {key(shown), part}
     known = Map.take(s.triangles, for({_, _, {shapes, _}} <- elements, m <- shapes, do: m))
-    level = s.level
+    {level, lean} = {s.level, lean?(s)}
 
     fn ->
-      triangles = Map.new(meshes, &{&1, Mesh.triangles(&1)})
-      all = Map.merge(known, triangles)
-      glbs = Map.new(parts, fn {key, part} -> {key, Build.glb(part, level: level, triangles: all)} end)
-      %{triangles: triangles, glbs: glbs}
+      World.Detail.lean(lean, fn ->
+        triangles = Map.new(meshes, &{&1, Mesh.triangles(&1)})
+        all = Map.merge(known, triangles)
+        glbs = Map.new(parts, fn {key, part} -> {key, Build.glb(part, level: level, triangles: all)} end)
+        %{triangles: triangles, glbs: glbs}
+      end)
     end
   end
 
   defp work(s, task) do
-    {drawing, level, made} = {s.job.drawing, s.level, s.made}
+    {drawing, level, made, lean} = {s.job.drawing, s.level, s.made, lean?(s)}
 
     fn ->
-      {thing, _, _} =
-        result =
-        World.Detail.with(level, fn ->
-          World.Drawing.make(drawing, task.id, World.Drawing.inputs(drawing, task.id, made))
-        end)
+      World.Detail.lean(lean, fn ->
+        {thing, _, _} =
+          result =
+          World.Detail.with(level, fn ->
+            World.Drawing.make(drawing, task.id, World.Drawing.inputs(drawing, task.id, made))
+          end)
 
-      elements = if thing, do: Build.elements(thing, level), else: []
-      meshes = for {_, _, _, {shapes, _}} <- elements, m <- shapes, uniq: true, do: m
-      triangles = Map.new(meshes, &{&1, Mesh.triangles(&1)})
+        elements = if thing, do: Build.elements(thing, level), else: []
+        meshes = for {_, _, _, {shapes, _}} <- elements, m <- shapes, uniq: true, do: m
+        triangles = Map.new(meshes, &{&1, Mesh.triangles(&1)})
 
-      glbs =
-        Map.new(elements, fn {_, _, part, shown} ->
-          {key(shown), Build.glb(part, level: level, triangles: triangles)}
-        end)
+        glbs =
+          Map.new(elements, fn {_, _, part, shown} ->
+            {key(shown), Build.glb(part, level: level, triangles: triangles)}
+          end)
 
-      %{triangles: triangles, glbs: glbs, made: result}
+        %{triangles: triangles, glbs: glbs, made: result}
+      end)
     end
   end
+
+  # A full collection after each big step (World.Detail.collect/1) only
+  # with a limit of memory: with no limit, the people do not wait for it.
+  defp lean?(s), do: Map.has_key?(s.job.budget, "memory_mb")
 
   defp change(s, job, names) do
     {old, new} = {World.Drawing.keys(s.job.drawing), World.Drawing.keys(job.drawing)}
@@ -500,7 +508,8 @@ defmodule World.Construction do
   defp finish(%{waiting: [], running: running, stale: stale} = s) when running == %{} and stale == %{} do
     s = Enum.reduce(s.idle, s, &let_go(&2, &1))
     s = if s.job.drawing, do: %{s | item: World.Drawing.assemble(s.job.drawing, s.made)}, else: s
-    glb = GLB.encode(s.job.scene.(s.item, level: s.level, triangles: s.triangles))
+    scene = fn -> s.job.scene.(s.item, level: s.level, triangles: s.triangles, parallel: true) end
+    glb = World.Detail.lean(lean?(s), fn -> GLB.encode(scene.()) end)
     s = record(s, "done", nil, %{"bytes" => byte_size(glb), "level" => Atom.to_string(s.level)})
     send(s.sampler, :peak)
     {what, peak} = receive do: ({:peak, peak} -> peak)
