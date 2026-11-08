@@ -146,4 +146,16 @@ defmodule World.StatueTest do
       assert {:error, [%{"path" => ^path} | _]} = Orders.check(%{"blueprint" => "statue", "options" => options})
     end
   end
+
+  test "the halo is behind the head, as in the photos: no point of it is in front of the back of the head" do
+    data = %{"height" => 32.0, "span" => 18.4, "hand" => 2.2}
+    {_, %{"figure" => fig}, _} = World.Skills.Figure.make(data, %{}, %{})
+    {_, %{"meshes" => halo}, _} = World.Skills.Halo.make(%{}, %{"figure" => %{"figure" => fig}}, %{level: :near})
+    neck = elem(fig.marks["head"], 2)
+    head = for {ps, _} <- fig.surfaces, {_, _, z} = p <- ps, z > neck, do: p
+    {{_, back, _}, {_, face, _}} = World.Vec.bounds(head)
+    {{_, _, _}, {_, front, _}} = World.Vec.bounds(Enum.flat_map(halo, & &1.points))
+    # The figure looks to +y: the halo is behind the back of the head.
+    assert front <= back + 1.0e-6 and face > back
+  end
 end

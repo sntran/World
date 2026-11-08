@@ -57,7 +57,7 @@ What the photo of the statue shows (Wikimedia Commons,
 | D3 | **The large forms stay cast** (the robe, the body, the hollow, the stair, the windows: concrete in forms, poured in bands). The shell is relaxed with Taubin smoothing, which keeps the volume and the sharp edges of the planes, so the steps of the grid go away. | The cast is how the real statue was built, and the hollow and the stair need its field. |
 | D4 | **The fine parts are carved, not cast:** the head (the face and the hair), the hands and the feet. They come from the full MakeHuman base mesh at near (`Human.near/5`, with eyes, nose and lips), posed and scaled as the figure. A new skill `carve` (trade sculptor) makes them, the cast field leaves their places out, and each overlaps the shell by a collar at the neck, the wrists and the ankles. Mid and far keep the cast. | A face cannot be cast in cells of 0.32 m; a sculptor makes the head and the hands of a real statue. |
 | D5 | **The robe as the photo shows it:** flat planes with sharp edges; the front panel with its three square marks; the side panels; the cape to the waist; the Sacred Heart; wide square sleeves; the band of Greek key at the cuffs and at the hem. The feet show under the hem, on a low dome. | These are the marks that make the statue the statue of Vũng Tàu. |
-| D6 | **The halo is behind the head.** Its center comes from the skull, not from the hair. Its cross is in the ring behind the head, and no part of the halo is in front of the face. | The halo is the lightning rod of the statue (the travel guides), and the photo shows it behind the head. |
+| D6 | **The halo is behind the head.** Its cross is in the ring behind the head, and no part of the halo is in front of the back of the head. The model has it so already (the skill `halo` puts it behind the back of the hair); the cross that seemed to go through the head was the lump of the face. A test keeps it so. | The halo is the lightning rod of the statue (the travel guides), and the photo shows it behind the head, its cross at the two sides of the head and over it. |
 | D7 | **Washed stone and light.** A role of the palette can have a texture that World makes (`World.PNG`): small changes of color (the pebbles of đá rửa) and a normal texture of grain, tiled in metres on the UVs that the statue already has (`World.Surface`). The color of `stone_wash` comes from the photos. The review pages share one scene module: tone mapping, a sun with soft shadows fitted to the model, a ground that takes the shadow, and `READY` after the first frame. | The same GLB looks like stone in any app; the review page shows the model as a person sees it. |
 | D8 | **Far keeps its bytes.** The tests that compare the far file with its bytes stay as they are; near and mid change, and their files are built again. | Far is the level of the skyline of the game. |
 | D9 | **The checks (the owner):** quick checks on each commit (the format, the compile with warnings as errors, the tests of what the commit changes), and the full checks on the tip before each push. | The container of the work restarts often, and a full check takes half an hour. |
@@ -73,8 +73,8 @@ What the photo of the statue shows (Wikimedia Commons,
   Khronos.
 - R3. The shell of a cast can be relaxed (`World.Cast`): its volume stays
   within 2%, and each edge is still in two faces.
-- R4. The halo of the statue has no point in front of the plane of the
-  face, and its cross is outside the outline of the head.
+- R4. The halo of the statue has no point in front of the back of the
+  head.
 - R5. The robe has the marks of D5. The span stays 18.4 m, and the
   hollow, the stair and the windows are inside the shell.
 - R6. The head, the hands and the feet are carved parts at near, with
