@@ -17,7 +17,7 @@ try {
 }
 
 const root = new URL('../..', import.meta.url).pathname;
-const types = { '.html': 'text/html', '.glb': 'model/gltf-binary', '.jsonl': 'application/x-ndjson' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.glb': 'model/gltf-binary', '.jsonl': 'application/x-ndjson' };
 
 // A static server of the repository.
 function serve() {

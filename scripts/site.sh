@@ -12,6 +12,7 @@
 #   against the build of the code.
 # - /kit/: the kit of a person (priv/kit, World.People.Kit), which CI
 #   checks with the catalog.
+# - /scene.js: the light of the three pages (review/scene.js).
 # - /palette.json, /version.json (the commit of the build).
 # - /_headers: CORS and the cache of each file.
 set -eu
@@ -33,6 +34,8 @@ if ! grep -q "const base = '/models/';" site/review.html; then
 fi
 cp review/replay.html site/replay.html
 cp review/world.html site/index.html
+# The light of the three pages (plan 0004, D7), next to them.
+cp review/scene.js site/scene.js
 
 # The commit names the files that the VM builds in R2, so each deploy
 # must have its own. The commit of Workers Builds, else the commit of

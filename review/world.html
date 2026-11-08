@@ -89,7 +89,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { light } from './scene.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -102,11 +102,7 @@ renderer.setPixelRatio(devicePixelRatio);
 const scene = new THREE.Scene();
 const style = getComputedStyle(document.body);
 scene.background = new THREE.Color(style.backgroundColor);
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8070, 0.6));
-const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-sun.position.set(30, 60, 40);
-scene.add(sun);
+const stage = light(renderer, scene);
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 2000);
 camera.position.set(40, 45, 70);
 const controls = new OrbitControls(camera, canvas);
@@ -137,6 +133,10 @@ function label(text, x, z) {
   return sprite;
 }
 const yard = await fetch(params.get('places') ?? '/places').then((r) => r.json()).catch(() => ({ places: [] }));
+// The sun and its shadows cover the yard: each place, 40 m round it.
+const area = new THREE.Box3(new THREE.Vector3(-40, 0, -40), new THREE.Vector3(80, 30, 60));
+for (const p of yard.places) area.expandByPoint(new THREE.Vector3(p.at[0] - 40, 0, -p.at[1] - 40)).expandByPoint(new THREE.Vector3(p.at[0] + 40, 30, -p.at[1] + 40));
+stage.fit(area);
 for (const p of yard.places) {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: KINDS[p.kind] ?? 0x999999, transparent: true, opacity: 0.3 }));
   ground.rotation.x = -Math.PI / 2;
@@ -243,6 +243,7 @@ async function person(name) {
   p.trade = p.row.insertCell();
   p.status = p.row.insertCell();
   p.figure.position.copy(gate);
+  stage.shade(p.figure);
   scene.add(p.figure);
   people.set(name, p);
   return p;
@@ -341,6 +342,7 @@ async function take(e) {
       const part = glb.clone();
       part.matrixAutoUpdate = false;
       part.matrix.fromArray(d.matrix);
+      stage.shade(part);
       b.group.add(part);
     }
   }
