@@ -688,6 +688,22 @@
         ]
       },
       {
+        "name": "carve",
+        "skill": {
+          "carve": {
+            "material": {
+              "param": "material"
+            }
+          }
+        },
+        "after": [
+          "shell"
+        ],
+        "from": [
+          "figure"
+        ]
+      },
+      {
         "name": {
           "param": "name"
         },
@@ -711,7 +727,8 @@
         "from": [
           "shell",
           "grille",
-          "halo"
+          "halo",
+          "carve"
         ],
         "to": "be",
         "at": "o",

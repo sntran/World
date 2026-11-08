@@ -102,6 +102,7 @@ plan, and each other node takes it in `from`.
 | `shell` | caster | `hand`, `material` | The shell of the statue, from its slabs. |
 | `set` | sculptor | `name`, `feet` | The statue set on its base. |
 | `halo` | smith | `material`, `halo`, `rays` | The halo and its rays. |
+| `carve` | sculptor | `material` | The head and the hands, carved from the full mesh of the person at near. |
 | `grille` | smith | `material`, `hollow`, `windows` | The grilles of the windows. |
 | `base` | mason | `material`, `base_width`, `base_depth`, `base_height`, `corner`, `reliefs`, `plinth_radius`, `plinth_height` | The plinth and the base, with the reliefs. |
 | `stair` | mason | `hollow`, `steps`, `well`, `feet` | The spiral stair inside a hollow statue. |

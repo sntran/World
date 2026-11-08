@@ -14,7 +14,16 @@ defmodule World.Skills.Figure do
   Its data: `figure`, the surfaces (`{points, triangles}`, in m, on its
   feet at z = 0), the hands (the box of the points of each hand of
   `arms_out`), the marks (the shoulders, the elbows, the wrists and the
-  head), the scale, the top and the halo (its radius and its center).
+  head), the scale, the top, the halo (its radius and its center), and
+  `carved`.
+
+  At near, the head (with its eyes) and the hands of `arms_out` are
+  carved (plan 0004, D4): `carved` has them from the full mesh of the
+  person at near (`{name, {points, triangles}}`), in the pose and at the
+  scale of the figure, and the surfaces for the cast have no triangle of
+  their bones, so that the cast of cells of 0.32 m does not make lumps of
+  them. A triangle is of a piece when its three points move most with
+  the bones of the piece. The hair stays in the cast.
   """
   @behaviour World.Skill
   alias World.{Detail, Figure, Frame, Scene, Vec}
@@ -36,9 +45,18 @@ defmodule World.Skills.Figure do
   def estimate(_data, _level), do: 0
 
   @impl true
-  def make(data, _inputs, _context), do: {nil, %{"figure" => figure(Statue.o(data, @names))}, %{}}
+  def make(data, _inputs, context),
+    do: {nil, %{"figure" => figure(Statue.o(data, @names), Map.get(context, :level))}, %{}}
 
-  defp figure(o) do
+  # The bones of each carved piece: the head, and each hand with its fingers.
+  @fingers for f <- ~w(index middle pinky ring thumb), n <- 1..3, do: "#{f}_0#{n}"
+  @pieces [
+    {"head", ~w(head)},
+    {"hand_l", ["hand_l" | Enum.map(@fingers, &(&1 <> "_l"))]},
+    {"hand_r", ["hand_r" | Enum.map(@fingers, &(&1 <> "_r"))]}
+  ]
+
+  defp figure(o, level) do
     f =
       Detail.with(:mid, fn ->
         Human.person(o.name, gender: o.gender, age: o.age, hair: o.hair, clothes: [], pose: pose(o))
@@ -72,10 +90,18 @@ defmodule World.Skills.Figure do
 
     surfaces = for {ps, tris} <- surfaces, do: {Enum.map(ps, move), tris}
     marks = Map.new(marks, fn {k, p} -> {k, squeeze.(p)} end)
+    carve? = level == :near and o.pose == "arms_out"
+    hands = hands(surfaces, marks, o)
+
+    {surfaces, carved} =
+      if carve?,
+        do: {uncarved(f, frames, move), carved(o, move, marks)},
+        else: {surfaces, []}
 
     %{
       surfaces: surfaces,
-      hands: hands(surfaces, marks, o),
+      hands: if(carve?, do: [], else: hands),
+      carved: carved,
       marks: marks,
       scale: s,
       top: top * s,
@@ -113,23 +139,110 @@ defmodule World.Skills.Figure do
   end
 
   # The triangles of the skin and the hair of the posed person.
-  defp skin(%Figure{nodes: nodes, skins: skins}, frames) do
-    for n <- nodes, n.skin != nil, skin = Enum.at(skins, n.skin), p <- n.primitives, p.material in [:skin, :hair] do
+  defp skin(f, frames), do: for({_, ps, tris, _} <- posed(f, frames, [:skin, :hair]), do: {ps, tris})
+
+  # Each primitive of the materials of the posed person: its material, its
+  # points, its triangles, and the bone that moves each point most.
+  defp posed(%Figure{nodes: nodes, skins: skins}, frames, materials) do
+    for n <- nodes, n.skin != nil, skin = Enum.at(skins, n.skin), p <- n.primitives, p.material in materials do
       bones =
         skin.joints
         |> Enum.zip(skin.inverse_bind)
         |> Enum.map(fn {j, ib} -> Frame.compose(frames[j], ib) end)
         |> List.to_tuple()
 
-      points =
-        for {pt, js, ws} <- Enum.zip([p.positions, p.joints, p.weights]) do
-          Enum.zip(Tuple.to_list(js), Tuple.to_list(ws))
-          |> Enum.map(fn {j, w} -> Vec.scale(Frame.point(elem(bones, j), pt), w) end)
-          |> Enum.reduce(&Vec.add/2)
-        end
+      names = skin.joints |> Enum.map(&Enum.at(nodes, &1).name) |> List.to_tuple()
 
-      {points, Enum.chunk_every(p.indices, 3)}
+      {points, most} =
+        Enum.unzip(
+          for {pt, js, ws} <- Enum.zip([p.positions, p.joints, p.weights]) do
+            pairs = Enum.zip(Tuple.to_list(js), Tuple.to_list(ws))
+
+            point =
+              pairs
+              |> Enum.map(fn {j, w} -> Vec.scale(Frame.point(elem(bones, j), pt), w) end)
+              |> Enum.reduce(&Vec.add/2)
+
+            {j, _} = Enum.max_by(pairs, &elem(&1, 1))
+            {point, elem(names, j)}
+          end
+        )
+
+      {p.material, points, Enum.chunk_every(p.indices, 3), List.to_tuple(most)}
     end
+  end
+
+  # The bones of all the carved pieces.
+  defp carved_bones, do: @pieces |> Enum.flat_map(&elem(&1, 1)) |> MapSet.new()
+
+  # A triangle is of a set of bones when its three points move most with them.
+  defp of?(tri, most, bones), do: Enum.all?(tri, &MapSet.member?(bones, elem(most, &1)))
+
+  # The surfaces of the mid person for the cast, with no triangle of the
+  # skin of a carved piece: the hair stays whole.
+  defp uncarved(f, frames, move) do
+    bones = carved_bones()
+
+    for {material, ps, tris, most} <- posed(f, frames, [:skin, :hair]) do
+      tris = if material == :skin, do: Enum.reject(tris, &of?(&1, most, bones)), else: tris
+      {Enum.map(ps, move), tris}
+    end
+  end
+
+  # The carved pieces from the full mesh of the person at near, in the
+  # same pose, moved as the figure (`move`: the scale and the squeeze of
+  # the arms). The eyes go with the head, in the stone of the statue.
+  defp carved(o, move, marks) do
+    # The open hands of the photos: the fingers straight.
+    open = %{{:hand, :l} => "open", {:hand, :r} => "open"}
+
+    f =
+      Detail.with(:near, fn ->
+        Human.person(o.name, gender: o.gender, age: o.age, hair: o.hair, clothes: [], pose: open)
+      end)
+
+    f = Figure.pose(f, %{}, arm_targets(f, o.lift))
+    frames = Scene.world_frames(%Scene{nodes: f.nodes})
+    prims = posed(f, frames, [:skin, :eyes])
+
+    for {name, bones} <- @pieces do
+      set = MapSet.new(bones)
+      piece = piece(for({_, ps, tris, most} <- prims, do: {ps, Enum.filter(tris, &of?(&1, most, set))}), move)
+      {name, reach(name, piece, marks, o)}
+    end
+  end
+
+  # The fingers of the full mesh curl down, so a hand is shorter than its
+  # mitt: with a `span`, the hand stretches out from its wrist until its
+  # tip is at half of the span (the open hands of the photos).
+  defp reach("hand_" <> side, {points, tris}, marks, %{span: span}) when is_number(span) and points != [] do
+    xw = abs(elem(marks["hand_" <> side], 0))
+    tip = points |> Enum.map(fn {x, _, _} -> abs(x) end) |> Enum.max()
+    k = (span / 2 - xw) / (tip - xw)
+
+    stretch = fn {x, y, z} = p ->
+      a = abs(x)
+      if a <= xw, do: p, else: {if(x < 0, do: -1, else: 1) * (xw + (a - xw) * k), y, z}
+    end
+
+    {Enum.map(points, stretch), tris}
+  end
+
+  defp reach(_name, piece, _marks, _o), do: piece
+
+  # One mesh of the triangles of some primitives: only their points, moved.
+  defp piece(prims, move) do
+    {points, tris, _} =
+      Enum.reduce(prims, {[], [], 0}, fn {ps, tris}, {points, all, base} ->
+        used = tris |> List.flatten() |> Enum.uniq() |> Enum.sort()
+        index = used |> Enum.with_index(base) |> Map.new()
+        pts = List.to_tuple(ps)
+
+        {points ++ Enum.map(used, &move.(elem(pts, &1))), all ++ Enum.map(tris, fn t -> Enum.map(t, &index[&1]) end),
+         base + length(used)}
+      end)
+
+    {points, tris}
   end
 
   # The change of x of the arms out to the sides: from the shoulder to the

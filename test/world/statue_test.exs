@@ -158,4 +158,29 @@ defmodule World.StatueTest do
     # The figure looks to +y: the halo is behind the back of the head.
     assert front <= back + 1.0e-6 and face > back
   end
+
+  @tag timeout: 300_000
+  test "at near the head and the hands are carved from the full mesh, out of the cast; at mid the cast has them" do
+    data = %{"height" => 32.0, "span" => 18.4, "hand" => 2.2}
+    {_, %{"figure" => near}, _} = World.Skills.Figure.make(data, %{}, %{level: :near})
+    {_, %{"figure" => mid}, _} = World.Skills.Figure.make(data, %{}, %{level: :mid})
+    assert mid.carved == [] and mid.hands != [] and near.hands == []
+    assert Enum.map(near.carved, &elem(&1, 0)) == ~w(head hand_l hand_r)
+
+    # The face of the full mesh, with its eyes: thousands of triangles.
+    {head_points, head_tris} = near.carved |> List.keyfind("head", 0) |> elem(1)
+    assert length(head_tris) > 3000 and length(head_points) > 1500
+
+    # The open hands reach the span.
+    tips = for {"hand_" <> _, {ps, _}} <- near.carved, do: ps |> Enum.map(fn {x, _, _} -> abs(x) end) |> Enum.max()
+    for t <- tips, do: assert_in_delta(t, 9.2, 1.0e-6)
+
+    # The cast has no triangle of the skin of the head and the hands.
+    count = fn fig -> fig.surfaces |> Enum.map(fn {_, tris} -> length(tris) end) |> Enum.sum() end
+    assert count.(near) < count.(mid)
+
+    {_, %{"meshes" => meshes}, _} = World.Skills.Carve.make(%{}, %{"figure" => %{"figure" => near}}, %{})
+    assert length(meshes) == 3 and Enum.all?(meshes, &(&1.material == :stone_wash))
+    assert {_, %{"meshes" => []}, _} = World.Skills.Carve.make(%{}, %{"figure" => %{"figure" => mid}}, %{})
+  end
 end

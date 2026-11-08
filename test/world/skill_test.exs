@@ -187,7 +187,7 @@ defmodule World.SkillTest do
     assert Blueprints.drawing(%{"blueprint" => "catalog", "options" => %{"name" => "wall_brick_sample"}}) == nil
     assert Blueprints.drawing(%{"blueprint" => "strut", "options" => %{}}) == nil
     statue = Blueprints.drawing(%{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua"}})
-    assert statue["name"] == "tuong_chua_kito_vua" and length(statue["nodes"]) == 37
+    assert statue["name"] == "tuong_chua_kito_vua" and length(statue["nodes"]) == 38
 
     assert Enum.map(Blueprints.data(), & &1["name"]) == [
              "bicycle",

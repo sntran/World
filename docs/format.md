@@ -418,8 +418,14 @@ of the base, and the figure looks to +y.
   when it has one) is `height` over its feet. With `span` (the hands, tip
   to tip) and `hand` (a hand from the wrist to the tip of the middle
   finger), the arms out to the sides become shorter or longer along x
-  from the shoulders: a statue has the proportions of its sculptor. A
-  mitt goes round each hand (the fingers together).
+  from the shoulders: a statue has the proportions of its sculptor. At
+  mid a mitt goes round each hand (the fingers together).
+- **The carved head and hands (near).** A face cannot be cast in cells of
+  0.32 m. At near the head (with its eyes) and the open hands are carved
+  from the full mesh of the person at near, in the same pose and at the
+  same scale (the hands stretch out from the wrists to the span), and the
+  triangles of their bones go out of the cast. The hair stays in the cast
+  (plan 0004, D4).
 - **The robe.** A column from the neck to the feet, wide sleeves along
   the bones of the arms, and two long panels at its sides. The triangles
   of the person that the robe covers go out of the cast.
@@ -475,7 +481,7 @@ The people make a statue as on a site, one node of the drawing each:
 |---|---|---|---|
 | `be` | `base` | mason | The base and the plinth (the root). |
 | `figure` | `figure` | sculptor | The posed and scaled person: data only. |
-| `robe` | `robe` | sculptor | The robe and the mitts: data only. |
+| `robe` | `robe` | sculptor | The robe and the mitts (at mid): data only. |
 | `survey` | `cast_survey` | surveyor | The grid of the cast: data only. |
 | `form_1` to `form_8` | `formwork` | carpenter | The forms of a band of the cast, from the feet up, all at the same time. |
 | `outside` | `cast_outside` | caster | The outside of the cast. |
@@ -485,7 +491,8 @@ The people make a statue as on a site, one node of the drawing each:
 | `shell` | `shell` | caster | The shell from its slabs (or the far form): data only. |
 | `grille` | `grille` | smith | The grilles of the windows: data only. |
 | `halo` | `halo` | smith | The halo and its rays: data only. |
-| NAME | `set` | sculptor | The part of the statue: the shell, the grilles and the halo on the plinth. |
+| `carve` | `carve` | sculptor | The carved head and hands, at near: data only. |
+| NAME | `set` | sculptor | The part of the statue: the shell, the grilles, the halo and the carved head and hands on the plinth. |
 | `cau_thang` | `stair` | mason | The spiral stair, in the cells of the cast. |
 | `lan_can` | `rail` | mason | The rail round the top of the base. |
 | `site` | `site` | surveyor | The ports, the collision boxes and the corners of the base, into the extras. |
