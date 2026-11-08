@@ -87,9 +87,16 @@ defmodule World.References do
   end
 
   @doc "The value of a measure of a model (`World.Measure.of/2`) and its drawing (`references` of this module)."
-  def value(%{"size" => axis} = d, m, _), do: Measure.size(m, String.to_existing_atom(axis), Map.get(d, "without", []))
+  def value(%{"size" => axis} = d, m, _),
+    do:
+      Measure.size(
+        m,
+        Map.fetch!(%{"length" => :length, "width" => :width, "height" => :height}, axis),
+        Map.get(d, "without", [])
+      )
+
   def value(%{"wheelbase" => true}, m, _), do: Measure.wheelbase(m)
-  def value(%{"track" => which}, m, _), do: Measure.track(m, String.to_existing_atom(which))
+  def value(%{"track" => which}, m, _), do: Measure.track(m, Map.fetch!(%{"front" => :front, "rear" => :rear}, which))
   def value(%{"ground_clearance" => d}, m, _), do: Measure.ground_clearance(m, Map.get(d, "without", []))
   def value(%{"top" => node} = d, m, _), do: Measure.top(m, node, d["span"] && List.to_tuple(d["span"]))
 
