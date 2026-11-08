@@ -26,7 +26,8 @@ defmodule World.StatueTest do
     assert_in_delta z0, 0.0, 1.0e-6
     # The base of 4 m and the plinth of 1.2 m under the feet.
     assert_in_delta elem(elem(Mesh.bounds(hd(part(near, "be").shapes)), 1), 2), 0.6, 1.0e-6
-    assert Scene.triangles(s) < 50_000
+    # The budget of a monument (plan 0004, D2).
+    assert Scene.triangles(s) < 100_000
     assert :stone_wash in roles(s) and :steel in roles(s)
 
     # The stair of 133 steps to the floor of the shoulders, inside.

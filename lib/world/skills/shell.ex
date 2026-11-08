@@ -39,7 +39,8 @@ defmodule World.Skills.Shell do
 
       grid ->
         pieces = for name <- ctx.from, q = inputs[name]["quads"], do: q
-        shell = Cast.join(grid, pieces, look) |> Mesh.matter(matter)
+        # The cells of the cast leave steps on a slope: the shell is relaxed.
+        shell = Cast.join(grid, pieces, look, relax: 2) |> Mesh.matter(matter)
         {nil, %{"meshes" => [shell], "shell" => shell, "grid" => field["grid"]}, %{}}
     end
   end

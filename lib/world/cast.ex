@@ -507,14 +507,50 @@ defmodule World.Cast do
     {quads, points}
   end
 
-  @doc "The mesh of the quads of the slabs of a grid, in the order of the slabs."
-  def join(_grid, pieces, material) do
+  @doc """
+  The mesh of the quads of the slabs of a grid, in the order of the
+  slabs. With `relax: n`, the points move in `n` steps of Taubin
+  smoothing (a step to the mean of the neighbors of each point, then a
+  step back a little more), so the steps of the cells go away and the
+  volume stays; the faces stay the same, so each edge is still in two
+  faces.
+  """
+  def join(_grid, pieces, material, opts \\ []) do
     quads = Enum.flat_map(pieces, &elem(&1, 0))
     points = Enum.reduce(pieces, %{}, &Map.merge(&2, elem(&1, 1)))
     keys = quads |> Enum.concat() |> Enum.uniq()
     ids = keys |> Enum.with_index() |> Map.new()
-    faces = for q <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: f
-    Mesh.new(Enum.map(keys, &points[&1]), faces, material)
+    rings = for q <- quads, do: Enum.map(q, &ids[&1])
+    faces = for [a, b, c, d] <- rings, f <- [[a, b, c], [a, c, d]], do: f
+    pts = relax(Enum.map(keys, &points[&1]), rings, Keyword.get(opts, :relax, 0))
+    Mesh.new(pts, faces, material)
+  end
+
+  # Taubin smoothing (lambda 0.5, mu -0.53) over the edges of the quads.
+  defp relax(points, _rings, 0), do: points
+
+  defp relax(points, rings, n) do
+    nbrs =
+      rings
+      |> Enum.flat_map(fn [a, b, c, d] -> [{a, b}, {b, c}, {c, d}, {d, a}, {b, a}, {c, b}, {d, c}, {a, d}] end)
+      |> Enum.uniq()
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    # Each point is a corner of a quad, so each has its neighbours.
+    nbrs = List.to_tuple(for i <- 0..(length(points) - 1), do: Map.fetch!(nbrs, i))
+    pts = List.to_tuple(points)
+
+    Enum.reduce(1..n, pts, fn _, p -> p |> taubin(nbrs, 0.5) |> taubin(nbrs, -0.53) end)
+    |> Tuple.to_list()
+  end
+
+  defp taubin(p, nbrs, f) do
+    for i <- 0..(tuple_size(p) - 1) do
+      v = elem(p, i)
+      mean = Vec.mean(Enum.map(elem(nbrs, i), &elem(p, &1)))
+      Vec.add(v, Vec.scale(Vec.sub(mean, v), f))
+    end
+    |> List.to_tuple()
   end
 
   # The field with no saddle: where two solid values touch only at an

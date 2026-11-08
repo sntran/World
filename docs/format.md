@@ -215,7 +215,9 @@ The build writes three levels of each model:
   level, 12,000 or fewer in the mid level, and 5,000 or fewer in the far
   level. A house can have 300,000 in the near level (one part for each
   brick and tile), 20,000 in the mid level and 12,000 in the far level.
-  A test of each model checks it.
+  A monument (a statue of 32 m, seen up close and from far) can have
+  100,000 in the near level, 12,000 in the mid level and 300 in the far
+  level (plan 0004, D2). A test of each model checks it.
 
 ## A house
 

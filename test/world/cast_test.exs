@@ -35,6 +35,32 @@ defmodule World.CastTest do
     assert Cast.solid([{a.points, tris}], 0.1).cells == Cast.solid([a], 0.1).cells
   end
 
+  test "a relaxed shell: the same faces, each edge in two faces, the steps of the cells gone, the volume within 2%" do
+    g = Cast.solid([Shape.cylinder(1.0, 2.0, :concrete, sides: 48)], 0.1)
+    grid = Cast.surface(g)
+    pieces = for slab <- Cast.slabs(grid, 3), do: Cast.quads(grid, slab)
+    plain = Cast.join(grid, pieces, :concrete)
+    smooth = Cast.join(grid, pieces, :concrete, relax: 2)
+    assert smooth.faces == plain.faces and length(smooth.points) == length(plain.points)
+
+    edges =
+      smooth.faces
+      |> Enum.flat_map(fn [a, b, c] -> [{a, b}, {b, c}, {c, a}] end)
+      |> Enum.frequencies_by(fn {a, b} -> {min(a, b), max(a, b)} end)
+
+    assert Enum.all?(edges, fn {_, n} -> n == 2 end)
+    assert_in_delta volume(smooth) / volume(plain), 1.0, 0.02
+
+    # On the side of the cylinder, the points of the relaxed shell are
+    # nearer to the circle than the steps of the cells.
+    off = fn m ->
+      side = for {x, y, z} <- m.points, z > 0.3 and z < 1.7, do: abs(:math.sqrt(x * x + y * y) - 1.0)
+      Enum.sum(side) / length(side)
+    end
+
+    assert off.(smooth) < off.(plain)
+  end
+
   test "a thin plate thicker than a cell stays, at its true thickness" do
     m = Cast.mesh(Cast.solid([box({0.0, 0.0, 0.0}, {2.0, 2.0, 0.15})], 0.1), :concrete)
     {{_, _, z0}, {_, _, z1}} = Mesh.bounds(m)
