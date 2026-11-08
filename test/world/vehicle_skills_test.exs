@@ -99,7 +99,7 @@ defmodule World.VehicleSkillsTest do
     assert Build.scene(car, level: :far).extras["joints"] == ["front_right_knuckle", "front_right_wheel"]
   end
 
-  test "a part from shape data: its shapes, its ports, its mass, its sources, its detail, and the errors" do
+  test "a part from shape data: its shapes, its ports, its mass, its sources, its detail, its contents, and the errors" do
     data = %{
       "shapes" => [%{"tube" => %{"line" => [[0, 0, 0], [0, 1, 0]], "radius" => 0.02}, "material" => "black"}],
       "ports" => %{"pivot" => %{"at" => [0, 0.5, 0], "axis" => [1, 0, 0], "up" => [0, 0, 1]}},
@@ -117,10 +117,34 @@ defmodule World.VehicleSkillsTest do
 
     assert Vehicle.estimate(data, :near) > 0 and Vehicle.estimate(%{}, :near) == 0
 
-    bad = %{"shapes" => [], "ports" => 1, "mass" => -1, "sources" => [1], "detail" => "far", "inside" => 2, "x" => 1}
+    # The contents add their mass to the mass of the shapes: a tank of
+    # steel with the fuel in it.
+    tank = %{
+      "shapes" => [%{"box" => %{"from" => [0, 0, 0], "to" => [0.1, 0.1, 0.1]}, "material" => "steel"}],
+      "contents" => [%{"name" => "fuel", "mass" => 3.5, "source" => "4.8 L of gasoline at 0.74 kg/L."}]
+    }
+
+    assert Vehicle.check_part(tank, "t") == []
+    assert_in_delta World.Mass.part(Vehicle.part(tank, "tank", :tank)).mass, 7.82 + 3.5, 1.0e-6
+    assert_in_delta World.Mass.part(Vehicle.part(Map.delete(tank, "contents"), "tank", :tank)).mass, 7.82, 1.0e-6
+    assert_in_delta World.Mass.part(Vehicle.part(Map.put(tank, "mass", 2), "tank", :tank)).mass, 5.5, 1.0e-6
+
+    bad = %{
+      "shapes" => [],
+      "ports" => 1,
+      "mass" => -1,
+      "sources" => [1],
+      "detail" => "far",
+      "inside" => 2,
+      "contents" => [1, %{"name" => 2, "mass" => 0, "source" => nil, "y" => 1}, %{}],
+      "x" => 1
+    }
 
     assert Enum.map(Vehicle.check_part(bad, "p"), &elem(&1, 0)) ==
-             ~w(p.x p.shapes p.ports p.mass p.sources p.detail p.inside)
+             ~w(p.x p.shapes p.ports p.mass p.sources p.detail p.inside p.contents[0] p.contents[1].y p.contents[1].name p.contents[1].mass p.contents[1].source p.contents[2].name p.contents[2].mass)
+
+    assert Vehicle.check_part(%{"shapes" => [], "contents" => 1}, "p") |> Enum.map(&elem(&1, 0)) ==
+             ~w(p.shapes p.contents)
 
     assert Vehicle.check_part(3, "p") == [{"p", "must be an object"}]
   end
@@ -135,6 +159,14 @@ defmodule World.VehicleSkillsTest do
       made(Spring, %{"diameter" => 0.05, "wire" => 0.006, "length" => 0.25, "turns" => 7, "inside" => true}, "shock")
 
     assert shock.inside and shock.name == "shock" and Map.keys(shock.ports) == ["end_a", "end_b"]
+
+    # A spring and a rim of a color are of steel and of aluminum for their mass.
+    painted =
+      made(Spring, %{"diameter" => 0.05, "wire" => 0.006, "length" => 0.25, "turns" => 7, "material" => "paint"})
+
+    assert_in_delta World.Mass.part(painted).mass, World.Mass.part(shock).mass, 1.0e-9
+    rim = &World.Mass.part(World.Vehicles.Wheels.rim(0.432, 0.066, material: &1)).mass
+    assert_in_delta rim.(:black), rim.(:aluminum), 1.0e-9
 
     assert Enum.map(Spring.check(%{"diameter" => 2, "turns" => 1}, "s"), &elem(&1, 0)) ==
              ~w(s.diameter s.wire s.length s.turns)

@@ -149,7 +149,8 @@ defmodule World.Vehicles.Wheels do
   A rim: a ring with a well and two flanges, for a bead seat diameter and
   a width (meters). Options: `depth` of the well, `flange`, `material`.
   The rim is a sheet of 4 mm, rolled to its profile: its mass is that of
-  the sheet (a skin on the two faces of the ring), not of a solid ring.
+  the sheet (a skin on the two faces of the ring), not of a solid ring;
+  a rim of a color (a black rim) is of aluminum.
   """
   def rim(diameter, width, opts \\ []) do
     r0 = diameter / 2
@@ -175,11 +176,14 @@ defmodule World.Vehicles.Wheels do
       :rim,
       profile
       |> Shape.lathe(Keyword.get(opts, :material, :rim), kind: :ring, sides: Keyword.get(opts, :sides, 48))
-      |> then(&World.Mesh.skin(&1, t / 2, &1.material)),
+      |> then(&World.Mesh.skin(&1, t / 2, rim_matter(&1.material))),
       [hub_port()],
       params: %{"diameter" => diameter, "width" => width}
     )
   end
+
+  # A rim of a color (a black rim) is of aluminum for its mass.
+  defp rim_matter(material), do: if(World.Mass.density(material), do: material, else: :aluminum)
 
   @doc """
   A cast wheel of a motorbike or a scooter: a rim, a hub, `spokes` curved

@@ -132,7 +132,7 @@ No skill names a model. The joints are in the drawing.
 | `bicycle_frame` | welder | the geometry sheet (`World.Skills.Bicycle`): `tire`, `chainstay`, `bb_drop`, `stack`, `reach`, `head_angle`, `seat_angle`, `seat_tube`, `head_tube`, `seatpost`, `rear_spacing`, the diameter of each tube | A diamond frame with its saddle: the ports `steer`, `rear_axle`, `bb`, `stand`, `rack`; the model moves to its center. |
 | `bicycle_fork` | welder | the geometry sheet, with `rake` and `bar_width` | The fork, the stem and a drop bar, with its fender: the ports `steer` and `axle`. |
 | `crankset` | mechanic | `arm`, `teeth` | The chainring, the arms and the pedals on their hinges: the port `axle` goes on `bb`. |
-| `stand` | smith | shape data: `shapes`, `ports`, `mass`, `sources`, `detail`, `inside` | A stand, a rack, a guard, from its own port. |
+| `stand` | smith | shape data: `shapes`, `ports`, `mass`, `sources`, `detail`, `inside`, `contents` | A stand, a rack, a guard, from its own port. |
 | `frame` | welder | shape data | The frame of a motor vehicle, with its head tube and its ports. |
 | `swingarm` | welder | shape data | A swing arm, with its ports `pivot`, `axle` and `shock`. |
 | `fork` | mechanic | shape data | A telescopic fork with its fender, or the bars, the grips, the levers and the mirrors of a cockpit. |
@@ -144,6 +144,13 @@ No skill names a model. The joints are in the drawing.
 | `lamp` | electrician | shape data (detail `always`) | The lamps. |
 | `spring` | smith | `diameter`, `wire`, `length`, `turns`, `material`, `inside` | A coil spring: a shock, with its ports `end_a` and `end_b`. |
 | `fastener` | mechanic | `kind` (`bolt`, `nut`, `washer`), `thread`, `length` | A bolt, a nut or a washer of ISO metric sizes. |
+
+The mass of a part from shape data is the mass of its shapes (each its
+volume, or its `skin` area times its thickness, times the density of its
+material or its `matter`), or the `mass` of its data sheet. Its
+`contents` add the things in it that its shapes do not show: the fuel in
+a tank, the oil in an engine, a battery under a seat (`World.Mass`). A
+spring or a rim of a color is of steel or of aluminum for its mass.
 
 The blueprints `bicycle.json` (its params are the numbers of its
 geometry sheet), `scooter.json`, `motorcycle.json` and `car.json` are vehicles from
