@@ -1,0 +1,103 @@
+{
+  "name": "royal_enfield_himalayan_411",
+  "title": "Royal Enfield Himalayan 411 (BS6, with ABS)",
+  "sources": [
+    {
+      "name": "Saltire Motorcycles, a dealer of Royal Enfield: Himalayan 411, the specifications",
+      "url": "https://www.saltiremotorcycles.com/?p=15993",
+      "license": "facts"
+    },
+    {
+      "name": "BikeDekho, Royal Enfield Himalayan 411, the specifications: the kerb weight with ABS",
+      "url": "https://bikedekho.com/royal-enfield/himalayan-411/specifications",
+      "license": "facts"
+    }
+  ],
+  "order": {
+    "blueprint": "motorcycle",
+    "options": {}
+  },
+  "numbers": [
+    {
+      "name": "length",
+      "value": 2.19,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall length.",
+      "measure": {
+        "size": "length"
+      }
+    },
+    {
+      "name": "width",
+      "value": 0.84,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall width: of the bars with their grips.",
+      "measure": {
+        "size": "width"
+      }
+    },
+    {
+      "name": "height",
+      "value": 1.37,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall height: the top of the mirrors over the ground.",
+      "measure": {
+        "size": "height"
+      }
+    },
+    {
+      "name": "wheelbase",
+      "value": 1.465,
+      "unit": "m",
+      "source": 0,
+      "standard": "The wheelbase: from the front axle to the rear axle.",
+      "measure": {
+        "wheelbase": true
+      }
+    },
+    {
+      "name": "seat height",
+      "value": 0.8,
+      "unit": "m",
+      "source": 0,
+      "standard": "The seat height: the lowest point of the top of the seat at the place of the rider.",
+      "measure": {
+        "seat": "seat",
+        "span": [
+          -0.495,
+          -0.145
+        ]
+      }
+    },
+    {
+      "name": "ground clearance",
+      "value": 0.22,
+      "unit": "m",
+      "source": 0,
+      "standard": "The ground clearance: the lowest point between the axles, with no wheel and no chain (the chain turns with the sprocket of the rear wheel).",
+      "measure": {
+        "ground_clearance": {
+          "without": [
+            "front_wheel",
+            "rear_wheel",
+            "chain"
+          ]
+        }
+      }
+    },
+    {
+      "name": "curb mass",
+      "value": 199.0,
+      "unit": "kg",
+      "source": 1,
+      "standard": "The kerb weight with ABS. The sources of the Himalayan give 182 to 199 kg. The parts that the drawing does not show (the electrics, the brackets, the inside of the hubs) have masses by estimate, so the tolerance is 10%.",
+      "measure": {
+        "mass": true
+      },
+      "tolerance": 0.1
+    }
+  ]
+}

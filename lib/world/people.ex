@@ -77,7 +77,7 @@ defmodule World.People do
   # The camper is a van of the line (`camper/1`).
   @vehicles %{
     "car" => {&ChevyBolt.model/0, {-0.37, -0.15, 0.65}, "drive", {1.3, -0.6}},
-    "motorcycle" => {&RoyalEnfieldHimalayan.model/0, {0.0, -0.3, 0.88}, "ride", {0.75, -0.25}},
+    "motorcycle" => {&RoyalEnfieldHimalayan.model/0, {0.0, -0.3, 0.82}, "ride", {0.75, -0.25}},
     "motorbike" => {&HondaVision.model/0, @seat, "ride", {0.65, -0.2}},
     "bicycle" => {&TouringBicycle.model/0, {0.0, -0.3, 1.03}, "ride_bicycle", {0.55, -0.15}}
   }

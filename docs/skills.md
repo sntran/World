@@ -136,7 +136,7 @@ No skill names a model. The joints are in the drawing.
 | `frame` | welder | shape data | The frame of a motor vehicle, with its head tube and its ports. |
 | `swingarm` | welder | shape data | A swing arm, with its ports `pivot`, `axle` and `shock`. |
 | `fork` | mechanic | shape data | A telescopic fork with its fender, or the bars, the grips, the levers and the mirrors of a cockpit. |
-| `engine` | mechanic | shape data, with its `mass` | An engine, with its ports. |
+| `engine` | mechanic | shape data, with its `mass` | An engine, with its ports, or a part of its drive (a chain). |
 | `panel` | molder | shape data (a `skin` of ABS) | A panel of plastic: the body of a scooter, a fender. |
 | `body` | sheet_metal_worker | shape data | A body of steel sheet on lofts with arches, a tank. |
 | `glass` | glazier | shape data | The windows of a car, a screen. |

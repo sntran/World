@@ -1,6 +1,9 @@
 defmodule World.Skills.Engine do
   @moduledoc """
-  The skill `engine` of a mechanic (plan 0002, D5): An engine from shape data, with its mass from its data sheet (`mass`) and its ports: the pivot and the axle of a swing arm unit, the port of its shock.
+  The skill `engine` of a mechanic (plan 0002, D5): an engine from shape
+  data, with its mass from its data sheet (`mass`) and its ports (the
+  pivot and the axle of a swing arm unit, the port of its shock), or a
+  part of its drive: the chain of a motorcycle.
   Its data: `shapes`, `ports`, `mass`, `sources`, `detail`, `inside`
   (`World.Skills.Vehicle`).
   """

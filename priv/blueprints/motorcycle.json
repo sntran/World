@@ -17,6 +17,48 @@
         "name": "frame",
         "skill": {
           "frame": {
+            "contents": [
+              {
+                "mass": 6.0,
+                "name": "the brackets, the plates of the footrests and the footrests",
+                "source": "An estimate."
+              },
+              {
+                "mass": 2.6,
+                "name": "the battery",
+                "source": "A VRLA battery of 12 V and 8 Ah (the sheets of dealers): about 2.6 kg, an estimate."
+              },
+              {
+                "mass": 4.0,
+                "name": "the ABS unit, the wires, the ECU and the switches",
+                "source": "An estimate."
+              },
+              {
+                "mass": 2.5,
+                "name": "the air box and the throttle body",
+                "source": "An estimate."
+              },
+              {
+                "mass": 1.5,
+                "name": "the oil cooler and its pipes",
+                "source": "An estimate."
+              },
+              {
+                "mass": 3.0,
+                "name": "the bolts and the cables",
+                "source": "An estimate."
+              },
+              {
+                "mass": 5.0,
+                "name": "the gussets, the cross tubes and the mounts of the engine",
+                "source": "An estimate: the parts of the frame that the drawing does not show."
+              },
+              {
+                "mass": 6.0,
+                "name": "the guard of the sump, the frames of the tank and of the screen",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -90,7 +132,9 @@
             "shapes": [
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -111,7 +155,7 @@
                     [
                       -0.07,
                       0.98,
-                      0.26
+                      0.239
                     ],
                     [
                       -0.07,
@@ -121,12 +165,12 @@
                     [
                       -0.07,
                       0.86,
-                      0.78
+                      0.72
                     ],
                     [
                       -0.098,
                       0.4,
-                      0.86
+                      0.82
                     ],
                     [
                       -0.098,
@@ -139,7 +183,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -155,7 +201,7 @@
                     [
                       -0.07,
                       0.86,
-                      0.78
+                      0.72
                     ]
                   ],
                   "radius": 0.018
@@ -163,7 +209,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -174,7 +222,7 @@
                     [
                       -0.098,
                       0.45,
-                      0.84
+                      0.8
                     ]
                   ],
                   "radius": 0.012
@@ -182,7 +230,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -203,7 +253,7 @@
                     [
                       0.07,
                       0.98,
-                      0.26
+                      0.239
                     ],
                     [
                       0.07,
@@ -213,12 +263,12 @@
                     [
                       0.07,
                       0.86,
-                      0.78
+                      0.72
                     ],
                     [
                       0.098,
                       0.4,
-                      0.86
+                      0.82
                     ],
                     [
                       0.098,
@@ -231,7 +281,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -247,7 +299,7 @@
                     [
                       0.07,
                       0.86,
-                      0.78
+                      0.72
                     ]
                   ],
                   "radius": 0.018
@@ -255,7 +307,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -266,7 +320,7 @@
                     [
                       0.098,
                       0.45,
-                      0.84
+                      0.8
                     ]
                   ],
                   "radius": 0.012
@@ -304,7 +358,9 @@
                   ]
                 },
                 "material": "black",
+                "matter": "steel",
                 "sides": 12,
+                "skin": 0.003,
                 "up": [
                   0.0,
                   0.8949,
@@ -313,7 +369,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -342,7 +400,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -371,7 +431,7 @@
               }
             ],
             "sources": [
-              "A half duplex split cradle frame of steel tube."
+              "A half duplex split cradle frame of steel tube, with a wall of 2 mm (by eye)."
             ]
           }
         }
@@ -382,6 +442,14 @@
         "port": "origin",
         "skill": {
           "engine": {
+            "contents": [
+              {
+                "mass": 1.9,
+                "name": "oil",
+                "source": "About 2.2 L of engine oil at 0.87 kg/L: an estimate."
+              }
+            ],
+            "mass": 60.0,
             "ports": {
               "origin": {
                 "at": [
@@ -438,6 +506,7 @@
                   "x": 0.0
                 },
                 "material": "black",
+                "matter": "aluminum",
                 "smooth": 2
               },
               {
@@ -473,7 +542,9 @@
               },
               {
                 "material": "chrome",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.0015,
                 "tube": {
                   "line": [
                     [
@@ -541,7 +612,9 @@
                   ]
                 },
                 "material": "black",
+                "matter": "steel",
                 "sides": 16,
+                "skin": 0.0015,
                 "smooth": 1,
                 "up": [
                   0.0,
@@ -626,7 +699,8 @@
               }
             ],
             "sources": [
-              "411 cc, one cylinder, air and oil cooled."
+              "411 cc, one cylinder, air and oil cooled.",
+              "The mass, an estimate: 52 kg for the engine with its gearbox, its starter and its balancer shaft, and 8 kg for the exhaust with its muffler and its converter."
             ]
           }
         }
@@ -637,6 +711,13 @@
         "port": "origin",
         "skill": {
           "body": {
+            "contents": [
+              {
+                "mass": 11.1,
+                "name": "fuel",
+                "source": "The tank of 15 L (the sheets of dealers), full: gasoline at 0.74 kg/L."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -693,6 +774,8 @@
                   "x": 0.0
                 },
                 "material": "paint",
+                "matter": "steel",
+                "skin": 0.001,
                 "smooth": 2
               }
             ],
@@ -708,6 +791,13 @@
         "port": "origin",
         "skill": {
           "seat": {
+            "contents": [
+              {
+                "mass": 2.0,
+                "name": "the pan and the cover of the seats",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -748,15 +838,15 @@
                     ],
                     [
                       0.75,
-                      0.8,
-                      0.86,
+                      0.72,
+                      0.795,
                       0.13,
                       4
                     ],
                     [
                       1.0,
-                      0.82,
-                      0.9,
+                      0.76,
+                      0.85,
                       0.12,
                       3
                     ]
@@ -764,6 +854,7 @@
                   "x": 0.0
                 },
                 "material": "seat",
+                "matter": "seat_foam",
                 "smooth": 2
               }
             ],
@@ -779,6 +870,13 @@
         "port": "origin",
         "skill": {
           "panel": {
+            "contents": [
+              {
+                "mass": 1.0,
+                "name": "the holder of the plate and the indicators",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -804,7 +902,7 @@
                   "along": "y",
                   "rows": [
                     [
-                      0.05,
+                      -0.03,
                       0.86,
                       0.88,
                       0.07,
@@ -828,22 +926,26 @@
                   "x": 0.0
                 },
                 "material": "black",
+                "matter": "plastic",
+                "skin": 0.0015,
                 "smooth": 1
               },
               {
                 "box": {
                   "from": [
                     -0.09,
-                    0.02,
+                    -0.05,
                     0.64
                   ],
                   "to": [
                     0.09,
-                    0.03,
+                    -0.04,
                     0.76
                   ]
                 },
-                "material": "white"
+                "material": "white",
+                "matter": "aluminum",
+                "skin": 0.0005
               }
             ]
           }
@@ -855,6 +957,13 @@
         "port": "origin",
         "skill": {
           "stand": {
+            "contents": [
+              {
+                "mass": 2.0,
+                "name": "the plates of the rack and the grab rails",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -877,6 +986,7 @@
             "shapes": [
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 6,
                 "tube": {
                   "line": [
@@ -938,17 +1048,19 @@
                 "box": {
                   "from": [
                     -0.05,
-                    0.06,
+                    -0.02,
                     0.82
                   ],
                   "to": [
                     0.05,
-                    0.1,
+                    0.02,
                     0.86
                   ]
                 },
                 "material": "light_back",
+                "matter": "plastic",
                 "round": 0.3,
+                "skin": 0.0015,
                 "smooth": 1
               }
             ]
@@ -969,6 +1081,18 @@
         "port": "steer",
         "skill": {
           "fork": {
+            "contents": [
+              {
+                "mass": 2.5,
+                "name": "the springs and the oil in the legs",
+                "source": "An estimate: about 0.5 L of oil in each leg of 41 mm."
+              },
+              {
+                "mass": 1.2,
+                "name": "the brake caliper and its hose",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "axle": {
                 "at": [
@@ -1059,7 +1183,9 @@
             "shapes": [
               {
                 "material": "aluminum",
+                "matter": "aluminum",
                 "sides": 12,
+                "skin": 0.004,
                 "tube": {
                   "line": [
                     [
@@ -1078,7 +1204,9 @@
               },
               {
                 "material": "aluminum",
+                "matter": "aluminum",
                 "sides": 12,
+                "skin": 0.004,
                 "tube": {
                   "line": [
                     [
@@ -1097,7 +1225,9 @@
               },
               {
                 "material": "chrome",
+                "matter": "steel",
                 "sides": 12,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -1116,7 +1246,9 @@
               },
               {
                 "material": "chrome",
+                "matter": "steel",
                 "sides": 12,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -1135,6 +1267,7 @@
               },
               {
                 "material": "black",
+                "matter": "aluminum",
                 "sides": 8,
                 "tube": {
                   "line": [
@@ -1154,6 +1287,7 @@
               },
               {
                 "material": "black",
+                "matter": "aluminum",
                 "sides": 8,
                 "tube": {
                   "line": [
@@ -1185,7 +1319,9 @@
                   "to": -100
                 },
                 "material": "black",
+                "matter": "plastic",
                 "sides": 8,
+                "skin": 0.0015,
                 "smooth": 1
               }
             ],
@@ -1201,6 +1337,13 @@
         "port": "origin",
         "skill": {
           "fork": {
+            "contents": [
+              {
+                "mass": 2.5,
+                "name": "the meter, the switches, the levers, the master cylinder and the cables",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -1223,13 +1366,15 @@
             "shapes": [
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
-                      -0.42,
+                      -0.416,
                       1.291268,
-                      1.1976140000000002
+                      1.197614
                     ],
                     [
                       -0.2,
@@ -1247,9 +1392,9 @@
                       1.1676140000000002
                     ],
                     [
-                      0.42,
+                      0.416,
                       1.291268,
-                      1.1976140000000002
+                      1.197614
                     ]
                   ],
                   "radius": 0.0127
@@ -1277,12 +1422,14 @@
                   "x": 0.0
                 },
                 "material": "glass",
-                "sides": 12
+                "matter": "plastic",
+                "sides": 12,
+                "skin": 0.0015
               },
               {
                 "at": [
-                  -0.3,
-                  1.3112679999999999,
+                  -0.289,
+                  1.311268,
                   1.192614
                 ],
                 "axis": [
@@ -1304,8 +1451,8 @@
               },
               {
                 "at": [
-                  0.3,
-                  1.3112679999999999,
+                  0.289,
+                  1.311268,
                   1.192614
                 ],
                 "axis": [
@@ -1327,6 +1474,7 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 6,
                 "tube": {
                   "line": [
@@ -1338,7 +1486,7 @@
                     [
                       -0.3,
                       1.371268,
-                      1.3776140000000001
+                      1.309614
                     ]
                   ],
                   "radius": 0.006
@@ -1349,20 +1497,23 @@
                   "from": [
                     -0.35,
                     1.361268,
-                    1.367614
+                    1.299614
                   ],
                   "to": [
                     -0.25,
                     1.381268,
-                    1.4376140000000002
+                    1.369614
                   ]
                 },
                 "material": "black",
+                "matter": "plastic",
                 "round": 0.3,
+                "skin": 0.0015,
                 "smooth": 2
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 6,
                 "tube": {
                   "line": [
@@ -1374,7 +1525,7 @@
                     [
                       0.3,
                       1.371268,
-                      1.3776140000000001
+                      1.309614
                     ]
                   ],
                   "radius": 0.006
@@ -1385,16 +1536,18 @@
                   "from": [
                     0.25,
                     1.361268,
-                    1.367614
+                    1.299614
                   ],
                   "to": [
                     0.35,
                     1.381268,
-                    1.4376140000000002
+                    1.369614
                   ]
                 },
                 "material": "black",
+                "matter": "plastic",
                 "round": 0.3,
+                "skin": 0.0015,
                 "smooth": 2
               }
             ]
@@ -1408,6 +1561,13 @@
         "port": "origin",
         "skill": {
           "lamp": {
+            "contents": [
+              {
+                "mass": 0.8,
+                "name": "the bulb, the reflector and the brackets",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -1464,7 +1624,9 @@
                   ]
                 },
                 "material": "black",
+                "matter": "plastic",
                 "sides": 20,
+                "skin": 0.002,
                 "up": [
                   0.0,
                   0.0,
@@ -1503,7 +1665,9 @@
                   ]
                 },
                 "material": "light_front",
+                "matter": "plastic",
                 "sides": 20,
+                "skin": 0.002,
                 "up": [
                   0.0,
                   0.0,
@@ -1526,10 +1690,23 @@
         "skill": {
           "wheel": {
             "build": "spoked",
+            "contents": [
+              {
+                "mass": 1.0,
+                "name": "the inner tube",
+                "source": "An inner tube of 90/90-21: about 1 kg, an estimate."
+              },
+              {
+                "mass": 2.0,
+                "name": "the drum of the hub, its bearings and its spacers",
+                "source": "An estimate."
+              }
+            ],
             "disc": 0.3,
             "hub_width": 0.11,
             "rim": "black",
             "rim_depth": 0.018,
+            "rim_matter": "steel",
             "spokes": 36,
             "tire": {
               "param": "front_tire"
@@ -1577,6 +1754,13 @@
         "port": "pivot",
         "skill": {
           "swingarm": {
+            "contents": [
+              {
+                "mass": 3.5,
+                "name": "the linkage, the damper of the shock, the rear brake caliper and the chain guard",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "axle": {
                 "at": [
@@ -1593,6 +1777,23 @@
                   0.0,
                   0.0,
                   1.0
+                ]
+              },
+              "origin": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
                 ]
               },
               "pivot": {
@@ -1620,8 +1821,8 @@
                 ],
                 "axis": [
                   0.0,
-                  0.2873478855663454,
-                  0.9578262852211513
+                  -0.2873478855663454,
+                  -0.9578262852211513
                 ],
                 "up": [
                   0.0,
@@ -1633,7 +1834,9 @@
             "shapes": [
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 8,
+                "skin": 0.0025,
                 "tube": {
                   "line": [
                     [
@@ -1652,7 +1855,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 8,
+                "skin": 0.0025,
                 "tube": {
                   "line": [
                     [
@@ -1671,7 +1876,9 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 8,
+                "skin": 0.0025,
                 "tube": {
                   "line": [
                     [
@@ -1687,7 +1894,40 @@
                   ],
                   "radius": 0.018
                 }
-              },
+              }
+            ],
+            "sources": [
+              "A box section swing arm with a monoshock (linkage), of steel with a wall of 2.5 mm (by eye)."
+            ]
+          }
+        }
+      },
+      {
+        "at": "origin",
+        "name": "chain",
+        "port": "origin",
+        "skill": {
+          "engine": {
+            "ports": {
+              "origin": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
               {
                 "material": "metal",
                 "sides": 6,
@@ -1724,10 +1964,11 @@
               }
             ],
             "sources": [
-              "A box section swing arm with a monoshock (linkage)."
+              "A chain of 520 on the sprockets: it turns with the rear wheel."
             ]
           }
-        }
+        },
+        "to": "swingarm"
       },
       {
         "at": "shock",
@@ -1756,10 +1997,28 @@
         "skill": {
           "wheel": {
             "build": "spoked",
+            "contents": [
+              {
+                "mass": 1.3,
+                "name": "the inner tube",
+                "source": "An inner tube of 120/90-17: about 1.3 kg, an estimate."
+              },
+              {
+                "mass": 2.5,
+                "name": "the drum of the hub, its bearings and its spacers",
+                "source": "An estimate."
+              },
+              {
+                "mass": 3.0,
+                "name": "the sprocket and its carrier with the cush drive",
+                "source": "An estimate."
+              }
+            ],
             "disc": 0.24,
             "hub_width": 0.13,
             "rim": "black",
             "rim_depth": 0.018,
+            "rim_matter": "steel",
             "spokes": 36,
             "tire": {
               "param": "rear_tire"
@@ -1804,6 +2063,7 @@
             "shapes": [
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 8,
                 "tube": {
                   "line": [
@@ -1814,7 +2074,7 @@
                     ],
                     [
                       -0.13,
-                      0.72,
+                      0.735,
                       0.3
                     ]
                   ],
@@ -1825,16 +2085,17 @@
                 "box": {
                   "from": [
                     -0.15,
-                    0.7,
+                    0.715,
                     0.29
                   ],
                   "to": [
                     -0.11,
-                    0.75,
+                    0.765,
                     0.31
                   ]
                 },
-                "material": "black"
+                "material": "black",
+                "matter": "steel"
               }
             ]
           }
