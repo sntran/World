@@ -392,6 +392,11 @@
       "param": "name"
     },
     "kind": "statue",
+    "materials": {
+      "stone_wash": {
+        "texture": "washed_stone"
+      }
+    },
     "sources": [
       "MakeHuman (CC0): the person of the figure.",
       "The sizes of the order and their sources are in the extras (\"sizes\"); a size with no source is an estimate."

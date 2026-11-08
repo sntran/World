@@ -7,7 +7,8 @@ defmodule World.Drawing do
 
   - `name`, `kind` (`item` by default), `sources`;
   - `materials`: a role of the palette to its `color`, `roughness` and
-    `metalness` in this model;
+    `metalness` in this model, and its `texture` (a texture that World
+    makes, `World.Textures`: `washed_stone`; only at near);
   - `parts`: a name to a part: its `shapes` (`box`, `cylinder`,
     `sphere`, `prism`, `lathe`, `tube`, each with its `material` and its
     frame `at`, `axis`, `up`; for its mass, a `matter` when the material
@@ -229,10 +230,11 @@ defmodule World.Drawing do
       p = "#{path}.#{role}"
 
       if role in roles do
-        object(spec, p, ~w(color roughness metalness), fn spec ->
+        object(spec, p, ~w(color roughness metalness texture), fn spec ->
           optional(spec, "color", p, &color/2) ++
             optional(spec, "roughness", p, &number(&1, &2, 0, 1)) ++
-            optional(spec, "metalness", p, &number(&1, &2, 0, 1))
+            optional(spec, "metalness", p, &number(&1, &2, 0, 1)) ++
+            optional(spec, "texture", p, &choice(&1, &2, World.Textures.names()))
         end)
       else
         [{p, "must be a role of the palette: #{Enum.join(roles, ", ")}"}]

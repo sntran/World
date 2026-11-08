@@ -163,6 +163,7 @@ defmodule World.DrawingTest do
       {base.("materials", %{"wood" => 1}), ["#{d}.materials.wood"]},
       {base.("materials", %{"wood" => %{"color" => "red", "roughness" => 2, "shine" => 1}}),
        ["#{d}.materials.wood.shine", "#{d}.materials.wood.color", "#{d}.materials.wood.roughness"]},
+      {base.("materials", %{"wood" => %{"texture" => "marble"}}), ["#{d}.materials.wood.texture"]},
       {base.("parts", []), ["#{d}.parts"]},
       {put.(["parts", "Lid"], %{"shapes" => [%{"sphere" => %{"radius" => 1}}]}), ["#{d}.parts.Lid"]},
       {put.(["parts", "drawer"], 1), ["#{d}.parts.drawer"]},

@@ -60,6 +60,17 @@ defmodule World.Build do
 
   defp restore(key, old), do: if(old == nil, do: Process.delete(key), else: Process.put(key, old))
 
+  # The texture of a role (`World.Textures`) at the level of the scene: its
+  # images at near, none at mid and far.
+  defp textures(materials, level) do
+    Map.new(materials, fn {role, spec} ->
+      case Map.pop(spec, "texture") do
+        {nil, _} -> {role, spec}
+        {name, rest} -> {role, Map.merge(rest, World.Textures.spec(name, level) || %{})}
+      end
+    end)
+  end
+
   defp build(item, opts) do
     level = Keyword.get(opts, :level, :near)
     pose = Keyword.get(opts, :pose, %{})
@@ -70,7 +81,7 @@ defmodule World.Build do
     {nodes, _} = finish(fixed, {Keyword.get(opts, :split, false), Keyword.get(opts, :instances, true)})
     {nodes, skins} = stretched(nodes, acc.skins, Enum.reverse(acc.stretches), acc.moves)
 
-    materials = Map.merge(Map.get(item, :materials, %{}), acc.materials)
+    materials = textures(Map.merge(Map.get(item, :materials, %{}), acc.materials), level)
     animations = join(acc.animations ++ Enum.map(acc.clips, &clip(&1, acc.moves)))
     scene = %Scene{name: name, nodes: nodes, skins: skins, animations: animations, materials: materials}
     {lo, hi} = if Scene.triangles(scene) > 0, do: Scene.bounds(scene), else: {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}
