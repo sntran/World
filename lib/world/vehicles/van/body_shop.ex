@@ -36,7 +36,11 @@ defmodule World.Vehicles.Van.BodyShop do
   @doc "The thickness of the steel sheet of the panels of the body, the hood and the doors (m)."
   def sheet, do: @sheet
 
-  @doc "The body of a van, with its ports: `hood`, and a corner at each wheel."
+  @doc """
+  The body of a van, with its ports: `hood`, and a corner at each wheel.
+  The `contents` of its make (the structure inside the skin, the wires)
+  add their mass to the body (`World.Mass`).
+  """
   def body(van) do
     %{h: h, m: m} = van
     {d0, d1} = Hull.span(h)
@@ -73,14 +77,16 @@ defmodule World.Vehicles.Van.BodyShop do
     {cab_and_cargo, params} = Sheet.stamp(cab_and_cargo, @sheet, :steel, faces: faces)
 
     Kit.part(@station, "body_" <> m["make"], :body, nose ++ cab_and_cargo, ports(van),
-      params: %{params | "sheet" => Float.round(params["sheet"] + nose_params["sheet"], 4)},
+      params:
+        %{params | "sheet" => Float.round(params["sheet"] + nose_params["sheet"], 4)}
+        |> Map.merge(if(c = van.make["contents"], do: %{"contents" => c}, else: %{})),
       sources: van.make["openings"]["sources"]
     )
   end
 
   @doc "The ports of the body: `origin`, and a corner at each wheel (`corner_front_right`, ...)."
   def ports(%{h: h, m: m}) do
-    {f, wb, [tf, tr]} = {m["front"], m["wheelbase"], m["track"]}
+    {f, wb, [tf, tr]} = {World.Vehicles.Van.front(m), m["wheelbase"], m["track"]}
     rz = Wheels.tire_radius(m["tire"])
 
     corners =

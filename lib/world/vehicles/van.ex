@@ -42,6 +42,20 @@ defmodule World.Vehicles.Van do
   @doc "The names of the models of vans."
   def models, do: @data["models"] |> Map.keys() |> Enum.sort()
 
+  # The parts out of the hull: the bumper before its nose, the step and
+  # the handle behind its back, the handles of the doors at its sides. The
+  # sizes of a model are its overall sizes (SAE J1100: with the bumpers,
+  # the moldings and the handles), so the hull is smaller by these.
+  @nose 0.018
+  @tail 0.035
+  @side 0.025
+
+  @doc """
+  The front overhang of the hull of a model (`model/2`): from its nose to
+  the front axle. The front overhang of the sheet is from the bumper.
+  """
+  def front(m), do: m["front"] / 1 - @nose
+
   # The sizes that an order can give, and how far each can go from the
   # size of the model (the height: down only to the traces, see `sizes/1`).
   @sizes %{"length" => 0.05, "width" => 0.05, "height" => 0.3}
@@ -92,7 +106,11 @@ defmodule World.Vehicles.Van do
     end)
   end
 
-  @doc "The hull of a model, with the sizes of an order (`model/2`)."
+  @doc """
+  The hull of a model, with the sizes of an order (`model/2`): smaller
+  than the overall sizes by the parts out of it (the bumper, the step,
+  the handles).
+  """
   def hull(name, order \\ %{}) do
     m = model(name, order)
     make = m["make_data"]
@@ -108,13 +126,13 @@ defmodule World.Vehicles.Van do
     end
 
     line = fn pts -> for [d, zz] <- pts, do: {d / 1, z.(zz)} end
-    {f, wb} = {m["front"] / 1, m["wheelbase"] / 1}
+    {f, wb} = {front(m), m["wheelbase"] / 1}
     r = Wheels.tire_radius(m["tire"])
     [af, ar] = h["arches"]
 
     Hull.new(
-      length: m["length"] / 1,
-      width: m["width"] / 1,
+      length: m["length"] / 1 - @nose - @tail,
+      width: m["width"] / 1 - 2 * @side,
       top: height,
       front: line.(make["front"] ++ t["roof"]),
       back: line.(t["back"]),
@@ -212,7 +230,7 @@ defmodule World.Vehicles.Van do
       make: m["make_data"],
       h: h,
       l: h.length,
-      f: m["front"] / 1,
+      f: front(m),
       glass: Order.windows(m, windows),
       rows: Order.rows(m, windows, Keyword.get(opts, :rows))
     }

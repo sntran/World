@@ -1,0 +1,97 @@
+{
+  "name": "ford_transit_148_high_roof",
+  "title": "Ford Transit 250 cargo van, 148 in, high roof",
+  "sources": [
+    {
+      "name": "Ford, 2025 Transit Technical Specifications, and the Body Builders Layout Book 2022 (the sources of the model transit_148 in priv/data/vans.json)",
+      "url": null,
+      "license": "facts"
+    },
+    {
+      "name": "Autopadre, 2025 Ford Transit 250 Cargo Van 148 in, high roof: the vehicle weight",
+      "url": "https://www.autopadre.com/vehicle-weight/ford-transit-250/2025-cargo-van-148-hi-rf-68647",
+      "license": "facts"
+    }
+  ],
+  "order": {
+    "blueprint": "van_line",
+    "options": {}
+  },
+  "numbers": [
+    {
+      "name": "length (SAE J1100, L103)",
+      "value": 5.981,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall length: 235.5 in, with the bumpers and the step.",
+      "measure": {
+        "size": "length"
+      }
+    },
+    {
+      "name": "width (SAE J1100, W103)",
+      "value": 2.066,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall width with no mirrors: 81.3 in.",
+      "measure": {
+        "size": "width",
+        "without": [
+          "closure_front_door_right/front_door_right/mirror",
+          "closure_front_door_left/front_door_left/mirror"
+        ]
+      }
+    },
+    {
+      "name": "height (SAE J1100, H101)",
+      "value": 2.785,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall height: 109.6 in.",
+      "measure": {
+        "size": "height"
+      }
+    },
+    {
+      "name": "wheelbase (SAE J1100, L101)",
+      "value": 3.75,
+      "unit": "m",
+      "source": 0,
+      "standard": "147.6 in.",
+      "measure": {
+        "wheelbase": true
+      }
+    },
+    {
+      "name": "front track (SAE J1100, W101)",
+      "value": 1.732,
+      "unit": "m",
+      "source": 0,
+      "standard": "The Body Builders Layout Book.",
+      "measure": {
+        "track": "front"
+      }
+    },
+    {
+      "name": "rear track (SAE J1100, W102)",
+      "value": 1.743,
+      "unit": "m",
+      "source": 0,
+      "standard": "The Body Builders Layout Book.",
+      "measure": {
+        "track": "rear"
+      }
+    },
+    {
+      "name": "curb mass",
+      "value": 2418.0,
+      "unit": "kg",
+      "source": 1,
+      "standard": "The curb weight: 5330 lb. The structure inside the skin, the wires and the dash have masses by estimate, so the tolerance is 10%.",
+      "measure": {
+        "mass": true
+      },
+      "tolerance": 0.1
+    }
+  ]
+}

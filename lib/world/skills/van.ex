@@ -89,6 +89,10 @@ defmodule World.Skills.Van do
         if(is_map(m["make"]),
           do: for(k <- @make, not Map.has_key?(m["make"], k), do: {"#{path}.make.#{k}", "is required"}),
           else: [{"#{path}.make", "must be the data of a make: traces, hull, front, openings, seats, sources"}]
+        ) ++
+        if(is_map(m["make"]) and Map.has_key?(m["make"], "contents"),
+          do: World.Skills.Vehicle.check_contents(m["make"]["contents"], "#{path}.make.contents"),
+          else: []
         )
 
     if missing == [] do

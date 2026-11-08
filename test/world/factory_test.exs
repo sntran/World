@@ -267,7 +267,7 @@ defmodule World.FactoryTest do
             "windows" => [%{"at" => "left", "to" => 3.5}, %{"at" => "slider"}],
             "rows" => 1,
             "engine_bay" => ["dc_charger"],
-            "roof" => [%{"kind" => "solar", "at" => 3.8}, %{"kind" => "fan", "at" => 5.2}]
+            "roof" => [%{"kind" => "solar", "at" => 3.85}, %{"kind" => "fan", "at" => 5.2}]
           }
         },
         %{

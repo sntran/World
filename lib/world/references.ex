@@ -8,7 +8,8 @@ defmodule World.References do
   value of the model, the error and the tolerance. The test of the
   references asserts that each number is in its tolerance (D3: no gaps).
 
-  A reference: `name`, `title`, `sources` (each with its `name`, `url`,
+  A reference: `name`, `title`, `sources` (each with its `name`, `url`
+  (null for a document with no link),
   and `license`: `facts` for the numbers of a document that is not in the
   repository), `order` (an order of World), `level` (`near` by default),
   and `numbers`, each with its `name`, `value`, `unit`, `tolerance` (a

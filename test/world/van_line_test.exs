@@ -134,6 +134,7 @@ defmodule World.VanLineTest do
     assert [%{"path" => "options.model.length"} | _] = bad.(Map.delete(data, "length"))
     assert [%{"path" => "options.model.make"}] = bad.(%{data | "make" => "ford_transit"})
     assert [%{"path" => "options.model.make.traces"}] = bad.(%{data | "make" => Map.delete(data["make"], "traces")})
+    assert [%{"path" => "options.model.make.contents"}] = bad.(put_in(data, ["make", "contents"], 3))
 
     assert [%{"path" => "options.model", "message" => "does not make the hull of a van" <> _}] =
              bad.(put_in(data, ["make", "traces"], %{}))
