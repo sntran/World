@@ -1,0 +1,99 @@
+{
+  "name": "chevrolet_bolt_ev_2022",
+  "title": "Chevrolet Bolt EV (2022)",
+  "sources": [
+    {
+      "name": "Chevrolet, 2022 Bolt EUV and Bolt EV specifications (the newsroom of Chevrolet)",
+      "url": "https://news.chevrolet.com/newsroom.detail.html/Pages/news/us/en/2021/feb/0214-boltev-bolteuv-specifications.html",
+      "license": "facts"
+    },
+    {
+      "name": "EV Specifications, 2022 Chevrolet Bolt EV 1LT: the curb weight",
+      "url": "https://www.evspecifications.com/en/model/f420131",
+      "license": "facts"
+    }
+  ],
+  "order": {
+    "blueprint": "car",
+    "options": {}
+  },
+  "numbers": [
+    {
+      "name": "length (SAE J1100, L103)",
+      "value": 4.145,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall length, with the bumpers and with no license plates.",
+      "measure": {
+        "size": "length",
+        "without": [
+          "plates"
+        ]
+      }
+    },
+    {
+      "name": "width (SAE J1100, W103)",
+      "value": 1.765,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall width, with no mirrors.",
+      "measure": {
+        "size": "width",
+        "without": [
+          "mirrors"
+        ]
+      }
+    },
+    {
+      "name": "height (SAE J1100, H101)",
+      "value": 1.611,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall height at curb mass.",
+      "measure": {
+        "size": "height"
+      }
+    },
+    {
+      "name": "wheelbase (SAE J1100, L101)",
+      "value": 2.601,
+      "unit": "m",
+      "source": 0,
+      "standard": "From the front axle to the rear axle.",
+      "measure": {
+        "wheelbase": true
+      }
+    },
+    {
+      "name": "front track (SAE J1100, W101)",
+      "value": 1.501,
+      "unit": "m",
+      "source": 0,
+      "standard": "From the center of one front wheel to the other.",
+      "measure": {
+        "track": "front"
+      }
+    },
+    {
+      "name": "rear track (SAE J1100, W102)",
+      "value": 1.501,
+      "unit": "m",
+      "source": 0,
+      "standard": "From the center of one rear wheel to the other.",
+      "measure": {
+        "track": "rear"
+      }
+    },
+    {
+      "name": "curb mass",
+      "value": 1628.0,
+      "unit": "kg",
+      "source": 1,
+      "standard": "The curb weight: 3589 lb. The parts that the drawing does not show (the structure inside the skin, the inside, the suspension) have masses by estimate, so the tolerance is 10%.",
+      "measure": {
+        "mass": true
+      },
+      "tolerance": 0.1
+    }
+  ]
+}

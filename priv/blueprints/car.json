@@ -17,6 +17,63 @@
         "name": "body",
         "skill": {
           "body": {
+            "contents": [
+              {
+                "mass": 435.0,
+                "name": "the battery pack",
+                "source": "GM, the preliminary specifications of the Bolt EV (2016): the battery system, 960 lb (435 kg)."
+              },
+              {
+                "mass": 80.0,
+                "name": "the drive unit: the motor, the gearbox and the inverter",
+                "source": "An estimate."
+              },
+              {
+                "mass": 280.0,
+                "name": "the structure inside the skin: the floor, the rails, the pillars, the roof bows, the inner panels of the doors and the lids",
+                "source": "An estimate: a body in white of a small car is about 250 to 300 kg."
+              },
+              {
+                "mass": 60.0,
+                "name": "the seats",
+                "source": "An estimate."
+              },
+              {
+                "mass": 70.0,
+                "name": "the dash, the carpets, the headliner and the trim inside",
+                "source": "An estimate."
+              },
+              {
+                "mass": 35.0,
+                "name": "the climate unit, the pumps, the radiator and the coolant",
+                "source": "An estimate."
+              },
+              {
+                "mass": 55.0,
+                "name": "the wires, the battery of 12 V, the charger and the electronics",
+                "source": "An estimate."
+              },
+              {
+                "mass": 90.0,
+                "name": "the suspension: the subframe, the struts, the arms and the rear beam",
+                "source": "An estimate."
+              },
+              {
+                "mass": 15.0,
+                "name": "the steering",
+                "source": "An estimate."
+              },
+              {
+                "mass": 15.0,
+                "name": "the brake lines, the booster and the fluids",
+                "source": "An estimate."
+              },
+              {
+                "mass": 40.0,
+                "name": "the bolts, the seals, the insulation and the small parts",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "corner_front_left": {
                 "at": [
@@ -185,7 +242,9 @@
                     ]
                   ]
                 },
-                "material": "paint"
+                "material": "paint",
+                "matter": "steel",
+                "skin": 0.0008
               },
               {
                 "body": {
@@ -208,11 +267,13 @@
                   "step": 0.4
                 },
                 "material": "black",
-                "sides": 16
+                "matter": "plastic",
+                "sides": 16,
+                "skin": 0.003
               }
             ],
             "sources": [
-              "By eye, from photos of the car."
+              "By eye, from photos of the car; the outer panels of sheet steel of 0.8 mm."
             ]
           }
         }
@@ -298,8 +359,13 @@
                   ]
                 },
                 "material": "glass_dark",
-                "sides": 16
+                "matter": "glass",
+                "sides": 16,
+                "skin": 0.002
               }
+            ],
+            "sources": [
+              "The windows: glass of 4 mm (2 mm on each face of the shape), by eye."
             ]
           }
         }
@@ -344,7 +410,9 @@
                   ]
                 },
                 "material": "trim",
+                "matter": "plastic",
                 "round": 0.25,
+                "skin": 0.0015,
                 "smooth": 2
               },
               {
@@ -361,7 +429,9 @@
                   ]
                 },
                 "material": "trim",
+                "matter": "plastic",
                 "round": 0.25,
+                "skin": 0.0015,
                 "smooth": 2
               },
               {
@@ -378,9 +448,44 @@
                   ]
                 },
                 "material": "black",
+                "matter": "plastic",
                 "round": 0.3,
+                "skin": 0.0015,
                 "smooth": 2
-              },
+              }
+            ],
+            "sources": [
+              "The bumpers and the grille: PP of 3 mm (1.5 mm on each face of the shape), by eye."
+            ]
+          }
+        }
+      },
+      {
+        "at": "origin",
+        "name": "plates",
+        "port": "origin",
+        "skill": {
+          "panel": {
+            "ports": {
+              "origin": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
               {
                 "box": {
                   "from": [
@@ -394,7 +499,9 @@
                     0.47
                   ]
                 },
-                "material": "white"
+                "material": "white",
+                "matter": "aluminum",
+                "skin": 0.0005
               },
               {
                 "box": {
@@ -409,8 +516,13 @@
                     0.73
                   ]
                 },
-                "material": "white"
+                "material": "white",
+                "matter": "aluminum",
+                "skin": 0.0005
               }
+            ],
+            "sources": [
+              "The license plates: aluminum of 1 mm."
             ]
           }
         }
@@ -421,6 +533,13 @@
         "port": "origin",
         "skill": {
           "panel": {
+            "contents": [
+              {
+                "mass": 1.5,
+                "name": "the glass and the motors of the mirrors",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -455,11 +574,14 @@
                   ]
                 },
                 "material": "black",
+                "matter": "plastic",
                 "round": 0.3,
+                "skin": 0.0015,
                 "smooth": 2
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 6,
                 "tube": {
                   "line": [
@@ -491,11 +613,14 @@
                   ]
                 },
                 "material": "black",
+                "matter": "plastic",
                 "round": 0.3,
+                "skin": 0.0015,
                 "smooth": 2
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 6,
                 "tube": {
                   "line": [
@@ -523,6 +648,13 @@
         "port": "origin",
         "skill": {
           "lamp": {
+            "contents": [
+              {
+                "mass": 4.0,
+                "name": "the LEDs, the bulbs and the reflectors",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "origin": {
                 "at": [
@@ -572,7 +704,9 @@
                   "x": 0.6
                 },
                 "material": "light_front",
+                "matter": "plastic",
                 "sides": 12,
+                "skin": 0.0015,
                 "smooth": 1
               },
               {
@@ -604,7 +738,9 @@
                   "x": -0.6
                 },
                 "material": "light_front",
+                "matter": "plastic",
                 "sides": 12,
+                "skin": 0.0015,
                 "smooth": 1
               },
               {
@@ -636,7 +772,9 @@
                   "x": 0.74
                 },
                 "material": "light_back",
+                "matter": "plastic",
                 "sides": 12,
+                "skin": 0.0015,
                 "smooth": 1
               },
               {
@@ -668,7 +806,9 @@
                   "x": -0.74
                 },
                 "material": "light_back",
+                "matter": "plastic",
                 "sides": 12,
+                "skin": 0.0015,
                 "smooth": 1
               }
             ]
