@@ -17,6 +17,13 @@
         "name": "frame",
         "skill": {
           "frame": {
+            "contents": [
+              {
+                "mass": 5.5,
+                "name": "the rails and the brackets under the body",
+                "source": "An estimate: the parts of the pressed frame that the tube does not show (the rails under the seat, the brackets of the engine, the floor and the body)."
+              }
+            ],
             "inside": true,
             "ports": {
               "body": {
@@ -108,7 +115,9 @@
             "shapes": [
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -177,7 +186,9 @@
                   ]
                 },
                 "material": "black",
+                "matter": "steel",
                 "sides": 12,
+                "skin": 0.003,
                 "up": [
                   0.0,
                   0.894,
@@ -186,7 +197,7 @@
               }
             ],
             "sources": [
-              "An underbone frame of steel tube, 48 mm."
+              "The eSAF frame of pressed steel (Honda, 2021), drawn as a tube of 48 mm with a wall of 2 mm and a head tube with a wall of 3 mm (by eye)."
             ]
           }
         }
@@ -197,6 +208,43 @@
         "port": "body",
         "skill": {
           "panel": {
+            "contents": [
+              {
+                "mass": 3.55,
+                "name": "fuel",
+                "source": "The tank of 4.8 L (Honda Việt Nam), full: gasoline at 0.74 kg/L. The curb mass (khối lượng bản thân) has a full tank."
+              },
+              {
+                "mass": 1.6,
+                "name": "battery",
+                "source": "A battery of 12 V and 3 Ah: the Yuasa YTZ4V, 1.6 kg with its acid (Yuasa, the data sheet of the YTZ4V)."
+              },
+              {
+                "mass": 1.0,
+                "name": "the fuel tank",
+                "source": "An estimate: a tank of steel or plastic of 4.8 L."
+              },
+              {
+                "mass": 1.4,
+                "name": "the box under the seat",
+                "source": "An estimate: a box of 17.7 L (Honda) of PP of 2.5 mm, about 0.6 m2."
+              },
+              {
+                "mass": 3.0,
+                "name": "the inner panels and the fenders",
+                "source": "An estimate: the floor, the inner cover and the fenders, of PP."
+              },
+              {
+                "mass": 2.0,
+                "name": "the wires, the ECU, the smart key and the horn",
+                "source": "An estimate."
+              },
+              {
+                "mass": 3.0,
+                "name": "the bolts, the cables, the footrests and the small brackets",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "body": {
                 "at": [
@@ -371,7 +419,9 @@
                     0.6
                   ]
                 },
-                "material": "white"
+                "material": "white",
+                "matter": "aluminum",
+                "skin": 0.0005
               },
               {
                 "box": {
@@ -386,7 +436,9 @@
                     0.72
                   ]
                 },
-                "material": "trim"
+                "material": "trim",
+                "matter": "plastic",
+                "skin": 0.0015
               },
               {
                 "material": "aluminum",
@@ -419,7 +471,7 @@
               }
             ],
             "sources": [
-              "By eye, from photos; the panels are skins of ABS of 3 mm."
+              "By eye, from photos; the panels are skins of ABS of 3 mm; the plate of aluminum of 1 mm and its holder of ABS."
             ]
           }
         }
@@ -430,6 +482,13 @@
         "port": "body",
         "skill": {
           "lamp": {
+            "contents": [
+              {
+                "mass": 0.8,
+                "name": "the LEDs, their boards and the reflectors",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "body": {
                 "at": [
@@ -479,7 +538,9 @@
                   "x": 0.0
                 },
                 "material": "light_front",
+                "matter": "plastic",
                 "sides": 12,
+                "skin": 0.0015,
                 "smooth": 1
               },
               {
@@ -511,7 +572,9 @@
                   "x": 0.0
                 },
                 "material": "light_back",
+                "matter": "plastic",
                 "sides": 12,
+                "skin": 0.0015,
                 "smooth": 1
               }
             ]
@@ -532,6 +595,13 @@
         "port": "hinge",
         "skill": {
           "seat": {
+            "contents": [
+              {
+                "mass": 1.2,
+                "name": "the pan and the cover of the seat",
+                "source": "An estimate: a pan of ABS of 3 mm and a cover of vinyl."
+              }
+            ],
             "ports": {
               "hinge": {
                 "at": [
@@ -595,6 +665,7 @@
                   "x": 0.0
                 },
                 "material": "seat",
+                "matter": "seat_foam",
                 "smooth": 2
               }
             ],
@@ -618,6 +689,18 @@
         "port": "steer",
         "skill": {
           "fork": {
+            "contents": [
+              {
+                "mass": 0.6,
+                "name": "the springs and the oil in the legs",
+                "source": "An estimate."
+              },
+              {
+                "mass": 0.8,
+                "name": "the brake caliper and its hose",
+                "source": "An estimate: a caliper of one piston."
+              }
+            ],
             "ports": {
               "axle": {
                 "at": [
@@ -708,7 +791,9 @@
             "shapes": [
               {
                 "material": "aluminum",
+                "matter": "aluminum",
                 "sides": 12,
+                "skin": 0.004,
                 "tube": {
                   "line": [
                     [
@@ -727,7 +812,9 @@
               },
               {
                 "material": "aluminum",
+                "matter": "aluminum",
                 "sides": 12,
+                "skin": 0.004,
                 "tube": {
                   "line": [
                     [
@@ -746,7 +833,9 @@
               },
               {
                 "material": "chrome",
+                "matter": "steel",
                 "sides": 12,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -765,7 +854,9 @@
               },
               {
                 "material": "chrome",
+                "matter": "steel",
                 "sides": 12,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -795,7 +886,8 @@
                     0.73
                   ]
                 },
-                "material": "black"
+                "material": "black",
+                "matter": "aluminum"
               },
               {
                 "arc": {
@@ -811,12 +903,14 @@
                   "to": -45
                 },
                 "material": "paint",
+                "matter": "plastic",
                 "sides": 8,
+                "skin": 0.0015,
                 "smooth": 2
               }
             ],
             "sources": [
-              "A telescopic fork, 26.6 degrees from up."
+              "A telescopic fork, 26.6 degrees from up: legs of aluminum with a wall of 4 mm, tubes of steel with a wall of 2 mm (by eye)."
             ]
           }
         }
@@ -827,6 +921,13 @@
         "port": "bars",
         "skill": {
           "fork": {
+            "contents": [
+              {
+                "mass": 1.6,
+                "name": "the brake master cylinder, the switches, the meter and the cables",
+                "source": "An estimate."
+              }
+            ],
             "ports": {
               "bars": {
                 "at": [
@@ -849,7 +950,9 @@
             "shapes": [
               {
                 "material": "chrome",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.0016,
                 "tube": {
                   "line": [
                     [
@@ -883,7 +986,9 @@
               },
               {
                 "material": "steel",
+                "matter": "steel",
                 "sides": 10,
+                "skin": 0.002,
                 "tube": {
                   "line": [
                     [
@@ -941,6 +1046,8 @@
                   "x": 0.0
                 },
                 "material": "paint",
+                "matter": "plastic",
+                "skin": 0.0015,
                 "smooth": 2
               }
             ],
@@ -1162,6 +1269,7 @@
             "shapes": [
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 6,
                 "tube": {
                   "line": [
@@ -1198,11 +1306,14 @@
                   ]
                 },
                 "material": "trim",
+                "matter": "plastic",
                 "round": 0.3,
+                "skin": 0.0015,
                 "smooth": 2
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 6,
                 "tube": {
                   "line": [
@@ -1239,7 +1350,9 @@
                   ]
                 },
                 "material": "trim",
+                "matter": "plastic",
                 "round": 0.3,
+                "skin": 0.0015,
                 "smooth": 2
               }
             ]
@@ -1305,6 +1418,19 @@
         "port": "pivot",
         "skill": {
           "engine": {
+            "contents": [
+              {
+                "mass": 0.7,
+                "name": "oil",
+                "source": "0.8 L of engine oil at 0.87 kg/L (an estimate of the capacity)."
+              },
+              {
+                "mass": 1.2,
+                "name": "the air cleaner",
+                "source": "An estimate."
+              }
+            ],
+            "mass": 29.5,
             "ports": {
               "axle": {
                 "at": [
@@ -1517,7 +1643,8 @@
               }
             ],
             "sources": [
-              "A 110 cc engine, air cooled, with its belt case at the left."
+              "A 110 cc engine, air cooled, with its belt case at the left.",
+              "The mass, an estimate: 26 kg for the engine with its belt drive and its final gears (soymotero.net gives 22 kg for the eSP engine of 110 cc and does not say what it has; a complete GY6 engine of 150 cc with its belt drive is 27 kg net, a retailer), and 3.5 kg for the muffler and its pipe."
             ]
           }
         }
@@ -1603,6 +1730,7 @@
             "shapes": [
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 8,
                 "tube": {
                   "line": [
@@ -1627,6 +1755,7 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 8,
                 "tube": {
                   "line": [
@@ -1651,6 +1780,7 @@
               },
               {
                 "material": "black",
+                "matter": "steel",
                 "sides": 8,
                 "tube": {
                   "line": [
