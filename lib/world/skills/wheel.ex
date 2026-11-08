@@ -6,7 +6,8 @@ defmodule World.Skills.Wheel do
   `37-622`), `build` (`spoked`: wire spokes, a bicycle or a classic
   motorcycle; `cast`: a cast wheel of a scooter or a motorbike; `car`: a
   wheel of a car or a van), `spokes`, `rim_width`, `rim_depth`, `rim`
-  (the material of the rim), `hub_width`, `cross`, `disc` (the diameter
+  (the material of the rim), `rim_matter` (`aluminum` or `steel`: the
+  matter of a black rim of wire spokes, for its mass), `hub_width`, `cross`, `disc` (the diameter
   of a brake disc; a cast wheel has its own disc), `face` (`spokes` or
   `disc`: the pressed steel face of a van), `holes`, `pcd`, `lugs`,
   `sides`, and the `contents` of the wheel (the things that its shapes do
@@ -35,6 +36,7 @@ defmodule World.Skills.Wheel do
       n.("rim_width", 0.01, 0.5),
       n.("rim_depth", 0.005, 0.1),
       option("rim", :choice, default: nil, values: ~w(aluminum steel black chrome)),
+      option("rim_matter", :choice, default: nil, values: ~w(aluminum steel)),
       n.("hub_width", 0.02, 0.3),
       i.("cross", 0, 4),
       n.("disc", 0.05, 0.5),
@@ -101,6 +103,7 @@ defmodule World.Skills.Wheel do
 
     for({k, key} <- keys, o[k] != nil, do: {key, o[k]}) ++
       if(o["rim"], do: [rim_material: String.to_existing_atom(o["rim"])], else: []) ++
+      if(o["rim_matter"], do: [rim_matter: String.to_existing_atom(o["rim_matter"])], else: []) ++
       if(o["face"] == "disc", do: [face: :disc], else: [])
   end
 end

@@ -61,6 +61,11 @@ defmodule World.VehicleSkillsTest do
     assert Wheel.check(tube, "w") == []
     assert_in_delta World.Mass.of(made(Wheel, tube)).mass, World.Mass.of(made(Wheel, plain)).mass + 1.0, 1.0e-9
     assert [{"w.contents[0].mass", _}] = Wheel.check(Map.put(tube, "contents", [%{"name" => "x", "mass" => 0}]), "w")
+
+    # A black rim of steel: the mass of steel, not of aluminum.
+    rim = fn data -> World.Mass.part(hd(for {"rim", p, _} <- made(Wheel, data).nodes, do: p)).mass end
+    black = %{"tire" => "90/90-21", "build" => "spoked", "rim" => "black"}
+    assert_in_delta rim.(Map.put(black, "rim_matter", "steel")) / rim.(black), 7820 / 2700, 1.0e-9
   end
 
   test "a knuckle of a corner, with its disc or with none" do
