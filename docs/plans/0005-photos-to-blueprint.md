@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Draft |
+| Status | Approved (the owner, 2026-11-08) |
 | Depends on | Plan 0004 (the statue of Vũng Tàu looks like the real one). |
 | Changes | A new folder `scripts/measure/` (the measure tools, out of the checks of CI); the measures of a model in `priv/measures/`; the drawing `tuong_chua_kito_vua`. |
 
