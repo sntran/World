@@ -8,8 +8,10 @@ defmodule World.Skills.Wheel do
   wheel of a car or a van), `spokes`, `rim_width`, `rim_depth`, `rim`
   (the material of the rim), `hub_width`, `cross`, `disc` (the diameter
   of a brake disc; a cast wheel has its own disc), `face` (`spokes` or
-  `disc`: the pressed steel face of a van), `holes`, `pcd`, `lugs` and
-  `sides`.
+  `disc`: the pressed steel face of a van), `holes`, `pcd`, `lugs`,
+  `sides`, and the `contents` of the wheel (the things that its shapes do
+  not show: the inner tube, the sprocket, the bearings; their mass goes
+  on the rim, `World.Skills.Vehicle`).
   """
   @behaviour World.Skill
   import World.Orders.Blueprint, only: [option: 3]
@@ -40,7 +42,8 @@ defmodule World.Skills.Wheel do
       i.("holes", 1, 24),
       n.("pcd", 0.05, 0.3),
       i.("lugs", 3, 10),
-      i.("sides", 8, 96)
+      i.("sides", 8, 96),
+      option("contents", :data, default: nil, check: &check_contents/2)
     ]
   end
 
@@ -49,6 +52,13 @@ defmodule World.Skills.Wheel do
     {:ok, raw}
   rescue
     _ -> {:error, [{path, "must be the code of a tire: 215/50R17, 90/90-14 or 37-622"}]}
+  end
+
+  defp check_contents(raw, path) do
+    case Vehicle.check_contents(raw, path) do
+      [] -> {:ok, raw}
+      errors -> {:error, errors}
+    end
   end
 
   @impl true
@@ -62,8 +72,14 @@ defmodule World.Skills.Wheel do
   @impl true
   def make(data, _inputs, _context) do
     o = Vehicle.o(data, options())
-    {build(o["build"], o["tire"], opts(o)), %{}, %{}}
+    {put_contents(build(o["build"], o["tire"], opts(o)), o["contents"]), %{}, %{}}
   end
+
+  # The contents of the wheel go in the params of its rim (its root).
+  defp put_contents(wheel, nil), do: wheel
+
+  defp put_contents(%World.Assembly{nodes: [{name, rim, c} | rest]} = wheel, list),
+    do: %{wheel | nodes: [{name, %{rim | params: Map.put(rim.params, "contents", list)}, c} | rest]}
 
   defp build("spoked", tire, opts), do: Wheels.spoked_wheel(tire, opts)
   defp build("cast", tire, opts), do: Wheels.cast_wheel(tire, Keyword.update(opts, :disc, false, &(&1 != nil)))

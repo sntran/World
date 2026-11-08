@@ -43,7 +43,7 @@ defmodule World.Skills.Vehicle do
       optional(data, "sources", path, &sources/2) ++
       optional(data, "detail", path, &choice(&1, &2, ~w(always near low))) ++
       optional(data, "inside", path, &choice(&1, &2, [true, false])) ++
-      optional(data, "contents", path, &contents/2)
+      optional(data, "contents", path, &check_contents/2)
   end
 
   def check_part(_data, path), do: [{path, "must be an object"}]
@@ -54,7 +54,8 @@ defmodule World.Skills.Vehicle do
   defp mass(v, path),
     do: if(is_number(v) and v > 0 and v <= 100_000, do: [], else: [{path, "must be a mass in kg, more than 0"}])
 
-  defp contents(v, path) when is_list(v) and length(v) <= 16 do
+  @doc "The errors of the `contents` of a part: a list of at most 16 objects, each with its `name`, its `mass` and its `source`."
+  def check_contents(v, path) when is_list(v) and length(v) <= 16 do
     v
     |> Enum.with_index()
     |> Enum.flat_map(fn {c, i} ->
@@ -68,7 +69,7 @@ defmodule World.Skills.Vehicle do
     end)
   end
 
-  defp contents(_, path), do: [{path, "must be a list of at most 16 objects"}]
+  def check_contents(_, path), do: [{path, "must be a list of at most 16 objects"}]
 
   defp text(v, path),
     do: if(is_binary(v) and byte_size(v) <= 500, do: [], else: [{path, "must be a text of at most 500 bytes"}])

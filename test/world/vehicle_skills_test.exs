@@ -54,6 +54,13 @@ defmodule World.VehicleSkillsTest do
 
     assert Enum.map(Wheel.check(%{"tire" => "big", "build" => "wooden", "spokes" => 0}, "w"), &elem(&1, 0)) ==
              ["w.tire", "w.build", "w.spokes"]
+
+    # The contents of a wheel (an inner tube) add their mass to the wheel.
+    tube = %{"tire" => "90/90-21", "build" => "spoked", "contents" => [%{"name" => "inner tube", "mass" => 1.0}]}
+    plain = Map.delete(tube, "contents")
+    assert Wheel.check(tube, "w") == []
+    assert_in_delta World.Mass.of(made(Wheel, tube)).mass, World.Mass.of(made(Wheel, plain)).mass + 1.0, 1.0e-9
+    assert [{"w.contents[0].mass", _}] = Wheel.check(Map.put(tube, "contents", [%{"name" => "x", "mass" => 0}]), "w")
   end
 
   test "a knuckle of a corner, with its disc or with none" do
