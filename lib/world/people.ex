@@ -50,7 +50,7 @@ defmodule World.People do
 
   # The hips of the rider on the seat of the scooter, in the axes of the
   # scooter (its center at y = 0).
-  @seat {0.0, -0.33, 0.86}
+  @seat {0.0, -0.33, 0.78}
 
   @doc "A rider on the Honda Vision 110: the scooter is the root."
   def rider do
