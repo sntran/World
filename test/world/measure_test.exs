@@ -14,6 +14,18 @@ defmodule World.MeasureTest do
             do: Part.port(name, {x, y, 0.3}, {1, 0, 0}, {0, 0, 1})
 
     body = Part.new("body", :body, [Shape.box({-0.8, 0.0, 0.2}, {0.8, 4.0, 1.5}, :paint)], ports)
+    # A seat in three steps along y: 1.3 m high, then 1.2, then 1.35.
+    seat =
+      Part.new(
+        "seat",
+        :seat,
+        for(
+          {y0, y1, z} <- [{1.0, 1.2, 1.3}, {1.2, 1.6, 1.2}, {1.6, 1.8, 1.35}],
+          do: Shape.box({-0.2, y0, 1.0}, {0.2, y1, z}, :black)
+        ),
+        [@o]
+      )
+
     mirror = Part.new("mirror", :mirror, [Shape.box({0.8, 2.8, 1.0}, {1.0, 2.9, 1.1}, :black)], [@o])
 
     wheel =
@@ -25,9 +37,10 @@ defmodule World.MeasureTest do
       Assembly.add(a, "wheel_" <> name, wheel, at: name, port: "hub", kind: :hinge, role: :wheel)
     end)
     |> Assembly.add("mirror", mirror, at: "o", port: "o")
+    |> Assembly.add("seat", seat, at: "o", port: "o")
   end
 
-  test "the box, the axles, the wheelbase, the tracks, the ground clearance, the top, a port and the mass" do
+  test "the box, the axles, the wheelbase, the tracks, the ground clearance, the top, the seat, a port and the mass" do
     m = Measure.of(car(), :near)
     assert_in_delta Measure.size(m, :width), 1.9, 1.0e-9
     assert_in_delta Measure.size(m, :width, ["mirror"]), 1.8, 1.0e-6
@@ -41,6 +54,9 @@ defmodule World.MeasureTest do
     assert_in_delta Measure.ground_clearance(m, []), 0.0, 1.0e-6
     assert_in_delta Measure.top(m, "body"), 1.5, 1.0e-9
     assert_in_delta Measure.top(m, "mirror", {2.0, 3.0}), 1.1, 1.0e-9
+    assert_in_delta Measure.top(m, "seat"), 1.35, 1.0e-9
+    assert_in_delta Measure.seat(m, "seat", {1.0, 1.8}), 1.2, 1.0e-9
+    assert_in_delta Measure.seat(m, "seat", {1.0, 1.15}, 3), 1.3, 1.0e-9
     {at, axis} = Measure.port(m, "body", "head")
     assert at == {0.0, 3.8, 1.5} and up?(axis)
     assert Measure.mass(m) > 0

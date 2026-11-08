@@ -48,6 +48,17 @@ defmodule World.ReferencesTest do
         "measure" => %{"top" => "body", "span" => [-1.0, 1.0]}
       },
       %{
+        "name" => "width (SAE J1100: no mirrors)",
+        "value" => 1.765,
+        "measure" => %{"size" => "width", "without" => ["mirrors"]}
+      },
+      %{
+        "name" => "the low top of the body at the rear",
+        "value" => 0.98,
+        "tolerance" => 0.01,
+        "measure" => %{"seat" => "body", "span" => [-1.0, 1.0]}
+      },
+      %{
         "name" => "ground clearance",
         "value" => 0.2,
         "tolerance" => 1.0,

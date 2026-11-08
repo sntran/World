@@ -410,7 +410,37 @@
                   ]
                 },
                 "material": "white"
-              },
+              }
+            ]
+          }
+        }
+      },
+      {
+        "at": "origin",
+        "name": "mirrors",
+        "port": "origin",
+        "skill": {
+          "panel": {
+            "ports": {
+              "origin": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
               {
                 "box": {
                   "from": [

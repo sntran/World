@@ -18,8 +18,9 @@ defmodule World.Measure do
     front or the rear axle (from the center of one wheel to the other);
   - the `ground_clearance`: the lowest point between the axles, with no
     wheel, no tire and no knuckle (the nodes `without` it);
-  - the `top` of a node (the seat height of a two-wheeler: the top of its
-    seat at the place of the rider, `top/3` with a span of y);
+  - the `top` of a node (the most z of its points, `top/3`), and the
+    `seat` height of a two-wheeler (`seat/3`: the lowest point of the
+    top of its seat at the place of the rider, a span of y);
   - a `port` of a node in the axes of the model (the geometry of a
     bicycle frame: its stack, its reach, its angles);
   - the curb `mass` (`World.Mass.of/2`);
@@ -152,6 +153,27 @@ defmodule World.Measure do
           do: z
 
     Enum.max(zs)
+  end
+
+  @doc """
+  The seat height of a two-wheeler, as the makers give it: the lowest
+  point of the top of the seat `node` at the place of the rider (`span`,
+  `{y0, y1}`). The span is cut in `bins` along y; the top of each bin is
+  the most z of the faces of the seat in it, and the seat height is the
+  least of these tops.
+  """
+  def seat(m, node, {y0, y1}, bins \\ 20) do
+    faces = for p <- parts(m, []), p.path == node or String.starts_with?(p.path, node <> "/"), f <- p.faces, do: f
+    step = (y1 - y0) / bins
+
+    tops =
+      for i <- 0..(bins - 1),
+          {a, b} = {y0 + i * step, y0 + (i + 1) * step},
+          zs = for(f <- faces, {_, _, z} <- clip(clip(f, a, 1), b, -1), do: z),
+          zs != [],
+          do: Enum.max(zs)
+
+    Enum.min(tops)
   end
 
   @doc "A port of the root part of a node in the axes of the model: `{point, axis}`."

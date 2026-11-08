@@ -32,7 +32,8 @@ The measures (`World.References.value/3`):
 | `{"wheelbase": true}` | From the front axle to the rear axle. | SAE J1100, L101. |
 | `{"track": "front" \| "rear"}` | From the center of one wheel to the other. | SAE J1100, W101 and W102. |
 | `{"ground_clearance": {"without": [nodes]}}` | The lowest face between the axles, with no wheel. | The ground clearance of a maker. |
-| `{"top": node, "span": [y0, y1]}` | The top of a node over a span of y. | The seat height of a two-wheeler. |
+| `{"top": node, "span": [y0, y1]}` | The top of a node (over a span of y, if given). | The top of a screen or a roof. |
+| `{"seat": node, "span": [y0, y1]}` | The lowest point of the top of a node over a span of y. | The seat height of a two-wheeler: the rider sits in the low part of the seat. |
 | `{"along": axis, "from": [node, port], "to": [node, port]}` | The distance between two ports along an axis. | The stack and the reach of a bicycle frame. |
 | `{"distance": [[node, port], [node, port]]}` | The distance between two ports. | The chainstay of a bicycle frame. |
 | `{"angle": [node, port]}` | The angle of the axis of a port from the ground. | The head angle of a bicycle frame. |

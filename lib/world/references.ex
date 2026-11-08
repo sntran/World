@@ -18,7 +18,10 @@ defmodule World.References do
   - `{"size": "length" | "width" | "height", "without": [nodes]}`;
   - `{"wheelbase": true}`, `{"track": "front" | "rear"}`;
   - `{"ground_clearance": {"without": [nodes]}}`;
-  - `{"top": node, "span": [y0, y1]}` (the seat height);
+  - `{"top": node, "span": [y0, y1]}`: the most z of a node (of its
+    points in the span of y, if the span is given);
+  - `{"seat": node, "span": [y0, y1]}`: the seat height of a
+    two-wheeler, the lowest point of the top of its seat in the span;
   - `{"along": "x" | "y" | "z", "from": [node, port], "to": [node, port]}`:
     the distance between two ports along an axis (the stack of a frame);
   - `{"distance": [[node, port], [node, port]]}`;
@@ -89,6 +92,8 @@ defmodule World.References do
   def value(%{"track" => which}, m, _), do: Measure.track(m, String.to_existing_atom(which))
   def value(%{"ground_clearance" => d}, m, _), do: Measure.ground_clearance(m, Map.get(d, "without", []))
   def value(%{"top" => node} = d, m, _), do: Measure.top(m, node, d["span"] && List.to_tuple(d["span"]))
+
+  def value(%{"seat" => node, "span" => [y0, y1]}, m, _), do: Measure.seat(m, node, {y0, y1})
 
   def value(%{"along" => axis, "from" => [n0, p0], "to" => [n1, p1]}, m, _) do
     i = Map.fetch!(%{"x" => 0, "y" => 1, "z" => 2}, axis)
