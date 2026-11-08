@@ -8,22 +8,20 @@
       "license": "facts"
     }
   ],
-  "level": "far",
-  "order": {
-    "blueprint": "bicycle",
-    "options": {
-      "tire": "50-559",
-      "stack": 0.5683,
-      "reach": 0.3794,
-      "head_angle": 71.0,
-      "seat_angle": 73.0,
-      "chainstay": 0.46,
-      "bb_drop": 0.047,
-      "seat_tube": 0.54,
-      "head_tube": 0.182,
-      "rake": 0.045
-    }
+  "blueprint": "blueprints/bicycle.json",
+  "options": {
+    "tire": "50-559",
+    "stack": 0.5683,
+    "reach": 0.3794,
+    "head_angle": 71.0,
+    "seat_angle": 73.0,
+    "chainstay": 0.46,
+    "bb_drop": 0.047,
+    "seat_tube": 0.54,
+    "head_tube": 0.182,
+    "rake": 0.045
   },
+  "level": "far",
   "numbers": [
     {
       "name": "stack",

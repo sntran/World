@@ -8,10 +8,8 @@
       "license": "facts"
     }
   ],
-  "order": {
-    "blueprint": "scooter_sport",
-    "options": {}
-  },
+  "blueprint": "references/blueprints/scooter_sport.json",
+  "options": {},
   "numbers": [
     {
       "name": "length",

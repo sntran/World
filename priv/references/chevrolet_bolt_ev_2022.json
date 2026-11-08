@@ -13,10 +13,8 @@
       "license": "facts"
     }
   ],
-  "order": {
-    "blueprint": "car",
-    "options": {}
-  },
+  "blueprint": "blueprints/car.json",
+  "options": {},
   "numbers": [
     {
       "name": "length (SAE J1100, L103)",

@@ -13,10 +13,8 @@
       "license": "facts"
     }
   ],
-  "order": {
-    "blueprint": "van_line",
-    "options": {}
-  },
+  "blueprint": "blueprints/van_line.json",
+  "options": {},
   "numbers": [
     {
       "name": "length (SAE J1100, L103)",

@@ -2,8 +2,10 @@ defmodule World.References do
   @moduledoc """
   The references of World (plan 0003, D1; `priv/references/NAME.json`,
   `docs/references.md`): real things with their published numbers, and
-  the order that builds each in World. `run/2` has the people of the node
-  build the order, measures the model as the standard of each number
+  the blueprint in data that builds each in World. `run/2` sends the
+  blueprint as a project sends it (`POST /blueprints`, the check of
+  `check_blueprint`), orders it by its hash, has the people of the node
+  build it, measures the model as the standard of each number
   defines it (`World.Measure`), and gives each number with its value, the
   value of the model, the error and the tolerance. The test of the
   references asserts that each number is in its tolerance (D3: no gaps).
@@ -11,7 +13,10 @@ defmodule World.References do
   A reference: `name`, `title`, `sources` (each with its `name`, `url`
   (null for a document with no link),
   and `license`: `facts` for the numbers of a document that is not in the
-  repository), `order` (an order of World), `level` (`near` by default),
+  repository), `blueprint` (the path of a blueprint in data, from
+  `priv/`: a blueprint of World, `blueprints/car.json`, or a blueprint of
+  a project, `references/blueprints/NAME.json`), its `options`, `level`
+  (`near` by default),
   and `numbers`, each with its `name`, `value`, `unit`, `tolerance` (a
   part of the value: 0.01 is 1%; or `abs` in the unit of the value), the
   index of its `source`, its `standard`, and its `measure`:
@@ -34,7 +39,8 @@ defmodule World.References do
   """
   alias World.{Measure, Orders, Vec}
 
-  @root Path.expand("../../priv/references", __DIR__)
+  @priv Path.expand("../../priv", __DIR__)
+  @root Path.join(@priv, "references")
   @paths Path.wildcard(Path.join(@root, "*.json"))
   for p <- @paths, do: @external_resource(p)
   @all Enum.map(@paths, &(&1 |> File.read!() |> JSON.decode!()))
@@ -63,11 +69,31 @@ defmodule World.References do
   """
   def run(ref, opts \\ []) do
     level = Map.get(ref, "level", "near")
-    {:ok, job} = Orders.job(ref["order"], level)
+    {:ok, job} = Orders.job(order(ref), level)
     {:ok, id} = World.build(Map.put(job, :budget, %{"workers" => Keyword.get(opts, :workers, 16)}))
     {:ok, _} = World.await(id, :infinity)
     m = Measure.of(job.item.(job.level), job.level)
     for n <- ref["numbers"], do: compare(n, value(n["measure"], m, job.drawing))
+  end
+
+  @doc """
+  The order of a reference, as a project gives it: the blueprint of its
+  file goes to the store (`World.Orders.keep_blueprint/1`, `POST
+  /blueprints`), and the order names it by its hash, with the options of
+  the reference. A blueprint that does not pass its check stops the run
+  with its errors.
+  """
+  def order(ref) do
+    raw = @priv |> Path.join(ref["blueprint"]) |> File.read!() |> JSON.decode!()
+
+    case Orders.keep_blueprint(raw) do
+      {:ok, %{"hash" => hash}} ->
+        %{"blueprint" => %{"hash" => hash}, "options" => Map.get(ref, "options", %{})}
+
+      {:error, errors} ->
+        raise ArgumentError,
+              "#{ref["name"]}: the blueprint #{ref["blueprint"]} does not pass its check: #{inspect(errors)}"
+    end
   end
 
   defp compare(n, model) do

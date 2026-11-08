@@ -71,8 +71,14 @@ defmodule World.VehiclesTest do
 
     assert ~w(mechanic molder smith upholsterer welder wheelwright) -- built("scooter", %{}, Path.join(dir, "s")) == []
 
-    # The Sport version of the scooter: its own blueprint, on a front wheel of 16 in.
-    for level <- [:near, :far], do: assert(Check.model(model("scooter_sport", level)) == :ok)
+    # The Sport version of the scooter: a blueprint of a project in the
+    # order, on a front wheel of 16 in.
+    sport = "priv/references/blueprints/scooter_sport.json" |> File.read!() |> JSON.decode!()
+
+    for level <- [:near, :far] do
+      {:ok, job} = Orders.job(%{"blueprint" => sport}, Atom.to_string(level))
+      assert Check.model(job.item.(level)) == :ok
+    end
 
     assert ~w(electrician mechanic sheet_metal_worker welder wheelwright) --
              built("motorcycle", %{}, Path.join(dir, "m")) == []

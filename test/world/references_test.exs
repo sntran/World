@@ -12,7 +12,7 @@ defmodule World.ReferencesTest do
     "name" => "bicycle_of_world",
     "title" => "The bicycle of World",
     "level" => "far",
-    "order" => %{"blueprint" => "bicycle", "options" => %{}},
+    "blueprint" => "blueprints/bicycle.json",
     "numbers" => [
       %{"name" => "wheelbase", "value" => 1.0173, "measure" => %{"wheelbase" => true}},
       %{
@@ -35,7 +35,7 @@ defmodule World.ReferencesTest do
     "name" => "car_of_world",
     "title" => "The car of World",
     "level" => "far",
-    "order" => %{"blueprint" => "car", "options" => %{}},
+    "blueprint" => "blueprints/car.json",
     "numbers" => [
       %{"name" => "front track", "value" => 1.5, "measure" => %{"track" => "front"}},
       %{"name" => "rear track", "value" => 1.5, "measure" => %{"track" => "rear"}},
@@ -91,7 +91,8 @@ defmodule World.ReferencesTest do
       "name" => "house_of_world",
       "title" => "A house of World",
       "level" => "far",
-      "order" => %{"blueprint" => "tube_house", "options" => %{"floors" => 1}},
+      "blueprint" => "blueprints/tube_house.json",
+      "options" => %{"floors" => 1},
       "numbers" => [
         %{"name" => "bricks", "value" => bricks, "measure" => %{"takeoff" => "brick"}},
         %{"name" => "stone", "value" => 3, "measure" => %{"takeoff" => "stone"}}
@@ -106,5 +107,16 @@ defmodule World.ReferencesTest do
     assert out =~ "bricks" and out =~ "! stone"
     assert capture_io(fn -> Mix.Tasks.World.References.run([]) end) |> is_binary()
     assert_raise Mix.Error, ~r/No reference nope/, fn -> Mix.Tasks.World.References.run(["nope"]) end
+  end
+
+  test "a reference sends its blueprint as a project does: by its hash, after the check of the blueprint" do
+    {:ok, ref} = References.fetch("honda_vision_sport")
+    assert %{"blueprint" => %{"hash" => hash}, "options" => %{}} = References.order(ref)
+    raw = "priv/references/blueprints/scooter_sport.json" |> File.read!() |> JSON.decode!()
+    assert hash == World.Orders.hash(raw) and World.Orders.Blueprints.fetch("scooter_sport") == :error
+
+    # A blueprint that does not pass its check stops the run with its errors.
+    bad = %{ref | "blueprint" => "references/honda_vision_sport.json"}
+    assert_raise ArgumentError, ~r/does not pass its check/, fn -> References.order(bad) end
   end
 end

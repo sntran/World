@@ -13,10 +13,8 @@
       "license": "facts"
     }
   ],
-  "order": {
-    "blueprint": "motorcycle",
-    "options": {}
-  },
+  "blueprint": "blueprints/motorcycle.json",
+  "options": {},
   "numbers": [
     {
       "name": "length",

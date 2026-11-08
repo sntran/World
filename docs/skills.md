@@ -153,7 +153,7 @@ a tank, the oil in an engine, a battery under a seat (`World.Mass`). A
 spring or a rim of a color is of steel or of aluminum for its mass.
 
 The blueprints `bicycle.json` (its params are the numbers of its
-geometry sheet), `scooter.json`, `scooter_sport.json`, `motorcycle.json` and `car.json` are vehicles from
+geometry sheet), `scooter.json`, `motorcycle.json` and `car.json` are vehicles from
 these skills (`docs/format.md`, "The vehicles that the people build").
 
 ## A van, as on the line of its maker (`World.Skills.Van`)
