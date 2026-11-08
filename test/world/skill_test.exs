@@ -194,6 +194,7 @@ defmodule World.SkillTest do
              "car",
              "motorcycle",
              "scooter",
+             "scooter_sport",
              "statue",
              "tower",
              "tube_house",

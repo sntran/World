@@ -577,6 +577,7 @@ extras `place` of the drawing move the model to its center. The kind is
 |---|---|---|
 | `bicycle.json` | the frame and the fork from the geometry sheet, two wheels, the crankset, the rack, the kickstand | `touring_bicycle` |
 | `scooter.json` | the frame, the panels, the lamps, the seat, the fork, the bars, the grips, the levers, the mirrors, two cast wheels, the axle bolt and nuts, the engine with its swing arm, the shock spring, the stand | `honda_vision_110` |
+| `scooter_sport.json` | the same nodes: the Sport version of the scooter, 24 mm higher on a front wheel of 16 in, with its front axle 22 mm to the front | none |
 | `car.json` | the body on lofts with the arches of its wheels, the glass, the trim, the lamps, and at each corner a knuckle (it steers at the front) with its wheel | `chevy_bolt_ev` |
 | `motorcycle.json` | the cradle frame, the engine, the tank, the seat, the rear fender, the rack, the lamps, the fork, the cockpit, two wheels with wire spokes, the axle bolt and nut, the swing arm, the monoshock spring, the side stand | `royal_enfield_himalayan` |
 

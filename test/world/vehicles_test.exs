@@ -71,6 +71,9 @@ defmodule World.VehiclesTest do
 
     assert ~w(mechanic molder smith upholsterer welder wheelwright) -- built("scooter", %{}, Path.join(dir, "s")) == []
 
+    # The Sport version of the scooter: its own blueprint, on a front wheel of 16 in.
+    for level <- [:near, :far], do: assert(Check.model(model("scooter_sport", level)) == :ok)
+
     assert ~w(electrician mechanic sheet_metal_worker welder wheelwright) --
              built("motorcycle", %{}, Path.join(dir, "m")) == []
   end

@@ -1,0 +1,97 @@
+{
+  "name": "honda_vision_sport",
+  "title": "Honda Vision 110, the Sport version (Việt Nam)",
+  "sources": [
+    {
+      "name": "Honda Việt Nam, Vision, the Sport version (Phiên bản Thể thao): the table of the specifications",
+      "url": "https://www.honda.com.vn/xe-may/san-pham/vision",
+      "license": "facts"
+    }
+  ],
+  "order": {
+    "blueprint": "scooter_sport",
+    "options": {}
+  },
+  "numbers": [
+    {
+      "name": "length",
+      "value": 1.925,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall length (dài): from the front to the back of the scooter.",
+      "measure": {
+        "size": "length"
+      }
+    },
+    {
+      "name": "width",
+      "value": 0.686,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall width (rộng): of the bars with their grips and their mirrors.",
+      "measure": {
+        "size": "width"
+      }
+    },
+    {
+      "name": "height",
+      "value": 1.126,
+      "unit": "m",
+      "source": 0,
+      "standard": "The overall height (cao): the top of the mirrors over the ground.",
+      "measure": {
+        "size": "height"
+      }
+    },
+    {
+      "name": "wheelbase",
+      "value": 1.277,
+      "unit": "m",
+      "source": 0,
+      "standard": "The wheelbase (khoảng cách trục bánh xe): from the front axle to the rear axle.",
+      "measure": {
+        "wheelbase": true
+      }
+    },
+    {
+      "name": "seat height",
+      "value": 0.785,
+      "unit": "m",
+      "source": 0,
+      "standard": "The seat height (độ cao yên): the lowest point of the top of the seat at the place of the rider.",
+      "measure": {
+        "seat": "seat",
+        "span": [
+          -0.4855,
+          -0.1355
+        ]
+      }
+    },
+    {
+      "name": "ground clearance",
+      "value": 0.175,
+      "unit": "m",
+      "source": 0,
+      "standard": "The ground clearance (khoảng sáng gầm xe): the lowest point between the axles, with no wheel.",
+      "measure": {
+        "ground_clearance": {
+          "without": [
+            "front_wheel",
+            "rear_wheel"
+          ]
+        }
+      }
+    },
+    {
+      "name": "curb mass",
+      "value": 97.0,
+      "unit": "kg",
+      "source": 0,
+      "standard": "The curb mass (khối lượng bản thân), with a full tank. The parts that the drawing does not show (the frame under the body, the inner panels, the wires) have masses by estimate, so the tolerance is 10%.",
+      "measure": {
+        "mass": true
+      },
+      "tolerance": 0.1
+    }
+  ]
+}
