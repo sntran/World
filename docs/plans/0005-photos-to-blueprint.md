@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Approved (the owner, 2026-11-08) |
+| Status | In progress |
 | Depends on | Plan 0004 (the statue of Vũng Tàu looks like the real one). |
 | Changes | A new folder `scripts/measure/` (the measure tools, out of the checks of CI); the measures of a model in `priv/measures/`; the drawing `tuong_chua_kito_vua`. |
 
@@ -123,6 +123,13 @@ cuff to the tip) 2.94 m.
   at 27.5 m, so 2.2 m over its middle, but its half width is 3.0 m. Is
   the ring a circle that leans back, or is a mark wrong? A mark in more
   frames will tell.
+  - Answer (2026-11-09): seven frames of the front shot gave the same
+    shape, at each focal length from 825 to 1500 px. The back shot, which
+    goes round the statue to its side, gives a circle of 3.10 m by
+    2.99 m that leans to the front by 30 degrees: its top is 1.48 m in
+    front of its middle, over the head
+    (`priv/measures/tuong_chua_kito_vua/README.md`). From the front and
+    over it, a ring that leans to the front looks short.
 - The people of World: Anny (NAVER LABS, 2025: Apache 2.0 for the code,
   CC0 for the assets of MakeHuman) can fit a pose and a shape to a
   photo. Does the owner want a plan for it after this one?
