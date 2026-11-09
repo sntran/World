@@ -11,6 +11,13 @@ defmodule World.Textures do
     tops (a normal texture). A tile is 0.3 m, on the UVs in metres of a
     surface (`World.Surface`).
 
+  - A photo of `priv/textures/` (plan 0005): `NAME.jpg` (the detail, grey)
+    and `NAME_normal.jpg` (its normal texture), made from a photo by
+    `scripts/measure/panel.py`: a panel in relief on the base of a statue.
+    Its role puts the image once on a panel (`panel` of a material of a
+    drawing, `World.Build`); the licenses of the photos are in
+    `CREDITS.md`.
+
   A texture is only at near (`World.Detail`): at mid and far a pebble is
   smaller than a texel of the screen, and the file stays small.
   """
@@ -21,8 +28,18 @@ defmodule World.Textures do
   @cell 8
   @tile 0.3
 
+  @dir Path.join(:code.priv_dir(:world), "textures")
+  @photos for(
+            f <- File.ls!(Path.join(__DIR__, "../../priv/textures")),
+            String.ends_with?(f, ".jpg") and not String.ends_with?(f, "_normal.jpg"),
+            do: Path.rootname(f)
+          )
+          |> Enum.sort()
+  for f <- File.ls!(Path.join(__DIR__, "../../priv/textures")),
+      do: @external_resource(Path.join(__DIR__, "../../priv/textures/" <> f))
+
   @doc "The names of the textures."
-  def names, do: ~w(washed_stone)
+  def names, do: ["washed_stone" | @photos]
 
   @doc """
   The keys of the material of a role for a texture at a level (`nil` for
@@ -41,6 +58,14 @@ defmodule World.Textures do
       "normal_image" => {"image/png", normal},
       "normal_image_scale" => repeat,
       "normal_scale" => 0.8
+    }
+  end
+
+  def spec(name, :near) when name in @photos do
+    %{
+      "image" => {"image/jpeg", File.read!(Path.join(@dir, name <> ".jpg"))},
+      "normal_image" => {"image/jpeg", File.read!(Path.join(@dir, name <> "_normal.jpg"))},
+      "normal_scale" => 0.7
     }
   end
 

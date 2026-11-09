@@ -36,4 +36,43 @@ defmodule World.TexturesTest do
     far = Build.scene(item, level: :far).materials.stone_wash
     refute Map.has_key?(far, "image") or Map.has_key?(far, "texture")
   end
+
+  test "a photo of a relief is once on its panel: its image, its normal image, and the transform of the panel" do
+    assert "relief_last_supper" in Textures.names()
+    spec = Textures.spec("relief_last_supper", :near)
+    assert {"image/jpeg", <<0xFF, 0xD8, _::binary>>} = spec["image"]
+    assert {"image/jpeg", <<0xFF, 0xD8, _::binary>>} = spec["normal_image"]
+    assert Textures.spec("relief_last_supper", :mid) == nil
+
+    raw = %{
+      "name" => "panel",
+      "materials" => %{"relief_front" => %{"texture" => "relief_last_supper", "panel" => [-2.0, 1.0, 2.0, 2.0]}},
+      "parts" => %{
+        "panel" => %{
+          "shapes" => [%{"box" => %{"from" => [-2, 0, 1], "to" => [2, 0.1, 2]}, "material" => "relief_front"}]
+        }
+      },
+      "nodes" => [%{"name" => "panel", "part" => "panel"}]
+    }
+
+    assert {:ok, _} = Drawing.check(raw, "d")
+    item = Drawing.build(raw)
+    near = Build.scene(item, level: :near).materials.relief_front
+    # u from -2 to 2 and v from 1 to 2 go to 0 to 1.
+    assert near["image_transform"] == %{"scale" => [0.25, 1.0], "offset" => [0.5, -1.0]}
+    refute Map.has_key?(near, "panel")
+    json = World.GLBHelper.json(World.GLB.encode(Build.scene(item, level: :near)))
+    [m] = json["materials"]
+    assert m["pbrMetallicRoughness"]["baseColorTexture"]["extensions"]["KHR_texture_transform"]["offset"] == [0.5, -1.0]
+    assert m["normalTexture"]["extensions"]["KHR_texture_transform"]["scale"] == [0.25, 1.0]
+    far = Build.scene(item, level: :far).materials.relief_front
+    refute Map.has_key?(far, "image") or Map.has_key?(far, "image_transform")
+
+    bad = put_in(raw, ["materials", "relief_front", "panel"], [2.0, 1.0, -2.0, 2.0])
+
+    assert {:error, [{"d.materials.relief_front.panel", "must be [u0, v0, u1, v1], u1 over u0 and v1 over v0"}]} =
+             Drawing.check(bad, "d")
+
+    assert {:error, [{"m.relief_back", _}]} = Drawing.check_materials(%{"relief_back" => 3}, "m")
+  end
 end

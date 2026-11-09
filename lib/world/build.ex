@@ -61,15 +61,26 @@ defmodule World.Build do
   defp restore(key, old), do: if(old == nil, do: Process.delete(key), else: Process.put(key, old))
 
   # The texture of a role (`World.Textures`) at the level of the scene: its
-  # images at near, none at mid and far.
+  # images at near, none at mid and far. With `panel` [u0, v0, u1, v1]
+  # (in the UVs in metres of World.Surface), the image is once on that
+  # rectangle: u0 at its column 0, v0 at its row 0.
   defp textures(materials, level) do
     Map.new(materials, fn {role, spec} ->
+      {panel, spec} = Map.pop(spec, "panel")
+
       case Map.pop(spec, "texture") do
         {nil, _} -> {role, spec}
-        {name, rest} -> {role, Map.merge(rest, World.Textures.spec(name, level) || %{})}
+        {name, rest} -> {role, rest |> Map.merge(World.Textures.spec(name, level) || %{}) |> on_panel(panel)}
       end
     end)
   end
+
+  defp on_panel(spec, [u0, v0, u1, v1]) when is_map_key(spec, "image") do
+    {su, sv} = {1 / (u1 - u0), 1 / (v1 - v0)}
+    Map.put(spec, "image_transform", %{"scale" => [su, sv], "offset" => [-u0 * su, -v0 * sv]})
+  end
+
+  defp on_panel(spec, _panel), do: spec
 
   defp build(item, opts) do
     level = Keyword.get(opts, :level, :near)

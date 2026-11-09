@@ -230,11 +230,12 @@ defmodule World.Drawing do
       p = "#{path}.#{role}"
 
       if role in roles do
-        object(spec, p, ~w(color roughness metalness texture), fn spec ->
+        object(spec, p, ~w(color roughness metalness texture panel), fn spec ->
           optional(spec, "color", p, &color/2) ++
             optional(spec, "roughness", p, &number(&1, &2, 0, 1)) ++
             optional(spec, "metalness", p, &number(&1, &2, 0, 1)) ++
-            optional(spec, "texture", p, &choice(&1, &2, World.Textures.names()))
+            optional(spec, "texture", p, &choice(&1, &2, World.Textures.names())) ++
+            optional(spec, "panel", p, &panel/2)
         end)
       else
         [{p, "must be a role of the palette: #{Enum.join(roles, ", ")}"}]
@@ -243,6 +244,25 @@ defmodule World.Drawing do
   end
 
   defp materials(_v, path), do: [{path, "must be an object"}]
+
+  # A rectangle of the UVs in metres (World.Surface) for the image of a
+  # texture: [u0, v0, u1, v1], u1 over u0 and v1 over v0.
+  defp panel([u0, v0, u1, v1], _path)
+       when is_number(u0) and is_number(v0) and is_number(u1) and is_number(v1) and u1 > u0 and v1 > v0,
+       do: []
+
+  defp panel(_v, path), do: [{path, "must be [u0, v0, u1, v1], u1 over u0 and v1 over v0"}]
+
+  @doc """
+  Check the `materials` of a drawing (a param of the type `materials` of
+  a blueprint): `{:ok, materials}` or `{:error, [{path, message}]}`.
+  """
+  def check_materials(v, path) do
+    case materials(v, path) do
+      [] -> {:ok, v}
+      errors -> {:error, errors}
+    end
+  end
 
   defp color(v, path),
     do: if(is_binary(v) and v =~ ~r/^#[0-9a-fA-F]{6}$/, do: [], else: [{path, "must be a color #rrggbb"}])

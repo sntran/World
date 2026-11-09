@@ -384,7 +384,8 @@ defmodule World.GLB do
   end
 
   # A texture of an image. Two materials with the same image share it. A
-  # texture that repeats (`scale`: the times in one unit of UV) has a
+  # texture that repeats (`scale`: the times in one unit of UV), or that
+  # is once on a panel (`scale` a map: its scale and its offset), has a
   # transform (KHR_texture_transform).
   defp texture(buf, {mime, data} = file, scale) do
     {image, buf} =
@@ -408,9 +409,11 @@ defmodule World.GLB do
     texture = %{"index" => image}
 
     texture =
-      if scale,
-        do: Map.put(texture, "extensions", %{"KHR_texture_transform" => %{"scale" => [scale, scale]}}),
-        else: texture
+      cond do
+        is_map(scale) -> Map.put(texture, "extensions", %{"KHR_texture_transform" => scale})
+        scale -> Map.put(texture, "extensions", %{"KHR_texture_transform" => %{"scale" => [scale, scale]}})
+        true -> texture
+      end
 
     {texture, buf}
   end
@@ -440,7 +443,7 @@ defmodule World.GLB do
           {pbr, buf}
 
         file ->
-          {texture, buf} = texture(buf, file, spec["image_scale"])
+          {texture, buf} = texture(buf, file, spec["image_transform"] || spec["image_scale"])
           {Map.put(pbr, "baseColorTexture", texture), buf}
       end
 
@@ -461,7 +464,7 @@ defmodule World.GLB do
           {material, buf}
 
         file ->
-          {texture, buf} = texture(buf, file, spec["normal_image_scale"])
+          {texture, buf} = texture(buf, file, spec["image_transform"] || spec["normal_image_scale"])
           {Map.put(material, "normalTexture", Map.put(texture, "scale", Map.get(spec, "normal_scale", 1.0) / 1)), buf}
       end
 

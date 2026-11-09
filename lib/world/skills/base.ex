@@ -13,6 +13,10 @@ defmodule World.Skills.Base do
   sides curve in by `base_curve` m, with a pilaster at each corner (its
   windows tall slots), two small windows under each panel and a door at
   the back; `relief_metal` makes the figures of the panels of bronze.
+  With `relief_photos`, each panel is of its own role (`relief_front`,
+  `relief_back`, `relief_left`, `relief_right`), for the photo of its
+  relief (a texture of the drawing, `World.Textures`), and has no figures
+  of lofts.
   With `base_room`, the base is a room (its walls 0.3 m, its floor on the
   foot band, its ceiling the top band) and the plinth is hollow, with a
   round opening of `well` m and 1.6 m round it for the stair. With
@@ -24,7 +28,9 @@ defmodule World.Skills.Base do
   alias World.Skills.Statue
 
   @names ~w(material base_width base_depth base_height corner reliefs plinth_radius plinth_height plinth_top plinth_sides
-             base_plan base_curve base_room relief_metal terrace well)
+             base_plan base_curve base_room relief_metal relief_photos terrace well)
+
+  @photo_roles %{front: :relief_front, back: :relief_back, left: :relief_left, right: :relief_right}
 
   @impl true
   def name, do: "base"
@@ -307,19 +313,20 @@ defmodule World.Skills.Base do
         end
       end
 
-      {line.(0.12), line.(0.15)}
+      role = if o.relief_photos, do: @photo_roles[side], else: :bronze
+      {role, line.(0.12), line.(0.15)}
     end
     |> Enum.flat_map(&door_gap/1)
-    |> Enum.map(fn {a, b} ->
-      Shape.prism(a ++ Enum.reverse(b), h - 2.15, :bronze, frame: Frame.move({0.0, 0.0, 1.35})) |> Mesh.matter(:copper)
+    |> Enum.map(fn {role, a, b} ->
+      Shape.prism(a ++ Enum.reverse(b), h - 2.15, role, frame: Frame.move({0.0, 0.0, 1.35})) |> Mesh.matter(:copper)
     end)
   end
 
   defp panels(_o), do: []
 
   # The back panel in two, at the two sides of the door (1.8 m).
-  defp door_gap({[{x0, y}, {x1, _}], [{_, yi}, _]}) when y < 0,
-    do: [{[{x0, y}, {-0.9, y}], [{x0, yi}, {-0.9, yi}]}, {[{0.9, y}, {x1, y}], [{0.9, yi}, {x1, yi}]}]
+  defp door_gap({role, [{x0, y}, {x1, _}], [{_, yi}, _]}) when y < 0,
+    do: [{role, [{x0, y}, {-0.9, y}], [{x0, yi}, {-0.9, yi}]}, {role, [{0.9, y}, {x1, y}], [{0.9, yi}, {x1, yi}]}]
 
   defp door_gap(lines), do: [lines]
 
@@ -343,7 +350,10 @@ defmodule World.Skills.Base do
   # a body and a head that stand 0.12 m out of the recess; on a curved
   # side each on the curve, and with `relief_metal` of bronze.
   defp reliefs(o, look) do
-    for %{"side" => side, "figures" => count} <- o.reliefs, {n, width, mid} = sides(o)[side], i <- 0..(count - 1) do
+    for %{"side" => side, "figures" => count} <- o.reliefs,
+        not o.relief_photos,
+        {n, width, mid} = sides(o)[side],
+        i <- 0..(count - 1) do
       along = Vec.cross({0.0, 0.0, 1.0}, n)
       panel = width - 2 * o.corner - 2.0
       x = -panel / 2 + panel * (i + 0.5) / count

@@ -1273,6 +1273,48 @@
     "base_room": true,
     "relief_metal": true,
     "terrace": 11.0,
+    "relief_photos": true,
+    "materials": {
+      "stone_wash": {
+        "texture": "washed_stone"
+      },
+      "relief_front": {
+        "texture": "relief_last_supper",
+        "panel": [
+          -5.85,
+          1.35,
+          5.85,
+          3.2
+        ]
+      },
+      "relief_back": {
+        "texture": "relief_keys",
+        "panel": [
+          -5.85,
+          1.35,
+          5.85,
+          3.2
+        ]
+      },
+      "relief_left": {
+        "texture": "relief_pilate",
+        "panel": [
+          -5.85,
+          1.35,
+          5.85,
+          3.2
+        ]
+      },
+      "relief_right": {
+        "texture": "relief_magi",
+        "panel": [
+          -5.85,
+          1.35,
+          5.85,
+          3.2
+        ]
+      }
+    },
     "sources": {
       "height": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: 27.5 m from the feet (the hem) to the top of the halo. vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu) gives 32 m: from the foot of the plinth to the top of the halo, 31.2 m measured (-2.5%).",
       "span": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: 23.5 m from the tip of one hand to the tip of the other. vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu): the arms 18.4 m wide, from cuff to cuff (the scale of the measures).",

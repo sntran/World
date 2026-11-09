@@ -68,6 +68,16 @@ and its depth from these marks are not a measure (their errors are some
 metres); the sides that curve in (`base_side_l_in`, `base_side_r_in`)
 are on an outline, not a point.
 
+## The reliefs of the base
+
+`reliefs.json` has, for each texture of `priv/textures/`, the photo of
+Wikimedia Commons (the size of its file 1920 x 1440) and the edges of its
+panel in it: `scripts/measure/panel.py PHOTO EDGES OUT [--mirror]` makes
+the texture again. The photo of the keys to Peter has a sunshade in front
+of the lower middle of the panel; the photos of the keys and of Christ
+before Pilate do not show their whole panel, and the part that shows goes
+over the whole panel of the model.
+
 ## Limits
 
 - The focal length of each shot comes from the shot (`front/`: 825 px,

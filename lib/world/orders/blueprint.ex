@@ -82,7 +82,7 @@ defmodule World.Orders.Blueprint do
     }
   end
 
-  @types ~w(number integer choice boolean color list object text sources skill)
+  @types ~w(number integer choice boolean color list object text sources skill materials)
   @param_keys ~w(name type default unit min max values item fields doc skill)
 
   @doc """
@@ -192,6 +192,7 @@ defmodule World.Orders.Blueprint do
       "text" -> option(p["name"], :data, opts ++ [check: &text(&1, &2, p["max"] || 200)])
       "sources" -> option(p["name"], :data, opts ++ [check: &World.Sizes.check(&1, &2, sized)])
       "skill" -> option(p["name"], :data, opts ++ [check: &by_skill(&1, &2, p)])
+      "materials" -> option(p["name"], :data, opts ++ [check: &World.Drawing.check_materials/2])
       type -> option(p["name"], String.to_existing_atom(type), opts)
     end
   end

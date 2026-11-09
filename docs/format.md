@@ -378,8 +378,9 @@ needs no new code for it. It has a `name`, a `doc`, `sources`, `params`
   `min`, `max`, `unit`, `values`, `item`, `fields`, `doc`). The types:
   `number`, `integer`, `choice`, `boolean`, `color`, `list`, `object`,
   `text` (at most `max` bytes, 200 by default), `sources` (the source of
-  each name of the `sizes`) and `skill` (a value that the skill `skill`
-  checks: the light of a tower). A param with no `default` is required.
+  each name of the `sizes`), `skill` (a value that the skill `skill`
+  checks: the light of a tower) and `materials` (the `materials` of a
+  drawing, below). A param with no `default` is required.
 - **In the drawing**, a value `{"param": NAME}` takes the value of the
   option, and `{"sum": [...]}` the sum of its numbers.
 - **The sizes** go into the extras of the model (`"sizes"`, `World.Sizes`):
@@ -1652,7 +1653,7 @@ the catalog: `banh_mi_cart`).
 | Key | What it is |
 |---|---|
 | `name`, `kind`, `sources` | The name of the model (a to z, 0 to 9 and _), its kind (`appliance`, `building`, `electrical`, `furniture`, `house`, `item`, `prop`, `statue`, `tower`, `vehicle`; `item` by default), and where its data comes from. |
-| `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model, and its `texture`: a texture that World makes (`World.Textures`: `washed_stone`, the pebbles of a render of washed stone, a tile of 0.3 m on the UVs in metres of a surface), only at near. A drawing makes no new role. |
+| `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model, and its `texture`, only at near (`World.Textures`): `washed_stone`, the pebbles of a render of washed stone, a tile of 0.3 m on the UVs in metres of a surface; or a photo of a relief of `priv/textures/` (`relief_last_supper`, `relief_keys`, `relief_pilate`, `relief_magi`) with `panel` `[u0, v0, u1, v1]`: the rectangle of the UVs in metres where the image is once. A drawing makes no new role. |
 | `parts` | A name to a part: its `shapes`, its `ports` (a name to `at`, `axis`, `up`), its `sources`; or a standard part: `standard` (`"bolt M8x40"`, `"cap_screw M6x20"`, `"nut M8"`, `"washer M8"`, `"bearing 6204"`), with the ports of the standard part (a bolt has `head` and `tip`). |
 | `nodes` | The tree of the model, the root first. |
 | `clips` | The animations of the joints. |

@@ -50,6 +50,9 @@ defmodule World.StatueTest do
     assert sizes["wall"]["source"] == "estimate (no source)"
     assert sizes["windows"]["value"] |> length() == 3
     assert sizes["material"]["value"] == "concrete"
+    # The four panels of the base with the photos of their reliefs, at near.
+    reliefs = for {role, spec} <- s.materials, String.starts_with?(Atom.to_string(role), "relief_"), do: spec
+    assert length(reliefs) == 4 and Enum.all?(reliefs, &(&1["image"] && &1["image_transform"]))
     assert ~w(door light stair view) -- Enum.map(near.extras["ports"], & &1["kind"]) == []
     # The base: a box for each wall (the back in two, at the door) and the
     # roof; then the plinth, the robe, the arms and the head.
@@ -237,6 +240,13 @@ defmodule World.StatueTest do
     assert Enum.any?(near.extras["collision"], &(&1["name"] == "be_mai"))
     # The rail along the curves.
     assert length(part(near, "lan_can").shapes) > 20
+
+    # With the photos of the reliefs: each panel of its own role, and no
+    # figures of lofts.
+    photos = statue(:near, Map.put(o, "relief_photos", true))
+    roles = for m <- part(photos, "be").shapes, uniq: true, do: m.material
+    assert [:relief_back, :relief_front, :relief_left, :relief_right] -- roles == []
+    refute :bronze in roles
 
     mid = statue(:mid, o)
     assert Check.model(mid) == :ok

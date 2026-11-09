@@ -45,6 +45,10 @@ COLMAP stay out of the repository.
    CAMERAS FRAMES POSE OUT` gives the overlap of the outline of the model
    in each frame, and draws it.
 
+7. **A panel in relief.** `panel.py PHOTO EDGES OUT` makes the textures
+   of a flat panel from a photo of it (the points of its top and bottom
+   edges), for a role of a drawing with a `panel` (`docs/format.md`).
+
 ## What a measure can and cannot give
 
 - The frames of one shot see the thing from one side: the sizes across

@@ -83,6 +83,7 @@ defmodule World.Skills.Statue do
       m.("base_curve", 1.5, 0.0, 10.0),
       option("base_room", :boolean, default: false),
       option("relief_metal", :boolean, default: false),
+      option("relief_photos", :boolean, default: false),
       m.("terrace", 0.0, 0.0, 100.0),
       option("reliefs", :list,
         default: [],

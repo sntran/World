@@ -170,6 +170,16 @@
       "doc": "Concrete with a render of washed stone, or stone (granite)."
     },
     {
+      "name": "materials",
+      "type": "materials",
+      "default": {
+        "stone_wash": {
+          "texture": "washed_stone"
+        }
+      },
+      "doc": "The materials of the drawing: a role of the palette to its color, roughness, metalness, texture (World.Textures) and panel (the rectangle of the UVs in metres where the image is once)."
+    },
+    {
       "name": "hollow",
       "type": "boolean",
       "default": false,
@@ -341,6 +351,12 @@
       "type": "boolean",
       "default": false,
       "doc": "The figures of the panels of the base are of bronze."
+    },
+    {
+      "name": "relief_photos",
+      "type": "boolean",
+      "default": false,
+      "doc": "Each panel of the base is of its own role (relief_front, relief_back, relief_left, relief_right) for the photo of its relief, a texture of the param materials; no figures of lofts."
     },
     {
       "name": "terrace",
@@ -519,9 +535,7 @@
     },
     "kind": "statue",
     "materials": {
-      "stone_wash": {
-        "texture": "washed_stone"
-      }
+      "param": "materials"
     },
     "sources": [
       "MakeHuman (CC0): the person of the figure.",
@@ -584,6 +598,9 @@
             },
             "well": {
               "param": "well"
+            },
+            "relief_photos": {
+              "param": "relief_photos"
             }
           }
         }
