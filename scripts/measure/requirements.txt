@@ -1,0 +1,6 @@
+# The tools of plan 0005 (scripts/measure/README.md). Out of the checks of CI.
+numpy==2.5.4
+pillow==13.0.0
+pycolmap==4.2.1
+scipy==1.18.1
+trimesh==5.2.0
