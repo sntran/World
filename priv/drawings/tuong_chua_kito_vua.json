@@ -326,6 +326,89 @@
               18.0,
               21.5
             ]
+          }
+        ]
+      },
+      {
+        "mirror": true,
+        "rings": [
+          {
+            "xrect": [
+              3.8,
+              -1.6,
+              1.6,
+              18.0,
+              21.0
+            ]
+          },
+          {
+            "xrect": [
+              5.36,
+              -1.43,
+              1.43,
+              19.1,
+              21.0
+            ]
+          }
+        ]
+      },
+      {
+        "mirror": true,
+        "rings": [
+          {
+            "xrect": [
+              3.8,
+              1.35,
+              1.6,
+              21.0,
+              21.5
+            ]
+          },
+          {
+            "xrect": [
+              5.36,
+              1.18,
+              1.43,
+              21.0,
+              22.14
+            ]
+          }
+        ]
+      },
+      {
+        "mirror": true,
+        "rings": [
+          {
+            "xrect": [
+              3.8,
+              -1.6,
+              -1.35,
+              21.0,
+              21.5
+            ]
+          },
+          {
+            "xrect": [
+              5.36,
+              -1.43,
+              -1.18,
+              21.0,
+              22.14
+            ]
+          }
+        ]
+      },
+      {
+        "mirror": true,
+        "rings": [
+          {
+            "xrect": [
+              5.36,
+              -1.43,
+              1.43,
+              19.1,
+              22.14
+            ]
           },
           {
             "xrect": [
@@ -1183,6 +1266,13 @@
       "rods": 3,
       "tube": 0.32
     },
+    "base_width": 14.5,
+    "base_depth": 14.5,
+    "base_plan": "curved",
+    "base_curve": 1.5,
+    "base_room": true,
+    "relief_metal": true,
+    "terrace": 11.0,
     "sources": {
       "height": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: 27.5 m from the feet (the hem) to the top of the halo. vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu) gives 32 m: from the foot of the plinth to the top of the halo, 31.2 m measured (-2.5%).",
       "span": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: 23.5 m from the tip of one hand to the tip of the other. vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu): the arms 18.4 m wide, from cuff to cuff (the scale of the measures).",
@@ -1190,7 +1280,7 @@
       "lift": "by eye from the photo Statue_of_Jesus_in_Vung_Tau.jpg (Wikimedia Commons, Category:Christ of Vung Tau): the arms a little over the level.",
       "steps": "vi.wikipedia, Tượng Chúa Kitô Vua (Vũng Tàu): 133 steps in a spiral from the base to the shoulders.",
       "base_height": "en.wikipedia, Christ of Vũng Tàu: a platform of 4 m (36 m in all). The owner: keep 4 m.",
-      "base_width": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: the base 12 m long.",
+      "base_width": "measured: priv/measures/tuong_chua_kito_vua (plan 0005, the frames of the drone video): the front corners of the roof of the base 14.8 m apart and the lamps of its back corners 13.3 m apart, at 18.4 m from cuff to cuff. amazingvietnam.vn (2010) gives 12 m.",
       "rays": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: 9 rays of metal in the halo, which are also lightning rods.",
       "material": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: reinforced concrete with a render of washed stone.",
       "reliefs": "amazingvietnam.vn (2010), the statue of Christ on Núi Nhỏ: front the Last Supper, back the keys to Peter, the sides Christ before Pilate and the three Magi.",
@@ -1201,7 +1291,11 @@
       "forms": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: the hem, the windows, the cape (14.4 m at its sides, 15.9 m over the front panel), the heart (19.1 m), the cuffs (21.0 to 23.1 m), the crown (26.2 m), the tip of the beard (22.0 m). The depth and the planes between the measures: by eye from the photos.",
       "head": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: the top of the head at 26.1 m and the tip of the beard at 22.0 m. The face: by eye from the photos.",
       "hands": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: the wrists at the cuffs (21.0 to 23.1 m), the hands 2.6 m, the palms up (the frames).",
-      "ring": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: a circle of 3.1 m (3.10 m to its sides and 2.99 m to its top, the back shot), its widest points at 25.06 m, leaning to the front by 30 to 32 degrees; 3 rods on its top (the photos)."
+      "ring": "measured: priv/measures/tuong_chua_kito_vua (plan 0005; a drone video, the cameras of COLMAP, the features in 3D), at 18.4 m from cuff to cuff: a circle of 3.1 m (3.10 m to its sides and 2.99 m to its top, the back shot), its widest points at 25.06 m, leaning to the front by 30 to 32 degrees; 3 rods on its top (the photos).",
+      "base_depth": "by eye from the frames of the drone video: the plan of the base is square.",
+      "base_plan": "by eye from the frames of the drone video: the front and the back of the base straight, its two sides curved in, a pilaster with tall slots at each corner, the door at the back.",
+      "base_curve": "by eye from the frames of the drone video (frame 046): the sides curve in by about 1.5 m.",
+      "terrace": "by eye from the frames of the drone video: a round platform with three steps, about 1.5 m out from the corners of the base."
     }
   }
 }

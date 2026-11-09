@@ -30,11 +30,18 @@ defmodule World.StatueTest do
     assert Scene.triangles(s) < 100_000
     assert :stone_wash in roles(s) and :steel in roles(s)
 
-    # The stair of 133 steps to the floor of the shoulders, inside.
+    # The stair of 133 steps from the floor of the room in the base (0.6 m
+    # over the ground) up through the plinth to the floor of the
+    # shoulders, inside.
     stair = part(near, "cau_thang")
     # 133 treads, the rail and 45 posts.
     assert length(stair.shapes) == 179 and stair.params["steps"] == 133
-    assert stair.params["rise"] > 0.15 and stair.params["rise"] < 0.19
+    assert stair.params["rise"] > 0.19 and stair.params["rise"] < 0.23
+    {{_, _, first}, _} = stair.shapes |> hd() |> Mesh.bounds()
+    assert_in_delta first, 0.6 + stair.params["rise"] - 0.08, 0.01
+    ports = Map.new(near.extras["ports"], &{&1["kind"], &1})
+    assert ports["stair"]["at"] == {0.0, 0.0, 0.6}
+    assert ports["door"]["at"] == {0.0, -7.25, 0.0}
 
     # The extras: each size with its source, or an estimate.
     sizes = Map.new(near.extras["sizes"], &{&1["name"], &1})
@@ -44,7 +51,9 @@ defmodule World.StatueTest do
     assert sizes["windows"]["value"] |> length() == 3
     assert sizes["material"]["value"] == "concrete"
     assert ~w(door light stair view) -- Enum.map(near.extras["ports"], & &1["kind"]) == []
-    assert length(near.extras["collision"]) == 5
+    # The base: a box for each wall (the back in two, at the door) and the
+    # roof; then the plinth, the robe, the arms and the head.
+    assert length(near.extras["collision"]) == 10
 
     # Hollow at near only: the mid level weighs more.
     mid = nui_nho(:mid)
@@ -132,6 +141,26 @@ defmodule World.StatueTest do
     near = statue(:mid, %{"height" => 3.0, "rays" => 4, "base_height" => 0.0, "plinth_height" => 0.0})
     assert Enum.count(part(near, "tuong").shapes, &(&1.material == :steel)) == 4
 
+    # A square base with a rail, and a plinth of facets with no room.
+    square = %{
+      "height" => 3.0,
+      "base_height" => 1.2,
+      "base_width" => 3.0,
+      "base_depth" => 3.0,
+      "corner" => 0.4,
+      "rail" => 0.5,
+      "plinth_height" => 0.4,
+      "plinth_radius" => 0.8,
+      "plinth_top" => 0.5,
+      "plinth_sides" => 8
+    }
+
+    for level <- [:mid, :near] do
+      item = statue(level, square)
+      assert Check.model(item) == :ok
+      assert part(item, "lan_can").shapes != []
+    end
+
     # The defaults: a statue of 32 m with its arms out, on a base.
     assert Scene.triangles(scene(statue(:far, %{}), :far)) <= 300
 
@@ -165,7 +194,15 @@ defmodule World.StatueTest do
       "plinth_radius" => 1.0,
       "plinth_top" => 0.7,
       "plinth_sides" => 8,
-      "base_height" => 1.0
+      "base_height" => 3.0,
+      "base_width" => 6.0,
+      "base_depth" => 6.0,
+      "base_plan" => "curved",
+      "base_curve" => 0.6,
+      "base_room" => true,
+      "relief_metal" => true,
+      "reliefs" => [%{"side" => "front", "figures" => 2}, %{"side" => "left", "figures" => 2}],
+      "terrace" => 4.5
     }
 
     near = statue(:near, o)
@@ -179,19 +216,34 @@ defmodule World.StatueTest do
     # One rod up and one ray each side.
     assert Enum.count(shapes, &(&1.material == :steel)) == 3
     # The top of the carved head where the data puts it (over the feet).
-    feet = 1.0 + 0.6
+    feet = 3.0 + 0.6
     tops = for m <- shapes, m.material != :steel, {{_, _, _}, {_, _, z}} = Mesh.bounds(m), do: z - feet
     assert Enum.any?(tops, &(abs(&1 - 5.5) < 1.0e-6))
-    # The plinth: an octagon.
-    plinth = part(near, "be").shapes |> List.last()
-
-    assert plinth.points |> Enum.map(fn {x, y, _} -> Float.round(:math.atan2(y, x), 3) end) |> Enum.uniq() |> length() <=
-             9
+    # The plinth: an octagon, hollow round the stair.
+    base = part(near, "be").shapes
+    plinth = List.last(base)
+    angles = plinth.points |> Enum.map(fn {x, y, _} -> Float.round(:math.atan2(y, x), 3) end) |> Enum.uniq()
+    assert length(angles) <= 9
+    assert plinth.points |> Enum.map(fn {x, y, _} -> :math.sqrt(x * x + y * y) end) |> Enum.min() > 0.5
+    # The base: its bronze panels (the back in two, at the door) and
+    # figures, the dark of its door, windows and slots, and the terrace.
+    assert Enum.count(base, &(&1.material == :bronze)) == 5 + 4
+    assert Enum.count(base, &(&1.material == :dark)) == 1 + 8 + 24
+    {{tx0, _, _}, {tx1, _, _}} = base |> Enum.flat_map(& &1.points) |> World.Vec.bounds()
+    assert_in_delta tx1 - tx0, 9.0, 0.01
+    # The stair from the floor of the room, and the room in the collision.
+    {{_, _, first}, _} = part(near, "cau_thang").shapes |> hd() |> Mesh.bounds()
+    assert first < 1.0
+    assert Enum.any?(near.extras["collision"], &(&1["name"] == "be_mai"))
+    # The rail along the curves.
+    assert length(part(near, "lan_can").shapes) > 20
 
     mid = statue(:mid, o)
     assert Check.model(mid) == :ok
-    # At far: the ring, with no arm, rod or ray.
-    far = statue(:far, o)
+    assert length(part(mid, "lan_can").shapes) == 1
+    # At far: the ring, with no arm, rod or ray; a plinth of facets of no
+    # given top.
+    far = statue(:far, Map.delete(o, "plinth_top"))
     assert Enum.count(part(far, "tuong").shapes, &(&1.material == :steel)) == 0
   end
 

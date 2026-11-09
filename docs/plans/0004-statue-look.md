@@ -59,7 +59,7 @@ What the photo of the statue shows (Wikimedia Commons,
 | D5 | **The robe as the photo shows it:** flat planes with sharp edges; the front panel with its three square marks; the side panels; the cape to the waist; the Sacred Heart; wide square sleeves; the band of Greek key at the cuffs and at the hem. The feet show under the hem, on a low dome. | These are the marks that make the statue the statue of Vũng Tàu. |
 | D6 | **The halo is behind the head.** Its cross is in the ring behind the head, and no part of the halo is in front of the back of the head. The model has it so already (the skill `halo` puts it behind the back of the hair); the cross that seemed to go through the head was the lump of the face. A test keeps it so. | The halo is the lightning rod of the statue (the travel guides), and the photo shows it behind the head, its cross at the two sides of the head and over it. |
 | D7 | **Washed stone and light.** A role of the palette can have a texture that World makes (`World.PNG`): small changes of color (the pebbles of đá rửa) and a normal texture of grain, tiled in metres on the UVs that the statue already has (`World.Surface`). The color of `stone_wash` comes from the photos. The review pages share one scene module: tone mapping, a sun with soft shadows fitted to the model, a ground that takes the shadow, and `READY` after the first frame. | The same GLB looks like stone in any app; the review page shows the model as a person sees it. |
-| D8 | **Far keeps its bytes.** The tests that compare the far file with its bytes stay as they are; near and mid change, and their files are built again. | Far is the level of the skyline of the game. |
+| D8 | **Far keeps its bytes**, until the sizes change. The tests that compare the far file with its bytes stay as they are; near and mid change, and their files are built again. The owner (2026-11-09): the measured sizes of plan 0005 change the outline, so the far file is built again with them. | Far is the level of the skyline of the game. |
 | D9 | **The checks (the owner):** quick checks on each commit (the format, the compile with warnings as errors, the tests of what the commit changes), and the full checks on the tip before each push. | The container of the work restarts often, and a full check takes half an hour. |
 
 ## 4. Requirements
@@ -80,7 +80,8 @@ What the photo of the statue shows (Wikimedia Commons,
 - R6. The head, the hands and the feet are carved parts at near, with
   the eyes, the nose and the mouth of the face. `Check.model` passes.
 - R7. Near has fewer than 100,000 triangles; mid at most 12,000; far at
-  most 300 and the same bytes.
+  most 300 (the owner, 2026-11-09: its bytes change with the measured
+  sizes of plan 0005).
 - R8. The statue built over MCP (`check_blueprint`, then `build`) has
   the look of the photos at three angles.
 
@@ -110,3 +111,4 @@ What the photo of the statue shows (Wikimedia Commons,
   changes too. The far file of `tuong_chua_kito_vua` is built again; it
   still has at most 300 triangles (252). Does the owner keep the new far
   file, or keep the old one?
+  - Answer (the owner, 2026-11-09): keep the new far file.

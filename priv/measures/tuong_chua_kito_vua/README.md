@@ -60,6 +60,14 @@ From `back/`:
 - The back of the cape (its lowest point at the back) is 4.0 m behind
   the line of the cuffs.
 
+The base, from `front/` (frames 009, 018, 027, 040 and 046): the front
+corners of its roof (`base_front_l`, `base_front_r`) 14.8 m apart across,
+the lamps of its back corners 13.3 m apart. The base is far under the
+line of the windows and the shot sees it from the front, so its heights
+and its depth from these marks are not a measure (their errors are some
+metres); the sides that curve in (`base_side_l_in`, `base_side_r_in`)
+are on an outline, not a point.
+
 ## Limits
 
 - The focal length of each shot comes from the shot (`front/`: 825 px,

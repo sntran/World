@@ -312,6 +312,46 @@
       "doc": "The radius of the round corners of the base."
     },
     {
+      "name": "base_plan",
+      "type": "choice",
+      "default": "square",
+      "values": [
+        "square",
+        "curved"
+      ],
+      "doc": "square: a block with round corners. curved: the front and the back straight, the two sides curved in by base_curve (the base on Núi Nhỏ)."
+    },
+    {
+      "name": "base_curve",
+      "type": "number",
+      "default": 1.5,
+      "min": 0.0,
+      "max": 10.0,
+      "unit": "m",
+      "doc": "How far the sides of a curved base go in, at their middle."
+    },
+    {
+      "name": "base_room",
+      "type": "boolean",
+      "default": false,
+      "doc": "The base is a room with a door at its back; the plinth is hollow, and the stair of a hollow statue starts on the floor of the room."
+    },
+    {
+      "name": "relief_metal",
+      "type": "boolean",
+      "default": false,
+      "doc": "The figures of the panels of the base are of bronze."
+    },
+    {
+      "name": "terrace",
+      "type": "number",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 100.0,
+      "unit": "m",
+      "doc": "The radius of a round platform of three steps round the base; 0: none."
+    },
+    {
       "name": "reliefs",
       "type": "list",
       "default": [],
@@ -429,6 +469,17 @@
       "unit": "m"
     },
     {
+      "name": "base_plan"
+    },
+    {
+      "name": "base_curve",
+      "unit": "m"
+    },
+    {
+      "name": "terrace",
+      "unit": "m"
+    },
+    {
       "name": "rail",
       "unit": "m"
     },
@@ -515,6 +566,24 @@
             },
             "plinth_sides": {
               "param": "plinth_sides"
+            },
+            "base_plan": {
+              "param": "base_plan"
+            },
+            "base_curve": {
+              "param": "base_curve"
+            },
+            "base_room": {
+              "param": "base_room"
+            },
+            "relief_metal": {
+              "param": "relief_metal"
+            },
+            "terrace": {
+              "param": "terrace"
+            },
+            "well": {
+              "param": "well"
             }
           }
         }
@@ -859,6 +928,9 @@
                   "param": "plinth_height"
                 }
               ]
+            },
+            "base_room": {
+              "param": "base_room"
             }
           }
         },
@@ -888,6 +960,12 @@
             },
             "base_height": {
               "param": "base_height"
+            },
+            "base_plan": {
+              "param": "base_plan"
+            },
+            "base_curve": {
+              "param": "base_curve"
             }
           }
         },
@@ -932,6 +1010,9 @@
                   "param": "plinth_height"
                 }
               ]
+            },
+            "base_room": {
+              "param": "base_room"
             }
           }
         },

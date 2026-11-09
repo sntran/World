@@ -2,14 +2,16 @@ defmodule World.Skills.Rail do
   @moduledoc """
   The skill `rail` of a mason: the rail of `rail` m round the top of the
   base of a statue (by eye from the photos): a low wall and a top rail on
-  each side, and at near the balusters between them, 0.3 m apart. The
-  part `lan_can` (nil with no rail, no base, or at far).
+  each side, and at near the balusters between them, 0.3 m apart. On the
+  curved plan of the base (`base_plan`, `World.Skills.Base`), the low wall
+  and the top rail go along its curves. The part `lan_can` (nil with no
+  rail, no base, or at far).
   """
   @behaviour World.Skill
-  alias World.{Detail, Frame, Mesh, Part, Shape}
+  alias World.{Detail, Frame, Mesh, Part, Shape, Vec}
   alias World.Skills.Statue
 
-  @names ~w(material rail base_width base_depth base_height)
+  @names ~w(material rail base_width base_depth base_height base_plan base_curve)
 
   @impl true
   def name, do: "rail"
@@ -32,6 +34,42 @@ defmodule World.Skills.Rail do
   def make(data, _inputs, %{level: level}) do
     o = Statue.o(data, @names)
     {if(o.rail > 0 and o.base_height > 0 and level != :far, do: rail_part(o)), %{}, %{}}
+  end
+
+  defp rail_part(%{base_plan: "curved"} = o) do
+    {look, matter} = Statue.material(o.material)
+    {h, z} = {o.rail, o.base_height}
+    # The line of the rail: the outline of the base 0.3 m in, closed.
+    n = %{near: 12, mid: 6}[Detail.level()]
+    {hw, hd, c} = {o.base_width / 2 - 0.3, o.base_depth / 2 - 0.3, o.base_curve}
+    side = fn sx -> for k <- 0..n, t = -1 + 2 * k / n, do: {sx * (hw - c * (1 - t * t)), sx * hd * t} end
+    line = side.(1.0) ++ side.(-1.0)
+    line = line ++ [hd(line)]
+    at = fn zz -> for {x, y} <- line, do: {x, y, zz} end
+
+    walls =
+      if Detail.level() == :near,
+        do: [Shape.sweep(at.(z + 0.08), 0.08, look, sides: 6), Shape.sweep(at.(z + h - 0.06), 0.07, look, sides: 6)],
+        else: [Shape.sweep(at.(z + h / 2), h / 2, look, sides: 4)]
+
+    balusters =
+      for [{x0, y0}, {x1, y1}] <- Enum.chunk_every(line, 2, 1, :discard),
+          Detail.level() == :near,
+          len = Vec.len({x1 - x0, y1 - y0, 0.0}),
+          k <- 0..(round(len / 0.3) - 1)//1 do
+        f = k / max(round(len / 0.3), 1)
+
+        Shape.cylinder(0.05, h - 0.27, look,
+          sides: 6,
+          frame: Frame.move({x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, z + 0.15})
+        )
+      end
+
+    Part.new("lan_can", :statue, Enum.map(walls ++ balusters, &Mesh.matter(&1, matter)), [Statue.port()],
+      sources: [
+        "The rail: #{h} m high (an estimate), along the curved plan of the base (the frames of the drone video)."
+      ]
+    )
   end
 
   defp rail_part(o) do

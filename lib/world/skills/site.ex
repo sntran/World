@@ -8,13 +8,16 @@ defmodule World.Skills.Site do
   back, and with `hollow` the foot of the stair and a view at each
   balcony. The collision boxes: the base, the plinth, the robe, the arms
   and the head (the halo and the rays have none: a player does not reach
-  them). The corners of the base, for the data of the surface.
+  them). With `base_room`, the base is a room that a player walks into:
+  the foot of the stair is on its floor, and the base has a box for each
+  wall (the back in two, at the two sides of the door) and its roof. The
+  corners of the base, for the data of the surface.
   """
   @behaviour World.Skill
   alias World.Vec
   alias World.Skills.Statue
 
-  @names ~w(hand hollow well base_width base_depth base_height plinth_radius feet)
+  @names ~w(hand hollow well base_width base_depth base_height plinth_radius feet base_room)
 
   @impl true
   def name, do: "site"
@@ -59,7 +62,9 @@ defmodule World.Skills.Site do
         xs = abs(elem(m["upperarm_l"], 0))
         za = elem(m["upperarm_l"], 2) + o.feet
 
-        [port("stair", {0.0, 0.0, o.feet}, {0.0, 0.0, 1.0}, [o.well + 1.6, o.well + 1.6, 2.0])] ++
+        foot = if o.base_room, do: 0.6, else: o.feet
+
+        [port("stair", {0.0, 0.0, foot}, {0.0, 0.0, 1.0}, [o.well + 1.6, o.well + 1.6, 2.0])] ++
           for side <- [-1.0, 1.0], do: port("view", {side * (xs + 1.75), 0.0, za}, {0.0, 0.0, 1.0}, [1.5, 1.6, 2.0])
       else
         []
@@ -81,13 +86,29 @@ defmodule World.Skills.Site do
     neck = elem(m["head"], 2) + lift
     za = (elem(m["hand_l"], 2) + elem(m["upperarm_l"], 2)) / 2 + lift
 
-    [
-      box.("be", {-hw, -hd, 0.0}, {hw, hd, o.base_height}),
-      box.("de", {-r, -r, o.base_height}, {r, r, lift}),
-      box.("ao", {-0.215 * s, -0.125 * s, lift}, {0.215 * s, 0.145 * s, sh}),
-      box.("tay", {-tip, -0.1 * s, za - 0.1 * s}, {tip, 0.1 * s, za + 0.1 * s}),
-      box.("dau", {-0.09 * s, -0.1 * s, neck}, {0.09 * s, 0.12 * s, top + lift})
-    ]
+    base =
+      if o.base_room do
+        {h, t} = {o.base_height, 0.3}
+
+        [
+          box.("be_truoc", {-hw, hd - t, 0.0}, {hw, hd, h}),
+          box.("be_sau_trai", {-hw, -hd, 0.0}, {-0.7, -hd + t, h}),
+          box.("be_sau_phai", {0.7, -hd, 0.0}, {hw, -hd + t, h}),
+          box.("be_trai", {-hw, -hd, 0.0}, {-hw + t, hd, h}),
+          box.("be_phai", {hw - t, -hd, 0.0}, {hw, hd, h}),
+          box.("be_mai", {-hw, -hd, h - 0.5}, {hw, hd, h})
+        ]
+      else
+        [box.("be", {-hw, -hd, 0.0}, {hw, hd, o.base_height})]
+      end
+
+    (base ++
+       [
+         box.("de", {-r, -r, o.base_height}, {r, r, lift}),
+         box.("ao", {-0.215 * s, -0.125 * s, lift}, {0.215 * s, 0.145 * s, sh}),
+         box.("tay", {-tip, -0.1 * s, za - 0.1 * s}, {tip, 0.1 * s, za + 0.1 * s}),
+         box.("dau", {-0.09 * s, -0.1 * s, neck}, {0.09 * s, 0.12 * s, top + lift})
+       ])
     |> Enum.filter(fn %{"size" => {_, _, h}} -> h > 0 end)
     |> Enum.map(fn b ->
       Map.new(b, fn {k, v} ->

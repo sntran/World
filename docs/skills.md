@@ -104,10 +104,10 @@ plan, and each other node takes it in `from`.
 | `halo` | smith | `material`, `halo`, `rays`, `ring` | The halo and its rays; with `ring`, where the measures put it, leaning to the front. |
 | `carve` | sculptor | `material`, `head`, `hands` | The head and the hands, carved from the full mesh of the person at near; with `head` and `hands`, where the measures put them. |
 | `grille` | smith | `material`, `hollow`, `windows` | The grilles of the windows. |
-| `base` | mason | `material`, `base_width`, `base_depth`, `base_height`, `corner`, `reliefs`, `plinth_radius`, `plinth_height`, `plinth_top`, `plinth_sides` | The plinth (round, or a dome of facets) and the base, with the reliefs. |
-| `stair` | mason | `hollow`, `steps`, `well`, `feet` | The spiral stair inside a hollow statue. |
-| `rail` | mason | `material`, `rail`, `base_width`, `base_depth`, `base_height` | The rail round the base. |
-| `site` | surveyor | `hand`, `hollow`, `well`, `base_width`, `base_depth`, `base_height`, `plinth_radius`, `feet` | The sizes and the sources of the site: data only. |
+| `base` | mason | `material`, `base_width`, `base_depth`, `base_height`, `corner`, `reliefs`, `plinth_radius`, `plinth_height`, `plinth_top`, `plinth_sides`, `base_plan`, `base_curve`, `base_room`, `relief_metal`, `terrace`, `well` | The plinth (round, or a dome of facets) and the base, square or curved, with the reliefs; with `base_room`, a room with a door and a hollow plinth. |
+| `stair` | mason | `hollow`, `steps`, `well`, `feet`, `base_room` | The spiral stair inside a hollow statue, from the plinth or from the floor of the room of the base. |
+| `rail` | mason | `material`, `rail`, `base_width`, `base_depth`, `base_height`, `base_plan`, `base_curve` | The rail round the base, along its curves. |
+| `site` | surveyor | `hand`, `hollow`, `well`, `base_width`, `base_depth`, `base_height`, `plinth_radius`, `feet`, `base_room` | The ports and the collision of the site: data only. |
 
 ## A tower (`World.Skills.Towers`)
 
