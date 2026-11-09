@@ -48,10 +48,16 @@ defmodule World.Skills.Statue do
       option("lift", :number, default: 8.0, min: -45.0, max: 60.0, unit: "deg"),
       option("gender", :number, default: 1.0, min: 0.0, max: 1.0),
       option("age", :number, default: 35.0, min: 25.0, max: 90.0, unit: "years"),
+      option("race", :data, default: nil, check: &race/2),
+      option("face", :data, default: %{}, check: &face/2),
       option("hair", :choice, default: Data.name!("hair", "long01"), values: ["none" | hair]),
       option("robe", :boolean, default: true),
+      option("forms", :data, default: [], check: &World.Forms.check/2),
+      option("head", :data, default: nil, check: &head/2),
+      option("hands", :data, default: nil, check: &hands/2),
       option("halo", :boolean, default: true),
       option("rays", :integer, default: 9, min: 0, max: 17),
+      option("ring", :data, default: nil, check: &ring/2),
       option("material", :choice, default: "concrete", values: Enum.map(materials(), &Atom.to_string/1)),
       option("hollow", :boolean, default: false),
       m.("wall", 0.3, 0.1, 2.0),
@@ -67,6 +73,8 @@ defmodule World.Skills.Statue do
       ),
       m.("plinth_radius", 4.5, 0.0, 50.0),
       m.("plinth_height", 1.2, 0.0, 20.0),
+      m.("plinth_top", nil, 0.0, 50.0),
+      option("plinth_sides", :integer, default: 32, min: 3, max: 64),
       m.("base_width", 12.0, 1.0, 100.0),
       m.("base_depth", 12.0, 1.0, 100.0),
       m.("base_height", 4.0, 0.0, 50.0),
@@ -95,6 +103,65 @@ defmodule World.Skills.Statue do
       do: {:ok, v},
       else: {:error, [{path, "must be a name: a to z, 0 to 9 and _, at most 40"}]}
   end
+
+  # The race of the carved head: a map of african, asian, caucasian to a
+  # weight from 0 to 1 (World.People.Human), or nil for the person of
+  # World.
+  defp race(v, path) when is_map(v) and map_size(v) > 0 do
+    if Enum.all?(v, fn {k, w} -> k in ~w(african asian caucasian) and is_number(w) and w >= 0 and w <= 1 end),
+      do: {:ok, v},
+      else: {:error, [{path, "must be a map of african, asian, caucasian to a weight from 0 to 1"}]}
+  end
+
+  defp race(_, path), do: {:error, [{path, "must be a map of african, asian, caucasian to a weight from 0 to 1"}]}
+
+  # The face of the carved head as the sculptor made it: a map of a slider
+  # of MakeHuman (World.People.Data.sliders/0) to a value from -1 to 1.
+  defp face(v, path) when is_map(v) do
+    sliders = World.People.Data.sliders()
+    bad = for {k, w} <- Enum.sort(v), not (Map.has_key?(sliders, k) and is_number(w) and w >= -1 and w <= 1), do: k
+
+    if bad == [],
+      do: {:ok, v},
+      else:
+        {:error, [{path, "must be a map of a slider of MakeHuman to a value from -1 to 1: #{Enum.join(bad, ", ")}"}]}
+  end
+
+  defp face(_, path), do: {:error, [{path, "must be a map of a slider of MakeHuman to a value from -1 to 1"}]}
+
+  # The carved head where the measures put it (plan 0005): the top of the
+  # head, the tip of the nose [y, z] (m, over the feet) and the part of
+  # its width (a sculptor's face is narrower than a person's).
+  defp head(%{"top" => t, "nose" => [y, z], "narrow" => n} = v, path) when map_size(v) == 3 do
+    if Enum.all?([t, y, z, n], &is_number/1) and t > z and n > 0.3 and n <= 1.5,
+      do: {:ok, v},
+      else: {:error, [{path, "must have top over the nose and narrow from 0.3 to 1.5"}]}
+  end
+
+  defp head(_, path), do: {:error, [{path, "must be {top, nose: [y, z], narrow}"}]}
+
+  # The carved hands: the length of each (m, from the wrist to the tip),
+  # the turn of the palm round the arm (deg: 180 is the palm up) and the
+  # wrist [x, z] of the hand on +x.
+  defp hands(%{"length" => l, "turn" => t, "wrist" => [x, z]} = v, path) when map_size(v) == 3 do
+    if Enum.all?([l, t, x, z], &is_number/1) and l > 0 and x > 0,
+      do: {:ok, v},
+      else: {:error, [{path, "must have a length over 0 and the wrist at x over 0"}]}
+  end
+
+  defp hands(_, path), do: {:error, [{path, "must be {length, turn, wrist: [x, z]}"}]}
+
+  # The ring of the halo where the measures put it: its center [y, z], its
+  # radius and the radius of its tube (m), its lean to the front (deg),
+  # and the rods on its top.
+  defp ring(%{"center" => [y, z], "radius" => r, "tube" => t, "lean" => a, "rods" => n} = v, path)
+       when map_size(v) == 5 do
+    if Enum.all?([y, z, r, t, a], &is_number/1) and r > 2 * t and t > 0 and is_integer(n) and n >= 0 and n <= 9,
+      do: {:ok, v},
+      else: {:error, [{path, "must have a radius over twice the tube, and 0 to 9 rods"}]}
+  end
+
+  defp ring(_, path), do: {:error, [{path, "must be {center: [y, z], radius, tube, lean, rods}"}]}
 
   defp text(v, _path) when is_binary(v) and byte_size(v) <= 200, do: {:ok, v}
   defp text(_, path), do: {:error, [{path, "must be a text of at most 200 bytes"}]}

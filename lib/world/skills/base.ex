@@ -12,7 +12,7 @@ defmodule World.Skills.Base do
   alias World.{Detail, Frame, Mesh, Part, Shape, Vec}
   alias World.Skills.Statue
 
-  @names ~w(material base_width base_depth base_height corner reliefs plinth_radius plinth_height)
+  @names ~w(material base_width base_depth base_height corner reliefs plinth_radius plinth_height plinth_top plinth_sides)
 
   @impl true
   def name, do: "base"
@@ -78,14 +78,34 @@ defmodule World.Skills.Base do
 
     plinth =
       if o.plinth_height > 0 do
-        {r, ph} = {o.plinth_radius, o.plinth_height}
-        profile = [{0.0, 0.0}, {r, 0.0}, {r, 0.75 * ph}, {0.92 * r, 0.93 * ph}, {0.7 * r, ph}, {0.0, ph}]
-        [Shape.lathe(profile, look, sides: 32, frame: Frame.move({0.0, 0.0, h})) |> Mesh.matter(matter)]
+        [plinth(o, h, look) |> Mesh.matter(matter)]
       else
         []
       end
 
     Part.new("be", :statue, Enum.map(block, &Mesh.matter(&1, matter)) ++ plinth, [Statue.port()], sources: sources)
+  end
+
+  # The plinth: round with a curved top, or with `plinth_top` (the radius
+  # of its top, under the hem) a dome of `plinth_sides` facets, a face to
+  # the front (the plinth on Núi Nhỏ: 8 facets, plan 0005).
+  defp plinth(%{plinth_top: nil} = o, h, look) do
+    {r, ph} = {o.plinth_radius, o.plinth_height}
+    profile = [{0.0, 0.0}, {r, 0.0}, {r, 0.75 * ph}, {0.92 * r, 0.93 * ph}, {0.7 * r, ph}, {0.0, ph}]
+    Shape.lathe(profile, look, sides: o.plinth_sides, frame: Frame.move({0.0, 0.0, h}))
+  end
+
+  defp plinth(o, h, look) do
+    {r, t, ph} = {o.plinth_radius, o.plinth_top, o.plinth_height}
+    # The profile of a dome from r at the foot to t at the top.
+    curve = for f <- [0.0, 0.08, 0.33, 0.6, 0.84, 1.0], do: {t + (r - t) * :math.sqrt(1 - f * f), f * ph}
+    profile = [{0.0, 0.0} | curve] ++ [{0.0, ph}]
+    a = :math.pi() / o.plinth_sides
+
+    Shape.lathe(profile, look,
+      sides: o.plinth_sides,
+      frame: Frame.new({0.0, 0.0, h}, {0.0, 0.0, 1.0}, {-:math.sin(a), :math.cos(a), 0.0})
+    )
   end
 
   # The four sides of the base: their normal, their width, and where

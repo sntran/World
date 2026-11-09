@@ -80,6 +80,20 @@
       "unit": "years"
     },
     {
+      "name": "race",
+      "type": "skill",
+      "skill": "figure",
+      "default": null,
+      "doc": "The race of the carved head: a map of african, asian and caucasian to a weight from 0 to 1. None: the person of World."
+    },
+    {
+      "name": "face",
+      "type": "skill",
+      "skill": "figure",
+      "default": {},
+      "doc": "The face of the carved head as the sculptor made it: a map of a slider of MakeHuman to a value from -1 to 1."
+    },
+    {
       "name": "hair",
       "type": "choice",
       "default": "long01",
@@ -104,6 +118,27 @@
       "doc": "A long robe with wide sleeves and two long panels at its sides."
     },
     {
+      "name": "forms",
+      "type": "skill",
+      "skill": "robe",
+      "default": [],
+      "doc": "The forms of the robe as data, in m over the feet (World.Forms): the planes, the sleeves, the cape, the hood, the reliefs. At near they are the outside of the statue. None: the robe of a person."
+    },
+    {
+      "name": "head",
+      "type": "skill",
+      "skill": "carve",
+      "default": null,
+      "doc": "The carved head where the measures put it: {top, nose: [y, z], narrow}. None: the head of the person."
+    },
+    {
+      "name": "hands",
+      "type": "skill",
+      "skill": "carve",
+      "default": null,
+      "doc": "The carved hands: {length, turn, wrist: [x, z]}. None: the hands of the person."
+    },
+    {
       "name": "halo",
       "type": "boolean",
       "default": true,
@@ -116,6 +151,13 @@
       "min": 0,
       "max": 17,
       "doc": "The metal rays of the halo (lightning rods)."
+    },
+    {
+      "name": "ring",
+      "type": "skill",
+      "skill": "halo",
+      "default": null,
+      "doc": "The ring of the halo where the measures put it: {center: [y, z], radius, tube, lean, rods}. None: round the head of the person."
     },
     {
       "name": "material",
@@ -215,6 +257,23 @@
       "max": 20.0,
       "unit": "m",
       "doc": "0: no plinth."
+    },
+    {
+      "name": "plinth_top",
+      "type": "number",
+      "default": null,
+      "min": 0.0,
+      "max": 50.0,
+      "unit": "m",
+      "doc": "The radius of the top of a plinth of facets, under the hem. None: a round plinth with a curved top."
+    },
+    {
+      "name": "plinth_sides",
+      "type": "integer",
+      "default": 32,
+      "min": 3,
+      "max": 64,
+      "doc": "The sides of the plinth (8: an octagon)."
     },
     {
       "name": "base_width",
@@ -350,6 +409,10 @@
       "unit": "m"
     },
     {
+      "name": "plinth_top",
+      "unit": "m"
+    },
+    {
       "name": "base_width",
       "unit": "m"
     },
@@ -385,6 +448,18 @@
         "width",
         "height"
       ]
+    },
+    {
+      "name": "forms"
+    },
+    {
+      "name": "head"
+    },
+    {
+      "name": "hands"
+    },
+    {
+      "name": "ring"
     }
   ],
   "drawing": {
@@ -434,6 +509,12 @@
             },
             "plinth_height": {
               "param": "plinth_height"
+            },
+            "plinth_top": {
+              "param": "plinth_top"
+            },
+            "plinth_sides": {
+              "param": "plinth_sides"
             }
           }
         }
@@ -471,6 +552,12 @@
             },
             "halo": {
               "param": "halo"
+            },
+            "race": {
+              "param": "race"
+            },
+            "face": {
+              "param": "face"
             }
           }
         }
@@ -481,6 +568,12 @@
           "robe": {
             "robe": {
               "param": "robe"
+            },
+            "forms": {
+              "param": "forms"
+            },
+            "material": {
+              "param": "material"
             }
           }
         },
@@ -634,6 +727,7 @@
         },
         "from": [
           "figure",
+          "robe",
           "field",
           {
             "repeat": {
@@ -677,6 +771,9 @@
             },
             "rays": {
               "param": "rays"
+            },
+            "ring": {
+              "param": "ring"
             }
           }
         },
@@ -693,6 +790,12 @@
           "carve": {
             "material": {
               "param": "material"
+            },
+            "head": {
+              "param": "head"
+            },
+            "hands": {
+              "param": "hands"
             }
           }
         },

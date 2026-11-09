@@ -6,12 +6,18 @@ defmodule World.Skills.Robe do
   the arms, the two long panels at its sides (by eye from the photos of
   the statue on Núi Nhỏ), and a mitt round each hand of `arms_out`. Its
   data: `meshes` (none with `robe` false).
+
+  With `forms` (plan 0005: `World.Forms`), the robe is its forms: the
+  planes, the sleeves, the cape, the hood of hair and the reliefs of the
+  measures of the real statue. Then `meshes` has the forms of the cast,
+  and `faces` has each form, cast or not, in the material of the statue:
+  at near they are the outside of the statue (`World.Skills.Shell`).
   """
   @behaviour World.Skill
-  alias World.{Shape, Vec}
+  alias World.{Forms, Shape, Vec}
   alias World.Skills.Statue
 
-  @names ~w(robe)
+  @names ~w(robe forms material)
 
   @impl true
   def name, do: "robe"
@@ -28,7 +34,18 @@ defmodule World.Skills.Robe do
   @impl true
   def make(data, %{"figure" => %{"figure" => fig}}, _context) do
     o = Statue.o(data, @names)
-    {nil, %{"meshes" => if(o.robe, do: robe(fig), else: [])}, %{}}
+
+    cond do
+      not o.robe ->
+        {nil, %{"meshes" => [], "faces" => []}, %{}}
+
+      o.forms != [] ->
+        {cast, detail} = Forms.meshes(o.forms, Statue.material(o.material))
+        {nil, %{"meshes" => cast, "faces" => cast ++ detail}, %{}}
+
+      true ->
+        {nil, %{"meshes" => robe(fig), "faces" => []}, %{}}
+    end
   end
 
   # In units of the person.

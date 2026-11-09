@@ -104,4 +104,9 @@ What the photo of the statue shows (Wikimedia Commons,
 
 ## 7. Open questions
 
-None now.
+- R7 and D8 (far keeps its bytes): plan 0005 gives the statue the sizes
+  of its measures (the hands 23.5 m apart, 27.5 m from the feet to the
+  top of the halo, a plinth of 3.7 m), so the outline of the far level
+  changes too. The far file of `tuong_chua_kito_vua` is built again; it
+  still has at most 300 triangles (252). Does the owner keep the new far
+  file, or keep the old one?

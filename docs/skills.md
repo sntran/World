@@ -91,20 +91,20 @@ plan, and each other node takes it in `from`.
 
 | Skill | Trade | Data | What it makes |
 |---|---|---|---|
-| `figure` | sculptor | `name`, `height`, `span`, `hand`, `pose`, `lift`, `gender`, `age`, `hair`, `halo` | The figure of a person at its size and pose: data for the cast. |
-| `robe` | sculptor | `robe` | The robe on the figure. |
+| `figure` | sculptor | `name`, `height`, `span`, `hand`, `pose`, `lift`, `gender`, `age`, `hair`, `halo`, `race`, `face` | The figure of a person at its size and pose: data for the cast; its head with the race and the face of the sculptor. |
+| `robe` | sculptor | `robe`, `forms`, `material` | The robe on the figure, or its `forms` as data (`World.Forms`, plan 0005): the outside of the statue at near. |
 | `cast_survey` | surveyor | `height` | The grid of the cast. |
 | `formwork` | carpenter | `band`, `bands` | The form of one band, from the feet up. |
 | `cast_outside` | caster | | The fill of the outside of the grid. |
 | `pour` | caster | `band`, `bands` | The pour of one band: the distances near its surface. |
 | `cast_field` | caster | `hollow`, `wall`, `well`, `windows` | The field of the solid, from the pours in any order. |
 | `shell_slab` | finisher | `band`, `bands` | The mesh of the surface of one slab of the grid. |
-| `shell` | caster | `hand`, `material` | The shell of the statue, from its slabs. |
+| `shell` | caster | `hand`, `material` | The shell of the statue, from its slabs; with the forms of the robe, at near only its inner walls. |
 | `set` | sculptor | `name`, `feet` | The statue set on its base. |
-| `halo` | smith | `material`, `halo`, `rays` | The halo and its rays. |
-| `carve` | sculptor | `material` | The head and the hands, carved from the full mesh of the person at near. |
+| `halo` | smith | `material`, `halo`, `rays`, `ring` | The halo and its rays; with `ring`, where the measures put it, leaning to the front. |
+| `carve` | sculptor | `material`, `head`, `hands` | The head and the hands, carved from the full mesh of the person at near; with `head` and `hands`, where the measures put them. |
 | `grille` | smith | `material`, `hollow`, `windows` | The grilles of the windows. |
-| `base` | mason | `material`, `base_width`, `base_depth`, `base_height`, `corner`, `reliefs`, `plinth_radius`, `plinth_height` | The plinth and the base, with the reliefs. |
+| `base` | mason | `material`, `base_width`, `base_depth`, `base_height`, `corner`, `reliefs`, `plinth_radius`, `plinth_height`, `plinth_top`, `plinth_sides` | The plinth (round, or a dome of facets) and the base, with the reliefs. |
 | `stair` | mason | `hollow`, `steps`, `well`, `feet` | The spiral stair inside a hollow statue. |
 | `rail` | mason | `material`, `rail`, `base_width`, `base_depth`, `base_height` | The rail round the base. |
 | `site` | surveyor | `hand`, `hollow`, `well`, `base_width`, `base_depth`, `base_height`, `plinth_radius`, `feet` | The sizes and the sources of the site: data only. |

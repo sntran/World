@@ -8,7 +8,7 @@
   "frames": 4,
   "error_px": 1.97
  },
- "halo_left": {
+ "halo_right": {
   "xyz": [
    -4.348141,
    -0.617072,
@@ -17,7 +17,7 @@
   "frames": 3,
   "error_px": 1.97
  },
- "halo_right": {
+ "halo_left": {
   "xyz": [
    -5.117073,
    -0.59353,
@@ -44,7 +44,7 @@
   "frames": 4,
   "error_px": 2.71
  },
- "hand_l_tip": {
+ "hand_r_tip": {
   "xyz": [
    -3.257445,
    -0.294261,
@@ -53,7 +53,7 @@
   "frames": 4,
   "error_px": 0.69
  },
- "hand_r_tip": {
+ "hand_l_tip": {
   "xyz": [
    -6.149483,
    -0.50995,
@@ -62,7 +62,7 @@
   "frames": 4,
   "error_px": 2.25
  },
- "cuff_l_top": {
+ "cuff_r_top": {
   "xyz": [
    -3.591343,
    -0.34289,
@@ -71,7 +71,7 @@
   "frames": 4,
   "error_px": 0.98
  },
- "cuff_l_bottom": {
+ "cuff_r_bottom": {
   "xyz": [
    -3.608541,
    -0.105891,
@@ -80,7 +80,7 @@
   "frames": 4,
   "error_px": 1.25
  },
- "cuff_r_top": {
+ "cuff_l_top": {
   "xyz": [
    -5.868961,
    -0.430488,
@@ -89,7 +89,7 @@
   "frames": 4,
   "error_px": 1.23
  },
- "cuff_r_bottom": {
+ "cuff_l_bottom": {
   "xyz": [
    -5.853628,
    -0.214385,

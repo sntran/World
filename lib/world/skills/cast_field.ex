@@ -6,8 +6,10 @@ defmodule World.Skills.CastField do
   (at the least two cells) and the openings: the `windows` in the front
   of the robe, a balcony at each shoulder, and the shaft of the stair
   round the well of `well` m (the node `figure` gives the marks). Its
-  data: `grid` (the cells, for the stair) and `surface` (the grid with
-  no saddle, for the slabs of the shell); nil with no survey.
+  data: `grid` (the cells, for the stair), `surface` (the grid with no
+  saddle, for the slabs of the shell) and `solid` (the cells before the
+  hollow, at near: the shell tells its inner walls from its outside); nil
+  with no survey.
   """
   @behaviour World.Skill
   alias World.Cast
@@ -28,19 +30,21 @@ defmodule World.Skills.CastField do
   def estimate(_data, _level), do: 0
 
   @impl true
-  def make(_data, %{"survey" => %{"survey" => nil}}, _context), do: {nil, %{"grid" => nil, "surface" => nil}, %{}}
+  def make(_data, %{"survey" => %{"survey" => nil}}, _context),
+    do: {nil, %{"grid" => nil, "surface" => nil, "solid" => nil}, %{}}
 
   def make(data, %{"survey" => %{"survey" => s}, "outside" => out, "figure" => %{"figure" => fig}} = inputs, ctx) do
     o = Statue.o(data, @names)
     pours = for name <- ctx.from, d = inputs[name]["distances"], do: d
-    grid = Cast.field(s, out["marks"], out["outside"], Cast.merge(pours))
+    solid = Cast.field(s, out["marks"], out["outside"], Cast.merge(pours))
+    hollow? = o.hollow and ctx.level == :near
 
     grid =
-      if o.hollow and ctx.level == :near,
-        do: Cast.hollow(grid, max(o.wall, 2 * s.step), openings(fig, o, s.step)),
-        else: grid
+      if hollow?,
+        do: Cast.hollow(solid, max(o.wall, 2 * s.step), openings(fig, o, s.step)),
+        else: solid
 
-    {nil, %{"grid" => grid, "surface" => Cast.surface(grid)}, %{}}
+    {nil, %{"grid" => grid, "surface" => Cast.surface(grid), "solid" => if(hollow?, do: solid)}, %{}}
   end
 
   # The openings of a hollow statue: the windows in the front of the robe,

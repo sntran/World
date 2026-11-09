@@ -21,9 +21,9 @@ Each folder has `marks.json` (the features in the frames), `cameras.json`
 (the cameras of the marked frames, from `sfm.py`) and `points.json`
 (from `tri.py`). The two folders have their own axes and units.
 
-The names of the features go by the side of the statue: `_l` is its
-right hand side (+x of World), on the left of a frame from the front
-and on the right of a frame from the back.
+The names of the features go by the side of the statue, as in World:
+`_l` and `_left` are its left hand side (-x of World), on the right of a
+frame from the front and on the left of a frame from the back.
 
 ## Results (2026-11-09)
 

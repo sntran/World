@@ -8,9 +8,14 @@ defmodule World.Skills.Shell do
   of Vũng Tàu). Its data: `meshes` (the shell, or the far form), `shell`
   (the mesh of the shell, for the grilles of its windows) and `grid` (the
   cells of the cast, for the stair).
+
+  With the forms of the robe (plan 0005, the node `robe` with `faces`),
+  at near the outside of the statue is its forms, with their sharp edges:
+  the shell keeps only its inner walls (each triangle with its middle a
+  cell or more inside the solid before the hollow), for a person inside.
   """
   @behaviour World.Skill
-  alias World.{Cast, Mesh, Shape}
+  alias World.{Cast, Mesh, Shape, Vec}
   alias World.Skills.Statue
 
   @names ~w(hand material)
@@ -30,6 +35,7 @@ defmodule World.Skills.Shell do
 
   @impl true
   def make(data, %{"figure" => %{"figure" => fig}, "field" => field} = inputs, ctx) do
+    faces = get_in(inputs, ["robe", "faces"]) || []
     o = Statue.o(data, @names)
     {look, matter} = Statue.material(o.material)
 
@@ -41,8 +47,29 @@ defmodule World.Skills.Shell do
         pieces = for name <- ctx.from, q = inputs[name]["quads"], do: q
         # The cells of the cast leave steps on a slope: the shell is relaxed.
         shell = Cast.join(grid, pieces, look, relax: 2) |> Mesh.matter(matter)
-        {nil, %{"meshes" => [shell], "shell" => shell, "grid" => field["grid"]}, %{}}
+
+        meshes =
+          if faces != [] and ctx.level == :near and field["solid"],
+            do: faces ++ inner(shell, field["solid"]),
+            else: [shell]
+
+        {nil, %{"meshes" => meshes, "shell" => shell, "grid" => field["grid"]}, %{}}
     end
+  end
+
+  # The inner walls of a shell: its triangles with their middle a cell or
+  # more inside the solid.
+  defp inner(%Mesh{points: points, faces: faces} = shell, solid) do
+    deep = Cast.erode(solid, 1)
+    pts = List.to_tuple(points)
+
+    kept =
+      Enum.filter(faces, fn f ->
+        mid = f |> Enum.map(&elem(pts, &1)) |> Vec.mean()
+        Cast.inside?(deep, mid)
+      end)
+
+    Enum.reject([%{shell | faces: kept}], &(&1.faces == []))
   end
 
   # The far form: the robe, the arms from hand to hand, the head.

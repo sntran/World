@@ -23,14 +23,16 @@ defmodule World.Skills.Figure do
   scale of the figure, and the surfaces for the cast have no triangle of
   their bones, so that the cast of cells of 0.32 m does not make lumps of
   them. A triangle is of a piece when its three points move most with
-  the bones of the piece. The hair stays in the cast.
+  the bones of the piece. The hair stays in the cast. The carved head
+  has the `race` and the `face` (sliders of MakeHuman) of the sculptor,
+  and the carved hands have their fingers together (the photos).
   """
   @behaviour World.Skill
   alias World.{Detail, Figure, Frame, Scene, Vec}
   alias World.People.Human
   alias World.Skills.Statue
 
-  @names ~w(name height span hand pose lift gender age hair halo)
+  @names ~w(name height span hand pose lift gender age hair halo race face)
 
   @impl true
   def name, do: "figure"
@@ -194,16 +196,27 @@ defmodule World.Skills.Figure do
   # the arms). The eyes go with the head, in the stone of the statue.
   defp carved(o, move, marks) do
     # The open hands of the photos: the fingers straight.
-    open = %{{:hand, :l} => "open", {:hand, :r} => "open"}
+    open =
+      for side <- ~w(l r),
+          {f, d} <- [{"index", -14.0}, {"ring", 9.0}, {"pinky", 18.0}],
+          into: %{{:hand, :l} => "open", {:hand, :r} => "open"} do
+        {"#{f}_01_#{side}", [spread: d]}
+      end
+
+    # The face as the sculptor made it: its race and its sliders.
+    race = if o.race, do: [race: o.race], else: []
 
     f =
       Detail.with(:near, fn ->
-        Human.person(o.name, gender: o.gender, age: o.age, hair: o.hair, clothes: [], pose: open)
+        Human.person(
+          o.name,
+          [gender: o.gender, age: o.age, hair: o.hair, clothes: [], pose: open, shape: o.face] ++ race
+        )
       end)
 
     f = Figure.pose(f, %{}, arm_targets(f, o.lift))
     frames = Scene.world_frames(%Scene{nodes: f.nodes})
-    prims = posed(f, frames, [:skin, :eyes])
+    prims = posed(f, frames, [:skin, :eyes, :hair])
 
     for {name, bones} <- @pieces do
       set = MapSet.new(bones)
