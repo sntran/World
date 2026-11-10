@@ -307,11 +307,23 @@ it.
 
 ### The rules of the clock
 
-- The time of the world: its start, plus 86,400 times the wall time
-  since its start. The log keeps the world time and the wall time of
-  each event, in milliseconds.
-- The time of a task: the wall time of the code (the build of a part, a
-  read of the store), times the scale.
+- The world has one clock (plan 0006, D1; `World.Clock.world/0`): it
+  starts with the node, and each construction, the yard and the haul
+  keep their times on it. The time of the world: its start, plus the
+  scale times the wall time since its start (86,400 by default; the
+  variable `WORLD_SCALE` of the node; 1,000 days in a second in the
+  tests). The log keeps the world time and the wall time of each event,
+  in milliseconds.
+- The time of a task is the days of its work on a site (plan 0006,
+  `World.Site`, `priv/standards/site.json`): the work of its node (`"work"`:
+  10 m3 of concrete, 186 m2 of forms), or the work of its takeoff (70
+  bags of cement are 10 m3 of concrete), over the rate of the crew of
+  the work for the method of the site; a task with neither is one hour.
+  The person does the work of the code at once and is busy until the
+  end of the days of the task on the clock (`task_started` has `days`).
+- A task can have a wait after it (`"cure"` of its node: `lift`, `strip`,
+  `set`): the tasks that wait for it start after the days of the cure.
+  The band of a cast waits for the cure of the band under it.
 - The speeds are real, in world time. A person walks at 1.4 m/s. A
   vehicle on the yard drives at 20 km/h; on a road between two places,
   at the limit of the road. The wall time of a drive is its world time
@@ -348,7 +360,7 @@ Durable Object at the edge (`World.Log.Server`, `World.Log.Store`).
 | `requested` | The construction | Its budget and its level. |
 | `plan_made` | The construction | The tasks with their waits, parts and trades, and the level. |
 | `hired`, `released` | A person | Its trade. |
-| `task_started`, `task_done` | A person | The task, its trade, its station. |
+| `task_started`, `task_done` | A person | The task, its trade, its station; at the start, the days of its work and the days of the wait after it (`days`, `wait`). |
 | `element` | A person | The task, the part, the key of its GLB, and its frame in the axes of glTF. |
 | `done` | The construction | The bytes of the model, its level. |
 | `stopped`, `failed` | The construction | The reason (`seconds`, `triangles`), or the message of the error. |

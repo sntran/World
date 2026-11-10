@@ -52,7 +52,7 @@ defmodule World.Yard do
 
   @impl true
   def init(opts) do
-    clock = Clock.new()
+    clock = Clock.world()
 
     s = %{
       clock: clock,

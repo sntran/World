@@ -1,0 +1,50 @@
+{
+  "rates": {
+    "source": "The rates of the crews of a site (plan 0006, D1): the work of one crew in one day (the unit of each work is its unit), for each method of a site (D6). The norms of Việt Nam (Định mức dự toán xây dựng công trình, Phụ lục II of Thông tư 12/2021/TT-BXD) give the days of people for each unit of work, but the chapters of the concrete, the masonry and the finish were not found (2026-11-10): each rate is an estimate with its reason. The method 1974 has no machine: the people mix the concrete on the site and carry the materials up the path of the hill (priv/history/tuong_chua_kito_vua.json, the facts carry and scaffold_hard).",
+    "unit": "1/day",
+    "fields": ["unit", "crew", "today", "1974", "source"],
+    "sizes": {
+      "design": {"unit": "model", "crew": 2, "today": 0.0333, "1974": 0.0111, "source": "estimate: a sculptor and a helper make the model of the figure, in 30 days in a computer with a print (today), in 90 days in clay at a small scale (1974)"},
+      "survey": {"unit": "site", "crew": 2, "today": 0.5, "1974": 0.2, "source": "estimate: two surveyors set out a site of a statue in 2 days with a total station (today), in 5 days with a tape and a level (1974)"},
+      "concrete": {"unit": "m3", "crew": 6, "today": 25.0, "1974": 4.0, "source": "estimate: a pump and a crew of six place about 25 m3 of a small pour in a day; with no machine, a crew mixes the concrete by hand and carries it up the scaffold in buckets, about 4 m3 in a day"},
+      "formwork": {"unit": "m2", "crew": 4, "today": 40.0, "1974": 20.0, "source": "estimate: four carpenters set about 40 m2 of curved plywood forms in a day (today), 20 m2 of timber boards cut by hand (1974)"},
+      "strip": {"unit": "m2", "crew": 4, "today": 100.0, "1974": 40.0, "source": "estimate: the forms come off in about a third of the time to set them"},
+      "scaffold": {"unit": "m2", "crew": 3, "today": 60.0, "1974": 25.0, "source": "estimate: the face of a scaffold of steel frames, about 60 m2 in a day for three people; of wooden poles and bamboo, hard to set up on the rock of the hill (the fact scaffold_hard), about 25 m2"},
+      "rebar": {"unit": "kg", "crew": 2, "today": 600.0, "1974": 400.0, "source": "estimate: two steel fixers cut, bend and tie about 600 kg of bars in a day with a bender (today), 400 kg by hand (1974)"},
+      "render": {"unit": "m2", "crew": 4, "today": 20.0, "1974": 12.0, "source": "estimate: a render of washed stone (đá rửa) on a curved face, about 20 m2 in a day for four people (today), 12 m2 (1974)"},
+      "carve": {"unit": "m2", "crew": 3, "today": 0.8, "1974": 0.4, "source": "estimate: the face, the hair and the hands, cut in the concrete and the render by three sculptors"},
+      "relief": {"unit": "m2", "crew": 3, "today": 0.4, "1974": 0.25, "source": "estimate: a relief with figures on a panel of the base, by three sculptors"},
+      "steel": {"unit": "kg", "crew": 2, "today": 150.0, "1974": 60.0, "source": "estimate: two smiths make and set about 150 kg of the steel of a halo or a grille in a day (today), 60 kg (1974)"},
+      "stair": {"unit": "step", "crew": 3, "today": 10.0, "1974": 4.0, "source": "estimate: three masons cast and set about 10 steps of a spiral stair in a day (today), 4 (1974)"},
+      "rail": {"unit": "m", "crew": 2, "today": 4.0, "1974": 2.0, "source": "estimate: two masons set about 4 m of a rail with its balusters in a day (today), 2 m (1974)"},
+      "brick": {"unit": "brick", "crew": 2, "today": 1000.0, "1974": 800.0, "source": "estimate: a mason and a helper lay about 1,000 bricks in a day"},
+      "paint": {"unit": "m2", "crew": 1, "today": 60.0, "1974": 40.0, "source": "estimate: a painter gives one coat to about 60 m2 of a wall in a day with a roller (today), 40 m2 with a brush (1974)"},
+      "roof": {"unit": "m2", "crew": 2, "today": 60.0, "1974": 30.0, "source": "estimate: two roofers fix about 60 m2 of steel sheets in a day"},
+      "task": {"unit": "task", "crew": 1, "today": 8.0, "1974": 8.0, "source": "estimate: a task with no work in data takes one hour of a day of 8 hours (the parts of a vehicle at a factory)"}
+    }
+  },
+  "cures": {
+    "source": "The waits of a site after a task (plan 0006, D2): the concrete sets before the next task on it. ACI 347R-14 lets the forms of a wall come off after 12 hours over 10 °C; the other days are estimates for the heat of Vũng Tàu.",
+    "unit": "day",
+    "fields": ["today", "1974", "source"],
+    "sizes": {
+      "lift": {"today": 2.0, "1974": 4.0, "source": "estimate: the next band of a cast waits until the band under it holds it and its forms"},
+      "strip": {"today": 1.0, "1974": 3.0, "source": "ACI 347R-14 (12 hours for a wall); the forms of timber of 1974 stay longer (estimate)"},
+      "set": {"today": 7.0, "1974": 14.0, "source": "estimate: the figure starts on the base after its concrete has the most of its strength for the load of the scaffold"}
+    }
+  },
+  "takeoff": {
+    "source": "The work of a task from its takeoff (World.Drawing.materials/3, the units of priv/places.json): a unit of a material is this much of a work.",
+    "unit": "ratio",
+    "fields": ["work", "per"],
+    "sizes": {
+      "brick": {"work": "brick", "per": 1.0},
+      "cement": {"work": "concrete", "per": 0.142857},
+      "rebar": {"work": "rebar", "per": 10.4},
+      "mortar": {"work": "render", "per": 2.222},
+      "paint": {"work": "paint", "per": 75.0},
+      "roof_sheet": {"work": "roof", "per": 6.42},
+      "steel": {"work": "steel", "per": 9.2}
+    }
+  }
+}

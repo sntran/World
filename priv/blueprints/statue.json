@@ -603,7 +603,77 @@
               "param": "relief_photos"
             }
           }
-        }
+        },
+        "work": {
+          "concrete": {
+            "product": [
+              0.334,
+              {
+                "param": "base_width"
+              },
+              {
+                "param": "base_depth"
+              },
+              {
+                "sum": [
+                  {
+                    "param": "base_height"
+                  },
+                  {
+                    "param": "plinth_height"
+                  }
+                ]
+              }
+            ]
+          },
+          "formwork": {
+            "product": [
+              4.0,
+              {
+                "sum": [
+                  {
+                    "param": "base_width"
+                  },
+                  {
+                    "param": "base_depth"
+                  }
+                ]
+              },
+              {
+                "sum": [
+                  {
+                    "param": "base_height"
+                  },
+                  {
+                    "param": "plinth_height"
+                  }
+                ]
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              26.7,
+              {
+                "param": "base_width"
+              },
+              {
+                "param": "base_depth"
+              },
+              {
+                "sum": [
+                  {
+                    "param": "base_height"
+                  },
+                  {
+                    "param": "plinth_height"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "cure": "set"
       },
       {
         "name": "figure",
@@ -646,6 +716,9 @@
               "param": "face"
             }
           }
+        },
+        "work": {
+          "design": 1.0
         }
       },
       {
@@ -665,7 +738,10 @@
         },
         "from": [
           "figure"
-        ]
+        ],
+        "work": {
+          "design": 0.3
+        }
       },
       {
         "name": "survey",
@@ -679,70 +755,714 @@
         "from": [
           "figure",
           "robe"
-        ]
+        ],
+        "work": {
+          "survey": 1.0
+        }
       },
       {
-        "repeat": {
-          "for": "i",
-          "in": {
-            "count": 8
+        "name": "form_1",
+        "skill": {
+          "formwork": {
+            "band": 1,
+            "bands": 8
           }
         },
-        "node": {
-          "name": "form_{i}",
-          "skill": {
-            "formwork": {
-              "band": {
-                "var": "i"
+        "from": [
+          "survey"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
               },
-              "bands": 8
-            }
+              {
+                "param": "height"
+              }
+            ]
           },
-          "from": [
-            "survey"
-          ]
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_2",
+        "skill": {
+          "formwork": {
+            "band": 2,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_1"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          },
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_3",
+        "skill": {
+          "formwork": {
+            "band": 3,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_2"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          },
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_4",
+        "skill": {
+          "formwork": {
+            "band": 4,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_3"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          },
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_5",
+        "skill": {
+          "formwork": {
+            "band": 5,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_4"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          },
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_6",
+        "skill": {
+          "formwork": {
+            "band": 6,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_5"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          },
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_7",
+        "skill": {
+          "formwork": {
+            "band": 7,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_6"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          },
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_8",
+        "skill": {
+          "formwork": {
+            "band": 8,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_7"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          },
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
         }
       },
       {
         "name": "outside",
         "skill": {
-          "cast_outside": {}
+          "cast_outside": {
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "work": {}
+      },
+      {
+        "name": "pour_1",
+        "skill": {
+          "pour": {
+            "band": 1,
+            "bands": 8
+          }
         },
         "from": [
           "survey",
-          {
-            "repeat": {
-              "for": "i",
-              "in": {
-                "count": 8
+          "outside"
+        ],
+        "after": [
+          "form_1"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
               }
-            },
-            "item": "form_{i}"
-          }
-        ]
-      },
-      {
-        "repeat": {
-          "for": "i",
-          "in": {
-            "count": 8
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
           }
         },
-        "node": {
-          "name": "pour_{i}",
-          "skill": {
-            "pour": {
-              "band": {
-                "var": "i"
+        "cure": "lift"
+      },
+      {
+        "name": "pour_2",
+        "skill": {
+          "pour": {
+            "band": 2,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_2",
+          "pour_1"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
               },
-              "bands": 8
-            }
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
           },
-          "from": [
-            "survey",
-            "outside"
-          ]
-        }
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift"
+      },
+      {
+        "name": "pour_3",
+        "skill": {
+          "pour": {
+            "band": 3,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_3",
+          "pour_2"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift"
+      },
+      {
+        "name": "pour_4",
+        "skill": {
+          "pour": {
+            "band": 4,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_4",
+          "pour_3"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift"
+      },
+      {
+        "name": "pour_5",
+        "skill": {
+          "pour": {
+            "band": 5,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_5",
+          "pour_4"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift"
+      },
+      {
+        "name": "pour_6",
+        "skill": {
+          "pour": {
+            "band": 6,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_6",
+          "pour_5"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift"
+      },
+      {
+        "name": "pour_7",
+        "skill": {
+          "pour": {
+            "band": 7,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_7",
+          "pour_6"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift"
+      },
+      {
+        "name": "pour_8",
+        "skill": {
+          "pour": {
+            "band": 8,
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_8",
+          "pour_7"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift"
       },
       {
         "name": "field",
@@ -775,7 +1495,8 @@
             },
             "item": "pour_{i}"
           }
-        ]
+        ],
+        "work": {}
       },
       {
         "repeat": {
@@ -796,7 +1517,20 @@
           },
           "from": [
             "field"
-          ]
+          ],
+          "work": {
+            "concrete": {
+              "product": [
+                0.0013,
+                {
+                  "param": "height"
+                },
+                {
+                  "param": "height"
+                }
+              ]
+            }
+          }
         }
       },
       {
@@ -824,7 +1558,20 @@
             },
             "item": "slab_{j}"
           }
-        ]
+        ],
+        "work": {
+          "render": {
+            "product": [
+              0.984,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "grille",
@@ -843,7 +1590,10 @@
         },
         "from": [
           "shell"
-        ]
+        ],
+        "work": {
+          "steel": 200.0
+        }
       },
       {
         "name": "halo",
@@ -868,7 +1618,20 @@
         ],
         "from": [
           "figure"
-        ]
+        ],
+        "work": {
+          "steel": {
+            "product": [
+              2.0,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "carve",
@@ -890,7 +1653,20 @@
         ],
         "from": [
           "figure"
-        ]
+        ],
+        "work": {
+          "carve": {
+            "product": [
+              0.049,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": {
@@ -921,7 +1697,8 @@
         ],
         "to": "be",
         "at": "o",
-        "port": "o"
+        "port": "o",
+        "work": {}
       },
       {
         "name": "cau_thang",
@@ -957,7 +1734,12 @@
         ],
         "to": "be",
         "at": "o",
-        "port": "o"
+        "port": "o",
+        "work": {
+          "stair": {
+            "param": "steps"
+          }
+        }
       },
       {
         "name": "lan_can",
@@ -991,7 +1773,24 @@
         ],
         "to": "be",
         "at": "o",
-        "port": "o"
+        "port": "o",
+        "work": {
+          "rail": {
+            "product": [
+              2.0,
+              {
+                "sum": [
+                  {
+                    "param": "base_width"
+                  },
+                  {
+                    "param": "base_depth"
+                  }
+                ]
+              }
+            ]
+          }
+        }
       },
       {
         "name": "site",
@@ -1035,7 +1834,8 @@
         },
         "from": [
           "figure"
-        ]
+        ],
+        "work": {}
       }
     ]
   }

@@ -48,7 +48,7 @@ defmodule World.Haul do
 
   @impl true
   def init(opts) do
-    clock = Keyword.get_lazy(opts, :clock, &Clock.new/0)
+    clock = Keyword.get_lazy(opts, :clock, &Clock.world/0)
 
     {:ok,
      %{

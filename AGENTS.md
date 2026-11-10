@@ -145,7 +145,8 @@ The node of `docs/world.md` (plan 0001):
 | `World.Log` | The events of a construction in the order of their time, in JSON, and their checks. `World.Log.Server`: the log of the node, with an id for each event, its watchers, and its store (`World.Log.Store`, the SQLite of the Durable Object through the port `/env/LOG_STORE`). |
 | `World.Stream` | The stream of the events to one client (`text/event-stream`): it watches, sends the events of the past after `Last-Event-ID`, then follows. |
 | `World.Program` | A program of the VM through a port: the stores of the orders and of the log use it. |
-| `World.Clock` | The clock of the world: one second of the wall clock is one day of the world. |
+| `World.Clock` | The clock of the world: one clock for the node (`world/0`, plan 0006); one second of the wall clock is one day of the world (`WORLD_SCALE`; 1,000 days in the tests). |
+| `World.Site` | The days of a site (plan 0006, D1, D2; `priv/standards/site.json`): the rate of the crew of each work for each method (`today`, `1974`), each with its source or an estimate; the days of a task from the work of its node or its takeoff, the wait after it (`cure`), and the schedule of a drawing with no limit of people. |
 | `World.Store` | The store of the files: the memory of the VM, a bucket (a folder on this computer), or the catalog of the release (read only). |
 
 ## The core of Wings

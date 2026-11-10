@@ -1,9 +1,11 @@
 defmodule World.Skills.CastOutside do
   @moduledoc """
-  The skill `cast_outside` of a caster: the marks of all the forms (the
-  nodes `from` after the survey) as one, and the cells outside the cast
-  (`World.Cast.outside/2`). Its data: `marks` and `outside` (nil with no
-  survey).
+  The skill `cast_outside` of a caster: the marks of all the bands of
+  the cast (`bands`, `World.Cast.marks/2`, the marks of the forms of each
+  band) as one, and the cells outside the cast (`World.Cast.outside/2`).
+  Its data: `marks` and `outside` (nil with no survey). It needs the
+  survey only, so on the site the form of a band can wait for the pour
+  of the band under it (plan 0006, D2).
   """
   @behaviour World.Skill
   alias World.Cast
@@ -15,7 +17,7 @@ defmodule World.Skills.CastOutside do
   def trade, do: :caster
 
   @impl true
-  def check(data, path), do: World.Skill.keys(data, path, [])
+  def check(data, path), do: World.Skills.Statue.check(data, path, ~w(bands))
 
   @impl true
   def estimate(_data, _level), do: 0
@@ -23,8 +25,9 @@ defmodule World.Skills.CastOutside do
   @impl true
   def make(_data, %{"survey" => %{"survey" => nil}}, _context), do: {nil, %{"marks" => nil, "outside" => nil}, %{}}
 
-  def make(_data, %{"survey" => %{"survey" => s}} = inputs, %{from: from}) do
-    marks = for(name <- from, name != "survey", do: inputs[name]["marks"]) |> Enum.reduce(MapSet.new(), &MapSet.union/2)
+  def make(data, %{"survey" => %{"survey" => s}}, _context) do
+    bands = Cast.bands(s, World.Skills.Statue.o(data, ~w(bands)).bands)
+    marks = for(band <- bands, do: Cast.marks(s, band)) |> Enum.reduce(MapSet.new(), &MapSet.union/2)
     {nil, %{"marks" => marks, "outside" => Cast.outside(s, marks)}, %{}}
   end
 end

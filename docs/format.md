@@ -1732,6 +1732,16 @@ X}` in any other list gives copies of X (the names of the pours in a
 of its errors are in the copies; the fill of a blueprint puts its params
 before and after the repeats (`{"param": "finish_{side}"}`).
 
+A node can give its work on a site (plan 0006, `World.Site`):
+`"work"`, each work of `priv/standards/site.json` (`concrete`, `formwork`,
+`scaffold`, `rebar`, `render`, `carve`, ...) to its amount in the unit of
+the work, and `"cure"`, the wait after it (`lift`, `strip`, `set`). Each
+`{"product": [...]}` in a value is the product of its numbers, so an
+amount follows the options (`{"product": [0.123, {"param": "height"},
+{"param": "height"}, {"param": "wall"}]}`: the concrete of a band of the
+cast of a statue). The days of a task are the amounts over the rates of
+their crews.
+
 A node with `"temporary": true`, or whose skill gives `"temporary" =>
 true` in its data, is not in the model: the people make it, and the
 stream shows it (the bricks under a render, the render under the paint).

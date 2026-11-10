@@ -33,7 +33,15 @@ defmodule World.MixProject do
 
   def cli, do: [preferred_envs: [precommit: :test]]
 
-  def application, do: [mod: {World.Application, []}, extra_applications: [:logger, :crypto]]
+  # The scale of the clock of the world (World.Clock.world/0): one day in
+  # a second, and in the tests 1,000 days in a second (a site of a year
+  # takes 0.4 s of the wall clock).
+  def application,
+    do: [
+      mod: {World.Application, []},
+      extra_applications: [:logger, :crypto],
+      env: [scale: if(Mix.env() == :test, do: 86_400_000, else: 86_400)]
+    ]
 
   defp deps do
     [

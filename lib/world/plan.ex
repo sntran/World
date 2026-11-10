@@ -29,8 +29,9 @@ defmodule World.Plan do
     `:connect`), the name of its item, its station, the node and the port
     it connects to, its joint (the role of a joint, or `nil`), the ids
     of the tasks it waits for, the name of its part (`uses`, or `nil`),
-    the part to make (`work`, or `nil`), and the trade of the people that
-    make it (`trade`).
+    the part to make (`work`, or `nil`), the trade of the people that
+    make it (`trade`), and on a site the days of its work and the days of
+    the wait after it (`days`, `wait`; `World.Site`).
     """
     defstruct id: nil,
               action: nil,
@@ -43,7 +44,9 @@ defmodule World.Plan do
               waits: [],
               uses: nil,
               work: nil,
-              trade: nil
+              trade: nil,
+              days: nil,
+              wait: 0.0
   end
 
   # The trade of the people that build an assembly, by its kind.

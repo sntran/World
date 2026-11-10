@@ -22,7 +22,22 @@ defmodule World.Supervisor do
   def start_link(env \\ System.get_env()), do: Supervisor.start_link(__MODULE__, env, name: __MODULE__)
 
   @impl true
-  def init(env), do: Supervisor.init(children(env), strategy: :one_for_one)
+  def init(env) do
+    scale(env)
+    Supervisor.init(children(env), strategy: :one_for_one)
+  end
+
+  @doc """
+  The scale of the clock of the world from `WORLD_SCALE` (world seconds
+  in one second of the wall clock, `World.Clock.world/0`), when the
+  environment has it.
+  """
+  def scale(%{"WORLD_SCALE" => text}) do
+    {n, ""} = Integer.parse(text)
+    Application.put_env(:world, :scale, n)
+  end
+
+  def scale(_env), do: :ok
 
   @doc "The children for the environment `env`: the node, and the server with `WORLD_SERVER`."
   def children(env) do

@@ -8,6 +8,12 @@ defmodule World.Clock do
   The times are integers in milliseconds: `start` and the wall times are
   wall clock times (Unix, UTC); a world time counts from the start of the
   world.
+
+  The world has one clock (plan 0006, D1; `world/0`): it starts with the
+  node, and its scale is the setting `:scale` of the application (the
+  variable `WORLD_SCALE` of the node; 86,400 by default, and 1,000 days
+  in a second in the tests). Each construction, the yard and the haul
+  keep their times on it, so a time of one log is a time of the others.
   """
 
   @scale 86_400
@@ -17,6 +23,24 @@ defmodule World.Clock do
 
   @doc "The default scale: world seconds for each second of the wall clock."
   def scale, do: @scale
+
+  @doc "One day of the world, in milliseconds."
+  def day, do: @day
+
+  @doc """
+  The clock of the world: its start is the first call of the node, its
+  scale the setting `:scale` of the application.
+  """
+  def world do
+    start =
+      with nil <- :persistent_term.get({__MODULE__, :start}, nil) do
+        now = wall()
+        :persistent_term.put({__MODULE__, :start}, now)
+        now
+      end
+
+    %__MODULE__{start: start, scale: Application.get_env(:world, :scale, @scale)}
+  end
 
   @doc """
   A clock. The options: `start` (the wall time of the start of the

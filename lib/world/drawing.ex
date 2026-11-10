@@ -189,6 +189,18 @@ defmodule World.Drawing do
     if is_number(v) and v >= lo and v <= hi, do: [], else: [{path, "must be a number from #{lo} to #{hi}"}]
   end
 
+  # The work of a node on a site (World.Site): each work of the rates to
+  # its amount.
+  defp work(w, path) when is_map(w) do
+    Enum.flat_map(Enum.sort(w), fn {k, v} ->
+      if k in World.Site.works(),
+        do: number(v, "#{path}.#{k}", 0, 1.0e9),
+        else: [{"#{path}.#{k}", "is not a work of a site"}]
+    end)
+  end
+
+  defp work(_w, path), do: [{path, "must be an object: each work of a site to its amount"}]
+
   defp positive(v, path),
     do: if(is_number(v) and v > 0 and v <= @size, do: [], else: [{path, "must be a length from 0 to #{@size} m"}])
 
@@ -488,7 +500,7 @@ defmodule World.Drawing do
 
   # A node: its errors, and its item (the part, or the item of the order).
   defp node(node, path, i, parts, known) when is_map(node) do
-    keys = ~w(name part item skill trade after from to at port joint turn offset temporary)
+    keys = ~w(name part item skill trade after from to at port joint turn offset temporary work cure)
 
     keys =
       if Map.has_key?(node, "repeat"),
@@ -499,7 +511,9 @@ defmodule World.Drawing do
       unknown(node, keys, path) ++
         required(node, "name", path, &name/2) ++
         optional(node, "trade", path, &choice(&1, &2, World.Plan.trades())) ++
-        optional(node, "temporary", path, &choice(&1, &2, [true, false]))
+        optional(node, "temporary", path, &choice(&1, &2, [true, false])) ++
+        optional(node, "work", path, &work/2) ++
+        optional(node, "cure", path, &choice(&1, &2, World.Site.cures()))
 
     name = node["name"]
 
@@ -762,7 +776,8 @@ defmodule World.Drawing do
   @doc """
   The drawing of a blueprint in data (`World.Orders.Blueprint.from_data/1`)
   with the options of an order: each `{"param": NAME}` takes the value of
-  its option, and each `{"sum": [...]}` the sum of its numbers. The texts
+  its option, each `{"sum": [...]}` the sum of its numbers, and each
+  `{"product": [...]}` their product (the work of a site, plan 0006). The texts
   of the option of the type `sources`, in the order of their names, go
   after the sources of the drawing, and the `sizes` of the blueprint go
   into its extras (`"sizes"`): each with its value, its unit and its
@@ -795,6 +810,7 @@ defmodule World.Drawing do
 
   defp put(%{"param" => name} = m, o) when map_size(m) == 1, do: Map.get(o, name, m)
   defp put(%{"sum" => l} = m, o) when map_size(m) == 1, do: l |> Enum.map(&put(&1, o)) |> Enum.sum()
+  defp put(%{"product" => l} = m, o) when map_size(m) == 1, do: l |> Enum.map(&put(&1, o)) |> Enum.product()
   defp put(%{} = m, o), do: Map.new(m, fn {k, v} -> {k, put(v, o)} end)
   defp put(l, o) when is_list(l), do: Enum.map(l, &put(&1, o))
   defp put(v, _o), do: v

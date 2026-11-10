@@ -97,7 +97,7 @@ defmodule World.Construction do
       |> Map.put_new(:geo, nil)
 
     budget = job.budget
-    clock = Clock.new()
+    clock = Clock.world()
     Process.set_label({:construction, job.id})
     urgent = :erlang.alias([:priority])
     # The alias is the value of the name: World.pause/1 and the others send
@@ -155,6 +155,7 @@ defmodule World.Construction do
             requests: %{},
             triangles: %{},
             glbs: %{},
+            cured: %{},
             workers_limit: Map.get(s.job.budget, "workers", @workers)
           })
 
@@ -269,8 +270,13 @@ defmodule World.Construction do
         done: MapSet.put(s.done, id),
         triangles: Map.merge(s.triangles, result.triangles),
         glbs: Map.merge(s.glbs, result.glbs),
-        made: if(result[:made], do: Map.put(s.made, id, result.made), else: s.made)
+        made: if(result[:made], do: Map.put(s.made, id, result.made), else: s.made),
+        cured: Map.put(s.cured, id, Clock.wall() + Clock.to_wall(s.log.clock, round(task.wait * Clock.day())))
     }
+
+    # The tasks after it wait for the cure (plan 0006, D2).
+    if task.wait > 0,
+      do: Process.send_after(self(), :cured, Clock.to_wall(s.log.clock, round(task.wait * Clock.day())) + 1)
 
     s = record(s, "task_done", p, task_data(task))
     s = if s.job.drawing, do: place(s, p), else: elements(s, p, id, Map.get(s.elements, id, []))
@@ -336,6 +342,9 @@ defmodule World.Construction do
 
   def handle_info(:close, s), do: {:stop, :normal, s}
 
+  # The concrete of a task has set: the tasks after it can start.
+  def handle_info(:cured, s), do: s |> assign() |> finish()
+
   defp elements(s, p, id, elements) do
     Enum.reduce(elements, s, fn {frame, part, shown}, s ->
       data = %{"task" => id, "part" => part.name, "glb" => key(shown), "matrix" => Frame.matrix(GLB.gl_frame(frame))}
@@ -386,7 +395,13 @@ defmodule World.Construction do
   defp ready(%{job: %{haul: haul, drawing: d}} = s) when haul == nil or d == nil, do: waits_done(s)
   defp ready(s), do: Enum.filter(waits_done(s), &(s.hauls[&1.id] == :here))
 
-  defp waits_done(s), do: Enum.filter(s.waiting, fn t -> Enum.all?(t.waits, &MapSet.member?(s.done, &1)) end)
+  defp waits_done(s) do
+    now = Clock.wall()
+
+    Enum.filter(s.waiting, fn t ->
+      Enum.all?(t.waits, &(MapSet.member?(s.done, &1) and Map.get(s.cured, &1, 0) <= now))
+    end)
+  end
 
   # A construction with a haul (`World.Haul`) and a place asks for the
   # takeoff of each task whose waits are done (World.Drawing.materials/3):
@@ -439,11 +454,36 @@ defmodule World.Construction do
 
   defp heap(_s), do: nil
 
+  # A task takes the days of its work on the site (plan 0006, D1,
+  # `World.Site`): the person does the work of the computer at once, and
+  # is busy until the end of its days on the clock of the world.
   defp give(s, p, task) do
-    s = %{s | idle: List.delete(s.idle, p), running: Map.put(s.running, p, task), waiting: List.delete(s.waiting, task)}
-    s = record(s, "task_started", p, task_data(task))
-    Person.work(p, task.id, work(s, task), heap(s))
+    {days, wait} = days(s, task)
+    task = Map.merge(task, %{days: days, wait: wait})
+    waiting = Enum.reject(s.waiting, &(&1.id == task.id))
+    s = %{s | idle: List.delete(s.idle, p), running: Map.put(s.running, p, task), waiting: waiting}
+    s = record(s, "task_started", p, Map.merge(task_data(task), %{"days" => days, "wait" => wait}))
+    due = Clock.wall() + Clock.to_wall(s.log.clock, round(days * Clock.day()))
+    Person.work(p, task.id, until(work(s, task), due), heap(s))
     s
+  end
+
+  defp days(%{job: %{drawing: nil}} = s, _task), do: {World.Site.days(%{"task" => 1}, method(s)), 0.0}
+
+  defp days(s, task) do
+    d = s.job.drawing
+    World.Site.task(d, task.id, World.Drawing.inputs(d, task.id, s.made), method(s))
+  end
+
+  defp method(s), do: Map.get(s.job, :method, "today")
+
+  # The work, then the rest of the days of the task.
+  defp until(work, due) do
+    fn ->
+      result = work.()
+      Process.sleep(max(due - Clock.wall(), 0))
+      result
+    end
   end
 
   # The work of a task: the triangles of the meshes of its element that
