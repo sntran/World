@@ -57,19 +57,39 @@ two:
 - **Today** (the default): a tower crane lifts the loads, a pump gives
   the concrete, the scaffold is of steel and the formwork of plywood.
   The days come from the rates of the trades of today.
-- **1974**: the site of the history. No machines: the people carry the
-  materials up the steep path of the hill, mix the concrete on the site
-  and pour it by hand, on a scaffold that is hard to set up. Three
-  stages: the rough structure (18 March 1974 to 30 April 1975), a pause
-  of 17 years with the rough statue on the hill, and the finish (28
-  January 1992 to 1 December 1994: the render, the reliefs, the rail).
+- **1974**: the true history of the site, from its first day to its
+  last. No machines: the people carry the materials up the steep path of
+  the hill, mix the concrete on the site and pour it by hand, on a
+  scaffold that is hard to set up. Its stages:
+  1. The first statue, 10 m on a base of 5 m, at the cape of Nghinh
+     Phong (1972 to 17 January 1973).
+  2. A pause: the land is claimed by Buddhists, and the part that is
+     built stands (to 16 February 1974).
+  3. **A change of the order:** the agreement of 16 February 1974 moves
+     the site to the top of Núi Nhỏ and makes the statue 32 m. The first
+     statue is taken down.
+  4. The rough structure on Núi Nhỏ (18 March 1974 to 30 April 1975).
+  5. A pause of 17 years: the rough statue gets old on the hill, weeds
+     cover the site, and the copper cable of the lightning rod is
+     stolen.
+  6. The finish (28 January 1992 to 1 December 1994): the repair, the
+     render, the reliefs, the rail.
+
+The owner (2026-11-10) on the film: "Use the right amount of time for
+each step, relative to each other, so the length of the film is the
+total time it takes those steps", and for the pause, the statue that
+gets old: "let do the actual time lapse of building the statue,
+including the demolishing of the first version. That shows a request for
+change."
 
 The facts of the history, each with its sources, are in
-`priv/history/tuong_chua_kito_vua.json` (13 facts from 6 sources, read
+`priv/history/tuong_chua_kito_vua.json`: 13 facts from 6 sources (read
 on 2026-11-10; the sources do not agree on some dates, and each such
-fact says so). What the facts do not say (the order and the days inside
-a stage, the material of the scaffold) comes from the standards of the
-trades of that time and is marked as an estimate.
+fact says so), the six stages and the change. What the facts do not say
+is marked there as an estimate: the month of the start in 1972, how much
+of the first statue stood when the work stopped, the days of its taking
+down, the order and the days inside a stage, the material of the
+scaffold.
 
 The same blueprint, the same model at the end, two sites: this tests
 that a blueprint keeps what it builds apart from how it is built.
@@ -93,6 +113,9 @@ that a blueprint keeps what it builds apart from how it is built.
 | D4 | **The steps of the construction are parts of the model.** The replay model (`replay.glb`) gets a node for each state that a person sees on the site: the scaffold of each band, the formwork of each band, each poured band in rough grey concrete, the render of washed stone over it in the finish, the reliefs. Each node has the task that puts it up and the task that takes it down (`"from"`, `"to"`). | The prototype cut the finished model at a height: it cannot show a formwork that comes off, or the grey concrete before the render. |
 | D5 | **The people at work.** Each person of the log goes on the site when a task starts, at the place of the task (the foot of the band, the face of the base), with the work of its trade: carry a load, set a panel, guide the hose of the pump, trowel, hammer, climb the scaffold, guide a load of the crane. These are new animations of `World.People.Pose`, with new props (a hard hat, a bucket, a trowel, a hammer) next to the props that World has. At most 50 people on the site (an estimate), at mid level. | The owner: "show the people at work too, that would be more real". |
 | D6 | **The time lapse is a page and a video, with a camera that the viewer sets.** `review/timelapse.html` plays the log of an order with its replay model: the sun of each day and the people. Its camera: a turn with the mouse or a finger, places to choose (the front, three quarters, the side, the back, close to the base, over the site), a slow turn round the site, and the camera in the URL (`cam`, `target`, `fov`), so a view can be shared. `scripts/timelapse.mjs` makes a video of it (ffmpeg) with the same camera. The page reads only the files of an order. | The owner (2026-11-10): "Make the camera configurable in the preview." |
+| D7 | **One scale of time for the whole film.** Each second of the film is the same number of days of the site (the viewer sets it; 30 days a second by default). A step gets the time of the film that its days give, a pause too: the length of the film is the time of the whole site at that scale (the history of 1974: about 4.5 minutes at 30 days a second). | The owner: the right amount of time for each step, relative to each other. |
+| D8 | **A change takes down what it drops.** A change of an order (`World.Construction.change/2`, plan 0001, D32) now has a cost on the site: each element that the change does not keep and that is built is taken down by people (a new action of a task, `remove`), the last one built first, with its days. The place of the site is an option of an order; a change of the place drops each element. The film shows the taking down. | The first statue at Nghinh Phong was taken down when the order changed: the owner, "that shows a request for change". |
+| D9 | **A site gets old in a pause.** In a pause of the site the built model gets old with the days: the concrete gets darker, weeds grow on the base and the plinth, a part can go (the copper cable of the lightning rod). The repair at the end of the pause makes it clean. The rate of the change is an estimate. | The facts of the pause of 1975 to 1992; the owner chose the statue that gets old. |
 
 ## 5. Requirements
 
@@ -103,8 +126,9 @@ that a blueprint keeps what it builds apart from how it is built.
   and its head has the start date of the site.
 - R3. The methods: an order of the statue with `method` `today` or
   `1974` gives the same final model and two schedules. `today` has the
-  crane and the pump; `1974` has no machine, its three stages with their
-  dates, and a pause with no task. A test reads
+  crane and the pump; `1974` has no machine, its six stages with their
+  dates, the change of 16 February 1974, and its two pauses with no
+  task. A test reads
   `priv/history/tuong_chua_kito_vua.json` and checks that each fact
   names a source of the file and each stage names facts of the file.
 - R4. The replay model has the scaffold, the formwork, the rough bands
@@ -118,6 +142,14 @@ that a blueprint keeps what it builds apart from how it is built.
   model, the scaffold and some people at the day of a pour.
 - R7. `scripts/timelapse.mjs` makes a video of an order, with the camera
   of the URL.
+- R8. One scale of time: in the page and the video, the time of each
+  step is its days over the scale; a test checks that the length of the
+  film is the days of the site over the scale.
+- R9. A change that drops built elements gives a `remove` task for each,
+  in the reverse order of their build; a change of the place drops each
+  element; the log has the events of the taking down.
+- R10. In a pause, the model gets old with the days (D9), and a repair
+  makes it clean; the page shows it.
 
 ## 6. Steps
 
@@ -126,23 +158,29 @@ that a blueprint keeps what it builds apart from how it is built.
    trades in `priv/standards/`.
 3. The methods `today` and `1974`, and the history of the statue in
    `priv/history/` (R3).
-4. The steps of the construction as parts of the replay model: the
+4. A change that takes down what it drops, and the place of a site as
+   an option of an order (R9).
+5. The model that gets old in a pause, and its repair (R10).
+6. The steps of the construction as parts of the replay model: the
    scaffold, the formwork, the rough bands, the finish (R4).
-5. The work of the people: the animations and the props (R5).
-6. The time-lapse page and its test (R6).
-7. The video script, and the time lapse of the statue for the owner
-   (R7).
+7. The work of the people: the animations and the props (R5).
+8. The time-lapse page with one scale of time, and its test (R6, R8).
+9. The video script, and the two time lapses of the statue for the
+   owner: `today` and `1974` (R7).
 
 ## 7. Acceptance criteria
 
 - Each requirement has its test, and the checks of D9 of plan 0004 pass.
-- The time lapse of the statue on Núi Nhỏ, made from its order over
-  MCP: the owner says that it looks like the building of the statue.
+- The two time lapses of the statue (`today` and `1974`), each made
+  from its order over MCP: the owner says that they look like the
+  building of the statue.
 
 ## 8. Open questions
 
-- The length of the film: 30 s, 60 s, or longer? For `1974`, the pause
-  of 17 years: a few seconds with a title, or also the rough statue that
-  gets old (darker concrete, weeds)?
 - The hill: the site on a flat ground, or on the top of Núi Nhỏ with its
-  path (the terrain of the game of Vũng Tàu)?
+  path (the terrain of the game of Vũng Tàu)? The first site is at the
+  cape of Nghinh Phong, at the foot of the same hill: one landscape with
+  the two places would show the change of the site.
+  - Answer (the owner, 2026-11-10): the length of the film is the days
+    of the site at one scale (D7); in the pause the statue gets old
+    (D9).
