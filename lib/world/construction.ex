@@ -159,6 +159,7 @@ defmodule World.Construction do
             cured: %{},
             days: %{},
             built: [],
+            shown: %{},
             stages: Map.get(s.job, :stages, []),
             stage: nil,
             last_stage: nil,
@@ -292,6 +293,7 @@ defmodule World.Construction do
     s = record(s, "task_done", p, task_data(task))
     # A task that takes down a part: the part goes (plan 0006, D7).
     s = if task.action == :remove, do: record(s, "element_removed", p, %{"task" => task.item}), else: s
+    s = if task.action == :again, do: again(s, p, task.item), else: s
     s = downs(s, p, id)
     s = if s.job.drawing, do: place(s, p), else: elements(s, p, id, Map.get(s.elements, id, []))
     finish(assign(s))
@@ -373,10 +375,12 @@ defmodule World.Construction do
   def handle_info({:age, days}, %{stage: %{work: "pause"}} = s), do: {:noreply, age(s, days)}
 
   defp elements(s, p, id, elements) do
-    Enum.reduce(elements, s, fn {frame, part, shown}, s ->
-      data = %{"task" => id, "part" => part.name, "glb" => key(shown), "matrix" => Frame.matrix(GLB.gl_frame(frame))}
-      record(s, "element", p, data)
-    end)
+    datas =
+      for {frame, part, shown} <- elements,
+          do: %{"task" => id, "part" => part.name, "glb" => key(shown), "matrix" => Frame.matrix(GLB.gl_frame(frame))}
+
+    s = Enum.reduce(datas, s, &record(&2, "element", p, &1))
+    if datas == [], do: s, else: %{s | shown: Map.put(s.shown, id, datas)}
   end
 
   # The elements of the nodes of a drawing, each node when it is made, in
@@ -496,11 +500,23 @@ defmodule World.Construction do
     waiting = Enum.reject(s.waiting, &(&1.id == task.id))
     s = %{s | idle: List.delete(s.idle, p), running: Map.put(s.running, p, task), waiting: waiting}
     s = %{s | days: Map.put(s.days, task.id, days)}
-    s = record(s, "task_started", p, Map.merge(task_data(task), %{"days" => days, "wait" => wait}))
+    data = %{"days" => days, "wait" => wait, "crew" => crew(s, task)}
+    s = record(s, "task_started", p, Map.merge(task_data(task), data))
     due = Clock.wall() + Clock.to_wall(s.log.clock, round(days * Clock.day()))
     Person.work(p, task.id, until(work(s, task), due), heap(s))
     s
   end
+
+  # A part made again after a pause (plan 0006, D8): its elements come
+  # back as they were.
+  defp again(s, p, item) do
+    shown = Map.get(s.shown, item, [])
+    s = Enum.reduce(shown, s, &record(&2, "element", p, &1))
+    if shown == [], do: s, else: %{s | built: s.built ++ [item]}
+  end
+
+  # To make a part again takes the days to make it.
+  defp days(s, %{action: :again, item: item}), do: {s.days[item], 0.0}
 
   # To take down a part takes a part of the days to make it (`remove`).
   defp days(s, %{action: :remove, item: item}), do: {World.Site.days(%{"remove" => s.days[item]}, method(s)), 0.0}
@@ -513,6 +529,11 @@ defmodule World.Construction do
   end
 
   defp method(s), do: Map.get(s.job, :method, "today")
+
+  # The people of the crew of a task: the person and its helpers (the
+  # crew of the rate of its work, `World.Site.crew/2`).
+  defp crew(%{job: %{drawing: nil}}, _task), do: 1
+  defp crew(s, task), do: World.Site.crew(s.job.drawing, task.item, method(s))
 
   # The work, then the rest of the days of the task.
   defp until(work, due) do
@@ -537,8 +558,8 @@ defmodule World.Construction do
     %{s | built: s.built -- gone}
   end
 
-  # To take down a part needs no work of the computer.
-  defp work(_s, %{action: :remove}), do: fn -> %{triangles: %{}, glbs: %{}} end
+  # To take down a part, or to make it again, needs no work of the computer.
+  defp work(_s, %{action: action}) when action in [:remove, :again], do: fn -> %{triangles: %{}, glbs: %{}} end
 
   defp work(%{job: %{drawing: nil}} = s, task) do
     elements = Map.get(s.elements, task.id, [])
@@ -731,8 +752,10 @@ defmodule World.Construction do
       "build" ->
         s = if st.repair, do: repair(s), else: s
         names = closure(s.job.drawing, st.until) -- MapSet.to_list(s.done)
+        {s, again} = make_again(s, st.again, names)
         span = World.Site.span(World.Site.schedule(s.job.drawing, method(s), names))
-        s = %{s | allowed: MapSet.new(names), fit: fit(s, st, span)}
+        first = Enum.max([0.0 | for(t <- again, do: elem(days(s, t), 0))])
+        s = %{s | allowed: MapSet.new(names ++ Enum.map(again, & &1.id)), fit: fit(s, st, span + first)}
         record(s, "stage_started", nil, stage_data(s, st))
 
       "pause" ->
@@ -757,6 +780,23 @@ defmodule World.Construction do
         s = %{s | allowed: MapSet.new(removes, & &1.id), fit: fit(s, st, span)}
         record(s, "stage_started", nil, stage_data(s, st))
     end
+  end
+
+  # The parts that a pause took, made again at the start of a build (the
+  # scaffold of the repair of 1992): a task `again/NODE` of the trade of
+  # the node each, and each other task of the stage waits for them. The
+  # event `changed` gives the new tasks and the new waits.
+  defp make_again(s, [], _names), do: {s, []}
+
+  defp make_again(s, names, rest) do
+    trades = Map.new(s.plan.tasks, &{&1.id, &1.trade})
+    again = for n <- names, do: %Plan.Task{id: "again/" <> n, action: :again, item: n, trade: trades[n], waits: []}
+    ids = Enum.map(again, & &1.id)
+    waiting = for t <- s.waiting, do: if(t.id in rest, do: %{t | waits: t.waits ++ ids}, else: t)
+    s = %{s | waiting: again ++ waiting, plan: %{s.plan | tasks: again ++ s.plan.tasks}}
+    add = for t <- again, do: %{"id" => t.id, "action" => "again", "waits" => [], "trade" => Atom.to_string(t.trade)}
+    data = %{"redo" => [], "keep" => [], "remove" => [], "add" => add, "waits" => Map.new(rest, &{&1, ids})}
+    {record(s, "changed", nil, data), again}
   end
 
   # The end of a stage: the next starts at its day (or now when it is
@@ -821,6 +861,7 @@ defmodule World.Construction do
   # grow on the base (an estimate of a rate); in the year of the middle
   # of the pause a part can go (`lost`).
   defp age(s, days) do
+    s = take(s)
     st = s.stage
     half = (st.to - st.from) / 2
     lost = if days >= half and days - 365 < half, do: st.lost, else: []
@@ -833,6 +874,16 @@ defmodule World.Construction do
       "lost" => lost
     })
   end
+
+  # The parts that a pause takes in its first year (the scaffold of bamboo
+  # and the board of the mixing of 1975: an estimate), once.
+  defp take(%{stage: %{takes: takes}} = s) when takes != [] do
+    gone = for n <- takes, n in s.built, do: n
+    s = Enum.reduce(gone, s, &record(&2, "element_removed", nil, %{"task" => &1, "lost" => true}))
+    %{s | built: s.built -- gone, stage: %{s.stage | takes: []}}
+  end
+
+  defp take(s), do: s
 
   # A repair at the start of a build after a pause: the model is clean.
   defp repair(s) do

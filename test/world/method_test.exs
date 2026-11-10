@@ -125,6 +125,23 @@ defmodule World.MethodTest do
 
     assert Enum.find_index(events, &(&1.kind == "repaired")) > Enum.find_index(events, &(&1.kind == "aged"))
 
+    # The scaffold and the board of the mixing go in the first year of the
+    # pause; the repair of 1992 puts them up again before the render (the
+    # far level has no cast, so no scaffold: the board of the mixing).
+    pause = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "pause"))
+    finish = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "finish"))
+    lost = for e <- Enum.slice(events, pause..finish), e.kind == "element_removed", do: e.data
+    assert lost == [%{"task" => "mixing", "lost" => true}]
+    %{data: %{"add" => add, "waits" => waits}} = Enum.at(events, finish - 1)
+    assert length(add) == 9 and waits["shell"] == Enum.map(add, & &1["id"])
+    again = Enum.find_index(events, &(&1.kind == "task_done" and &1.data["task"] == "again/mixing"))
+    shell = Enum.find_index(events, &(&1.kind == "task_started" and &1.data["task"] == "shell"))
+    assert again > finish and again < shell
+    back = for e <- Enum.slice(events, finish..shell), e.kind == "element", do: e.data["task"]
+    assert back == ["mixing"]
+    # The crew of a pour by hand: 12 people (the rate concrete of 1974).
+    assert %{data: %{"crew" => 12}} = Enum.find(events, &(&1.kind == "task_started" and &1.data["task"] == "pour_1"))
+
     # The end: on or after 1 December 1994.
     assert day.(List.last(events)) >= 8188 - 1
     # Today: one stage, about a year, with the machines of today.

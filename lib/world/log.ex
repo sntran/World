@@ -139,11 +139,16 @@ defmodule World.Log do
   # The tasks that take down what it drops (`remove`) are new tasks.
   defp task(%Event{kind: "changed", order: order, data: %{"redo" => redo} = d}, orders) do
     with {:ok, o} <- Map.fetch(orders, order) |> plan() do
-      removes = Map.new(Map.get(d, "remove", []), &{&1["id"], &1["waits"]})
+      removes = Map.new(Map.get(d, "remove", []) ++ Map.get(d, "add", []), &{&1["id"], &1["waits"]})
+      # The new waits of the tasks of a change (the parts made again first).
+      waits = Map.merge(o.waits, removes, fn _, a, b -> a ++ b end)
+
+      waits =
+        Enum.reduce(Map.get(d, "waits", %{}), waits, fn {id, more}, w -> Map.update(w, id, more, &(&1 ++ more)) end)
 
       o = %{
         o
-        | waits: Map.merge(o.waits, removes),
+        | waits: waits,
           started: MapSet.difference(o.started, MapSet.new(redo)),
           done: MapSet.difference(o.done, MapSet.new(redo))
       }

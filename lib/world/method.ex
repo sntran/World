@@ -72,7 +72,8 @@ defmodule World.Method do
   that repairs what a pause left), `lost` (the parts that a pause
   takes), `means` (how the people of the time build, `means/0`) and
   `path` (the points of the game of the path of the carriers, with the
-  means `carry_path`).
+  means `carry_path`), `takes` (the parts that a pause takes in its first
+  year) and `again` (the parts that a build makes again first).
   """
   def stages(order) do
     case {of(order), history(get_in(order, ["options", "name"]))} do
@@ -94,6 +95,8 @@ defmodule World.Method do
             repair: Map.get(st, "repair", false),
             lost: Map.get(st, "lost", []),
             means: Map.get(st, "means", []),
+            takes: Map.get(st, "takes", []),
+            again: Map.get(st, "again", []),
             path: path(order, st)
           }
         end
@@ -114,6 +117,8 @@ defmodule World.Method do
             repair: false,
             lost: [],
             means: if(of(order) == "today", do: @today, else: []),
+            takes: [],
+            again: [],
             path: nil
           }
         ]

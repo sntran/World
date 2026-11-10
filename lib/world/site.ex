@@ -28,7 +28,9 @@ defmodule World.Site do
   @doc "The rate of a work for a method: `%{unit, crew, rate, source}` (the units in one day of the crew)."
   def rate(work, method \\ "today") when method in @methods do
     r = Standards.size({"site", "rates"}, work)
-    %{unit: r["unit"], crew: r["crew"], rate: r[method], source: r["source"]}
+    # A crew of each method (`%{"today" => 6, "1974" => 12}`), or one crew.
+    crew = if is_map(r["crew"]), do: r["crew"][method], else: r["crew"]
+    %{unit: r["unit"], crew: crew, rate: r[method], source: r["source"]}
   end
 
   @doc "The wait of a cure for a method, in days."
@@ -82,6 +84,15 @@ defmodule World.Site do
       end
 
     {days(work, method), wait(node, method)}
+  end
+
+  @doc """
+  The people of the crew of the task of a node for a method: the largest
+  crew of the rates of its work (1 with no work in its data).
+  """
+  def crew(drawing, name, method \\ "today") do
+    node = Enum.find(drawing["nodes"], &(&1["name"] == name)) || %{}
+    Enum.max([1 | for({w, _} <- Map.get(node, "work") || %{}, do: rate(w, method).crew)])
   end
 
   @doc """

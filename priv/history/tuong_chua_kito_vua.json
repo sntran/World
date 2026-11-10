@@ -269,7 +269,7 @@
         "timber_forms"
       ],
       "means_estimate": "No source says how the loads went up the scaffold or how the concrete was mixed in 1972 to 1975: the people carry the materials up the path (the fact carry: no source names a machine or a road for trucks to the top), mix the concrete by hand on a board, and lift the buckets with a pulley on the scaffold; the scaffold of bamboo and the forms of timber are the common means of a site of Việt Nam of the time (an estimate).",
-      "estimate": "The forms come off when their band has set (strip_N); the scaffold stays on the rough statue in the pause, for the finish (an estimate: no source says)."
+      "estimate": "The forms come off when their band has set (strip_N), an estimate; no source says."
     },
     {
       "name": "pause",
@@ -283,7 +283,19 @@
       "work": "pause",
       "lost": [
         "the copper cable of the lightning rod"
-      ]
+      ],
+      "takes": [
+        "scaffold_1",
+        "scaffold_2",
+        "scaffold_3",
+        "scaffold_4",
+        "scaffold_5",
+        "scaffold_6",
+        "scaffold_7",
+        "scaffold_8",
+        "mixing"
+      ],
+      "takes_estimate": "No source says what came of the scaffold and of the site: a scaffold of bamboo and timber left out for 17 years rots, and the people of the time took what had a value (the copper cable of the lightning rod was stolen, the fact pause). Here the scaffold and the board of the mixing go in the first year of the pause (an estimate)."
     },
     {
       "name": "finish",
@@ -307,7 +319,19 @@
         "bamboo_scaffold",
         "timber_forms"
       ],
-      "means_estimate": "The materials went up the path with no motor vehicle (the fact carry_1992). How the loads went up the scaffold has no source: a pulley, as in 1974 (an estimate)."
+      "means_estimate": "The materials went up the path with no motor vehicle (the fact carry_1992). How the loads went up the scaffold has no source: a pulley, as in 1974 (an estimate).",
+      "again": [
+        "scaffold_1",
+        "scaffold_2",
+        "scaffold_3",
+        "scaffold_4",
+        "scaffold_5",
+        "scaffold_6",
+        "scaffold_7",
+        "scaffold_8",
+        "mixing"
+      ],
+      "again_estimate": "The repair of 1992 needs a scaffold: the people put up the scaffold again, and the board of the mixing, before the render (an estimate)."
     }
   ],
   "changes": [

@@ -4,11 +4,11 @@
 //
 // URL is the page of the world that follows a construction
 // (review/world.html?follow=...&events=...&still=1, with the camera of
-// ?view, ?cam, ?target, ?fov and the days of ?days). The script goes from
-// day 0 to the last day of the construction, FPS frames for each second
-// (30 by default), each frame `days / FPS` days of the world after the
-// one before; so the length of the film is the days of the site over the
-// days in one second. ffmpeg makes the video (H.264, yuv420p).
+// ?view, ?cam, ?target, ?fov, and the speeds of ?days for the work and
+// ?pause for a pause). The script goes from the first second of the film
+// to its last, FPS frames in each second (30 by default): the steps of
+// the work keep their days to each other, and a pause is faster. ffmpeg
+// makes the video (H.264, yuv420p).
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 
@@ -28,17 +28,17 @@ await page.waitForFunction(() => window.READY === true && window.TIMELAPSE, null
 await page.addStyleTag({ content: 'body{grid-template-columns:1fr!important;grid-template-rows:1fr!important} header,aside,#lapsebar{display:none!important} main{grid-row:1!important;height:100vh!important}' });
 await page.evaluate(() => window.dispatchEvent(new Event('resize')));
 
-const { end, days } = await page.evaluate(() => ({ end: window.TIMELAPSE.end, days: window.TIMELAPSE.days }));
-const frames = Math.max(1, Math.ceil((end / days) * Number(fps)));
-console.log(`${end.toFixed(1)} days at ${days} days in a second: ${frames} frames, ${(frames / Number(fps)).toFixed(1)} s`);
+const { end, days, film } = await page.evaluate(() => ({ end: window.TIMELAPSE.end, days: window.TIMELAPSE.days, film: window.TIMELAPSE.film }));
+const frames = Math.max(1, Math.ceil(film * Number(fps)));
+console.log(`${end.toFixed(1)} days, ${days} days in a second of the work: ${frames} frames, ${film.toFixed(1)} s`);
 
 const ffmpeg = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', fps, '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', out], { stdio: ['pipe', 'inherit', 'inherit'] });
 // Each frame: the day, its render, and the image of the canvas with the
 // label of the page (the day, the date, the stage) in the same step (a
 // JPEG of quality 0.92).
 for (let f = 0; f <= frames; f++) {
-  const url = await page.evaluate(async (day) => {
-    await window.TIMELAPSE.to(day);
+  const url = await page.evaluate(async (t) => {
+    await window.TIMELAPSE.at(t);
     const view = document.getElementById('view');
     const frame = document.createElement('canvas');
     [frame.width, frame.height] = [view.width, view.height];
@@ -50,7 +50,7 @@ for (let f = 0; f <= frames; f++) {
     g.shadowBlur = 4;
     g.fillText(document.getElementById('lapse').textContent, view.height / 40, view.height / 18);
     return frame.toDataURL('image/jpeg', 0.92);
-  }, Math.min((f * days) / Number(fps), end));
+  }, Math.min(f / Number(fps), film));
   const jpeg = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
   if (!ffmpeg.stdin.write(jpeg)) await new Promise((r) => ffmpeg.stdin.once('drain', r));
   if (f % 250 === 0) console.log(`frame ${f} of ${frames}`);

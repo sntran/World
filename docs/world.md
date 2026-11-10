@@ -277,8 +277,13 @@ by default), the same for each step and each pause, so a film is the
 days of the site over that number. The camera turns with the mouse or a
 finger, has its views (three quarters, the front, the side, the back,
 the base, above), a slow turn, and takes `cam`, `target` and `fov` from
-the URL ("Copy the camera"). The label gives the day, the date of the
-history, the stage and the task. `scripts/timelapse_log.exs` makes the
+the URL ("Copy the camera"). The work goes at `days` days in one second
+(5 by default) and a pause at `pause` (365: a year in a second): the
+steps of the work keep their days to each other. Each part grows from
+its foot to its top over the days of its task; the crew of each task
+works round it; the carriers walk the path; in a pause the grass and the
+bushes grow on the lot. The label gives the day, the date of the
+history, the stage, the task and the speed. `scripts/timelapse_log.exs` makes the
 log and the files of a construction of the statue (`today` or `1974`),
 and `scripts/timelapse.mjs` makes its video (ffmpeg).
 
@@ -293,6 +298,15 @@ the crew of carriers), mix the concrete by hand on a board (the node
 `mixing`), lift the buckets with a pulley on the scaffold, on a scaffold
 of bamboo with forms of timber boards. What no source gives is an
 estimate (`means_estimate` of each stage).
+
+A pause takes the parts of its `takes` in its first year: the scaffold
+of bamboo and the board of the mixing of 1975 rot or go (an estimate;
+`element_removed` with `lost`). The build after it makes the parts of
+its `again` first (the scaffold of the repair of 1992): a task
+`again/NODE` each, that the other tasks of the stage wait for (the event
+`changed` gives the new tasks and the new waits). Each task has the
+people of its crew (`crew` of `task_started`, the crew of the rate of
+its work for the method: 12 for a pour by hand, 6 with a pump).
 
 Each stage starts at its date (`stage_started`, with its days from the
 start and its `fit`) and ends when its tasks are done (`stage_done`). The

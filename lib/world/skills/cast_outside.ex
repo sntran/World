@@ -29,7 +29,11 @@ defmodule World.Skills.CastOutside do
     do: {nil, %{"marks" => nil, "outside" => nil, "bands" => nil, "boxes" => nil}, %{}}
 
   def make(data, %{"survey" => %{"survey" => s}}, _context) do
-    bands = Cast.bands(s, World.Skills.Statue.o(data, ~w(bands)).bands)
+    # The bands of the forms: the first `bands` groups of the triangles
+    # (`World.Cast.bands/2` can give one more, small, at the top: no form
+    # marks it, as the forms of each band did).
+    n = World.Skills.Statue.o(data, ~w(bands)).bands
+    bands = s |> Cast.bands(n) |> Enum.take(n)
     marks = for(band <- bands, do: Cast.marks(s, band)) |> Enum.reduce(MapSet.new(), &MapSet.union/2)
     boxes = World.Skills.Statue.band_boxes(s, bands)
     {nil, %{"marks" => marks, "outside" => Cast.outside(s, marks), "bands" => bands, "boxes" => boxes}, %{}}

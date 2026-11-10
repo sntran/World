@@ -121,6 +121,8 @@ const files = params.get('files') ?? '';
 // The scene: a ground with a lot for each construction.
 const canvas = $('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// A part grows from its foot to its top over the days of its task.
+renderer.localClippingEnabled = true;
 renderer.setPixelRatio(devicePixelRatio);
 const scene = new THREE.Scene();
 const style = getComputedStyle(document.body);
@@ -369,7 +371,7 @@ function act(p, name) {
 // from its foot to the lot, and walks down again. The page draws the
 // crew; a person of the census is a task (docs/world.md). The path is in
 // points of the game, on the ground of the place.
-const CARRIERS = 12;
+const CARRIERS = 24;
 async function carriers(b, path) {
   for (const c of b.carriers ?? []) c.figure.removeFromParent();
   b.trail?.removeFromParent();
@@ -439,6 +441,101 @@ function carry(b, day, dt) {
     if (c.mixer && !still) c.mixer.update(dt);
   }
 }
+// The crew of a task (plan 0006, D10): the person and its helpers, the
+// crew of the rate of its work (`crew` of the event); each helper works
+// round the place of the task with the clip of the trade.
+const helpers = new Set();
+async function crew(b, d, trade) {
+  const kit = await body;
+  const list = [];
+  for (let k = 1; k < (d.crew ?? 1); k++) {
+    const figure = SkeletonUtils.clone(kit.scene);
+    const h = { figure, mixer: kit.clips.length ? new THREE.AnimationMixer(figure) : null, clips: kit.clips, clip: null, work: WORK[trade] ?? 'carry' };
+    figure.position.copy(spot(b, d.task, k * 3 + b.done));
+    figure.lookAt(b.group.position.x, figure.position.y, b.group.position.z);
+    stage.shade(figure);
+    scene.add(figure);
+    helpers.add(h);
+    list.push(h);
+  }
+  (b.crews ??= {})[d.task] = list;
+}
+
+// The parts of a task in a time lapse: the page reads the elements of the
+// task in the log ahead (they come at its end) and shows them from the
+// start of the task, cut at a height that rises from the foot of the part
+// to its top over the days of the task. A part made again after a pause
+// (`again/NODE`) is the part of its node.
+async function grow(b, e) {
+  const key = e.data.task.replace(/^again\//, '');
+  const done = lapse.pending.findIndex((x) => x.order === e.order && x.kind === 'task_done' && x.data.task === e.data.task);
+  if (done < 0) return;
+  const to = (lapse.pending[done].at - lapse.t0) / DAY;
+  const from = (e.at - lapse.t0) / DAY;
+  for (let i = done + 1; i < lapse.pending.length; i++) {
+    const x = lapse.pending[i];
+    if (x.order !== e.order || x.kind !== 'element' || x.data.task !== key) break;
+    const glb = await element(x.order, x.data.glb).catch(() => null);
+    if (!glb) continue;
+    x.shown = true;
+    const part = glb.clone();
+    part.matrixAutoUpdate = false;
+    part.matrix.fromArray(x.data.matrix);
+    stage.shade(part);
+    b.group.add(part);
+    (b.parts[key] ??= []).push(part);
+    part.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(part);
+    const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), box.min.y);
+    part.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.clippingPlanes = [plane]; } });
+    (b.growing ??= []).push({ part, plane, box, from, to });
+  }
+}
+function growing(b, day) {
+  b.growing = (b.growing ?? []).filter((g) => {
+    const f = Math.min(Math.max((day - g.from) / Math.max(g.to - g.from, 1e-6), 0), 1);
+    g.plane.constant = g.box.min.y + (g.box.max.y - g.box.min.y + 0.05) * f;
+    if (f < 1 && g.part.parent) return true;
+    g.part.traverse((o) => { if (o.isMesh) o.material.clippingPlanes = []; });
+    return false;
+  });
+}
+
+// The grass and the bushes of a site in a pause (plan 0006, D8): on the
+// ground of the lot and round the base, more with the years (`weeds` of
+// the event, 0 to 1); none after the repair.
+const GRASS = 700;
+async function grass(b, weeds) {
+  if (!b.grass) {
+    const place = [...places.values()].find((p) => p.terrain);
+    await Promise.all(ready);
+    const blade = new THREE.InstancedMesh(new THREE.ConeGeometry(0.25, 1, 5), new THREE.MeshStandardMaterial({ color: 0x5e7d34, roughness: 1 }), GRASS);
+    const bush = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0x46612a, roughness: 1 }), GRASS / 7);
+    const m = new THREE.Matrix4();
+    const at = b.group.getWorldPosition(new THREE.Vector3());
+    let seed = 7;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const put = (mesh, i, size) => {
+      const a = rand() * 2 * Math.PI;
+      const r = 5 + rand() * 15;
+      const p = new THREE.Vector3(at.x + Math.cos(a) * r, 1000, at.z + Math.sin(a) * r);
+      down.set(p, new THREE.Vector3(0, -1, 0));
+      const hit = [...(b.parts.be ?? []), place?.ground].filter(Boolean).flatMap((o) => down.intersectObject(o, true))
+        .sort((x, y) => x.distance - y.distance)[0];
+      p.y = hit ? hit.point.y : at.y;
+      const s = size * (0.5 + rand());
+      m.compose(p.setY(p.y + s / 2), new THREE.Quaternion(), new THREE.Vector3(s, s, s));
+      mesh.setMatrixAt(i, m);
+    };
+    for (let i = 0; i < GRASS; i++) put(blade, i, 0.8);
+    for (let i = 0; i < GRASS / 7; i++) put(bush, i, 1.4);
+    b.grass = [blade, bush];
+    for (const g of b.grass) { g.castShadow = true; scene.add(g); }
+  }
+  b.grass[0].count = Math.round(GRASS * weeds);
+  b.grass[1].count = Math.round((GRASS / 7) * weeds);
+}
+
 // The place of a person at work: on the scaffold of the band of its task
 // (scaffold_N of a task ..._N), or round the lot.
 function spot(b, task, i) {
@@ -468,6 +565,10 @@ function walk(p, to) {
 // m/s); a person at work does the work of its trade (or bobs with no
 // clips), unless the reader asks for no motion.
 function walking(now, dt) {
+  for (const h of helpers) {
+    act(h, h.work);
+    if (h.mixer && !still) h.mixer.update(dt);
+  }
   for (const b of builds.values()) if (b.carriers?.length) carry(b, lapse ? lapse.day : now / 1000 / 2, dt);
   for (const p of people.values()) {
     const f = lapse ? Math.min((lapse.day - p.startDay) / p.walkDays, 1) : Math.min((now - p.start) / 3000, 1);
@@ -559,13 +660,19 @@ async function take(e) {
     p.task = d.task;
     p.status.textContent = `works on ${d.task}`;
     // The person goes to the place of its task, and works there.
-    walk(p, spot(b, d.task, people.size + b.done));
+    const at = spot(b, d.task, people.size + b.done);
+    walk(p, at);
     b.task = d.task;
+    b.workY = at.y - b.group.position.y;
+    await crew(b, d, p.job);
+    if (lapse) await grow(b, e);
   }
   if (e.kind === 'task_done') {
     b.done += 1;
     const p = await person(e.who);
     p.task = null;
+    for (const h of b.crews?.[d.task] ?? []) { h.figure.removeFromParent(); helpers.delete(h); }
+    delete b.crews?.[d.task];
   }
   if (e.kind === 'stage_started') {
     b.stage = d;
@@ -580,9 +687,10 @@ async function take(e) {
       b.nextLot = null;
     }
   }
-  if (e.kind === 'aged') b.aged = d;
-  if (e.kind === 'repaired') b.aged = null;
-  if (e.kind === 'element') {
+  if (e.kind === 'aged') { b.aged = d; await grass(b, d.weeds); }
+  if (e.kind === 'repaired') { b.aged = null; await grass(b, 0); }
+  if (e.kind === 'element' && e.shown) b.elements += 1;
+  if (e.kind === 'element' && !e.shown) {
     b.elements += 1;
     const glb = await element(e.order, d.glb).catch(() => null);
     if (glb) {
@@ -623,10 +731,10 @@ const next = (e) => { events.push(e); queue = queue.then(() => take(e)).catch((e
 // clock of the log, at `days` days of the world in one second.
 const DAY = 86400000;
 const VIEWS = {
-  three_quarters: { cam: [62, 30, 98], target: [0, 21, 0] },
-  front: { cam: [0, 24, 115], target: [0, 21, 0] },
-  side: { cam: [115, 24, 0], target: [0, 21, 0] },
-  back: { cam: [0, 24, -115], target: [0, 21, 0] },
+  three_quarters: { cam: [38, 14, 60], target: [0, 10, 0] },
+  front: { cam: [0, 12, 72], target: [0, 10, 0] },
+  side: { cam: [72, 12, 0], target: [0, 10, 0] },
+  back: { cam: [0, 12, -72], target: [0, 10, 0] },
   base: { cam: [9, 2.5, 20], target: [0, 6, 0] },
   above: { cam: [0.1, 110, 0.1], target: [0, 10, 0] },
 };
@@ -637,7 +745,11 @@ const lapse = params.get('follow') ? {
   t0: null,
   day: 0,
   end: 0,
-  days: Number(params.get('days') ?? 20),
+  // The days of the world in one second of the film: of the work, and of
+  // a pause.
+  days: Number(params.get('days') ?? 5),
+  pause: Number(params.get('pause') ?? 365),
+  segments: [],
   playing: !params.has('still'),
   turn: params.get('turn') === '1',
   angle: 0,
@@ -652,9 +764,32 @@ const lapse = params.get('follow') ? {
     await queue;
     this.place();
   },
+  // The speed at a day: a pause of the construction is faster.
+  rate(day) {
+    let rate = this.days;
+    for (const s of this.segments) if (s.day <= day) rate = s.pause ? this.pause : this.days;
+    return rate;
+  },
+  // The seconds of the film at a day, and the day at a second of the film.
+  film(day) {
+    let t = 0;
+    let last = 0;
+    for (const s of [...this.segments, { day: Infinity }]) {
+      const upto = Math.min(s.day, day);
+      if (upto > last) t += (upto - last) / this.rate(last);
+      last = Math.max(last, upto);
+      if (s.day >= day) break;
+    }
+    return t;
+  },
+  dayAt(t) {
+    let lo = 0, hi = this.end;
+    for (let k = 0; k < 50; k++) { const mid = (lo + hi) / 2; if (this.film(mid) < t) lo = mid; else hi = mid; }
+    return hi;
+  },
   frame(dt) {
     if (this.playing && this.t0 !== null) {
-      this.day = Math.min(this.day + dt * this.days, this.end);
+      this.day = Math.min(this.day + dt * this.rate(this.day), this.end);
       while (this.pending.length && (this.pending[0].at - this.t0) / DAY <= this.day) next(this.pending.shift());
     }
     this.place();
@@ -664,9 +799,12 @@ const lapse = params.get('follow') ? {
     const b = builds.get(this.order);
     if (!b) return;
     const v = VIEWS[this.view];
+    growing(b, this.day);
     // The slow turn: 0.15 rad in each second of the film.
-    if (this.turn) this.angle = (this.day / this.days) * 0.15;
-    const cam = new THREE.Vector3(...(this.cam ?? v.cam)).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.angle);
+    if (this.turn) this.angle = this.film(this.day) * 0.15;
+    // The camera follows the height of the work (a view, not a camera of the URL).
+    const lift = this.target ? 0 : Math.max((b.workY ?? v.target[1]) - v.target[1], -10);
+    const cam = new THREE.Vector3(...(this.cam ?? v.cam)).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.angle).add(new THREE.Vector3(0, lift, 0));
     b.group.updateWorldMatrix(true, false);
     camera.position.copy(cam.applyMatrix4(b.group.matrixWorld));
     // The camera stays 10 m over the ground of a hill.
@@ -676,12 +814,14 @@ const lapse = params.get('follow') ? {
       const hit = down.intersectObject(hill, true)[0];
       if (hit && camera.position.y < hit.point.y + 10) camera.position.y = hit.point.y + 10;
     }
-    controls.target.copy(new THREE.Vector3(...(this.target ?? v.target)).applyMatrix4(b.group.matrixWorld));
+    controls.target.copy(new THREE.Vector3(...(this.target ?? v.target)).add(new THREE.Vector3(0, lift, 0)).applyMatrix4(b.group.matrixWorld));
     const date = b.date0 ? ' · ' + new Date(b.date0.getTime() + this.day * DAY).toISOString().slice(0, 10) : '';
     const stage = b.stage ? ` · ${b.stage.name}` : '';
     const work = b.task && b.stage?.work !== 'pause' ? ` · ${b.task}` : '';
     const old = b.aged && b.stage?.work === 'pause' ? ` · the site gets old (${Math.round(b.aged.days / 365)} years)` : '';
-    $('lapse').textContent = `Day ${Math.floor(this.day) + 1}${date}${stage}${work}${old}`;
+    const r = this.rate(this.day);
+    const speed = r === 365 ? 'a year in a second' : `${r} days in a second`;
+    $('lapse').textContent = `Day ${Math.floor(this.day) + 1}${date}${stage}${work}${old} · ${speed}`;
     // The old statue: the concrete gets darker in a pause, and weeds
     // grow on the base (D8).
     const dirt = b.aged ? b.aged.dirt : 0;
@@ -725,6 +865,8 @@ if (params.get('events')) {
     const own = all.filter((e) => e.order === lapse.order);
     lapse.t0 = own[0]?.at ?? 0;
     lapse.end = ((own.at(-1)?.at ?? 0) - lapse.t0) / DAY;
+    lapse.segments = own.filter((e) => e.kind === 'stage_started' || e.kind === 'stage_done')
+      .map((e) => ({ day: (e.at - lapse.t0) / DAY, pause: e.kind === 'stage_started' && e.data.work === 'pause' }));
     lapse.pending = all;
     await lapse.to(0);
   } else {
@@ -800,7 +942,15 @@ if (lapse) {
 // The state of the page, for a test: the lots and the people; and the
 // time lapse, for a video.
 window.WORLD = { builds, people, places, trucks };
-window.TIMELAPSE = lapse && { to: (day) => lapse.to(day).then(() => { walking(performance.now(), 1 / 30); controls.update(); renderer.render(scene, camera); }), get end() { return lapse.end; }, get days() { return lapse.days; } };
+const draw = () => { walking(performance.now(), 1 / 30); controls.update(); renderer.render(scene, camera); };
+window.TIMELAPSE = lapse && {
+  to: (day) => lapse.to(day).then(draw),
+  // The second `t` of the film (the stages at their speeds).
+  at: (t) => lapse.to(lapse.dayAt(t)).then(draw),
+  get end() { return lapse.end; },
+  get days() { return lapse.days; },
+  get film() { return lapse.film(lapse.end); },
+};
 await Promise.all(ready);
 window.READY = true;
 let last = performance.now();

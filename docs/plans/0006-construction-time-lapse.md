@@ -200,6 +200,12 @@ What is not as the plan says:
   that there was no machine in 1992 to 1994 (grandart.vn); for 1974 they
   say only that the carry was the biggest difficulty, so the rest is an
   estimate.
+- The film (the owner, 2026-11-10: the pauses too long, the work too
+  fast, few people, no weeds): the work at one speed (5 days in a
+  second) and a pause faster (a year in a second), each part that grows
+  over its task, the crew of each task, the grass of a pause. The
+  scaffold goes in the first year of the pause and comes back for the
+  repair of 1992 (no source: an estimate).
 - The reliefs are a part of the base, not a stage of their own.
 - A person is a task: the crews of the rates are in the days of a task,
   and the page shows one person for each task.

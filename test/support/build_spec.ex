@@ -103,6 +103,17 @@ defmodule World.BuildSpec do
   defp action(%{kind: "parts_here", order: b, data: d}), do: {"Arrive", [b, task(b, d["task"])]}
   defp action(_), do: nil
 
+  # The waits of each task: of its plan, and the new waits of a change
+  # (the parts made again first, plan 0006).
+  defp waits(plans, events) do
+    base = Map.new(plans, fn {b, t} -> {task(b, t["id"]), Enum.map(t["waits"], &task(b, &1))} end)
+
+    for %{kind: "changed", order: b, data: %{"waits" => more}} <- events, {id, ws} <- more, reduce: base do
+      acc ->
+        Map.update(acc, task(b, id), Enum.map(ws, &task(b, &1)), &Enum.uniq(&1 ++ Enum.map(ws, fn w -> task(b, w) end)))
+    end
+  end
+
   # A task of the specification: the construction and the id of the task.
   defp task(b, id), do: b <> "|" <> id
 
@@ -112,7 +123,7 @@ defmodule World.BuildSpec do
     plans =
       for %{kind: k, order: b, data: d} <- events,
           k in ~w(plan_made changed),
-          t <- if(k == "plan_made", do: d["tasks"], else: Map.get(d, "remove", [])),
+          t <- if(k == "plan_made", do: d["tasks"], else: Map.get(d, "remove", []) ++ Map.get(d, "add", [])),
           do: {b, t}
 
     builds = events |> Enum.map(& &1.order) |> Enum.uniq()
@@ -129,7 +140,7 @@ defmodule World.BuildSpec do
     RunBuilds == #{set(builds)}
     RunTasks == #{set(for {b, t} <- plans, do: task(b, t["id"]))}
     RunBuildOf == #{fun(Map.new(plans, fn {b, t} -> {task(b, t["id"]), b} end), &str/1)}
-    RunWaits == #{fun(Map.new(plans, fn {b, t} -> {task(b, t["id"]), Enum.map(t["waits"], &task(b, &1))} end), &set/1)}
+    RunWaits == #{fun(waits(plans, events), &set/1)}
     RunTrade == #{fun(Map.new(plans, fn {b, t} -> {task(b, t["id"]), t["trade"]} end), &str/1)}
     RunPeople == #{set(Map.keys(hires))}
     RunSkill == #{fun(hires, &str/1)}
