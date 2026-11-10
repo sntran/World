@@ -342,19 +342,22 @@ const body = loader.loadAsync(params.get('worker') ?? `${files}/m/catalog.far.gl
 const WORK = { caster: 'pour', carpenter: 'set_panel', scaffolder: 'climb', rigger: 'guide', mason: 'trowel', finisher: 'trowel', smith: 'hammer', sculptor: 'hammer', surveyor: 'guide', builder: 'carry' };
 const people = new Map();
 const gate = new THREE.Vector3(-20, 0, -20);
+// A figure that moves: a person of the census, a helper of its crew, or a
+// carrier of the path.
+let seeds = 0;
+function worker(kit, work) {
+  const figure = SkeletonUtils.clone(kit.scene);
+  figure.position.copy(gate);
+  stage.shade(figure);
+  scene.add(figure);
+  return { figure, mixer: kit.clips.length ? new THREE.AnimationMixer(figure) : null, clips: kit.clips, clip: null, work, seed: ++seeds, route: null, place: null };
+}
 async function person(name) {
   if (people.has(name)) return people.get(name);
-  const b = await body;
-  const figure = SkeletonUtils.clone(b.scene);
-  const p = { name, figure, from: gate.clone(), to: gate.clone(), start: 0, task: null, build: null, row: $('people').insertRow() };
-  p.mixer = b.clips.length ? new THREE.AnimationMixer(figure) : null;
-  p.clips = b.clips;
+  const p = Object.assign(worker(await body, 'carry'), { name, task: null, build: null, helpers: [], row: $('people').insertRow() });
   p.row.insertCell().textContent = name;
   p.trade = p.row.insertCell();
   p.status = p.row.insertCell();
-  p.figure.position.copy(gate);
-  stage.shade(p.figure);
-  scene.add(p.figure);
   people.set(name, p);
   return p;
 }
@@ -366,18 +369,230 @@ function act(p, name) {
   p.clip = name;
   if (clip) p.mixer.clipAction(clip).play();
 }
+// The people in motion (plan 0006, D10; the owner, 2026-11-10): as in a
+// time lapse of a site, each person moves all the time. At a task, a
+// person walks round the place of the task (the ring of the scaffold of
+// its band, or a ring round the lot) and works at each stop with the clip
+// of its trade (a leg of LEG s, a walk in its first part). A person that
+// comes walks in on the way to the lot (the path of the hill when there
+// is one), and a person that goes walks out on it in WAY s; then it is
+// not seen. A free person waits round the lot (the construction can take
+// it again soon), and goes at the end of the stage. The clock is the second of the film (of the page, with no
+// time lapse); a walk is at SPEED m in a second of the film.
+const LEG = 1.2;
+const WAY = 4;
+const SPEED = 15;
+const clock = (day) => (lapse ? lapse.film(day ?? lapse.day) : performance.now() / 1000);
+const hash = (seed, k) => {
+  const x = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+const smooth = (f) => f * f * (3 - 2 * f);
+const helpers = new Set();
+
+// The place of the work of a task: the ring of the scaffold of its band
+// (scaffold_N of a task ..._N), or a ring of 10 m round the lot.
+function placeOf(b, task) {
+  const m = /_(\d+)$/.exec(task ?? '');
+  const key = m && 'scaffold_' + m[1];
+  const sc = key && b.parts[key];
+  if (sc?.length) {
+    if (b.rings?.[key]?.n === sc.length) return b.rings[key];
+    const box = new THREE.Box3();
+    for (const part of sc) box.expandByObject(part);
+    const c = box.getCenter(new THREE.Vector3()).setY(box.min.y + 0.05);
+    const size = box.getSize(new THREE.Vector3());
+    return ((b.rings ??= {})[key] = { n: sc.length, c, rx: size.x / 2, rz: size.z / 2 });
+  }
+  return { c: b.group.getWorldPosition(new THREE.Vector3()), rx: 10, rz: 10, ground: true };
+}
+const ringAt = (pl, a, r = 1) => new THREE.Vector3(pl.c.x + Math.cos(a) * pl.rx * r, pl.c.y, pl.c.z + Math.sin(a) * pl.rz * r);
+const angleOf = (pl, v) => Math.atan2((v.z - pl.c.z) / pl.rz, (v.x - pl.c.x) / pl.rx);
+// The points of a ring from one angle to another, the short way.
+function arc(pl, a1, a2, r) {
+  const d = Math.atan2(Math.sin(a2 - a1), Math.cos(a2 - a1));
+  const n = Math.max(1, Math.ceil(Math.abs(d) / 0.4));
+  return Array.from({ length: n + 1 }, (_, i) => ringAt(pl, a1 + (d * i) / n, r));
+}
+
+// The way out of a lot, from its ring: down the path of the hill when the
+// lot has one, or 45 m on the ground to the side of the camera.
+function way(b) {
+  const at = b.group.getWorldPosition(new THREE.Vector3());
+  if (b.line && b.line.at(-1).distanceTo(at) < 80) return b.line.slice().reverse();
+  const key = at.toArray().map(Math.round).join();
+  if (b.way?.key === key) return b.way.pts;
+  b.group.updateWorldMatrix(true, false);
+  const d = new THREE.Vector3(...(lapse ? lapse.cam ?? VIEWS[lapse.view].cam : [0.6, 0, 0.8])).setY(0).transformDirection(b.group.matrixWorld).setY(0).normalize();
+  const hill = [...places.values()].find((p) => p.terrain)?.ground;
+  const ray = new THREE.Raycaster();
+  const pts = [];
+  for (let r = 12; r <= 45; r += 3) {
+    const v = at.clone().addScaledVector(d, r);
+    if (hill) {
+      ray.set(v.clone().setY(1000), new THREE.Vector3(0, -1, 0));
+      const hit = ray.intersectObject(hill, true)[0];
+      if (hit) v.y = hit.point.y;
+    }
+    pts.push(v);
+  }
+  b.way = { key, pts };
+  return pts;
+}
+
+// A route: points, the second of the film at its start, and its seconds;
+// its points up to `way` are a way into a lot or out of it.
+function go(w, pts, t0, dur, way = 0) {
+  if (pts.length < 2) pts = [pts[0], pts[0]];
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  w.route = { pts, cum, t0, dur: dur ?? Math.max(cum.at(-1) / SPEED, 0.2), way };
+}
+function along(r, t) {
+  const s = Math.min(Math.max((t - r.t0) / r.dur, 0), 1) * r.cum.at(-1);
+  let i = 1;
+  while (i < r.pts.length - 1 && r.cum[i] < s) i++;
+  const len = r.cum[i] - r.cum[i - 1];
+  const f = len > 0 ? Math.min(Math.max((s - r.cum[i - 1]) / len, 0), 1) : 1;
+  return { at: r.pts[i - 1].clone().lerp(r.pts[i], f), ahead: r.pts[i], i };
+}
+const moving = (w, t) => w.route && t < w.route.t0 + w.route.dur;
+
+// Where a figure is at the second `t` of the film, and its clip.
+function where(w, t) {
+  if (w.route && (moving(w, t) || !w.place)) {
+    const { at, ahead } = along(w.route, still ? Infinity : t);
+    return { at, ahead, clip: moving(w, t) && !still ? 'walk' : 'none', done: !moving(w, t) };
+  }
+  if (!w.place) return { at: w.figure.position.clone(), clip: 'none' };
+  const pl = w.place;
+  const s = still ? 0.5 : Math.max(t - w.legT0, 0) / LEG;
+  const k = Math.floor(s);
+  const u = s - k;
+  // The stops drift round the whole ring, a short walk from each other.
+  const ang = (j) => (j < 0 ? w.a0 : w.a0 + 2.4 * (Math.sin(0.45 * j + w.seed) - Math.sin(w.seed)) + (hash(w.seed, j) - 0.5) * 1.2);
+  const rad = (j) => (pl.ground && j >= 0 ? 0.95 + 0.3 * hash(w.seed, j + 999) : 1);
+  // A person on a lot works between its tasks too; a free one waits.
+  const work = (w.boss ?? w).waiting ? 'none' : w.work;
+  if (u < 0.35) {
+    const f = smooth(u / 0.35);
+    const a = ang(k - 1) + (ang(k) - ang(k - 1)) * f;
+    return { at: ringAt(pl, a, rad(k - 1) + (rad(k) - rad(k - 1)) * f), ahead: ringAt(pl, ang(k), rad(k)), clip: 'walk' };
+  }
+  return { at: ringAt(pl, ang(k), rad(k)), ahead: pl.c, clip: work };
+}
+// The points of the way that a figure has still to walk at `t` (on its
+// way out: the way back), and their seconds.
+function rest(w, t) {
+  if (!moving(w, t)) return { pts: [where(w, t).at], left: 0 };
+  const r = w.route;
+  const { at, i } = along(r, t);
+  const v = r.cum.at(-1) / r.dur;
+  const s = r.cum[i - 1] + at.distanceTo(r.pts[i - 1]);
+  if (w.leaving) return { pts: [at, ...r.pts.slice(0, i).reverse()], left: s / v };
+  if (i > r.way) return { pts: [at], left: 0 };
+  return { pts: [at, ...r.pts.slice(i, r.way + 1)], left: (r.cum[r.way] - s) / v };
+}
+// A figure goes to the place of its task: from where it is (on its way in,
+// to the end of that way; on its way out, back on it) to the ring of the
+// place at its own angle.
+function toPlace(w, pl, t) {
+  const { pts, left } = rest(w, t);
+  const a = angleOf(pl, pts.at(-1));
+  const to = ringAt(pl, a);
+  go(w, [...pts, to], t, left + Math.max(pts.at(-1).distanceTo(to) / SPEED, 0.2), pts.length - 1);
+  w.leaving = false;
+  w.place = pl;
+  w.a0 = a;
+  w.legT0 = t + w.route.dur;
+}
+// A figure comes to a lot on its way in, and goes to a place there.
+function come(b, w, t, pl) {
+  const side = new THREE.Vector3(hash(w.seed, 1) - 0.5, 0, hash(w.seed, 2) - 0.5).multiplyScalar(1.5);
+  const pts = way(b).slice().reverse().map((v) => v.clone().add(side));
+  const ground = placeOf(b, null);
+  w.route = null;
+  go(w, [...pts, ringAt(ground, angleOf(ground, pts.at(-1)), 1.1)], t, WAY, pts.length);
+  w.figure.visible = true;
+  w.leaving = w.gone = false;
+  w.place = null;
+  toPlace(w, pl, t);
+}
+// A figure goes from a lot: round the lot to its way out, and out (on
+// its way in, back on it).
+function leave(b, w, t) {
+  if (moving(w, t) && !w.leaving && along(w.route, t).i <= w.route.way) {
+    const { at, i } = along(w.route, t);
+    const pts = [at, ...w.route.pts.slice(0, i).reverse()];
+    go(w, pts, t, Math.max(((t - w.route.t0) / w.route.dur) * w.route.dur, 0.2));
+    w.place = null;
+    w.leaving = true;
+    return;
+  }
+  const from = where(w, t).at;
+  const exit = way(b);
+  const ground = placeOf(b, null);
+  const side = new THREE.Vector3(hash(w.seed, 3) - 0.5, 0, hash(w.seed, 4) - 0.5).multiplyScalar(1.5);
+  go(w, [from, ...arc(ground, angleOf(ground, from), angleOf(ground, exit[0]), 1.1), ...exit.map((v) => v.clone().add(side))], t, WAY);
+  w.place = null;
+  w.leaving = true;
+}
+// The free people of a lot and their crews go (at the end of a stage).
+function depart(b, t) {
+  for (const p of people.values()) {
+    if (p.build !== b || !p.waiting) continue;
+    for (const w of [p, ...p.helpers]) leave(b, w, t);
+    p.waiting = false;
+    p.helpers = [];
+    p.build = null;
+  }
+}
+// A figure now: its place and its clip; a figure that went is not seen.
+function step(w, t, dt, now) {
+  if (w.gone) return;
+  const s = where(w, t);
+  if (s.done && w.leaving) {
+    w.gone = true;
+    w.figure.visible = false;
+    if (!people.has(w.name)) {
+      w.figure.removeFromParent();
+      helpers.delete(w);
+    }
+    return;
+  }
+  w.figure.position.copy(s.at);
+  if (s.ahead && s.ahead.distanceToSquared(s.at) > 1e-6) w.figure.lookAt(s.ahead.x, s.at.y, s.ahead.z);
+  act(w, s.clip);
+  if (w.mixer && !still) w.mixer.update(dt);
+  if (!w.mixer && !['walk', 'none'].includes(s.clip) && !still) w.figure.position.y += Math.abs(Math.sin(now / 200)) * 0.15;
+}
+
 // The carriers of a site with no machine (the means carry_path of the
 // history): a crew that carries the materials up the path of the hill
-// from its foot to the lot, and walks down again. The page draws the
-// crew; a person of the census is a task (docs/world.md). The path is in
-// points of the game, on the ground of the place.
+// from its foot to the lot, and walks down again, a trip in 20 s of the
+// film. They come up the path one after the other, and go down it when
+// the stage has no path. The page draws the crew; a person of the census
+// is a task (docs/world.md). The path is in points of the game, on the
+// ground of the place.
 const CARRIERS = 24;
-async function carriers(b, path) {
-  for (const c of b.carriers ?? []) c.figure.removeFromParent();
-  b.trail?.removeFromParent();
+const TRIP = 20;
+async function carriers(b, path, t) {
+  const key = path && JSON.stringify(path);
+  if (key && key === b.pathKey && b.carriers?.length) return;
+  for (const c of b.carriers ?? []) {
+    const { at, i } = carrierAt(b, c, t);
+    if (c.figure.visible && b.line) {
+      go(c, [at, ...b.line.slice(0, i + 1).reverse()], t, WAY * ((i + 1) / b.line.length) + 0.2);
+      c.leaving = true;
+      c.place = null;
+      helpers.add(c);
+    } else c.figure.removeFromParent();
+  }
   b.carriers = [];
+  b.pathKey = key;
   const place = [...places.values()].find((p) => p.terrain);
   if (!path || !place) return;
+  b.trail?.removeFromParent();
   await Promise.all(ready);
   const [ox, oz] = place.terrain.origin;
   const down = new THREE.Raycaster();
@@ -414,51 +629,37 @@ async function carriers(b, path) {
   b.trail = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0xa08560, roughness: 1, side: THREE.DoubleSide }));
   b.trail.receiveShadow = true;
   scene.add(b.trail);
+  b.line = line;
   const kit = await body;
   for (let i = 0; i < CARRIERS; i++) {
-    const figure = SkeletonUtils.clone(kit.scene);
-    const c = { figure, phase: i / CARRIERS, mixer: kit.clips.length ? new THREE.AnimationMixer(figure) : null, clips: kit.clips, clip: null };
-    stage.shade(figure);
-    scene.add(figure);
+    const c = worker(kit, 'carry');
+    c.t0 = t + (i * TRIP) / CARRIERS;
+    c.figure.visible = false;
     b.carriers.push(c);
   }
-  b.line = line;
 }
-// A carrier: up with a load, down with none; a trip in 20 s of the film
-// (a carrier walks at the speed of the eye, not of the days).
-function carry(b, day, dt) {
-  const film = lapse ? day / lapse.days : day;
+// A carrier at `t`: up with a load, down with none; not seen before it
+// starts at the foot of the path.
+function carrierAt(b, c, t) {
+  const s = (t - c.t0) / TRIP;
+  if (s < 0 || !b.line) return { at: b.line?.[0] ?? c.figure.position.clone(), i: 0, up: true, wait: true };
+  const u = s % 1;
+  const up = u < 0.5;
+  const f = up ? u * 2 : 2 - u * 2;
+  const x = f * (b.line.length - 1);
+  const i = Math.min(Math.floor(x), b.line.length - 2);
+  return { at: b.line[i].clone().lerp(b.line[i + 1], x - i), ahead: b.line[up ? i + 1 : i], i, up };
+}
+function carry(b, t, dt) {
   for (const c of b.carriers ?? []) {
-    const t = (film / 20 + c.phase) % 1;
-    const up = t < 0.5;
-    const f = up ? t * 2 : 2 - t * 2;
-    const at = f * (b.line.length - 1);
-    const i = Math.min(Math.floor(at), b.line.length - 2);
-    c.figure.position.lerpVectors(b.line[i], b.line[i + 1], at - i);
-    const ahead = b.line[up ? i + 1 : i];
-    c.figure.lookAt(ahead.x, c.figure.position.y, ahead.z);
+    const { at, ahead, up, wait } = carrierAt(b, c, t);
+    c.figure.visible = !wait;
+    if (wait) continue;
+    c.figure.position.copy(at);
+    c.figure.lookAt(ahead.x, at.y, ahead.z);
     act(c, up ? 'carry' : 'walk');
     if (c.mixer && !still) c.mixer.update(dt);
   }
-}
-// The crew of a task (plan 0006, D10): the person and its helpers, the
-// crew of the rate of its work (`crew` of the event); each helper works
-// round the place of the task with the clip of the trade.
-const helpers = new Set();
-async function crew(b, d, trade) {
-  const kit = await body;
-  const list = [];
-  for (let k = 1; k < (d.crew ?? 1); k++) {
-    const figure = SkeletonUtils.clone(kit.scene);
-    const h = { figure, mixer: kit.clips.length ? new THREE.AnimationMixer(figure) : null, clips: kit.clips, clip: null, work: WORK[trade] ?? 'carry' };
-    figure.position.copy(spot(b, d.task, k * 3 + b.done));
-    figure.lookAt(b.group.position.x, figure.position.y, b.group.position.z);
-    stage.shade(figure);
-    scene.add(figure);
-    helpers.add(h);
-    list.push(h);
-  }
-  (b.crews ??= {})[d.task] = list;
 }
 
 // The parts of a task in a time lapse: the page reads the elements of the
@@ -547,48 +748,13 @@ async function grass(b, weeds) {
   b.grass[1].count = Math.round((GRASS / 7) * weeds);
 }
 
-// The place of a person at work: on the scaffold of the band of its task
-// (scaffold_N of a task ..._N), or round the lot.
-function spot(b, task, i) {
-  const m = /_(\d+)$/.exec(task ?? '');
-  const sc = m && b.parts['scaffold_' + m[1]];
-  const a = (i * 2.399) % (2 * Math.PI);
-  if (sc?.length) {
-    const box = new THREE.Box3();
-    for (const part of sc) box.expandByObject(part);
-    const c = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    return new THREE.Vector3(c.x + Math.cos(a) * size.x / 2, box.min.y + 0.05, c.z + Math.sin(a) * size.z / 2);
-  }
-  const at = b.group.getWorldPosition(new THREE.Vector3());
-  return at.add(new THREE.Vector3(Math.cos(a) * 10, 0, Math.sin(a) * 10));
-}
-function walk(p, to) {
-  p.from.copy(p.figure.position);
-  p.to.copy(to);
-  p.start = performance.now();
-  p.startDay = eventDay;
-  // At 1.4 m/s of the world (docs/world.md, "Time").
-  p.walkDays = Math.max(p.from.distanceTo(p.to) / 1.4 / 86400, 1e-6);
-}
-
-// The people now: a walk takes 3 s (in a time lapse, its days at 1.4
-// m/s); a person at work does the work of its trade (or bobs with no
-// clips), unless the reader asks for no motion.
+// The people now: each figure at its place and with its clip (with no
+// motion when the reader asks for none).
 function walking(now, dt) {
-  for (const h of helpers) {
-    act(h, h.work);
-    if (h.mixer && !still) h.mixer.update(dt);
-  }
-  for (const b of builds.values()) if (b.carriers?.length) carry(b, lapse ? lapse.day : now / 1000 / 2, dt);
-  for (const p of people.values()) {
-    const f = lapse ? Math.min((lapse.day - p.startDay) / p.walkDays, 1) : Math.min((now - p.start) / 3000, 1);
-    p.figure.position.lerpVectors(p.from, p.to, still ? 1 : f);
-    if (f < 1) p.figure.lookAt(p.to.x, p.figure.position.y, p.to.z);
-    act(p, f < 1 ? 'walk' : p.task ? WORK[p.job] ?? 'carry' : 'none');
-    if (p.mixer && !still) p.mixer.update(dt);
-    if (!p.mixer && p.task && !still) p.figure.position.y = p.to.y + Math.abs(Math.sin(now / 200)) * 0.15;
-  }
+  const t = clock();
+  for (const p of people.values()) step(p, t, dt, now);
+  for (const h of helpers) step(h, t, dt, now);
+  for (const b of builds.values()) if (b.carriers?.length) carry(b, t, dt);
 }
 
 // What an event tells, in words.
@@ -658,37 +824,62 @@ async function take(e) {
     p.build = b;
     p.status.textContent = `at ${b.id.slice(0, 12)}`;
     p.job = d.trade;
-    walk(p, spot(b, null, people.size));
+    p.work = WORK[d.trade] ?? 'carry';
+    // A person that waits on the lot, or that is on its way out of it,
+    // goes back to work; another walks in.
+    const t = clock(eventDay);
+    const back = p.waiting || (p.leaving && !p.gone && p.from === b);
+    p.waiting = false;
+    if (back) toPlace(p, placeOf(b, null), t);
+    else come(b, p, t, placeOf(b, null));
+    p.from = b;
   }
+  // A free person and its crew wait round the lot (the construction can
+  // take them again soon); they walk out of it at the end of the stage.
   if (e.kind === 'released') {
     const p = await person(e.who);
-    p.build = null;
+    const t = clock(eventDay);
+    for (const w of [p, ...p.helpers]) toPlace(w, placeOf(b, null), t);
+    p.waiting = true;
+    p.task = null;
     p.status.textContent = 'free';
-    walk(p, gate);
   }
   if (e.kind === 'task_started') {
     const p = await person(e.who);
     p.task = d.task;
     p.status.textContent = `works on ${d.task}`;
-    // The person goes to the place of its task, and works there.
-    const at = spot(b, d.task, people.size + b.done);
-    walk(p, at);
+    // The person and its crew go to the place of the task, and work round
+    // it (plan 0006, D10: the crew of the rate of its work, `crew` of the
+    // event). A crew that grows takes people that walk in; a helper with
+    // no work in this task works round the lot.
+    const t = clock(eventDay);
+    const pl = placeOf(b, d.task);
+    toPlace(p, pl, t);
+    const n = (d.crew ?? 1) - 1;
+    const kit = await body;
+    while (p.helpers.length < n) {
+      const h = Object.assign(worker(kit, p.work), { boss: p });
+      come(b, h, t, pl);
+      helpers.add(h);
+      p.helpers.push(h);
+    }
+    p.helpers.forEach((h, k) => toPlace(h, k < n ? pl : placeOf(b, null), t));
     b.task = d.task;
-    b.workY = at.y - b.group.position.y;
-    await crew(b, d, p.job);
+    b.workY = pl.c.y - b.group.position.y;
     if (lapse) await grow(b, e);
   }
   if (e.kind === 'task_done') {
     b.done += 1;
     const p = await person(e.who);
     p.task = null;
-    for (const h of b.crews?.[d.task] ?? []) { h.figure.removeFromParent(); helpers.delete(h); }
-    delete b.crews?.[d.task];
   }
   if (e.kind === 'stage_started') {
     b.stage = d;
+    depart(b, clock(eventDay));
+    // A change makes a new statue: it has no age.
+    if (d.work === 'change') b.aged = null;
     // The carriers of the path, with the means of the time (plan 0006, D6).
-    carriers(b, d.work === 'build' && d.means?.includes('carry_path') ? d.path : null);
+    carriers(b, d.work === 'build' && d.means?.includes('carry_path') ? d.path : null, clock(eventDay));
     if (d.date) b.date0 = new Date(Date.parse(d.date) - d.from * 86400000);
     // A change of the lot: the people take down the old parts where they
     // stand; the next build is on the new lot.
@@ -718,7 +909,10 @@ async function take(e) {
     for (const part of b.parts[d.task] ?? []) part.removeFromParent();
     delete b.parts[d.task];
   }
-  if (['done', 'stopped', 'failed'].includes(e.kind)) b.status = e.kind;
+  if (['done', 'stopped', 'failed'].includes(e.kind)) {
+    b.status = e.kind;
+    depart(b, clock(eventDay));
+  }
   b.state.textContent = `${b.done} of ${b.tasks} tasks, ${b.elements} elements, ${b.status}`;
   log(e);
 }
@@ -775,17 +969,28 @@ const lapse = params.get('follow') ? {
     await queue;
     this.place();
   },
+  // The parts of the film: a pause goes at the speed of the work while the
+  // people walk out of the lot (WAY s), then at its own speed.
+  parts() {
+    const out = [];
+    this.segments.forEach((s, i) => {
+      out.push({ day: s.day, pause: false });
+      const fast = s.day + WAY * this.days;
+      if (s.pause && fast < (this.segments[i + 1]?.day ?? Infinity)) out.push({ day: fast, pause: true });
+    });
+    return out;
+  },
   // The speed at a day: a pause of the construction is faster.
   rate(day) {
     let rate = this.days;
-    for (const s of this.segments) if (s.day <= day) rate = s.pause ? this.pause : this.days;
+    for (const s of this.parts()) if (s.day <= day) rate = s.pause ? this.pause : this.days;
     return rate;
   },
   // The seconds of the film at a day, and the day at a second of the film.
   film(day) {
     let t = 0;
     let last = 0;
-    for (const s of [...this.segments, { day: Infinity }]) {
+    for (const s of [...this.parts(), { day: Infinity }]) {
       const upto = Math.min(s.day, day);
       if (upto > last) t += (upto - last) / this.rate(last);
       last = Math.max(last, upto);
@@ -969,7 +1174,7 @@ if (lapse) {
 
 // The state of the page, for a test: the lots and the people; and the
 // time lapse, for a video.
-window.WORLD = { builds, people, places, trucks };
+window.WORLD = { builds, people, helpers, places, trucks };
 const draw = () => { walking(performance.now(), 1 / 30); controls.update(); renderer.render(scene, camera); };
 window.TIMELAPSE = lapse && {
   to: (day) => lapse.to(day).then(draw),
@@ -978,6 +1183,8 @@ window.TIMELAPSE = lapse && {
   get end() { return lapse.end; },
   get days() { return lapse.days; },
   get film() { return lapse.film(lapse.end); },
+  // The second of the film at a day.
+  filmAt: (day) => lapse.film(day),
 };
 await Promise.all(ready);
 window.READY = true;

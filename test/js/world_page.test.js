@@ -116,11 +116,11 @@ test('the time lapse of the statue on the hill: the clock of its log, the scaffo
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const { port } = server.address();
-    await page.goto(`http://127.0.0.1:${port}/review/world.html?follow=1&still=1&days=50&view=front&events=${dir}/events.jsonl&places=${dir}/places.json&files=${dir}&worker=${dir}/worker.glb`);
+    await page.goto(`http://127.0.0.1:${port}/review/world.html?follow=1&still=1&days=5&view=front&events=${dir}/events.jsonl&places=${dir}/places.json&files=${dir}&worker=${dir}/worker.glb`);
     await page.waitForFunction(() => window.READY === true, null, { timeout: 60_000 });
     // The length of the film: the days of the site over the days in one second.
     assert.ok(Math.abs((await page.evaluate(() => window.TIMELAPSE.end)) - end) < 1e-6);
-    assert.equal(await page.evaluate(() => window.TIMELAPSE.days), 50);
+    assert.equal(await page.evaluate(() => window.TIMELAPSE.days), 5);
     // Day 0: the lot on the top of the hill, nothing built.
     const first = await page.evaluate(() => [...window.WORLD.builds.values()].map((b) => [b.group.position.y, Object.keys(b.parts).length]));
     assert.ok(Math.abs(first[0][0] - 138.32) < 0.01 && first[0][1] === 0, JSON.stringify(first));
@@ -134,8 +134,25 @@ test('the time lapse of the statue on the hill: the clock of its log, the scaffo
     }, id);
     for (const part of ['be', 'scaffold_3', 'form_3', 'pour_2']) assert.ok(state.parts.includes(part), JSON.stringify(state));
     assert.ok(!state.parts.includes('form_1'), 'the forms of the first band are off');
-    assert.ok(state.people >= 1 && state.clips.includes('pour'), JSON.stringify(state));
+    assert.ok(state.people >= 1, JSON.stringify(state));
     assert.match(state.label, /^Day \d+ · build · pour_3/);
+    // The people move all the time, as in a time lapse of a site: over 2 s
+    // of the film they walk round their places and do the work of their
+    // trades at the stops.
+    const moves = await page.evaluate(async ({ order, from }) => {
+      const b = window.WORLD.builds.get(order);
+      const near = () => [...window.WORLD.people.values()].filter((p) => p.build === b && p.figure.visible);
+      const before = new Map(near().map((p) => [p.name, p.figure.position.clone()]));
+      const clips = new Set();
+      for (let k = 1; k <= 20; k++) {
+        await window.TIMELAPSE.at(from + k * 0.1);
+        for (const p of near()) clips.add(p.clip);
+      }
+      const moved = near().filter((p) => before.has(p.name) && before.get(p.name).distanceTo(p.figure.position) > 0.5);
+      return { clips: [...clips], moved: moved.length, people: before.size };
+    }, { order: id, from: await page.evaluate((d) => window.TIMELAPSE.filmAt(d), day(pour) + 0.01) });
+    const work = ['carry', 'set_panel', 'pour', 'trowel', 'hammer', 'climb', 'guide'];
+    assert.ok(moves.moved >= 1 && moves.clips.includes('walk') && moves.clips.some((c) => work.includes(c)), JSON.stringify(moves));
     // The camera of the URL: the front of the statue, from the south of the lot.
     const cam = await page.evaluate((order) => {
       const b = window.WORLD.builds.get(order);
