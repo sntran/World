@@ -206,6 +206,14 @@ What is not as the plan says:
   over its task, the crew of each task, the grass of a pause. The
   scaffold goes in the first year of the pause and comes back for the
   repair of 1992 (no source: an estimate).
+- The people of the film (the owner, 2026-11-10: "they do not move";
+  "when construction pauses, they just disappear. They should leave
+  instead"): each person moves all the time round the place of its task
+  and works at each stop; the crew stays with its person from task to
+  task; a free person waits round the lot; at the end of a stage the
+  people walk out on the way to the lot (the path of the hill) and the
+  carriers walk down the path, in the first 4 s of a pause at the speed
+  of the work.
 - The reliefs are a part of the base, not a stage of their own.
 - A person is a task: the crews of the rates are in the days of a task,
   and the page shows one person for each task.
