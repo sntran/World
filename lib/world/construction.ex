@@ -121,7 +121,8 @@ defmodule World.Construction do
       stale: %{}
     }
 
-    s = record(s, "requested", nil, %{"budget" => budget, "level" => Atom.to_string(job.level)})
+    workers = Map.get(budget, "workers", Map.get(job, :workers, @workers))
+    s = record(s, "requested", nil, %{"budget" => budget, "level" => Atom.to_string(job.level), "workers" => workers})
     # A timer cannot send to an alias: the timer server sends it.
     if budget["seconds"],
       do:
@@ -158,11 +159,19 @@ defmodule World.Construction do
             cured: %{},
             days: %{},
             built: [],
-            workers_limit: Map.get(s.job.budget, "workers", @workers)
+            stages: Map.get(s.job, :stages, []),
+            stage: nil,
+            last_stage: nil,
+            allowed: :all,
+            fit: 1.0,
+            origin: Clock.at(s.log.clock),
+            age: 0.0,
+            pause_from: 0.0,
+            workers_limit: Map.get(s.job.budget, "workers", Map.get(s.job, :workers, @workers))
           })
 
         s = record(s, "plan_made", nil, Map.put(Plan.to_data(plan), "level", Atom.to_string(level)))
-        {:noreply, assign(s)}
+        {:noreply, s |> next_stage() |> assign()}
 
       {:error, triangles} ->
         stop(s, %{"reason" => "triangles", "triangles" => triangles})
@@ -349,6 +358,19 @@ defmodule World.Construction do
   # The concrete of a task has set: the tasks after it can start.
   def handle_info(:cured, s), do: s |> assign() |> finish()
 
+  # The day of the next stage of the site, and the end of a pause.
+  def handle_info(:stage, s), do: s |> next_stage() |> assign() |> finish()
+
+  def handle_info(:pause_over, s) do
+    days = day(s) - s.pause_from
+    s = age(s, days)
+    %{s | age: s.age + days} |> stage_done() |> finish()
+  end
+
+  # A year of a pause: the site gets old (plan 0006, D8).
+  def handle_info({:age, days}, %{stage: %{work: "pause"}} = s), do: {:noreply, age(s, days)}
+  def handle_info({:age, _}, s), do: {:noreply, s}
+
   defp elements(s, p, id, elements) do
     Enum.reduce(elements, s, fn {frame, part, shown}, s ->
       data = %{"task" => id, "part" => part.name, "glb" => key(shown), "matrix" => Frame.matrix(GLB.gl_frame(frame))}
@@ -405,9 +427,12 @@ defmodule World.Construction do
     now = Clock.wall()
 
     Enum.filter(s.waiting, fn t ->
-      Enum.all?(t.waits, &(MapSet.member?(s.done, &1) and Map.get(s.cured, &1, 0) <= now))
+      allowed?(s, t.id) and Enum.all?(t.waits, &(MapSet.member?(s.done, &1) and Map.get(s.cured, &1, 0) <= now))
     end)
   end
+
+  defp allowed?(%{allowed: :all}, _id), do: true
+  defp allowed?(s, id), do: MapSet.member?(s.allowed, id)
 
   # A construction with a haul (`World.Haul`) and a place asks for the
   # takeoff of each task whose waits are done (World.Drawing.materials/3):
@@ -465,6 +490,7 @@ defmodule World.Construction do
   # is busy until the end of its days on the clock of the world.
   defp give(s, p, task) do
     {days, wait} = days(s, task)
+    {days, wait} = {days * s.fit, wait * s.fit}
     task = Map.merge(task, %{days: days, wait: wait})
     waiting = Enum.reject(s.waiting, &(&1.id == task.id))
     s = %{s | idle: List.delete(s.idle, p), running: Map.put(s.running, p, task), waiting: waiting}
@@ -592,6 +618,10 @@ defmodule World.Construction do
         built: s.built -- changed
     }
 
+    # A change in a stage of a site: the tasks that take down are of it.
+    allowed = if s.allowed == :all, do: :all, else: MapSet.union(s.allowed, MapSet.new(removes, & &1.id))
+    s = %{s | allowed: allowed}
+
     remove =
       for t <- removes,
           do: %{"id" => t.id, "action" => "remove", "waits" => t.waits, "trade" => Atom.to_string(t.trade)}
@@ -631,6 +661,15 @@ defmodule World.Construction do
   end
 
   # The end: each task done, the people go, and the model is joined.
+  # The end of a stage of the site: each task of a build or a change is
+  # done.
+  defp finish(%{stage: %{work: work}, running: running} = s) when work != "pause" and running == %{} do
+    if Enum.any?(s.waiting, &allowed?(s, &1.id)), do: {:noreply, s}, else: s |> stage_done() |> finish()
+  end
+
+  defp finish(%{stage: %{}} = s), do: {:noreply, s}
+  defp finish(%{stages: [_ | _]} = s), do: {:noreply, s}
+
   defp finish(%{waiting: [], running: running, stale: stale} = s) when running == %{} and stale == %{} do
     s = Enum.reduce(s.idle, s, &let_go(&2, &1))
     s = if s.job.drawing, do: %{s | item: World.Drawing.assemble(s.job.drawing, s.made)}, else: s
@@ -668,6 +707,123 @@ defmodule World.Construction do
   end
 
   defp finish(s), do: {:noreply, s}
+
+  # --- The stages of a site (plan 0006, D6; World.Method) ---------------------------
+
+  defp next_stage(%{stages: []} = s), do: s
+
+  defp next_stage(%{stages: [st | rest]} = s) do
+    s = %{s | stages: rest, stage: st}
+
+    case st.work do
+      "build" ->
+        s = if st.repair, do: repair(s), else: s
+        names = closure(s.job.drawing, st.until) -- MapSet.to_list(s.done)
+        span = World.Site.span(World.Site.schedule(s.job.drawing, method(s), names))
+        s = %{s | allowed: MapSet.new(names), fit: fit(s, st, span)}
+        record(s, "stage_started", nil, stage_data(s, st))
+
+      "pause" ->
+        s = Enum.reduce(s.idle, %{s | allowed: MapSet.new(), fit: 1.0}, &let_go(&2, &1))
+        # The days that are left of the pause (a late stage has fewer).
+        days = st.to - max(day(s), st.from)
+
+        for y <- 1..max(floor(days / 365), 1),
+            y * 365 < days,
+            do: Process.send_after(self(), {:age, y * 365.0}, wall(s, y * 365.0))
+
+        Process.send_after(self(), :pause_over, wall(s, max(st.to - day(s), 0)))
+        record(%{s | pause_from: day(s)}, "stage_started", nil, stage_data(s, st))
+
+      "change" ->
+        # The place of the model in the game on its new lot (World.Yard).
+        job = Map.merge(st.job, %{lot: st.lot, geo: Map.get(Map.get(s.job, :geos, %{}), st.lot)})
+        # The new statue is new: it has no age.
+        s = change(%{s | age: 0.0}, job, Enum.map(job.drawing["nodes"], & &1["name"]))
+        removes = for t <- s.waiting, t.action == :remove, do: t
+        span = Enum.sum([0.0 | for(t <- removes, do: elem(days(s, t), 0))])
+        s = %{s | allowed: MapSet.new(removes, & &1.id), fit: fit(s, st, span)}
+        record(s, "stage_started", nil, stage_data(s, st))
+    end
+  end
+
+  # The end of a stage: the next starts at its day (or now when it is
+  # late), and no task starts before it.
+  defp stage_done(%{stage: st} = s) do
+    allowed = if s.stages == [], do: :all, else: MapSet.new()
+    s = %{s | stage: nil, allowed: allowed, fit: 1.0, last_stage: st.name}
+    s = record(s, "stage_done", nil, %{"name" => st.name, "work" => st.work})
+
+    case s.stages do
+      [next | _] -> Process.send_after(self(), :stage, wall(s, max(next.from - day(s), 0)))
+      [] -> :ok
+    end
+
+    s
+  end
+
+  # The days of the tasks of a stage, fitted to the days between its dates.
+  defp fit(_s, %{to: nil}, _span), do: 1.0
+  defp fit(s, st, span), do: max(st.to - max(day(s), st.from), 1) / max(span, 1.0e-6)
+
+  # The nodes of a build: the nodes of `until` and the nodes they wait for.
+  defp closure(drawing, "all"), do: Enum.map(drawing["nodes"], & &1["name"])
+
+  defp closure(drawing, until) do
+    root = hd(drawing["nodes"])["name"]
+    by_name = Map.new(drawing["nodes"], &{&1["name"], &1})
+
+    walk = fn walk, name, seen ->
+      Enum.reduce(World.Drawing.waits(by_name[name], root), MapSet.put(seen, name), &walk.(walk, &1, &2))
+    end
+
+    until |> Enum.reduce(MapSet.new(), &walk.(walk, &1, &2)) |> MapSet.to_list()
+  end
+
+  defp stage_data(s, st) do
+    tasks = if s.allowed == :all, do: [], else: Enum.sort(MapSet.to_list(s.allowed))
+
+    data = %{
+      "name" => st.name,
+      "work" => st.work,
+      "from" => st.from,
+      "to" => st.to,
+      "fit" => s.fit,
+      "text" => st.text,
+      "after" => s.last_stage,
+      "tasks" => tasks
+    }
+
+    if st.lot, do: Map.put(data, "lot", st.lot), else: data
+  end
+
+  # The day of the site now, from the start of the construction.
+  defp day(s), do: (Clock.at(s.log.clock) - s.origin) / Clock.day()
+  defp wall(s, days), do: Clock.to_wall(s.log.clock, round(days * Clock.day()))
+
+  # A pause: the built model gets old with the days (plan 0006, D8): each
+  # year of the pause and at its end. The concrete gets darker and weeds
+  # grow on the base (an estimate of a rate); in the year of the middle
+  # of the pause a part can go (`lost`).
+  defp age(s, days) do
+    st = s.stage
+    half = (st.to - st.from) / 2
+    lost = if days >= half and days - 365 < half, do: st.lost, else: []
+    years = (s.age + days) / 365
+
+    record(s, "aged", nil, %{
+      "days" => s.age + days,
+      "dirt" => Float.round(1 - :math.exp(-years / 8), 3),
+      "weeds" => Float.round(min(years / 5, 1.0), 3),
+      "lost" => lost
+    })
+  end
+
+  # A repair at the start of a build after a pause: the model is clean.
+  defp repair(s) do
+    lost = for st <- Map.get(s.job, :stages, []), st.work == "pause", l <- st.lost, do: l
+    record(%{s | age: 0.0}, "repaired", nil, %{"parts" => lost})
+  end
 
   defp sample(owner, {what, peak}) do
     {_, now} = World.memory()

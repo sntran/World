@@ -421,6 +421,16 @@
       "doc": "The stains of the sea air, for the shader of an app: no change of the shape."
     },
     {
+      "name": "method",
+      "type": "choice",
+      "values": [
+        "today",
+        "1974"
+      ],
+      "default": "today",
+      "doc": "The method of the site (plan 0006, D6): today (a crane, a pump, a scaffold of steel, forms of plywood) or 1974 (no machine: the people carry the materials up the path, mix the concrete on the site and pour it by hand). The model is the same; the days of the site are not. With 1974, a statue with a history (priv/history/NAME.json) follows its stages."
+    },
+    {
       "name": "sources",
       "type": "sources",
       "default": {},

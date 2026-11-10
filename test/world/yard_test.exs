@@ -82,7 +82,16 @@ defmodule World.YardTest do
     {:start, job} = Yard.place(%{id: "statue-geo", drawing: %{"kind" => "statue"}, item: fn _ -> part end})
     {:ok, hill} = World.Places.fetch("nui_nho")
     assert job.place == "nui_nho" and job.lot == "top" and job.geo == World.Places.geo(hill, "top")
-    assert %{data: %{"lot" => "top", "place" => "nui_nho"}} = List.last(Yard.state().log |> Log.events())
+    assert job.geos["cape"] == World.Places.geo(hill, "cape")
+    # A job with its lot (the first statue of 1974, at the cape).
+    {:start, cape} =
+      Yard.place(%{id: "statue-cape", drawing: %{"kind" => "statue"}, lot: "cape", item: fn _ -> part end})
+
+    assert cape.lot == "cape" and cape.geo == World.Places.geo(hill, "cape")
+
+    assert %{data: %{"lot" => "top", "place" => "nui_nho"}} =
+             Enum.find(Log.events(Yard.state().log), &(&1.data["order"] == "statue-geo"))
+
     {:ok, gid} = World.build(%{job | drawing: nil})
 
     assert {:ok, %{glb: <<"glTF", _::binary-8, n::little-32, "JSON", json::binary-size(n), _::binary>>}} =

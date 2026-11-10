@@ -242,6 +242,32 @@ people before its node is made again, the last built first (a task
 the days of the task that made it; `element_removed` when it is down).
 A change of the lot (`lot` of the job) drops each node.
 
+A site has a method (plan 0006, D6; `World.Method`): the option
+`method` of an order (`today` or `1974` for a statue). The method gives
+the rates of the crews (`World.Site`), the most people on the site (50),
+and the stages of the construction. Today is one stage that builds
+each node. 1974 is the true history of the statue on Núi Nhỏ
+(`priv/history/tuong_chua_kito_vua.json`, each fact with its sources):
+
+1. `first_build`: the first statue (8.6 m on a base of 5 m) at the cape
+   of Nghinh Phong, up to the fourth band of its cast, from 1 July 1972;
+2. `first_pause`: the land is claimed; the part that is built stands;
+3. `first_down`: the change of 16 February 1974 gives the order its
+   full options and the lot on the top of the hill: the first statue is
+   taken down (`changed`, `remove/NODE`, `element_removed`);
+4. `rough`: the rough structure on the top, to 30 April 1975;
+5. `pause`: 17 years with no work; the statue gets old (`aged`: each
+   year, the dirt of the concrete and the weeds from 0 to 1, and the
+   copper cable of the lightning rod that goes);
+6. `finish`: the repair (`repaired`), the render, the halo, the stair,
+   the rail, to 1 December 1994.
+
+Each stage starts at its date (`stage_started`, with its days from the
+start and its `fit`) and ends when its tasks are done (`stage_done`). The
+days of the tasks of a stage are fitted to the days between its dates;
+between two stages no task starts. The model at the end is the model of
+the method of today.
+
 ## The plan from a drawing
 
 A drawing with skills (a blueprint in data: the statue, the tower) is

@@ -89,19 +89,28 @@ defmodule World.Site do
   and the last day of each task (`%{name => {first, last}}`, from day 0),
   each after the last day and the wait of each task it waits for
   (`World.Plan.of_drawing/1`). The work of a node is its data, or one
-  task of an hour.
+  task of an hour. With `names`, the tasks of those nodes only (a stage
+  of a site): a wait for another node is no wait.
   """
-  def schedule(drawing, method \\ "today") do
+  def schedule(drawing, method \\ "today", names \\ :all) do
     tasks = Map.new(World.Plan.of_drawing(drawing).tasks, &{&1.id, &1})
     by_name = Map.new(drawing["nodes"], &{&1["name"], &1})
 
-    Enum.reduce(World.Drawing.order(drawing), %{}, fn name, acc ->
+    names =
+      if names == :all,
+        do: World.Drawing.order(drawing),
+        else: Enum.filter(World.Drawing.order(drawing), &(&1 in names))
+
+    Enum.reduce(names, %{}, fn name, acc ->
       t = tasks[name]
       node = by_name[t.id]
-      first = Enum.max([0.0 | for(w <- t.waits, do: elem(acc[w], 1) + wait(by_name[w], method))])
+      first = Enum.max([0.0 | for(w <- t.waits, acc[w], do: elem(acc[w], 1) + wait(by_name[w], method))])
       Map.put(acc, t.id, {first, first + days(Map.get(node, "work") || %{"task" => 1}, method)})
     end)
   end
+
+  @doc "The days of a schedule: its last day (0 with no task)."
+  def span(schedule), do: Enum.max([0.0 | for({_, {_, last}} <- schedule, do: last)])
 
   defp wait(node, method), do: if(c = node["cure"], do: cure(c, method), else: 0.0)
 end

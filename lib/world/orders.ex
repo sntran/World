@@ -302,7 +302,31 @@ defmodule World.Orders do
     end
   end
 
-  defp new_job(order, lvl) do
+  # An order with the option `method` (plan 0006, D6) has its method, the
+  # most people on its site, and the stages of its site (World.Method):
+  # the job of a stage with options is the order with them, and the job
+  # starts with the job of its first stage.
+  defp new_job(%{"options" => %{"method" => method}} = order, lvl) do
+    stages =
+      for st <- World.Method.stages(order) do
+        if st.options,
+          do: Map.put(st, :job, one_job(update_in(order, ["options"], &Map.merge(&1, st.options)), lvl)),
+          else: st
+      end
+
+    job = one_job(order, lvl)
+    first = hd(stages)
+    start = if first[:job], do: Map.take(first.job, [:item, :scene, :drawing]), else: %{}
+
+    job
+    |> Map.merge(start)
+    |> Map.merge(%{method: method, stages: stages, workers: World.Method.workers(method)})
+    |> then(&if(first.lot, do: Map.put(&1, :lot, first.lot), else: &1))
+  end
+
+  defp new_job(order, lvl), do: one_job(order, lvl)
+
+  defp one_job(order, lvl) do
     {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
     targets = Map.new(Map.get(order, "targets", %{}), fn {k, [x, y, z]} -> {k, {x, y, z}} end)
 

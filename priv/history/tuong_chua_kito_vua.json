@@ -1,5 +1,5 @@
 {
-  "note": "The history of the construction of the statue of Christ on Núi Nhỏ (Tao Phùng), Vũng Tàu, from the web on 2026-11-10 (plan 0006). Each fact names its sources; the sources do not agree on some dates, and each such fact says so. The method 1974 of the statue (plan 0006, D3) takes its stages, its change and its site from these facts. A value with no source is an estimate, marked with \"estimate\".",
+  "note": "The history of the construction of the statue of Christ on Núi Nhỏ (Tao Phùng), Vũng Tàu, from the web on 2026-11-10 (plan 0006). Each fact names its sources; the sources do not agree on some dates, and each such fact says so. The method 1974 of the statue (plan 0006, D3) takes its stages, its change and its site from these facts. A value with no source is an estimate, marked with \"estimate\". Each stage has its work for the method 1974 (\"work\": build, pause or change): a build makes the nodes of \"until\" and the nodes they wait for (\"all\": each node), a change gives the order new options and a new lot (\"lot\", a lot of the place nui_nho) and takes down what it drops, and a pause leaves the site to get old (\"lost\": the parts that go).",
   "sources": {
     "viwiki": {
       "title": "Tượng Chúa Kitô Vua (Vũng Tàu)",
@@ -163,7 +163,26 @@
       "text": "The first statue, 10 m on a base of 5 m, at the cape of Nghinh Phong.",
       "facts": [
         "first_site"
-      ]
+      ],
+      "work": "build",
+      "lot": "cape",
+      "until": [
+        "pour_4"
+      ],
+      "options": {
+        "height": 8.6,
+        "span": 7.3,
+        "hand": 0.8,
+        "base_width": 7.0,
+        "base_depth": 7.0,
+        "base_height": 3.8,
+        "plinth_height": 1.2,
+        "plinth_radius": 2.0,
+        "terrace": 0.0,
+        "steps": 40,
+        "windows": []
+      },
+      "options_estimate": "The sizes of the first statue have no source but the facts: 10 m on a base of 5 m (the figure of 8.6 m and the dome of 1.4 m make the 10 m, as the 27.5 m and the dome of the statue of Núi Nhỏ make its 32 m; the base of 3.8 m and the plinth of 1.2 m make the 5 m)."
     },
     {
       "name": "first_pause",
@@ -173,7 +192,8 @@
       "text": "The work stops: the land is claimed by Buddhists. The part that is built stands.",
       "facts": [
         "first_site"
-      ]
+      ],
+      "work": "pause"
     },
     {
       "name": "first_down",
@@ -184,7 +204,10 @@
       "text": "The agreement gives the cape to the Buddhists: the first statue is taken down.",
       "facts": [
         "first_site"
-      ]
+      ],
+      "work": "change",
+      "lot": "top",
+      "options": {}
     },
     {
       "name": "rough",
@@ -200,6 +223,17 @@
         "carry",
         "scaffold_hard",
         "rough_done"
+      ],
+      "work": "build",
+      "until": [
+        "slab_1",
+        "slab_2",
+        "slab_3",
+        "slab_4",
+        "slab_5",
+        "slab_6",
+        "slab_7",
+        "slab_8"
       ]
     },
     {
@@ -210,6 +244,10 @@
       "text": "No work: the rough statue stands on the hill and gets old; weeds cover the site; the copper cable of the lightning rod is stolen.",
       "facts": [
         "pause"
+      ],
+      "work": "pause",
+      "lost": [
+        "the copper cable of the lightning rod"
       ]
     },
     {
@@ -222,7 +260,10 @@
         "permit_1992",
         "finish",
         "inauguration"
-      ]
+      ],
+      "work": "build",
+      "until": "all",
+      "repair": true
     }
   ],
   "changes": [

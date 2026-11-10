@@ -28,10 +28,21 @@ defmodule World.BuildSpec do
     {:ok, m} = Machine.load(Path.join(dir, "Run.tla"), paths: [@specs])
     {:ok, init} = Machine.init_states(m)
 
-    events
-    |> Enum.reduce_while({:ok, init}, fn e, {:ok, states} ->
-      e
-      |> actions()
+    # The tasks of a stage of a site (plan 0006) arrive at its start, as
+    # the materials of a task: a task of a later stage is not ready.
+    {steps, _} =
+      Enum.map_reduce(events, MapSet.new(), fn
+        %{kind: "stage_started", order: b, data: d} = e, seen ->
+          new = for t <- Map.get(d, "tasks", []), not MapSet.member?(seen, task(b, t)), do: task(b, t)
+          {{e, actions(e) ++ for(t <- new, do: {"Arrive", [b, t]})}, MapSet.union(seen, MapSet.new(new))}
+
+        e, seen ->
+          {{e, actions(e)}, seen}
+      end)
+
+    steps
+    |> Enum.reduce_while({:ok, init}, fn {e, actions}, {:ok, states} ->
+      actions
       |> Enum.reduce_while({:cont, {:ok, states}}, fn {name, args}, {:cont, {:ok, states}} ->
         case step(m, states, name, args, e) do
           {:cont, _} = next -> {:cont, next}
@@ -77,6 +88,13 @@ defmodule World.BuildSpec do
   defp action(%{kind: "task_started", order: b, who: p, data: d}), do: {"Start", [b, p, task(b, d["task"])]}
   defp action(%{kind: "task_done", order: b, who: p, data: d}), do: {"Finish", [p, task(b, d["task"])]}
   defp action(%{kind: "released", order: b, who: p}), do: {"Release", [b, p]}
+  # Between two stages of a site (plan 0006), and in a stage of a pause,
+  # the site is in a pause: no task starts.
+  defp action(%{kind: "stage_done", order: b, data: %{"work" => w}}) when w != "pause", do: {"Pause", [b]}
+
+  defp action(%{kind: "stage_started", order: b, data: %{"work" => w, "after" => a}}) when w != "pause" and a != nil,
+    do: {"Resume", [b]}
+
   defp action(%{kind: "done", order: b}), do: {"Done", [b]}
   defp action(%{kind: "stopped", order: b}), do: {"Deadline", [b]}
   defp action(%{kind: "paused", order: b}), do: {"Pause", [b]}
@@ -101,7 +119,9 @@ defmodule World.BuildSpec do
     hires = for %{kind: "hired", who: p, data: d} <- events, into: %{}, do: {p, d["trade"]}
 
     budgets =
-      for %{kind: "requested", order: b, data: d} <- events, into: %{}, do: {b, get_in(d, ["budget", "workers"]) || 4}
+      for %{kind: "requested", order: b, data: d} <- events,
+          into: %{},
+          do: {b, d["workers"] || get_in(d, ["budget", "workers"]) || 4}
 
     """
     ---- MODULE Run ----
@@ -114,7 +134,7 @@ defmodule World.BuildSpec do
     RunPeople == #{set(Map.keys(hires))}
     RunSkill == #{fun(hires, &str/1)}
     RunBudget == #{fun(budgets, &Integer.to_string/1)}
-    RunHauled == #{set(for %{kind: "parts_asked", order: b, data: d} <- events, uniq: true, do: task(b, d["task"]))}
+    RunHauled == #{set(Enum.uniq(for(%{kind: "parts_asked", order: b, data: d} <- events, do: task(b, d["task"])) ++ for(%{kind: "stage_started", order: b, data: d} <- events, t <- Map.get(d, "tasks", []), do: task(b, t))))}
     ====
     """
   end

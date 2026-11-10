@@ -574,6 +574,10 @@ its trade and the tasks that it waits for), `hired`, `task_started`,
 its matrix), `released`, `paused`, `resumed`, `changed` (the tasks
 made again, the nodes kept, the tasks that take down what it drops,
 the new lot), `element_removed` (a part that people took down),
+`stage_started` and `stage_done` (a stage of the method of the site:
+its name, its work, its days and its fit, its tasks), `aged` (a pause
+of a site: its days, the dirt, the weeds, the parts that go),
+`repaired`,
 `task_dropped`,
 `done` (the model is complete), `stopped`, `failed` and `run_done` (the
 time and the memory). A comment line

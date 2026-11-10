@@ -462,6 +462,10 @@ of the base, and the figure looks to +y.
 - **The far form.** The robe, the arms from hand to hand, the head, the
   halo ring and the base: at most 300 triangles (R9 of plan 0008).
 
+The option `method` (`today` by default, or `1974`) is the method of
+the site (plan 0006, `World.Method`): the same model, other days and
+other stages (`docs/world.md`, "A job, from start to end").
+
 The extras: `"sizes"` (each size of the order with its value, its unit
 and its source; a size with no source has the source `"estimate (no
 source)"`), `"weathering"` (0 to 1, the stains of the sea air, for the

@@ -116,14 +116,21 @@ defmodule World.Yard do
 
   defp open?(s, place), do: MapSet.member?(s.open, place)
 
-  # A job at a place with a terrain goes to its first lot (plan 0006, D4),
-  # and its model has its place in the game (D5).
+  # A job at a place with a terrain goes to its lot (`lot` of the job,
+  # plan 0006, D7), or to the first lot (D4); its model has its place in
+  # the game (D5), and the job has the place in the game of each lot, for
+  # a change of the lot.
   defp lot(job) do
     {:ok, p} = Places.fetch(job.place)
 
     case Places.lots(p) do
-      [] -> job
-      [l | _] -> Map.merge(job, %{lot: l["name"], geo: Places.geo(p, l["name"])})
+      [] ->
+        job
+
+      [l | _] = lots ->
+        name = if Enum.any?(lots, &(&1["name"] == job[:lot])), do: job.lot, else: l["name"]
+        geos = Map.new(lots, &{&1["name"], Places.geo(p, &1["name"])})
+        Map.merge(job, %{lot: name, geo: geos[name], geos: geos})
     end
   end
 
