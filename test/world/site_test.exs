@@ -7,6 +7,7 @@ defmodule World.SiteTest do
   alias World.{Clock, Detail, Drawing, Log, Orders, Site, Standards}
 
   doctest Site
+  doctest World.Skills.Pour
 
   test "the clock of the world: one start for the node, the scale of the application" do
     a = Clock.world()
@@ -31,6 +32,7 @@ defmodule World.SiteTest do
 
     for c <- Site.cures(), m <- Site.methods(), do: assert(Site.cure(c, m) > 0)
     assert Site.cure("strip") == 1.0 and Site.cure("lift", "1974") == 4.0
+    assert Site.rate("concrete") == Site.rate("concrete", "today")
     assert Site.work_of(%{}) == %{}
     assert Standards.names({"site", "takeoff"}) -- ~w(brick cement mortar paint rebar roof_sheet steel) == []
   end
@@ -65,6 +67,13 @@ defmodule World.SiteTest do
     plain = %{"nodes" => [%{"name" => "a", "skill" => %{"note" => %{}}}]}
     assert Site.task(plain, "a", %{}) == {0.125, 0.0}
     assert Site.schedule(plain) == %{"a" => {0.0, 0.125}}
+  end
+
+  test "the parts of a site of 1974: the board of the mixing; a drawing with no nodes has none to keep" do
+    alias World.Skills.Mixing
+    assert Mixing.check(%{"at" => [1.0, 2.0]}, "m") == [] and Mixing.check(%{"at" => [1]}, "m") != []
+    assert Mixing.estimate(%{}, :far) == 0 and Mixing.estimate(%{}, :near) == 200
+    assert Drawing.fill(%{"drawing" => %{"name" => "none"}}, %{}) == %{"name" => "none", "sources" => []}
   end
 
   test "the work of a node is checked: a work of the rates and its amount, a cure of the table" do

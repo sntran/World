@@ -50,17 +50,24 @@ defmodule World.Skills.Pour do
     points = for {a, b, c} <- tris, {x, y, z} <- [a, b, c], do: {x, y, z + o.feet}
     faces = for i <- 0..(length(tris) - 1)//1, do: [3 * i, 3 * i + 1, 3 * i + 2]
 
-    part =
-      if tris == [],
-        do: nil,
-        else: Part.new(name, :part, [Mesh.new(points, faces, :concrete, angle: 60.0)], [Statue.port()])
+    part = Part.new(name, :part, [Mesh.new(points, faces, :concrete, angle: 60.0)], [Statue.port()])
 
     {part, %{"distances" => Cast.distances(s, marks, out, band), "temporary" => true}, %{}}
   end
 
-  # A triangle cut to the heights z0 to z1: the triangles of the polygon
-  # that is left (none when it is all out).
-  defp clip(tri, z0, z1) do
+  @doc """
+  A triangle (a list of three points) cut to the heights z0 to z1: the
+  triangles of the polygon that is left (the same turn), none when it is
+  all out.
+
+      iex> World.Skills.Pour.clip([{0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}], 0.0, 2.0)
+      [{{0.0, 0.0, 1.0}, {0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}}]
+      iex> World.Skills.Pour.clip([{0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}], 0.5, 2.0) |> length()
+      1
+      iex> World.Skills.Pour.clip([{0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}], 2.0, 3.0)
+      []
+  """
+  def clip(tri, z0, z1) do
     poly = tri |> cut(fn {_, _, z} -> z - z0 end) |> cut(fn {_, _, z} -> z1 - z end)
 
     case poly do

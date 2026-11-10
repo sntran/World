@@ -368,9 +368,9 @@ defmodule World.Construction do
     %{s | age: s.age + days} |> stage_done() |> finish()
   end
 
-  # A year of a pause: the site gets old (plan 0006, D8).
+  # A year of a pause: the site gets old (plan 0006, D8). Each year comes
+  # before the end of its pause (its time is before it).
   def handle_info({:age, days}, %{stage: %{work: "pause"}} = s), do: {:noreply, age(s, days)}
-  def handle_info({:age, _}, s), do: {:noreply, s}
 
   defp elements(s, p, id, elements) do
     Enum.reduce(elements, s, fn {frame, part, shown}, s ->
