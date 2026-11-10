@@ -87,7 +87,7 @@ defmodule World.PropsTest do
   end
 
   test "the props: their names, their ports, and a name that is not a prop" do
-    assert Props.names() == ["bottle", "fan", "non_la"]
+    assert Props.names() == ~w(bottle bucket fan hammer hard_hat non_la trowel)
     assert Props.on("fan") == "grip" and Props.on("bottle") == "grip" and Props.on("non_la") == "crown"
 
     for name <- Props.names() do
