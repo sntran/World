@@ -47,11 +47,13 @@ defmodule World.SiteTest do
 
     for i <- 2..8 do
       {_, under} = today["pour_#{i - 1}"]
-      {form, _} = today["form_#{i}"]
+      {scaffold, up} = today["scaffold_#{i}"]
+      {form, set} = today["form_#{i}"]
       {pour, _} = today["pour_#{i}"]
-      # The form of a band waits for the cure of the band under it (2 days).
-      assert_in_delta form, under + 2.0, 1.0e-9
-      assert pour >= elem(today["form_#{i}"], 1)
+      # The scaffold of a band waits for the cure of the band under it (2
+      # days), the forms for the scaffold, the pour for the forms.
+      assert_in_delta scaffold, under + 2.0, 1.0e-9
+      assert form >= up and pour >= set
     end
 
     # The work of the nodes: the concrete of the base, a band of the cast.

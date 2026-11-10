@@ -39,8 +39,9 @@ defmodule World.Method do
 
   @doc """
   The stages of an order: each a map with its `name`, its `work`
-  (`build`, `pause`, `change`), its first and last day from the start of
-  the construction (`from`, `to`: nil with no date), the nodes of a
+  (`build`, `pause`, `change`), its date (`date`, or nil), its first and
+  last day from the start of the construction (`from`, `to`: nil with no
+  date), the nodes of a
   build (`until`: a list of names or `"all"`), the options and the lot of
   a change or of the first build (`options`, `lot`), `repair` (a build
   that repairs what a pause left) and `lost` (the parts that a pause
@@ -57,6 +58,7 @@ defmodule World.Method do
             work: st["work"],
             text: st["text"],
             place: st["place"],
+            date: st["from"],
             from: Date.diff(Date.from_iso8601!(st["from"]), start),
             to: Date.diff(Date.from_iso8601!(st["to"]), start),
             until: Map.get(st, "until", "all"),
@@ -72,6 +74,7 @@ defmodule World.Method do
           %{
             name: "build",
             work: "build",
+            date: nil,
             text: nil,
             place: nil,
             from: 0,

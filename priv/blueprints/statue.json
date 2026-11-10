@@ -771,11 +771,64 @@
         }
       },
       {
+        "name": "scaffold_1",
+        "skill": {
+          "scaffold": {
+            "band": 1,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
         "name": "form_1",
         "skill": {
           "formwork": {
             "band": 1,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
           }
         },
         "from": [
@@ -792,7 +845,44 @@
                 "param": "height"
               }
             ]
-          },
+          }
+        },
+        "after": [
+          "scaffold_1"
+        ],
+        "temporary": true,
+        "down": "strip_1"
+      },
+      {
+        "name": "scaffold_2",
+        "skill": {
+          "scaffold": {
+            "band": 2,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_1"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
           "scaffold": {
             "product": [
               0.15,
@@ -811,13 +901,27 @@
         "skill": {
           "formwork": {
             "band": 2,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
           }
         },
         "from": [
           "survey"
         ],
         "after": [
+          "scaffold_2",
           "pour_1"
         ],
         "work": {
@@ -831,7 +935,41 @@
                 "param": "height"
               }
             ]
-          },
+          }
+        },
+        "temporary": true,
+        "down": "strip_2"
+      },
+      {
+        "name": "scaffold_3",
+        "skill": {
+          "scaffold": {
+            "band": 3,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_2"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
           "scaffold": {
             "product": [
               0.15,
@@ -850,13 +988,27 @@
         "skill": {
           "formwork": {
             "band": 3,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
           }
         },
         "from": [
           "survey"
         ],
         "after": [
+          "scaffold_3",
           "pour_2"
         ],
         "work": {
@@ -870,7 +1022,41 @@
                 "param": "height"
               }
             ]
-          },
+          }
+        },
+        "temporary": true,
+        "down": "strip_3"
+      },
+      {
+        "name": "scaffold_4",
+        "skill": {
+          "scaffold": {
+            "band": 4,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_3"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
           "scaffold": {
             "product": [
               0.15,
@@ -889,13 +1075,27 @@
         "skill": {
           "formwork": {
             "band": 4,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
           }
         },
         "from": [
           "survey"
         ],
         "after": [
+          "scaffold_4",
           "pour_3"
         ],
         "work": {
@@ -909,7 +1109,41 @@
                 "param": "height"
               }
             ]
-          },
+          }
+        },
+        "temporary": true,
+        "down": "strip_4"
+      },
+      {
+        "name": "scaffold_5",
+        "skill": {
+          "scaffold": {
+            "band": 5,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_4"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
           "scaffold": {
             "product": [
               0.15,
@@ -928,13 +1162,27 @@
         "skill": {
           "formwork": {
             "band": 5,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
           }
         },
         "from": [
           "survey"
         ],
         "after": [
+          "scaffold_5",
           "pour_4"
         ],
         "work": {
@@ -948,7 +1196,41 @@
                 "param": "height"
               }
             ]
-          },
+          }
+        },
+        "temporary": true,
+        "down": "strip_5"
+      },
+      {
+        "name": "scaffold_6",
+        "skill": {
+          "scaffold": {
+            "band": 6,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_5"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
           "scaffold": {
             "product": [
               0.15,
@@ -967,13 +1249,27 @@
         "skill": {
           "formwork": {
             "band": 6,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
           }
         },
         "from": [
           "survey"
         ],
         "after": [
+          "scaffold_6",
           "pour_5"
         ],
         "work": {
@@ -987,7 +1283,41 @@
                 "param": "height"
               }
             ]
-          },
+          }
+        },
+        "temporary": true,
+        "down": "strip_6"
+      },
+      {
+        "name": "scaffold_7",
+        "skill": {
+          "scaffold": {
+            "band": 7,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_6"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
           "scaffold": {
             "product": [
               0.15,
@@ -1006,13 +1336,27 @@
         "skill": {
           "formwork": {
             "band": 7,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
           }
         },
         "from": [
           "survey"
         ],
         "after": [
+          "scaffold_7",
           "pour_6"
         ],
         "work": {
@@ -1026,7 +1370,41 @@
                 "param": "height"
               }
             ]
-          },
+          }
+        },
+        "temporary": true,
+        "down": "strip_7"
+      },
+      {
+        "name": "scaffold_8",
+        "skill": {
+          "scaffold": {
+            "band": 8,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "after": [
+          "pour_7"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
           "scaffold": {
             "product": [
               0.15,
@@ -1045,13 +1423,27 @@
         "skill": {
           "formwork": {
             "band": 8,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
           }
         },
         "from": [
           "survey"
         ],
         "after": [
+          "scaffold_8",
           "pour_7"
         ],
         "work": {
@@ -1065,19 +1457,10 @@
                 "param": "height"
               }
             ]
-          },
-          "scaffold": {
-            "product": [
-              0.15,
-              {
-                "param": "height"
-              },
-              {
-                "param": "height"
-              }
-            ]
           }
-        }
+        },
+        "temporary": true,
+        "down": "strip_8"
       },
       {
         "name": "outside",
@@ -1096,7 +1479,17 @@
         "skill": {
           "pour": {
             "band": 1,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
           }
         },
         "from": [
@@ -1136,14 +1529,51 @@
             ]
           }
         },
-        "cure": "lift"
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_1",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_1"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "pour_2",
         "skill": {
           "pour": {
             "band": 2,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
           }
         },
         "from": [
@@ -1184,14 +1614,51 @@
             ]
           }
         },
-        "cure": "lift"
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_2",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_2"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "pour_3",
         "skill": {
           "pour": {
             "band": 3,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
           }
         },
         "from": [
@@ -1232,14 +1699,51 @@
             ]
           }
         },
-        "cure": "lift"
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_3",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_3"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "pour_4",
         "skill": {
           "pour": {
             "band": 4,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
           }
         },
         "from": [
@@ -1280,14 +1784,51 @@
             ]
           }
         },
-        "cure": "lift"
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_4",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_4"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "pour_5",
         "skill": {
           "pour": {
             "band": 5,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
           }
         },
         "from": [
@@ -1328,14 +1869,51 @@
             ]
           }
         },
-        "cure": "lift"
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_5",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_5"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "pour_6",
         "skill": {
           "pour": {
             "band": 6,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
           }
         },
         "from": [
@@ -1376,14 +1954,51 @@
             ]
           }
         },
-        "cure": "lift"
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_6",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_6"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "pour_7",
         "skill": {
           "pour": {
             "band": 7,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
           }
         },
         "from": [
@@ -1424,14 +2039,51 @@
             ]
           }
         },
-        "cure": "lift"
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_7",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_7"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "pour_8",
         "skill": {
           "pour": {
             "band": 8,
-            "bands": 8
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
           }
         },
         "from": [
@@ -1472,7 +2124,34 @@
             ]
           }
         },
-        "cure": "lift"
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_8",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_8"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
       },
       {
         "name": "field",
@@ -1573,6 +2252,29 @@
           "render": {
             "product": [
               0.984,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "unscaffold",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "scaffolder",
+        "after": [
+          "shell"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              1.2,
               {
                 "param": "height"
               },

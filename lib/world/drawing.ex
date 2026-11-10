@@ -500,7 +500,7 @@ defmodule World.Drawing do
 
   # A node: its errors, and its item (the part, or the item of the order).
   defp node(node, path, i, parts, known) when is_map(node) do
-    keys = ~w(name part item skill trade after from to at port joint turn offset temporary work cure)
+    keys = ~w(name part item skill trade after from to at port joint turn offset temporary work cure down)
 
     keys =
       if Map.has_key?(node, "repeat"),
@@ -513,7 +513,8 @@ defmodule World.Drawing do
         optional(node, "trade", path, &choice(&1, &2, World.Plan.trades())) ++
         optional(node, "temporary", path, &choice(&1, &2, [true, false])) ++
         optional(node, "work", path, &work/2) ++
-        optional(node, "cure", path, &choice(&1, &2, World.Site.cures()))
+        optional(node, "cure", path, &choice(&1, &2, World.Site.cures())) ++
+        optional(node, "down", path, &name/2)
 
     name = node["name"]
 
@@ -820,7 +821,7 @@ defmodule World.Drawing do
   detail of the process: each node made in the order of its waits
   (`make/3`), then put together (`assemble/2`).
   """
-  def build(raw) do
+  def build(raw, opts \\ []) do
     g = graph(raw["nodes"])
 
     made =
@@ -828,7 +829,7 @@ defmodule World.Drawing do
         Map.put(made, name, make(raw, name, inputs(raw, name, made)))
       end)
 
-    assemble(raw, made)
+    assemble(raw, made, opts)
   end
 
   @doc "The names of the nodes in the order of their waits: each node after the nodes that it waits for."

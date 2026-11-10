@@ -318,9 +318,10 @@ defmodule World.Orders do
     first = hd(stages)
     start = if first[:job], do: Map.take(first.job, [:item, :scene, :drawing]), else: %{}
 
+    # The drawing of the model at the end, for its replay.
     job
     |> Map.merge(start)
-    |> Map.merge(%{method: method, stages: stages, workers: World.Method.workers(method)})
+    |> Map.merge(%{method: method, stages: stages, workers: World.Method.workers(method), model: job.drawing})
     |> then(&if(first.lot, do: Map.put(&1, :lot, first.lot), else: &1))
   end
 
@@ -357,9 +358,33 @@ defmodule World.Orders do
     if file == "glb", do: glb, else: log
   end
 
+  # The replay of a drawing has each node that a person sees on the site
+  # (plan 0006, D9): the temporary nodes too (the scaffold, the forms, the
+  # rough bands), each with the task that puts it up and the task that
+  # takes it down (`from`, `to` of its extras).
+  defp make("replay", _order, lvl, _item, %{drawing: d} = job) when d != nil do
+    d = Map.get(job, :model, d)
+    stream = Detail.with(lvl, fn -> World.Drawing.build(d, stream: true) end)
+    scene = job.scene.(stream, split: true)
+    downs = Map.new(for n <- d["nodes"], n["down"], do: {n["name"], n["down"]})
+
+    nodes =
+      for n <- scene.nodes do
+        case n.extras do
+          %{"task" => task} -> %{n | extras: Map.merge(n.extras, from_to(task, downs[task]))}
+          _ -> n
+        end
+      end
+
+    GLB.encode(%{scene | nodes: nodes})
+  end
+
   defp make("replay", _order, _lvl, item, job), do: GLB.encode(job.scene.(item.(), split: true))
   defp make("parts", _order, _lvl, item, _job), do: parts(item.())
   defp make("receipt", order, lvl, item, job), do: receipt(order, lvl, job.scene.(item.(), []))
+
+  defp from_to(task, nil), do: %{"from" => task}
+  defp from_to(task, down), do: %{"from" => task, "to" => down}
 
   # A construction of the order by the people of the node: the files of
   # the model and the log of the construction, with its time (run_done).

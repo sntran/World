@@ -292,6 +292,7 @@ defmodule World.Construction do
     s = record(s, "task_done", p, task_data(task))
     # A task that takes down a part: the part goes (plan 0006, D7).
     s = if task.action == :remove, do: record(s, "element_removed", p, %{"task" => task.item}), else: s
+    s = downs(s, p, id)
     s = if s.job.drawing, do: place(s, p), else: elements(s, p, id, Map.get(s.elements, id, []))
     finish(assign(s))
   end
@@ -525,6 +526,17 @@ defmodule World.Construction do
   # The work of a task: the triangles of the meshes of its element that
   # nobody made yet, and the GLB of each part of the element that is new.
   # For a node of a drawing, the person makes the node first.
+  # The parts that a task takes down (`down` of their nodes, plan 0006,
+  # D9): the formwork at its strip, the scaffold at its fall, the rough
+  # concrete under the render.
+  defp downs(%{job: %{drawing: nil}} = s, _p, _id), do: s
+
+  defp downs(s, p, id) do
+    gone = for n <- s.job.drawing["nodes"], n["down"] == id, n["name"] in s.built, do: n["name"]
+    s = Enum.reduce(gone, s, &record(&2, "element_removed", p, %{"task" => &1}))
+    %{s | built: s.built -- gone}
+  end
+
   # To take down a part needs no work of the computer.
   defp work(_s, %{action: :remove}), do: fn -> %{triangles: %{}, glbs: %{}} end
 
@@ -790,6 +802,7 @@ defmodule World.Construction do
       "to" => st.to,
       "fit" => s.fit,
       "text" => st.text,
+      "date" => st.date,
       "after" => s.last_stage,
       "tasks" => tasks
     }

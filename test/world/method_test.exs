@@ -122,4 +122,21 @@ defmodule World.MethodTest do
     # About a year of the plan; more with the work of a slow computer.
     assert span > 300 and World.Site.span(World.Site.schedule(today.drawing)) < 400
   end
+
+  test "the replay of the statue has each part that a person sees on the site, with its tasks; the model passes its checks" do
+    glb = Orders.build(order("1974"), "mid", "replay") |> elem(1)
+    <<"glTF", _::binary-8, n::little-32, "JSON", json::binary-size(n), _::binary>> = glb
+    nodes = for n <- JSON.decode!(json)["nodes"], e = n["extras"], e["from"], into: %{}, do: {e["from"], e["to"]}
+
+    for i <- 1..8 do
+      assert nodes["scaffold_#{i}"] == "unscaffold" and nodes["form_#{i}"] == "strip_#{i}"
+      assert nodes["pour_#{i}"] == "tuong_chua_kito_vua"
+    end
+
+    # The parts of the end stay: no task takes them down.
+    assert Map.has_key?(nodes, "tuong_chua_kito_vua") and nodes["be"] == nil
+    {:ok, job} = Orders.job(order("1974"), "mid")
+    stream = World.Detail.with(:mid, fn -> Drawing.build(job.model, stream: true) end)
+    assert World.Check.model(stream) == :ok
+  end
 end

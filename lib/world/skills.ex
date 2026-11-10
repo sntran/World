@@ -6,7 +6,7 @@ defmodule World.Skills do
   [module]`); a skill there takes the place of a skill of the same name.
   """
 
-  alias World.Skills.{Base, Carve, Figure, Grille, Halo, Rail, Robe, Set, Shell, Site, Stair}
+  alias World.Skills.{Base, Carve, Figure, Grille, Halo, Rail, Robe, Scaffold, Set, Shell, Site, SiteStep, Stair}
   alias World.Skills.{Lantern, SpiralStair, Tower, TowerBody, TowerSite}
   alias World.Skills.{CastField, CastOutside, CastSurvey, Formwork, Pour, ShellSlab}
   alias World.Skills.{Column, Course, Flight, Footing, HousePlan, Iron, Opening, Paint, Plaster, Roof, Slab}
@@ -14,7 +14,7 @@ defmodule World.Skills do
   alias World.Skills.{BicycleFork, BicycleFrame, Crankset, Knuckle, Stand, Wheel}
   alias World.Skills.{Body, Engine, Fastener, Fork, Frame, Glass, Lamp, Panel, Seat, Spring, Swingarm}
 
-  @skills [Base, Carve, Figure, Grille, Halo, Rail, Robe, Set, Shell, Site, Stair] ++
+  @skills [Base, Carve, Figure, Grille, Halo, Rail, Robe, Scaffold, Set, Shell, Site, SiteStep, Stair] ++
             [Lantern, SpiralStair, Tower, TowerBody, TowerSite] ++
             [CastField, CastOutside, CastSurvey, Formwork, Pour, ShellSlab] ++
             [Column, Course, Flight, Footing, HousePlan, Iron, Opening, Paint, Plaster, Roof, Slab] ++
