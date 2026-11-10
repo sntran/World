@@ -370,6 +370,7 @@ function act(p, name) {
 const CARRIERS = 12;
 async function carriers(b, path) {
   for (const c of b.carriers ?? []) c.figure.removeFromParent();
+  b.trail?.removeFromParent();
   b.carriers = [];
   const place = [...places.values()].find((p) => p.terrain);
   if (!path || !place) return;
@@ -394,6 +395,21 @@ async function carriers(b, path) {
     const hit = down.intersectObject(place.ground, true)[0];
     if (hit) p.y = hit.point.y;
   }
+  // The path on the ground: a strip of earth, 1.5 m wide, 0.15 m over it.
+  const strip = [];
+  for (let i = 0; i < line.length; i++) {
+    const a = line[Math.max(i - 1, 0)], c = line[Math.min(i + 1, line.length - 1)];
+    const side = new THREE.Vector3(c.z - a.z, 0, a.x - c.x).normalize().multiplyScalar(0.75);
+    strip.push(line[i].clone().add(side).setY(line[i].y + 0.15), line[i].clone().sub(side).setY(line[i].y + 0.15));
+  }
+  const geometry = new THREE.BufferGeometry().setFromPoints(strip);
+  const index = [];
+  for (let i = 0; i + 1 < line.length; i++) index.push(2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2);
+  geometry.setIndex(index);
+  geometry.computeVertexNormals();
+  b.trail = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0xa08560, roughness: 1, side: THREE.DoubleSide }));
+  b.trail.receiveShadow = true;
+  scene.add(b.trail);
   const kit = await body;
   for (let i = 0; i < CARRIERS; i++) {
     const figure = SkeletonUtils.clone(kit.scene);
@@ -404,10 +420,12 @@ async function carriers(b, path) {
   }
   b.line = line;
 }
-// A carrier: up with a load, down with none; a trip in 2 days of the film.
+// A carrier: up with a load, down with none; a trip in 20 s of the film
+// (a carrier walks at the speed of the eye, not of the days).
 function carry(b, day, dt) {
+  const film = lapse ? day / lapse.days : day;
   for (const c of b.carriers ?? []) {
-    const t = (day / 2 + c.phase) % 1;
+    const t = (film / 20 + c.phase) % 1;
     const up = t < 0.5;
     const f = up ? t * 2 : 2 - t * 2;
     const at = f * (b.line.length - 1);
@@ -654,11 +672,23 @@ const lapse = params.get('follow') ? {
     const work = b.task && b.stage?.work !== 'pause' ? ` · ${b.task}` : '';
     const old = b.aged && b.stage?.work === 'pause' ? ` · the site gets old (${Math.round(b.aged.days / 365)} years)` : '';
     $('lapse').textContent = `Day ${Math.floor(this.day) + 1}${date}${stage}${work}${old}`;
-    // The old statue: the concrete gets darker in a pause (D8).
+    // The old statue: the concrete gets darker in a pause, and weeds
+    // grow on the base (D8).
     const dirt = b.aged ? b.aged.dirt : 0;
+    const weeds = b.aged ? b.aged.weeds : 0;
     if (dirt !== b.dirt) {
       b.dirt = dirt;
-      b.group.traverse((o) => { if (o.isMesh && o.material?.color) { o.userData.base ??= o.material.color.clone(); o.material = o.material.clone(); o.material.color.copy(o.userData.base).multiplyScalar(1 - 0.55 * dirt); } });
+      const base = new Set(b.parts.be ?? []);
+      const green = new THREE.Color(0x4f6b32);
+      b.group.traverse((o) => {
+        if (!o.isMesh || !o.material?.color) return;
+        o.userData.base ??= o.material.color.clone();
+        o.material = o.material.clone();
+        o.material.color.copy(o.userData.base).multiplyScalar(1 - 0.55 * dirt);
+        let p = o;
+        while (p && !base.has(p)) p = p.parent;
+        if (p) o.material.color.lerp(green, 0.45 * weeds);
+      });
     }
   },
 } : null;

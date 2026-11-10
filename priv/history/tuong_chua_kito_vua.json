@@ -175,7 +175,8 @@
       "work": "build",
       "lot": "cape",
       "until": [
-        "pour_4"
+        "pour_4",
+        "mixing"
       ],
       "options": {
         "height": 8.6,
@@ -249,7 +250,16 @@
         "slab_5",
         "slab_6",
         "slab_7",
-        "slab_8"
+        "slab_8",
+        "strip_1",
+        "strip_2",
+        "strip_3",
+        "strip_4",
+        "strip_5",
+        "strip_6",
+        "strip_7",
+        "strip_8",
+        "mixing"
       ],
       "means": [
         "carry_path",
@@ -258,7 +268,8 @@
         "bamboo_scaffold",
         "timber_forms"
       ],
-      "means_estimate": "No source says how the loads went up the scaffold or how the concrete was mixed in 1972 to 1975: the people carry the materials up the path (the fact carry: no source names a machine or a road for trucks to the top), mix the concrete by hand on a board, and lift the buckets with a pulley on the scaffold; the scaffold of bamboo and the forms of timber are the common means of a site of Việt Nam of the time (an estimate)."
+      "means_estimate": "No source says how the loads went up the scaffold or how the concrete was mixed in 1972 to 1975: the people carry the materials up the path (the fact carry: no source names a machine or a road for trucks to the top), mix the concrete by hand on a board, and lift the buckets with a pulley on the scaffold; the scaffold of bamboo and the forms of timber are the common means of a site of Việt Nam of the time (an estimate).",
+      "estimate": "The forms come off when their band has set (strip_N); the scaffold stays on the rough statue in the pause, for the finish (an estimate: no source says)."
     },
     {
       "name": "pause",
