@@ -468,8 +468,12 @@ async function crew(b, d, trade) {
 // (`again/NODE`) is the part of its node.
 async function grow(b, e) {
   const key = e.data.task.replace(/^again\//, '');
-  const done = lapse.pending.findIndex((x) => x.order === e.order && x.kind === 'task_done' && x.data.task === e.data.task);
-  if (done < 0) return;
+  // The end of this task: before the next start of a task of its name (a
+  // jump of the film can pass the end, and a later task of the name is
+  // not this one).
+  const same = (x) => x.order === e.order && x.data?.task === e.data.task;
+  const done = lapse.pending.findIndex((x) => same(x) && (x.kind === 'task_done' || x.kind === 'task_started'));
+  if (done < 0 || lapse.pending[done].kind !== 'task_done') return;
   const to = (lapse.pending[done].at - lapse.t0) / DAY;
   const from = (e.at - lapse.t0) / DAY;
   for (let i = done + 1; i < lapse.pending.length; i++) {
