@@ -781,6 +781,7 @@ for the bone `pelvis`. An option `delay` starts a person late, and
 | `tai_chi` | 16 s | The opening: the arms rise with the palms down and sink on bent knees; "wave hands like clouds" to the left and to the right, with the weight from one leg to the other and the waist turning. |
 | `yoga` | 24 s | Mountain with the palms together at the chest, the arms up, a forward fold, the tree on the left leg (the right foot at the left knee, the hands together over the head), warrior II to the left. |
 | `aerobics` | 8 s | At 120 beats a minute: a march with the knees up and the arms pumping, jumping jacks, steps to the side with punches, knee lifts with a clap. |
+| `carry`, `set_panel`, `pour`, `trowel`, `hammer`, `climb`, `guide` | 2 s each | The work of the trades of a site (plan 0006, D10): a load at the chest, a panel set up high, a pour from a bucket, the strokes of a trowel, the blows of a hammer, a climb of a scaffold, a load of a crane guided with an arm up. Two poses each, in a loop. |
 
 
 The flex of a hinge (the elbow, the wrist, the knee, the joints of the
@@ -822,6 +823,10 @@ in the pose and in each animation. The props now:
 | `fan` | `grip` | An open tai chi fan: ribs of bamboo of about 33 cm, a leaf of red silk, open to 160 degrees. |
 | `bottle` | `grip` | A bottle of water of 500 ml (65 by 205 mm), held at its side. |
 | `non_la` | `crown` | A nón lá: a cone of palm leaves of about 41 cm across and 19 cm high. |
+| `hard_hat` | `crown` | A hard hat of EN 397, about 30 by 22 cm. |
+| `bucket` | `grip` | A bucket of a site of 10 L. |
+| `trowel` | `grip` | A trowel of a mason, a blade of 28 by 12 cm. |
+| `hammer` | `grip` | A hammer of a site, a handle of 33 cm. |
 
 A node of an assembly can also connect to a port on a bone (`at:
 "grip_r"`): it goes in the node of the bone too.
@@ -1745,6 +1750,14 @@ amount follows the options (`{"product": [0.123, {"param": "height"},
 {"param": "height"}, {"param": "wall"}]}`: the concrete of a band of the
 cast of a statue). The days of a task are the amounts over the rates of
 their crews.
+
+A node can name the node whose task takes it down on the site
+(`"down"`, plan 0006, D9): when that task is done, its element goes
+(`element_removed`). The statue has the stages of a site as nodes: the
+scaffold of each band (`scaffold_N`, down at `unscaffold`), its forms
+(`form_N`, down at `strip_N`), and the band in rough grey concrete after
+its pour (`pour_N`, down when the statue in washed stone is set), each
+temporary.
 
 A node with `"temporary": true`, or whose skill gives `"temporary" =>
 true` in its data, is not in the model: the people make it, and the

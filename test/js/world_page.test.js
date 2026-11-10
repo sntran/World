@@ -101,6 +101,58 @@ test('the world page draws the hill of Núi Nhỏ from the game, the sea, and a 
   }
 });
 
+test('the time lapse of the statue on the hill: the clock of its log, the scaffold and the people at a pour, the camera', { skip: !playwright && 'no Playwright' }, async () => {
+  const dir = '/test/js/fixtures/timelapse';
+  const events = (await readFile(join(root, dir.slice(1), 'events.jsonl'), 'utf8')).split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const id = events.find((e) => e.order !== 'yard').order;
+  const t0 = events.find((e) => e.order === id).at;
+  const day = (e) => (e.at - t0) / 86400000;
+  const pour = events.find((e) => e.kind === 'task_started' && e.data.task === 'pour_3');
+  const end = day(events.filter((e) => e.order === id).at(-1));
+  const server = await serve();
+  const browser = await playwright.chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'], executablePath: process.env.CHROMIUM });
+  try {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    const { port } = server.address();
+    await page.goto(`http://127.0.0.1:${port}/review/world.html?follow=1&still=1&days=50&view=front&events=${dir}/events.jsonl&places=${dir}/places.json&files=${dir}&worker=${dir}/worker.glb`);
+    await page.waitForFunction(() => window.READY === true, null, { timeout: 60_000 });
+    // The length of the film: the days of the site over the days in one second.
+    assert.ok(Math.abs((await page.evaluate(() => window.TIMELAPSE.end)) - end) < 1e-6);
+    assert.equal(await page.evaluate(() => window.TIMELAPSE.days), 50);
+    // Day 0: the lot on the top of the hill, nothing built.
+    const first = await page.evaluate(() => [...window.WORLD.builds.values()].map((b) => [b.group.position.y, Object.keys(b.parts).length]));
+    assert.ok(Math.abs(first[0][0] - 138.32) < 0.01 && first[0][1] === 0, JSON.stringify(first));
+    // The day of the pour of the third band: the scaffold and the forms of
+    // the band stand, the people work on the lot, the base is there.
+    await page.evaluate((d) => window.TIMELAPSE.to(d), day(pour) + 0.01);
+    const state = await page.evaluate((order) => {
+      const b = window.WORLD.builds.get(order);
+      const near = [...window.WORLD.people.values()].filter((p) => p.build === b && p.figure.position.distanceTo(b.group.position) < 40);
+      return { parts: Object.keys(b.parts).sort(), people: near.length, clips: near.map((p) => p.clip), label: document.getElementById('lapse').textContent };
+    }, id);
+    for (const part of ['be', 'scaffold_3', 'form_3', 'pour_2']) assert.ok(state.parts.includes(part), JSON.stringify(state));
+    assert.ok(!state.parts.includes('form_1'), 'the forms of the first band are off');
+    assert.ok(state.people >= 1 && state.clips.includes('pour'), JSON.stringify(state));
+    assert.match(state.label, /^Day \d+ · build · pour_3/);
+    // The camera of the URL: the front of the statue, from the south of the lot.
+    const cam = await page.evaluate((order) => {
+      const b = window.WORLD.builds.get(order);
+      return [b.group.position.z, document.querySelector('canvas').toDataURL().length];
+    }, id);
+    assert.ok(cam[1] > 1000);
+    // The end: the statue stands, the scaffold and the forms are down.
+    await page.evaluate((d) => window.TIMELAPSE.to(d), end);
+    const last = await page.evaluate((order) => Object.keys(window.WORLD.builds.get(order).parts).sort(), id);
+    assert.ok(last.includes('tuong_chua_kito_vua') && !last.some((p) => /^(scaffold|form|pour)_/.test(p)), JSON.stringify(last));
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});
+
 test('the world page draws the elements of a construction as they come', { skip: !playwright && 'no Playwright' }, async () => {
   const events = (await readFile(join(root, 'test/js/fixtures/world/events.jsonl'), 'utf8')).split('\n').filter(Boolean).map((l) => JSON.parse(l));
   const elements = events.filter((e) => e.kind === 'element').length;

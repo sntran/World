@@ -29,6 +29,9 @@
   main { position: relative; min-height: 0; }
   canvas { display: block; width: 100%; height: 100%; }
   #message { position: absolute; left: 16px; bottom: 12px; margin: 0; color: var(--soft); }
+  #lapse { position: absolute; left: 16px; top: 12px; margin: 0; font: 600 16px/1.3 system-ui, sans-serif; color: #fff; text-shadow: 0 1px 3px #000a; max-width: calc(100% - 32px); }
+  #lapsebar { position: absolute; right: 16px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: end; background: var(--paper); padding: 6px; border-radius: 6px; max-width: calc(100% - 32px); }
+  #lapsebar[hidden] { display: none; }
   @media (max-width: 700px) {
     body { grid-template-columns: 1fr; grid-template-rows: auto 55vh auto; height: auto; }
     main { grid-row: 2; height: 55vh; }
@@ -65,7 +68,15 @@
   <h2>The events</h2>
   <ol id="events"></ol>
 </aside>
-<main><canvas id="view"></canvas><p id="message">The world starts.</p></main>
+<main><canvas id="view"></canvas><p id="message">The world starts.</p><p id="lapse" aria-live="polite"></p>
+  <div id="lapsebar" hidden>
+    <button id="play" type="button">Pause</button>
+    <label>Days in a second <select id="speed"><option>5</option><option>10</option><option selected>20</option><option>50</option><option>100</option><option>500</option></select></label>
+    <label>View <select id="viewsel"><option value="three_quarters">Three quarters</option><option value="front">Front</option><option value="side">Side</option><option value="back">Back</option><option value="base">The base</option><option value="above">Above</option></select></label>
+    <label><span>Turn</span> <input id="turn" type="checkbox"></label>
+    <button id="copycam" type="button">Copy the camera</button>
+  </div>
+</main>
 <script type="module">
 // The world (docs/plans/0001-people-build-on-demand.md, R24): the people of
 // the node, and each construction on its lot as its elements arrive. The
@@ -83,12 +94,24 @@
 //
 // ?events=URL reads a recorded stream (one event of JSON on each line),
 // ?places=URL the places, and ?files=URL the folder of its elements, for
-// a test with no server. An
+// a test with no server.
+//
+// The time lapse (plan 0006, D11): ?follow=ORDER (or ?follow=1, the first
+// construction) follows one construction on the clock of its log, at
+// ?days=N days of the world in one second of the page (20 by default),
+// the same for each step and each pause: a film is the days of the site
+// over N seconds. The camera turns with the mouse or a finger, has views
+// (?view=three_quarters, front, side, back, base, above), a slow turn
+// (?turn=1), and takes ?cam=x,y,z, ?target=x,y,z (m, in the frame of the
+// lot) and ?fov=deg. ?still=1 waits for window.TIMELAPSE.to(day) (a
+// video, scripts/timelapse.mjs). ?worker=URL is the GLB of a person with
+// the animations of the work (an order of the blueprint person). An
 // element whose GLB the node does not keep now (5 minutes after the end
 // of its construction) does not show.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { light } from './scene.js';
 
 const params = new URLSearchParams(location.search);
@@ -130,6 +153,7 @@ function label(text, x, z, y = 4) {
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
   sprite.scale.set(80, 20, 1);
   sprite.position.set(x, y, z);
+  sprite.userData.label = true;
   return sprite;
 }
 const yard = await fetch(params.get('places') ?? '/places').then((r) => r.json()).catch(() => ({ places: [] }));
@@ -296,18 +320,30 @@ function element(id, key) {
 
 // The people: a figure each, from the catalog (a person at the level far),
 // or a plain body when the catalog is not there.
-const body = loader.loadAsync(`${files}/m/catalog.far.glb?name=man`).then((g) => g.scene).catch(() => {
+// The people: a figure each, from ?worker=URL (a person with the
+// animations of the work, plan 0006, D10), or the man of the catalog (a
+// person at the level far), or a plain body when neither is there.
+const plainBody = () => {
   const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.2, 4, 8), mark);
   m.position.y = 0.85;
   const g = new THREE.Group();
   g.add(m);
-  return g;
-});
+  return { scene: g, clips: [] };
+};
+const body = loader.loadAsync(params.get('worker') ?? `${files}/m/catalog.far.glb?name=man`)
+  .then((g) => ({ scene: g.scene, clips: g.animations }))
+  .catch(() => plainBody());
+// The work of each trade (World.People.Pose.work/0).
+const WORK = { caster: 'pour', carpenter: 'set_panel', scaffolder: 'climb', mason: 'trowel', finisher: 'trowel', smith: 'hammer', sculptor: 'hammer', surveyor: 'guide', builder: 'carry' };
 const people = new Map();
 const gate = new THREE.Vector3(-20, 0, -20);
 async function person(name) {
   if (people.has(name)) return people.get(name);
-  const p = { name, figure: (await body).clone(), from: gate.clone(), to: gate.clone(), start: 0, task: null, build: null, row: $('people').insertRow() };
+  const b = await body;
+  const figure = SkeletonUtils.clone(b.scene);
+  const p = { name, figure, from: gate.clone(), to: gate.clone(), start: 0, task: null, build: null, row: $('people').insertRow() };
+  p.mixer = b.clips.length ? new THREE.AnimationMixer(figure) : null;
+  p.clips = b.clips;
   p.row.insertCell().textContent = name;
   p.trade = p.row.insertCell();
   p.status = p.row.insertCell();
@@ -317,10 +353,51 @@ async function person(name) {
   people.set(name, p);
   return p;
 }
+// A clip of a person (walk, the work of its trade), or none.
+function act(p, name) {
+  if (!p.mixer || p.clip === name) return;
+  const clip = p.clips.find((c) => c.name === name);
+  p.mixer.stopAllAction();
+  p.clip = name;
+  if (clip) p.mixer.clipAction(clip).play();
+}
+// The place of a person at work: on the scaffold of the band of its task
+// (scaffold_N of a task ..._N), or round the lot.
+function spot(b, task, i) {
+  const m = /_(\d+)$/.exec(task ?? '');
+  const sc = m && b.parts['scaffold_' + m[1]];
+  const a = (i * 2.399) % (2 * Math.PI);
+  if (sc?.length) {
+    const box = new THREE.Box3();
+    for (const part of sc) box.expandByObject(part);
+    const c = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    return new THREE.Vector3(c.x + Math.cos(a) * size.x / 2, box.min.y + 0.05, c.z + Math.sin(a) * size.z / 2);
+  }
+  const at = b.group.getWorldPosition(new THREE.Vector3());
+  return at.add(new THREE.Vector3(Math.cos(a) * 10, 0, Math.sin(a) * 10));
+}
 function walk(p, to) {
   p.from.copy(p.figure.position);
   p.to.copy(to);
   p.start = performance.now();
+  p.startDay = eventDay;
+  // At 1.4 m/s of the world (docs/world.md, "Time").
+  p.walkDays = Math.max(p.from.distanceTo(p.to) / 1.4 / 86400, 1e-6);
+}
+
+// The people now: a walk takes 3 s (in a time lapse, its days at 1.4
+// m/s); a person at work does the work of its trade (or bobs with no
+// clips), unless the reader asks for no motion.
+function walking(now, dt) {
+  for (const p of people.values()) {
+    const f = lapse ? Math.min((lapse.day - p.startDay) / p.walkDays, 1) : Math.min((now - p.start) / 3000, 1);
+    p.figure.position.lerpVectors(p.from, p.to, still ? 1 : f);
+    if (f < 1) p.figure.lookAt(p.to.x, p.figure.position.y, p.to.z);
+    act(p, f < 1 ? 'walk' : p.task ? WORK[p.job] ?? 'carry' : 'none');
+    if (p.mixer && !still) p.mixer.update(dt);
+    if (!p.mixer && p.task && !still) p.figure.position.y = p.to.y + Math.abs(Math.sin(now / 200)) * 0.15;
+  }
 }
 
 // What an event tells, in words.
@@ -373,7 +450,10 @@ function yardEvent(e) {
   }
 }
 
+// The day of the event that the page takes now (in a time lapse).
+let eventDay = 0;
 async function take(e) {
+  if (lapse) eventDay = (e.at - lapse.t0) / DAY;
   if (e.order === 'yard' || e.order === 'haul') {
     yardEvent(e);
     return log(e);
@@ -386,7 +466,8 @@ async function take(e) {
     p.trade.textContent = d.trade;
     p.build = b;
     p.status.textContent = `at ${b.id.slice(0, 12)}`;
-    walk(p, b.group.position.clone().add(new THREE.Vector3(-LOT / 2 + 3, 0, LOT / 2 - 3 - (people.size % 6))));
+    p.job = d.trade;
+    walk(p, spot(b, null, people.size));
   }
   if (e.kind === 'released') {
     const p = await person(e.who);
@@ -398,12 +479,28 @@ async function take(e) {
     const p = await person(e.who);
     p.task = d.task;
     p.status.textContent = `works on ${d.task}`;
+    // The person goes to the place of its task, and works there.
+    walk(p, spot(b, d.task, people.size + b.done));
+    b.task = d.task;
   }
   if (e.kind === 'task_done') {
     b.done += 1;
     const p = await person(e.who);
     p.task = null;
   }
+  if (e.kind === 'stage_started') {
+    b.stage = d;
+    if (d.date) b.date0 = new Date(Date.parse(d.date) - d.from * 86400000);
+    // A change of the lot: the people take down the old parts where they
+    // stand; the next build is on the new lot.
+    if (d.lot && d.work === 'change') b.nextLot = d.lot;
+    if (d.work === 'build' && b.nextLot) {
+      settle(b.group, at.get(b.id)?.[0] ?? 'nui_nho', b.nextLot);
+      b.nextLot = null;
+    }
+  }
+  if (e.kind === 'aged') b.aged = d;
+  if (e.kind === 'repaired') b.aged = null;
   if (e.kind === 'element') {
     b.elements += 1;
     const glb = await element(e.order, d.glb).catch(() => null);
@@ -441,9 +538,94 @@ let queue = Promise.resolve();
 const events = [];
 const next = (e) => { events.push(e); queue = queue.then(() => take(e)).catch((err) => console.error(err)); };
 
+// The time lapse (plan 0006, D11): the events of a recorded log on the
+// clock of the log, at `days` days of the world in one second.
+const DAY = 86400000;
+const VIEWS = {
+  three_quarters: { cam: [45, 22, 72], target: [0, 15, 0] },
+  front: { cam: [0, 16, 90], target: [0, 15, 0] },
+  side: { cam: [90, 16, 0], target: [0, 15, 0] },
+  back: { cam: [0, 16, -90], target: [0, 15, 0] },
+  base: { cam: [9, 2.5, 20], target: [0, 6, 0] },
+  above: { cam: [0.1, 110, 0.1], target: [0, 10, 0] },
+};
+const vec = (text) => text?.split(',').map(Number);
+const lapse = params.get('follow') ? {
+  pending: [],
+  t0: null,
+  day: 0,
+  end: 0,
+  days: Number(params.get('days') ?? 20),
+  playing: !params.has('still'),
+  turn: params.get('turn') === '1',
+  angle: 0,
+  view: VIEWS[params.get('view')] ? params.get('view') : 'three_quarters',
+  cam: vec(params.get('cam')),
+  target: vec(params.get('target')),
+  order: null,
+  // The events of the days up to `day`, in their order.
+  async to(day) {
+    this.day = day;
+    while (this.pending.length && (this.pending[0].at - this.t0) / DAY <= day) next(this.pending.shift());
+    await queue;
+    this.place();
+  },
+  frame(dt) {
+    if (this.playing && this.t0 !== null) {
+      this.day = Math.min(this.day + dt * this.days, this.end);
+      while (this.pending.length && (this.pending[0].at - this.t0) / DAY <= this.day) next(this.pending.shift());
+    }
+    this.place();
+  },
+  // The camera in the frame of the lot of the construction, and the label.
+  place() {
+    const b = builds.get(this.order);
+    if (!b) return;
+    const v = VIEWS[this.view];
+    // The slow turn: 0.15 rad in each second of the film.
+    if (this.turn) this.angle = (this.day / this.days) * 0.15;
+    const cam = new THREE.Vector3(...(this.cam ?? v.cam)).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.angle);
+    b.group.updateWorldMatrix(true, false);
+    camera.position.copy(cam.applyMatrix4(b.group.matrixWorld));
+    controls.target.copy(new THREE.Vector3(...(this.target ?? v.target)).applyMatrix4(b.group.matrixWorld));
+    const date = b.date0 ? ' · ' + new Date(b.date0.getTime() + this.day * DAY).toISOString().slice(0, 10) : '';
+    const stage = b.stage ? ` · ${b.stage.name}` : '';
+    const work = b.task && b.stage?.work !== 'pause' ? ` · ${b.task}` : '';
+    const old = b.aged && b.stage?.work === 'pause' ? ` · the site gets old (${Math.round(b.aged.days / 365)} years)` : '';
+    $('lapse').textContent = `Day ${Math.floor(this.day) + 1}${date}${stage}${work}${old}`;
+    // The old statue: the concrete gets darker in a pause (D8).
+    const dirt = b.aged ? b.aged.dirt : 0;
+    if (dirt !== b.dirt) {
+      b.dirt = dirt;
+      b.group.traverse((o) => { if (o.isMesh && o.material?.color) { o.userData.base ??= o.material.color.clone(); o.material = o.material.clone(); o.material.color.copy(o.userData.base).multiplyScalar(1 - 0.55 * dirt); } });
+    }
+  },
+} : null;
+// The sky of a film, and no names of the places in front of the camera.
+if (lapse) {
+  scene.background = new THREE.Color(0x9fc3e0);
+  scene.traverse((o) => { if (o.userData.label) o.visible = false; });
+}
+if (lapse && params.get('fov')) {
+  camera.fov = Number(params.get('fov'));
+  camera.updateProjectionMatrix();
+}
+
 if (params.get('events')) {
   const text = await (await fetch(params.get('events'))).text();
-  for (const line of text.split('\n').filter(Boolean)) next(JSON.parse(line));
+  const all = text.split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  if (lapse) {
+    // The construction to follow, and its days.
+    const first = all.find((e) => e.order !== 'yard' && e.order !== 'haul');
+    lapse.order = params.get('follow') === '1' ? first?.order : params.get('follow');
+    const own = all.filter((e) => e.order === lapse.order);
+    lapse.t0 = own[0]?.at ?? 0;
+    lapse.end = ((own.at(-1)?.at ?? 0) - lapse.t0) / DAY;
+    lapse.pending = all;
+    await lapse.to(0);
+  } else {
+    for (const e of all) next(e);
+  }
 } else {
   const source = new EventSource('/events');
   source.onmessage = (m) => next(JSON.parse(m.data));
@@ -481,17 +663,48 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-// The state of the page, for a test: the lots and the people.
+// The bar of the time lapse.
+if (lapse) {
+  $('lapsebar').hidden = false;
+  $('viewsel').value = lapse.view;
+  $('turn').checked = lapse.turn;
+  $('speed').value = String(lapse.days);
+  $('play').textContent = lapse.playing ? 'Pause' : 'Play';
+  $('play').onclick = () => { lapse.playing = !lapse.playing; $('play').textContent = lapse.playing ? 'Pause' : 'Play'; };
+  $('speed').onchange = () => { lapse.days = Number($('speed').value); };
+  $('viewsel').onchange = () => { lapse.view = $('viewsel').value; lapse.cam = lapse.target = null; lapse.angle = 0; };
+  $('turn').onchange = () => { lapse.turn = $('turn').checked; };
+  // The camera as the viewer sets it, in the frame of the lot, for the URL.
+  controls.addEventListener('start', () => { lapse.turn = false; $('turn').checked = false; });
+  controls.addEventListener('end', () => {
+    const b = builds.get(lapse.order);
+    const inv = b.group.matrixWorld.clone().invert();
+    lapse.cam = camera.position.clone().applyMatrix4(inv).toArray().map((x) => Math.round(x * 10) / 10);
+    lapse.target = controls.target.clone().applyMatrix4(inv).toArray().map((x) => Math.round(x * 10) / 10);
+    lapse.angle = 0;
+  });
+  $('copycam').onclick = () => {
+    const u = new URL(location.href);
+    if (lapse.cam) u.searchParams.set('cam', lapse.cam.join(','));
+    if (lapse.target) u.searchParams.set('target', lapse.target.join(','));
+    u.searchParams.set('fov', String(camera.fov));
+    navigator.clipboard?.writeText(u.toString());
+    $('copycam').textContent = 'Copied';
+  };
+}
+
+// The state of the page, for a test: the lots and the people; and the
+// time lapse, for a video.
 window.WORLD = { builds, people, places, trucks };
+window.TIMELAPSE = lapse && { to: (day) => lapse.to(day).then(() => { walking(performance.now(), 1 / 30); controls.update(); renderer.render(scene, camera); }), get end() { return lapse.end; }, get days() { return lapse.days; } };
 await Promise.all(ready);
 window.READY = true;
+let last = performance.now();
 renderer.setAnimationLoop((now) => {
-  for (const p of people.values()) {
-    // A walk takes 3 s; a person at work bobs, unless the reader asks for no motion.
-    const f = Math.min((now - p.start) / 3000, 1);
-    p.figure.position.lerpVectors(p.from, p.to, still ? 1 : f);
-    if (p.task && !still) p.figure.position.y = Math.abs(Math.sin(now / 200)) * 0.15;
-  }
+  const dt = Math.min((now - last) / 1000, 0.1);
+  last = now;
+  if (lapse) lapse.frame(dt);
+  walking(now, dt);
   for (const t of trucks.values()) {
     // A drive takes 2 s; a rented truck goes back to the gate after its load.
     const f = Math.min((now - t.start) / 2000, 1);

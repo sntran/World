@@ -67,7 +67,10 @@ about it.
   `?log=URL&model=URL` for a local test. The world page
   (`review/world.html`, the index of the site) reads the stream of the
   node and its places (`GET /places`), and draws the map of the yard:
-  `?events=URL&places=URL&files=URL` for a local test.
+  `?events=URL&places=URL&files=URL` for a local test. With
+  `?follow=ORDER` it is the time lapse of one construction (plan 0006,
+  D11): `scripts/timelapse_log.exs` makes a log of the statue on the
+  hill, and `scripts/timelapse.mjs URL OUT.mp4` its video.
 
 ## The contexts
 

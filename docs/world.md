@@ -262,6 +262,26 @@ each node. 1974 is the true history of the statue on Núi Nhỏ
 6. `finish`: the repair (`repaired`), the render, the halo, the stair,
    the rail, to 1 December 1994.
 
+The people of a site do the work of their trade (plan 0006, D10): a
+person of the blueprint `person` can have the animations of the work
+(`World.People.Pose.work/0`: `carry`, `set_panel`, `pour`, `trowel`,
+`hammer`, `climb`, `guide`) and the props of a site (`hard_hat`, `bucket`,
+`trowel`, `hammer`). On the world page each person walks to the place of
+its task (on the scaffold of its band) and works there with the clip of
+its trade. A site has at most 50 people (the 50 skilled workers of 1974).
+
+The time lapse is the world page that follows one construction (plan
+0006, D11): `review/world.html?follow=ORDER&events=LOG` replays the log
+on its clock at `days` days of the world in one second of the page (20
+by default), the same for each step and each pause, so a film is the
+days of the site over that number. The camera turns with the mouse or a
+finger, has its views (three quarters, the front, the side, the back,
+the base, above), a slow turn, and takes `cam`, `target` and `fov` from
+the URL ("Copy the camera"). The label gives the day, the date of the
+history, the stage and the task. `scripts/timelapse_log.exs` makes the
+log and the files of a construction of the statue (`today` or `1974`),
+and `scripts/timelapse.mjs` makes its video (ffmpeg).
+
 Each stage starts at its date (`stage_started`, with its days from the
 start and its `fit`) and ends when its tasks are done (`stage_done`). The
 days of the tasks of a stage are fitted to the days between its dates;

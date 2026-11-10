@@ -17,7 +17,9 @@ defmodule World.People.Pose do
   the index finger out and the other fingers in the fist, and jabs three
   times; the body leans there and the head looks there; in 2.6 s, once).
   The routines of a morning of exercise (`routines/0`, `routine/1`):
-  `"tai_chi"`, `"yoga"` and `"aerobics"`, in a loop, with the options
+  `"tai_chi"`, `"yoga"` and `"aerobics"`, and the work of a site
+  (`work/0`: `carry`, `set_panel`, `pour`, `trowel`, `hammer`, `climb`,
+  `guide`, plan 0006), in a loop, with the options
   `delay` (seconds late) and `mirror` (the leader who faces the group).
   A clip blends each bone from the pose "stand" to the pose of the clip
   on the shortest arc; a clip that plays once starts and stops in the
@@ -104,10 +106,15 @@ defmodule World.People.Pose do
   }
 
   # The routines of a morning of exercise (`routine/1`).
-  @routines ~w(aerobics tai_chi yoga)
+  @routines ~w(aerobics tai_chi yoga carry set_panel pour trowel hammer climb guide)
+  # The work of the trades on a site (plan 0006, D10).
+  @work ~w(carry set_panel pour trowel hammer climb guide)
 
   @doc "The names of the routines: animations in a loop."
   def routines, do: @routines
+
+  @doc "The routines of the work of the trades on a site (plan 0006, D10)."
+  def work, do: @work
 
   @doc "The names of the shapes of a hand."
   def hands, do: Map.keys(@hands) |> Enum.sort()
@@ -367,6 +374,44 @@ defmodule World.People.Pose do
      }, lift(t, 0.3, 2.1, 2.6)}
   end
 
+  # The two poses of each work: the loop goes from one to the other.
+  defp work_keys("carry", arm, at) do
+    load = sym(arm.(:l, {-0.25, 0.65, -0.15}, 110))
+    {[load, at.(0.0, 5)], [load, at.(-0.04, 8)]}
+  end
+
+  defp work_keys("set_panel", arm, at),
+    do: {[sym(arm.(:l, {-0.25, 0.6, 0.75}, 30)), at.(0.0, -5)], [sym(arm.(:l, {-0.25, 0.75, 0.6}, 10)), at.(0.0, 0)]}
+
+  defp work_keys("pour", arm, at),
+    do:
+      {[sym(arm.(:l, {-0.15, 0.7, -0.7}, 40)), at.(-0.08, 35)],
+       [sym(arm.(:l, {-0.15, 0.85, -0.3}, 60)), at.(-0.06, 25)]}
+
+  defp work_keys("trowel", arm, at) do
+    left = arm.(:l, {-0.3, 0.5, -0.6}, 50)
+    {[left, arm.(:r, {0.35, 0.8, -0.5}, 30), at.(-0.1, 40)], [left, arm.(:r, {-0.05, 0.85, -0.5}, 30), at.(-0.1, 40)]}
+  end
+
+  defp work_keys("hammer", arm, at) do
+    left = arm.(:l, {-0.2, 0.8, -0.4}, 40)
+    {[left, arm.(:r, {0.25, 0.4, 0.75}, 110), at.(-0.02, 15)], [left, arm.(:r, {0.2, 0.85, -0.35}, 15), at.(-0.03, 25)]}
+  end
+
+  defp work_keys("climb", arm, at) do
+    up =
+      merge([arm.(:l, {-0.2, 0.3, 0.95}, 20), arm.(:r, {0.25, 0.4, 0.1}, 90)], %{
+        {:foot, :r} => %{by: {0.0, 0.1, 0.3}, flat: false}
+      })
+
+    {[up, at.(0.0, 0)], [mirror(up), at.(0.02, 0)]}
+  end
+
+  defp work_keys("guide", arm, at) do
+    left = arm.(:l, {-0.35, 0.0, -0.9}, 10)
+    {[left, arm.(:r, {0.35, 0.3, 0.9}, 20), at.(0.0, -5)], [left, arm.(:r, {0.45, 0.4, 0.75}, 70), at.(0.0, -5)]}
+  end
+
   @doc """
   A routine: `{length, frames per second, [{time, pose}]}`, the poses at
   their times in seconds, in a loop. The person faces the front (+y).
@@ -462,6 +507,16 @@ defmodule World.People.Pose do
        {19.5, warrior},
        {22.0, warrior}
      ]}
+  end
+
+  # The work of a site (plan 0006, D10): a loop of 2 s for each, the
+  # person facing the work (+y).
+  def routine(name) when name in @work do
+    arm = fn side, to, flex -> %{{:aim, side} => %{to: to}, "lowerarm_#{side}" => [flex: flex]} end
+    grip = sym(%{{:hand, :l} => "grip"})
+    at = fn z, flex -> %{:hips => %{at: {0.0, 0.0, z}}, :spine => [flex: flex]} end
+    {a, b} = work_keys(name, arm, at)
+    {2.0, 10, [{0.0, merge([grip | a], %{})}, {1.0, merge([grip | b], %{})}]}
   end
 
   def routine("aerobics") do

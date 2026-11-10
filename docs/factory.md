@@ -46,7 +46,7 @@ An order is data, never code. World runs no code from an order.
 | `POST /blueprints` | A blueprint in data of a project (`docs/skills.md`): 201 with its `hash` (an order gives `{"blueprint": {"hash": HASH}}`), or 422 with the errors, each with its path. |
 | `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. |
 | `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the node build the GLB at each level (`World.Construction`). |
-| `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. |
+| `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
@@ -178,7 +178,9 @@ of 7 people is about 1.5 MB at the far level and 4.8 MB at the mid level. With
 and the leader in the left hand.
 
 A `person` can hold a prop in each hand (`right_hand`, `left_hand`:
-`fan` or `bottle`) and wear a hat (`hat`: `non_la`). The props follow
+`fan`, `bottle`, `bucket`, `trowel` or `hammer`) and wear a hat (`hat`:
+`non_la` or `hard_hat`), with up to 8 animations (the walk, the
+routines, the work of a site). The props follow
 the hands in the pose and in the animations, and they are in the list of
 the parts.
 At the edge, a group of more than 3 people needs more memory than the
