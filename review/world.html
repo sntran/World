@@ -794,6 +794,18 @@ const lapse = params.get('follow') ? {
     }
     this.place();
   },
+  // The height of the top of the parts on the lot (m over the lot), each
+  // second of the film.
+  top(b) {
+    const now = Math.floor(this.film(this.day));
+    if (b.topAt !== now) {
+      b.topAt = now;
+      const box = new THREE.Box3();
+      for (const list of Object.values(b.parts)) for (const p of list) box.expandByObject(p);
+      b.topY = box.isEmpty() ? 0 : box.max.y - b.group.getWorldPosition(new THREE.Vector3()).y;
+    }
+    return Math.min(b.topY, 60);
+  },
   // The camera in the frame of the lot of the construction, and the label.
   place() {
     const b = builds.get(this.order);
@@ -802,9 +814,14 @@ const lapse = params.get('follow') ? {
     growing(b, this.day);
     // The slow turn: 0.15 rad in each second of the film.
     if (this.turn) this.angle = this.film(this.day) * 0.15;
-    // The camera follows the height of the work (a view, not a camera of the URL).
-    const lift = this.target ? 0 : Math.max((b.workY ?? v.target[1]) - v.target[1], -10);
-    const cam = new THREE.Vector3(...(this.cam ?? v.cam)).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.angle).add(new THREE.Vector3(0, lift, 0));
+    // The camera follows the height of the work, and holds what stands: it
+    // aims at the middle of the built height or higher, and goes back as
+    // the model rises (a view, not a camera of the URL).
+    const top = this.top(b);
+    const aim = Math.min(Math.max(b.workY ?? v.target[1], top / 2, v.target[1]), Math.max(top, v.target[1]));
+    const lift = this.target ? 0 : aim - v.target[1];
+    const back = this.cam ? 1 : Math.max(1, (top + 6) / 26);
+    const cam = new THREE.Vector3(...(this.cam ?? v.cam)).multiplyScalar(back).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.angle).add(new THREE.Vector3(0, lift, 0));
     b.group.updateWorldMatrix(true, false);
     camera.position.copy(cam.applyMatrix4(b.group.matrixWorld));
     // The camera stays 10 m over the ground of a hill.
