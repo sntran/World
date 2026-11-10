@@ -38,3 +38,4 @@ builder does not change the requirements: the owner does.
 | 0003 | [World builds real blueprints, and the tests compare them](0003-real-blueprints.md) | In progress |
 | 0004 | [The statue of Vũng Tàu looks like the real one](0004-statue-look.md) | In progress |
 | 0005 | [From photos to a blueprint: measure, then fit](0005-photos-to-blueprint.md) | In progress |
+| 0006 | [The construction of a model as a time lapse](0006-construction-time-lapse.md) | Draft |
