@@ -90,7 +90,7 @@ defmodule World.Site do
   The people of the crew of the task of a node for a method: the largest
   crew of the rates of its work (1 with no work in its data).
   """
-  def crew(drawing, name, method \\ "today") do
+  def crew(drawing, name, method) do
     node = Enum.find(drawing["nodes"], &(&1["name"] == name)) || %{}
     Enum.max([1 | for({w, _} <- Map.get(node, "work") || %{}, do: rate(w, method).crew)])
   end

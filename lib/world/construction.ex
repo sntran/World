@@ -531,7 +531,7 @@ defmodule World.Construction do
   defp method(s), do: Map.get(s.job, :method, "today")
 
   # The people of the crew of a task: the person and its helpers (the
-  # crew of the rate of its work, `World.Site.crew/2`).
+  # crew of the rate of its work, `World.Site.crew/3`).
   defp crew(%{job: %{drawing: nil}}, _task), do: 1
   defp crew(s, task), do: World.Site.crew(s.job.drawing, task.item, method(s))
 
