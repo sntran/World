@@ -107,12 +107,18 @@ defmodule World.MethodTest do
     # lightning rod goes in the middle of the pause of 17 years, and the
     # repair of 1992 makes it clean (plan 0006, D8).
     aged = for e <- events, e.kind == "aged", do: e.data
-    # The first pause at its end (it is short when the computer is slow);
-    # the pause of 17 years each year that is left of it, and at its end.
-    assert length(aged) >= 12 and List.last(aged)["days"] > 4000
-    # The new statue has no age at the change: its dirt grows in the long pause.
+    # The pause of 17 years: an age each year that is left of it, and one
+    # at its end. A slow computer starts the pause late, so fewer years
+    # are left, and the count comes from the days that are left.
     long = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "pause"))
-    dirt = for e <- Enum.drop(events, long), e.kind == "aged", do: e.data["dirt"]
+    pause = Enum.at(events, long)
+    left = pause.data["to"] - max(day.(pause), pause.data["from"])
+    years = Enum.count(1..max(floor(left / 365), 1), &(&1 * 365 < left))
+    in_pause = for e <- Enum.drop(events, long), e.kind == "aged", do: e.data
+    assert left > 365 and abs(length(in_pause) - (years + 1)) <= 1
+    assert_in_delta List.last(in_pause)["days"], left, 30
+    # The new statue has no age at the change: its dirt grows in the long pause.
+    dirt = for e <- in_pause, do: e["dirt"]
     assert dirt == Enum.sort(dirt)
     # The dirt and the weeds from the years (a pause that starts late is shorter).
     last = List.last(aged)
