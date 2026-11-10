@@ -33,10 +33,27 @@ const frames = Math.max(1, Math.ceil((end / days) * Number(fps)));
 console.log(`${end.toFixed(1)} days at ${days} days in a second: ${frames} frames, ${(frames / Number(fps)).toFixed(1)} s`);
 
 const ffmpeg = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', fps, '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', out], { stdio: ['pipe', 'inherit', 'inherit'] });
+// Each frame: the day, its render, and the image of the canvas with the
+// label of the page (the day, the date, the stage) in the same step (a
+// JPEG of quality 0.92).
 for (let f = 0; f <= frames; f++) {
-  await page.evaluate((day) => window.TIMELAPSE.to(day), Math.min((f * days) / Number(fps), end));
-  const png = await page.locator('#view').screenshot({ type: 'png', timeout: 120_000 });
-  if (!ffmpeg.stdin.write(png)) await new Promise((r) => ffmpeg.stdin.once('drain', r));
+  const url = await page.evaluate(async (day) => {
+    await window.TIMELAPSE.to(day);
+    const view = document.getElementById('view');
+    const frame = document.createElement('canvas');
+    [frame.width, frame.height] = [view.width, view.height];
+    const g = frame.getContext('2d');
+    g.drawImage(view, 0, 0);
+    g.font = `600 ${Math.round(view.height / 32)}px system-ui, sans-serif`;
+    g.fillStyle = '#fff';
+    g.shadowColor = '#000a';
+    g.shadowBlur = 4;
+    g.fillText(document.getElementById('lapse').textContent, view.height / 40, view.height / 18);
+    return frame.toDataURL('image/jpeg', 0.92);
+  }, Math.min((f * days) / Number(fps), end));
+  const jpeg = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
+  if (!ffmpeg.stdin.write(jpeg)) await new Promise((r) => ffmpeg.stdin.once('drain', r));
+  if (f % 250 === 0) console.log(`frame ${f} of ${frames}`);
 }
 ffmpeg.stdin.end();
 const code = await new Promise((r) => ffmpeg.on('close', r));

@@ -187,7 +187,9 @@ for (const p of yard.places) {
     const box = terrainBox(p);
     const size = box.getSize(new THREE.Vector3());
     const middle = box.getCenter(new THREE.Vector3());
-    const sea = new THREE.Mesh(new THREE.PlaneGeometry(size.x + 200, size.z + 200), new THREE.MeshStandardMaterial({ color: 0x3f7f9f, roughness: 0.3 }));
+    // A film has the sea to the horizon; the map keeps the yard clear.
+    const margin = params.get('follow') ? 6000 : 200;
+    const sea = new THREE.Mesh(new THREE.PlaneGeometry(size.x + margin, size.z + margin), new THREE.MeshStandardMaterial({ color: 0x3f7f9f, roughness: 0.3 }));
     sea.rotation.x = -Math.PI / 2;
     sea.position.set(middle.x, 0.02, middle.z);
     sea.receiveShadow = true;
@@ -629,6 +631,7 @@ const VIEWS = {
   above: { cam: [0.1, 110, 0.1], target: [0, 10, 0] },
 };
 const vec = (text) => text?.split(',').map(Number);
+const down = new THREE.Raycaster();
 const lapse = params.get('follow') ? {
   pending: [],
   t0: null,
@@ -666,6 +669,13 @@ const lapse = params.get('follow') ? {
     const cam = new THREE.Vector3(...(this.cam ?? v.cam)).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.angle);
     b.group.updateWorldMatrix(true, false);
     camera.position.copy(cam.applyMatrix4(b.group.matrixWorld));
+    // The camera stays 10 m over the ground of a hill.
+    const hill = [...places.values()].find((p) => p.terrain)?.ground;
+    if (hill) {
+      down.set(camera.position.clone().setY(1000), new THREE.Vector3(0, -1, 0));
+      const hit = down.intersectObject(hill, true)[0];
+      if (hit && camera.position.y < hit.point.y + 10) camera.position.y = hit.point.y + 10;
+    }
     controls.target.copy(new THREE.Vector3(...(this.target ?? v.target)).applyMatrix4(b.group.matrixWorld));
     const date = b.date0 ? ' · ' + new Date(b.date0.getTime() + this.day * DAY).toISOString().slice(0, 10) : '';
     const stage = b.stage ? ` · ${b.stage.name}` : '';
