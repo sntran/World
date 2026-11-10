@@ -235,7 +235,12 @@ A client can pause a construction (`paused`: no task starts, the people
 end the tasks in hand, the free people go), change it in the pause (a
 new order of the same blueprint in data: each node whose data is the
 same stays made; `changed`), resume it (`resumed`), or cancel it
-(`stopped`, the reason `cancelled`).
+(`stopped`, the reason `cancelled`). A change has a cost on the site
+(plan 0006, D7): each built element that it drops is taken down by
+people before its node is made again, the last built first (a task
+`remove/NODE` of the trade of the node, `action` `remove`, a third of
+the days of the task that made it; `element_removed` when it is down).
+A change of the lot (`lot` of the job) drops each node.
 
 ## The plan from a drawing
 

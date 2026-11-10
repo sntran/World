@@ -12,7 +12,7 @@ defmodule World.Log do
   """
   alias World.Clock
 
-  @kinds ~w(requested plan_made hired released task_started task_done task_dropped element paused resumed changed done stopped failed run_done parts_asked parts_here haul_asked loaded unloaded hauled truck_joined place_raised place_open place_held place_started truck_made)
+  @kinds ~w(requested plan_made hired released task_started task_done task_dropped element paused resumed changed done stopped failed run_done parts_asked parts_here haul_asked loaded unloaded hauled truck_joined place_raised place_open place_held place_started truck_made element_removed stage_started stage_done aged repaired)
 
   defmodule Event do
     @moduledoc "One thing that happened: its world time, wall time, kind, order, person and data."
@@ -136,11 +136,15 @@ defmodule World.Log do
   end
 
   # A change makes its tasks again: they did not start, and are not done.
-  defp task(%Event{kind: "changed", order: order, data: %{"redo" => redo}}, orders) do
+  # The tasks that take down what it drops (`remove`) are new tasks.
+  defp task(%Event{kind: "changed", order: order, data: %{"redo" => redo} = d}, orders) do
     with {:ok, o} <- Map.fetch(orders, order) |> plan() do
+      removes = Map.new(Map.get(d, "remove", []), &{&1["id"], &1["waits"]})
+
       o = %{
         o
-        | started: MapSet.difference(o.started, MapSet.new(redo)),
+        | waits: Map.merge(o.waits, removes),
+          started: MapSet.difference(o.started, MapSet.new(redo)),
           done: MapSet.difference(o.done, MapSet.new(redo))
       }
 

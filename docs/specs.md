@@ -228,8 +228,10 @@ specification has no step for an event, or `{:error, {:violated,
 invariant, event}}`.
 
 `test/world/change_test.exs` replays the logs of a pause, of a change
-of a task in hand (its result goes to nobody: `task_dropped`), and of
-the statue at far whose height changes after its base: the base stays.
+of a task in hand (its result goes to nobody: `task_dropped`), of a
+change that takes down what it drops (the tasks `remove/NODE` of the
+event `changed` are tasks of the replay), and of the statue at far
+whose height changes after its base: the base stays.
 `test/world/construction_test.exs` replays the log of the wall of
 bricks with one worker and with eight, of two constructions at one
 time, of a construction of two trades with a budget of one person (it

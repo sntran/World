@@ -156,6 +156,8 @@ defmodule World.Construction do
             triangles: %{},
             glbs: %{},
             cured: %{},
+            days: %{},
+            built: [],
             workers_limit: Map.get(s.job.budget, "workers", @workers)
           })
 
@@ -279,6 +281,8 @@ defmodule World.Construction do
       do: Process.send_after(self(), :cured, Clock.to_wall(s.log.clock, round(task.wait * Clock.day())) + 1)
 
     s = record(s, "task_done", p, task_data(task))
+    # A task that takes down a part: the part goes (plan 0006, D7).
+    s = if task.action == :remove, do: record(s, "element_removed", p, %{"task" => task.item}), else: s
     s = if s.job.drawing, do: place(s, p), else: elements(s, p, id, Map.get(s.elements, id, []))
     finish(assign(s))
   end
@@ -374,7 +378,9 @@ defmodule World.Construction do
       end
 
       s = Enum.reduce(ready, s, fn name, s -> elements(s, p, name, own.(name)) end)
-      %{s | placed: MapSet.union(s.placed, MapSet.new(ready))}
+      # The nodes with an element stand on the site (a change takes them down).
+      built = for name <- ready, own.(name) != [], do: name
+      %{s | placed: MapSet.union(s.placed, MapSet.new(ready)), built: s.built ++ built}
     end
   end
 
@@ -462,11 +468,15 @@ defmodule World.Construction do
     task = Map.merge(task, %{days: days, wait: wait})
     waiting = Enum.reject(s.waiting, &(&1.id == task.id))
     s = %{s | idle: List.delete(s.idle, p), running: Map.put(s.running, p, task), waiting: waiting}
+    s = %{s | days: Map.put(s.days, task.id, days)}
     s = record(s, "task_started", p, Map.merge(task_data(task), %{"days" => days, "wait" => wait}))
     due = Clock.wall() + Clock.to_wall(s.log.clock, round(days * Clock.day()))
     Person.work(p, task.id, until(work(s, task), due), heap(s))
     s
   end
+
+  # To take down a part takes a part of the days to make it (`remove`).
+  defp days(s, %{action: :remove, item: item}), do: {World.Site.days(%{"remove" => s.days[item]}, method(s)), 0.0}
 
   defp days(%{job: %{drawing: nil}} = s, _task), do: {World.Site.days(%{"task" => 1}, method(s)), 0.0}
 
@@ -489,6 +499,9 @@ defmodule World.Construction do
   # The work of a task: the triangles of the meshes of its element that
   # nobody made yet, and the GLB of each part of the element that is new.
   # For a node of a drawing, the person makes the node first.
+  # To take down a part needs no work of the computer.
+  defp work(_s, %{action: :remove}), do: fn -> %{triangles: %{}, glbs: %{}} end
+
   defp work(%{job: %{drawing: nil}} = s, task) do
     elements = Map.get(s.elements, task.id, [])
     meshes = for {_, _, {shapes, _}} <- elements, m <- shapes, not Map.has_key?(s.triangles, m), uniq: true, do: m
@@ -535,20 +548,35 @@ defmodule World.Construction do
   # with a limit of memory: with no limit, the people do not wait for it.
   defp lean?(s), do: Map.has_key?(s.job.budget, "memory_mb")
 
+  # A change of the lot drops each node; each built element that a change
+  # drops comes down first, the last built first (plan 0006, D7): a task
+  # `remove/NODE` of the trade of the node, and the node waits for it.
   defp change(s, job, names) do
     {old, new} = {World.Drawing.keys(s.job.drawing), World.Drawing.keys(job.drawing)}
-    changed = for n <- names, old[n] != new[n], do: n
+    lot? = Map.get(job, :lot) != Map.get(s.job, :lot)
+    changed = if lot?, do: names, else: for(n <- names, old[n] != new[n], do: n)
+    gone = for n <- Enum.reverse(s.built), n in changed, do: n
+    trades = Map.new(s.plan.tasks, &{&1.id, &1.trade})
+
+    removes =
+      for {n, i} <- Enum.with_index(gone) do
+        waits = if i == 0, do: [], else: ["remove/" <> Enum.at(gone, i - 1)]
+        %Plan.Task{id: "remove/" <> n, action: :remove, item: n, trade: trades[n], waits: waits}
+      end
+
     started = MapSet.union(s.done, MapSet.new(Map.values(s.running), & &1.id))
     # The tasks that wait for a task are made again before it.
     redo = for n <- Enum.reverse(World.Drawing.order(job.drawing)), n in changed, MapSet.member?(started, n), do: n
     stale = for {p, t} <- s.running, t.id in changed, into: %{}, do: {p, t.id}
     running = Map.drop(s.running, Map.keys(stale))
     plan = Plan.of_drawing(job.drawing)
+    tasks = for t <- plan.tasks, do: if(t.id in gone, do: %{t | waits: t.waits ++ ["remove/" <> t.id]}, else: t)
+    plan = %{plan | tasks: removes ++ tasks}
     done = MapSet.difference(s.done, MapSet.new(changed))
     in_hand = for {_, t} <- running, do: t.id
     waiting = for t <- plan.tasks, not MapSet.member?(done, t.id), t.id not in in_hand, do: t
     placed = MapSet.difference(s.placed, MapSet.new(changed))
-    keep = Map.take(job, [:drawing, :item, :scene, :pose, :hash])
+    keep = Map.take(job, [:drawing, :item, :scene, :pose, :hash, :lot, :geo])
 
     s = %{
       s
@@ -560,10 +588,16 @@ defmodule World.Construction do
         stale: Map.merge(s.stale, stale),
         made: Map.drop(s.made, changed),
         hauls: Map.drop(s.hauls, changed),
-        placed: placed
+        placed: placed,
+        built: s.built -- changed
     }
 
-    record(s, "changed", nil, %{"redo" => redo, "keep" => names -- changed})
+    remove =
+      for t <- removes,
+          do: %{"id" => t.id, "action" => "remove", "waits" => t.waits, "trade" => Atom.to_string(t.trade)}
+
+    data = %{"redo" => redo, "keep" => names -- changed, "remove" => remove}
+    record(s, "changed", nil, if(lot?, do: Map.put(data, "lot", job.lot), else: data))
   end
 
   # The trades that wait for a person: hire in the budget. When a trade

@@ -571,7 +571,10 @@ person), `at` (the milliseconds from the start of the build), `wall`
 and `data`. The kinds: `requested`, `plan_made` (the tasks, each with
 its trade and the tasks that it waits for), `hired`, `task_started`,
 `task_done`, `element` (the part of a task: its node, its GLB key and
-its matrix), `released`, `paused`, `resumed`, `changed`, `task_dropped`,
+its matrix), `released`, `paused`, `resumed`, `changed` (the tasks
+made again, the nodes kept, the tasks that take down what it drops,
+the new lot), `element_removed` (a part that people took down),
+`task_dropped`,
 `done` (the model is complete), `stopped`, `failed` and `run_done` (the
 time and the memory). A comment line
 (`: ping`) comes each 15 s when there is no event.

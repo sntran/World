@@ -89,7 +89,14 @@ defmodule World.BuildSpec do
   defp task(b, id), do: b <> "|" <> id
 
   defp module(events) do
-    plans = for %{kind: "plan_made", order: b, data: d} <- events, t <- d["tasks"], do: {b, t}
+    # The tasks of the plans, and the tasks of the changes that take down
+    # what they drop.
+    plans =
+      for %{kind: k, order: b, data: d} <- events,
+          k in ~w(plan_made changed),
+          t <- if(k == "plan_made", do: d["tasks"], else: Map.get(d, "remove", [])),
+          do: {b, t}
+
     builds = events |> Enum.map(& &1.order) |> Enum.uniq()
     hires = for %{kind: "hired", who: p, data: d} <- events, into: %{}, do: {p, d["trade"]}
 

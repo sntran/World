@@ -26,6 +26,19 @@ defmodule World.ChangeTest do
     }
   end
 
+  # The blocks with a slow block on the top, to pause after the upper block.
+  defp tall(size) do
+    slow = %{
+      "name" => "top",
+      "skill" => %{"block" => %{"size" => 0.2, "wait" => 1000}},
+      "from" => ["upper"],
+      "to" => "upper",
+      "at" => "top"
+    }
+
+    update_in(drawing(size), ["nodes"], &(&1 ++ [slow]))
+  end
+
   defp job(d, id), do: %{id: id, item: fn level -> Detail.with(level, fn -> Drawing.build(d) end) end, drawing: d}
   defp glb(d), do: Detail.with(:near, fn -> Drawing.build(d) end) |> Build.glb(level: :near)
   defp id, do: "change-#{System.unique_integer([:positive])}"
@@ -51,6 +64,56 @@ defmodule World.ChangeTest do
     assert started(r.log, "note") == 1 and started(r.log, "root") == 2
     assert Log.check(r.log) == :ok
     assert BuildSpec.replay([r.log], dir) == :ok
+  end
+
+  test "a change takes down each built element that it drops, the last built first; a change of the lot drops each",
+       %{tmp_dir: dir} do
+    id = id()
+    World.watch(id)
+    {:ok, ^id} = World.build(Map.put(job(tall(1.0), id), :budget, %{"workers" => 1}))
+    assert_receive {:world, %{"kind" => "element", "data" => %{"task" => "upper"}}}, 5_000
+    assert World.pause(id) == :ok
+    assert_receive {:world, %{"kind" => "paused"}}
+
+    # The root changes, so the upper block on it: both come down, the upper first.
+    assert World.change(id, job(tall(2.0), "other")) == :ok
+    assert_receive {:world, %{"kind" => "changed", "data" => %{"remove" => [up, root]}}}
+    assert up == %{"id" => "remove/upper", "action" => "remove", "waits" => [], "trade" => "mason"}
+    assert root["id"] == "remove/root" and root["waits"] == ["remove/upper"]
+    assert World.resume(id) == :ok
+    assert {:ok, r} = World.await(id, 10_000)
+    assert r.glb == glb(tall(2.0))
+    kinds = for e <- Log.events(r.log), e.kind in ~w(element_removed element), do: {e.kind, e.data["task"]}
+    gone = Enum.filter(kinds, &(elem(&1, 0) == "element_removed"))
+    assert gone == [{"element_removed", "upper"}, {"element_removed", "root"}]
+    # The root comes back after it came down.
+    assert for({k, "root"} <- kinds, do: k) == ~w(element element_removed element)
+    # To take down a part takes a third of its days.
+    started = for e <- Log.events(r.log), e.kind == "task_started", into: %{}, do: {e.data["task"], e.data["days"]}
+    assert_in_delta started["remove/root"], 0.125 / 3, 1.0e-9
+    assert Log.check(r.log) == :ok
+    assert BuildSpec.replay([r.log], dir) == :ok
+
+    # A change of the lot: each built node comes down, and is made again.
+    id = id()
+    World.watch(id)
+    {:ok, ^id} = World.build(Map.put(job(tall(1.0), id), :budget, %{"workers" => 1}))
+    assert_receive {:world, %{"kind" => "element", "order" => ^id, "data" => %{"task" => "root"}}}, 5_000
+    assert World.pause(id) == :ok
+    assert_receive {:world, %{"kind" => "paused", "order" => ^id}}, 5_000
+    assert World.change(id, Map.merge(job(tall(1.0), "other"), %{lot: "cape", geo: %{"at" => [1, 2, 3]}})) == :ok
+
+    assert_receive {:world,
+                    %{
+                      "kind" => "changed",
+                      "order" => ^id,
+                      "data" => %{"lot" => "cape", "keep" => [], "remove" => [%{"id" => "remove/" <> _} | _]}
+                    }}
+
+    assert World.resume(id) == :ok
+    assert {:ok, r} = World.await(id, 10_000)
+    assert started(r.log, "note") == 2
+    assert Log.check(r.log) == :ok
   end
 
   test "a pause gives no task until the resume; a pause and a resume twice change nothing", %{tmp_dir: dir} do

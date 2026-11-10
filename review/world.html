@@ -230,7 +230,7 @@ function lot(id) {
   const row = $('builds').insertRow();
   row.insertCell().textContent = id.slice(0, 12);
   const state = row.insertCell();
-  const b = { id, group, state, tasks: 0, done: 0, elements: 0, status: 'plan' };
+  const b = { id, group, state, tasks: 0, done: 0, elements: 0, status: 'plan', parts: {} };
   builds.set(id, b);
   return b;
 }
@@ -413,7 +413,13 @@ async function take(e) {
       part.matrix.fromArray(d.matrix);
       stage.shade(part);
       b.group.add(part);
+      (b.parts[d.task] ??= []).push(part);
     }
+  }
+  // A task that takes down a part (plan 0006, D7): its elements go.
+  if (e.kind === 'element_removed') {
+    for (const part of b.parts[d.task] ?? []) part.removeFromParent();
+    delete b.parts[d.task];
   }
   if (['done', 'stopped', 'failed'].includes(e.kind)) b.status = e.kind;
   b.state.textContent = `${b.done} of ${b.tasks} tasks, ${b.elements} elements, ${b.status}`;
