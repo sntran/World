@@ -1757,7 +1757,12 @@ A node can name the node whose task takes it down on the site
 scaffold of each band (`scaffold_N`, down at `unscaffold`), its forms
 (`form_N`, down at `strip_N`), and the band in rough grey concrete after
 its pour (`pour_N`, down when the statue in washed stone is set), each
-temporary.
+temporary. With the method of today the site has a tower crane
+(`crane`, the skill `crane` of a rigger: a lattice mast on a block,
+its jib 8 m over the top of the statue, a counter jib, the cab and the
+line of the hook), up after the base and down after the scaffold
+(`crane_down`). A node with `"only": [A, B]` is in the drawing when A
+is B: the crane has `"only": [{"param": "method"}, "today"]`.
 
 A node with `"temporary": true`, or whose skill gives `"temporary" =>
 true` in its data, is not in the model: the people make it, and the

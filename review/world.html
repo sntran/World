@@ -334,7 +334,7 @@ const body = loader.loadAsync(params.get('worker') ?? `${files}/m/catalog.far.gl
   .then((g) => ({ scene: g.scene, clips: g.animations }))
   .catch(() => plainBody());
 // The work of each trade (World.People.Pose.work/0).
-const WORK = { caster: 'pour', carpenter: 'set_panel', scaffolder: 'climb', mason: 'trowel', finisher: 'trowel', smith: 'hammer', sculptor: 'hammer', surveyor: 'guide', builder: 'carry' };
+const WORK = { caster: 'pour', carpenter: 'set_panel', scaffolder: 'climb', rigger: 'guide', mason: 'trowel', finisher: 'trowel', smith: 'hammer', sculptor: 'hammer', surveyor: 'guide', builder: 'carry' };
 const people = new Map();
 const gate = new THREE.Vector3(-20, 0, -20);
 async function person(name) {
@@ -542,10 +542,10 @@ const next = (e) => { events.push(e); queue = queue.then(() => take(e)).catch((e
 // clock of the log, at `days` days of the world in one second.
 const DAY = 86400000;
 const VIEWS = {
-  three_quarters: { cam: [45, 22, 72], target: [0, 15, 0] },
-  front: { cam: [0, 16, 90], target: [0, 15, 0] },
-  side: { cam: [90, 16, 0], target: [0, 15, 0] },
-  back: { cam: [0, 16, -90], target: [0, 15, 0] },
+  three_quarters: { cam: [62, 30, 98], target: [0, 21, 0] },
+  front: { cam: [0, 24, 115], target: [0, 21, 0] },
+  side: { cam: [115, 24, 0], target: [0, 21, 0] },
+  back: { cam: [0, 24, -115], target: [0, 21, 0] },
   base: { cam: [9, 2.5, 20], target: [0, 6, 0] },
   above: { cam: [0.1, 110, 0.1], target: [0, 10, 0] },
 };

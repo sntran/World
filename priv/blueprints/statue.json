@@ -754,6 +754,44 @@
         }
       },
       {
+        "name": "crane",
+        "only": [
+          {
+            "param": "method"
+          },
+          "today"
+        ],
+        "skill": {
+          "crane": {
+            "height": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                },
+                {
+                  "param": "height"
+                },
+                8.0
+              ]
+            },
+            "jib": 40.0,
+            "at": [
+              -11.0,
+              -11.0
+            ],
+            "turn": 45.0
+          }
+        },
+        "temporary": true,
+        "down": "crane_down",
+        "work": {
+          "crane": 1.0
+        }
+      },
+      {
         "name": "survey",
         "skill": {
           "cast_survey": {
@@ -2283,6 +2321,25 @@
               }
             ]
           }
+        }
+      },
+      {
+        "name": "crane_down",
+        "only": [
+          {
+            "param": "method"
+          },
+          "today"
+        ],
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "rigger",
+        "after": [
+          "unscaffold"
+        ],
+        "work": {
+          "crane": 1.0
         }
       },
       {

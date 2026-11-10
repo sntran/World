@@ -20,6 +20,7 @@
       "brick": {"unit": "brick", "crew": 2, "today": 1000.0, "1974": 800.0, "source": "estimate: a mason and a helper lay about 1,000 bricks in a day"},
       "paint": {"unit": "m2", "crew": 1, "today": 60.0, "1974": 40.0, "source": "estimate: a painter gives one coat to about 60 m2 of a wall in a day with a roller (today), 40 m2 with a brush (1974)"},
       "roof": {"unit": "m2", "crew": 2, "today": 60.0, "1974": 30.0, "source": "estimate: two roofers fix about 60 m2 of steel sheets in a day"},
+      "crane": {"unit": "crane", "crew": 4, "today": 0.333, "1974": 0.333, "source": "estimate: four riggers and a mobile crane set up (or take down) a small tower crane of about 45 m in 3 days; the sites of 1974 had no tower crane"},
       "remove": {"unit": "day", "crew": 4, "today": 3.0, "1974": 2.0, "source": "estimate: to take down a part takes a third of the days to make it with the machines of today (a breaker, a crane), a half by hand (1974); the amount is the days of the task that made it"},
       "task": {"unit": "task", "crew": 1, "today": 8.0, "1974": 8.0, "source": "estimate: a task with no work in data takes one hour of a day of 8 hours (the parts of a vehicle at a factory)"}
     }

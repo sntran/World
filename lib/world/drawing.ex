@@ -500,7 +500,7 @@ defmodule World.Drawing do
 
   # A node: its errors, and its item (the part, or the item of the order).
   defp node(node, path, i, parts, known) when is_map(node) do
-    keys = ~w(name part item skill trade after from to at port joint turn offset temporary work cure down)
+    keys = ~w(name part item skill trade after from to at port joint turn offset temporary work cure down only)
 
     keys =
       if Map.has_key?(node, "repeat"),
@@ -778,7 +778,8 @@ defmodule World.Drawing do
   The drawing of a blueprint in data (`World.Orders.Blueprint.from_data/1`)
   with the options of an order: each `{"param": NAME}` takes the value of
   its option, each `{"sum": [...]}` the sum of its numbers, and each
-  `{"product": [...]}` their product (the work of a site, plan 0006). The texts
+  `{"product": [...]}` their product (the work of a site, plan 0006); a
+  node with `"only": [A, B]` is in the drawing when A is B. The texts
   of the option of the type `sources`, in the order of their names, go
   after the sources of the drawing, and the `sizes` of the blueprint go
   into its extras (`"sizes"`): each with its value, its unit and its
@@ -789,7 +790,7 @@ defmodule World.Drawing do
   def fill(blueprint, options) do
     # The params, the repeats, then the params that a repeat names
     # (`{"param": "finish_{side}"}`).
-    drawing = blueprint["drawing"] |> put(options) |> expand() |> put(options)
+    drawing = blueprint["drawing"] |> put(options) |> expand() |> put(options) |> only()
     params = Map.get(blueprint, "params", [])
     sources = Enum.find_value(params, %{}, &(&1["type"] == "sources" && options[&1["name"]]))
 
@@ -804,6 +805,16 @@ defmodule World.Drawing do
     drawing = Map.update(drawing, "sources", texts, &(&1 ++ texts))
     if sizes == [], do: drawing, else: Map.update(drawing, "extras", %{"sizes" => sizes}, &Map.put(&1, "sizes", sizes))
   end
+
+  # The nodes of the options: a node with `"only": [A, B]` is in the
+  # drawing when A is B (`[{"param": "method"}, "today"]`: the crane of a
+  # site of today), and the key goes.
+  defp only(%{"nodes" => nodes} = d) do
+    kept = for n <- nodes, match?([a, a], Map.get(n, "only", [0, 0])), do: Map.delete(n, "only")
+    %{d | "nodes" => kept}
+  end
+
+  defp only(d), do: d
 
   # A size of one option, or of some (`of`: a list of their values).
   defp size(%{"of" => names}, options), do: for(n <- names, do: options[n])

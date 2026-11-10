@@ -104,7 +104,11 @@ defmodule World.MethodTest do
     # The new statue has no age at the change: its dirt grows in the long pause.
     long = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "pause"))
     dirt = for e <- Enum.drop(events, long), e.kind == "aged", do: e.data["dirt"]
-    assert dirt == Enum.sort(dirt) and List.last(dirt) > 0.8 and List.last(aged)["weeds"] == 1.0
+    assert dirt == Enum.sort(dirt)
+    # The dirt and the weeds from the years (a pause that starts late is shorter).
+    last = List.last(aged)
+    assert_in_delta last["dirt"], 1 - :math.exp(-last["days"] / 365 / 8), 0.001
+    assert_in_delta last["weeds"], min(last["days"] / 365 / 5, 1.0), 0.001
     assert [["the copper cable of the lightning rod"]] = for(a <- aged, a["lost"] != [], do: a["lost"])
 
     assert %{data: %{"parts" => ["the copper cable of the lightning rod"]}} =
@@ -138,5 +142,19 @@ defmodule World.MethodTest do
     {:ok, job} = Orders.job(order("1974"), "mid")
     stream = World.Detail.with(:mid, fn -> Drawing.build(job.model, stream: true) end)
     assert World.Check.model(stream) == :ok
+
+    # The tower crane of a site of today (D6): up after the base, down
+    # after the scaffold; no crane in 1974.
+    {:ok, today} = Orders.job(order("today"), "mid")
+    crane = Enum.find(today.drawing["nodes"], &(&1["name"] == "crane"))
+    assert crane["down"] == "crane_down" and crane["temporary"] and not Map.has_key?(crane, "only")
+    assert Enum.find(today.drawing["nodes"], &(&1["name"] == "crane_down"))["after"] == ["unscaffold"]
+    refute Enum.any?(job.model["nodes"], &(&1["name"] in ~w(crane crane_down)))
+    stream = World.Detail.with(:mid, fn -> Drawing.build(today.drawing, stream: true) end)
+    assert World.Check.model(stream) == :ok
+    {p, _, _} = World.Skills.Crane.make(crane["skill"]["crane"], %{}, %{name: "crane"})
+    {{_, _, _}, {_, _, top}} = World.Part.bounds(p)
+    # Its jib over the top of the statue (the halo at 7.7 + 28 m).
+    assert top > 7.7 + 28.0 + 7 and World.Skills.Crane.check(%{"at" => [1]}, "c") != []
   end
 end

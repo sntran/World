@@ -97,8 +97,8 @@ defmodule World.MCPTest do
     statue = %{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua"}}
     r = tool("plan_build", %{"order" => statue})["structuredContent"]
 
-    assert r["level"] == "near" and length(r["tasks"]) == 55 and r["trades"]["caster"] == 11 and
-             r["trades"]["scaffolder"] == 9
+    assert r["level"] == "near" and length(r["tasks"]) == 57 and r["trades"]["caster"] == 11 and
+             r["trades"]["scaffolder"] == 9 and r["trades"]["rigger"] == 2
 
     assert tool("plan_build", %{"order" => @strut, "level" => "huge"})["isError"] == true
 
