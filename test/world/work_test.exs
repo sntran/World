@@ -9,7 +9,8 @@ defmodule World.WorkTest do
   test "the work of the trades: a loop of two poses for each, and the props of a site" do
     assert Pose.work() == ~w(carry set_panel pour trowel hammer climb guide)
     for w <- Pose.work(), do: assert({2.0, 10, [{0.0, %{}}, {1.0, %{}}]} = Pose.routine(w))
-    assert Pose.work() -- Pose.routines() == []
+    # The work of a site is not a routine of exercise.
+    assert Enum.all?(Pose.work(), &(&1 not in Pose.routines()))
 
     for name <- ~w(hard_hat bucket trowel hammer) do
       part = Props.prop(name)

@@ -106,7 +106,7 @@ defmodule World.People.Pose do
   }
 
   # The routines of a morning of exercise (`routine/1`).
-  @routines ~w(aerobics tai_chi yoga carry set_panel pour trowel hammer climb guide)
+  @routines ~w(aerobics tai_chi yoga)
   # The work of the trades on a site (plan 0006, D10).
   @work ~w(carry set_panel pour trowel hammer climb guide)
 
@@ -208,7 +208,8 @@ defmodule World.People.Pose do
   def animation("wave", bones, opts), do: clip("wave", bones, 2.6, 39, &wave/1, hands(opts))
   def animation("point", bones, opts), do: clip("point", bones, 2.6, 39, &point/1, hands(opts))
 
-  def animation(name, bones, opts) when name in @routines, do: animation({name, routine(name)}, bones, opts)
+  def animation(name, bones, opts) when name in @routines or name in @work,
+    do: animation({name, routine(name)}, bones, opts)
 
   # A routine of the caller: `{name, {length, fps, keys}}` as `routine/1`.
   def animation({name, {length, fps, keys}}, bones, opts) do

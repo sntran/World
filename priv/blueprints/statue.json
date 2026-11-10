@@ -852,7 +852,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "temporary": true,
         "down": "unscaffold",
@@ -892,7 +893,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "work": {
           "formwork": {
@@ -935,7 +937,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "pour_1"
@@ -978,7 +981,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "scaffold_2",
@@ -1022,7 +1026,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "pour_2"
@@ -1065,7 +1070,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "scaffold_3",
@@ -1109,7 +1115,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "pour_3"
@@ -1152,7 +1159,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "scaffold_4",
@@ -1196,7 +1204,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "pour_4"
@@ -1239,7 +1248,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "scaffold_5",
@@ -1283,7 +1293,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "pour_5"
@@ -1326,7 +1337,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "scaffold_6",
@@ -1370,7 +1382,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "pour_6"
@@ -1413,7 +1426,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "scaffold_7",
@@ -1457,7 +1471,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "pour_7"
@@ -1500,7 +1515,8 @@
           }
         },
         "from": [
-          "survey"
+          "survey",
+          "outside"
         ],
         "after": [
           "scaffold_8",

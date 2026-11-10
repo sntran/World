@@ -32,13 +32,21 @@ defmodule World.Skills.Pour do
   def make(_data, %{"survey" => %{"survey" => nil}}, _context),
     do: {nil, %{"distances" => nil, "temporary" => true}, %{}}
 
-  def make(data, %{"survey" => %{"survey" => s}, "outside" => %{"marks" => marks, "outside" => out}}, %{name: name}) do
+  def make(data, %{"survey" => %{"survey" => s}, "outside" => outside}, %{name: name}) do
+    %{"marks" => marks, "outside" => out, "bands" => bands, "boxes" => boxes} = outside
     o = Statue.o(data, @names)
-    band = Statue.band_tris(s, o.band, o.bands)
-    # The concrete of the band: each triangle of the cast cut to the
-    # heights of the band (`World.Skills.Statue.band_box/4`).
-    {{_, _, z0}, {_, _, z1}} = Statue.band_box(s, o.band, o.bands, 0.0)
-    tris = for t <- Tuple.to_list(s.tris), piece <- clip(Tuple.to_list(t), z0, z1), do: piece
+    band = Enum.at(bands, o.band - 1, [])
+    # The concrete of the band: each triangle of the cast at the heights
+    # of the band, cut to them (`World.Skills.Statue.band_boxes/2`).
+    {{_, _, z0}, {_, _, z1}} = Enum.at(boxes, o.band - 1)
+
+    tris =
+      for t <- Tuple.to_list(s.tris),
+          ps = Tuple.to_list(t),
+          Enum.any?(ps, &(elem(&1, 2) <= z1)) and Enum.any?(ps, &(elem(&1, 2) >= z0)),
+          piece <- clip(ps, z0, z1),
+          do: piece
+
     points = for {a, b, c} <- tris, {x, y, z} <- [a, b, c], do: {x, y, z + o.feet}
     faces = for i <- 0..(length(tris) - 1)//1, do: [3 * i, 3 * i + 1, 3 * i + 2]
 

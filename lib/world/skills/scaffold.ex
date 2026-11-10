@@ -34,9 +34,9 @@ defmodule World.Skills.Scaffold do
   @impl true
   def make(_data, %{"survey" => %{"survey" => nil}}, _context), do: {nil, %{"temporary" => true}, %{}}
 
-  def make(data, %{"survey" => %{"survey" => s}}, %{name: name}) do
+  def make(data, %{"outside" => %{"boxes" => boxes}}, %{name: name}) do
     o = Statue.o(data, @names)
-    {{x0, y0, z0}, {x1, y1, z1}} = Statue.band_box(s, o.band, o.bands, o.feet)
+    {{x0, y0, z0}, {x1, y1, z1}} = boxes |> Enum.at(o.band - 1) |> Statue.lift(o.feet)
     {x0, y0, x1, y1} = {x0 - @out, y0 - @out, x1 + @out, y1 + @out}
     material = if o.method == "1974", do: :bamboo, else: :steel
     corners = [{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}]

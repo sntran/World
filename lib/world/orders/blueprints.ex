@@ -154,7 +154,7 @@ defmodule World.Orders.Blueprints do
             option("pose", :choice, default: "stand", values: Pose.names()),
             option("animations", :list,
               default: [],
-              item: option("item", :choice, values: ["walk" | Pose.routines()]),
+              item: option("item", :choice, values: ["walk" | Pose.routines() ++ Pose.work()]),
               # The walk and the work of each trade of a site (plan 0006, D10).
               max: 8
             ),

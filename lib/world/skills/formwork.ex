@@ -1,16 +1,15 @@
 defmodule World.Skills.Formwork do
   @moduledoc """
   The skill `formwork` of a carpenter: the forms of one band of a cast,
-  from the feet up (`band` of `bands`, `World.Cast.bands/2`): the cells
-  that the triangles of the band mark (`World.Cast.marks/2`), and the
-  panels round the box of the band as a site sees them (plan 0006, D9):
+  from the feet up (`band` of `bands`; the box of the band from the
+  outside of the cast, `World.Skills.CastOutside`): the panels round the
+  box of the band as a site sees them (plan 0006, D9):
   plywood today, timber boards in 1974 (`method`), the feet of the statue
   `feet` m over the ground. The part is temporary: the stream shows it
-  until the strip, and the model leaves it out. Its data: `marks` (nil
-  with no survey) and `temporary`.
+  until the strip, and the model leaves it out. Its data: `temporary`.
   """
   @behaviour World.Skill
-  alias World.{Cast, Part, Shape}
+  alias World.{Part, Shape}
   alias World.Skills.Statue
 
   @names ~w(band bands feet method)
@@ -30,12 +29,11 @@ defmodule World.Skills.Formwork do
   def estimate(_data, _level), do: 0
 
   @impl true
-  def make(_data, %{"survey" => %{"survey" => nil}}, _context), do: {nil, %{"marks" => nil, "temporary" => true}, %{}}
+  def make(_data, %{"survey" => %{"survey" => nil}}, _context), do: {nil, %{"temporary" => true}, %{}}
 
-  def make(data, %{"survey" => %{"survey" => s}}, %{name: name}) do
+  def make(data, %{"outside" => %{"boxes" => boxes}}, %{name: name}) do
     o = Statue.o(data, @names)
-    marks = Cast.marks(s, Statue.band_tris(s, o.band, o.bands))
-    {{x0, y0, z0}, {x1, y1, z1}} = Statue.band_box(s, o.band, o.bands, o.feet)
+    {{x0, y0, z0}, {x1, y1, z1}} = boxes |> Enum.at(o.band - 1) |> Statue.lift(o.feet)
     {x0, y0, x1, y1} = {x0 - @out, y0 - @out, x1 + @out, y1 + @out}
     material = if o.method == "1974", do: :wood, else: :plywood
 
@@ -46,6 +44,6 @@ defmodule World.Skills.Formwork do
       Shape.box({x1, y0, z0}, {x1 + @board, y1, z1}, material)
     ]
 
-    {Part.new(name, :part, panels, [Statue.port()]), %{"marks" => marks, "temporary" => true}, %{}}
+    {Part.new(name, :part, panels, [Statue.port()]), %{"temporary" => true}, %{}}
   end
 end

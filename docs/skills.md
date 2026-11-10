@@ -94,9 +94,13 @@ plan, and each other node takes it in `from`.
 | `figure` | sculptor | `name`, `height`, `span`, `hand`, `pose`, `lift`, `gender`, `age`, `hair`, `halo`, `race`, `face` | The figure of a person at its size and pose: data for the cast; its head with the race and the face of the sculptor. |
 | `robe` | sculptor | `robe`, `forms`, `material` | The robe on the figure, or its `forms` as data (`World.Forms`, plan 0005): the outside of the statue at near. |
 | `cast_survey` | surveyor | `height` | The grid of the cast. |
-| `formwork` | carpenter | `band`, `bands` | The form of one band, from the feet up. |
-| `cast_outside` | caster | | The fill of the outside of the grid. |
-| `pour` | caster | `band`, `bands` | The pour of one band: the distances near its surface. |
+| `cast_outside` | caster | `bands` | The fill of the outside of the grid, the triangles of each band, and the box of each band on a site. |
+| `scaffold` | scaffolder | `band`, `bands`, `feet`, `method` | The scaffold of one band (temporary): steel today, bamboo with a pulley in 1974. |
+| `formwork` | carpenter | `band`, `bands`, `feet`, `method` | The forms of one band (temporary): plywood today, timber boards in 1974. |
+| `pour` | caster | `band`, `bands`, `feet` | The pour of one band: the distances near its surface, and the band in rough grey concrete (temporary). |
+| `site_step` | (its node) | | A step of a site with no part: the strip of the forms, the fall of the scaffold or of the crane. |
+| `crane` | rigger | `height`, `jib`, `at`, `turn` | The tower crane of a site of today (temporary). |
+| `mixing` | caster | `at` | The board of the mixing of the concrete by hand of 1974 (temporary). |
 | `cast_field` | caster | `hollow`, `wall`, `well`, `windows` | The field of the solid, from the pours in any order. |
 | `shell_slab` | finisher | `band`, `bands` | The mesh of the surface of one slab of the grid. |
 | `shell` | caster | `hand`, `material` | The shell of the statue, from its slabs; with the forms of the robe, at near only its inner walls. |

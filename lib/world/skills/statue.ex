@@ -35,30 +35,32 @@ defmodule World.Skills.Statue do
   def port, do: Part.port("o", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
 
   @doc """
-  The box of a band of a cast (`World.Cast.bands/2`) on a site, its feet
-  `feet` m over the ground: `{{x0, y0, z0}, {x1, y1, z1}}`. The bands meet
-  end to end: a band goes from the lowest center of its triangles to the
-  lowest center of the next (the first from the lowest point, the last to
-  the highest), and its box holds each triangle of the cast at those
-  heights (the arms of the band over it too).
+  The boxes of the bands of a cast (`World.Cast.bands/2`, `bands` the
+  indices of the triangles of each) on a site: a list of `{{x0, y0, z0},
+  {x1, y1, z1}}`, the feet of the statue at 0. The bands meet end to end:
+  a band goes from the lowest center of its triangles to the lowest
+  center of the next (the first from the lowest point, the last to the
+  highest), and its box holds each triangle of the cast at those heights
+  (the arms of the band over it too).
   """
-  def band_box(s, band, bands, feet) do
-    all = World.Cast.bands(s, bands)
+  def band_boxes(s, bands) do
     tris = Tuple.to_list(s.tris)
+    spans = for t <- tris, ps = Tuple.to_list(t), zs = Enum.map(ps, &elem(&1, 2)), do: {Enum.min(zs), Enum.max(zs), ps}
     center = fn i -> elem(s.tris, i) |> Tuple.to_list() |> Enum.map(&elem(&1, 2)) |> Enum.sum() |> Kernel./(3) end
-    zs = for t <- tris, {_, _, z} <- Tuple.to_list(t), do: z
-    low = fn b -> b |> Enum.map(center) |> Enum.min() end
-    z0 = if band == 1, do: Enum.min(zs), else: low.(Enum.at(all, band - 1))
-    z1 = if band >= length(all), do: Enum.max(zs), else: low.(Enum.at(all, band))
-    # A triangle at those heights: its span of heights meets them.
-    at = fn ps -> Enum.min(Enum.map(ps, &elem(&1, 2))) <= z1 and Enum.max(Enum.map(ps, &elem(&1, 2))) >= z0 end
-    points = for t <- tris, ps = Tuple.to_list(t), at.(ps), p <- ps, do: p
-    {{x0, y0, _}, {x1, y1, _}} = World.Vec.bounds(points)
-    {{x0, y0, z0 + feet}, {x1, y1, z1 + feet}}
+    lows = for b <- bands, do: b |> Enum.map(center) |> Enum.min()
+    bottom = spans |> Enum.map(&elem(&1, 0)) |> Enum.min()
+    top = spans |> Enum.map(&elem(&1, 1)) |> Enum.max()
+    edges = Enum.zip([bottom | tl(lows)], tl(lows) ++ [top])
+
+    for {z0, z1} <- edges do
+      points = for {lo, hi, ps} <- spans, lo <= z1 and hi >= z0, p <- ps, do: p
+      {{x0, y0, _}, {x1, y1, _}} = World.Vec.bounds(points)
+      {{x0, y0, z0}, {x1, y1, z1}}
+    end
   end
 
-  @doc "The indices of the triangles of a band of a cast."
-  def band_tris(s, band, bands), do: Enum.at(World.Cast.bands(s, bands), band - 1, [])
+  @doc "A box of a band (`band_boxes/2`) with the feet of the statue `feet` m over the ground."
+  def lift({{x0, y0, z0}, {x1, y1, z1}}, feet), do: {{x0, y0, z0 + feet}, {x1, y1, z1 + feet}}
 
   @doc "The options of the data of the skills of a statue, by their names."
   def options do
