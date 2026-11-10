@@ -1,0 +1,31 @@
+{
+  "note": "The history of the construction of the statue of Christ on Núi Nhỏ (Tao Phùng), Vũng Tàu, from the web on 2026-11-10 (plan 0006). Each fact names its sources; the sources do not agree on some dates, and each such fact says so. The method 1974 of the statue (plan 0006, D3) takes its stages and its site from these facts; a fact with no source in it is not here.",
+  "sources": {
+    "viwiki": {"title": "Tượng Chúa Kitô Vua (Vũng Tàu)", "publisher": "vi.wikipedia", "url": "https://vi.wikipedia.org/wiki/T%C6%B0%E1%BB%A3ng_Ch%C3%BAa_Kit%C3%B4_Vua_(V%C5%A9ng_T%C3%A0u)", "read": "2026-11-10"},
+    "enwiki": {"title": "Christ of Vũng Tàu", "publisher": "en.wikipedia", "url": "https://en.wikipedia.org/wiki/Christ_of_V%C5%A9ng_T%C3%A0u", "read": "2026-11-10"},
+    "vietcatholic": {"title": "Thăm tượng đài Kitô Vua trên đỉnh Tao Phùng, Vũng Tầu", "publisher": "vietcatholic.net", "url": "http://vietcatholic.net/News/Html/90894.htm", "read": "2026-11-10"},
+    "grandart": {"title": "Dừng chân ghé thăm tượng Chúa Kitô Vua", "publisher": "grandart.vn", "url": "https://grandart.vn/dung-chan-ghe-tham-tuong-chua-kito-vua-bieu-tuong-duc-tin-vung-chai-giua-bien-troi-vung-tau", "read": "2026-11-10"},
+    "ashui": {"title": "Tượng chúa Kitô trên đỉnh núi Nhỏ, TP Vũng Tàu", "publisher": "ashui.com", "url": "https://ashui.com/tuong-chua-kito-tren-dinh-nui-nho-tp-vung-tau/", "read": "2026-11-10"},
+    "gcatholic": {"title": "Tượng Chúa Kitô Vua", "publisher": "GCatholic", "url": "https://gcatholic.org/churches/asia/5880", "read": "2026-11-10"}
+  },
+  "facts": [
+    {"id": "first_site", "date": "1972/1974-02-16", "text": "A first statue, 10 m on a base of 5 m, was started in 1972 at Nghinh Phong (Ô Quắn). The work stopped on 17 January 1973 (the land was claimed by Buddhists); on 16 February 1974 an agreement gave the Catholics about 10 hectares on Núi Nhỏ, and the first statue was taken down.", "sources": ["viwiki", "vietcatholic"]},
+    {"id": "permit_1974", "date": "1974-03-18", "text": "The local government gave the permit 140/VT/HC/LA to build the statue on Núi Nhỏ (Tao Phùng), and the work started. The hill is about 170 to 176 m over the sea; the design changed for the wind and the sun of the hill.", "sources": ["viwiki", "vietcatholic", "grandart"]},
+    {"id": "people_1974", "text": "The concrete was the work of the engineer Nguyễn Quảng Đức (ashui.com gives Nguyễn Văn Đức); the sculpture was the work of the sculptor Văn Nhân with about 50 skilled workers (\"50 thợ lành nghề\").", "sources": ["viwiki", "vietcatholic", "ashui"]},
+    {"id": "foundation", "text": "The foundation was to be 6 m deep; at about 3 m the workers found very hard concrete: tunnels of the French time under the top of the hill.", "sources": ["viwiki", "vietcatholic"]},
+    {"id": "materials", "text": "Sand and gravel from the Đồng Nai river, marble from Hòn Non Nước (Đà Nẵng), white cement from abroad; the other materials from Vietnam.", "sources": ["vietcatholic"]},
+    {"id": "carry", "text": "Thousands of tonnes of materials went up to the top of the hill (\"hàng ngàn tấn vật liệu\") on a steep, narrow path, with no machines.", "sources": ["vietcatholic", "grandart"]},
+    {"id": "scaffold_hard", "text": "The high hill, the rock and a scaffold that was hard to set up made the work long.", "sources": ["ashui"]},
+    {"id": "rough_done", "date": "1975-04-30", "text": "The rough structure (\"phần thô\") was done when the work stopped on 30 April 1975.", "sources": ["viwiki", "vietcatholic"]},
+    {"id": "pause", "date": "1975/1992", "text": "The site was left for about 17 years: weeds covered it, and the copper cable of the lightning rod was stolen. In 1990 the city refused a first request to repair it (31 August 1990).", "sources": ["viwiki", "vietcatholic"]},
+    {"id": "permit_1992", "date": "1992-01-28", "text": "The province gave the permit 233/QĐ.UB to repair and finish the statue and its base with no change of the design, and a stone stair 3 to 5 m wide from the beach of Nghinh Phong, and trees.", "sources": ["viwiki", "vietcatholic"]},
+    {"id": "finish", "date": "1992/1994", "text": "The repair took about two years: the four reliefs of the base (the Last Supper, the three Magi, the keys to Peter, Christ before Pilate), a Pietà in front of the statue, trees, power and water, and a path of about 800 stone steps. Văn Nhân, too old to climb, directed his students from the foot of the hill. A committee led by Đa Minh Nguyễn Chu Trinh ran the work, with money and work from Catholics in Vietnam and abroad.", "sources": ["viwiki", "vietcatholic"]},
+    {"id": "inauguration", "date": "1994-12-01", "text": "The bishop of Xuân Lộc, Nguyễn Minh Nhật, blessed and opened the statue on 1 December 1994. The sources do not agree: en.wikipedia gives 2 December 1994; other pages give 1993 or 1995.", "sources": ["viwiki", "vietcatholic", "enwiki", "gcatholic"]},
+    {"id": "inside", "text": "Inside, a spiral stair of 133 steps goes up to the shoulders; the inside holds about 100 people at one time. Three windows in the robe give light and air.", "sources": ["viwiki", "vietcatholic"]}
+  ],
+  "stages": [
+    {"name": "rough", "from": "1974-03-18", "to": "1975-04-30", "text": "The foundation, the base, the plinth and the cast of the statue: the rough structure.", "facts": ["permit_1974", "people_1974", "foundation", "materials", "carry", "scaffold_hard", "rough_done"]},
+    {"name": "pause", "from": "1975-04-30", "to": "1992-01-28", "text": "No work: the rough statue stands on the hill.", "facts": ["pause"]},
+    {"name": "finish", "from": "1992-01-28", "to": "1994-12-01", "text": "The repair, the render, the reliefs of the base, the rail, the paths.", "facts": ["permit_1992", "finish", "inauguration"]}
+  ]
+}
