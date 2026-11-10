@@ -472,6 +472,16 @@ collision boxes (the base, the plinth, the robe, the arms, the head), and
 the corners of the base for `World.Surface`. The receipt of an order of a
 statue has the list `sizes`.
 
+A model that the people build on a lot of a place with a terrain (a
+statue on the hill of Núi Nhỏ, plan 0006) has its place in the Vũng Tàu
+game in its extras: `"geo": {"frame": "vung_tau_game", "at": [X, height,
+Z], "turn": deg}`. `at` is the game point of the origin of the model (X
+to the east, Z to the south, in metres from Bãi Trước) and the height of
+the ground there; `turn` is the turn of the model round the vertical,
+from the north to the east (the front of a model is +y: with a turn of
+0 it looks to the north). The game puts the model on its ground with no
+other data.
+
 The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
 from the feet to the top of the halo, the hands 18.4 m apart, the hands
 2.2 m, 133 steps inside, a base of 12 by 12 by 4 m with four reliefs.

@@ -94,6 +94,7 @@ defmodule World.Construction do
       |> Map.put_new(:drawing, nil)
       |> Map.put_new(:haul, nil)
       |> Map.put_new(:place, nil)
+      |> Map.put_new(:geo, nil)
 
     budget = job.budget
     clock = Clock.new()
@@ -544,6 +545,10 @@ defmodule World.Construction do
     end)
   end
 
+  # A model on a lot of a terrain has its place in the game (plan 0006, D5).
+  defp geo(scene, %{geo: nil}), do: scene
+  defp geo(scene, %{geo: geo}), do: %{scene | extras: Map.put(scene.extras, "geo", geo)}
+
   defp let_go(s, p) do
     Process.demonitor(s.watched[p], [:flush])
     Person.release(p)
@@ -555,7 +560,7 @@ defmodule World.Construction do
   defp finish(%{waiting: [], running: running, stale: stale} = s) when running == %{} and stale == %{} do
     s = Enum.reduce(s.idle, s, &let_go(&2, &1))
     s = if s.job.drawing, do: %{s | item: World.Drawing.assemble(s.job.drawing, s.made)}, else: s
-    scene = fn -> s.job.scene.(s.item, level: s.level, triangles: s.triangles, parallel: true) end
+    scene = fn -> geo(s.job.scene.(s.item, level: s.level, triangles: s.triangles, parallel: true), s.job) end
     glb = World.Detail.lean(lean?(s), fn -> GLB.encode(scene.()) end)
     s = record(s, "done", nil, %{"bytes" => byte_size(glb), "level" => Atom.to_string(s.level)})
     send(s.sampler, :peak)

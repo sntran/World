@@ -5,7 +5,7 @@ defmodule World.PlacesTest do
   alias World.{Detail, Drawing, Mass, Orders, Places, Stock}
 
   test "the places of the yard: their kinds, the place of a kind of model, the drives, the buildings" do
-    assert Enum.map(Places.all(), & &1["name"]) == ~w(gate warehouse vehicles workshop site)
+    assert Enum.map(Places.all(), & &1["name"]) == ~w(gate warehouse vehicles workshop site nui_nho)
     assert Places.for_kind("vehicle") == "vehicles" and Places.for_kind("house") == "site"
     assert Places.for_kind("furniture") == "workshop" and Places.for_kind("animal") == nil
     assert {:ok, %{"kind" => "warehouse"}} = Places.fetch("warehouse")

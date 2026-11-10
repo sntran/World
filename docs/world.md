@@ -96,14 +96,23 @@ back as blueprints in data, built one time by the people of the node.
 
 Plan 0002 (D6) brings the places back in data: `priv/places.json` has
 the gate of the suppliers, the warehouse, the factory of the vehicles,
-the workshop of the small things, and the site of the houses, the
-statues and the towers (`World.Places`), the stock of the warehouse in
+the workshop of the small things, the site of the houses and the
+towers, and the hill of Núi Nhỏ for the statues (`World.Places`), the stock of the warehouse in
 the units of a site (`World.Stock`), and the trucks. A skill gives the
 takeoff of its task (`materials/2`): a band of courses its bricks, a
 column or a slab its bags of cement and bars of rebar, a render its
 bags of mortar, the paint its cans. The takeoff of the frame and of the
 walls of a tube house agrees with the volume of the elements that the
 people make.
+
+Plan 0006 (D3, D4) gives a place its true ground: the hill of Núi Nhỏ
+(`nui_nho`) has the height tiles of the Vũng Tàu game round the hill and
+the cape of Nghinh Phong (`priv/terrain/nui_nho/`, a copy with no change,
+in the frame of the game; `World.Terrain`), and two lots at their points
+of the game: the top, where the statue of the game is, and the cape. A
+statue goes to the top; its model has its place in the game (`"geo"`),
+so the game can take it back. The ground of a lot is flat in its radius
+and blends into the hill.
 
 The haul (`World.Haul`) brings the takeoff of a task to the place of its
 construction by truck (`World.Truck`), before the task starts. The

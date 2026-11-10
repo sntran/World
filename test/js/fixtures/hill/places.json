@@ -1,0 +1,64 @@
+{
+    "places": [
+        {
+            "at": [
+                700.0,
+                800.0
+            ],
+            "doc": "The hill of N\u00fai Nh\u1ecf (Tao Ph\u00f9ng) and the cape of Nghinh Phong, V\u0169ng T\u00e0u (plan 0006, D4): the true ground of the V\u0169ng T\u00e0u game (World.Terrain). The point of the place on the yard is the point of the lot top; each lot is at its point of the game. A statue is built here.",
+            "kind": "site",
+            "kinds": [
+                "statue"
+            ],
+            "name": "nui_nho",
+            "terrain": {
+                "box": [
+                    760.0,
+                    1440.0,
+                    1600.0,
+                    2640.0
+                ],
+                "ground": "/test/js/fixtures/hill/ground.glb",
+                "lots": [
+                    {
+                        "at": [
+                            1159.87,
+                            1893.39
+                        ],
+                        "doc": "The top of the hill: the statue of Christ of the game (landmark chua_kito_vua, OSM way 235008112). The turn of 180 (the statue looks to the south, to the sea) is an estimate from the drone video of plan 0005.",
+                        "height": 138.32185175,
+                        "name": "top",
+                        "radius": 12.0,
+                        "turn": 180.0,
+                        "yard": [
+                            700.0,
+                            800.0000000000002
+                        ]
+                    },
+                    {
+                        "at": [
+                            1076.55,
+                            2561.69
+                        ],
+                        "doc": "The cape of Nghinh Phong (landmark mui_nghinh_phong): the site of the first statue of 1972 (priv/history/tuong_chua_kito_vua.json). The turn is an estimate.",
+                        "height": 1.3368362500000048,
+                        "name": "cape",
+                        "radius": 8.0,
+                        "turn": 180.0,
+                        "yard": [
+                            616.6800000000001,
+                            131.70000000000027
+                        ]
+                    }
+                ],
+                "name": "nui_nho",
+                "origin": [
+                    1159.87,
+                    1893.39
+                ],
+                "step": 4.0
+            }
+        }
+    ],
+    "speed_kmh": 20
+}

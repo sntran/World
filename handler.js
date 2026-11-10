@@ -203,7 +203,7 @@ async function route(request, env, { vm, commit }) {
     return file(request, env, vm, commit, parts[0], parts[1]);
   }
 
-  if (path === '/events' || path === '/census' || path === '/places' || path.startsWith('/builds/')) return forward(request, vm, url.origin, path + url.search);
+  if (path === '/events' || path === '/census' || path === '/places' || path.startsWith('/places/') || path.startsWith('/builds/')) return forward(request, vm, url.origin, path + url.search);
 
   if (path.startsWith('/m/')) {
     const parts = split(path.slice(3));

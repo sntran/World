@@ -156,9 +156,20 @@ defmodule World.StreamTest do
     assert World.budget(nil) == {:ok, %{}}
   end
 
-  test "GET /census: the people of the node" do
+  test "GET /census, /places and the ground of a place: the people of the node, the places of the yard" do
     assert %{"people" => _, "waiting" => _} = json(call(:get, "/census"))
-    assert %{"places" => [%{"name" => "gate"} | _], "speed_kmh" => 20} = json(call(:get, "/places"))
+    assert %{"places" => [%{"name" => "gate"} | _] = places, "speed_kmh" => 20} = json(call(:get, "/places"))
+
+    assert [%{"terrain" => %{"ground" => ground, "lots" => [%{"name" => "top", "height" => _} | _]}}] =
+             for(p <- places, p["terrain"], do: p)
+
+    # The ground of the hill (plan 0006, D3): a GLB, made once.
+    conn = call(:get, ground)
+    assert conn.status == 200 and ["model/gltf-binary"] == Plug.Conn.get_resp_header(conn, "content-type")
+    assert "glTF" <> _ = conn.resp_body
+    assert call(:get, ground).resp_body == conn.resp_body
+    assert call(:get, "/places/site/ground.glb").status == 404
+    assert call(:get, "/places/moon/ground.glb").status == 404
   end
 
   describe "on a real server" do

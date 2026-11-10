@@ -1,5 +1,5 @@
 {
-  "doc": "The places of the yard of the node (plan 0002, D6): the gate of the suppliers, the warehouse, a factory for the families of things, and the site where the houses, the statues and the towers stand. The positions are in meters on one flat plane; a truck drives on the yard at its speed limit. The people build the warehouse and the factories as houses of one floor with a shutter of the size of their products (D7).",
+  "doc": "The places of the yard of the node (plan 0002, D6): the gate of the suppliers, the warehouse, a factory for the families of things, the site where the houses and the towers stand, and the hill of Núi Nhỏ where the statues stand. The positions are in meters on one flat plane (a place with a terrain has its true ground, plan 0006, D4); a truck drives on the yard at its speed limit. The people build the warehouse and the factories as houses of one floor with a shutter of the size of their products (D7).",
   "speed_kmh": 20,
   "places": [
     {
@@ -196,10 +196,57 @@
       "kinds": [
         "building",
         "house",
-        "statue",
         "tower"
       ],
-      "doc": "The site: a house, a statue or a tower is built where it stands."
+      "doc": "The site: a house or a tower is built where it stands."
+    },
+    {
+      "name": "nui_nho",
+      "kind": "site",
+      "at": [
+        700.0,
+        800.0
+      ],
+      "kinds": [
+        "statue"
+      ],
+      "doc": "The hill of Núi Nhỏ (Tao Phùng) and the cape of Nghinh Phong, Vũng Tàu (plan 0006, D4): the true ground of the Vũng Tàu game (World.Terrain). The point of the place on the yard is the point of the lot top; each lot is at its point of the game. A statue is built here.",
+      "terrain": {
+        "name": "nui_nho",
+        "origin": [
+          1159.87,
+          1893.39
+        ],
+        "box": [
+          760.0,
+          1440.0,
+          1600.0,
+          2640.0
+        ],
+        "step": 4.0,
+        "lots": [
+          {
+            "name": "top",
+            "at": [
+              1159.87,
+              1893.39
+            ],
+            "radius": 12.0,
+            "turn": 180.0,
+            "doc": "The top of the hill: the statue of Christ of the game (landmark chua_kito_vua, OSM way 235008112). The turn of 180 (the statue looks to the south, to the sea) is an estimate from the drone video of plan 0005."
+          },
+          {
+            "name": "cape",
+            "at": [
+              1076.55,
+              2561.69
+            ],
+            "radius": 8.0,
+            "turn": 180.0,
+            "doc": "The cape of Nghinh Phong (landmark mui_nghinh_phong): the site of the first statue of 1972 (priv/history/tuong_chua_kito_vua.json). The turn is an estimate."
+          }
+        ]
+      }
     }
   ],
   "stock": {

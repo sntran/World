@@ -63,6 +63,44 @@ test('the world page draws the map of the yard: the places, the lots at their pl
   }
 });
 
+test('the world page draws the hill of Núi Nhỏ from the game, the sea, and a lot at the height of its ground', { skip: !playwright && 'no Playwright' }, async () => {
+  const server = await serve();
+  const browser = await playwright.chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'], executablePath: process.env.CHROMIUM });
+  try {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    const { port } = server.address();
+    const hill = '/test/js/fixtures/hill';
+    await page.goto(`http://127.0.0.1:${port}/review/world.html?events=${hill}/events.jsonl&places=${hill}/places.json&files=${hill}`);
+    await page.waitForFunction(() => window.READY === true, null, { timeout: 60_000 });
+    // The ground of the place: a mesh of the GLB, with a half turn; its top is the top of the hill.
+    const ground = await page.evaluate(() => {
+      const g = window.WORLD.places.get('nui_nho').ground;
+      g.updateWorldMatrix(true, true);
+      const meshes = [];
+      g.traverse((o) => { if (o.isMesh) meshes.push(o); });
+      // A Box3 of the three.js of the page: the class of the box of a geometry.
+      const Box3 = meshes[0].geometry.boundingBox.constructor;
+      const box = new Box3().setFromObject(g);
+      return { meshes: meshes.length, turn: g.rotation.y, top: box.max.y, low: box.min.y };
+    });
+    assert.equal(ground.meshes, 1);
+    assert.ok(Math.abs(ground.turn - Math.PI) < 1e-9);
+    assert.ok(ground.top > 140 && ground.top < 180 && ground.low < 0, JSON.stringify(ground));
+    // Each statue on its lot: the point of the game on the yard, at the height of its ground, its front to the south.
+    const lots = await page.evaluate(() => Object.fromEntries([...window.WORLD.builds.values()].map((b) => [b.id, [b.group.position.x, b.group.position.y, b.group.position.z, b.group.rotation.y, b.group.getObjectByName('lot').visible]])));
+    const [x, y, z, turn, plane] = lots['s1-far'];
+    assert.ok(Math.abs(x - 700) < 0.01 && Math.abs(y - 138.32) < 0.01 && Math.abs(z + 800) < 0.01 && Math.abs(turn) < 1e-9 && !plane, JSON.stringify(lots));
+    // The cape: 83.32 m to the west and 668.3 m to the south of the top.
+    assert.ok(Math.abs(lots['s2-far'][0] - 616.68) < 0.01 && Math.abs(lots['s2-far'][2] + 131.7) < 0.01 && Math.abs(lots['s2-far'][1] - 1.34) < 0.01, JSON.stringify(lots));
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});
+
 test('the world page draws the elements of a construction as they come', { skip: !playwright && 'no Playwright' }, async () => {
   const events = (await readFile(join(root, 'test/js/fixtures/world/events.jsonl'), 'utf8')).split('\n').filter(Boolean).map((l) => JSON.parse(l));
   const elements = events.filter((e) => e.kind === 'element').length;

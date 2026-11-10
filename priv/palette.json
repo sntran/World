@@ -4,6 +4,7 @@
     "asphalt": {"color": [58, 60, 62], "roughness": 0.95, "metalness": 0.0},
     "bark": {"color": [118, 102, 86], "roughness": 0.9, "metalness": 0.0},
     "ground": {"color": [150, 140, 116], "roughness": 1.0, "metalness": 0.0},
+    "grass": {"color": [104, 122, 72], "roughness": 1.0, "metalness": 0.0},
     "leaf": {"color": [74, 112, 52], "roughness": 0.7, "metalness": 0.0},
     "plaster": {"color": [224, 216, 198], "roughness": 0.9, "metalness": 0.0},
     "aluminum": {"color": [196, 200, 204], "roughness": 0.35, "metalness": 1.0},

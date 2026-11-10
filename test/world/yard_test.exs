@@ -32,7 +32,7 @@ defmodule World.YardTest do
     for _ <- 1..2, do: kind_of("truck_made").()
 
     %{open: open, trucks: trucks, log: log} = Yard.state()
-    assert open == ~w(gate site vehicles warehouse workshop)
+    assert open == ~w(gate nui_nho site vehicles warehouse workshop)
     assert trucks == ~w(truck_1 truck_2)
     assert Log.check(log) == :ok
     kinds = for e <- Log.events(log), do: {e.kind, e.data["place"] || e.data["truck"]}
@@ -75,6 +75,20 @@ defmodule World.YardTest do
 
     trucks = for %{kind: "loaded", data: d} <- events, d["load"] in ids, uniq: true, do: d["truck"]
     assert trucks -- ~w(truck_1 truck_2) == []
+
+    # A statue goes to the hill of Núi Nhỏ, on its top (plan 0006, D4),
+    # and its model has its place in the game (D5).
+    part = World.Part.new("box", :part, [World.Shape.box({0, 0, 0}, {1, 1, 1}, :concrete)], [])
+    {:start, job} = Yard.place(%{id: "statue-geo", drawing: %{"kind" => "statue"}, item: fn _ -> part end})
+    {:ok, hill} = World.Places.fetch("nui_nho")
+    assert job.place == "nui_nho" and job.lot == "top" and job.geo == World.Places.geo(hill, "top")
+    assert %{data: %{"lot" => "top", "place" => "nui_nho"}} = List.last(Yard.state().log |> Log.events())
+    {:ok, gid} = World.build(%{job | drawing: nil})
+
+    assert {:ok, %{glb: <<"glTF", _::binary-8, n::little-32, "JSON", json::binary-size(n), _::binary>>}} =
+             World.await(gid, 30_000)
+
+    assert JSON.decode!(json)["scenes"] |> hd() |> get_in(["extras", "geo"]) == job.geo
   end
 
   test "a building or a truck of the yard that fails or stops: the yard makes it again" do

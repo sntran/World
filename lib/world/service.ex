@@ -235,7 +235,25 @@ defmodule World.Service do
 
   # The places of the yard, for the map of the world page.
   get "/places" do
-    json(conn, 200, %{"places" => World.Places.all(), "speed_kmh" => World.Places.data()["speed_kmh"]})
+    json(conn, 200, %{"places" => World.Places.view(), "speed_kmh" => World.Places.data()["speed_kmh"]})
+  end
+
+  # The ground of a place with a terrain (plan 0006, D3), made once.
+  get "/places/:name/ground.glb" do
+    case World.Places.fetch(name) do
+      {:ok, %{"terrain" => _} = p} ->
+        glb =
+          with nil <- :persistent_term.get({World.Places, :ground, name}, nil) do
+            glb = World.Build.glb(World.Places.ground(p))
+            :persistent_term.put({World.Places, :ground, name}, glb)
+            glb
+          end
+
+        conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
+
+      _ ->
+        json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such ground"}]})
+    end
   end
 
   match _ do
