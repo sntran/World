@@ -38,4 +38,4 @@ builder does not change the requirements: the owner does.
 | 0003 | [World builds real blueprints, and the tests compare them](0003-real-blueprints.md) | In progress |
 | 0004 | [The statue of Vũng Tàu looks like the real one](0004-statue-look.md) | In progress |
 | 0005 | [From photos to a blueprint: measure, then fit](0005-photos-to-blueprint.md) | In progress |
-| 0006 | [The world on one clock, the hill of Núi Nhỏ, and the time lapse of a construction](0006-construction-time-lapse.md) | In progress |
+| 0006 | [The world on one clock, the hill of Núi Nhỏ, and the time lapse of a construction](0006-construction-time-lapse.md) | In progress: each step done; the owner looks at the two time lapses. |

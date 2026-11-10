@@ -792,6 +792,28 @@
         }
       },
       {
+        "name": "mixing",
+        "only": [
+          {
+            "param": "method"
+          },
+          "1974"
+        ],
+        "skill": {
+          "mixing": {
+            "at": [
+              11.0,
+              -11.0
+            ]
+          }
+        },
+        "temporary": true,
+        "down": {
+          "param": "name"
+        },
+        "work": {}
+      },
+      {
         "name": "survey",
         "skill": {
           "cast_survey": {

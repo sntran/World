@@ -24,9 +24,34 @@ defmodule World.Method do
   for f <- @files, do: @external_resource(f)
   @histories Map.new(@files, &{Path.basename(&1, ".json"), &1 |> File.read!() |> JSON.decode!()})
 
+  # The means of a site (`means/0`): how the people of the time build.
+  @means %{
+    "trucks" => "the trucks of the yard drive to the lot",
+    "tower_crane" => "a tower crane lifts the loads (the node crane)",
+    "pump" => "a pump gives the concrete to the forms",
+    "steel_scaffold" => "a scaffold of steel tubes",
+    "plywood_forms" => "forms of plywood",
+    "carry_path" => "the people carry the materials up the path of the hill",
+    "hand_mix" => "the people mix the concrete by hand on a board on the lot (the node mixing)",
+    "pulley" => "a pulley on the scaffold lifts the buckets",
+    "bamboo_scaffold" => "a scaffold of bamboo",
+    "timber_forms" => "forms of timber boards"
+  }
+  @today ~w(trucks tower_crane pump steel_scaffold plywood_forms)
+
+  @doc "The means of a site, each with what it is."
+  def means, do: @means
+
   # The most people on a site: the 50 skilled workers of 1974
   # (`people_1974` of the history); the same for today (an estimate).
   @workers %{"today" => 50, "1974" => 50}
+
+  # The path of the carriers goes up the hill to the top: the cape is at
+  # the sea.
+  defp path(order, st) do
+    if "carry_path" in Map.get(st, "means", []) and String.contains?(st["place"] || "", "Núi Nhỏ"),
+      do: get_in(history(order["options"]["name"]), ["path", "points"])
+  end
 
   @doc "The history of a model by its name (`priv/history/NAME.json`), or nil."
   def history(name), do: Map.get(@histories, name)
@@ -44,8 +69,10 @@ defmodule World.Method do
   date), the nodes of a
   build (`until`: a list of names or `"all"`), the options and the lot of
   a change or of the first build (`options`, `lot`), `repair` (a build
-  that repairs what a pause left) and `lost` (the parts that a pause
-  takes).
+  that repairs what a pause left), `lost` (the parts that a pause
+  takes), `means` (how the people of the time build, `means/0`) and
+  `path` (the points of the game of the path of the carriers, with the
+  means `carry_path`).
   """
   def stages(order) do
     case {of(order), history(get_in(order, ["options", "name"]))} do
@@ -65,7 +92,9 @@ defmodule World.Method do
             options: st["options"],
             lot: st["lot"],
             repair: Map.get(st, "repair", false),
-            lost: Map.get(st, "lost", [])
+            lost: Map.get(st, "lost", []),
+            means: Map.get(st, "means", []),
+            path: path(order, st)
           }
         end
 
@@ -83,7 +112,9 @@ defmodule World.Method do
             options: nil,
             lot: nil,
             repair: false,
-            lost: []
+            lost: [],
+            means: if(of(order) == "today", do: @today, else: []),
+            path: nil
           }
         ]
     end

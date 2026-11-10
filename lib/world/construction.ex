@@ -803,10 +803,12 @@ defmodule World.Construction do
       "fit" => s.fit,
       "text" => st.text,
       "date" => st.date,
+      "means" => st.means,
       "after" => s.last_stage,
       "tasks" => tasks
     }
 
+    data = if st.path, do: Map.put(data, "path", st.path), else: data
     if st.lot, do: Map.put(data, "lot", st.lot), else: data
   end
 

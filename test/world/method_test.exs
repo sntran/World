@@ -15,7 +15,7 @@ defmodule World.MethodTest do
     h = Method.history("tuong_chua_kito_vua")
     sources = Map.keys(h["sources"])
     facts = for f <- h["facts"], into: %{}, do: {f["id"], f}
-    assert map_size(facts) == 13 and length(sources) == 6
+    assert map_size(facts) == 14 and length(sources) == 6
 
     for f <- h["facts"] do
       assert f["sources"] != [] and f["sources"] -- sources == [], f["id"]
@@ -72,6 +72,14 @@ defmodule World.MethodTest do
     stages = for e <- events, e.kind == "stage_started", do: e.data["name"]
     assert stages == ~w(first_build first_pause first_down rough pause finish)
 
+    # The means of the time (D6): no machine; the carriers of the path go
+    # up the hill to the top (the cape is at the sea).
+    started = for e <- events, e.kind == "stage_started", into: %{}, do: {e.data["name"], e.data}
+    assert "carry_path" in started["rough"]["means"] and "pulley" in started["finish"]["means"]
+    refute "tower_crane" in started["rough"]["means"]
+    assert length(started["rough"]["path"]) == 6 and started["first_build"]["path"] == nil
+    assert started["pause"]["means"] == []
+
     # Each stage starts at its date, or later when the computer is slow:
     # at 1,000 days in a second, the work of the computer on the figure
     # (0.8 s) is 800 days (at one day in a second, less than one day).
@@ -91,8 +99,9 @@ defmodule World.MethodTest do
 
     # The change of 16 February 1974: the first statue comes down at the cape.
     assert %{data: %{"lot" => "top", "remove" => [_ | _] = removes}} = Enum.find(events, &(&1.kind == "changed"))
-    gone = for e <- events, e.kind == "element_removed", do: e.data["task"]
-    assert length(gone) == length(removes) and gone != []
+    changed = Enum.find_index(events, &(&1.kind == "changed"))
+    gone = for e <- Enum.drop(events, changed), e.kind == "element_removed", do: e.data["task"]
+    assert removes != [] and Enum.all?(removes, &(String.replace_prefix(&1["id"], "remove/", "") in gone))
 
     # The pauses: the statue gets old with the years, the cable of the
     # lightning rod goes in the middle of the pause of 17 years, and the
@@ -118,9 +127,11 @@ defmodule World.MethodTest do
 
     # The end: on or after 1 December 1994.
     assert day.(List.last(events)) >= 8188 - 1
-    # Today: one stage, about a year.
-    assert [%{data: %{"name" => "build", "fit" => 1.0}}] =
+    # Today: one stage, about a year, with the machines of today.
+    assert [%{data: %{"name" => "build", "fit" => 1.0, "means" => means}}] =
              for(e <- Log.events(ra.log), e.kind == "stage_started", do: e)
+
+    assert "tower_crane" in means and Map.keys(Method.means()) -- means != []
 
     span = (List.last(Log.events(ra.log)).at - hd(Log.events(ra.log)).at) / Clock.day()
     # About a year of the plan; more with the work of a slow computer.
@@ -150,6 +161,10 @@ defmodule World.MethodTest do
     assert crane["down"] == "crane_down" and crane["temporary"] and not Map.has_key?(crane, "only")
     assert Enum.find(today.drawing["nodes"], &(&1["name"] == "crane_down"))["after"] == ["unscaffold"]
     refute Enum.any?(job.model["nodes"], &(&1["name"] in ~w(crane crane_down)))
+    # The board of the mixing by hand of 1974.
+    assert Enum.any?(job.model["nodes"], &(&1["name"] == "mixing"))
+    refute Enum.any?(today.drawing["nodes"], &(&1["name"] == "mixing"))
+    assert nodes["mixing"] == "tuong_chua_kito_vua"
     stream = World.Detail.with(:mid, fn -> Drawing.build(today.drawing, stream: true) end)
     assert World.Check.model(stream) == :ok
     {p, _, _} = World.Skills.Crane.make(crane["skill"]["crane"], %{}, %{name: "crane"})

@@ -199,6 +199,7 @@ for (const p of yard.places) {
     ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: KINDS[p.kind] ?? 0x999999, transparent: true, opacity: 0.3 }));
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(p.at[0], 0.01, -p.at[1]);
+    ground.userData.flat = true;
     scene.add(ground);
     scene.add(label(p.name, p.at[0], -p.at[1] + 42));
   }
@@ -361,6 +362,63 @@ function act(p, name) {
   p.clip = name;
   if (clip) p.mixer.clipAction(clip).play();
 }
+// The carriers of a site with no machine (the means carry_path of the
+// history): a crew that carries the materials up the path of the hill
+// from its foot to the lot, and walks down again. The page draws the
+// crew; a person of the census is a task (docs/world.md). The path is in
+// points of the game, on the ground of the place.
+const CARRIERS = 12;
+async function carriers(b, path) {
+  for (const c of b.carriers ?? []) c.figure.removeFromParent();
+  b.carriers = [];
+  const place = [...places.values()].find((p) => p.terrain);
+  if (!path || !place) return;
+  await Promise.all(ready);
+  const [ox, oz] = place.terrain.origin;
+  const down = new THREE.Raycaster();
+  const points = path.map(([x, z]) => {
+    const at = new THREE.Vector3(place.at[0] + x - ox, 400, -(place.at[1] + oz - z));
+    down.set(at, new THREE.Vector3(0, -1, 0));
+    const hit = down.intersectObject(place.ground, true)[0];
+    return at.setY(hit ? hit.point.y : 0);
+  });
+  // Points each 2 m along the path.
+  const line = [];
+  for (let i = 0; i + 1 < points.length; i++) {
+    const n = Math.max(1, Math.ceil(points[i].distanceTo(points[i + 1]) / 2));
+    for (let k = 0; k < n; k++) line.push(points[i].clone().lerp(points[i + 1], k / n));
+  }
+  line.push(points.at(-1));
+  for (const p of line.slice(1)) {
+    down.set(p.clone().setY(400), new THREE.Vector3(0, -1, 0));
+    const hit = down.intersectObject(place.ground, true)[0];
+    if (hit) p.y = hit.point.y;
+  }
+  const kit = await body;
+  for (let i = 0; i < CARRIERS; i++) {
+    const figure = SkeletonUtils.clone(kit.scene);
+    const c = { figure, phase: i / CARRIERS, mixer: kit.clips.length ? new THREE.AnimationMixer(figure) : null, clips: kit.clips, clip: null };
+    stage.shade(figure);
+    scene.add(figure);
+    b.carriers.push(c);
+  }
+  b.line = line;
+}
+// A carrier: up with a load, down with none; a trip in 2 days of the film.
+function carry(b, day, dt) {
+  for (const c of b.carriers ?? []) {
+    const t = (day / 2 + c.phase) % 1;
+    const up = t < 0.5;
+    const f = up ? t * 2 : 2 - t * 2;
+    const at = f * (b.line.length - 1);
+    const i = Math.min(Math.floor(at), b.line.length - 2);
+    c.figure.position.lerpVectors(b.line[i], b.line[i + 1], at - i);
+    const ahead = b.line[up ? i + 1 : i];
+    c.figure.lookAt(ahead.x, c.figure.position.y, ahead.z);
+    act(c, up ? 'carry' : 'walk');
+    if (c.mixer && !still) c.mixer.update(dt);
+  }
+}
 // The place of a person at work: on the scaffold of the band of its task
 // (scaffold_N of a task ..._N), or round the lot.
 function spot(b, task, i) {
@@ -390,6 +448,7 @@ function walk(p, to) {
 // m/s); a person at work does the work of its trade (or bobs with no
 // clips), unless the reader asks for no motion.
 function walking(now, dt) {
+  for (const b of builds.values()) if (b.carriers?.length) carry(b, lapse ? lapse.day : now / 1000 / 2, dt);
   for (const p of people.values()) {
     const f = lapse ? Math.min((lapse.day - p.startDay) / p.walkDays, 1) : Math.min((now - p.start) / 3000, 1);
     p.figure.position.lerpVectors(p.from, p.to, still ? 1 : f);
@@ -490,6 +549,8 @@ async function take(e) {
   }
   if (e.kind === 'stage_started') {
     b.stage = d;
+    // The carriers of the path, with the means of the time (plan 0006, D6).
+    carriers(b, d.work === 'build' && d.means?.includes('carry_path') ? d.path : null);
     if (d.date) b.date0 = new Date(Date.parse(d.date) - d.from * 86400000);
     // A change of the lot: the people take down the old parts where they
     // stand; the next build is on the new lot.
@@ -605,6 +666,9 @@ const lapse = params.get('follow') ? {
 if (lapse) {
   scene.background = new THREE.Color(0x9fc3e0);
   scene.traverse((o) => { if (o.userData.label) o.visible = false; });
+  // A film of a lot on the hill: the flat yard of the node is not in it.
+  grid.visible = false;
+  scene.traverse((o) => { if (o.userData.flat) o.visible = false; });
 }
 if (lapse && params.get('fov')) {
   camera.fov = Number(params.get('fov'));

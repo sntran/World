@@ -7,7 +7,8 @@ defmodule World.Skills.Scaffold do
   with the method of today, bamboo with 1974 (`method`). The feet of the
   statue are `feet` m over the ground. The part is temporary: the stream
   shows it, the model leaves it out. Its data: `temporary`. The far level
-  has no cast, so no scaffold.
+  has no cast, so no scaffold. With 1974 a pulley on the top of the
+  scaffold lifts the buckets (no source: an estimate).
   """
   @behaviour World.Skill
   alias World.{Part, Shape}
@@ -58,8 +59,25 @@ defmodule World.Skills.Scaffold do
         )
       end
 
-    {Part.new(name, :part, poles ++ ledgers, [Statue.port()]), %{"temporary" => true}, %{}}
+    {Part.new(name, :part, poles ++ ledgers ++ pulley(o.method, {x0, y0, x1, y1}, z0, z1), [Statue.port()]),
+     %{"temporary" => true}, %{}}
   end
+
+  # The pulley of a site with no crane (1974, an estimate): a timber beam
+  # out of the back of the top of the scaffold, its rope down the band
+  # (the rope of the band under it goes on) and a bucket on it. The
+  # machines of today need none.
+  defp pulley("1974", {x0, _y0, x1, y1}, z0, z1) do
+    x = (x0 + x1) / 2
+    beam = Shape.box({x - 0.06, y1 - 0.3, z1 - 0.06}, {x + 0.06, y1 + 1.5, z1 + 0.06}, :wood)
+    wheel = Shape.box({x - 0.04, y1 + 1.3, z1 - 0.25}, {x + 0.04, y1 + 1.5, z1 - 0.06}, :iron)
+    rope = Shape.box({x - 0.01, y1 + 1.39, z0}, {x + 0.01, y1 + 1.41, z1 - 0.25}, :rope)
+    mid = (z0 + z1) / 2
+    bucket = Shape.box({x - 0.15, y1 + 1.25, mid}, {x + 0.15, y1 + 1.55, mid + 0.3}, :black)
+    [beam, wheel, rope, bucket]
+  end
+
+  defp pulley(_method, _box, _z0, _z1), do: []
 
   # A ledger each 2 m over the foot of the band, and one at its top: the
   # ledger at its foot is the top of the band under it.

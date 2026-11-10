@@ -173,3 +173,37 @@ that a blueprint keeps what it builds apart from how it is built.
 ## 9. Open questions
 
 None now.
+
+## 10. State (2026-11-10)
+
+Each step is done, on the branch `feat/0006-hill`:
+
+| Step | Commit | What is there |
+|---|---|---|
+| 2 | `feat(places): the hill of Núi Nhỏ from the Vũng Tàu game` | The 55 tiles of the game, `World.Terrain`, the place `nui_nho` and its lots, `"geo"`, the ground on the page. |
+| 3 | `feat(site): one clock for the world, in days of a site` | `World.Clock.world/0`, `priv/standards/site.json`, `World.Site`; the statue takes 355 days with the machines of today. |
+| 5 | `feat(construction): a change takes down what it drops` | The tasks `remove/NODE`, `element_removed`, the change of the lot. |
+| 4, 6 | `feat(site): the methods of a site, and the history of the statue` | `World.Method`, the six stages of 1974 with their dates and their fit, the old statue in a pause and its repair. |
+| 7 | `feat(statue): the stages of a site as parts of the model` | The scaffold, the forms and the rough bands as nodes that come and go (`down`), the replay with `from` and `to`. |
+| 8, 9 | `feat(world): the people at work, and the time lapse of a construction` | The work of the trades and the props of a site; the world page as a time lapse; `scripts/timelapse_log.exs` and `scripts/timelapse.mjs`. |
+
+What is not as the plan says:
+
+- The rates of the crews are estimates, each with its reason: the
+  chapters of the norms of Việt Nam on the concrete, the masonry and the
+  finish (Thông tư 12/2021/TT-BXD, Phụ lục II) were not found. The waits
+  of the forms cite ACI 347R-14.
+- The means of each stage (the owner, 2026-11-10: "show whatever
+  methods the people were using at the time to build"): the crane only
+  where the history allows it (today); in 1974 and 1992 to 1994 the
+  carriers of the path, the mixing by hand and a pulley. The sources say
+  that there was no machine in 1992 to 1994 (grandart.vn); for 1974 they
+  say only that the carry was the biggest difficulty, so the rest is an
+  estimate.
+- The reliefs are a part of the base, not a stage of their own.
+- A person is a task: the crews of the rates are in the days of a task,
+  and the page shows one person for each task.
+- The far level has no cast, so no bands, forms or scaffold: a time lapse
+  is at the level mid or near.
+- The logs of the films come from `scripts/timelapse_log.exs` (the job of
+  the order, as the MCP tool `build` makes it), not from a call over MCP.

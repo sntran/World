@@ -282,6 +282,18 @@ history, the stage and the task. `scripts/timelapse_log.exs` makes the
 log and the files of a construction of the statue (`today` or `1974`),
 and `scripts/timelapse.mjs` makes its video (ffmpeg).
 
+Each stage of a build has the means of the people of the time
+(`means`, `World.Method.means/0`; in `stage_started`). Today: the trucks
+drive to the lot, a tower crane lifts the loads (the node `crane`), a
+pump gives the concrete, a scaffold of steel, forms of plywood. In 1974
+and in the repair of 1992 to 1994 no machine (the facts `carry` and
+`carry_1992`): the people carry the materials up the path of the hill
+from its foot (`path` of the history, an estimate; the world page draws
+the crew of carriers), mix the concrete by hand on a board (the node
+`mixing`), lift the buckets with a pulley on the scaffold, on a scaffold
+of bamboo with forms of timber boards. What no source gives is an
+estimate (`means_estimate` of each stage).
+
 Each stage starts at its date (`stage_started`, with its days from the
 start and its `fit`) and ends when its tasks are done (`stage_done`). The
 days of the tasks of a stage are fitted to the days between its dates;

@@ -1,5 +1,5 @@
 {
-  "note": "The history of the construction of the statue of Christ on Núi Nhỏ (Tao Phùng), Vũng Tàu, from the web on 2026-11-10 (plan 0006). Each fact names its sources; the sources do not agree on some dates, and each such fact says so. The method 1974 of the statue (plan 0006, D3) takes its stages, its change and its site from these facts. A value with no source is an estimate, marked with \"estimate\". Each stage has its work for the method 1974 (\"work\": build, pause or change): a build makes the nodes of \"until\" and the nodes they wait for (\"all\": each node), a change gives the order new options and a new lot (\"lot\", a lot of the place nui_nho) and takes down what it drops, and a pause leaves the site to get old (\"lost\": the parts that go).",
+  "note": "The history of the construction of the statue of Christ on Núi Nhỏ (Tao Phùng), Vũng Tàu, from the web on 2026-11-10 (plan 0006). Each fact names its sources; the sources do not agree on some dates, and each such fact says so. The method 1974 of the statue (plan 0006, D3) takes its stages, its change and its site from these facts. A value with no source is an estimate, marked with \"estimate\". Each stage has its work for the method 1974 (\"work\": build, pause or change): a build makes the nodes of \"until\" and the nodes they wait for (\"all\": each node), a change gives the order new options and a new lot (\"lot\", a lot of the place nui_nho) and takes down what it drops, and a pause leaves the site to get old (\"lost\": the parts that go). Each stage of a build has its means (\"means\"): how the people of the time built (World.Method.means/0); what no source gives is in \"means_estimate\".",
   "sources": {
     "viwiki": {
       "title": "Tượng Chúa Kitô Vua (Vũng Tàu)",
@@ -84,9 +84,16 @@
     },
     {
       "id": "carry",
-      "text": "Thousands of tonnes of materials went up to the top of the hill (\"hàng ngàn tấn vật liệu\") on a steep, narrow path, with no machines.",
+      "text": "The biggest difficulty was to move thousands of tonnes of materials to the top of the hill (\"Khó khăn lớn nhất là việc chuyển hàng ngàn tấn vật liệu lên đỉnh núi\").",
       "sources": [
-        "vietcatholic",
+        "vietcatholic"
+      ]
+    },
+    {
+      "id": "carry_1992",
+      "date": "1992/1994",
+      "text": "In the repair the materials went up the hill on a steep, narrow path, with no motor vehicle to help (\"vận chuyển vật liệu xây dựng lên núi trong điều kiện đường dốc hẹp, không có phương tiện cơ giới hỗ trợ\").",
+      "sources": [
         "grandart"
       ]
     },
@@ -162,7 +169,8 @@
       "estimate": "The month of the start in 1972, and how much of the first statue was built before the stop (the base and the lower half of the statue), have no source.",
       "text": "The first statue, 10 m on a base of 5 m, at the cape of Nghinh Phong.",
       "facts": [
-        "first_site"
+        "first_site",
+        "carry"
       ],
       "work": "build",
       "lot": "cape",
@@ -182,7 +190,15 @@
         "steps": 40,
         "windows": []
       },
-      "options_estimate": "The sizes of the first statue have no source but the facts: 10 m on a base of 5 m (the figure of 8.6 m and the dome of 1.4 m make the 10 m, as the 27.5 m and the dome of the statue of Núi Nhỏ make its 32 m; the base of 3.8 m and the plinth of 1.2 m make the 5 m)."
+      "options_estimate": "The sizes of the first statue have no source but the facts: 10 m on a base of 5 m (the figure of 8.6 m and the dome of 1.4 m make the 10 m, as the 27.5 m and the dome of the statue of Núi Nhỏ make its 32 m; the base of 3.8 m and the plinth of 1.2 m make the 5 m).",
+      "means": [
+        "carry_path",
+        "hand_mix",
+        "pulley",
+        "bamboo_scaffold",
+        "timber_forms"
+      ],
+      "means_estimate": "No source says how the loads went up the scaffold or how the concrete was mixed in 1972 to 1975: the people carry the materials up the path (the fact carry: no source names a machine or a road for trucks to the top), mix the concrete by hand on a board, and lift the buckets with a pulley on the scaffold; the scaffold of bamboo and the forms of timber are the common means of a site of Việt Nam of the time (an estimate)."
     },
     {
       "name": "first_pause",
@@ -234,7 +250,15 @@
         "slab_6",
         "slab_7",
         "slab_8"
-      ]
+      ],
+      "means": [
+        "carry_path",
+        "hand_mix",
+        "pulley",
+        "bamboo_scaffold",
+        "timber_forms"
+      ],
+      "means_estimate": "No source says how the loads went up the scaffold or how the concrete was mixed in 1972 to 1975: the people carry the materials up the path (the fact carry: no source names a machine or a road for trucks to the top), mix the concrete by hand on a board, and lift the buckets with a pulley on the scaffold; the scaffold of bamboo and the forms of timber are the common means of a site of Việt Nam of the time (an estimate)."
     },
     {
       "name": "pause",
@@ -259,11 +283,20 @@
       "facts": [
         "permit_1992",
         "finish",
-        "inauguration"
+        "inauguration",
+        "carry_1992"
       ],
       "work": "build",
       "until": "all",
-      "repair": true
+      "repair": true,
+      "means": [
+        "carry_path",
+        "hand_mix",
+        "pulley",
+        "bamboo_scaffold",
+        "timber_forms"
+      ],
+      "means_estimate": "The materials went up the path with no motor vehicle (the fact carry_1992). How the loads went up the scaffold has no source: a pulley, as in 1974 (an estimate)."
     }
   ],
   "changes": [
@@ -275,5 +308,35 @@
         "permit_1974"
       ]
     }
-  ]
+  ],
+  "path": {
+    "from": "the foot of the hill near the beach of Nghinh Phong, where the road ends",
+    "points": [
+      [
+        1105.7,
+        2327.8
+      ],
+      [
+        1135.0,
+        2230.0
+      ],
+      [
+        1125.0,
+        2140.0
+      ],
+      [
+        1170.0,
+        2060.0
+      ],
+      [
+        1140.0,
+        1980.0
+      ],
+      [
+        1159.87,
+        1906.0
+      ]
+    ],
+    "estimate": "No source gives the path of 1974: the points of the game of a path from the foot of the hill (6 m over the sea, at the beach of Nghinh Phong where the stone stair of 1992 starts, the fact permit_1992) to the lot on the top, in turns on the steep part."
+  }
 }
