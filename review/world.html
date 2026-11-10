@@ -510,7 +510,14 @@ function growing(b, day) {
 // the event, 0 to 1); none after the repair.
 const GRASS = 700;
 async function grass(b, weeds) {
+  // The grass of the lot where the pause is (the lot can change).
+  const here = b.group.getWorldPosition(new THREE.Vector3());
+  if (b.grass && b.grassAt?.distanceTo(here) > 1) {
+    for (const g of b.grass) g.removeFromParent();
+    b.grass = null;
+  }
   if (!b.grass) {
+    b.grassAt = here;
     const place = [...places.values()].find((p) => p.terrain);
     await Promise.all(ready);
     const blade = new THREE.InstancedMesh(new THREE.ConeGeometry(0.25, 1, 5), new THREE.MeshStandardMaterial({ color: 0x5e7d34, roughness: 1 }), GRASS);
