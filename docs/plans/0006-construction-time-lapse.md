@@ -212,8 +212,17 @@ What is not as the plan says:
   and works at each stop; the crew stays with its person from task to
   task; a free person waits round the lot; at the end of a stage the
   people walk out on the way to the lot (the path of the hill) and the
-  carriers walk down the path, in the first 4 s of a pause at the speed
-  of the work.
+  carriers walk down the path while the day waits 4 s at the start of
+  the pause.
+- The people at work (the owner, 2026-11-11: "they came after the base
+  already had some layers", "They should be climbing up stairs, do
+  something on the construction, not moving around"): the day waits 4 s
+  at the start of each stage while its people walk in; each person of a
+  crew has its own place at the work and works there; they climb onto
+  the base and up a ladder at the corner of the scaffold to the deck of
+  the band (the scaffold of the model has no ladder: the page puts one
+  at the corner to the side of the path); the free helpers mix at the
+  heap of the materials.
 - The reliefs are a part of the base, not a stage of their own.
 - A person is a task: the crews of the rates are in the days of a task,
   and the page shows one person for each task.

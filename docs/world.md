@@ -266,14 +266,21 @@ The people of a site do the work of their trade (plan 0006, D10): a
 person of the blueprint `person` can have the animations of the work
 (`World.People.Pose.work/0`: `carry`, `set_panel`, `pour`, `trowel`,
 `hammer`, `climb`, `guide`) and the props of a site (`hard_hat`, `bucket`,
-`trowel`, `hammer`). On the world page each person walks to the place of
-its task (on the scaffold of its band) with the crew of the task, and
-moves all the time, as in a time lapse of a site: it walks round the
-place and works at each stop with the clip of its trade. A person comes
-in on the way to the lot (the path of the hill when there is one); a
-free person waits round the lot, and at the end of a stage it walks out
-on that way with its crew. A site has at most 50 people (the 50 skilled
-workers of 1974).
+`trowel`, `hammer`). On the world page the people of a stage walk in on
+the way to the lot (the path of the hill when there is one) before its
+work starts: the people that it hires, and the helpers of the crews (as
+many as work at one time in the stage, at most 60). A person and the
+crew of its task go to the place of the task, each to a place of its own
+round the work: on the ground round the part, or on the deck of the
+scaffold of its band. To a deck they climb onto the base at its edge and
+up the ladder at the corner of the scaffold, and from deck to deck on
+the ladder. There each does the work of its trade, with a step now and
+then; a person that carries takes the loads from the ladder (or the heap
+of the materials) to its place. A free helper goes on at its place until
+a task takes it (the nearest first), or mixes and shovels at the heap; a
+free person waits at the head of the way. At the end of a stage the
+people walk out on the way. A site has at most 50 people (the 50
+skilled workers of 1974).
 
 The time lapse is the world page that follows one construction (plan
 0006, D11): `review/world.html?follow=ORDER&events=LOG` replays the log
@@ -283,9 +290,10 @@ days of the site over that number. The camera turns with the mouse or a
 finger, has its views (three quarters, the front, the side, the back,
 the base, above), a slow turn, and takes `cam`, `target` and `fov` from
 the URL ("Copy the camera"). The work goes at `days` days in one second
-(5 by default) and a pause at `pause` (365: a year in a second), after
-4 s at the speed of the work in which the people and the carriers walk
-out: the steps of the work keep their days to each other. Each part grows from
+(5 by default) and a pause at `pause` (365: a year in a second): the
+steps of the work keep their days to each other. At the start of each
+stage the day waits 4 s: the people of the stage walk in (at a pause:
+the people and the carriers walk out). Each part grows from
 its foot to its top over the days of its task; the crew of each task
 works round it; the carriers walk the path; in a pause the grass and the
 bushes grow on the lot. The label gives the day, the date of the
