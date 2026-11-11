@@ -485,7 +485,7 @@ function ladder(b, list, pl) {
 function surface(b, at) {
   const solid = Object.entries(b.parts).filter(([k]) => !/^(scaffold_|form_|crane|mixing)/.test(k)).flatMap(([, list]) => list);
   const ray = new THREE.Raycaster(at.clone().setY(at.y - 0.3), new THREE.Vector3(0, -1, 0));
-  const hit = ray.intersectObjects(solid, true)[0];
+  const hit = ray.intersectObjects(solid, true).find(shown);
   return hit ? hit.point.clone() : null;
 }
 const ringAt = (pl, a, r = pl.r) => new THREE.Vector3(pl.c.x + Math.cos(a) * pl.rx * r, pl.c.y, pl.c.z + Math.sin(a) * pl.rz * r);
@@ -626,7 +626,7 @@ function workAt(b, w, k) {
   if (b && len > 0.5) {
     reach.set(ring.clone().setY(ring.y + 1), dir);
     reach.far = len;
-    const hit = reach.intersectObjects(solids(b), true)[0];
+    const hit = reach.intersectObjects(solids(b), true).find(shown);
     if (hit) {
       at = ring.clone().addScaledVector(dir, Math.max(hit.distance - 0.45, 0));
       face = hit.point.clone();
@@ -638,6 +638,9 @@ function workAt(b, w, k) {
   return p;
 }
 const reach = new THREE.Raycaster();
+// A hit on a part that is seen: not on a part that is cut off (a band that
+// grows, a band of the finished model).
+const shown = (hit) => hit.object.visible && (hit.object.material?.clippingPlanes ?? []).every((p) => p.distanceToPoint(hit.point) >= -0.01);
 // The parts that a person works on (not the scaffold, the machines or the
 // heap).
 function solids(b) {
@@ -1202,18 +1205,29 @@ async function grow(b, e) {
   if (done < 0 || lapse.pending[done].kind !== 'task_done') return;
   const to = (lapse.pending[done].at - lapse.t0) / DAY;
   const from = (e.at - lapse.t0) / DAY;
+  // The finished model ahead in the log: a pour is a band of it, the render
+  // covers it with its stone, the halo is its steel (the owner, 2026-11-11:
+  // the statue that the people built must not change at the end).
+  const fin = finished(b, e);
+  if (fin && (key === 'shell' || key === 'halo')) await coat(b, fin, key, from, to);
   for (let i = done + 1; i < lapse.pending.length; i++) {
     const x = lapse.pending[i];
     if (x.order !== e.order || x.kind !== 'element' || x.data.task !== key) break;
     const glb = await element(x.order, x.data.glb).catch(() => null);
     if (!glb) continue;
     x.shown = true;
+    if (fin && /^pour_\d+$/.test(key) && await band(b, fin, glb, x, key, from, to)) continue;
     const part = glb.clone();
     part.matrixAutoUpdate = false;
     part.matrix.fromArray(x.data.matrix);
     stage.shade(part);
     b.group.add(part);
     (b.parts[key] ??= []).push(part);
+    // The finished model over its render: it is there at once.
+    if (key === b.model && b.coated) {
+      landed(b);
+      continue;
+    }
     part.updateWorldMatrix(true, true);
     const box = new THREE.Box3().setFromObject(part);
     const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), box.min.y);
@@ -1221,12 +1235,102 @@ async function grow(b, e) {
     (b.growing ??= []).push({ part, plane, box, from, to });
   }
 }
+// The finished model is on the lot: the bands, the render and the halo
+// under it go (it has the same surface, so nothing changes).
+function landed(b) {
+  b.coated = false;
+  for (const k of Object.keys(b.parts)) if (/^pour_\d+$/.test(k)) for (const part of b.parts[k]) part.visible = false;
+  for (const k of ['shell', 'halo']) for (const part of b.parts[k] ?? []) part.removeFromParent();
+  delete b.parts.shell;
+  delete b.parts.halo;
+}
+// The element of the finished model of a lot ahead in the log (not after a
+// change of the lot: a statue that was not finished keeps its rough
+// bands), and the last band that is poured before it.
+function finished(b, e) {
+  let last = 0;
+  for (const x of lapse.pending) {
+    if (x.order !== e.order) continue;
+    if (x.kind === 'changed' && x.data?.lot) return null;
+    if (x.kind !== 'element') continue;
+    const m = /^pour_(\d+)$/.exec(x.data.task);
+    if (m) last = Math.max(last, Number(m[1]));
+    if (b.model && x.data.task === b.model) return { x, last };
+  }
+  return null;
+}
+// The meshes of the finished model: the stone (the shell, the head, the
+// hands), or the steel (the halo, the grilles).
+async function model(b, fin, steel) {
+  const whole = await element(fin.x.order, fin.x.data.glb).catch(() => null);
+  if (!whole) return null;
+  const part = whole.clone();
+  part.matrixAutoUpdate = false;
+  part.matrix.fromArray(fin.x.data.matrix);
+  stage.shade(part);
+  const out = [];
+  part.traverse((o) => { if (o.isMesh && (o.material?.name === 'steel') !== steel) out.push(o); });
+  for (const o of out) o.visible = false;
+  b.group.add(part);
+  part.updateWorldMatrix(true, true);
+  for (const o of out) o.removeFromParent();
+  return part;
+}
+// A pour: the band of the finished model between the foot and the top of
+// the rough band, in its concrete (the first band from the foot of the
+// model, the last to its top).
+async function band(b, fin, rough, x, key, from, to) {
+  const n = Number(key.slice(5));
+  const probe = rough.clone();
+  probe.matrixAutoUpdate = false;
+  probe.matrix.fromArray(x.data.matrix);
+  b.group.add(probe);
+  probe.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(probe);
+  let concrete = null;
+  probe.traverse((o) => { if (o.isMesh && !concrete) concrete = o.material; });
+  probe.removeFromParent();
+  const part = await model(b, fin, false);
+  if (!part || box.isEmpty()) return false;
+  const whole = new THREE.Box3().setFromObject(part);
+  const lo = n === 1 ? whole.min.y - 0.05 : box.min.y;
+  const hi = n >= fin.last ? whole.max.y : box.max.y;
+  const keep = n === 1 ? [] : [new THREE.Plane(new THREE.Vector3(0, 1, 0), -lo)];
+  const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), lo);
+  part.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = (concrete ?? o.material).clone();
+    o.material.clippingPlanes = [plane, ...keep];
+  });
+  (b.parts[key] ??= []).push(part);
+  // At its end the band keeps both cuts: the top at the top of the band.
+  (b.growing ??= []).push({ part, plane, keep: [plane, ...keep], box: { min: { y: lo }, max: { y: hi } }, from, to });
+  return true;
+}
+// The render of the shell (its stone over the concrete, from the foot to
+// the top), or the halo (its steel).
+async function coat(b, fin, key, from, to) {
+  const part = await model(b, fin, key === 'halo');
+  if (!part) return;
+  const box = new THREE.Box3().setFromObject(part);
+  const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), box.min.y);
+  part.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = o.material.clone();
+    o.material.clippingPlanes = [plane];
+    // Over the concrete of the same surface.
+    Object.assign(o.material, { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+  });
+  (b.parts[key] ??= []).push(part);
+  (b.growing ??= []).push({ part, plane, box, from, to });
+  if (key === 'shell') b.coated = true;
+}
 function growing(b, day) {
   b.growing = (b.growing ?? []).filter((g) => {
     const f = Math.min(Math.max((day - g.from) / Math.max(g.to - g.from, 1e-6), 0), 1);
     g.plane.constant = g.box.min.y + (g.box.max.y - g.box.min.y + 0.05) * f;
     if (f < 1 && g.part.parent) return true;
-    g.part.traverse((o) => { if (o.isMesh) o.material.clippingPlanes = []; });
+    g.part.traverse((o) => { if (o.isMesh) o.material.clippingPlanes = g.keep ?? []; });
     return false;
   });
 }
@@ -1357,7 +1461,10 @@ async function take(e) {
   }
   const b = lot(e.order);
   const d = e.data ?? {};
-  if (e.kind === 'plan_made') b.tasks = d.tasks.length;
+  if (e.kind === 'plan_made') {
+    b.tasks = d.tasks.length;
+    b.model = d.name;
+  }
   if (e.kind === 'hired') {
     const p = await person(e.who);
     p.trade.textContent = d.trade;
@@ -1425,6 +1532,11 @@ async function take(e) {
   // takes it.
   if (e.kind === 'task_done') {
     b.done += 1;
+    // A render or a halo that the film passed at a jump.
+    if (lapse && (d.task === 'shell' || d.task === 'halo') && !b.parts[d.task]) {
+      const fin = finished(b, e);
+      if (fin) await coat(b, fin, d.task, eventDay, eventDay);
+    }
     const p = await person(e.who);
     p.task = null;
     for (const h of p.crew ?? []) Object.assign(h, { task: null, boss: null });
@@ -1456,13 +1568,18 @@ async function take(e) {
   if (e.kind === 'element' && !e.shown) {
     b.elements += 1;
     const glb = await element(e.order, d.glb).catch(() => null);
-    if (glb) {
+    // A pour that the film passed at a jump: its band of the finished model.
+    const fin = lapse && /^pour_\d+$/.test(d.task) && finished(b, e);
+    if (glb && fin && await band(b, fin, glb, e, d.task, eventDay, eventDay)) {
+      // (There.)
+    } else if (glb) {
       const part = glb.clone();
       part.matrixAutoUpdate = false;
       part.matrix.fromArray(d.matrix);
       stage.shade(part);
       b.group.add(part);
       (b.parts[d.task] ??= []).push(part);
+      if (d.task === b.model) landed(b);
     }
   }
   // A task that takes down a part (plan 0006, D7): its elements go.

@@ -230,6 +230,15 @@ What is not as the plan says:
   crane (today) and of the pulley (1974). No source tells how the statue
   itself was built (the scaffold, the forms, the pours), so the cycles
   of 1974 are the general work by hand of Việt Nam.
+- The model at the end (the owner, 2026-11-11: "The ending result that
+  the people built suddenly become a different model ... That makes it
+  look fake"): the rough bands of the replay (D9) are not the surface of
+  the finished model, and the finished model came at its last task with
+  no work before it. On the page of the film, each pour is now the band
+  of the finished model at the heights of its rough band, in concrete;
+  the render covers it with the stone from the foot to the top, and the
+  halo puts up the steel; the finished model comes on the same surface,
+  so nothing changes. The replay model still has the rough bands.
 - The reliefs are a part of the base, not a stage of their own.
 - A person is a task: the crews of the rates are in the days of a task,
   and the page shows one person for each task.

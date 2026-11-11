@@ -303,7 +303,13 @@ the URL ("Copy the camera"). The work goes at `days` days in one second
 steps of the work keep their days to each other. At the start of each
 stage the day waits 4 s: the people of the stage walk in (at a pause:
 the people and the carriers walk out). Each part grows from
-its foot to its top over the days of its task; the crew of each task
+its foot to its top over the days of its task. The film shows the
+finished model from the first pour: each pour is the band of the
+finished model at the heights of its rough band, in its concrete; the
+render covers the bands with the stone of the model from the foot to
+the top, and the halo puts up its steel. So the model at the end is the
+model that the people built (a model that a change takes down before its
+end keeps its rough bands). The crew of each task
 works round it; the carriers walk the path; in a pause the grass and the
 bushes grow on the lot. The label gives the day, the date of the
 history, the stage, the task and the speed. `scripts/timelapse_log.exs` makes the
