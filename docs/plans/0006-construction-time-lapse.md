@@ -239,6 +239,10 @@ What is not as the plan says:
   the render covers it with the stone from the foot to the top, and the
   halo puts up the steel; the finished model comes on the same surface,
   so nothing changes. The replay model still has the rough bands.
+- The move to the new lot (the owner, 2026-11-11: "between old and new
+  location, the frame just jumps directly"): at the first stage on the
+  new lot, the camera flies from the cape to the top of the hill in the
+  4 s that the day waits, up over the hill and down.
 - The reliefs are a part of the base, not a stage of their own.
 - A person is a task: the crews of the rates are in the days of a task,
   and the page shows one person for each task.

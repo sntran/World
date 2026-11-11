@@ -1556,8 +1556,13 @@ async function take(e) {
     // stand; the next build is on the new lot.
     if (d.lot && d.work === 'change') b.nextLot = d.lot;
     if (d.work === 'build' && b.nextLot) {
+      b.group.updateWorldMatrix(true, false);
+      const from = b.group.matrixWorld.clone();
       settle(b.group, at.get(b.id)?.[0] ?? 'nui_nho', b.nextLot);
       b.nextLot = null;
+      // The camera flies from the old lot to the new one while the people
+      // of the stage walk in (the owner, 2026-11-11: no jump).
+      if (lapse) b.move = { from, t0: clock(eventDay), dur: WAY };
     }
     // The people of the stage walk in before its work.
     if (d.work !== 'pause') await arrive(b, e, clock(eventDay));
@@ -1728,8 +1733,20 @@ const lapse = params.get('follow') ? {
     const lift = this.target ? 0 : aim - v.target[1];
     const back = this.cam ? 1 : Math.max(1, (top + 6) / 26);
     const cam = new THREE.Vector3(...(this.cam ?? v.cam)).multiplyScalar(back).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.angle).add(new THREE.Vector3(0, lift, 0));
+    // The camera and its target in the frame of a lot; from the old lot to
+    // the new one after a change of the lot, up over the hill and down.
+    const pose = (m) => ({ pos: cam.clone().applyMatrix4(m), target: new THREE.Vector3(...(this.target ?? v.target)).add(new THREE.Vector3(0, lift, 0)).applyMatrix4(m) });
     b.group.updateWorldMatrix(true, false);
-    camera.position.copy(cam.applyMatrix4(b.group.matrixWorld));
+    let { pos, target } = pose(b.group.matrixWorld);
+    const move = b.move && this.t >= b.move.t0 && this.t < b.move.t0 + b.move.dur ? b.move : null;
+    if (move) {
+      const f = smooth((this.t - move.t0) / move.dur);
+      const a = pose(move.from);
+      const hump = a.pos.distanceTo(pos) * 0.35 * Math.sin(Math.PI * f);
+      pos = a.pos.lerp(pos, f).add(new THREE.Vector3(0, hump, 0));
+      target = a.target.lerp(target, f);
+    }
+    camera.position.copy(pos);
     // The camera stays 10 m over the ground of a hill.
     const hill = [...places.values()].find((p) => p.terrain)?.ground;
     if (hill) {
@@ -1737,13 +1754,13 @@ const lapse = params.get('follow') ? {
       const hit = down.intersectObject(hill, true)[0];
       if (hit && camera.position.y < hit.point.y + 10) camera.position.y = hit.point.y + 10;
     }
-    controls.target.copy(new THREE.Vector3(...(this.target ?? v.target)).add(new THREE.Vector3(0, lift, 0)).applyMatrix4(b.group.matrixWorld));
+    controls.target.copy(target);
     const date = b.date0 ? ' · ' + new Date(b.date0.getTime() + this.day * DAY).toISOString().slice(0, 10) : '';
     const stage = b.stage ? ` · ${b.stage.name}` : '';
     const work = b.task && b.stage?.work !== 'pause' ? ` · ${b.task}` : '';
     const old = b.aged && b.stage?.work === 'pause' ? ` · the site gets old (${Math.round(b.aged.days / 365)} years)` : '';
     const r = this.rate(this.day);
-    const hold = this.holding() ? (b.stage?.work === 'pause' ? 'the people leave the site' : 'the people come to the site') : null;
+    const hold = move ? 'the work moves to the new lot' : this.holding() ? (b.stage?.work === 'pause' ? 'the people leave the site' : 'the people come to the site') : null;
     const speed = hold ?? (r === 365 ? 'a year in a second' : `${r} days in a second`);
     $('lapse').textContent = `Day ${Math.floor(this.day) + 1}${date}${stage}${work}${old} · ${speed}`;
     // The old statue: the concrete gets darker in a pause, and weeds
