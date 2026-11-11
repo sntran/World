@@ -381,10 +381,12 @@ function act(p, name) {
 // place. A free person waits at the head of the way, and at the end of
 // a stage the people walk out on the way. The clock is the second of the
 // film (of the page, with no time lapse); a walk is at SPEED m in a
-// second of the film, a climb at half of it.
+// second of the film, and a way from one place of the lot to another
+// takes at most HOP s.
 const WAY = 4;
 const SPEED = 12;
 const STEP = 3;
+const HOP = 2.5;
 const CROWD = 60;
 const clock = (day) => (lapse ? (day === undefined ? lapse.t : lapse.film(day)) : performance.now() / 1000);
 const hash = (seed, k) => {
@@ -489,14 +491,14 @@ function way(b) {
 }
 
 // A route: points, the clip of the leg to each point, the second of the
-// film at its start, and its seconds (a climb counts twice its length);
+// film at its start, and its seconds;
 // its points up to `way` are a way into a lot.
 function go(w, legs, t0, dur, way = 0) {
   if (legs.length < 2) legs = [legs[0], legs[0]];
   const pts = legs.map((l) => l.at ?? l);
   const clips = legs.map((l) => l.clip ?? 'walk');
   const cum = [0];
-  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]) * (clips[i] === 'climb' ? 2 : 1));
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
   w.route = { pts, clips, cum, t0, dur: dur ?? Math.max(cum.at(-1) / SPEED, 0.2), way };
 }
 function along(r, t) {
@@ -596,8 +598,8 @@ function toPlace(b, w, pl, a, t) {
   const more = legs(b, from, r.left > 0 ? null : w.place, pl, a);
   const all = [from, ...more];
   let len = 0;
-  for (let i = 1; i < all.length; i++) len += (all[i - 1].at ?? all[i - 1]).distanceTo(all[i].at ?? all[i]) * (all[i].clip === 'climb' ? 2 : 1);
-  go(w, [...r.legs, ...more], t, r.left + Math.max(len / SPEED, 0.2), r.legs.length - 1);
+  for (let i = 1; i < all.length; i++) len += (all[i - 1].at ?? all[i - 1]).distanceTo(all[i].at ?? all[i]);
+  go(w, [...r.legs, ...more], t, r.left + Math.min(Math.max(len / SPEED, 0.2), HOP), r.legs.length - 1);
   w.leaving = false;
   w.place = pl;
   w.a = a;
@@ -700,6 +702,15 @@ async function arrive(b, e, t) {
   }
   const free = (b.pool ?? []).filter((h) => !h.leaving && !h.gone).length;
   for (let k = free; k < Math.min(most, CROWD) - who.size; k++) await helper(b, t);
+}
+// The people on the deck of a scaffold that goes come down from it: a free
+// helper to the heap, a person to the ring of the lot.
+function comeDown(b, list, t) {
+  for (const w of [...people.values(), ...(b.pool ?? [])]) {
+    if (!list || w.place?.list !== list || w.leaving || w.gone) continue;
+    if (b.pool?.includes(w) && !w.task) free(b, w, t);
+    else toPlace(b, w, lotRing(b), angleOf(lotRing(b), where(w, t).at), t);
+  }
 }
 // A figure now: its place and its clip; a figure that went is not seen.
 function step(w, t, dt, now) {
@@ -1000,8 +1011,16 @@ async function take(e) {
     const p = await person(e.who);
     p.task = d.task;
     p.status.textContent = `works on ${d.task}`;
-    // The parts of the task (in a time lapse, from its start).
-    if (lapse) await grow(b, e);
+    // The parts of the task (in a time lapse, from its start); the people on
+    // a scaffold that the task takes down come down from it first.
+    if (lapse) {
+      await grow(b, e);
+      for (const x of lapse.pending) {
+        if (x.order !== e.order || x.who !== e.who) continue;
+        if (x.kind === 'task_done') break;
+        if (x.kind === 'element_removed') comeDown(b, b.parts[x.data.task], clock(eventDay));
+      }
+    }
     // The person and its crew go to the place of the task, each to its own
     // place round it (plan 0006, D10: the crew of the rate of its work,
     // `crew` of the event). A crew that grows takes people that walk in;
@@ -1066,6 +1085,7 @@ async function take(e) {
   }
   // A task that takes down a part (plan 0006, D7): its elements go.
   if (e.kind === 'element_removed') {
+    comeDown(b, b.parts[d.task], clock(eventDay));
     for (const part of b.parts[d.task] ?? []) part.removeFromParent();
     delete b.parts[d.task];
   }
