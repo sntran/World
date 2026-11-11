@@ -704,12 +704,14 @@ async function arrive(b, e, t) {
   for (let k = free; k < Math.min(most, CROWD) - who.size; k++) await helper(b, t);
 }
 // The people on the deck of a scaffold that goes come down from it: a free
-// helper to the heap, a person to the ring of the lot.
+// helper to the heap, a person to the ring of the lot. The list keeps the
+// time when the last of them is down: the scaffold stays until then.
 function comeDown(b, list, t) {
   for (const w of [...people.values(), ...(b.pool ?? [])]) {
     if (!list || w.place?.list !== list || w.leaving || w.gone) continue;
     if (b.pool?.includes(w) && !w.task) free(b, w, t);
     else toPlace(b, w, lotRing(b), angleOf(lotRing(b), where(w, t).at), t);
+    if (w.route) list.down = Math.max(list.down ?? 0, w.route.t0 + w.route.dur);
   }
 }
 // A figure now: its place and its clip; a figure that went is not seen.
@@ -920,7 +922,20 @@ function walking(now, dt) {
   const t = clock();
   for (const p of people.values()) step(p, t, dt, now);
   for (const h of helpers) step(h, t, dt, now);
-  for (const b of builds.values()) if (b.carriers?.length) carry(b, t, dt);
+  for (const b of builds.values()) {
+    if (b.carriers?.length) carry(b, t, dt);
+    if (b.going?.length) goes(b, t);
+  }
+}
+// The parts that a task took down go when their time comes. The people
+// come down a ladder on all the scaffolds, so the scaffolds go together.
+function goes(b, t) {
+  const last = Math.max(...b.going.map((g) => g.t));
+  b.going = b.going.filter((g) => {
+    if ((g.scaffold ? last : g.t) > t) return true;
+    for (const part of g.list) part.removeFromParent();
+    return false;
+  });
 }
 
 // What an event tells, in words.
@@ -1015,10 +1030,13 @@ async function take(e) {
     // a scaffold that the task takes down come down from it first.
     if (lapse) {
       await grow(b, e);
+      // (The parts go after the end of the task.)
+      let end = false;
       for (const x of lapse.pending) {
         if (x.order !== e.order || x.who !== e.who) continue;
-        if (x.kind === 'task_done') break;
         if (x.kind === 'element_removed') comeDown(b, b.parts[x.data.task], clock(eventDay));
+        else if (end) break;
+        else if (x.kind === 'task_done') end = true;
       }
     }
     // The person and its crew go to the place of the task, each to its own
@@ -1085,8 +1103,10 @@ async function take(e) {
   }
   // A task that takes down a part (plan 0006, D7): its elements go.
   if (e.kind === 'element_removed') {
-    comeDown(b, b.parts[d.task], clock(eventDay));
-    for (const part of b.parts[d.task] ?? []) part.removeFromParent();
+    const list = b.parts[d.task] ?? [];
+    comeDown(b, list, clock(eventDay));
+    // The parts go when the people on them are down.
+    (b.going ??= []).push({ list, t: list.down ?? 0, scaffold: d.task.startsWith('scaffold') });
     delete b.parts[d.task];
   }
   if (['done', 'stopped', 'failed'].includes(e.kind)) {
