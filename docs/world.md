@@ -284,8 +284,9 @@ today, filled at the stack at the foot of the mast; the bucket on the
 rope of a pulley at the ladder in 1974. The source on the ground is the
 heap: the mixing board, or the stack of the panels, the bars and the
 tubes. A free helper goes on at its place until a task takes it (the
-nearest first), or works at the heap: it mixes, carries loads to the
-foot of the lift or to the work on the ground, or works the lift. A
+nearest first), or works at the heap: it mixes, carries loads up the
+ladder to the deck, to the foot of the lift or to the work on the
+ground, or works the lift. A
 person that waits for its next task works at the heap too. At the end
 of a stage the people walk out on the way. A site has at most 50 people (the 50
 skilled workers of 1974).

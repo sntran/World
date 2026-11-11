@@ -705,15 +705,33 @@ function groundAt(b, at) {
 // the work on the ground), with a load, and back.
 function haul(b, w, k, u) {
   const yard = yardOf(b);
-  const lift = b.lift && (b.lift.kind !== 'crane' || hash(w.seed, 43) < 0.4) ? b.lift.foot : b.lift?.pl.foot;
-  const to = lift ?? (b.workPl?.ground ? ringAt(b.workPl, angleOf(b.workPl, yard) + (hash(w.seed, 40 + (k % 5)) - 0.5) * 3) : ringAt(lotRing(b), angleOf(lotRing(b), yard) + 0.4));
   const side = new THREE.Vector3(hash(w.seed, 41) - 0.5, 0, hash(w.seed, 42) - 0.5).multiplyScalar(4);
   const a = yard.clone().add(side);
-  const z = to.clone().add(side.clone().multiplyScalar(0.4));
+  // To a deck: most carry the load up the ladder by hand; the others take
+  // it to the foot of the lift.
+  const pl = b.lift?.pl;
+  let pts;
+  if (pl && hash(w.seed, 43) >= 0.35) pts = [a, ...[...pl.down].reverse().map((d) => d.at), pl.ladder];
+  else {
+    const to = b.lift?.foot ?? (b.workPl?.ground ? ringAt(b.workPl, angleOf(b.workPl, yard) + (hash(w.seed, 40 + (k % 5)) - 0.5) * 3) : ringAt(lotRing(b), angleOf(lotRing(b), yard) + 0.4));
+    pts = [a, to.clone().add(side.clone().multiplyScalar(0.4))];
+  }
+  const r = w.haul?.key === pts.at(-1).toArray().join() + pts.length ? w.haul : (w.haul = Object.assign(pathOf(pts), { key: pts.at(-1).toArray().join() + pts.length }));
+  const z = pts.at(-1);
+  // A leg that goes up or down more than along is on the ladder.
+  const leg = (s, clip) => {
+    const p = alongPts(r, s);
+    const d = p.ahead.clone().sub(p.at);
+    const steep = Math.abs(d.y) > Math.hypot(d.x, d.z);
+    return { at: p.at, ahead: steep && pl ? pl.c.clone().setY(p.at.y) : p.ahead, clip: steep ? 'climb' : clip };
+  };
   if (u < 0.1) return { at: a, ahead: yard, clip: 'pour', load: u > 0.06 };
-  if (u < 0.5) return { at: a.clone().lerp(z, smooth((u - 0.1) / 0.4)), ahead: z, clip: 'carry', load: true };
-  if (u < 0.6) return { at: z, ahead: to, clip: 'pour', load: u < 0.54 };
-  return { at: z.clone().lerp(a, smooth((u - 0.6) / 0.4)), ahead: a, clip: 'walk' };
+  if (u < 0.5) return { ...leg(smooth((u - 0.1) / 0.4), 'carry'), load: true };
+  if (u < 0.6) return { at: z, ahead: pl?.c ?? z, clip: 'pour', load: u < 0.54 };
+  const back = alongPts(r, 1 - smooth((u - 0.6) / 0.4));
+  const d = back.ahead.clone().sub(back.at);
+  const steep = Math.abs(d.y) > Math.hypot(d.x, d.z);
+  return { at: back.at, ahead: steep && pl ? pl.c.clone().setY(back.at.y) : r.pts[0], clip: steep ? 'climb' : 'walk' };
 }
 // The free helper that works the lift: the first one at the heap.
 function liftHand(b) {
