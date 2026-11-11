@@ -376,16 +376,15 @@ function act(p, name) {
 // place of its own round the work: on the ground round the part, or on
 // the deck of the scaffold of the band (they climb the ladder at the
 // corner of the scaffold to it, and down from it). There each does the
-// work of its trade, with a step now and then; a person that carries
-// takes loads from the ladder (or the heap of the materials) to its
-// place. A free person waits at the head of the way, and at the end of
-// a stage the people walk out on the way. The clock is the second of the
+// work cycle of its trade (D12, below): it takes a load at the source of
+// its place, carries it to a point of the work on the part, and works
+// there. A free person gets the materials ready at the heap, and at the
+// end of a stage the people walk out on the way. The clock is the second of the
 // film (of the page, with no time lapse); a walk is at SPEED m in a
 // second of the film, and a way from one place of the lot to another
 // takes at most HOP s.
 const WAY = 4;
 const SPEED = 12;
-const STEP = 3;
 const HOP = 2.5;
 const CROWD = 60;
 const clock = (day) => (lapse ? (day === undefined ? lapse.t : lapse.film(day)) : performance.now() / 1000);
@@ -443,10 +442,43 @@ function placeOf(b, task) {
       pl.down.push({ at: top.clone().setX(edge.x).setZ(edge.z) }, { at: edge, clip: 'climb' });
     }
     pl.foot = pl.down.at(-1).at;
+    ladder(b, list, pl);
   }
   pl.list = list;
   pl.n = list.length;
   return ((b.rings ??= {})[name] = pl);
+}
+// The ladder of a deck: rails and rungs from the foot to the deck, at the
+// corner of the scaffold. It goes with the scaffold.
+const rail = new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.9 });
+function ladder(b, list, pl) {
+  list.ladder?.removeFromParent();
+  const g = new THREE.Group();
+  const out = pl.ladder.clone().sub(pl.c).setY(0).normalize();
+  const across = new THREE.Vector3(-out.z, 0, out.x).multiplyScalar(0.25);
+  // Each leg up from the foot: the edge of the base, the base, the deck.
+  const pts = [...pl.down].reverse().map((d) => d.at);
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const [lo, hi] = [pts[i], pts[i + 1]];
+    if (hi.y - lo.y < 0.8) continue;
+    const len = hi.distanceTo(lo);
+    for (const side of [-1, 1]) {
+      const r = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len, 5), rail);
+      r.position.copy(lo).add(hi).multiplyScalar(0.5).addScaledVector(across, side);
+      r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), hi.clone().sub(lo).normalize());
+      g.add(r);
+    }
+    for (let y = 0.3; y < len; y += 0.35) {
+      const at = lo.clone().lerp(hi, y / len);
+      const rung = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.03), rail);
+      rung.position.copy(at);
+      rung.lookAt(at.clone().add(out));
+      g.add(rung);
+    }
+  }
+  for (const m of g.children) m.castShadow = true;
+  scene.add(g);
+  list.ladder = g;
 }
 // The surface under a point: the top of the parts of the lot (not the
 // scaffold, the forms or the machines) under it, or none.
@@ -519,28 +551,300 @@ function where(w, t) {
   }
   if (!w.place) return { at: w.figure.position.clone(), clip: 'none' };
   const pl = w.place;
-  const home = w.lot ?? w.boss?.lot;
-  const face = pl.rest && home ? lotAt(home) : pl.c;
-  if (pl.rest) return { at: ringAt(pl, w.a, 0.25 + 0.75 * hash(w.seed, 5)), ahead: face, clip: 'none' };
-  const s = still ? 0.5 : Math.max(t - w.legT0, 0) / STEP;
+  const home = w.lot ?? w.boss?.lot ?? w.build;
+  if (pl.rest) return { at: ringAt(pl, w.a, 0.25 + 0.75 * hash(w.seed, 5)), ahead: home ? lotAt(home) : pl.c, clip: 'none' };
+  return cycle(home, w, t);
+}
+
+// The work cycle (plan 0006, D12): a person at work goes to the source of
+// its materials, takes a load, carries it to the next point of the work on
+// the part, and works there; then the next cycle, at the next point along
+// the part. A cycle takes about CYCLE s of the film. The person of a task
+// takes a load in one cycle of three, and steps to the next point in the
+// others; its helpers take a load in each cycle; a person that guides
+// takes none. A free helper mixes at the heap, or carries loads from the
+// heap to the foot of the lift (or to the work on the ground); one free
+// helper works the lift at its foot.
+const CYCLE = 6;
+const SPREAD = 0.9;
+function cycle(b, w, t) {
+  const pl = w.place;
+  const P = CYCLE * (0.8 + 0.5 * hash(w.seed, 11));
+  const s = still ? 0.6 : Math.max(t - w.legT0, 0) / P + hash(w.seed, 12);
   const k = Math.floor(s);
   const u = s - k;
-  // A person that carries: from its place to the ladder (or the heap) and
-  // back with a load, a trip in each STEP s.
-  if (w.work === 'carry' && w.from != null) {
-    const back = u >= 0.5;
-    const f = smooth(Math.min(((back ? u - 0.5 : u) / 0.5) * 1.25, 1));
-    const a = back ? w.from + (w.a - w.from) * f : w.a + (w.from - w.a) * f;
-    return { at: ringAt(pl, a), ahead: ringAt(pl, back ? w.a : w.from), clip: f < 1 ? (back ? 'carry' : 'walk') : back ? 'carry' : 'none' };
+  const lead = !w.boss && !b?.pool?.includes(w);
+  const boss = w.boss ?? w;
+  const wait = boss.waiting && !w.yard;
+  // A free helper at the heap.
+  if (b && w.yard && !w.task) {
+    const lift = b.lift;
+    if (lift && w === liftHand(b)) return { at: lift.foot.clone().add(lift.side), ahead: lift.foot, clip: lift.kind === 'crane' ? 'guide' : 'climb' };
+    if (hash(w.seed, 8) >= 0.3) return haul(b, w, k, u);
   }
-  // A step now and then along the work; the work of the trade.
-  const ang = (j) => (j < 0 ? w.a : w.a + (hash(w.seed, j) - 0.5) * 0.3);
-  const work = (w.boss ?? w).waiting ? 'none' : w.work;
-  if (u < 0.1) {
-    const a = ang(k - 1) + (ang(k) - ang(k - 1)) * smooth(u / 0.1);
-    return { at: ringAt(pl, a), ahead: ringAt(pl, ang(k)), clip: 'walk' };
+  const job = w.work === 'carry' ? 'trowel' : w.work;
+  const c = plan(b, w, k, !wait && w.work !== 'guide' && (!lead || k % 3 === 0));
+  if (!c.fetch || wait) {
+    if (u < 0.12 && !wait) return { ...alongPts(c.step, smooth(u / 0.12)), clip: 'walk' };
+    return { at: c.at, ahead: c.face, clip: wait ? 'none' : job };
   }
-  return { at: ringAt(pl, ang(k)), ahead: face, clip: work };
+  // Out to the source, the load, back to the work, the work.
+  if (u < 0.22) return { ...alongPts(c.out, smooth(u / 0.22)), clip: 'walk' };
+  if (u < 0.3) return { at: c.out.pts.at(-1), ahead: c.src, clip: 'pour', load: u > 0.26 };
+  if (u < 0.55) return { ...alongPts(c.back, smooth((u - 0.3) / 0.25)), clip: 'carry', load: true };
+  return { at: c.at, ahead: c.face, clip: job };
+}
+// A path of points with their lengths, and the point at a part of it.
+function pathOf(pts) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  return { pts, cum };
+}
+function alongPts(r, f) {
+  if (r.pts.length < 2) return { at: r.pts[0].clone(), ahead: r.pts[0] };
+  const x = f * r.cum.at(-1);
+  let i = 1;
+  while (i < r.pts.length - 1 && r.cum[i] < x) i++;
+  const len = r.cum[i] - r.cum[i - 1];
+  return { at: r.pts[i - 1].clone().lerp(r.pts[i], len > 0 ? Math.min(Math.max((x - r.cum[i - 1]) / len, 0), 1) : 1), ahead: r.pts[i] };
+}
+// The point of the work `k` of a figure: on its place, at an angle near
+// its own, at the surface of the part (the forms, the cast, the base).
+function workAt(b, w, k) {
+  const pl = w.place;
+  w.points ??= new Map();
+  const key = `${k}`;
+  if (w.points.pl !== pl) w.points = Object.assign(new Map(), { pl });
+  if (w.points.has(key)) return w.points.get(key);
+  const a = w.a + (hash(w.seed, 30 + (((k % 9) + 9) % 9)) - 0.5) * SPREAD;
+  const ring = ringAt(pl, a, pl.ground ? 1 : 0.95);
+  const dir = pl.c.clone().setY(ring.y).sub(ring);
+  const len = dir.length();
+  dir.normalize();
+  let at = ringAt(pl, a, pl.ground ? 0.9 : 0.7);
+  let face = pl.c.clone().setY(ring.y + 1);
+  if (b && len > 0.5) {
+    reach.set(ring.clone().setY(ring.y + 1), dir);
+    reach.far = len;
+    const hit = reach.intersectObjects(solids(b), true)[0];
+    if (hit) {
+      at = ring.clone().addScaledVector(dir, Math.max(hit.distance - 0.45, 0));
+      face = hit.point.clone();
+    }
+  }
+  const p = { at, face, a };
+  if (w.points.size > 12) w.points.clear();
+  w.points.set(key, p);
+  return p;
+}
+const reach = new THREE.Raycaster();
+// The parts that a person works on (not the scaffold, the machines or the
+// heap).
+function solids(b) {
+  return Object.entries(b.parts).filter(([k]) => !/^(scaffold_|crane|mixing)/.test(k)).flatMap(([, list]) => list);
+}
+// The cycle `k` of a figure: the point of its work, the step to it from the
+// last point, and (when it takes a load) the way out to the source and the
+// way back with the load.
+function plan(b, w, k, fetch) {
+  const pl = w.place;
+  const now = workAt(b, w, k);
+  const last = workAt(b, w, k - 1);
+  const c = { at: now.at, face: now.face, fetch: fetch && !!b };
+  c.step = pathOf([last.at, now.at]);
+  if (!c.fetch) return c;
+  const src = sourceOf(b, pl);
+  const via = (from, a1, a2) => [from, ...arc(pl, a1, a2, pl.ground ? 1 : 0.95)];
+  c.src = src;
+  c.out = pathOf([...via(last.at, last.a, angleOf(pl, src)), src]);
+  c.back = pathOf([src, ...via(now.at, now.a, angleOf(pl, src)).reverse()]);
+  return c;
+}
+// The source of the loads of a place: the lift at a deck (the bucket of
+// the crane, the pulley at the ladder), or the heap of the materials (the
+// mixing board, the stack of a site of today) on the ground.
+function sourceOf(b, pl) {
+  if (!pl.ground) {
+    if (b.lift?.pl === pl) return b.lift.deck;
+    return pl.ladder;
+  }
+  return yardOf(b);
+}
+function yardOf(b) {
+  const heap = b.parts.mixing?.[0];
+  if (heap) return new THREE.Box3().setFromObject(heap).getCenter(new THREE.Vector3()).setY(lotAt(b).y);
+  return laydown(b);
+}
+// The stack of the materials of a site with no heap: near the foot of the
+// crane, or at the ring of the lot to the side of the way in.
+function laydown(b) {
+  const crane = craneOf(b);
+  if (crane) return crane.pick.clone().addScaledVector(crane.across, 3.5);
+  // To the side of the camera, so that the stack does not hide the work.
+  const ring = lotRing(b);
+  b.group.updateWorldMatrix(true, false);
+  const d = new THREE.Vector3(...(lapse ? lapse.cam ?? VIEWS[lapse.view].cam : [0.6, 0, 0.8])).setY(0).transformDirection(b.group.matrixWorld).setY(0).normalize();
+  const base = new THREE.Box3();
+  for (const part of b.parts.be ?? []) base.expandByObject(part);
+  const half = base.isEmpty() ? 6 : Math.max(base.max.x - base.min.x, base.max.z - base.min.z) / 2;
+  const at = ring.c.clone().addScaledVector(d.applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.6), half + 2.5);
+  return groundAt(b, at);
+}
+// The ground under a point: the top of the parts of the lot, or the hill.
+function groundAt(b, at) {
+  const top = surface(b, at.clone().setY(at.y + 30));
+  if (top) return top;
+  const hill = [...places.values()].find((p) => p.terrain)?.ground;
+  if (!hill) return at;
+  reach.set(at.clone().setY(1000), new THREE.Vector3(0, -1, 0));
+  reach.far = Infinity;
+  const hit = reach.intersectObject(hill, true)[0];
+  return hit ? at.clone().setY(hit.point.y) : at;
+}
+// A free helper that carries: from the heap to the foot of the lift (or to
+// the work on the ground), with a load, and back.
+function haul(b, w, k, u) {
+  const yard = yardOf(b);
+  const lift = b.lift && (b.lift.kind !== 'crane' || hash(w.seed, 43) < 0.4) ? b.lift.foot : b.lift?.pl.foot;
+  const to = lift ?? (b.workPl?.ground ? ringAt(b.workPl, angleOf(b.workPl, yard) + (hash(w.seed, 40 + (k % 5)) - 0.5) * 3) : ringAt(lotRing(b), angleOf(lotRing(b), yard) + 0.4));
+  const side = new THREE.Vector3(hash(w.seed, 41) - 0.5, 0, hash(w.seed, 42) - 0.5).multiplyScalar(4);
+  const a = yard.clone().add(side);
+  const z = to.clone().add(side.clone().multiplyScalar(0.4));
+  if (u < 0.1) return { at: a, ahead: yard, clip: 'pour', load: u > 0.06 };
+  if (u < 0.5) return { at: a.clone().lerp(z, smooth((u - 0.1) / 0.4)), ahead: z, clip: 'carry', load: true };
+  if (u < 0.6) return { at: z, ahead: to, clip: 'pour', load: u < 0.54 };
+  return { at: z.clone().lerp(a, smooth((u - 0.6) / 0.4)), ahead: a, clip: 'walk' };
+}
+// The free helper that works the lift: the first one at the heap.
+function liftHand(b) {
+  return (b.pool ?? []).find((h) => h.yard && !h.task && !h.leaving && !h.gone && hash(h.seed, 8) >= 0.3);
+}
+
+// The tower crane of a lot (plan 0006, D6): the foot of its mast, the
+// way of its jib, and the height of the jib, from the part.
+function craneOf(b) {
+  const part = b.parts.crane?.[0];
+  if (!part?.parent) return null;
+  if (b.crane?.part === part) return b.crane;
+  part.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(part);
+  const v = new THREE.Vector3();
+  const foot = new THREE.Vector3();
+  let n = 0;
+  let tip = null;
+  const high = [];
+  part.traverse((o) => {
+    const pos = o.isMesh && o.geometry.attributes.position;
+    if (!pos) return;
+    for (let i = 0; i < pos.count; i += 3) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+      if (v.y < box.min.y + 2) { foot.add(v); n++; }
+      else if (v.y > box.max.y - 2.5) high.push(v.clone());
+    }
+  });
+  if (!n || !high.length) return null;
+  foot.divideScalar(n);
+  for (const h of high) if (!tip || h.clone().setY(0).distanceTo(foot.clone().setY(0)) > tip.clone().setY(0).distanceTo(foot.clone().setY(0))) tip = h;
+  const dir = tip.clone().sub(foot).setY(0).normalize();
+  const ground = lotAt(b).y;
+  const pick = foot.clone().addScaledVector(dir, 4).setY(ground);
+  b.crane = { part, foot: foot.setY(ground), dir, across: new THREE.Vector3(-dir.z, 0, dir.x), top: box.max.y - 1.8, pick, reach: tip.clone().setY(0).distanceTo(foot.clone().setY(0)) };
+  return b.crane;
+}
+// The lift of a deck (plan 0006, D12): the bucket of the tower crane (a
+// site of today) from the stack at the foot of the mast to the edge of the
+// deck under the jib; or the bucket on the rope of a pulley at the corner
+// of the ladder (1974), pulled at the foot. `foot` is where the bucket is
+// filled, `deck` where the people of the deck take the load.
+function liftOf(b, pl) {
+  if (pl.ground) return null;
+  const means = b.stage?.means;
+  const crane = (!means || means.includes('tower_crane')) && craneOf(b);
+  if (crane) {
+    // The point of the jib over the edge of the deck, on the side of the mast.
+    let at = null;
+    for (let d = 0; d <= crane.reach; d += 0.5) {
+      const p = crane.foot.clone().addScaledVector(crane.dir, d);
+      const e = ((p.x - pl.c.x) / (pl.rx * 1.15)) ** 2 + ((p.z - pl.c.z) / (pl.rz * 1.15)) ** 2;
+      if (e <= 1) { at = p; break; }
+    }
+    if (!at) return null;
+    const drop = at.clone().setY(pl.c.y + 1.4);
+    return { kind: 'crane', pl, crane, foot: crane.pick.clone(), drop, deck: ringAt(pl, angleOf(pl, drop), 0.95), side: crane.across.clone().multiplyScalar(1.2), period: 10 };
+  }
+  const out = pl.ladder.clone().sub(pl.c).setY(0).normalize();
+  const foot = pl.foot.clone().addScaledVector(out, 0.9);
+  const sc = new THREE.Box3();
+  for (const part of pl.list) sc.expandByObject(part);
+  const wheel = pl.ladder.clone().addScaledVector(out, 0.9).setY(Math.max(sc.max.y, pl.c.y + 2) + 0.6);
+  return { kind: 'pulley', pl, foot, drop: wheel.clone().setY(pl.c.y + 1), wheel, deck: pl.ladder.clone(), side: out.clone().multiplyScalar(1.1), period: 6 };
+}
+// The bucket of a lift at `t`: up full, a stop at the deck, down empty, a
+// stop at the foot.
+function lifting(b, t) {
+  const lift = b.lift;
+  if (!lift) {
+    if (b.hoist) b.hoist.visible = false;
+    return;
+  }
+  if (!b.hoist) {
+    const g = new THREE.Group();
+    const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.35, 0.8, 10), new THREE.MeshStandardMaterial({ color: 0x5b6168, roughness: 0.7 }));
+    bucket.castShadow = true;
+    const rope = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 1, 0)]), new THREE.LineBasicMaterial({ color: 0x222222 }));
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.06, 6, 12), new THREE.MeshStandardMaterial({ color: 0x6b4a2b }));
+    g.add(bucket, rope, wheel);
+    scene.add(g);
+    b.hoist = Object.assign(g, { bucket, rope, wheel });
+  }
+  const h = b.hoist;
+  h.visible = true;
+  const u = (still ? 0.3 : t / lift.period) % 1;
+  const low = lift.foot.clone().setY(lift.foot.y + 0.4);
+  const high = lift.drop;
+  let at;
+  if (lift.kind === 'crane') {
+    // Up at the stack, along the jib, down to the deck; and back.
+    const up = lift.crane.top - 4;
+    const way = pathOf([low, low.clone().setY(up), high.clone().setY(up), high]);
+    at = u < 0.15 ? low.clone() : u < 0.45 ? alongPts(way, smooth((u - 0.15) / 0.3)).at : u < 0.6 ? high.clone() : u < 0.9 ? alongPts(way, 1 - smooth((u - 0.6) / 0.3)).at : low.clone();
+    h.rope.geometry.setFromPoints([at.clone().setY(lift.crane.top), at.clone().setY(at.y + 0.4)]);
+    h.wheel.visible = false;
+  } else {
+    at = u < 0.2 ? low.clone() : u < 0.5 ? low.clone().lerp(high, smooth((u - 0.2) / 0.3)) : u < 0.65 ? high.clone() : u < 0.9 ? high.clone().lerp(low, smooth((u - 0.65) / 0.25)) : low.clone();
+    at.setX(lift.wheel.x).setZ(lift.wheel.z);
+    h.rope.geometry.setFromPoints([lift.wheel, at.clone().setY(at.y + 0.4), lift.wheel, lift.foot.clone().add(lift.side).setY(lift.foot.y + 1.4)]);
+    h.wheel.visible = true;
+    h.wheel.position.copy(lift.wheel);
+    h.wheel.lookAt(lift.wheel.clone().add(lift.side));
+    h.bucket.scale.setScalar(0.5);
+  }
+  h.bucket.position.copy(at);
+}
+
+// The load in the hands of a figure (plan 0006, D12): a panel of the
+// forms, a bar of the steel, a tube of the scaffold, or a bucket.
+const LOADS = {
+  set_panel: () => new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.0, 1.2), new THREE.MeshStandardMaterial({ color: 0xb98a4e, roughness: 0.9 })),
+  hammer: () => new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 4), new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.6 })),
+  climb: () => new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3, 6).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x8f969c, metalness: 0.4, roughness: 0.5 })),
+  bucket: () => new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x3a3f45, roughness: 0.8 })),
+};
+const HOLD = { set_panel: [0.32, 0.85, 0.15], hammer: [0.2, 1.5, 0.6], climb: [0.2, 1.5, 0.4], bucket: [0.3, 0.55, 0.12] };
+function hold(w, on) {
+  const kind = LOADS[w.work] ? w.work : 'bucket';
+  if (!on) {
+    if (w.load) w.load.visible = false;
+    return;
+  }
+  if (!w.load || w.load.kind !== kind) {
+    w.load?.removeFromParent();
+    w.load = Object.assign(LOADS[kind](), { kind });
+    w.load.castShadow = true;
+    w.load.position.fromArray(HOLD[kind]);
+    w.figure.add(w.load);
+  }
+  w.load.visible = true;
 }
 // The points of the way in that a figure has still to walk at `t`, and
 // their seconds; else where it is.
@@ -604,11 +908,7 @@ function toPlace(b, w, pl, a, t) {
   w.place = pl;
   w.a = a;
   w.legT0 = t + w.route.dur;
-  // A person that carries takes the loads at the ladder of a deck, or at
-  // the heap of the materials (or the head of the way) on the ground.
-  const heap = b.parts.mixing?.[0] ?? b.parts.crane?.[0];
-  const source = pl.ladder ?? (heap ? new THREE.Box3().setFromObject(heap).getCenter(new THREE.Vector3()) : way(b)[0]);
-  w.from = pl.rest ? null : angleOf(pl, source);
+  w.yard = false;
 }
 // A figure comes on the way in to the head of the way, and waits there.
 function come(b, w, t) {
@@ -626,7 +926,7 @@ function come(b, w, t) {
   w.place = pl;
   w.a = a;
   w.legT0 = t + WAY;
-  w.from = null;
+  w.yard = false;
 }
 // A figure goes from a lot: down from its deck, to the head of the way,
 // and out on it (on its way in: back on it).
@@ -670,9 +970,43 @@ async function helper(b, t) {
 // mixing board of a site with no machine), or works round the lot.
 function free(b, h, t) {
   Object.assign(h, { task: null, boss: null, work: hash(h.seed, 8) < 0.5 ? 'pour' : 'trowel' });
-  const yard = b.parts.mixing?.length ? placeOf(b, 'mixing') : lotRing(b);
-  toPlace(b, h, yard, hash(h.seed, 9) * 2 * Math.PI, t);
-  h.from = null;
+  toPlace(b, h, yardPlace(b), hash(h.seed, 9) * 2 * Math.PI, t);
+  h.yard = true;
+}
+// The place at the heap: the mixing board, or the stack of the materials.
+function yardPlace(b) {
+  if (b.parts.mixing?.length) return placeOf(b, 'mixing');
+  const c = laydown(b);
+  if (b.stack?.c.distanceTo(c) < 0.1) return b.stack;
+  pile(b, c);
+  return (b.stack = { c, rx: 2.6, rz: 2.6, r: 1, ground: true });
+}
+// The stack of the materials of a site of today: the panels of the forms,
+// the bars of the steel, the tubes of the scaffold.
+function pile(b, c) {
+  b.pile?.removeFromParent();
+  const g = new THREE.Group();
+  const put = (size, color, x, z, n, turn) => {
+    for (let i = 0; i < n; i++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(...size), new THREE.MeshStandardMaterial({ color, roughness: 0.8 }));
+      m.position.set(x, size[1] / 2 + i * size[1], z);
+      m.rotation.y = turn;
+      m.castShadow = m.receiveShadow = true;
+      g.add(m);
+    }
+  };
+  put([2.4, 0.12, 1.2], 0xb98a4e, -0.6, 0.4, 5, 0.2);
+  put([5, 0.14, 0.5], 0x7a4a2a, 0.9, -0.6, 2, 0.5);
+  put([3, 0.12, 0.6], 0x8f969c, 0.2, -1.4, 3, -0.3);
+  g.position.copy(c);
+  scene.add(g);
+  b.pile = g;
+}
+// A person that waits for its next task gets the materials ready at the
+// heap (it walks there on its way in).
+function prepare(b, p, t) {
+  toPlace(b, p, yardPlace(b), hash(p.seed, 9) * 2 * Math.PI, t);
+  p.yard = true;
 }
 // The people of a stage come before its work: the page reads the events
 // of the stage in the log ahead, and each person that it hires walks in
@@ -699,6 +1033,7 @@ async function arrive(b, e, t) {
     p.waiting = true;
     p.status.textContent = 'comes';
     come(b, p, t);
+    prepare(b, p, t);
   }
   const free = (b.pool ?? []).filter((h) => !h.leaving && !h.gone).length;
   for (let k = free; k < Math.min(most, CROWD) - who.size; k++) await helper(b, t);
@@ -707,6 +1042,8 @@ async function arrive(b, e, t) {
 // helper to the heap, a person to the ring of the lot. The list keeps the
 // time when the last of them is down: the scaffold stays until then.
 function comeDown(b, list, t) {
+  if (list && b.lift?.pl.list === list) b.lift = null;
+  if (list && b.workPl?.list === list) b.workPl = null;
   for (const w of [...people.values(), ...(b.pool ?? [])]) {
     if (!list || w.place?.list !== list || w.leaving || w.gone) continue;
     if (b.pool?.includes(w) && !w.task) free(b, w, t);
@@ -729,6 +1066,7 @@ function step(w, t, dt, now) {
   }
   w.figure.visible = !(t < w.hidden);
   w.figure.position.copy(s.at);
+  hold(w, !!s.load);
   if (s.ahead && s.ahead.distanceToSquared(s.at) > 1e-6) w.figure.lookAt(s.ahead.x, s.at.y, s.ahead.z);
   act(w, s.clip);
   if (w.mixer && !still) w.mixer.update(dt);
@@ -826,6 +1164,7 @@ function carry(b, t, dt) {
     c.figure.position.copy(at);
     c.figure.lookAt(ahead.x, at.y, ahead.z);
     act(c, up ? 'carry' : 'walk');
+    hold(c, up);
     if (c.mixer && !still) c.mixer.update(dt);
   }
 }
@@ -925,6 +1264,7 @@ function walking(now, dt) {
   for (const b of builds.values()) {
     if (b.carriers?.length) carry(b, t, dt);
     if (b.going?.length) goes(b, t);
+    lifting(b, t);
   }
 }
 // The parts that a task took down go when their time comes. The people
@@ -934,6 +1274,7 @@ function goes(b, t) {
   b.going = b.going.filter((g) => {
     if ((g.scaffold ? last : g.t) > t) return true;
     for (const part of g.list) part.removeFromParent();
+    g.list.ladder?.removeFromParent();
     return false;
   });
 }
@@ -1017,7 +1358,7 @@ async function take(e) {
   if (e.kind === 'released') {
     const p = await person(e.who);
     const t = clock(eventDay);
-    toPlace(b, p, restOf(b), hash(p.seed, 6) * 2 * Math.PI, t);
+    prepare(b, p, t);
     p.waiting = true;
     p.task = null;
     p.status.textContent = 'free';
@@ -1058,6 +1399,9 @@ async function take(e) {
     });
     b.task = d.task;
     b.workY = pl.c.y - b.group.position.y;
+    // The work now, and the lift to its deck.
+    b.workPl = pl;
+    if (!pl.ground) b.lift = liftOf(b, pl) ?? b.lift;
   }
   // The crew of a task is free: it goes on at its place until a task
   // takes it.
@@ -1070,6 +1414,8 @@ async function take(e) {
   }
   if (e.kind === 'stage_started') {
     b.stage = d;
+    b.lift = b.workPl = null;
+    if (b.pile) b.pile.visible = d.work === 'build';
     depart(b, clock(eventDay));
     // A change makes a new statue: it has no age.
     if (d.work === 'change') b.aged = null;
@@ -1111,6 +1457,8 @@ async function take(e) {
   }
   if (['done', 'stopped', 'failed'].includes(e.kind)) {
     b.status = e.kind;
+    b.lift = b.workPl = null;
+    if (b.pile) b.pile.visible = false;
     depart(b, clock(eventDay));
   }
   b.state.textContent = `${b.done} of ${b.tasks} tasks, ${b.elements} elements, ${b.status}`;

@@ -274,12 +274,20 @@ crew of its task go to the place of the task, each to a place of its own
 round the work: on the ground round the part, or on the deck of the
 scaffold of its band. To a deck they climb onto the base at its edge and
 up the ladder at the corner of the scaffold, and from deck to deck on
-the ladder. There each does the work of its trade, with a step now and
-then; a person that carries takes the loads from the ladder (or the heap
-of the materials) to its place. A free helper goes on at its place until
-a task takes it (the nearest first), or mixes and shovels at the heap; a
-free person waits at the head of the way. At the end of a stage the
-people walk out on the way. A site has at most 50 people (the 50
+the ladder. There each does the work cycle of its trade (plan 0006,
+D12): it goes to the source of its materials, takes a load (a panel, a
+bar, a tube, a bucket), carries it to the next point of the work on the
+surface of the part, and works there, in about 6 s of the film. The
+person of a task takes a load in one cycle of three; its helpers in each
+cycle. The source of a deck is the lift: the bucket of the tower crane
+today, filled at the stack at the foot of the mast; the bucket on the
+rope of a pulley at the ladder in 1974. The source on the ground is the
+heap: the mixing board, or the stack of the panels, the bars and the
+tubes. A free helper goes on at its place until a task takes it (the
+nearest first), or works at the heap: it mixes, carries loads to the
+foot of the lift or to the work on the ground, or works the lift. A
+person that waits for its next task works at the heap too. At the end
+of a stage the people walk out on the way. A site has at most 50 people (the 50
 skilled workers of 1974).
 
 The time lapse is the world page that follows one construction (plan

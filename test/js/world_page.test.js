@@ -143,16 +143,31 @@ test('the time lapse of the statue on the hill: the clock of its log, the scaffo
       const b = window.WORLD.builds.get(order);
       const near = () => [...window.WORLD.people.values()].filter((p) => p.build === b && p.figure.visible);
       const before = new Map(near().map((p) => [p.name, p.figure.position.clone()]));
+      // All the figures of the lot (the people and their helpers): the
+      // work with the hands, the loads in the hands (plan 0006, D12).
+      const all = () => [...window.WORLD.people.values(), ...window.WORLD.helpers].filter((p) => (p.build === b || p.lot === b || p.boss?.build === b) && p.figure.visible);
+      const hands = ['set_panel', 'pour', 'trowel', 'hammer', 'climb', 'guide'];
       const clips = new Set();
+      let [seen, work, loads] = [0, 0, 0];
       for (let k = 1; k <= 20; k++) {
         await window.TIMELAPSE.at(from + k * 0.1);
         for (const p of near()) clips.add(p.clip);
+        for (const p of all()) {
+          seen++;
+          if (hands.includes(p.clip)) work++;
+          if (p.load?.visible) loads++;
+        }
       }
       const moved = near().filter((p) => before.has(p.name) && before.get(p.name).distanceTo(p.figure.position) > 0.5);
-      return { clips: [...clips], moved: moved.length, people: before.size };
+      return { clips: [...clips], moved: moved.length, people: before.size, work: work / seen, loads, lift: b.lift?.kind ?? null, crane: !!b.parts.crane?.length };
     }, { order: id, from: await page.evaluate((d) => window.TIMELAPSE.filmAt(d), day(pour) + 0.01) });
     const work = ['carry', 'set_panel', 'pour', 'trowel', 'hammer', 'climb', 'guide'];
     assert.ok(moves.moved >= 1 && moves.clips.includes('walk') && moves.clips.some((c) => work.includes(c)), JSON.stringify(moves));
+    // The work cycle: some people work with their hands and the others
+    // carry, walk or wait; loads go in the hands; the crane lifts the
+    // bucket to the deck of the band.
+    assert.ok(moves.work > 0.15 && moves.work < 0.75 && moves.loads >= 1, JSON.stringify(moves));
+    assert.ok(!moves.crane || moves.lift === 'crane', JSON.stringify(moves));
     // The camera of the URL: the front of the statue, from the south of the lot.
     const cam = await page.evaluate((order) => {
       const b = window.WORLD.builds.get(order);

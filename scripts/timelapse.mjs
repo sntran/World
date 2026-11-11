@@ -6,7 +6,8 @@
 // (review/world.html?follow=...&events=...&still=1, with the camera of
 // ?view, ?cam, ?target, ?fov, and the speeds of ?days for the work and
 // ?pause for a pause). The script goes from the first second of the film
-// to its last, FPS frames in each second (30 by default): the steps of
+// to its last (or from FROM to TO of the environment, in seconds of the
+// film), FPS frames in each second (30 by default): the steps of
 // the work keep their days to each other, and a pause is faster. ffmpeg
 // makes the video (H.264, yuv420p).
 import { spawn } from 'node:child_process';
@@ -29,7 +30,10 @@ await page.addStyleTag({ content: 'body{grid-template-columns:1fr!important;grid
 await page.evaluate(() => window.dispatchEvent(new Event('resize')));
 
 const { end, days, film } = await page.evaluate(() => ({ end: window.TIMELAPSE.end, days: window.TIMELAPSE.days, film: window.TIMELAPSE.film }));
-const frames = Math.max(1, Math.ceil(film * Number(fps)));
+// A part of the film only: FROM and TO, in seconds of the film.
+const from = Math.max(Number(process.env.FROM ?? 0), 0);
+const to = Math.min(Number(process.env.TO ?? film), film);
+const frames = Math.max(1, Math.ceil((to - from) * Number(fps)));
 console.log(`${end.toFixed(1)} days, ${days} days in a second of the work: ${frames} frames, ${film.toFixed(1)} s`);
 
 const ffmpeg = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', fps, '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', out], { stdio: ['pipe', 'inherit', 'inherit'] });
@@ -50,7 +54,7 @@ for (let f = 0; f <= frames; f++) {
     g.shadowBlur = 4;
     g.fillText(document.getElementById('lapse').textContent, view.height / 40, view.height / 18);
     return frame.toDataURL('image/jpeg', 0.92);
-  }, Math.min(f / Number(fps), film));
+  }, Math.min(from + f / Number(fps), to));
   const jpeg = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
   if (!ffmpeg.stdin.write(jpeg)) await new Promise((r) => ffmpeg.stdin.once('drain', r));
   if (f % 250 === 0) console.log(`frame ${f} of ${frames}`);
