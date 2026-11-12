@@ -48,6 +48,12 @@ defmodule World.Scene do
     `data` a list of `{r, g, b, a}` (0 to 1) for each point that goes
     into `COLOR_0` as it is: numbers for a shader of an app, not colors
     (`World.Surface`).
+
+    A primitive with only points, normals and indices can be `packed`
+    (`World.Scene.pack/1`): its points and its normals as binaries of
+    floats of 64 bits (`%{count, positions, normals}`), and `positions`
+    and `normals` empty. A binary goes from one process to another with no
+    copy, and takes less memory than a list of tuples of floats.
     """
     defstruct material: :paint,
               positions: [],
@@ -61,8 +67,51 @@ defmodule World.Scene do
               fur_dirs: nil,
               targets: nil,
               uvs2: nil,
-              data: nil
+              data: nil,
+              packed: nil
   end
+
+  @doc """
+  The primitive with its points and its normals as binaries
+  (`World.Scene.Primitive`), when it has only points, normals and
+  indices; else the same primitive.
+  """
+  def pack(
+        %Primitive{
+          uvs: nil,
+          uvs2: nil,
+          joints: nil,
+          weights: nil,
+          colors: nil,
+          fur: nil,
+          fur_dirs: nil,
+          targets: nil,
+          data: nil,
+          packed: nil
+        } = p
+      ) do
+    %{
+      p
+      | positions: [],
+        normals: [],
+        packed: %{count: length(p.positions), positions: floats(p.positions), normals: floats(p.normals)}
+    }
+  end
+
+  def pack(%Primitive{} = p), do: p
+
+  @doc "The primitive with its points and its normals as lists (`pack/1`)."
+  def unpack(%Primitive{packed: %{positions: pos, normals: nor}} = p),
+    do: %{p | positions: points(pos), normals: points(nor), packed: nil}
+
+  def unpack(%Primitive{} = p), do: p
+
+  @doc "The points of a primitive (packed or not)."
+  def positions(%Primitive{packed: %{positions: pos}}), do: points(pos)
+  def positions(%Primitive{positions: pos}), do: pos
+
+  defp floats(list), do: for({x, y, z} <- list, into: <<>>, do: <<x::float-64, y::float-64, z::float-64>>)
+  defp points(bin), do: for(<<x::float-64, y::float-64, z::float-64 <- bin>>, do: {x, y, z})
 
   @doc """
   A primitive from the corners of `World.Mesh.triangles/2` (three for
@@ -153,7 +202,7 @@ defmodule World.Scene do
         []
 
       {%{skin: nil} = n, i} ->
-        for f <- places(frames[i], n.instances), p <- n.primitives, pt <- p.positions, do: Frame.point(f, pt)
+        for f <- places(frames[i], n.instances), p <- n.primitives, pt <- positions(p), do: Frame.point(f, pt)
 
       {n, _} ->
         skinned(n, Enum.at(skins, n.skin), frames)

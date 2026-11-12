@@ -153,6 +153,22 @@ defmodule World.GLB do
     {json, buf.bin}
   end
 
+  # A packed primitive (`World.Scene.pack/1`): its points and its normals
+  # from its binaries, the same bytes.
+  defp primitive(%Scene.Primitive{packed: %{count: n, positions: pos, normals: nor}} = p, buf, mat_index, _, _) do
+    {pos, buf} = packed(buf, pos, n, true)
+    {nor, buf} = packed(buf, nor, n, false)
+    {ind, buf} = indices(buf, p.indices, n)
+
+    World.Detail.collect(
+      {%{
+         "attributes" => %{"POSITION" => pos, "NORMAL" => nor},
+         "indices" => ind,
+         "material" => Map.fetch!(mat_index, p.material)
+       }, buf}
+    )
+  end
+
   defp primitive(%Scene.Primitive{} = p, buf, mat_index, {names, normals?}, bumpy) do
     {pos, buf} = floats(buf, p.positions, "VEC3", 34962, true, &gl/1)
     {nor, buf} = floats(buf, p.normals, "VEC3", 34962, false, &gl/1)
@@ -519,6 +535,24 @@ defmodule World.GLB do
       end
 
     add_accessor(buf, data, target, acc)
+  end
+
+  # The points (or the normals) of a packed primitive: floats of 64 bits in
+  # the axes of World, to floats of 32 bits in the axes of glTF.
+  defp packed(buf, bin, count, bounds?) do
+    data =
+      for <<x::float-64, y::float-64, z::float-64 <- bin>>, {a, b, c} = gl({x, y, z}), into: <<>> do
+        <<a::little-float-32, b::little-float-32, c::little-float-32>>
+      end
+
+    acc = %{"componentType" => 5126, "count" => count, "type" => "VEC3"}
+
+    acc =
+      if bounds?,
+        do: (fn {lo, hi} -> Map.merge(acc, %{"min" => lo, "max" => hi}) end).(bounds(data, 3)),
+        else: acc
+
+    add_accessor(buf, data, 34962, acc)
   end
 
   # The least and the most of each column of a binary of floats.

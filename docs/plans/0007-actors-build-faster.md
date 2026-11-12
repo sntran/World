@@ -223,12 +223,36 @@ person makes.
     the peak, not 562 MB.
 
   The bench of `house_brick_vn` at near: **801 MB, not 1,222 MB**, in
-  14.8 s. R6 asks for less than 424 MB. The rest of the peak is the
-  join: the primitives of a scene are lists of boxed floats (about 37 MB
-  for the brick), copied from each process of a material to the joiner.
-  The next change: the points and the normals of a primitive as binaries
-  (in the processes of the materials, so they go to the joiner with no
-  copy), with the box of the model and the GLB from them, the same bytes;
-  and the elements of a task made when the task starts, not all of them
-  at the start of the construction.
+  14.8 s. R6 asks for less than 424 MB.
+
+### Step 6, the second part (2026-11-12)
+
+A message copies a term with no sharing: the house has 7,108 bricks of
+33 meshes, and its model takes 19.9 MB in the process that made it and
+34.4 MB after a copy. Three changes:
+
+- **The elements are made in the construction** from the model that it
+  gets from the drafter (273 ms for the house), so they share its parts
+  and meshes; before, the drafter sent them with the model, each with a
+  copy of its part. The construction: 201 MB at the peak, not 290 MB.
+- **Each process of a material gets its different meshes once**, and an
+  index for each place of a mesh.
+- **A packed primitive** (`World.Scene.pack/1`): in the join of a
+  construction, each process of a material gives its points and its
+  normals as binaries of floats of 64 bits, which go to the joiner with
+  no copy; the GLB writer and the box of the scene read them (the same
+  bytes, `test/world/scene_pack_test.exs`). The joiner: 201 MB, not
+  258 MB.
+
+The bench of `house_brick_vn` at near, two runs of each on one machine
+(it started again, and is slower than the machine of the first part):
+the commit before these changes, 833 MB and 19.0 to 20.1 s; with them,
+**667 MB to 697 MB** and 19.5 to 20.3 s (the same time). R6 (less than
+424 MB) is not met. What is left:
+the construction keeps its elements, its model, its plan and the tasks
+that wait (about 150 MB live), and the joiner has a copy of the model
+and makes the scene of 7,594 nodes. The next change of size is the join
+from the GLBs that the people make for each element (D6), or instances
+for the meshes that repeat (33 meshes for 7,108 bricks); each changes
+the form of the GLB of a model, and the owner decides it.
 

@@ -468,7 +468,7 @@ defmodule World.Build do
 
     nodes =
       for {n, i} <- Enum.with_index(nodes),
-          do: %{n | primitives: n.primitives ++ primitives(Map.get(once, i, []))}
+          do: %{n | primitives: n.primitives ++ primitives(Map.get(once, i, []), true)}
 
     {nodes ++ shared(many, keys, instances), parts}
   end
@@ -576,7 +576,9 @@ defmodule World.Build do
   #
   # With `parallel: true` (the join of a construction), a process for each
   # material makes its primitive, with the triangles of its meshes only.
-  defp primitives(placed) do
+  # With `pack` and `parallel`, each process gives its primitive packed
+  # (`World.Scene.pack/1`): to the process of the join with no copy.
+  defp primitives(placed, pack \\ false) do
     given = Process.get(:world_triangles, %{})
 
     groups =
@@ -588,9 +590,21 @@ defmodule World.Build do
     if Process.get(:world_parallel, false) do
       lean = Process.get(:world_lean, true)
 
+      # Each process gets the different meshes of its material once, and
+      # an index for each place of a mesh: a message copies a term with no
+      # sharing, so a list of the placed meshes would copy a mesh for each
+      # place (the 7,108 bricks of a house are 33 meshes).
       groups
-      |> Enum.map(fn {_, shapes} = g -> {g, Map.take(given, for({_, m} <- shapes, uniq: true, do: m))} end)
-      |> Task.async_stream(fn {g, given} -> Detail.lean(lean, fn -> primitive(g, given) end) end,
+      |> Enum.map(fn {mat, shapes} ->
+        meshes = for {_, m} <- shapes, uniq: true, do: m
+        index = meshes |> Enum.with_index() |> Map.new()
+        {mat, Enum.map(shapes, fn {f, m} -> {f, index[m]} end), List.to_tuple(meshes), Map.take(given, meshes)}
+      end)
+      |> Task.async_stream(
+        fn {mat, places, meshes, given} ->
+          g = {mat, Enum.map(places, fn {f, i} -> {f, elem(meshes, i)} end)}
+          Detail.lean(lean, fn -> if(pack, do: Scene.pack(primitive(g, given)), else: primitive(g, given)) end)
+        end,
         ordered: true,
         timeout: :infinity
       )

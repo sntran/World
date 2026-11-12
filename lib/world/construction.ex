@@ -163,12 +163,12 @@ defmodule World.Construction do
     {:noreply, Map.merge(s, %{drafter: drafter, deferred: []})}
   end
 
-  # The model at the level that fits, its plan and its elements.
+  # The model at the level that fits, and its plan.
   defp draft(job) do
     case fit(job, job.budget["triangles"]) do
       {:ok, level, item} ->
         plan = if job.drawing, do: Plan.of_drawing(job.drawing), else: Plan.flat(item)
-        {:ok, level, item, plan, if(job.drawing, do: [], else: Build.elements(item, level, job.pose))}
+        {:ok, level, item, plan}
 
       {:error, triangles} ->
         {:error, triangles}
@@ -177,7 +177,13 @@ defmodule World.Construction do
 
   defp planned(s, result) do
     case result do
-      {:ok, level, item, plan, elements} ->
+      {:ok, level, item, plan} ->
+        # The elements of the model, made here from the model: a message
+        # copies a term with no sharing, so elements from the drafter would
+        # each have a copy of their parts and meshes (the 7,108 bricks of a
+        # house are 33 meshes); made here, they share the parts of the model.
+        elements = if s.job.drawing, do: [], else: Build.elements(item, level, s.job.pose)
+
         s =
           Map.merge(s, %{
             level: level,

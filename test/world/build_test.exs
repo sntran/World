@@ -90,11 +90,25 @@ defmodule World.BuildTest do
     assert points(many) == points(Build.scene(lefts, instances: false))
   end
 
-  test "a scene in parallel (a process for each material) and with no full collection is the same scene" do
+  test "a scene in parallel (a process for each material, its primitives packed) and with no full collection is the same scene" do
     a = Assembly.add(row(3), "w", wheel(), at: "o", port: "o")
     one = Build.scene(a)
-    assert Build.scene(a, parallel: true) == one
-    assert World.Detail.lean(false, fn -> World.Detail.lean(true, fn -> Build.scene(a, parallel: true) end) end) == one
+
+    unpack = fn scene ->
+      %{
+        scene
+        | nodes: Enum.map(scene.nodes, &%{&1 | primitives: Enum.map(&1.primitives, fn p -> World.Scene.unpack(p) end)})
+      }
+    end
+
+    parallel = Build.scene(a, parallel: true)
+    assert Enum.any?(parallel.nodes, fn n -> Enum.any?(n.primitives, & &1.packed) end)
+    assert unpack.(parallel) == one and World.GLB.encode(parallel) == World.GLB.encode(one)
+
+    assert unpack.(
+             World.Detail.lean(false, fn -> World.Detail.lean(true, fn -> Build.scene(a, parallel: true) end) end)
+           ) == one
+
     assert Process.get(:world_lean) == nil and Process.get(:world_parallel) == nil
   end
 
