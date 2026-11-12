@@ -384,6 +384,10 @@ function act(p, name) {
 // second of the film, and a way from one place of the lot to another
 // takes at most HOP s.
 const WAY = 4;
+// A move to a new lot: the film waits REST s at the old site, then the
+// camera goes up the road in RIDE s.
+const REST = 1.5;
+const RIDE = 16;
 const SPEED = 12;
 const HOP = 2.5;
 const CROWD = 60;
@@ -932,21 +936,21 @@ function toPlace(b, w, pl, a, t) {
   w.yard = false;
 }
 // A figure comes on the way in to the head of the way, and waits there.
-function come(b, w, t) {
+function come(b, w, t, dur = WAY) {
   const side = new THREE.Vector3(hash(w.seed, 1) - 0.5, 0, hash(w.seed, 2) - 0.5).multiplyScalar(3);
   const pts = way(b).slice().reverse().map((v) => v.clone().add(side));
   const pl = restOf(b);
   const a = hash(w.seed, 6) * 2 * Math.PI;
   // The people of a stage do not start at one time.
-  const late = hash(w.seed, 7) * WAY * 0.4;
+  const late = hash(w.seed, 7) * dur * 0.4;
   w.route = null;
   w.hidden = t + late;
-  go(w, [...pts, ringAt(pl, a, 0.25 + 0.75 * hash(w.seed, 5))], t + late, WAY - late, pts.length);
+  go(w, [...pts, ringAt(pl, a, 0.25 + 0.75 * hash(w.seed, 5))], t + late, dur - late, pts.length);
   w.figure.visible = true;
   w.leaving = w.gone = false;
   w.place = pl;
   w.a = a;
-  w.legT0 = t + WAY;
+  w.legT0 = t + dur;
   w.yard = false;
 }
 // A figure goes from a lot: down from its deck, to the head of the way,
@@ -979,9 +983,9 @@ function depart(b, t) {
   b.pool = (b.pool ?? []).filter((h) => h.task);
 }
 // A helper of the crews of a lot (the pool of the lot), that walks in.
-async function helper(b, t) {
+async function helper(b, t, dur = WAY) {
   const h = Object.assign(worker(await body, 'carry'), { lot: b, task: null });
-  come(b, h, t);
+  come(b, h, t, dur);
   helpers.add(h);
   (b.pool ??= []).push(h);
   free(b, h, t);
@@ -1032,7 +1036,7 @@ function prepare(b, p, t) {
 // The people of a stage come before its work: the page reads the events
 // of the stage in the log ahead, and each person that it hires walks in
 // with the crew of its biggest task (at most CROWD people on the lot).
-async function arrive(b, e, t) {
+async function arrive(b, e, t, dur = WAY) {
   if (!lapse) return;
   // The people that the stage hires, and the most people that work in it
   // at one time (the crews of the tasks at one time).
@@ -1053,11 +1057,11 @@ async function arrive(b, e, t) {
     p.lot = b;
     p.waiting = true;
     p.status.textContent = 'comes';
-    come(b, p, t);
+    come(b, p, t, dur);
     prepare(b, p, t);
   }
   const free = (b.pool ?? []).filter((h) => !h.leaving && !h.gone).length;
-  for (let k = free; k < Math.min(most, CROWD) - who.size; k++) await helper(b, t);
+  for (let k = free; k < Math.min(most, CROWD) - who.size; k++) await helper(b, t, dur);
 }
 // The people on the deck of a scaffold that goes come down from it: a free
 // helper to the heap, a person to the ring of the lot. The list keeps the
@@ -1550,7 +1554,7 @@ async function take(e) {
     // A change makes a new statue: it has no age.
     if (d.work === 'change') b.aged = null;
     // The carriers of the path, with the means of the time (plan 0006, D6).
-    carriers(b, d.work === 'build' && d.means?.includes('carry_path') ? d.path : null, clock(eventDay));
+    await carriers(b, d.work === 'build' && d.means?.includes('carry_path') ? d.path : null, clock(eventDay));
     if (d.date) b.date0 = new Date(Date.parse(d.date) - d.from * 86400000);
     // A change of the lot: the people take down the old parts where they
     // stand; the next build is on the new lot.
@@ -1560,12 +1564,14 @@ async function take(e) {
       const from = b.group.matrixWorld.clone();
       settle(b.group, at.get(b.id)?.[0] ?? 'nui_nho', b.nextLot);
       b.nextLot = null;
-      // The camera flies from the old lot to the new one while the people
-      // of the stage walk in (the owner, 2026-11-11: no jump).
-      if (lapse) b.move = { from, t0: clock(eventDay), dur: WAY };
+      // The camera goes up the road to the new lot after a short look at
+      // the old site, with the people of the stage (the owner, 2026-11-11).
+      if (lapse) b.move = { from, t0: clock(eventDay) };
     }
-    // The people of the stage walk in before its work.
-    if (d.work !== 'pause') await arrive(b, e, clock(eventDay));
+    // The people of the stage walk in before its work (after a move, up the
+    // road with the camera).
+    const t = clock(eventDay);
+    if (d.work !== 'pause') await arrive(b, e, b.move?.t0 === t ? t + REST : t, b.move?.t0 === t ? RIDE : WAY);
   }
   if (e.kind === 'aged') { b.aged = d; await grass(b, d.weeds); }
   if (e.kind === 'repaired') { b.aged = null; await grass(b, 0); }
@@ -1623,6 +1629,40 @@ const next = (e) => { events.push(e); queue = queue.then(() => take(e)).catch((e
 // The time lapse (plan 0006, D11): the events of a recorded log on the
 // clock of the log, at `days` days of the world in one second.
 const DAY = 86400000;
+// The move to a new lot (the owner, 2026-11-11: "the camera should be
+// from the first person perspective going up the road to the hill"): the
+// view of the old site for REST s, then down to the eye of a person at the
+// old lot, along the ground to the foot of the path and up the path, 2 m
+// over the road and looking along it, and back to the view of the new lot
+// at the end.
+const EYE = 2;
+function ride(b, move, u, from, to) {
+  if (u < REST) return from;
+  const r = (u - REST) / RIDE;
+  // The road: the old lot, the ground to the foot of the path, the path.
+  if (!move.road) {
+    const start = new THREE.Vector3().setFromMatrixPosition(move.from);
+    const line = b.line ?? way(b).slice().reverse();
+    const pts = [];
+    const n = Math.max(1, Math.ceil(start.distanceTo(line[0]) / 5));
+    for (let i = 0; i < n; i++) pts.push(groundAt(b, start.clone().lerp(line[0], i / n)));
+    pts.push(...line);
+    move.road = pathOf(pts);
+  }
+  const road = move.road;
+  const at = (f) => {
+    const x = Math.min(Math.max(f, 0), 1) * road.cum.at(-1);
+    const p = alongPts(road, f).at;
+    const ahead = alongPts(road, Math.min((x + 12) / road.cum.at(-1), 1)).at;
+    if (ahead.distanceTo(p) < 1) ahead.copy(lotAt(b));
+    return { pos: p.clone().setY(p.y + EYE), target: ahead.clone().setY(ahead.y + EYE * 0.8) };
+  };
+  const E = 0.1;
+  const blend = (a, c, f) => ({ pos: a.pos.clone().lerp(c.pos, f), target: a.target.clone().lerp(c.target, f) });
+  if (r < E) return blend(from, at(0), smooth(r / E));
+  if (r > 1 - E) return blend(at(1), to, smooth((r - 1 + E) / E));
+  return at((r - E) / (1 - 2 * E));
+}
 const VIEWS = {
   three_quarters: { cam: [38, 14, 60], target: [0, 10, 0] },
   front: { cam: [0, 12, 72], target: [0, 10, 0] },
@@ -1685,7 +1725,7 @@ const lapse = params.get('follow') ? {
       last = Math.max(last, upto);
       if (s.day >= day) break;
     }
-    for (const s of this.segments) if (s.hold && s.day < day) t += WAY;
+    for (const s of this.segments) if (s.hold && s.day < day) t += s.move ? REST + RIDE : WAY;
     return t;
   },
   dayAt(t) {
@@ -1738,18 +1778,13 @@ const lapse = params.get('follow') ? {
     const pose = (m) => ({ pos: cam.clone().applyMatrix4(m), target: new THREE.Vector3(...(this.target ?? v.target)).add(new THREE.Vector3(0, lift, 0)).applyMatrix4(m) });
     b.group.updateWorldMatrix(true, false);
     let { pos, target } = pose(b.group.matrixWorld);
-    const move = b.move && this.t >= b.move.t0 && this.t < b.move.t0 + b.move.dur ? b.move : null;
-    if (move) {
-      const f = smooth((this.t - move.t0) / move.dur);
-      const a = pose(move.from);
-      const hump = a.pos.distanceTo(pos) * 0.35 * Math.sin(Math.PI * f);
-      pos = a.pos.lerp(pos, f).add(new THREE.Vector3(0, hump, 0));
-      target = a.target.lerp(target, f);
-    }
+    const move = b.move && this.t >= b.move.t0 && this.t < b.move.t0 + REST + RIDE ? b.move : null;
+    const riding = move && this.t >= move.t0 + REST;
+    if (move) ({ pos, target } = ride(b, move, this.t - move.t0, pose(move.from), { pos, target }));
     camera.position.copy(pos);
     // The camera stays 10 m over the ground of a hill.
     const hill = [...places.values()].find((p) => p.terrain)?.ground;
-    if (hill) {
+    if (hill && !riding) {
       down.set(camera.position.clone().setY(1000), new THREE.Vector3(0, -1, 0));
       const hit = down.intersectObject(hill, true)[0];
       if (hit && camera.position.y < hit.point.y + 10) camera.position.y = hit.point.y + 10;
@@ -1760,7 +1795,7 @@ const lapse = params.get('follow') ? {
     const work = b.task && b.stage?.work !== 'pause' ? ` · ${b.task}` : '';
     const old = b.aged && b.stage?.work === 'pause' ? ` · the site gets old (${Math.round(b.aged.days / 365)} years)` : '';
     const r = this.rate(this.day);
-    const hold = move ? 'the work moves to the new lot' : this.holding() ? (b.stage?.work === 'pause' ? 'the people leave the site' : 'the people come to the site') : null;
+    const hold = move ? (riding ? 'up the road to the new lot' : 'the old site is down') : this.holding() ? (b.stage?.work === 'pause' ? 'the people leave the site' : 'the people come to the site') : null;
     const speed = hold ?? (r === 365 ? 'a year in a second' : `${r} days in a second`);
     $('lapse').textContent = `Day ${Math.floor(this.day) + 1}${date}${stage}${work}${old} · ${speed}`;
     // The old statue: the concrete gets darker in a pause, and weeds
@@ -1806,8 +1841,17 @@ if (params.get('events')) {
     const own = all.filter((e) => e.order === lapse.order);
     lapse.t0 = own[0]?.at ?? 0;
     lapse.end = ((own.at(-1)?.at ?? 0) - lapse.t0) / DAY;
-    lapse.segments = own.filter((e) => e.kind === 'stage_started' || e.kind === 'stage_done')
-      .map((e) => ({ day: (e.at - lapse.t0) / DAY, pause: e.kind === 'stage_started' && e.data.work === 'pause', hold: e.kind === 'stage_started' }));
+    // The first stage of work after a change of the lot waits longer: the
+    // move to the new lot.
+    let moved = false;
+    lapse.segments = [];
+    for (const e of own) {
+      if (e.kind === 'changed' && e.data?.lot) moved = true;
+      if (e.kind !== 'stage_started' && e.kind !== 'stage_done') continue;
+      const move = e.kind === 'stage_started' && e.data.work === 'build' && moved;
+      if (move) moved = false;
+      lapse.segments.push({ day: (e.at - lapse.t0) / DAY, pause: e.kind === 'stage_started' && e.data.work === 'pause', hold: e.kind === 'stage_started', move });
+    }
     lapse.pending = all;
     await lapse.to(0);
   } else {

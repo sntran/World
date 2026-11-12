@@ -302,9 +302,12 @@ the URL ("Copy the camera"). The work goes at `days` days in one second
 (5 by default) and a pause at `pause` (365: a year in a second): the
 steps of the work keep their days to each other. At the start of each
 stage the day waits 4 s: the people of the stage walk in (at a pause:
-the people and the carriers walk out; at the first stage on a new lot,
-the camera flies from the old lot to the new one in these 4 s, up over
-the hill and down, while the people walk up the path). Each part grows from
+the people and the carriers walk out). The first stage on a new lot
+waits longer: 1.5 s at the old site when it is down, then 16 s up the
+road to the new lot, with the camera at the eye of a person (2 m over
+the road, looking along it) from the old lot along the ground to the
+foot of the path and up the path, while the people of the stage walk up
+with it. Each part grows from
 its foot to its top over the days of its task. The film shows the
 finished model from the first pour: each pour is the band of the
 finished model at the heights of its rough band, in its concrete; the

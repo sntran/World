@@ -240,9 +240,13 @@ What is not as the plan says:
   halo puts up the steel; the finished model comes on the same surface,
   so nothing changes. The replay model still has the rough bands.
 - The move to the new lot (the owner, 2026-11-11: "between old and new
-  location, the frame just jumps directly"): at the first stage on the
-  new lot, the camera flies from the cape to the top of the hill in the
-  4 s that the day waits, up over the hill and down.
+  location, the frame just jumps directly"; "the camera should be from
+  the first person perspective going up the road to the hill. Also only
+  moves after the old site is fully taken down, with a small pause"): the
+  first stage on the new lot waits 17.5 s, not 4 s: 1.5 s at the cape when
+  the old statue is down, then 16 s with the camera at the eye of a person
+  from the cape to the foot of the path and up the path to the top, with
+  the people of the stage.
 - The reliefs are a part of the base, not a stage of their own.
 - A person is a task: the crews of the rates are in the days of a task,
   and the page shows one person for each task.
