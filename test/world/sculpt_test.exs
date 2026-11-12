@@ -11,7 +11,7 @@ defmodule World.SculptTest do
     edits = stone(30)
     %{bricks: bricks, step: step} = Sculpt.bricks(edits, 0.05)
     assert bricks != [] and Sculpt.cells() == 8 and Sculpt.points() == 11
-    assert Sculpt.limit(edits, 0.05) == 4 * 0.05 + 2 * 0.03
+    assert Sculpt.limit(edits, 0.05) == 4 * 0.05 and Sculpt.limit(edits, 0.02) == 2 * 0.02 + 2 * 0.03
 
     for b <- bricks, i <- [-1, 0, 4, 8, 9], j <- [-1, 3, 9], k <- [-1, 0, 7, 9] do
       p = Vec.add(Sculpt.corner(b.at, step), {i * step, j * step, k * step})

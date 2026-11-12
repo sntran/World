@@ -76,7 +76,12 @@ defmodule World.Sculpt do
   process of the brick; `cache` (false by default), with `each`: the
   piece of a brick comes from the cache of the node when the cache has
   its key (`World.Sculpt.Cache`), and its field is not made (`field:
-  nil`). `cached` counts those bricks.
+  nil`); each brick has its `key`. With `cache: :keys`, a brick from the
+  cache has the piece `:cached` (the piece stays in the cache). `cached`
+  counts the bricks from the cache. `sink`: a function of each brick that
+  is made (not from the cache), called in the process of the brick as
+  soon as it is made (the stream of a live sculpture,
+  `World.Sculpt.Live`).
   """
   def bricks(edits, step, opts \\ []) do
     case SDF.bounds(edits) do
@@ -94,7 +99,8 @@ defmodule World.Sculpt do
           limit: limit(edits, step),
           parallel: Keyword.get(opts, :parallel, true),
           each: opts[:each],
-          cache: opts[:each] && opts[:cache]
+          cache: opts[:each] && opts[:cache],
+          sink: opts[:sink]
         }
 
         {bricks, n} = cell(edits, {from, span}, how)
@@ -105,14 +111,14 @@ defmodule World.Sculpt do
 
   @doc """
   The limit of the field of a sculpture with cells of `step` m
-  (`World.SDF.field/3`): four cells and two of its largest blends. So
-  the cuts of the edges of the grid, and the steps of their search, are
-  in the field with no limit, unless three blends meet there; and the
-  field at the center of an eighth of a brick can be more than its half
-  diagonal (3.5 cells) from 0, so the tree can tell that it has no
-  surface.
+  (`World.SDF.field/3`): two cells and two of its largest blends, and at
+  least four cells. So the cuts of the edges of the grid, and the steps
+  of their search, are in the field with no limit, unless three blends
+  meet there; and the field at the center of an eighth of a brick can
+  be more than its half diagonal (3.5 cells) from 0, so the tree can
+  tell that it has no surface.
   """
-  def limit(edits, step), do: 4 * step + 2 * Enum.reduce(edits, 0.0, &max(&1.blend, &2))
+  def limit(edits, step), do: max(2 * step + 2 * Enum.reduce(edits, 0.0, &max(&1.blend, &2)), 4 * step)
 
   # The brick of a point, and the least power of 4 that holds n bricks.
   defp index({x, y, z}, size), do: {floor(x / size), floor(y / size), floor(z / size)}
@@ -124,16 +130,22 @@ defmodule World.Sculpt do
   defp cell(edits, {at, 1}, %{step: step, limit: limit, each: each} = how) do
     key = if how.cache, do: Cache.key(at, step, {limit, edits})
 
-    case key && Cache.get(key) do
-      nil ->
-        brick = %{at: at, edits: edits, limit: limit, field: field(edits, at, step, limit)}
-        brick = if each, do: Map.put(brick, :piece, each.(brick)), else: brick
-        if key, do: Cache.put(key, brick.piece)
-        {[brick], length(edits) * @points ** 3}
+    {brick, n} =
+      case key && hit(key, how.cache) do
+        nil ->
+          {field, n, eighths} = field(edits, at, step, limit)
+          brick = %{at: at, edits: edits, limit: limit, field: field}
+          brick = if each, do: Map.put(brick, :piece, each.(Map.put(brick, :eighths, eighths))), else: brick
+          if key, do: Cache.put(key, brick.piece)
+          if how.sink, do: how.sink.(Map.put(brick, :key, key))
+          {brick, n}
 
-      piece ->
-        {[%{at: at, edits: edits, limit: limit, field: nil, piece: piece}], 0}
-    end
+        piece ->
+          {%{at: at, edits: edits, limit: limit, field: nil, piece: piece}, 0}
+      end
+
+    brick = if key, do: Map.put(brick, :key, key), else: brick
+    {[brick], n}
   end
 
   # A cell of the tree: its 64 children, each with its edits, and the
@@ -161,6 +173,11 @@ defmodule World.Sculpt do
 
     Enum.reduce(results, {[], n}, fn {bricks, m}, {all, n} -> {bricks ++ all, n + m} end)
   end
+
+  # A brick of the cache: its piece, or (with `cache: :keys`) only the
+  # sign that the cache has it.
+  defp hit(key, :keys), do: if(Cache.member?(key), do: :cached)
+  defp hit(key, _), do: Cache.get(key)
 
   # A cell in a process of the crew: linked to the process that made it
   # (to the hand of the sculptor at the root), so a stop of the hand stops
@@ -206,17 +223,77 @@ defmodule World.Sculpt do
     for a <- [-q, q], b <- [-q, q], c <- [-q, q], do: {x + a, y + b, z + c}
   end
 
-  # The field of a brick at each of its points, with its border.
-  defp field(edits, at, step, limit) do
-    {ox, oy, oz} = corner(at, step)
+  @doc """
+  The brick `at` with cells of `step` m, its short list of edits and the
+  limit of its field: its field, and the short lists of its eighths
+  (`eighths`, for `World.Sculpt.Surface.piece/2`).
+  """
+  def brick(at, edits, step, limit) do
+    {field, _, eighths} = field(edits, at, step, limit)
+    %{at: at, edits: edits, limit: limit, field: field, eighths: eighths}
+  end
 
-    for k <- -1..(@points - 2), j <- -1..(@points - 2), i <- -1..(@points - 2), into: <<>> do
-      <<SDF.value(edits, {ox + i * step, oy + j * step, oz + k * step}, limit)::float-32-little>>
+  @doc """
+  The piece of a brick of `bricks/3` with `cache: :keys`: from the
+  cache, or made again when the cache has let it go since.
+  """
+  def piece(%{piece: :cached} = b, step),
+    do: Cache.get(b.key) || Surface.piece(brick(b.at, b.edits, step, b.limit), step)
+
+  def piece(b, _step), do: b.piece
+
+  @doc """
+  The eighth of a brick (0 to 7) that the point `{i, j, k}` of the brick
+  is in (in cells from its corner, from -1 to 9), or nil between two
+  eighths.
+  """
+  def eighth({i, j, k}) do
+    case {side(i), side(j), side(k)} do
+      {a, b, c} when is_integer(a) and is_integer(b) and is_integer(c) -> a + 2 * b + 4 * c
+      _ -> nil
     end
   end
 
-  # The border of a brick: one cell on each side, to its far corner.
-  defp border(step), do: 2 * step * :math.sqrt(3)
+  # The field of a brick at each of its points, with its border: each
+  # eighth of the points (from -1 to 4, and from 5 to 9, on each axis)
+  # with the edits of its own ball, so a point takes fewer edits; the
+  # values are the same (`World.SDF.prune/4`). Also the evaluations that
+  # it takes, and the lists of the eighths.
+  defp field(edits, at, step, limit) do
+    {ox, oy, oz} = corner(at, step)
+
+    lists =
+      List.to_tuple(
+        for c <- 0..1, b <- 0..1, a <- 0..1 do
+          {{cx, rx}, {cy, ry}, {cz, rz}} = {part(a), part(b), part(c)}
+          center = {ox + cx * step, oy + cy * step, oz + cz * step}
+          SDF.prune(edits, center, step * :math.sqrt(rx * rx + ry * ry + rz * rz), limit)
+        end
+      )
+
+    field =
+      for k <- -1..(@points - 2), j <- -1..(@points - 2), i <- -1..(@points - 2), into: <<>> do
+        list = elem(lists, eighth({i, j, k}))
+        <<SDF.value(list, {ox + i * step, oy + j * step, oz + k * step}, limit)::float-32-little>>
+      end
+
+    counts = for c <- 0..1, b <- 0..1, a <- 0..1, do: (6 - a) * (6 - b) * (6 - c)
+    n = 8 * length(edits) + Enum.sum(Enum.zip_with(Tuple.to_list(lists), counts, &(length(&1) * &2)))
+    {field, n, lists}
+  end
+
+  # The center and the half size of an eighth of the points on an axis
+  # (in cells), and the eighth of a point.
+  defp part(0), do: {1.5, 2.5}
+  defp part(1), do: {7.0, 2.0}
+  defp side(i) when i <= 4, do: 0
+  defp side(i) when i >= 5, do: 1
+  defp side(_), do: nil
+
+  # The border of a cell: the points of its bricks go one cell past its
+  # sides, so its ball is the ball of its box grown by one cell on each
+  # axis.
+  defp border(step), do: step * :math.sqrt(3)
 
   @doc "The corner of the brick `{i, j, k}` (its first cell) with cells of `step` m."
   def corner({i, j, k}, step), do: {i * @cells * step, j * @cells * step, k * @cells * step}

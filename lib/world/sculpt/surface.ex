@@ -64,7 +64,7 @@ defmodule World.Sculpt.Surface do
     # The cells of the quads, and each edge of those cells that the
     # surface cuts: its cut and the normal there, found once.
     cells = for {start, axis, _, _} <- crossed, c <- around(axis, start), uniq: true, do: c
-    cuts = cuts(cells, base, step, &SDF.field(edits, &1, limit), v)
+    cuts = cuts(cells, base, step, field(brick, edits, limit, step), v)
 
     quads =
       for {start, axis, v0, v1} <- crossed do
@@ -107,6 +107,24 @@ defmodule World.Sculpt.Surface do
       Mesh.new(Enum.map(used, &elem(all, &1)), Enum.map(faces, fn f -> Enum.map(f, &local[&1]) end), material || :paint)
     end)
   end
+
+  # The field of the edits of a brick at a point: with the short list of
+  # the eighth of the brick that the point is in (the same values).
+  defp field(%{eighths: eighths, at: at}, edits, limit, step) do
+    corner = Sculpt.corner(at, step)
+
+    fn p ->
+      list =
+        case Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step)) do
+          nil -> edits
+          e -> elem(eighths, e)
+        end
+
+      SDF.field(list, p, limit)
+    end
+  end
+
+  defp field(_brick, edits, limit, _step), do: &SDF.field(edits, &1, limit)
 
   # The part of the surface of a cell that the inside corner `inside` is
   # in: its least corner.

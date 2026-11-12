@@ -16,11 +16,18 @@ defmodule World.Sculpt.CacheTest do
   test "the next build of the same sculpture takes each brick from the cache, with the same meshes" do
     edits = Stone.edits(40)
     first = build(edits, 0.04)
-    assert first.cached == 0 and Cache.size() == length(first.bricks)
+    assert first.cached == 0 and elem(Cache.size(), 0) == length(first.bricks)
     again = build(edits, 0.04)
     assert again.cached == length(first.bricks) and again.evaluations < first.evaluations / 10
     assert Enum.map(again.bricks, & &1.piece) == Enum.map(first.bricks, & &1.piece)
     assert Sculpt.model(edits, step: 0.04) == Sculpt.model(edits, step: 0.04, cache: false)
+
+    # Only the keys: the pieces stay in the cache, or are made again when the cache lets them go.
+    keys = Sculpt.bricks(edits, 0.04, each: &Surface.piece(&1, 0.04), cache: :keys)
+    assert Enum.all?(keys.bricks, &(&1.piece == :cached))
+    assert Enum.map(keys.bricks, &Sculpt.piece(&1, 0.04)) == Enum.map(first.bricks, & &1.piece)
+    Cache.clear()
+    assert Enum.map(keys.bricks, &Sculpt.piece(&1, 0.04)) == Enum.map(first.bricks, & &1.piece)
   end
 
   test "after a change of one edit, only the bricks that the old or the new edit reaches are made again (R5)" do
@@ -54,11 +61,32 @@ defmodule World.Sculpt.CacheTest do
              Enum.map(Sculpt.bricks(edits, step, each: &Surface.piece(&1, step)).bricks, & &1.piece)
   end
 
-  test "the table empties at its limit of memory, and with no table there is no cache" do
+  test "past its limit of bytes the table keeps the pieces of the last generation; with no table there is no cache" do
     Application.put_env(:world, Cache, bytes: 200_000)
     on_exit(fn -> Application.delete_env(:world, Cache) end)
-    for i <- 1..400, do: Cache.put(Cache.key({i, 0, 0}, 0.02, []), List.duplicate(i, 100))
-    assert Cache.size() < 400
+    key = &Cache.key({&1, 0, 0}, 0.02, [])
+    piece = &:binary.copy(<<rem(&1, 256)>>, 1_000)
+
+    put = fn range ->
+      for i <- range,
+          do:
+            (
+              Cache.put(key.(i), piece.(i))
+              :sys.get_state(Cache)
+            )
+    end
+
+    # The first 100 KB: a trim, and the pieces go to the old generation.
+    put.(1..150)
+    assert {150, bytes} = Cache.size()
+    assert bytes < 100_000
+    # Ten old pieces are in use again; at the next trim the other old pieces go.
+    for i <- 1..10, do: assert(Cache.get(key.(i)) == piece.(i))
+    put.(151..200)
+    assert Cache.get(key.(5)) == piece.(5) and Cache.get(key.(50)) == nil
+    assert Cache.get(key.(120)) == piece.(120) and Cache.get(key.(195)) == piece.(195)
+    assert {count, _} = Cache.size()
+    assert count < 200 - 80
 
     :ok = Supervisor.terminate_child(World.Supervisor, Cache)
     on_exit(fn -> Supervisor.restart_child(World.Supervisor, Cache) end)
