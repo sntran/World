@@ -32,7 +32,7 @@ defmodule World.Log.ServerTest do
     order = "b#{System.unique_integer([:positive])}"
     World.watch(order)
     World.watch(:world)
-    assert Server.last(s) == 0
+    assert Server.last(s) == 0 and Server.history(0, s) == []
 
     Server.publish(event(order, "requested"), s)
     Server.publish(event(order, "plan_made", 1), s)
