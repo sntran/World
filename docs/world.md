@@ -1,5 +1,31 @@
 # The world
 
+## The vision
+
+The owner, 2026-11-12:
+
+> I think my vision for World is very similar to Dreams: an engine
+> which outside users can use to make any content and models. And do
+> them fast!
+
+So World is an engine for each user outside it, not only for the
+projects of the owner:
+
+- **Any content from a few simple things.** A user makes a model from a
+  short list of edits: simple shapes that it adds, takes away or paints,
+  with smooth joints (plan 0008), and joins the parts with ports and
+  joints (`docs/format.md`). A user sends this as data (a blueprint, a
+  drawing) over MCP; World checks it and builds it. No user writes code.
+- **Fast.** The people of the node build each model as actors on the
+  Erlang BEAM: the work of one model goes to many people at the same
+  time, each with a small part of it, and only the work that a change
+  needs is done again (plan 0007, plan 0008).
+- **In a budget.** Each build has its limits (the people, the seconds,
+  the triangles, the memory), as each sculpture of Dreams has its
+  "thermometer".
+
+## The factory and the people
+
 The factory of World (`docs/factory.md`) takes an order and gives the
 files of a model. In the world, people make the model, as in the real
 world. The node of World (one Erlang node) is a city of people: each

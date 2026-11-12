@@ -148,7 +148,14 @@ on each commit, and the full check on the tip before a push.
 
 ## 9. Open questions
 
-- None yet.
+- **The order** (the owner, 2026-11-12, "Yes" to the order that the
+  builder gave): plan 0008 (a model from edits) comes before the steps
+  of this plan that are open. Its blocks of cells, each a task for a
+  person, are the better way to step 2 for a model of one part (an
+  animal, a person): the time of such a model is in the code that makes
+  its one part in one process (the measure: 1,482 ms of 1,636 ms for the
+  douc), not in its triangles. Step 6 (the output and the memory) and
+  step 7 (the measure again) come after plan 0008.
 
 ## 10. The measure
 
