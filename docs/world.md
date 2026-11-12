@@ -226,7 +226,9 @@ The example is a job of the blueprint `strut` at the level far.
 
 The budget: the most workers at one time, the seconds (at its deadline
 a construction stops, with `stopped` and no model), the triangles, and
-the memory of the people (`memory_mb`: a task over its part fails).
+the memory of the people (`memory_mb`: a task over its part fails), and
+the clock (`clock`: `fast` keeps the days of each task in the log, but
+the people do not wait for them).
 Only with `memory_mb` do the people and the join do a full collection
 after each big step (`World.Detail.collect/1`): with no limit, nobody
 waits for it.

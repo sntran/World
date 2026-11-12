@@ -12,6 +12,7 @@ defmodule Mix.Tasks.World.Bench do
       mix world.bench --level near       # far, mid (by default) or near
       mix world.bench --workers 8        # the people of each build (4)
       mix world.bench --scale 86400      # the world clock (one day in 1 ms)
+      mix world.bench --clock fast       # the fast clock (world by default)
       mix world.bench --timeout 120      # the seconds of each build (600)
       mix world.bench --out bench.json   # the results as JSON too
   """
@@ -21,7 +22,7 @@ defmodule Mix.Tasks.World.Bench do
   def run(args) do
     {opts, names} =
       OptionParser.parse!(args,
-        strict: [level: :string, workers: :integer, scale: :integer, timeout: :integer, out: :string]
+        strict: [level: :string, workers: :integer, scale: :integer, timeout: :integer, out: :string, clock: :string]
       )
 
     Mix.Task.run("app.start")
@@ -36,6 +37,7 @@ defmodule Mix.Tasks.World.Bench do
       World.Bench.run(orders,
         level: Keyword.get(opts, :level, "mid"),
         workers: Keyword.get(opts, :workers, 4),
+        budget: %{"clock" => Keyword.get(opts, :clock, "world")},
         scale: Keyword.get(opts, :scale, 86_400_000),
         timeout: Keyword.get(opts, :timeout, 600) * 1000,
         each: &Mix.shell().info("#{&1["name"]}: #{&1["result"]} in #{&1["ms"]} ms")

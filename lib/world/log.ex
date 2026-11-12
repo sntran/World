@@ -29,14 +29,16 @@ defmodule World.Log do
 
   @doc """
   Add an event of a kind. The options: `wall` (the wall time, now by
-  default), `order`, `who`, `data`. The log refuses an unknown
-  kind, and an event before the last one: `{:error, reason}`.
+  default), `at` (the world time: the world time of `wall` by default; a
+  construction on the fast clock gives it), `order`, `who`, `data`. The
+  log refuses an unknown kind, and an event before the last one:
+  `{:error, reason}`.
   """
   def add(%__MODULE__{clock: clock, events: events} = log, kind, opts \\ []) do
     wall = Keyword.get_lazy(opts, :wall, &Clock.wall/0)
 
     event = %Event{
-      at: Clock.at(clock, wall),
+      at: Keyword.get_lazy(opts, :at, fn -> Clock.at(clock, wall) end),
       wall: wall,
       kind: kind,
       order: opts[:order],
@@ -56,7 +58,8 @@ defmodule World.Log do
 
   @doc "The log in JSON: one line for the clock, then one line for each event."
   def to_json(%__MODULE__{clock: clock} = log) do
-    head = JSON.encode!(%{"scale" => clock.scale, "start" => clock.start})
+    head = %{"scale" => clock.scale, "start" => clock.start}
+    head = JSON.encode!(if clock.fast, do: Map.put(head, "fast", true), else: head)
 
     lines = for e <- events(log), do: JSON.encode!(data(e))
     Enum.join([head | lines], "\n") <> "\n"
@@ -69,7 +72,7 @@ defmodule World.Log do
   @doc "A log from its JSON, then checked (`check/1`): `{:ok, log}` or `{:error, reason}`."
   def from_json(json) do
     [head | lines] = String.split(json, "\n", trim: true)
-    %{"scale" => scale, "start" => start} = JSON.decode!(head)
+    %{"scale" => scale, "start" => start} = head = JSON.decode!(head)
 
     events =
       for line <- lines, e = JSON.decode!(line) do
@@ -83,13 +86,18 @@ defmodule World.Log do
         }
       end
 
-    log = %__MODULE__{clock: %Clock{scale: scale, start: start}, events: Enum.reverse(events)}
+    log = %__MODULE__{
+      clock: %Clock{scale: scale, start: start, fast: head["fast"] == true},
+      events: Enum.reverse(events)
+    }
+
     with :ok <- check(log), do: {:ok, log}
   end
 
   @doc """
   Check a log: each event has a known kind, a world time from its wall
-  time and the clock, and no event comes before the last one. For each
+  time and the clock (not on the fast clock: there the world time is that
+  of the construction), and no event comes before the last one. For each
   order, a task starts once, after the plan of the order (`plan_made`),
   after each task it waits for is done; and a task is done after its
   start. `:ok`, or `{:error, {reason, event}}`.
@@ -112,7 +120,7 @@ defmodule World.Log do
   defp step(e, last, orders, clock) do
     cond do
       e.kind not in @kinds -> {:error, :unknown_kind}
-      e.at != Clock.at(clock, e.wall) -> {:error, :wrong_time}
+      not clock.fast and e.at != Clock.at(clock, e.wall) -> {:error, :wrong_time}
       last != nil and e.at < last -> {:error, :before_last}
       true -> task(e, orders)
     end

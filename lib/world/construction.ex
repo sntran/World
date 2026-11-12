@@ -97,7 +97,10 @@ defmodule World.Construction do
       |> Map.put_new(:geo, nil)
 
     budget = job.budget
-    clock = Clock.world()
+    # The fast clock (plan 0007, D4), for a site with no stages and no
+    # trucks: their dates and their drives are on the world clock.
+    fast = budget["clock"] == "fast" and Map.get(job, :stages, []) == [] and job.haul == nil
+    clock = %{Clock.world() | fast: fast}
     Process.set_label({:construction, job.id})
     urgent = :erlang.alias([:priority])
     # The alias is the value of the name: World.pause/1 and the others send
@@ -118,7 +121,14 @@ defmodule World.Construction do
       watched: %{},
       over: false,
       paused: false,
-      stale: %{}
+      stale: %{},
+      # The fast clock (plan 0007, D4): the world time of the construction
+      # (ms of the world), the end of each task in hand, and the results
+      # that wait for their end.
+      fast: fast,
+      at: Clock.at(clock),
+      dues: %{},
+      held: %{}
     }
 
     workers = Map.get(budget, "workers", Map.get(job, :workers, @workers))
@@ -272,33 +282,13 @@ defmodule World.Construction do
   # person makes it.
   def handle_info({:done, p, _id, _result}, s) when not is_map_key(s.running, p), do: {:noreply, s}
 
-  def handle_info({:done, p, id, result}, s) do
-    task = s.running[p]
-    s = if MapSet.member?(s.done, id), do: s, else: unblock(s, id)
-
-    s = %{
-      s
-      | running: Map.delete(s.running, p),
-        idle: s.idle ++ [p],
-        done: MapSet.put(s.done, id),
-        triangles: Map.merge(s.triangles, result.triangles),
-        glbs: Map.merge(s.glbs, result.glbs),
-        made: if(result[:made], do: Map.put(s.made, id, result.made), else: s.made),
-        cured: Map.put(s.cured, id, Clock.wall() + Clock.to_wall(s.log.clock, round(task.wait * Clock.day())))
-    }
-
-    # The tasks after it wait for the cure (plan 0006, D2).
-    if task.wait > 0,
-      do: Process.send_after(self(), :cured, Clock.to_wall(s.log.clock, round(task.wait * Clock.day())) + 1)
-
-    s = record(s, "task_done", p, task_data(task))
-    # A task that takes down a part: the part goes (plan 0006, D7).
-    s = if task.action == :remove, do: record(s, "element_removed", p, %{"task" => task.item}), else: s
-    s = if task.action == :again, do: again(s, p, task.item), else: s
-    s = downs(s, p, id)
-    s = if s.job.drawing, do: place(s, p), else: elements(s, p, id, Map.get(s.elements, id, []))
-    finish(assign(s))
+  # On the fast clock, a result waits for the world time of the end of its
+  # task: the construction takes the results in the order of their ends.
+  def handle_info({:done, p, id, result}, %{fast: true} = s) do
+    %{s | held: Map.put(s.held, p, {id, result})} |> advance() |> finish()
   end
+
+  def handle_info({:done, p, id, result}, s), do: s |> complete(p, id, result) |> assign() |> finish()
 
   # The materials of a task are at the place of the construction.
   def handle_info({:hauled, ref}, s) do
@@ -321,6 +311,7 @@ defmodule World.Construction do
   def handle_info({:DOWN, _, :process, p, _}, s) do
     {task, running} = Map.pop(s.running, p)
     s = if task, do: back(s, task), else: s
+    s = %{s | held: Map.delete(s.held, p), dues: Map.delete(s.dues, p)}
 
     s = %{
       s
@@ -383,6 +374,70 @@ defmodule World.Construction do
     if datas == [], do: s, else: %{s | shown: Map.put(s.shown, id, datas)}
   end
 
+  # A task is done: its person is free, the tasks after it can start, and
+  # its elements stand.
+  defp complete(s, p, id, result) do
+    task = s.running[p]
+    s = if MapSet.member?(s.done, id), do: s, else: unblock(s, id)
+
+    s = %{
+      s
+      | running: Map.delete(s.running, p),
+        idle: s.idle ++ [p],
+        done: MapSet.put(s.done, id),
+        triangles: Map.merge(s.triangles, result.triangles),
+        glbs: Map.merge(s.glbs, result.glbs),
+        made: if(result[:made], do: Map.put(s.made, id, result.made), else: s.made),
+        cured: Map.put(s.cured, id, now(s) + span(s, task.wait)),
+        dues: Map.delete(s.dues, p)
+    }
+
+    # The tasks after it wait for the cure (plan 0006, D2).
+    if task.wait > 0 and not s.fast,
+      do: Process.send_after(self(), :cured, Clock.to_wall(s.log.clock, round(task.wait * Clock.day())) + 1)
+
+    s = record(s, "task_done", p, task_data(task))
+    # A task that takes down a part: the part goes (plan 0006, D7).
+    s = if task.action == :remove, do: record(s, "element_removed", p, %{"task" => task.item}), else: s
+    s = if task.action == :again, do: again(s, p, task.item), else: s
+    s = downs(s, p, id)
+    if s.job.drawing, do: place(s, p), else: elements(s, p, id, Map.get(s.elements, id, []))
+  end
+
+  # The fast clock: the task in hand that ends first is done when its
+  # result is here; then the next. When no task is in hand, the clock goes
+  # to the end of the next cure.
+  defp advance(s) do
+    case Enum.min_by(Map.keys(s.running), &s.dues[&1], fn -> nil end) do
+      nil ->
+        wake(s)
+
+      p ->
+        case Map.pop(s.held, p) do
+          {nil, _} ->
+            s
+
+          {{id, result}, held} ->
+            %{s | held: held, at: max(s.at, s.dues[p])} |> complete(p, id, result) |> assign() |> advance()
+        end
+    end
+  end
+
+  defp wake(s) do
+    case for(c <- Map.values(s.cured), c > s.at, do: c) do
+      [] -> s
+      ends -> %{s | at: Enum.min(ends)} |> assign() |> advance()
+    end
+  end
+
+  # The time of the construction: the wall clock, or the world time of the
+  # fast clock; and a time span of some days on it.
+  defp now(%{fast: true, at: at}), do: at
+  defp now(_s), do: Clock.wall()
+
+  defp span(%{fast: true}, days), do: round(days * Clock.day())
+  defp span(s, days), do: Clock.to_wall(s.log.clock, round(days * Clock.day()))
+
   # The elements of the nodes of a drawing, each node when it is made, in
   # the model of the nodes so far (with the nodes that are temporary). The
   # root must be known first: each node up to the first with a part is
@@ -431,7 +486,7 @@ defmodule World.Construction do
   defp here?(s, t), do: s.hauls[t.id] == :here
 
   defp waits_done(s) do
-    now = Clock.wall()
+    now = now(s)
 
     for {_, id} <- :gb_sets.to_list(s.open), t = s.waiting[id], can?(s, t, now), do: t
   end
@@ -524,7 +579,7 @@ defmodule World.Construction do
 
   defp assign(s) do
     s = ask(s)
-    {s, wanted} = give_ready(s, :gb_sets.iterator(s.open), Clock.wall(), [])
+    {s, wanted} = give_ready(s, :gb_sets.iterator(s.open), now(s), [])
     hire(s, Enum.reverse(wanted))
   end
 
@@ -580,9 +635,10 @@ defmodule World.Construction do
     s = %{s | days: Map.put(s.days, task.id, days)}
     data = %{"days" => days, "wait" => wait, "crew" => crew(s, task)}
     s = record(s, "task_started", p, Map.merge(task_data(task), data))
-    due = Clock.wall() + Clock.to_wall(s.log.clock, round(days * Clock.day()))
-    Person.work(p, task.id, until(work(s, task), due), heap(s))
-    s
+    due = now(s) + span(s, days)
+    # On the fast clock, the person does not wait for the days.
+    Person.work(p, task.id, until(work(s, task), if(s.fast, do: 0, else: due)), heap(s))
+    %{s | dues: Map.put(s.dues, p, due)}
   end
 
   # A part made again after a pause (plan 0006, D8): its elements come
@@ -994,7 +1050,10 @@ defmodule World.Construction do
     last = List.first(s.log.events)
     wall = max(Clock.wall(), if(last, do: last.wall, else: 0))
     who = who && Person.name(who)
-    {:ok, log} = Log.add(s.log, kind, wall: wall, order: s.id, who: who, data: data)
+    # On the fast clock, the world time of an event is that of the
+    # construction.
+    at = if Map.get(s, :fast), do: [at: max(s.at, if(last, do: last.at, else: 0))], else: []
+    {:ok, log} = Log.add(s.log, kind, [wall: wall, order: s.id, who: who, data: data] ++ at)
     World.Log.Server.publish(hd(log.events))
     %{s | log: log}
   end

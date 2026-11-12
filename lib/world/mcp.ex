@@ -55,7 +55,7 @@ defmodule World.MCP do
   @budget %{
     "type" => "object",
     "description" =>
-      "The budget of the construction: workers (the most people at one time, 1 to 64, 4 by default), seconds (the deadline; no model after it), triangles (the most triangles: the most detailed level that fits)."
+      "The budget of the construction: workers (the most people at one time, 1 to 64, 4 by default), seconds (the deadline; no model after it), triangles (the most triangles: the most detailed level that fits), memory_mb (the memory of the people), clock (world, by default, or fast: the log keeps the days of each task, and the people do not wait for them)."
   }
 
   @drawing %{

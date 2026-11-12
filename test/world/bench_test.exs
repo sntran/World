@@ -73,7 +73,12 @@ defmodule World.BenchTest do
 
   test "mix world.bench: the table, the JSON, a wrong name", %{tmp_dir: dir} do
     out = Path.join(dir, "bench.json")
-    io = capture_io(fn -> Mix.Tasks.World.Bench.run(["alpaca", "--level", "far", "--workers", "2", "--out", out]) end)
+
+    io =
+      capture_io(fn ->
+        Mix.Tasks.World.Bench.run(["alpaca", "--level", "far", "--workers", "2", "--clock", "fast", "--out", out])
+      end)
+
     assert io =~ "alpaca: built in " and io =~ "1 of 1 built, "
     assert [%{"name" => "alpaca", "result" => "built"}] = JSON.decode!(File.read!(out))
     assert_raise Mix.Error, ~r/Not a model or a blueprint: nothing/, fn -> Mix.Tasks.World.Bench.run(["nothing"]) end

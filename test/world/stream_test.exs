@@ -151,9 +151,12 @@ defmodule World.StreamTest do
   end
 
   test "a budget of workers, seconds and triangles" do
-    budget = %{"workers" => 2, "seconds" => 1.5, "triangles" => 100, "memory_mb" => 64}
+    budget = %{"workers" => 2, "seconds" => 1.5, "triangles" => 100, "memory_mb" => 64, "clock" => "fast"}
     assert World.budget(budget) == {:ok, budget}
     assert World.budget(nil) == {:ok, %{}}
+
+    assert {:error, [%{"path" => "budget.clock", "message" => "must be world or fast"}]} =
+             World.budget(%{"clock" => "slow"})
   end
 
   test "GET /census, /places and the ground of a place: the people of the node, the places of the yard" do

@@ -19,7 +19,9 @@ defmodule World.Clock do
   @scale 86_400
   @day 86_400_000
 
-  defstruct start: 0, scale: @scale
+  # `fast`: the clock of a construction on the fast clock (plan 0007, D4):
+  # the world time of its events does not come from their wall time.
+  defstruct start: 0, scale: @scale, fast: false
 
   @doc "The default scale: world seconds for each second of the wall clock."
   def scale, do: @scale
