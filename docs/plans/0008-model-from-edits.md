@@ -265,9 +265,18 @@ on each commit, and the full check on the tip before a push.
 
 ## 11. Open questions
 
-- **The model of step 6.** A simple animal (its body is a field today,
-  `World.Blob`), the rubble of the take-down of plan 0006, or another
-  one?
+- **The model of step 7** (the owner, 2026-11-12): a simple animal. It
+  is the carp (`priv/drawings/carp_edits.json`, section 13).
+- **The memory of a sculpture at the edge.** The carp from edits needs
+  202 MB to 374 MB at its peak, and the edge has 128 MB. The catalog
+  keeps its files, so the edge sends them with no build; an order of a
+  sculpture at near at the edge needs less memory first (the pieces as
+  binaries in the tree, fewer points in the collapse).
+- **The borders of the materials** follow the grid in steps, because
+  each quad has one material. A color for each point, with a blend at
+  the border, makes them smooth.
+- **An animal from edits has no rig yet.** The carp from edits is a
+  static model; the carp of the catalog has its bones and swims.
 - **The manifold mesh.** Step 3 found the case: at a face of a cell
   whose inside corners are on its diagonal, two sheets of the surface
   touch at one edge (10 edges of a stone of 41 edits). The mesh stays
@@ -501,4 +510,54 @@ and its meshes in 2.1 s at near, 0.35 s at mid and 0.12 s at far.
   with the mesh of each material, as JSON), and `GET /sculptures/ID.glb`
   the GLB of its surface now. The node has at most 8 live sculptures at
   one time.
+
+### Step 7: one model from edits (2026-11-12)
+
+The owner chose a simple animal: the carp. `priv/drawings/carp_edits.json`
+is a drawing of one node of the skill `sculpt`: 21 edits (an ellipsoid
+for the body, the head, the snout and the stalk of the tail; a paint for
+the dark back and one for the pale belly; the mouth and two grooves of
+the gills taken away; the eyes; the dorsal, the tail, the pectoral, the
+pelvic and the anal fins as thin ellipsoids), with the sizes of the carp
+of the catalog and the colors of its species file. Its triangles are the
+budget of each level (R7):
+
+| Level | Cells | The carp of the catalog | The carp from edits | Its build (fast clock), peak of memory, cores |
+|---|---|---|---|---|
+| near | 2 mm | 19,056 | 20,000 | 6.6 s, 374 MB, 2.13 |
+| mid | 3.5 mm | 3,176 | 3,000 | 3.1 s, 223 MB, 1.82 |
+| far | 4 mm | 3,176 | 600 | 2.4 s, 202 MB, 1.93 |
+
+The carp of the catalog builds in 0.15 s to 0.6 s: its mesh is a file.
+The carp from edits lies on its belly: its fins are over the lowest
+point of the belly, so it stands (`World.Check.model/1`).
+The shots of the two carps at each level, next to each other, went to
+the owner.
+
+The carp found six changes:
+
+- **The size of the cells of a sculpture** (`cells` in its data): the
+  cells of the levels (2, 8 and 32 cm) are for a model of some meters;
+  a carp of 50 cm with fins of 7 mm needs cells of a few millimeters. A
+  part thinner than about two cells breaks into pieces.
+- **The axes of an edit:** with no `axis` and no `up`, an edit has the
+  axes of the sculpture (a port has a free y), so the long side of an
+  ellipsoid stays on y.
+- **No small pieces:** a piece of the surface less than two cells
+  across goes (the pieces of a fin that the cells break).
+- **A border of two materials collapses along its line:** each point of
+  a border stayed, so the far level had 380 faces for a budget of 300.
+  Now an edge of a border collapses, the planes of the border keep its
+  line, and a point where three materials meet stays.
+- **A collapse in each region** of 8 × 8 × 8 bricks, in a process of
+  its own, to twice its share of the budget, with the points that it
+  shares with the other regions fixed; then the whole mesh, with the
+  quadrics of the first pass. The near carp: 3.8 s, not 8.1 s, with the
+  same volume (2,121 cm³ of 2,123). Two faults came out on the way: a
+  collapse kept the other point of an edge at the place of a fixed point
+  (the place stayed, the index did not, so the regions did not join),
+  and a tetrahedron became two faces on the same three points.
+- **At most two processes for each scheduler in each cell of the
+  tree:** the peak of the bricks of the near carp went from 273 MB to
+  187 MB, in the same time.
 
