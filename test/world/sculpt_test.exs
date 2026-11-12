@@ -67,4 +67,16 @@ defmodule World.SculptTest do
     %{evaluations: n, bricks: bricks} = Sculpt.bricks(edits, step)
     assert n < 0.05 * brute and length(bricks) > 100
   end
+
+  test "the levels of detail: cells of 2, 8 and 32 cm; fewer faces at each level; a budget" do
+    edits = stone(30)
+    assert Enum.map([:near, :mid, :far], &Sculpt.step/1) == [0.02, 0.08, 0.32]
+    faces = fn meshes -> meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() end
+    mid = Sculpt.model(edits, level: :mid)
+    far = World.Detail.with(:far, fn -> Sculpt.model(edits) end)
+    assert faces.(far) > 0 and faces.(far) < faces.(mid)
+    assert Sculpt.model(edits, level: :mid, parallel: false) == mid
+    assert faces.(Sculpt.model(edits, level: :mid, budget: 1_000)) <= 1_000
+    assert faces.(Sculpt.model(edits, step: 0.05)) > faces.(mid)
+  end
 end

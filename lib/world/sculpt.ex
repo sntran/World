@@ -23,10 +23,13 @@ defmodule World.Sculpt do
   process to another with no copy.
   """
 
-  alias World.{SDF, Vec}
+  alias World.{Detail, SDF, Vec}
+  alias World.Sculpt.Surface
 
   @cells 8
   @points @cells + 3
+  # The cells of each level of detail, in m (D8).
+  @steps %{near: 0.02, mid: 0.08, far: 0.32}
 
   @doc "The cells of a brick on each axis."
   def cells, do: @cells
@@ -34,13 +37,32 @@ defmodule World.Sculpt do
   @doc "The points of the field of a brick on each axis (with its border)."
   def points, do: @points
 
+  @doc "The size of the cells (m) of a level of detail: `:near`, `:mid` or `:far`."
+  def step(level), do: Map.fetch!(@steps, level)
+
+  @doc """
+  The meshes of a sculpture (a `World.Mesh` for each material): its
+  bricks, the piece of the surface of each brick in the process of the
+  brick, and the meshes of the pieces (`World.Sculpt.Surface`). The
+  options: `level` (the level of detail of `World.Detail` by default),
+  `step` (the size of the cells, the size of the level by default),
+  `budget` (the most faces, `World.Simplify`) and `parallel`.
+  """
+  def model(edits, opts \\ []) do
+    step = opts[:step] || step(opts[:level] || Detail.level())
+    %{bricks: bricks} = bricks(edits, step, Keyword.put(opts, :each, &Surface.piece(&1, step)))
+    Surface.meshes(Enum.map(bricks, & &1.piece), budget: opts[:budget])
+  end
+
   @doc """
   The bricks of a sculpture with cells of `step` m: `%{bricks: bricks,
   evaluations: n, step: step}`. Each brick is `%{at: {i, j, k}, edits:
   edits, field: binary}` (the edits that can change the field in it, and
   its field). `evaluations` counts each evaluation of the distance of an
-  edit at a point. The option `parallel` (true by default): false makes
-  each cell in the process that calls (the same bricks).
+  edit at a point. The options: `parallel` (true by default): false makes
+  each cell in the process that calls (the same bricks); `each`: a
+  function of a brick, whose value goes into the brick as `piece`, in the
+  process of the brick.
   """
   def bricks(edits, step, opts \\ []) do
     case SDF.bounds(edits) do
@@ -52,7 +74,7 @@ defmodule World.Sculpt do
         {a, b, c} = from = index(lo, size)
         {d, e, f} = index(hi, size)
         span = cube(max(max(d - a, e - b), f - c) + 1, 1)
-        {bricks, n} = cell(edits, {from, span}, step, Keyword.get(opts, :parallel, true))
+        {bricks, n} = cell(edits, {from, span}, step, {Keyword.get(opts, :parallel, true), opts[:each]})
         %{bricks: Enum.sort_by(bricks, & &1.at), evaluations: n, step: step}
     end
   end
@@ -63,7 +85,7 @@ defmodule World.Sculpt do
   defp cube(n, span), do: cube(n, span * 4)
 
   # A brick: its field at each point, with the edits that can change it.
-  defp cell(edits, {at, 1}, step, _parallel) do
+  defp cell(edits, {at, 1}, step, {_parallel, each}) do
     origin = corner(at, step)
     {ox, oy, oz} = origin
 
@@ -72,12 +94,14 @@ defmodule World.Sculpt do
         <<SDF.value(edits, {ox + i * step, oy + j * step, oz + k * step})::float-32-little>>
       end
 
-    {[%{at: at, edits: edits, field: field}], length(edits) * @points ** 3}
+    brick = %{at: at, edits: edits, field: field}
+    brick = if each, do: Map.put(brick, :piece, each.(brick)), else: brick
+    {[brick], length(edits) * @points ** 3}
   end
 
   # A cell of the tree: its 64 children, each with its edits, and the
   # children with a surface, each in a process of its own.
-  defp cell(edits, {at, span}, step, parallel) do
+  defp cell(edits, {at, span}, step, {parallel, _} = how) do
     child = div(span, 4)
     {ax, ay, az} = at
 
@@ -92,10 +116,10 @@ defmodule World.Sculpt do
     results =
       if parallel do
         work
-        |> Enum.map(fn {c, kept} -> Task.async(fn -> cell(kept, c, step, true) end) end)
+        |> Enum.map(fn {c, kept} -> Task.async(fn -> cell(kept, c, step, how) end) end)
         |> Task.await_many(:infinity)
       else
-        Enum.map(work, fn {c, kept} -> cell(kept, c, step, false) end)
+        Enum.map(work, fn {c, kept} -> cell(kept, c, step, how) end)
       end
 
     Enum.reduce(results, {[], n}, fn {bricks, m}, {all, n} -> {bricks ++ all, n + m} end)

@@ -273,8 +273,14 @@ on each commit, and the full check on the tip before a push.
   touch at one edge (10 edges of a stone of 41 edits). The mesh stays
   closed. Manifold dual contouring [P12] splits them; it comes when a
   model needs it (a print of the model, a check of its edges).
-- **The sizes of the cells** of D8 are an estimate: the measure of step
-  3 sets them.
+- **The sizes of the cells** of D8: the measure of step 3 (section 13)
+  keeps 2, 8 and 32 cm. A stone of 1.6 m has 58,304 faces at near, 3,424
+  at mid and 156 at far, so each level is near the budget of an item
+  before the collapse.
+- **The collapse is one process.** It takes 2.4 s of the 6.1 s of the
+  near stone to 40,000 faces. A collapse in each region of bricks, with
+  the points at the borders of the regions kept, can use each scheduler;
+  it comes when a model needs it.
 - **A live sculpture** is a part of this plan (the owner, 2026-11-12):
   D11, R8, step 5.
 
@@ -372,3 +378,21 @@ also 2 to 3 times faster than one process on one scheduler: one process
 keeps all the data on one heap, and its collection of garbage grows;
 each small process of the tree has its own small heap, and gives it back
 when it ends.
+
+### Step 3 (2026-11-12)
+
+The same stone of 100 edits, its meshes from `World.Sculpt.model/2` (the
+piece of the surface of each brick in the process of the brick), on 4
+schedulers:
+
+| Level | Cells | Faces | Time | To a budget |
+|---|---|---|---|---|
+| near | 2 cm | 58,304 | 3.7 s | 40,000 faces in 6.1 s; 10,000 in 7.1 s |
+| mid | 8 cm | 3,424 | 0.9 s | 3,000 faces in 1.0 s |
+| far | 32 cm | 156 | 0.17 s | (under 300) |
+
+At near the bricks take 1.8 s and their pieces 1.9 s more. Each cut of
+an edge of the grid, and its normal, is found once in a brick (the
+first version found it again for each cell round the edge, and took
+6 s). The collapse to the budget is one process (section 11).
+

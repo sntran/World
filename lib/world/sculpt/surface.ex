@@ -50,27 +50,33 @@ defmodule World.Sculpt.Surface do
     base = {bi * n, bj * n, bk * n}
     v = fn {i, j, k} -> Sculpt.at(brick, {i, j, k}) end
 
-    quads =
+    crossed =
       for i <- 0..(n - 1),
           j <- 0..(n - 1),
           k <- 0..(n - 1),
           axis <- 0..2,
           start = {i, j, k},
-          stop = Vec.add(start, unit(axis)),
           v0 = v.(start),
-          v1 = v.(stop),
-          v0 < 0 != v1 < 0 do
-        inside = if v0 < 0, do: start, else: stop
-        cells = around(axis, start)
-        keys = for c <- cells, do: {Vec.add(base, c), part(c, inside, v)}
-        cut = cut(place(base, start, step), place(base, stop, step), v0, v1, edits)
-        {_, material} = SDF.field(edits, cut)
+          v1 = v.(Vec.add(start, unit(axis))),
+          v0 < 0 != v1 < 0,
+          do: {start, axis, v0, v1}
+
+    # The cells of the quads, and each edge of those cells that the
+    # surface cuts: its cut and the normal there, found once.
+    cells = for {start, axis, _, _} <- crossed, c <- around(axis, start), uniq: true, do: c
+    cuts = cuts(cells, base, step, edits, v)
+
+    quads =
+      for {start, axis, v0, v1} <- crossed do
+        inside = if v0 < 0, do: start, else: Vec.add(start, unit(axis))
+        keys = for c <- around(axis, start), do: {Vec.add(base, c), part(c, inside, v)}
+        {_cut, _normal, material} = cuts[{start, axis}]
         {if(v1 > v0, do: keys, else: Enum.reverse(keys)), material}
       end
 
     points =
       for key <- quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq(), into: %{} do
-        {key, point(key, base, step, edits, v)}
+        {key, point(key, base, step, cuts, v)}
       end
 
     %{quads: quads, points: points}
@@ -123,44 +129,68 @@ defmodule World.Sculpt.Surface do
 
   # The point of a part of a cell: dual contouring of the cuts of its
   # edges, kept in the cell.
-  defp point({global, part}, base, step, edits, v) do
+  defp point({global, part}, base, step, cuts, v) do
     cell = Vec.sub(global, base)
     solid = for c <- 0..7, v.(Vec.add(cell, corner(c))) < 0, do: c
     mine = component(solid, [part], [part])
 
-    cuts =
+    {points, normals} =
       for {c0, c1} <- @edges,
           p0 = Vec.add(cell, corner(c0)),
-          p1 = Vec.add(cell, corner(c1)),
           v0 = v.(p0),
-          v1 = v.(p1),
+          v1 = v.(Vec.add(cell, corner(c1))),
           v0 < 0 != v1 < 0,
           if(v0 < 0, do: c0, else: c1) in mine do
-        cut(place(base, p0, step), place(base, p1, step), v0, v1, edits)
+        {cut, normal, _} = cuts[{p0, axis(c0, c1)}]
+        {cut, normal}
       end
+      |> Enum.unzip()
 
-    mean = Vec.mean(cuts)
-    normals = for c <- cuts, do: gradient(edits, c, step)
     lo = place(base, cell, step)
-    clamp(qef(cuts, normals, mean), lo, Vec.add(lo, {step, step, step}))
+    clamp(qef(points, normals, Vec.mean(points)), lo, Vec.add(lo, {step, step, step}))
   end
+
+  # Each edge of the cells that the surface cuts (`{start, axis}`): its
+  # cut, the normal of the field there, and the material there.
+  defp cuts(cells, base, step, edits, v) do
+    for cell <- cells,
+        {c0, c1} <- @edges,
+        p0 = Vec.add(cell, corner(c0)),
+        p1 = Vec.add(cell, corner(c1)),
+        v0 = v.(p0),
+        v1 = v.(p1),
+        v0 < 0 != v1 < 0,
+        uniq: true do
+      {p0, p1, v0, v1}
+    end
+    |> Map.new(fn {p0, p1, v0, v1} ->
+      cut = cut(place(base, p0, step), place(base, p1, step), v0, v1, edits, step)
+      {_, material} = SDF.field(edits, cut)
+      {{p0, axis(p0, p1)}, {cut, gradient(edits, cut, step), material}}
+    end)
+  end
+
+  defp axis({x, _, _}, {x1, _, _}) when x != x1, do: 0
+  defp axis({_, y, _}, {_, y1, _}) when y != y1, do: 1
+  defp axis({_, _, _}, {_, _, _}), do: 2
+  defp axis(c0, c1) when is_integer(c0), do: axis(corner(c0), corner(c1))
 
   # The cut of an edge of the grid: where the field of the edits is 0 on
   # it, from the values at its ends (regula falsi, the Illinois way, in 8
-  # steps): near a sharp edge the field is not a line along an edge of
+  # steps or fewer): near a sharp edge the field is not a line along an edge of
   # the grid, so a line between the two values is not the cut.
-  defp cut(p0, p1, v0, v1, edits), do: falsi(p0, p1, edits, {0.0, v0}, {1.0, v1}, 8, nil)
+  defp cut(p0, p1, v0, v1, edits, step), do: falsi(p0, p1, edits, {0.0, v0}, {1.0, v1}, 8, nil, step * 1.0e-6)
 
-  defp falsi(p0, p1, _edits, {a, fa}, {b, fb}, 0, _side), do: Vec.lerp(p0, p1, a - fa * (b - a) / (fb - fa))
+  defp falsi(p0, p1, _edits, {a, fa}, {b, fb}, 0, _side, _tol), do: Vec.lerp(p0, p1, a - fa * (b - a) / (fb - fa))
 
-  defp falsi(p0, p1, edits, {a, fa}, {b, fb}, n, side) do
+  defp falsi(p0, p1, edits, {a, fa}, {b, fb}, n, side, tol) do
     t = a - fa * (b - a) / (fb - fa)
     ft = SDF.value(edits, Vec.lerp(p0, p1, t))
 
     cond do
-      ft == 0.0 -> Vec.lerp(p0, p1, t)
-      ft < 0 == fa < 0 -> falsi(p0, p1, edits, {t, ft}, {b, if(side == :a, do: fb / 2, else: fb)}, n - 1, :a)
-      true -> falsi(p0, p1, edits, {a, if(side == :b, do: fa / 2, else: fa)}, {t, ft}, n - 1, :b)
+      abs(ft) <= tol -> Vec.lerp(p0, p1, t)
+      ft < 0 == fa < 0 -> falsi(p0, p1, edits, {t, ft}, {b, if(side == :a, do: fb / 2, else: fb)}, n - 1, :a, tol)
+      true -> falsi(p0, p1, edits, {a, if(side == :b, do: fa / 2, else: fa)}, {t, ft}, n - 1, :b, tol)
     end
   end
 
