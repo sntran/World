@@ -445,3 +445,46 @@ balls near each brick), and each point of a brick takes each edit of
 its list. A compiled form of a short list (D10) is the next step of
 speed, when a model needs it.
 
+### Step 5: the live sculpture (2026-11-12)
+
+`World.Sculpt.Live` keeps the edits and the pieces of a sculpture. An
+edit comes as a message of priority; a work makes the tree with the
+cache; each brick that is made sends its piece at once; a new edit
+stops the work and its crew (an exit signal) and starts again from the
+newest edits.
+
+The first measure of a change found three costs, and three changes:
+
+- **The cache was full.** At 270 bytes for each face, the near level of
+  the stone of 1,000 edits (105,000 faces) and its mid level were more
+  than 32 MB, so the table was emptied and a change took 42.5 s. Now a
+  piece is a binary in the table (68 bytes for each face), and the table
+  has two generations: a trim takes away only the pieces that no build
+  used since the last trim.
+- **Each point took each edit of its brick.** Now each eighth of a brick
+  has its own short list (a second prune, with the same values to the
+  bit), for the field and for the search of the cuts.
+- **The ball of a brick was too large.** Its points go one cell past its
+  sides, so its ball is the ball of its box grown by one cell on each
+  axis (it had two), and the limit of the field is two cells and two
+  blends, at least four cells (it was four cells and two blends).
+
+The stone of 1,000 edits, on 4 schedulers, with a move of one ball by
+3 cm (three balls, one at a time):
+
+| Level | The whole sculpture | A change | The first piece |
+|---|---|---|---|
+| near | 17.0 s (it was 35.3 s) | 1.7 to 1.9 s (10% to 11%) | 62 to 85 ms |
+| mid | 4.6 s | 3.0 to 3.5 s (65% to 76%) | 2 to 3 ms |
+
+At near a change is near a tenth of the whole sculpture (R8): 56 of 636
+bricks (8.8%) are made again, and the walk of the tree over the bricks
+of the cache takes 0.75 s. At mid a brick is 64 cm, so one edit reaches
+most of the bricks: a live sculpture works at near, and the other levels
+come when the edits stop. The next step of speed: a key for each cell of
+the tree, so a change walks only the cells that it reaches.
+
+The stone of 100 edits now: 452 bricks at 2 cm, 10 edits in a short
+list, 33 to 37 bricks (7% to 8%) made again after a move of one ball,
+and its meshes in 2.1 s at near, 0.35 s at mid and 0.12 s at far.
+

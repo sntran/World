@@ -8,13 +8,17 @@ defmodule World.Supervisor do
   `"true"` (on `PORT`, 4000 by default). It decides nothing: `World`,
   `World.Census` and `World.Yard` decide.
 
-  - `World.Names`: a construction by its id (unique keys).
+  - `World.Names`: a construction by its id, a person, a live sculpture
+    (unique keys).
   - `World.Events`: the processes that watch a construction, or the whole
     world with the key `:world` (duplicate keys, in partitions by key: a
     dispatch reads one partition).
   - `World.Log.Server`: the log of the node, each event with its id.
   - `World.Persons`: the people (a dynamic supervisor).
   - `World.Constructions`: the constructions (a dynamic supervisor).
+  - `World.Sculpt.Cache`: the pieces of the bricks of the sculptures.
+  - `World.Sculptures`: the live sculptures (`World.Sculpt.Live`, a
+    dynamic supervisor).
   """
   use Supervisor
 
@@ -48,7 +52,8 @@ defmodule World.Supervisor do
       {DynamicSupervisor, name: World.Persons, strategy: :one_for_one},
       {DynamicSupervisor, name: World.Constructions, strategy: :one_for_one},
       World.Census,
-      World.Sculpt.Cache
+      World.Sculpt.Cache,
+      {DynamicSupervisor, name: World.Sculptures, strategy: :one_for_one}
     ] ++ yard(env) ++ server(env)
   end
 
