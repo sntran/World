@@ -162,6 +162,54 @@ path. Two points of the work:
 A change of a live sculpture is one shape: an edit with a mirror or a
 repeat is refused there with its path.
 
+### Step 4: the keys of the cells (2026-11-12)
+
+A stone of 1,000 edits at near (636 bricks, cells of 2 cm) as a live
+sculpture, on 4 schedulers with no other work: the time from the start
+to the last piece, and from a change of one edit (the edits 10, 500 and
+900) to the last new piece.
+
+| | The whole sculpture | A change of one edit | The first new piece | The change, as a part of the whole |
+|---|---|---|---|---|
+| Before this step | 7.1 s | 1.00 s to 1.20 s | 0.23 s to 0.29 s | 14% to 17% |
+| After | 4.4 s | 0.41 s to 0.53 s | 0.10 s to 0.18 s | 9% to 12% |
+
+**R5 is not met:** a change is 2.3 times faster, but the whole sculpture
+is 1.6 times faster too, so the part is 9% to 12%, not less than 7%.
+The 10% of section 3 was a measure with other work on the machine. What
+the step did:
+
+- **A record for each cell of the tree** (D5): the cache keeps the bricks
+  under a cell by the hash of its place and its short list. A walk of a
+  sculpture that did not change takes 2 ms to 8 ms (it was 750 ms), and
+  a change walks only the cells that it reaches. A record for each brick
+  keeps its key by the hash of its own list, so a brick that did not
+  change needs no lists of its eighths.
+- **Each edit has a short id** (the hash of its values, made one time),
+  and the keys hash the ids.
+- **The messages were the hidden cost.** A message between two processes
+  is a copy, and each brick went up the tree with its short list of
+  edits (about 150 edits, 100 words each), level by level; a live
+  sculpture gave all its bricks to each new work process. The time line
+  of a change showed it: the last brick was done at 0.5 s, the answer
+  came at 0.9 s. Now a brick has the ids of its edits in the tree and in
+  the live sculpture, and gets its edits again at the root.
+- **The edits go down the tree in two steps** (the eight parts of a
+  cell, then the eight children of each part), in a process for each
+  part when the cell has many edits. Each brick gets the same edits as
+  before (a test compares them with the edits from the whole list in one
+  step), with about half the evaluations of the walk.
+- **A cut takes fewer evaluations:** a cut of an edge of a cell stops at
+  1/1,000 of a cell, and the gradient at a point uses the value that the
+  cut gave. The points move by less than that; the files of the carp
+  from edits changed.
+
+What is left: the bricks that a change of one of these edits reaches are
+5% to 8% of the bricks of the stone (33 to 51 of 636), and each one is
+made again in full. Less than 7% for each change needs a part of a brick
+that stays: the field of each eighth in the cache (a change reaches only
+some of the eighths of a brick). This is open.
+
 ### Step 5: bones (2026-11-12)
 
 The data of the skill `sculpt` takes `bones`, `bone_blend`, `plan`,

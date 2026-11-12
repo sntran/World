@@ -44,6 +44,20 @@ defmodule World.SculptTest do
   test "the processes and one process give the same bricks; a sculpture with no edit that adds has none" do
     edits = stone(20)
     assert Sculpt.bricks(edits, 0.05) == Sculpt.bricks(edits, 0.05, parallel: false)
+
+    # With many edits, each part of a cell has a process. The edits go
+    # down the tree in steps, and a brick gets the same edits as from the
+    # whole list in one step.
+    many = stone(200)
+    %{bricks: bricks} = found = Sculpt.bricks(many, 0.1)
+    assert found == Sculpt.bricks(many, 0.1, parallel: false) and length(bricks) > 10
+    {limit, side} = {Sculpt.limit(many, 0.1), Sculpt.cells() * 0.1}
+
+    for b <- bricks do
+      center = World.Vec.add(Sculpt.corner(b.at, 0.1), {side / 2, side / 2, side / 2})
+      assert b.edits == SDF.prune(many, center, (side / 2 + 0.1) * :math.sqrt(3), limit)
+    end
+
     assert %{bricks: [], evaluations: 0} = Sculpt.bricks([], 0.05)
     assert %{bricks: []} = Sculpt.bricks([SDF.edit(:ball, {1}, mode: :subtract)], 0.05)
   end

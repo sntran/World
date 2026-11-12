@@ -143,26 +143,33 @@ defmodule World.Sculpt.Live do
   def handle_call(:pieces, _from, s),
     do: {:reply, s.bricks |> Enum.sort() |> Enum.map(fn {at, {_, piece, _}} -> {at, piece} end), s}
 
-  # The pieces, the short list of edits of each brick, the edits and the cells.
+  # The pieces, the short list of edits of each brick, the edits and the
+  # cells. The sculpture keeps the ids of the edits of each brick; while
+  # a work runs, an id of a brick that the work did not reach can be of
+  # an edit that the sculpture has no more: that edit is not in the list.
   def handle_call(:surface, _from, s) do
     bricks = Enum.sort(s.bricks)
     pieces = Enum.map(bricks, fn {_, {_, piece, _}} -> piece end)
-    {:reply, {pieces, Map.new(bricks, fn {at, {_, _, list}} -> {at, list} end), s.edits, s.step}, s}
+    by_id = Map.new(s.edits, &{&1.id, &1})
+    lists = Map.new(bricks, fn {at, {_, _, ids}} -> {at, for(id <- ids, e = by_id[id], do: e)} end)
+    {:reply, {pieces, lists, s.edits, s.step}, s}
   end
 
   @impl true
-  def handle_info({:piece, v, at, key, piece, list}, %{version: v} = s), do: {:noreply, put(s, at, key, piece, list)}
+  def handle_info({:piece, v, at, key, piece, ids}, %{version: v} = s), do: {:noreply, put(s, at, key, piece, ids)}
 
-  # The pieces of a work, all of them: each brick that did not come before,
-  # and the bricks that have no surface now.
-  def handle_info({:built, v, keys, pieces}, %{version: v, work: {_, ref, _}} = s) do
+  # The end of a work: the key and the ids of the edits of each brick of
+  # the version, the piece of each brick that did not come before, and
+  # the bricks that have no surface now.
+  def handle_info({:built, v, bricks, pieces}, %{version: v, work: {_, ref, _}} = s) do
     Process.demonitor(ref, [:flush])
-    s = Enum.reduce(pieces, s, fn {at, {key, piece, list}}, s -> put(s, at, key, piece, list) end)
+    s = Enum.reduce(pieces, s, fn {at, {key, piece}}, s -> put(s, at, key, piece, []) end)
 
-    gone = for at <- Map.keys(s.bricks), not Map.has_key?(keys, at), do: at
+    gone = for at <- Map.keys(s.bricks), not Map.has_key?(bricks, at), do: at
     for at <- gone, do: notify(s, {:gone, at})
     notify(s, {:done, v})
-    {:noreply, %{s | bricks: Map.drop(s.bricks, gone), work: nil}}
+    now = Map.new(bricks, fn {at, {key, ids}} -> {at, {key, elem(Map.fetch!(s.bricks, at), 1), ids}} end)
+    {:noreply, %{s | bricks: now, work: nil}}
   end
 
   def handle_info({:DOWN, ref, :process, _, reason}, %{work: {_, ref, v}} = s) do
@@ -173,14 +180,14 @@ defmodule World.Sculpt.Live do
   # A piece of a work that a newer edit stopped.
   def handle_info(_message, s), do: {:noreply, s}
 
-  defp put(s, at, key, piece, list) do
+  defp put(s, at, key, piece, ids) do
     case s.bricks[at] do
       {^key, _, _} ->
         s
 
       _ ->
         notify(s, {:piece, at, piece})
-        %{s | bricks: Map.put(s.bricks, at, {key, piece, list})}
+        %{s | bricks: Map.put(s.bricks, at, {key, piece, ids})}
     end
   end
 
@@ -192,23 +199,21 @@ defmodule World.Sculpt.Live do
 
   # A work of the edits of the version: the tree of the bricks, with the
   # cache; each brick with a new key sends its piece when it is made.
-  defp work(%{edits: edits, step: step, version: v} = s) do
+  defp work(%{edits: edits, step: step, version: v, name: name} = s) do
     live = self()
     known = Map.new(s.bricks, fn {at, {key, _, _}} -> {at, key} end)
-    sink = fn b -> send(live, {:piece, v, b.at, b.key, b.piece, b.edits}) end
+    # A message is a copy: a brick goes to the sculpture with the ids of
+    # its edits, not with its edits; and the work process gets the keys
+    # of the bricks, not the bricks of the sculpture.
+    ids = fn b -> Enum.map(b.edits, & &1.id) end
+    sink = fn b -> send(live, {:piece, v, b.at, b.key, b.piece, ids.(b)}) end
 
     {pid, ref} =
       spawn_monitor(fn ->
-        Process.set_label({:sculpture_work, s.name, v})
+        Process.set_label({:sculpture_work, name, v})
         %{bricks: bricks} = Sculpt.bricks(edits, step, each: &Surface.piece(&1, step), cache: :keys, sink: sink)
-        keys = Map.new(bricks, &{&1.at, &1.key})
-
-        pieces =
-          for b <- bricks, known[b.at] != b.key, into: %{} do
-            {b.at, {b.key, Sculpt.piece(b, step), b.edits}}
-          end
-
-        send(live, {:built, v, keys, pieces})
+        pieces = for b <- bricks, known[b.at] != b.key, into: %{}, do: {b.at, {b.key, Sculpt.piece(b, step)}}
+        send(live, {:built, v, Map.new(bricks, &{&1.at, {&1.key, ids.(&1)}}), pieces})
       end)
 
     %{s | work: {pid, ref, v}}

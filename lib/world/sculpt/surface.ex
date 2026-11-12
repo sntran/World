@@ -299,18 +299,10 @@ defmodule World.Sculpt.Surface do
 
   # The field of the edits of a brick at a point: with the short list of
   # the eighth of the brick that the point is in (the same values).
-  defp field(%{eighths: eighths, at: at}, edits, limit, step) do
+  defp field(%{eighths: eighths, at: at}, _edits, limit, step) do
     corner = Sculpt.corner(at, step)
 
-    fn p ->
-      list =
-        case Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step)) do
-          nil -> edits
-          e -> elem(eighths, e)
-        end
-
-      SDF.field(list, p, limit)
-    end
+    fn p -> SDF.field(elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))), p, limit) end
   end
 
   defp field(_brick, edits, limit, _step), do: &SDF.field(edits, &1, limit)
@@ -402,9 +394,8 @@ defmodule World.Sculpt.Surface do
       {p0, p1, v0, v1}
     end
     |> Map.new(fn {p0, p1, v0, v1} ->
-      cut = cut(place(base, p0, step), place(base, p1, step), v0, v1, field, step)
-      {_, material} = field.(cut)
-      {{p0, axis(p0, p1)}, {cut, gradient(field, cut, step), material}}
+      {cut, value, material} = cut(place(base, p0, step), place(base, p1, step), v0, v1, field, step)
+      {{p0, axis(p0, p1)}, {cut, gradient(field, cut, value, step), material}}
     end)
   end
 
@@ -415,18 +406,20 @@ defmodule World.Sculpt.Surface do
 
   # The cut of an edge of the grid: where the field of the edits is 0 on
   # it, from the values at its ends (regula falsi, the Illinois way, in 8
-  # steps or fewer): near a sharp edge the field is not a line along an edge of
+  # steps or fewer, to a thousandth of a cell: the finish pass puts the
+  # points of the mesh on the surface): near a sharp edge the field is not a line along an edge of
   # the grid, so a line between the two values is not the cut.
-  defp cut(p0, p1, v0, v1, field, step), do: falsi(p0, p1, field, {0.0, v0}, {1.0, v1}, 8, nil, step * 1.0e-6)
+  defp cut(p0, p1, v0, v1, field, step), do: falsi(p0, p1, field, {0.0, v0}, {1.0, v1}, 8, nil, step * 1.0e-3)
 
-  defp falsi(p0, p1, _field, {a, fa}, {b, fb}, 0, _side, _tol), do: Vec.lerp(p0, p1, a - fa * (b - a) / (fb - fa))
-
+  # The cut, the value of the field there (near 0) and its material: the
+  # last point of the search.
   defp falsi(p0, p1, field, {a, fa}, {b, fb}, n, side, tol) do
     t = a - fa * (b - a) / (fb - fa)
-    {ft, _} = field.(Vec.lerp(p0, p1, t))
+    p = Vec.lerp(p0, p1, t)
+    {ft, material} = field.(p)
 
     cond do
-      abs(ft) <= tol -> Vec.lerp(p0, p1, t)
+      abs(ft) <= tol or n == 1 -> {p, ft, material}
       ft < 0 == fa < 0 -> falsi(p0, p1, field, {t, ft}, {b, if(side == :a, do: fb / 2, else: fb)}, n - 1, :a, tol)
       true -> falsi(p0, p1, field, {a, if(side == :b, do: fa / 2, else: fa)}, {t, ft}, n - 1, :b, tol)
     end
@@ -459,16 +452,13 @@ defmodule World.Sculpt.Surface do
 
   defp clamp({x, y, z}, {a, b, c}, {d, e, f}), do: {min(max(x, a), d), min(max(y, b), e), min(max(z, c), f)}
 
-  # The normal of the field at a point (central differences of the field
-  # of the edits).
-  defp gradient(field, {x, y, z}, step) do
+  # The normal of the field at a cut, from the value of the field there
+  # and at three points next to it (the finish pass gives the normals of
+  # the mesh: this one places the point of a cell).
+  defp gradient(field, {x, y, z}, value, step) do
     h = step * 1.0e-3
     f = &elem(field.(&1), 0)
-
-    Vec.norm(
-      {f.({x + h, y, z}) - f.({x - h, y, z}), f.({x, y + h, z}) - f.({x, y - h, z}),
-       f.({x, y, z + h}) - f.({x, y, z - h})}
-    )
+    Vec.norm({f.({x + h, y, z}) - value, f.({x, y + h, z}) - value, f.({x, y, z + h}) - value})
   end
 
   defp place(base, p, step), do: Vec.scale(Vec.add(base, p), step) |> Vec.float()

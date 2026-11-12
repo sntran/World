@@ -509,8 +509,10 @@ grid of each level is the same for each sculpture, so a brick (8 × 8 × 8
 cells) keeps its place when an edit changes, and the node keeps the
 piece of each brick in a cache by the hash of its place, its cells and
 its edits: the next build of the same edits, or of the edits after a
-change of one, makes only the bricks that the change reaches. A
-sculpture can also be live (`World.Sculpt.Live`): a process that takes a
+change of one, makes only the bricks that the change reaches. The cache
+also keeps the bricks under each cell of the tree by the hash of its
+short list of edits, so the walk visits only the cells that a change
+reaches. A sculpture can also be live (`World.Sculpt.Live`): a process that takes a
 change of one edit at a time, and sends the new pieces of its surface as
 they come.
 

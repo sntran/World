@@ -36,6 +36,8 @@ defmodule World.Sculpt do
 
   @cells 8
   @points @cells + 3
+  # The edits of a cell from which each of its eight parts has a process.
+  @many 128
   # The cells of each level of detail, in m (D8).
   @steps %{near: 0.02, mid: 0.08, far: 0.32}
 
@@ -65,7 +67,7 @@ defmodule World.Sculpt do
     step = opts[:step] || step(opts[:level] || Detail.level())
     opts = opts |> Keyword.put(:each, &Surface.piece(&1, step)) |> Keyword.put_new(:cache, true)
     # The meshes of the same edits, cells and budget come from the cache.
-    key = if opts[:cache], do: Cache.key({:model, opts[:budget]}, step, edits)
+    key = if opts[:cache], do: Cache.key({:model, opts[:budget]}, step, SDF.ids(edits))
 
     with nil <- key && Cache.get(key) do
       %{bricks: bricks} = bricks(edits, step, opts)
@@ -154,7 +156,18 @@ defmodule World.Sculpt do
 
         {bricks, n} = cell(edits, {from, span}, how)
         cached = Enum.count(bricks, &is_nil(&1.field))
-        %{bricks: Enum.sort_by(bricks, & &1.at), evaluations: n, cached: cached, step: step}
+        # In the tree, a brick has the ids of its edits (a message from a
+        # process to its parent is a copy, and an id is much smaller than
+        # an edit); here it gets its edits again.
+        by_id = Map.new(edits, &{&1.id, &1})
+
+        bricks =
+          for b <- Enum.sort_by(bricks, & &1.at) do
+            {ids, b} = Map.pop!(b, :ids)
+            Map.put(b, :edits, Enum.map(ids, &Map.fetch!(by_id, &1)))
+          end
+
+        %{bricks: bricks, evaluations: n, cached: cached, step: step}
     end
   end
 
@@ -175,41 +188,118 @@ defmodule World.Sculpt do
   defp cube(n, span), do: cube(n, span * 4)
 
   # A brick: its field at each point, with the edits that can change it;
-  # or its piece from the cache.
-  defp cell(edits, {at, 1}, %{step: step, limit: limit, each: each} = how) do
-    key = if how.cache, do: Cache.key(at, step, {limit, edits})
+  # or its piece from the cache. With the cache, a record keeps the key
+  # of the brick by the hash of its own list: a brick whose list did not
+  # change needs no lists of its eighths.
+  defp cell(edits, {at, 1}, %{step: step, limit: limit} = how) do
+    ids = SDF.ids(edits)
+    record = if how.cache, do: Cache.key({:brick, at}, step, {limit, ids})
+    key = record && Cache.get(record)
+
+    case key && hit(key, how.cache) do
+      nil -> make(edits, ids, at, record, how)
+      piece -> {[%{at: at, ids: ids, limit: limit, field: nil, piece: piece, key: key}], 0}
+    end
+  end
+
+  # A cell of the tree. With the cache, the cell has a key (a hash of its
+  # place and its short list), and the cache keeps the bricks under it
+  # by that key: the place and the key of each one, and the places of its
+  # edits in the list of the cell. So a walk of a cell whose list did not
+  # change takes its bricks from the cache, with no visit of its
+  # children (`docs/plans/0009-sculpture-finish.md`, D5).
+  defp cell(edits, {at, span} = c, %{cache: cache} = how) when cache not in [nil, false] do
+    ids = SDF.ids(edits)
+    key = Cache.key({:cell, at, span}, how.step, {how.limit, ids})
+
+    case under(Cache.get(key), ids, how) do
+      nil ->
+        {bricks, n} = walk(edits, c, how)
+        index = ids |> Enum.with_index() |> Map.new()
+        Cache.put(key, for(b <- bricks, do: {b.at, b.key, Enum.map(b.ids, &index[&1])}))
+        {bricks, n}
+
+      bricks ->
+        {bricks, 0}
+    end
+  end
+
+  defp cell(edits, c, how), do: walk(edits, c, how)
+
+  # The brick from its edits. Its key is the hash of the short lists of
+  # its eighths: its field comes from them, and an edit of its own list
+  # that is in none of them (it is past each of their smaller balls) does
+  # not change it.
+  defp make(edits, ids, at, record, %{step: step, limit: limit, each: each} = how) do
+    eighths = eighths(edits, at, step, limit)
+    key = if how.cache, do: Cache.key(at, step, {limit, eighths |> Tuple.to_list() |> Enum.map(&SDF.ids/1)})
+    if record, do: Cache.put(record, key)
 
     {brick, n} =
       case key && hit(key, how.cache) do
         nil ->
-          {field, n, eighths} = field(edits, at, step, limit)
+          {field, n} = field(eighths, at, step, limit)
           brick = %{at: at, edits: edits, limit: limit, field: field}
           brick = if each, do: Map.put(brick, :piece, each.(Map.put(brick, :eighths, eighths))), else: brick
           if key, do: Cache.put(key, brick.piece)
           if how.sink, do: how.sink.(Map.put(brick, :key, key))
-          {brick, n}
+          {brick |> Map.delete(:edits) |> Map.put(:ids, ids), n + 8 * length(edits)}
 
         piece ->
-          {%{at: at, edits: edits, limit: limit, field: nil, piece: piece}, 0}
+          {%{at: at, ids: ids, limit: limit, field: nil, piece: piece}, 8 * length(edits)}
       end
 
     brick = if key, do: Map.put(brick, :key, key), else: brick
     {[brick], n}
   end
 
-  # A cell of the tree: its 64 children, each with its edits, and the
-  # children with a surface, each in a process of its own.
-  defp cell(edits, {at, span}, how) do
-    child = div(span, 4)
-    {ax, ay, az} = at
+  # The bricks of a record of a cell, when the cache has each of them.
+  defp under(nil, _ids, _how), do: nil
 
-    {work, n} =
-      for x <- 0..3, y <- 0..3, z <- 0..3, reduce: {[], 0} do
-        {work, n} ->
-          c = {{ax + x * child, ay + y * child, az + z * child}, child}
-          {kept, used} = classify(edits, c, how)
-          {if(kept, do: [{c, kept} | work], else: work), n + used}
+  defp under(record, ids, how) do
+    list = List.to_tuple(ids)
+
+    bricks =
+      for {at, key, places} <- record do
+        piece = hit(key, how.cache)
+
+        piece &&
+          %{at: at, key: key, ids: Enum.map(places, &elem(list, &1)), limit: how.limit, field: nil, piece: piece}
       end
+
+    if Enum.all?(bricks), do: bricks
+  end
+
+  # The walk of a cell: its 64 children, each with its edits, and the
+  # children with a surface, each in a process of its own. The edits go
+  # down in two steps: to each half of the cell on each axis (its eight
+  # parts), then to the eight children of each part. A child gets the
+  # same edits as from the list of the cell (the ball of a child is in
+  # the ball of its part, and a part lets go only the edits that each of
+  # its children lets go), with fewer evaluations. With many edits, each
+  # part has a process.
+  defp walk(edits, {{ax, ay, az}, span}, how) do
+    child = div(span, 4)
+    parts = for x <- 0..1, y <- 0..1, z <- 0..1, do: {ax + 2 * x * child, ay + 2 * y * child, az + 2 * z * child}
+
+    found =
+      if how.parallel and length(edits) >= @many do
+        parts
+        |> Task.async_stream(
+          fn at ->
+            Process.set_label({:sculpt, at, 2 * child})
+            children(edits, at, child, how)
+          end,
+          max_concurrency: System.schedulers_online(),
+          ordered: false,
+          timeout: :infinity
+        )
+        |> Enum.map(fn {:ok, result} -> result end)
+      else
+        Enum.map(parts, &children(edits, &1, child, how))
+      end
+
+    {work, n} = Enum.reduce(found, {[], 0}, fn {work, m}, {all, n} -> {work ++ all, n + m} end)
 
     results =
       if how.parallel do
@@ -228,6 +318,26 @@ defmodule World.Sculpt do
       end
 
     Enum.reduce(results, {[], n}, fn {bricks, m}, {all, n} -> {bricks ++ all, n + m} end)
+  end
+
+  # The children with a surface of a part of a cell (two children on
+  # each axis), each with its edits; and the evaluations.
+  defp children(edits, {ox, oy, oz}, child, %{step: step, limit: limit} = how) do
+    side = 2 * child * @cells * step
+    center = Vec.add(corner({ox, oy, oz}, step), {side / 2, side / 2, side / 2})
+    {kept, {lo, hi}} = SDF.cell(edits, center, side * :math.sqrt(3) / 2 + border(step), limit)
+    used = length(edits)
+
+    if lo > 0 or hi < 0 do
+      {[], used}
+    else
+      for x <- 0..1, y <- 0..1, z <- 0..1, reduce: {[], used} do
+        {work, n} ->
+          c = {{ox + x * child, oy + y * child, oz + z * child}, child}
+          {mine, m} = classify(kept, c, how)
+          {if(mine, do: [{c, mine} | work], else: work), n + m}
+      end
+    end
   end
 
   # A brick of the cache: its piece, or (with `cache: :keys`) only the
@@ -285,7 +395,8 @@ defmodule World.Sculpt do
   (`eighths`, for `World.Sculpt.Surface.piece/2`).
   """
   def brick(at, edits, step, limit) do
-    {field, _, eighths} = field(edits, at, step, limit)
+    eighths = eighths(edits, at, step, limit)
+    {field, _} = field(eighths, at, step, limit)
     %{at: at, edits: edits, limit: limit, field: field, eighths: eighths}
   end
 
@@ -300,32 +411,31 @@ defmodule World.Sculpt do
 
   @doc """
   The eighth of a brick (0 to 7) that the point `{i, j, k}` of the brick
-  is in (in cells from its corner, from -1 to 9), or nil between two
-  eighths.
+  is in (in cells from its corner, from -1 to 9; a point between two
+  cells too).
   """
-  def eighth({i, j, k}) do
-    case {side(i), side(j), side(k)} do
-      {a, b, c} when is_integer(a) and is_integer(b) and is_integer(c) -> a + 2 * b + 4 * c
-      _ -> nil
-    end
-  end
+  def eighth({i, j, k}), do: side(i) + 2 * side(j) + 4 * side(k)
 
-  # The field of a brick at each of its points, with its border: each
-  # eighth of the points (from -1 to 4, and from 5 to 9, on each axis)
-  # with the edits of its own ball, so a point takes fewer edits; the
-  # values are the same (`World.SDF.prune/4`). Also the evaluations that
-  # it takes, and the lists of the eighths.
-  defp field(edits, at, step, limit) do
+  # The short list of each eighth of a brick: the edits of its own ball
+  # (the eighths are from -1 to 4.5 cells and from 4.5 to 9 on each axis,
+  # so each point of the brick with its border is in one). A point takes
+  # fewer edits, and the values are the same (`World.SDF.prune/4`).
+  defp eighths(edits, at, step, limit) do
     {ox, oy, oz} = corner(at, step)
 
-    lists =
-      List.to_tuple(
-        for c <- 0..1, b <- 0..1, a <- 0..1 do
-          {{cx, rx}, {cy, ry}, {cz, rz}} = {part(a), part(b), part(c)}
-          center = {ox + cx * step, oy + cy * step, oz + cz * step}
-          SDF.prune(edits, center, step * :math.sqrt(rx * rx + ry * ry + rz * rz), limit)
-        end
-      )
+    List.to_tuple(
+      for c <- 0..1, b <- 0..1, a <- 0..1 do
+        {{cx, rx}, {cy, ry}, {cz, rz}} = {part(a), part(b), part(c)}
+        center = {ox + cx * step, oy + cy * step, oz + cz * step}
+        SDF.prune(edits, center, step * :math.sqrt(rx * rx + ry * ry + rz * rz), limit)
+      end
+    )
+  end
+
+  # The field of a brick at each of its points, with its border, from the
+  # lists of its eighths; and the evaluations that it takes.
+  defp field(lists, at, step, limit) do
+    {ox, oy, oz} = corner(at, step)
 
     field =
       for k <- -1..(@points - 2), j <- -1..(@points - 2), i <- -1..(@points - 2), into: <<>> do
@@ -334,17 +444,15 @@ defmodule World.Sculpt do
       end
 
     counts = for c <- 0..1, b <- 0..1, a <- 0..1, do: (6 - a) * (6 - b) * (6 - c)
-    n = 8 * length(edits) + Enum.sum(Enum.zip_with(Tuple.to_list(lists), counts, &(length(&1) * &2)))
-    {field, n, lists}
+    {field, Enum.sum(Enum.zip_with(Tuple.to_list(lists), counts, &(length(&1) * &2)))}
   end
 
   # The center and the half size of an eighth of the points on an axis
   # (in cells), and the eighth of a point.
-  defp part(0), do: {1.5, 2.5}
-  defp part(1), do: {7.0, 2.0}
-  defp side(i) when i <= 4, do: 0
-  defp side(i) when i >= 5, do: 1
-  defp side(_), do: nil
+  defp part(0), do: {1.75, 2.75}
+  defp part(1), do: {6.75, 2.25}
+  defp side(i) when i <= 4.5, do: 0
+  defp side(_), do: 1
 
   # The border of a cell: the points of its bricks go one cell past its
   # sides, so its ball is the ball of its box grown by one cell on each

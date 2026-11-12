@@ -16,10 +16,19 @@ defmodule World.Sculpt.CacheTest do
   test "the next build of the same sculpture takes each brick from the cache, with the same meshes" do
     edits = Stone.edits(40)
     first = build(edits, 0.04)
-    assert first.cached == 0 and elem(Cache.size(), 0) == length(first.bricks)
+    # The table has the piece of each brick, and the record of each cell of the tree.
+    assert first.cached == 0 and elem(Cache.size(), 0) > length(first.bricks)
+    # The cell of the root is in the cache: its bricks with no walk.
     again = build(edits, 0.04)
-    assert again.cached == length(first.bricks) and again.evaluations < first.evaluations / 10
+    assert again.cached == length(first.bricks) and again.evaluations == 0
     assert Enum.map(again.bricks, & &1.piece) == Enum.map(first.bricks, & &1.piece)
+    assert Enum.map(again.bricks, &{&1.at, &1.key, &1.edits}) == Enum.map(first.bricks, &{&1.at, &1.key, &1.edits})
+
+    # The cache lets the piece of one brick go: the walk makes that brick again, the others come from the cache.
+    :ets.delete(Cache, hd(first.bricks).key)
+    walked = build(edits, 0.04)
+    assert walked.cached == length(first.bricks) - 1 and walked.evaluations > 0
+    assert Enum.map(walked.bricks, & &1.piece) == Enum.map(first.bricks, & &1.piece)
     assert Sculpt.model(edits, step: 0.04) == Sculpt.model(edits, step: 0.04, cache: false)
 
     # Only the keys: the pieces stay in the cache, or are made again when the cache lets them go.

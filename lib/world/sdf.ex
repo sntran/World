@@ -67,7 +67,8 @@ defmodule World.SDF do
               blend: 0.0,
               material: nil,
               color: nil,
-              box: nil
+              box: nil,
+              id: nil
   end
 
   @doc "The shapes of an edit."
@@ -90,7 +91,7 @@ defmodule World.SDF do
     unless mode in @modes, do: raise(ArgumentError, "the mode of an edit is add, subtract or paint")
     size = floats(size)
 
-    %Edit{
+    edit = %Edit{
       shape: shape,
       size: size,
       frame: frame,
@@ -102,7 +103,14 @@ defmodule World.SDF do
       color: linear(Keyword.get(opts, :color)),
       box: placed(local_bounds(shape, size), frame)
     }
+
+    # The id of the edit: a hash of what it is, made once. The keys of the
+    # cache of a sculpture hash the ids of its edits, not the edits.
+    %{edit | id: :erlang.md5(:erlang.term_to_binary({shape, size, frame, mode, blend, edit.material, edit.color}))}
   end
+
+  @doc "The ids of some edits (`edit/3`), in their order."
+  def ids(edits), do: Enum.map(edits, & &1.id)
 
   defp floats({points, radii}) when is_list(points), do: {Enum.map(points, &Vec.float/1), Enum.map(radii, &(&1 / 1))}
   defp floats(size), do: size |> Tuple.to_list() |> Enum.map(&(&1 / 1)) |> List.to_tuple()
@@ -144,8 +152,19 @@ defmodule World.SDF do
     end)
   end
 
-  @doc "The value of the field only."
-  def value(edits, p, limit \\ @far), do: elem(field(edits, p, limit), 0)
+  @doc "The value of the field only (the hot path of a sculpture: a loop of its own, with no material)."
+  def value(edits, p, limit \\ @far), do: fold(edits, p, limit, limit)
+
+  defp fold([], _p, d, _limit), do: d
+
+  defp fold([%Edit{mode: :add, blend: r} = e | rest], p, d, limit),
+    do: fold(rest, p, clamp(smin(d, distance(e, p), r), limit), limit)
+
+  defp fold([%Edit{mode: :subtract, blend: r} = e | rest], p, d, limit),
+    do: fold(rest, p, clamp(smax(d, -distance(e, p), r), limit), limit)
+
+  # A paint does not change the value.
+  defp fold([%Edit{mode: :paint} | rest], p, d, limit), do: fold(rest, p, d, limit)
 
   defp clamp(d, limit), do: min(max(d, -limit), limit)
 
