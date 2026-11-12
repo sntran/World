@@ -49,7 +49,7 @@ defmodule World.SimplifyTest do
         do: assert_in_delta(a, b, 1.0e-5)
   end
 
-  test "a stone of three materials, to half: closed, and the points at the borders of the materials stay" do
+  test "a stone of three materials, to a budget: closed, each material in its faces, its borders on their lines" do
     :rand.seed(:exsss, {5, 5, 5})
 
     edits =
@@ -67,25 +67,27 @@ defmodule World.SimplifyTest do
 
     {points, faces} = triangles(edits, 0.04)
 
-    border = fn ps, fs ->
+    # The points of a mesh where `n` materials or more meet.
+    meet = fn ps, fs, n ->
       fs
       |> Enum.flat_map(fn {f, m} -> Enum.map(f, &{&1, m}) end)
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-      |> Enum.filter(fn {_, ms} -> length(Enum.uniq(ms)) > 1 end)
+      |> Enum.filter(fn {_, ms} -> length(Enum.uniq(ms)) >= n end)
       |> Enum.map(fn {v, _} -> Enum.at(ps, v) end)
-      |> MapSet.new()
     end
 
-    {ps, fs} = Simplify.collapse(points, faces, div(length(faces), 2))
-    assert length(fs) <= div(length(faces), 2) and closed?(fs)
-    assert MapSet.subset?(border.(ps, fs), border.(points, faces))
+    {ps, fs} = Simplify.collapse(points, faces, 400)
+    assert length(fs) <= 400 and closed?(fs)
     assert fs |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> Enum.sort() == [:clay, :moss, :stone]
-    # The meshes of the materials with a budget: the faces of the collapse.
-    # The points at the borders stay, so the budget is not always reached.
-    {_, few} = Simplify.collapse(points, faces, 400)
-    assert length(few) < div(length(faces), 2)
+    # A point where three materials meet stays; a point of a border is near a border of before.
+    assert MapSet.subset?(MapSet.new(meet.(ps, fs, 3)), MapSet.new(meet.(points, faces, 3)))
+    before = meet.(points, faces, 2)
+
+    for p <- meet.(ps, fs, 2),
+        do: assert(Enum.min(Enum.map(before, &Vec.len(Vec.sub(&1, p)))) < 0.04, inspect(p))
+
     meshes = Surface.meshes(Enum.map(Sculpt.bricks(edits, 0.04).bricks, &Surface.piece(&1, 0.04)), budget: 400)
-    assert meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() == length(few)
+    assert meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() == length(fs)
   end
 
   test "a face with no area (its points on a line) does not stop the collapse" do
@@ -96,6 +98,10 @@ defmodule World.SimplifyTest do
     assert closed?(faces)
     {_ps, fs} = Simplify.collapse(points, faces, 4)
     assert length(fs) <= 6 and closed?(fs)
+
+    # A tetrahedron has no edge to collapse: its four faces stay.
+    tetra = [{[0, 2, 1], :a}, {[0, 3, 2], :a}, {[1, 2, 3], :a}, {[0, 1, 3], :a}]
+    assert {_, ^tetra} = Simplify.collapse(Enum.take(points, 4), tetra, 2)
   end
 
   test "a budget of more faces than the mesh has: the same mesh" do

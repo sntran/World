@@ -9,13 +9,20 @@ defmodule World.Simplify do
   quadric at its two ends and at its middle; the edge of the least cost
   goes first: its two points become one point at that place, and the
   faces between them go. A collapse does not happen when it turns a face
-  over, or when the two points have more than two neighbors in common
-  (so each edge stays in two faces). A point at the border of two
-  materials stays where it is, so the faces of each material still meet
-  the faces of the next one. The collapses stop at the budget of faces.
+  over, when the two points have more than two neighbors in common (so
+  each edge stays in two faces), or when two faces would be on the same
+  three points. A point at the border of two
+  materials moves only along the border (an edge of the border collapses,
+  and the planes of the border keep its line), and a point where three
+  materials meet stays: so each face keeps its material, and the faces
+  of each material still meet the faces of the next one. The collapses
+  stop at the budget of faces.
   """
 
   alias World.Vec
+
+  # The weight of the plane of a border of two materials.
+  @border 10.0
 
   @doc """
   The mesh of `points` and triangles `faces` (each `{[a, b, c],
@@ -25,6 +32,20 @@ defmodule World.Simplify do
   def collapse(points, faces, budget) when length(faces) <= budget, do: {points, faces}
 
   def collapse(points, faces, budget) do
+    %{points: points, faces: faces} = collapse(points, faces, budget, [])
+    {points, faces}
+  end
+
+  @doc """
+  `collapse/3` with options: `fixed` (the indices of the points that
+  stay where they are: the points that a mesh shares with the next
+  one), and `quadrics` (the quadric of each point, from a collapse
+  before: the planes of the first surface, in place of the planes of
+  these faces). Gives `%{points, faces, ids, quadrics}`: `ids` are the
+  indices in `points` of the points that stay, and `quadrics` their
+  quadrics, for a collapse after.
+  """
+  def collapse(points, faces, budget, opts) do
     pts = points |> Enum.with_index() |> Map.new(fn {p, i} -> {i, Vec.float(p)} end)
     fs = faces |> Enum.with_index() |> Map.new(fn {{[a, b, c], m}, i} -> {i, {a, b, c, m}} end)
 
@@ -33,15 +54,22 @@ defmodule World.Simplify do
         Enum.reduce([a, b, c], acc, &Map.update(&2, &1, [f], fn l -> [f | l] end))
       end)
 
-    q = Map.new(pts, fn {v, _} -> {v, Enum.reduce(vfaces[v] || [], zero(), &add(&2, plane(pts, fs[&1])))} end)
+    kinds = Map.new(vfaces, fn {v, list} -> {v, list |> Enum.map(&elem(fs[&1], 3)) |> Enum.uniq() |> length()} end)
+    stay = MapSet.new(Keyword.get(opts, :fixed, []))
+    locked = for({v, n} <- kinds, n > 1, into: MapSet.new(), do: v) |> MapSet.union(stay)
+    fixed = for({v, n} <- kinds, n > 2, into: MapSet.new(), do: v) |> MapSet.union(stay)
 
-    locked =
-      for {v, list} <- vfaces,
-          list |> Enum.map(&elem(fs[&1], 3)) |> Enum.uniq() |> length() > 1,
-          into: MapSet.new(),
-          do: v
+    q =
+      case opts[:quadrics] do
+        nil ->
+          q = Map.new(pts, fn {v, _} -> {v, Enum.reduce(vfaces[v] || [], zero(), &add(&2, plane(pts, fs[&1])))} end)
+          Enum.reduce(fs, q, fn {_, face}, q -> border(q, pts, fs, vfaces, face) end)
 
-    s = %{pts: pts, fs: fs, vf: vfaces, q: q, locked: locked, ver: %{}, count: map_size(fs)}
+        list ->
+          list |> Enum.with_index() |> Map.new(fn {q, i} -> {i, q} end)
+      end
+
+    s = %{pts: pts, fs: fs, vf: vfaces, q: q, locked: locked, fixed: fixed, ver: %{}, count: map_size(fs)}
     heap = Enum.reduce(edges(s), :gb_sets.new(), fn {a, b}, h -> push(h, s, a, b) end)
     s = run(s, heap, budget)
     pack(s)
@@ -71,18 +99,45 @@ defmodule World.Simplify do
     for {_, {a, b, c, _}} <- s.fs, {x, y} <- [{a, b}, {b, c}, {c, a}], uniq: true, do: {min(x, y), max(x, y)}
   end
 
-  # An edge into the heap, with its cost and its place; none between two
-  # points that stay.
+  # The quadrics of the borders of the materials: for each edge of a face
+  # whose face across it has another material, the plane through the edge
+  # at a right angle to the face, with a large weight. So a point on a
+  # border moves along it, and the border keeps its line.
+  defp border(q, pts, fs, vf, {a, b, c, m}) do
+    Enum.reduce([{a, b}, {b, c}, {c, a}], q, fn {x, y}, q ->
+      other = for f <- vf[x], f in vf[y], {_, _, _, m2} = fs[f], m2 != m, do: f
+
+      if other == [] do
+        q
+      else
+        n = normal([pts[a], pts[b], pts[c]])
+        side = Vec.cross(Vec.sub(pts[y], pts[x]), n)
+        plane = plane_of(side, pts[x], @border)
+        q |> Map.update!(x, &add(&1, plane)) |> Map.update!(y, &add(&1, plane))
+      end
+    end)
+  end
+
+  # An edge into the heap, with its cost and its place. A point where
+  # three materials meet stays; a point on a border moves only along it.
   defp push(heap, s, a, b) do
     {a, b} = {min(a, b), max(a, b)}
     {la, lb} = {MapSet.member?(s.locked, a), MapSet.member?(s.locked, b)}
+    {fa, fb} = {MapSet.member?(s.fixed, a), MapSet.member?(s.fixed, b)}
+    both = [s.pts[a], s.pts[b], Vec.scale(Vec.add(s.pts[a], s.pts[b]), 0.5)]
 
-    places =
+    # The places, and the point that stays (the first): the point that
+    # does not move keeps its index too.
+    {places, a, b} =
       cond do
-        la and lb -> []
-        la -> [s.pts[a]]
-        lb -> [s.pts[b]]
-        true -> [s.pts[a], s.pts[b], Vec.scale(Vec.add(s.pts[a], s.pts[b]), 0.5)]
+        fa and fb -> {[], a, b}
+        la and lb and not on_border?(s, a, b) -> {[], a, b}
+        fa -> {[s.pts[a]], a, b}
+        fb -> {[s.pts[b]], b, a}
+        la and lb -> {both, a, b}
+        la -> {[s.pts[a]], a, b}
+        lb -> {[s.pts[b]], b, a}
+        true -> {both, a, b}
       end
 
     case places do
@@ -96,6 +151,11 @@ defmodule World.Simplify do
     end
   end
 
+  # An edge on a border of two materials: its two faces have two materials.
+  defp on_border?(s, a, b) do
+    for(f <- s.vf[a], f in s.vf[b], uniq: true, do: elem(s.fs[f], 3)) |> length() > 1
+  end
+
   # The points that share a face with a point.
   defp around(s, v), do: for(f <- s.vf[v], {a, b, c, _} = s.fs[f], u <- [a, b, c], u != v, uniq: true, do: u)
 
@@ -106,7 +166,8 @@ defmodule World.Simplify do
     shared = for f <- s.vf[a], f in s.vf[b], do: f
     moved = Enum.uniq(s.vf[a] ++ s.vf[b]) -- shared
 
-    if MapSet.size(common) != 2 or length(shared) != 2 or Enum.any?(moved, &flips?(s, &1, a, b, place)) do
+    if MapSet.size(common) != 2 or length(shared) != 2 or twins?(s, moved, a, b) or
+         Enum.any?(moved, &flips?(s, &1, a, b, place)) do
       :no
     else
       fs =
@@ -121,12 +182,22 @@ defmodule World.Simplify do
       ver = s.ver |> Map.update(a, 1, &(&1 + 1)) |> Map.update(b, 1, &(&1 + 1))
       # The point a is at the place of b when b stays: it stays too.
       locked = if MapSet.member?(s.locked, b), do: MapSet.put(s.locked, a), else: s.locked
+      fixed = if MapSet.member?(s.fixed, b), do: MapSet.put(s.fixed, a), else: s.fixed
       pts = s.pts |> Map.put(a, place) |> Map.delete(b)
-      {:ok, %{s | pts: pts, fs: fs, vf: vf, q: q, ver: ver, locked: locked, count: s.count - length(shared)}}
+
+      {:ok,
+       %{s | pts: pts, fs: fs, vf: vf, q: q, ver: ver, locked: locked, fixed: fixed, count: s.count - length(shared)}}
     end
   end
 
   defp sub(x, b, a), do: if(x == b, do: a, else: x)
+
+  # Two faces on the same three points after the collapse (a tetrahedron
+  # would become a flat shell of two faces).
+  defp twins?(s, moved, a, b) do
+    sets = for f <- moved, {x, y, z, _} = s.fs[f], do: Enum.sort([sub(x, b, a), sub(y, b, a), sub(z, b, a)])
+    length(Enum.uniq(sets)) < length(sets)
+  end
 
   # A face that goes: out of the lists of its other points.
   defp drop(vf, {x, y, z, _}, f, skip) do
@@ -145,23 +216,22 @@ defmodule World.Simplify do
   defp normal([p, q, r]), do: Vec.cross(Vec.sub(q, p), Vec.sub(r, p))
 
   # The quadric of the plane of a face: (n . x + d)^2, as its ten numbers.
-  defp plane(pts, {a, b, c, _}) do
-    n = normal([pts[a], pts[b], pts[c]])
+  defp plane(pts, {a, b, c, _}), do: plane_of(normal([pts[a], pts[b], pts[c]]), pts[a], 1.0)
+
+  # The quadric of the plane through a point with a normal, with a weight.
+  defp plane_of(n, p, w) do
     len = Vec.len(n)
 
     if len < 1.0e-15 do
       zero()
     else
       {x, y, z} = Vec.scale(n, 1 / len)
-      d = -Vec.dot({x, y, z}, pts[a])
-      {x * x, x * y, x * z, x * d, y * y, y * z, y * d, z * z, z * d, d * d}
+      d = -Vec.dot({x, y, z}, p)
+      {w * x * x, w * x * y, w * x * z, w * x * d, w * y * y, w * y * z, w * y * d, w * z * z, w * z * d, w * d * d}
     end
   end
 
   defp zero, do: {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
-
-  defp add({a1, a2, a3, a4, a5, a6, a7, a8, a9, a10}, {b1, b2, b3, b4, b5, b6, b7, b8, b9, b10}),
-    do: {a1 + b1, a2 + b2, a3 + b3, a4 + b4, a5 + b5, a6 + b6, a7 + b7, a8 + b8, a9 + b9, a10 + b10}
 
   defp error({xx, xy, xz, xd, yy, yz, yd, zz, zd, dd}, {x, y, z}) do
     xx * x * x + 2 * xy * x * y + 2 * xz * x * z + 2 * xd * x + yy * y * y + 2 * yz * y * z + 2 * yd * y + zz * z * z +
@@ -173,6 +243,10 @@ defmodule World.Simplify do
     used = s.fs |> Map.values() |> Enum.flat_map(fn {a, b, c, _} -> [a, b, c] end) |> Enum.uniq() |> Enum.sort()
     ids = used |> Enum.with_index() |> Map.new()
     faces = s.fs |> Enum.sort() |> Enum.map(fn {_, {a, b, c, m}} -> {[ids[a], ids[b], ids[c]], m} end)
-    {Enum.map(used, &s.pts[&1]), faces}
+    %{points: Enum.map(used, &s.pts[&1]), faces: faces, ids: used, quadrics: Enum.map(used, &s.q[&1])}
   end
+
+  @doc "The sum of two quadrics (`collapse/4`)."
+  def add({a1, a2, a3, a4, a5, a6, a7, a8, a9, a10}, {b1, b2, b3, b4, b5, b6, b7, b8, b9, b10}),
+    do: {a1 + b1, a2 + b2, a3 + b3, a4 + b4, a5 + b5, a6 + b6, a7 + b7, a8 + b8, a9 + b9, a10 + b10}
 end
