@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Draft |
+| Status | Approved (the owner, 2026-11-12: "I approve plan") |
 | Depends on | Plan 0007 (the people build each model as actors). It comes before the open steps of plan 0007 (the owner, 2026-11-12). |
 | Changes | A new module of fields of distances (`World.SDF`); a tree of processes that finds the cells near the surface; bricks of the field in binaries; a surface with sharp edges and no gaps between bricks; a cache of bricks by hash; a skill `sculpt` for blueprints and drawings; the format of a sculpture in `docs/format.md`; one model of the catalog made again from edits. |
 
@@ -33,6 +33,10 @@ At the end:
   again.
 - **Each level of detail from the same edits**, and in the budget of its
   triangles.
+- **A live sculpture.** A sculpture can be a process that keeps its
+  edits and takes each edit as a message: it makes again only the bricks
+  that the edit reaches, and streams them, so a user sees each change
+  soon.
 - **One model of the catalog** comes from edits, and the measure
   (`mix world.bench`) compares it with the model of today.
 
@@ -58,6 +62,9 @@ and:
 > The research is just for reference. We learn from them and choose the
 > best approach for us, taking advantage of the parallel architecture of
 > Erlang.
+
+> For the open question, yes, live sculpture is part of the plan. I
+> approve plan.
 
 ## 3. What Dreams does (a reference)
 
@@ -189,6 +196,7 @@ parallel work second.
 | D7 | **The surface by dual contouring in each brick**: one point in each cell that the surface crosses, at the least squared distance to the planes of its cut edges (probabilistic quadrics [P13]), kept in its cell; a quad across each cut edge [P10]. Each shared edge has one owner brick, and the border of each brick makes its points match those of the next one [P14]. | Sharp edges stay sharp where the edits are hard, and the surface has no gap between bricks. Surface nets (World today) is the same method with the point at the mean. |
 | D8 | **The levels of detail:** cells of 2 cm, 8 cm and 32 cm (an estimate) at near, mid and far (the levels of `World.Detail`), then an edge collapse by quadric error metrics to the budget of triangles of the level [P16]. | The same edits at each level, each level in its budget. |
 | D9 | **The skill `sculpt`** takes the edits in a node of a blueprint or a drawing. Its format is in `docs/format.md` ("A sculpture"), and `check_blueprint` checks it (the shapes, the sizes, the modes, at most 10,000 edits: an estimate). | A user sends a sculpture as it sends any blueprint. |
+| D11 | **A live sculpture is a process** (a GenServer under a supervisor, by the hash of its first edits or a name of its user): it keeps the edits, the tree of its cells and the keys of its bricks. A message `{:edit, i, edit}` (add, change or take away the edit `i`) finds the bricks that the old and the new edit reach (their bounds, grown by their blends), makes only those again with the tree of D3, and sends their new pieces of the surface to each watcher as they come (the events of World, `World.watch/1`). A new edit while the bricks of the last one are in work stops their processes (a message of priority) and starts again from the newest edits. | A user sees each change soon: the work is the bricks of the change, on each scheduler, and the newest edit wins. |
 | D10 | **The euclidean distance, in plain Erlang.** No NIF (the node runs at the edge in WebAssembly too). Each function of the field takes and gives floats in tuples, with no maps in the hot path. A compiled form of the short list of a brick (a function made for it) comes only if the measure asks for it [P7]. | One code at the edge and on a server; the measure decides each change of speed. |
 
 ## 8. Requirements
@@ -211,6 +219,11 @@ parallel work second.
 - **R5.** When one edit of a sculpture of 1,000 edits changes, the bricks
   that are made again are only the bricks that it reaches, before or
   after the change; the others come from the cache.
+- **R8.** A live sculpture of 1,000 edits takes a change of one edit and
+  sends the new pieces of its surface in less than a tenth of the time of
+  the whole sculpture; its surface after the change is the surface of a
+  new build of the same edits; an edit that comes while the last one is
+  in work stops that work.
 - **R6.** A sculpture comes in a blueprint over MCP (`check_blueprint`,
   `build`), and each error has its path.
 - **R7.** The model of step 6 comes from at most 200 edits, has the
@@ -230,8 +243,12 @@ on each commit, and the full check on the tip before a push.
    seams, the levels, the edge collapse.
 4. **The sculptor and its crew, and the cache** (D4, D6; R4, R5): the
    task `sculpt`, the tree as the crew of the hand, the table of bricks.
-5. **The skill `sculpt` and its format** (D9; R6), `docs/format.md`.
-6. **One model from edits** (R7): a model of the catalog made again,
+5. **The live sculpture** (D11; R8): the process, its edits as
+   messages, the bricks of a change, the stream of their pieces.
+6. **The skill `sculpt` and its format** (D9; R6), `docs/format.md`, and
+   the live sculpture over MCP (tools to open one, to send an edit, and
+   to watch it).
+7. **One model from edits** (R7): a model of the catalog made again,
    with its shots and the measure.
 
 ## 10. Acceptance criteria
@@ -251,10 +268,8 @@ on each commit, and the full check on the tip before a push.
   splits it; is it needed in step 3, or later when a model needs it?
 - **The sizes of the cells** of D8 are an estimate: the measure of step
   3 sets them.
-- **A live sculpture.** Later, a sculpture can be a process that keeps
-  its edits and takes an edit as a message: it makes again only the
-  bricks of that edit, and streams them. Is it a part of this plan, or
-  of a later one?
+- **A live sculpture** is a part of this plan (the owner, 2026-11-12):
+  D11, R8, step 5.
 
 ## 12. Sources
 
