@@ -143,3 +143,22 @@ shots went to the owner), and the far level has the light of the true
 surface. One fault came out: a paint with a color and no material gave
 its faces no material (a second mesh, in blocks); a paint with no
 material keeps the material under it.
+
+### Step 3: mirror, repeat and groups (2026-11-12)
+
+The data of the skill `sculpt` takes `mirror` and `repeat` on each edit,
+and `groups` with edits of the shape `group` (`docs/format.md`, "A
+sculpture"). Each gives the same field as its copies written by hand
+(R4, `test/world/skills/sculpt_test.exs`), and each wrong value gives its
+path. Two points of the work:
+
+- **The copy of a group is the whole group**, in the order of its edits,
+  then the next copy: the order of the edits changes a smooth joint, so
+  a copy edit by edit gave another surface than the group by hand.
+- **A mirror keeps the right hand:** the frame of a copy is made again
+  from its mirrored axis and up, so its x is the other way. Each shape
+  is the same across its x; the points of a tube turn theirs.
+
+A change of a live sculpture is one shape: an edit with a mirror or a
+repeat is refused there with its path.
+

@@ -81,9 +81,12 @@ defmodule World.Sculpt.Web do
   def edit(%{"sculpture" => id, "index" => i} = args) when is_binary(id) and is_integer(i) do
     edit = args["edit"]
     errors = if edit == nil, do: [], else: Skill.check(%{"edits" => [edit]}, "") |> Enum.map(&at_edit/1)
+    # A change is one shape: an edit with copies (a mirror, a repeat) is many.
+    copies = if edit != nil and errors == [], do: Skill.edits([edit]), else: [nil]
 
     with [] <- errors,
-         {:ok, v} <- Live.edit(id, i, edit && hd(Skill.edits([edit]))) do
+         {:copies, [one]} <- {:copies, copies},
+         {:ok, v} <- Live.edit(id, i, one) do
       {:ok, %{"sculpture" => id, "version" => v}}
     else
       {:error, :index} ->
@@ -91,6 +94,9 @@ defmodule World.Sculpt.Web do
 
       {:error, :none} ->
         {:error, [%{"path" => "sculpture", "message" => "no such live sculpture"}]}
+
+      {:copies, _} ->
+        {:error, [%{"path" => "edit", "message" => "must be one shape: no mirror and no repeat in a change"}]}
 
       errors ->
         {:error, paths(errors)}

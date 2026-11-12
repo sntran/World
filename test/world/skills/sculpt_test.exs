@@ -147,11 +147,213 @@ defmodule World.Skills.SculptTest do
     assert Skill.check(5, "x") == [{"x", "must be an object"}]
   end
 
-  test "the example of docs/format.md is a node that the check passes, and a sculptor makes it" do
-    [_, json] = Regex.run(~r/## A sculpture.*?```json\n(.*?)```/s, File.read!("docs/format.md"))
-    node = JSON.decode!(json)
-    d = %{"name" => "stone", "kind" => "item", "nodes" => [node]}
-    assert {:ok, _} = Orders.check(order(d))
-    assert [{"stone", %World.Part{shapes: [_ | _]}, _}] = Detail.with(:mid, fn -> Drawing.build(d) end).nodes
+  test "the examples of docs/format.md pass the check, and a sculptor makes them" do
+    [_, section] = Regex.run(~r/## A sculpture(.*?)\n## /s, File.read!("docs/format.md"))
+    [data, node] = for [_, json] <- Regex.scan(~r/```json\n(.*?)```/s, section), do: JSON.decode!(json)
+    # The first one is the data of a sculpture with a group and copies; the second one a node.
+    for n <- [%{"name" => "stone", "skill" => %{"sculpt" => Map.put(data, "cells", %{"mid" => 0.004})}}, node] do
+      d = %{"name" => "stone", "kind" => "item", "nodes" => [n]}
+      assert {:ok, _} = Orders.check(order(d))
+      assert [{"stone", %World.Part{shapes: [_ | _]}, _}] = Detail.with(:mid, fn -> Drawing.build(d) end).nodes
+    end
+
+    assert length(Skill.edits(data["edits"], data["groups"])) == 1 + 4 + 6
+  end
+
+  # Points round the origin, for the fields of two lists of edits.
+  defp samples do
+    :rand.seed(:exsss, {9, 9, 9})
+    for _ <- 1..300, do: {:rand.uniform() * 2 - 1, :rand.uniform() * 2 - 1, :rand.uniform() * 2 - 1}
+  end
+
+  defp same_field?(a, b), do: Enum.all?(samples(), &(abs(World.SDF.value(a, &1) - World.SDF.value(b, &1)) < 1.0e-9))
+
+  test "a mirror gives the copies across the planes of the sculpture: the same field as the copies by hand (R4)" do
+    ball = %{"shape" => "ball", "size" => [0.1], "at" => [0.3, 0.1, 0.2]}
+
+    assert same_field?(
+             Skill.edits([Map.put(ball, "mirror", "x")]),
+             Skill.edits([ball, %{ball | "at" => [-0.3, 0.1, 0.2]}])
+           )
+
+    four = for x <- [0.3, -0.3], z <- [0.2, -0.2], do: %{ball | "at" => [x, 0.1, z]}
+    assert same_field?(Skill.edits([Map.put(ball, "mirror", ["x", "z"])]), Skill.edits(four))
+
+    # A shape with a turn, and a tube: the field of the copy at a point is the field of the shape at the mirror of the point.
+    cone = %{
+      "shape" => "cone",
+      "size" => [0.1, 0.02, 0.2],
+      "at" => [0.3, 0.1, 0.0],
+      "axis" => [1, 2, 3],
+      "up" => [0, 1, -1]
+    }
+
+    tube = %{
+      "shape" => "tube",
+      "size" => %{"points" => [[0.1, 0, 0], [0.3, 0.2, 0.1], [0.2, 0.4, 0.3]], "radii" => [0.05, 0.03, 0.02]},
+      "at" => [0.1, 0, 0],
+      "axis" => [1, 0, 1]
+    }
+
+    for e <- [cone, tube], plane <- ~w(x y z) do
+      [one, copy] = Skill.edits([Map.put(e, "mirror", plane)])
+      flip = fn {x, y, z} -> %{"x" => {-x, y, z}, "y" => {x, -y, z}, "z" => {x, y, -z}}[plane] end
+      for p <- samples(), do: assert_in_delta(World.SDF.distance(copy, flip.(p)), World.SDF.distance(one, p), 1.0e-9)
+    end
+  end
+
+  test "a repeat gives a ring or a row of copies: the same field as the copies by hand (R4)" do
+    ball = %{"shape" => "ball", "size" => [0.1], "at" => [0.5, 0, 0.1]}
+    ring = for {x, y} <- [{0.5, 0}, {0, 0.5}, {-0.5, 0}, {0, -0.5}], do: %{ball | "at" => [x, y, 0.1]}
+    assert same_field?(Skill.edits([Map.put(ball, "repeat", %{"count" => 4})]), Skill.edits(ring))
+
+    row = for k <- 0..2, do: %{ball | "at" => [0.5, 0, 0.1 + 0.2 * k]}
+    assert same_field?(Skill.edits([Map.put(ball, "repeat", %{"count" => 3, "move" => [0, 0, 0.2]})]), Skill.edits(row))
+
+    # A turn and a move: a stair round an axis through a center. Then a mirror of each copy.
+    box = %{"shape" => "box", "size" => [0.2, 0.05, 0.02], "at" => [0.3, 0, 0]}
+
+    stair =
+      Skill.edits([
+        Map.put(box, "repeat", %{
+          "count" => 3,
+          "axis" => [0, 0, 1],
+          "angle" => 90,
+          "move" => [0, 0, 0.1],
+          "center" => [0.1, 0, 0]
+        })
+      ])
+
+    hand = [
+      box,
+      %{box | "at" => [0.1, 0.2, 0.1]} |> Map.put("axis", [0, 0, 1]) |> Map.put("up", [-1, 0, 0]),
+      %{box | "at" => [-0.1, 0, 0.2]}
+    ]
+
+    assert same_field?(stair, Skill.edits(hand))
+    both = Skill.edits([Map.merge(ball, %{"repeat" => %{"count" => 4}, "mirror" => "z"})])
+
+    assert length(both) == 8 and
+             same_field?(
+               both,
+               Skill.edits(ring ++ Enum.map(ring, fn e -> %{e | "at" => List.replace_at(e["at"], 2, -0.1)} end))
+             )
+  end
+
+  test "a group is used at a place and a scale, with copies: the same field as its edits by hand; the people make it (R4)" do
+    groups = %{
+      "eye" => [
+        %{"shape" => "ball", "size" => [0.1], "blend" => 0.02},
+        %{
+          "shape" => "capsule",
+          "size" => [0.1, 0.02],
+          "at" => [0, 0.1, 0],
+          "axis" => [0, 1, 0],
+          "blend" => 0.02,
+          "mirror" => "x"
+        }
+      ]
+    }
+
+    use = %{"shape" => "group", "group" => "eye", "at" => [0.3, 0, 0.2], "scale" => 2, "mirror" => "x"}
+
+    hand =
+      for x <- [0.3, -0.3] do
+        [%{"shape" => "ball", "size" => [0.2], "at" => [x, 0, 0.2], "blend" => 0.04}] ++
+          List.duplicate(
+            %{"shape" => "capsule", "size" => [0.2, 0.04], "at" => [x, 0.2, 0.2], "axis" => [0, 1, 0], "blend" => 0.04},
+            2
+          )
+      end
+
+    assert same_field?(Skill.edits([use], groups), Skill.edits(List.flatten(hand)))
+    # A superellipsoid keeps its power at a scale; a tube has its points and its radii at the scale.
+    more = %{
+      "g" => [
+        %{"shape" => "superellipsoid", "size" => [0.1, 0.1, 0.1, 4]},
+        %{"shape" => "tube", "size" => %{"points" => [[0, 0, 0], [0.1, 0, 0]], "radii" => [0.02, 0.01]}}
+      ]
+    }
+
+    [s, t] = Skill.edits([%{"shape" => "group", "group" => "g", "scale" => 3}], more)
+    {x, _, _, power} = s.size
+    {[_, {far, _, _}], [r0, r1]} = t.size
+    assert power == 4.0
+    for {have, want} <- [{x, 0.3}, {far, 0.3}, {r0, 0.06}, {r1, 0.03}], do: assert_in_delta(have, want, 1.0e-12)
+
+    data = %{"groups" => groups, "edits" => [%{"shape" => "ball", "size" => [0.25]}, use], "cells" => %{"far" => 0.04}}
+    assert paths(drawing(data)) == []
+    far = Detail.with(:far, fn -> Drawing.build(drawing(data)) end)
+    assert [{"stone", %World.Part{shapes: [_ | _]}, _}] = far.nodes
+    assert Skill.estimate(data, :far) > 0
+  end
+
+  defp paths(d) do
+    case Orders.check(order(d)) do
+      {:error, errors} -> Enum.map(errors, & &1["path"])
+      {:ok, _} -> []
+    end
+  end
+
+  test "the errors of a mirror, a repeat and a group, each with its path; the count of the copies" do
+    p = "options.drawing.nodes.0.skill.sculpt"
+    ball = %{"shape" => "ball", "size" => [0.1]}
+    with_edit = fn e -> drawing(%{"edits" => [Map.merge(ball, e)]}) end
+    groups = %{"g" => [ball]}
+
+    cases = [
+      {with_edit.(%{"mirror" => "w"}), ["#{p}.edits.0.mirror"]},
+      {with_edit.(%{"mirror" => ["x", "x"]}), ["#{p}.edits.0.mirror"]},
+      {with_edit.(%{"mirror" => []}), ["#{p}.edits.0.mirror"]},
+      {with_edit.(%{"repeat" => 4}), ["#{p}.edits.0.repeat"]},
+      {with_edit.(%{
+         "repeat" => %{"count" => 1, "axis" => [0, 0, 0], "angle" => 400, "move" => "up", "center" => [0], "more" => 1}
+       }),
+       [
+         "#{p}.edits.0.repeat.more",
+         "#{p}.edits.0.repeat.count",
+         "#{p}.edits.0.repeat.axis",
+         "#{p}.edits.0.repeat.angle",
+         "#{p}.edits.0.repeat.move",
+         "#{p}.edits.0.repeat.center"
+       ]},
+      {with_edit.(%{"repeat" => %{"angle" => 10}}), ["#{p}.edits.0.repeat.count"]},
+      {drawing(%{"edits" => [%{"shape" => "group", "group" => "nobody"}]}), ["#{p}.edits.0.group"]},
+      {drawing(%{"groups" => groups, "edits" => [%{"shape" => "group"}]}), ["#{p}.edits.0.group"]},
+      {drawing(%{
+         "groups" => groups,
+         "edits" => [%{"shape" => "group", "group" => "g", "scale" => 0, "size" => [1], "at" => [0]}]
+       }), ["#{p}.edits.0.size", "#{p}.edits.0.scale", "#{p}.edits.0.at"]},
+      {drawing(%{"groups" => %{"g" => [%{"shape" => "group", "group" => "g"}]}, "edits" => [ball]}),
+       ["#{p}.groups.g.0.shape"]},
+      {drawing(%{"groups" => %{"A b" => [ball], "e" => [], "f" => [%{"shape" => "ball"}]}, "edits" => [ball]}),
+       ["#{p}.groups.A b", "#{p}.groups.e", "#{p}.groups.f.0.size"]},
+      {drawing(%{"groups" => [ball], "edits" => [ball]}), ["#{p}.groups"]},
+      # 8 mirrors of 1,000 copies, and 2,001 more: 10,001 edits.
+      {drawing(%{
+         "edits" => [
+           Map.merge(ball, %{"repeat" => %{"count" => 1_000}, "mirror" => ~w(x y z)}),
+           Map.put(ball, "repeat", %{"count" => 1_000}),
+           Map.put(ball, "repeat", %{"count" => 1_000}),
+           ball
+         ]
+       }), ["#{p}.edits"]},
+      {drawing(%{
+         "groups" => %{"g" => List.duplicate(ball, 1_000)},
+         "edits" => [%{"shape" => "group", "group" => "g", "repeat" => %{"count" => 11}}]
+       }), ["#{p}.edits"]}
+    ]
+
+    for {d, expected} <- cases, do: assert(paths(d) == expected, inspect({expected, paths(d)}))
+
+    assert paths(
+             drawing(%{
+               "edits" => [
+                 Map.merge(ball, %{"repeat" => %{"count" => 1_000}, "mirror" => ~w(x y z)}),
+                 Map.put(ball, "repeat", %{"count" => 1_000}),
+                 Map.put(ball, "repeat", %{"count" => 1_000})
+               ]
+             })
+           ) == []
   end
 end

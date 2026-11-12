@@ -415,6 +415,8 @@ source: World makes the part again from them at each level.
 The data of the skill:
 
 - `edits`: a list of 1 to 10,000 edits, in their order;
+- `groups`: lists of edits with a name, for the edits of the shape
+  `group` (below);
 - `ports`: the ports of the part (as in "A drawing");
 - `sources`: at most 16 texts;
 - `budget`: the most triangles at `near`, `mid` and `far` (12 to
@@ -452,6 +454,37 @@ An edit has its `shape` and its `size`, and these keys:
   `#ffffff` in the `materials` of the drawing), the colors are as they
   are written. A border of two colors of one material is smooth; a border
   of two materials follows the cells.
+
+An edit can have copies, so a few edits make much:
+
+- `mirror`: `x`, `y` or `z`, or a list of them: the copy of the edit
+  across that plane of the sculpture (through its origin); two planes
+  give four copies, three give eight;
+- `repeat`: `{"count": N}` (2 to 1,000) gives a ring of N copies round
+  the z of the sculpture; `axis` and `center` give another axis, `angle`
+  the degrees from one copy to the next (360 / N by default), and `move`
+  a step `[x, y, z]` from one copy to the next (with a move and no
+  angle, a row; with both, a stair or a spiral). The mirror of each copy
+  comes after it.
+
+A group is a list of edits with a name, in `groups` of the data
+(`{"scale": [...edits...]}`; no group in a group). An edit of the shape
+`group` uses it: `{"shape": "group", "group": NAME}` with `at`, `axis`
+and `up` (the place of the origin of the group), a `scale` (its sizes,
+its places and its blends times the scale), and a `mirror` and a `repeat`
+(each copy is the whole group). A sculpture has at most 10,000 edits
+with their copies.
+
+```json
+{"groups": {"eye": [
+   {"shape": "ball", "size": [0.012], "color": "#f4f0e6"},
+   {"shape": "ball", "size": [0.006], "at": [0.008, 0, 0], "color": "#101010"}]},
+ "edits": [
+   {"shape": "ellipsoid", "size": [0.05, 0.12, 0.05], "color": "#a88840"},
+   {"shape": "group", "group": "eye", "at": [0.04, 0.08, 0.015], "mirror": "x"},
+   {"shape": "ellipsoid", "size": [0.004, 0.012, 0.01], "at": [0.05, -0.05, 0],
+    "blend": 0.004, "color": "#846034", "repeat": {"count": 6, "axis": [0, 1, 0]}}]}
+```
 
 After the cut to its budget, each point of the mesh goes back onto the
 surface of the edits, and takes the normal of the surface there

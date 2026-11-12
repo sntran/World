@@ -124,6 +124,8 @@ defmodule World.Sculpt.WebTest do
            ) == ["edit.size"]
 
     assert errors(tool("edit_sculpture", %{"sculpture" => id, "index" => 9, "edit" => nil})) == ["index"]
+    mirror = %{"shape" => "ball", "size" => [0.1], "at" => [0.3, 0, 0], "mirror" => "x"}
+    assert errors(tool("edit_sculpture", %{"sculpture" => id, "index" => 0, "edit" => mirror})) == ["edit"]
     assert errors(tool("edit_sculpture", %{"sculpture" => "nobody", "index" => 0, "edit" => nil})) == ["sculpture"]
     assert errors(tool("edit_sculpture", %{"sculpture" => id})) == [""]
     assert errors(tool("close_sculpture", %{"sculpture" => "nobody"})) == ["sculpture"]

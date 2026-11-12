@@ -68,7 +68,7 @@ defmodule World.MCP do
   @edit %{
     "type" => "object",
     "description" =>
-      ~s<An edit (docs/format.md, "A sculpture"): {"shape": "ball", "size": [0.1], "at": [x, y, z], "axis": [x, y, z], "up": [x, y, z], "mode": "add" | "subtract" | "paint", "blend": M, "material": ROLE}.>
+      ~s<An edit (docs/format.md, "A sculpture"): {"shape": "ball", "size": [0.1], "at": [x, y, z], "axis": [x, y, z], "up": [x, y, z], "mode": "add" | "subtract" | "paint", "blend": M, "material": ROLE, "color": "#rrggbb", "mirror": "x", "repeat": {"count": N}}.>
   }
 
   @tools [
