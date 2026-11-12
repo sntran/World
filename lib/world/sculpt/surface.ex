@@ -76,19 +76,29 @@ defmodule World.Sculpt.Surface do
     %{quads: quads, points: points}
   end
 
-  @doc "The meshes of the pieces of a sculpture: one `World.Mesh` for each material, with its quads in two triangles."
-  def meshes(pieces) do
+  @doc """
+  The meshes of the pieces of a sculpture: one `World.Mesh` for each
+  material, with its quads in two triangles. With the option `budget`
+  (faces), fewer faces for all the materials together, with their shape
+  (`World.Simplify.collapse/3`).
+  """
+  def meshes(pieces, opts \\ []) do
     points = Enum.reduce(pieces, %{}, &Map.merge(&2, &1.points))
+    quads = Enum.flat_map(pieces, & &1.quads)
+    keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+    ids = keys |> Enum.with_index() |> Map.new()
+    tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
+    pts = Enum.map(keys, &points[&1])
+    {pts, tris} = if opts[:budget], do: World.Simplify.collapse(pts, tris, opts[:budget]), else: {pts, tris}
+    all = List.to_tuple(pts)
 
-    pieces
-    |> Enum.flat_map(& &1.quads)
+    tris
     |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
     |> Enum.sort_by(fn {material, _} -> inspect(material) end)
-    |> Enum.map(fn {material, quads} ->
-      keys = quads |> Enum.concat() |> Enum.uniq()
-      ids = keys |> Enum.with_index() |> Map.new()
-      faces = for q <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: f
-      Mesh.new(Enum.map(keys, &points[&1]), faces, material || :paint)
+    |> Enum.map(fn {material, faces} ->
+      used = faces |> Enum.concat() |> Enum.uniq()
+      local = used |> Enum.with_index() |> Map.new()
+      Mesh.new(Enum.map(used, &elem(all, &1)), Enum.map(faces, fn f -> Enum.map(f, &local[&1]) end), material || :paint)
     end)
   end
 

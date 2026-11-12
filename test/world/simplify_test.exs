@@ -1,0 +1,105 @@
+defmodule World.SimplifyTest do
+  # Fewer triangles for a mesh, with its shape: edge collapse by quadric
+  # error metrics (plan 0008, D8).
+  use ExUnit.Case, async: true
+
+  alias World.{Frame, Mesh, SDF, Sculpt, Simplify, Vec}
+  alias World.Sculpt.Surface
+
+  # The triangles of a sculpture with their materials, before the meshes.
+  defp triangles(edits, step) do
+    %{bricks: bricks} = Sculpt.bricks(edits, step)
+    pieces = Enum.map(bricks, &Surface.piece(&1, step))
+    points = Enum.reduce(pieces, %{}, &Map.merge(&2, &1.points))
+    quads = Enum.flat_map(pieces, & &1.quads)
+    keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+    ids = keys |> Enum.with_index() |> Map.new()
+    tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
+    {Enum.map(keys, &points[&1]), tris}
+  end
+
+  # Each edge in one face each way.
+  defp closed?(faces) do
+    faces
+    |> Enum.flat_map(fn {[a, b, c], _} -> [{a, b}, {b, c}, {c, a}] end)
+    |> Enum.frequencies()
+    |> then(fn count -> Enum.all?(count, fn {{a, b}, n} -> n == 1 and count[{b, a}] == 1 end) end)
+  end
+
+  defp volume(points, faces), do: Mesh.volume(points, Enum.map(faces, &elem(&1, 0))) / 6
+
+  test "a ball of many faces, to 500: closed, its volume, its points near its surface" do
+    {points, faces} = triangles([SDF.edit(:ball, {0.5})], 0.025)
+    assert length(faces) > 5_000 and closed?(faces)
+    {ps, fs} = Simplify.collapse(points, faces, 500)
+    assert length(fs) <= 500 and closed?(fs)
+    assert_in_delta volume(ps, fs), 4 / 3 * :math.pi() * 0.125, 0.04 * 4 / 3 * :math.pi() * 0.125
+    for p <- ps, do: assert(abs(Vec.len(p) - 0.5) < 0.03)
+  end
+
+  test "a box, to 100 faces: its faces stay flat, its volume and its bounds stay" do
+    box = [SDF.edit(:box, {0.42, 0.31, 0.27}, frame: Frame.move({0.013, 0.007, 0.004}))]
+    {points, faces} = triangles(box, 0.05)
+    {ps, fs} = Simplify.collapse(points, faces, 100)
+    assert length(fs) <= 100 and closed?(fs)
+    assert_in_delta volume(ps, fs), 0.84 * 0.62 * 0.54, 1.0e-3
+    {{lx, ly, lz}, {hx, hy, hz}} = Vec.bounds(ps)
+
+    for {a, b} <- [{lx, -0.407}, {hx, 0.433}, {ly, -0.303}, {hy, 0.317}, {lz, -0.266}, {hz, 0.274}],
+        do: assert_in_delta(a, b, 1.0e-5)
+  end
+
+  test "a stone of three materials, to half: closed, and the points at the borders of the materials stay" do
+    :rand.seed(:exsss, {5, 5, 5})
+
+    edits =
+      [SDF.edit(:ellipsoid, {0.6, 0.5, 0.4}, material: :stone)] ++
+        for i <- 1..12 do
+          dir = Vec.norm({:rand.normal(), :rand.normal(), :rand.normal()})
+          at = {elem(dir, 0) * 0.6, elem(dir, 1) * 0.5, elem(dir, 2) * 0.4}
+
+          SDF.edit(:ball, {0.12},
+            frame: Frame.move(at),
+            mode: :paint,
+            material: if(rem(i, 2) == 0, do: :moss, else: :clay)
+          )
+        end
+
+    {points, faces} = triangles(edits, 0.04)
+
+    border = fn ps, fs ->
+      fs
+      |> Enum.flat_map(fn {f, m} -> Enum.map(f, &{&1, m}) end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.filter(fn {_, ms} -> length(Enum.uniq(ms)) > 1 end)
+      |> Enum.map(fn {v, _} -> Enum.at(ps, v) end)
+      |> MapSet.new()
+    end
+
+    {ps, fs} = Simplify.collapse(points, faces, div(length(faces), 2))
+    assert length(fs) <= div(length(faces), 2) and closed?(fs)
+    assert MapSet.subset?(border.(ps, fs), border.(points, faces))
+    assert fs |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> Enum.sort() == [:clay, :moss, :stone]
+    # The meshes of the materials with a budget: the faces of the collapse.
+    # The points at the borders stay, so the budget is not always reached.
+    {_, few} = Simplify.collapse(points, faces, 400)
+    assert length(few) < div(length(faces), 2)
+    meshes = Surface.meshes(Enum.map(Sculpt.bricks(edits, 0.04).bricks, &Surface.piece(&1, 0.04)), budget: 400)
+    assert meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() == length(few)
+  end
+
+  test "a face with no area (its points on a line) does not stop the collapse" do
+    # A tetrahedron with the point m at the middle of the edge from a to b:
+    # the face a b d becomes a m d and m b d, and a b m has no area.
+    points = [{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.5, 0, 0}]
+    faces = [{[0, 2, 1], :a}, {[0, 3, 2], :a}, {[1, 2, 3], :a}, {[0, 4, 3], :a}, {[4, 1, 3], :a}, {[0, 1, 4], :a}]
+    assert closed?(faces)
+    {_ps, fs} = Simplify.collapse(points, faces, 4)
+    assert length(fs) <= 6 and closed?(fs)
+  end
+
+  test "a budget of more faces than the mesh has: the same mesh" do
+    {points, faces} = triangles([SDF.edit(:ball, {0.3})], 0.1)
+    assert Simplify.collapse(points, faces, length(faces)) == {points, faces}
+  end
+end
