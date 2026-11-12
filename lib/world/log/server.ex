@@ -7,7 +7,10 @@ defmodule World.Log.Server do
   construction and of the world (`World.Events`): `{:world, event}`,
   with the event as data (`World.Log.data/1` and its `"id"`).
 
-  It keeps the last #{2_000} events in its memory, and each event in the
+  It keeps the last #{2_000} events in its memory (a table, ETS, ordered by
+  id: a publish adds one event and takes away the oldest one, so it takes
+  the same work with 10 events in the log or 10,000; plan 0007, D7, R7),
+  and each event in the
   store of the log when the node has one (`World.Log.Store`), in
   batches: so a watcher that comes later gets the events of the past
   (`history/2`). A stop of the VM loses the events of the batch (fewer
@@ -53,16 +56,19 @@ defmodule World.Log.Server do
     store = Keyword.get_lazy(opts, :store, &Store.on?/0)
     Process.set_label(:log)
 
-    {last, recent} =
+    recent = :ets.new(:log_recent, [:ordered_set, :private])
+
+    last =
       case store && Store.last() do
         {:ok, n} ->
           started = %{"id" => n + @batch, "kind" => "started", "at" => 0, "wall" => World.Clock.wall()}
           started = Map.merge(started, %{"order" => nil, "who" => nil, "data" => %{}})
           Store.append([JSON.encode!(started)])
-          {n + @batch, [started]}
+          :ets.insert(recent, {n + @batch, started})
+          n + @batch
 
         _ ->
-          {0, []}
+          0
       end
 
     {:ok, %{last: last, recent: recent, buffer: [], timer: nil, store: store}}
@@ -77,14 +83,20 @@ defmodule World.Log.Server do
       Registry.dispatch(World.Events, key, fn watchers -> for {pid, _} <- watchers, do: send(pid, {:world, data}) end)
     end
 
-    s = %{s | last: id, recent: Enum.take([data | s.recent], @keep)}
-    {:noreply, keep(s, data)}
+    :ets.insert(s.recent, {id, data})
+    if :ets.info(s.recent, :size) > @keep, do: :ets.delete(s.recent, :ets.first(s.recent))
+    {:noreply, keep(%{s | last: id}, data)}
   end
 
   @impl true
   def handle_call({:history, after_id}, _from, s) do
-    recent = s.recent |> Enum.reverse() |> Enum.filter(&(&1["id"] > after_id))
-    oldest = if s.recent == [], do: s.last + 1, else: List.last(s.recent)["id"]
+    recent = :ets.select(s.recent, [{{:"$1", :"$2"}, [{:>, :"$1", after_id}], [:"$2"]}])
+
+    oldest =
+      case :ets.first(s.recent) do
+        :"$end_of_table" -> s.last + 1
+        id -> id
+      end
 
     # The events that the memory does not keep come from the store, after
     # the events of the buffer go into it.

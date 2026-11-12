@@ -52,6 +52,27 @@ defmodule World.Log.ServerTest do
     assert length(history) == 2_000 and hd(history)["id"] == 2
   end
 
+  test "a publish takes the same work with 10 events in the log or 10,000 (plan 0007, R7)" do
+    s = server(store: false)
+    pid = Process.whereis(s)
+
+    # The publishes are casts: a call first, so the work before is done.
+    work = fn n ->
+      Server.last(s)
+      {:reductions, r0} = Process.info(pid, :reductions)
+      for i <- 1..n, do: Server.publish(event("work", "requested", i), s)
+      Server.last(s)
+      {:reductions, r1} = Process.info(pid, :reductions)
+      (r1 - r0) / n
+    end
+
+    for _ <- 1..10, do: Server.publish(event("work", "requested"), s)
+    small = work.(200)
+    for _ <- 1..10_000, do: Server.publish(event("work", "requested"), s)
+    large = work.(200)
+    assert large < small * 1.5
+  end
+
   test "the store keeps each event in batches; a new log goes on from the last id, and reads the older events from the store",
        %{tmp_dir: dir} do
     with_store(Path.join(dir, "log.jsonl"))
