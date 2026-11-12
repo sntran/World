@@ -45,7 +45,7 @@ defmodule World.Sculpt.Surface do
   is `{cell, part}`: the index of the cell in the grid, and the least
   corner of the part.
   """
-  def piece(%{at: {bi, bj, bk}, edits: edits} = brick, step) do
+  def piece(%{at: {bi, bj, bk}, edits: edits, limit: limit} = brick, step) do
     n = Sculpt.cells()
     base = {bi * n, bj * n, bk * n}
     v = fn {i, j, k} -> Sculpt.at(brick, {i, j, k}) end
@@ -64,7 +64,7 @@ defmodule World.Sculpt.Surface do
     # The cells of the quads, and each edge of those cells that the
     # surface cuts: its cut and the normal there, found once.
     cells = for {start, axis, _, _} <- crossed, c <- around(axis, start), uniq: true, do: c
-    cuts = cuts(cells, base, step, edits, v)
+    cuts = cuts(cells, base, step, &SDF.field(edits, &1, limit), v)
 
     quads =
       for {start, axis, v0, v1} <- crossed do
@@ -152,7 +152,7 @@ defmodule World.Sculpt.Surface do
 
   # Each edge of the cells that the surface cuts (`{start, axis}`): its
   # cut, the normal of the field there, and the material there.
-  defp cuts(cells, base, step, edits, v) do
+  defp cuts(cells, base, step, field, v) do
     for cell <- cells,
         {c0, c1} <- @edges,
         p0 = Vec.add(cell, corner(c0)),
@@ -164,9 +164,9 @@ defmodule World.Sculpt.Surface do
       {p0, p1, v0, v1}
     end
     |> Map.new(fn {p0, p1, v0, v1} ->
-      cut = cut(place(base, p0, step), place(base, p1, step), v0, v1, edits, step)
-      {_, material} = SDF.field(edits, cut)
-      {{p0, axis(p0, p1)}, {cut, gradient(edits, cut, step), material}}
+      cut = cut(place(base, p0, step), place(base, p1, step), v0, v1, field, step)
+      {_, material} = field.(cut)
+      {{p0, axis(p0, p1)}, {cut, gradient(field, cut, step), material}}
     end)
   end
 
@@ -179,18 +179,18 @@ defmodule World.Sculpt.Surface do
   # it, from the values at its ends (regula falsi, the Illinois way, in 8
   # steps or fewer): near a sharp edge the field is not a line along an edge of
   # the grid, so a line between the two values is not the cut.
-  defp cut(p0, p1, v0, v1, edits, step), do: falsi(p0, p1, edits, {0.0, v0}, {1.0, v1}, 8, nil, step * 1.0e-6)
+  defp cut(p0, p1, v0, v1, field, step), do: falsi(p0, p1, field, {0.0, v0}, {1.0, v1}, 8, nil, step * 1.0e-6)
 
-  defp falsi(p0, p1, _edits, {a, fa}, {b, fb}, 0, _side, _tol), do: Vec.lerp(p0, p1, a - fa * (b - a) / (fb - fa))
+  defp falsi(p0, p1, _field, {a, fa}, {b, fb}, 0, _side, _tol), do: Vec.lerp(p0, p1, a - fa * (b - a) / (fb - fa))
 
-  defp falsi(p0, p1, edits, {a, fa}, {b, fb}, n, side, tol) do
+  defp falsi(p0, p1, field, {a, fa}, {b, fb}, n, side, tol) do
     t = a - fa * (b - a) / (fb - fa)
-    ft = SDF.value(edits, Vec.lerp(p0, p1, t))
+    {ft, _} = field.(Vec.lerp(p0, p1, t))
 
     cond do
       abs(ft) <= tol -> Vec.lerp(p0, p1, t)
-      ft < 0 == fa < 0 -> falsi(p0, p1, edits, {t, ft}, {b, if(side == :a, do: fb / 2, else: fb)}, n - 1, :a, tol)
-      true -> falsi(p0, p1, edits, {a, if(side == :b, do: fa / 2, else: fa)}, {t, ft}, n - 1, :b, tol)
+      ft < 0 == fa < 0 -> falsi(p0, p1, field, {t, ft}, {b, if(side == :a, do: fb / 2, else: fb)}, n - 1, :a, tol)
+      true -> falsi(p0, p1, field, {a, if(side == :b, do: fa / 2, else: fa)}, {t, ft}, n - 1, :b, tol)
     end
   end
 
@@ -223,9 +223,9 @@ defmodule World.Sculpt.Surface do
 
   # The normal of the field at a point (central differences of the field
   # of the edits).
-  defp gradient(edits, {x, y, z}, step) do
+  defp gradient(field, {x, y, z}, step) do
     h = step * 1.0e-3
-    f = &SDF.value(edits, &1)
+    f = &elem(field.(&1), 0)
 
     Vec.norm(
       {f.({x + h, y, z}) - f.({x - h, y, z}), f.({x, y + h, z}) - f.({x, y - h, z}),

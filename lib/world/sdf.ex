@@ -101,11 +101,26 @@ defmodule World.SDF do
   @doc """
   The field of the edits at a point, and the material of the surface
   there: `{value, material}`. With no edit, the point is far outside.
+
+  With a `limit` (m), the value stays from `-limit` to `limit` after each
+  edit. Far from the surface each value is the limit, so an edit there
+  changes nothing, and `prune/4` lets it go: the short list of a cell
+  near the surface holds only the edits near it. The field stays a bound
+  (Lipschitz 1), and near the surface it is the field with no limit
+  where no blend takes values near the limit into it: a limit of a few
+  blends keeps the surface.
   """
-  def field(edits, p), do: Enum.reduce(edits, {@far, nil}, &step(&1, &2, distance(&1, p)))
+  def field(edits, p, limit \\ @far) do
+    Enum.reduce(edits, {limit, nil}, fn e, acc ->
+      {d, mat} = step(e, acc, distance(e, p))
+      {clamp(d, limit), mat}
+    end)
+  end
 
   @doc "The value of the field only."
-  def value(edits, p), do: elem(field(edits, p), 0)
+  def value(edits, p, limit \\ @far), do: elem(field(edits, p, limit), 0)
+
+  defp clamp(d, limit), do: min(max(d, -limit), limit)
 
   # An edit on the field so far: the smooth union, the smooth cut, or the
   # paint of the surface in its shape.
@@ -150,31 +165,39 @@ defmodule World.SDF do
   The edits that can change the field in a cell: the ball of the radius
   `half` round the point `center` (the half diagonal of a box). The field
   of the edits that it gives is the field of all the edits at each point
-  of the cell. An edit goes when, at its step, it changes the field at no
-  point of the cell: by the ranges of the field over the cell (each value
-  at the center, less and more `half`, folded edit by edit). An edit that
-  adds goes when its least value is at least the most value of the field
-  so far and its blend; an edit that takes away, when its least value is
-  at least its blend less the least value of the field so far; an edit
-  that paints, when its shape does not reach the cell.
+  of the cell (with the same `limit`, `field/3`). An edit goes when, at
+  its step, it changes the field at no point of the cell: by the ranges
+  of the field over the cell (each value at the center, less and more
+  `half`, folded edit by edit, in the limit). An edit that adds goes when
+  its least value is at least the most value of the field so far and its
+  blend; an edit that takes away, when its least value is at least its
+  blend less the least value of the field so far; an edit that paints,
+  when its shape does not reach the cell.
   """
-  def prune(edits, center, half) do
-    {kept, _} =
-      Enum.reduce(edits, {[], {@far, @far}}, fn e, {kept, {lo, hi} = range} ->
+  def prune(edits, center, half, limit \\ @far), do: elem(cell(edits, center, half, limit), 0)
+
+  @doc """
+  The edits of a cell (`prune/4`) and the range of their field over the
+  cell: `{edits, {lo, hi}}`. With `lo` more than 0 or `hi` less than 0,
+  the surface does not cross the cell.
+  """
+  def cell(edits, center, half, limit \\ @far) do
+    {kept, range} =
+      Enum.reduce(edits, {[], {limit, limit}}, fn e, {kept, {lo, hi} = range} ->
         d = distance(e, center)
         {dlo, dhi} = {d - half, d + half}
 
         case e.mode do
           :add when dlo >= hi + e.blend -> {kept, range}
-          :add -> {[e | kept], {smin(lo, dlo, e.blend), smin(hi, dhi, e.blend)}}
+          :add -> {[e | kept], {clamp(smin(lo, dlo, e.blend), limit), clamp(smin(hi, dhi, e.blend), limit)}}
           :subtract when dlo >= e.blend - lo -> {kept, range}
-          :subtract -> {[e | kept], {smax(lo, -dhi, e.blend), smax(hi, -dlo, e.blend)}}
+          :subtract -> {[e | kept], {clamp(smax(lo, -dhi, e.blend), limit), clamp(smax(hi, -dlo, e.blend), limit)}}
           :paint when dlo > 0.0 -> {kept, range}
           :paint -> {[e | kept], range}
         end
       end)
 
-    Enum.reverse(kept)
+    {Enum.reverse(kept), range}
   end
 
   defp join({{a, b, c}, {d, e, f}}, {{g, h, i}, {j, k, l}}),

@@ -3,33 +3,22 @@ defmodule World.SculptTest do
   # its surface (plan 0008, D3 and D5; R2).
   use ExUnit.Case, async: true
 
-  alias World.{Frame, SDF, Sculpt, Vec}
+  alias World.{SDF, Sculpt, Vec}
 
-  # A stone: an ellipsoid with balls added and taken away on its surface.
-  def stone(n) do
-    :rand.seed(:exsss, {3, 3, 3})
-    base = SDF.edit(:ellipsoid, {0.8, 0.6, 0.5}, material: :stone)
+  defp stone(n), do: World.Stone.edits(n)
 
-    bumps =
-      for i <- 1..(n - 1) do
-        dir = Vec.norm({:rand.normal(), :rand.normal(), :rand.normal()})
-        at = {elem(dir, 0) * 0.8, elem(dir, 1) * 0.6, elem(dir, 2) * 0.5}
-        mode = if rem(i, 3) == 0, do: :subtract, else: :add
-        SDF.edit(:ball, {0.05 + :rand.uniform() * 0.1}, frame: Frame.move(at), mode: mode, blend: 0.03)
-      end
-
-    [base | bumps]
-  end
-
-  test "each brick has the field of all the edits at its points, with its border" do
+  test "each brick has the field of all the edits at its points, with its border, in the limit of the field" do
     edits = stone(30)
     %{bricks: bricks, step: step} = Sculpt.bricks(edits, 0.05)
     assert bricks != [] and Sculpt.cells() == 8 and Sculpt.points() == 11
+    assert Sculpt.limit(edits, 0.05) == 4 * 0.05 + 2 * 0.03
 
     for b <- bricks, i <- [-1, 0, 4, 8, 9], j <- [-1, 3, 9], k <- [-1, 0, 7, 9] do
       p = Vec.add(Sculpt.corner(b.at, step), {i * step, j * step, k * step})
-      # The field is in floats of 32 bits.
-      assert_in_delta Sculpt.at(b, {i, j, k}), SDF.value(edits, p), 1.0e-6 * max(1.0, abs(SDF.value(edits, p)))
+      # The field is in floats of 32 bits; near the surface it is the field with no limit.
+      want = SDF.value(edits, p, b.limit)
+      assert_in_delta Sculpt.at(b, {i, j, k}), want, 1.0e-6 * max(1.0, abs(want))
+      if abs(want) < 2 * step, do: assert_in_delta(want, SDF.value(edits, p), 1.0e-12)
     end
   end
 

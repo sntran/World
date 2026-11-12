@@ -396,3 +396,31 @@ an edge of the grid, and its normal, is found once in a brick (the
 first version found it again for each cell round the edge, and took
 6 s). The collapse to the budget is one process (section 11).
 
+### Step 4: the cache (2026-11-12)
+
+The first cache missed too often: after a move of one bump (a ball of
+5 cm, 5 cm up) of the stone of 100 edits, 70 of 501 bricks at 2 cm (14%)
+had a new short list. A brick kept each edit that changes the field at
+one of its points, and far from the surface (0.4 m at a brick of 2 cm
+with its border) the field is large, so many edits change it there, with
+no change to the surface.
+
+So the field of a sculpture has a limit (`World.SDF.field/3`,
+`World.Sculpt.limit/2`: four cells and two of its largest blends): after
+each edit, each value stays in the limit. Far from the surface each
+value is the limit, so an edit there changes nothing, and the prune lets
+it go, with no error (the prune of D3 is exact for this field). The
+field stays a bound (Lipschitz 1). The tree tests the centers of the
+eight parts of a brick, so it does not keep a brick at the limit.
+
+| Cells | Bricks | Edits in a short list (mean) | Bricks made again after the move | Bricks (time) |
+|---|---|---|---|---|
+| 4 cm, no limit | 120 | 43.3 | 61 (51%) | |
+| 2 cm, no limit | 501 | 14.7 | 70 (14%) | 1.8 s |
+| 4 cm, limit | 110 | 33.0 | 30 (27%) | |
+| 2 cm, limit | 452 | 13.9 | 48 (11%) | 1.3 s |
+
+The bricks that are made again are all near the old or the new edit
+(`test/world/sculpt_cache_test.exs`), and the other bricks come from the
+cache with the same pieces (R5).
+

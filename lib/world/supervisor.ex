@@ -47,7 +47,8 @@ defmodule World.Supervisor do
       World.Log.Server,
       {DynamicSupervisor, name: World.Persons, strategy: :one_for_one},
       {DynamicSupervisor, name: World.Constructions, strategy: :one_for_one},
-      World.Census
+      World.Census,
+      World.Sculpt.Cache
     ] ++ yard(env) ++ server(env)
   end
 
