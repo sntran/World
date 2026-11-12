@@ -7,8 +7,9 @@ defmodule World.Skills.Sculpt do
   and its `size`, and `at`, `axis`, `up`, `mode`, `blend`, `material`),
   and `ports`, `sources`, `budget` (the most triangles at `near`, `mid`
   and `far`) and `cells` (the size of the cells at `near`, `mid` and
-  `far`, m: for a small model, smaller cells than the cells of the
-  levels, `World.Sculpt.step/1`). The sculptor makes the part with the tree of the
+  `far`, m). With no `cells` for a level and a budget, the cells fit the
+  budget and the thinnest edit (`World.Sculpt.fit/2`); with neither, the
+  cells of the level (`World.Sculpt.step/1`). The sculptor makes the part with the tree of the
   bricks of the edits (`World.Sculpt.model/2`) in its hand: the tree is
   the crew of the hand, so a stop of the person stops it (D4).
   """
@@ -77,8 +78,18 @@ defmodule World.Skills.Sculpt do
     end
   end
 
-  # The size of the cells of a level: from the data, else of the level.
-  defp step(data, level), do: get_in(data, ["cells", Atom.to_string(level)]) || World.Sculpt.step(level)
+  # The size of the cells of a level: from the data; else, with a budget,
+  # the cells that fit the budget and the thinnest edit; else the cells of
+  # the level.
+  defp step(data, level) do
+    l = Atom.to_string(level)
+
+    cond do
+      cells = get_in(data, ["cells", l]) -> cells
+      budget = get_in(data, ["budget", l]) -> World.Sculpt.fit(edits(data["edits"]), budget) || World.Sculpt.step(level)
+      true -> World.Sculpt.step(level)
+    end
+  end
 
   @doc "The edits of a sculpture from its data (`World.SDF.edit/3`)."
   def edits(list), do: Enum.map(list, &edit/1)

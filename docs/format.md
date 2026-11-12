@@ -422,8 +422,11 @@ The data of the skill:
   metrics takes the faces to the budget, and keeps the shape and the
   borders of the materials;
 - `cells`: the size of the cells at `near`, `mid` and `far` (m, 0.001 to
-  1), for a model smaller or larger than the cells of the levels (below):
-  a part thinner than about two cells can go.
+  1). A part thinner than about two cells can go. With no `cells` for a
+  level that has a budget, World chooses them: the largest cells that
+  give about 1.5 times the budget before the collapse, but at most half
+  the thinnest edit that adds or takes away. With neither, the cells of
+  the level (below).
 
 An edit has its `shape` and its `size`, and these keys:
 

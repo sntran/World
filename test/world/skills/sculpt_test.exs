@@ -52,7 +52,9 @@ defmodule World.Skills.SculptTest do
     assert faces <= 2_000 and faces > 500
     assert Enum.map(part.shapes, & &1.material) |> Enum.sort() == [:gray, :paint, :stone_wash]
     assert Map.has_key?(part.ports, "base") and part.sources == ["A test."]
-    assert part.shapes == World.Sculpt.model(Skill.edits(data()["edits"]), level: :mid, budget: 2_000)
+    # With a budget and no cells, the cells that fit the budget.
+    edits = Skill.edits(data()["edits"])
+    assert part.shapes == Sculpt.model(edits, step: Sculpt.fit(edits, 2_000), budget: 2_000)
 
     # Smaller cells: more faces.
     fine = Detail.with(:far, fn -> Drawing.build(drawing(Map.put(data(), "cells", %{"far" => 0.1}))) end)

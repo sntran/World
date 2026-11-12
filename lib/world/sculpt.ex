@@ -56,15 +56,55 @@ defmodule World.Sculpt do
   options: `level` (the level of detail of `World.Detail` by default),
   `step` (the size of the cells, the size of the level by default),
   `budget` (the most faces, `World.Simplify`), `parallel`, and `cache`
-  (true by default: the pieces of the bricks of the node,
-  `World.Sculpt.Cache`).
+  (true by default: the pieces of the bricks of the node, and the meshes
+  of the same edits, cells and budget, `World.Sculpt.Cache`).
   """
   def model(edits, opts \\ []) do
     step = opts[:step] || step(opts[:level] || Detail.level())
     opts = opts |> Keyword.put(:each, &Surface.piece(&1, step)) |> Keyword.put_new(:cache, true)
-    %{bricks: bricks} = bricks(edits, step, opts)
-    Surface.meshes(Enum.map(bricks, & &1.piece), budget: opts[:budget], small: 2 * step)
+    # The meshes of the same edits, cells and budget come from the cache.
+    key = if opts[:cache], do: Cache.key({:model, opts[:budget]}, step, edits)
+
+    with nil <- key && Cache.get(key) do
+      %{bricks: bricks} = bricks(edits, step, opts)
+      meshes = Surface.meshes(Enum.map(bricks, & &1.piece), budget: opts[:budget], small: 2 * step)
+      if key, do: Cache.put(key, meshes)
+      meshes
+    end
   end
+
+  @doc """
+  The cells (m) for the meshes of a sculpture in a budget of faces: the
+  largest cells that give about 1.5 times the budget before the collapse
+  (the surface of the sculpture is about half the surface of its box, and
+  a cell of the surface gives about three faces), but at most half the
+  thinnest edit that adds or takes away (so each part is two cells
+  across), and at least an eighth of the cells of the budget. The box is
+  the box of the shapes that add (with no blend). Nil with no edit that
+  adds.
+  """
+  def fit(edits, budget) do
+    case for(%{mode: :add, box: box} <- edits, do: box) do
+      [] ->
+        nil
+
+      boxes ->
+        {{x0, y0, z0}, {x1, y1, z1}} = Vec.bounds(Enum.flat_map(boxes, &Tuple.to_list/1))
+        {a, b, c} = {x1 - x0, y1 - y0, z1 - z0}
+        cells = :math.sqrt(2 * (a * b + b * c + c * a) / budget)
+        thin = for %{mode: mode} = e <- edits, mode != :paint, do: thickness(e.shape, e.size)
+        max(min(cells, Enum.min(thin) / 2), cells / 8)
+    end
+  end
+
+  # The least thickness of a shape: twice its least size.
+  defp thickness(:tube, {_, radii}), do: 2 * Enum.min(radii)
+  defp thickness(:capsule, {_h, r}), do: 2 * r
+  defp thickness(:ring, {_big, r}), do: 2 * r
+  defp thickness(:cylinder, {r, h}), do: 2 * min(r, h)
+  defp thickness(:cone, {r1, r2, h}), do: 2 * min(max(r1, r2), h)
+  defp thickness(shape, {x, y, z, _}) when shape in [:round_box, :superellipsoid], do: 2 * Enum.min([x, y, z])
+  defp thickness(_shape, size), do: 2 * (size |> Tuple.to_list() |> Enum.min())
 
   @doc """
   The bricks of a sculpture with cells of `step` m: `%{bricks: bricks,

@@ -561,3 +561,32 @@ The carp found six changes:
   tree:** the peak of the bricks of the near carp went from 273 MB to
   187 MB, in the same time.
 
+### Faster: the cells of the budget, and the cache of the meshes (2026-11-12)
+
+The owner asked if 6.6 s for the near carp is the best that World can
+do. It was not: the near carp made 95,408 faces with cells of 2 mm, and
+the collapse took 80% of them away. The time of the near carp went to
+the bricks (2.7 s), the mesh (0.8 s), the collapse (3.9 s) and the GLB
+(0.45 s). Two changes:
+
+- **The cells fit the budget** (`World.Sculpt.fit/2`): with a budget and
+  no `cells`, the largest cells that give about 1.5 times the budget
+  before the collapse, but at most half the thinnest edit (two cells
+  across a fin of 7 mm: 3.5 mm), and at least an eighth of the cells of
+  the budget. The carp has no `cells` now: each level has cells of
+  3.5 mm, so the three levels share their bricks in the cache.
+- **The meshes in the cache**, by a hash of the edits, the cells and the
+  budget: a second build of the same edits takes no time for its model.
+
+| The near carp | Cold | A second build |
+|---|---|---|
+| Before (cells of 2 mm) | 6.6 s (the bench), 7.5 s for the model and its GLB | the same, less the bricks |
+| Now (cells of 3.5 mm) | 4.0 s (the bench), 3.1 s for the model and 0.49 s for its GLB | 3 ms for the model, 0.41 s for its GLB |
+
+The volume stays (2,119 cm³ of 2,123). The build of the three levels of
+the carp (`mix world.build carp_edits`) takes 17.7 s, not about 30 s. A
+cold mid or far takes 4.2 s and 4.4 s now (the bench, in a fresh node):
+each collapses 31,016 faces in one pass. The next steps: a faster
+collapse (it is half of the time, and its last pass is one process) and
+a compiled form of the short lists (D10).
+

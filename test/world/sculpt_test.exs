@@ -68,4 +68,41 @@ defmodule World.SculptTest do
     assert faces.(Sculpt.model(edits, level: :mid, budget: 1_000)) <= 1_000
     assert faces.(Sculpt.model(edits, step: 0.05)) > faces.(mid)
   end
+
+  test "the cells that fit a budget: the budget, the thinnest edit that adds or takes away, and an eighth of the budget" do
+    ball = SDF.edit(:ball, {0.5})
+    # A box of 1 m: about 1.5 times 1,000 faces for cells of sqrt(2 * 3 / 1000) m.
+    assert_in_delta Sculpt.fit([ball], 1_000), :math.sqrt(6 / 1000), 1.0e-12
+    # A plate of 8 mm: cells of 4 mm, two across it.
+    plate = SDF.edit(:box, {0.5, 0.5, 0.004})
+    assert_in_delta Sculpt.fit([plate], 100), :math.sqrt(2 * 1.016 / 100) / 8, 1.0e-12
+    assert_in_delta Sculpt.fit([plate], 10_000), 0.004, 1.0e-12
+    # A paint does not count; a hole does; with no edit that adds, none.
+    paint = SDF.edit(:ball, {0.001}, mode: :paint)
+    hole = SDF.edit(:cylinder, {0.01, 1.0}, mode: :subtract)
+    assert Sculpt.fit([ball, paint], 1_000) == Sculpt.fit([ball], 1_000)
+    assert_in_delta Sculpt.fit([ball, hole], 1_000), 0.01, 1.0e-12
+    assert Sculpt.fit([hole], 1_000) == nil
+
+    for e <- [
+          SDF.edit(:capsule, {0.2, 0.05}),
+          SDF.edit(:ring, {0.3, 0.05}),
+          SDF.edit(:cone, {0.05, 0.0, 0.3}),
+          SDF.edit(:round_box, {0.3, 0.05, 0.3, 0.01}),
+          SDF.edit(:superellipsoid, {0.3, 0.05, 0.3, 4}),
+          SDF.edit(:tube, {[{0, 0, 0}, {0.3, 0, 0}], [0.05, 0.08]})
+        ] do
+      assert_in_delta Sculpt.fit([e], 10), 0.05, 1.0e-12
+    end
+  end
+
+  test "the meshes of the same edits, cells and budget come from the cache" do
+    edits = stone(20)
+    World.Sculpt.Cache.clear()
+    {cold, first} = :timer.tc(fn -> Sculpt.model(edits, step: 0.04, budget: 500) end)
+    {warm, again} = :timer.tc(fn -> Sculpt.model(edits, step: 0.04, budget: 500) end)
+    assert again == first and warm * 10 < cold
+    assert Sculpt.model(edits, step: 0.04, budget: 500, cache: false) == first
+    assert Sculpt.model(edits, step: 0.04, budget: 400) != first
+  end
 end
