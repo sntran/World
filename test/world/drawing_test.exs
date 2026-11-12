@@ -138,6 +138,22 @@ defmodule World.DrawingTest do
     refute Drawing.__mix_recompile__?()
   end
 
+  test "the drawing of one node: a person makes the node from it and its inputs, as from the whole drawing (plan 0007, D3)" do
+    {:ok, %{drawing: raw}} = Orders.job(Drawing.raw("tuong_chua_kito_vua"), "far")
+
+    made =
+      Enum.reduce(["figure", "robe"], %{}, fn n, made ->
+        Map.put(made, n, Drawing.make(raw, n, Drawing.inputs(raw, n, made)))
+      end)
+
+    one = Drawing.node(raw, "survey")
+    assert [%{"name" => "survey"}] = one["nodes"]
+    assert one["sources"] == raw["sources"] and one["parts"] == %{}
+    inputs = Drawing.inputs(raw, "survey", made)
+    assert Map.keys(inputs) == ["figure", "robe"]
+    assert Drawing.make(one, "survey", inputs) == Drawing.make(raw, "survey", inputs)
+  end
+
   test "the errors of a drawing, each with its path" do
     d = "options.drawing"
     put = fn keys, value -> put_in(box(), Enum.map(keys, &Access.key(&1)), value) end

@@ -862,6 +862,17 @@ defmodule World.Drawing do
     end)
   end
 
+  @doc """
+  The drawing of one node: the node, the sources and its part. A person
+  of a construction makes the node from it (`make/3`) with its inputs
+  (plan 0007, D3).
+  """
+  def node(raw, name) do
+    node = Enum.find(raw["nodes"], &(&1["name"] == name))
+    parts = Map.take(Map.get(raw, "parts") || %{}, List.wrap(node["part"]))
+    %{"nodes" => [node], "sources" => Map.get(raw, "sources", []), "parts" => parts}
+  end
+
   @doc "The data of the nodes `from` of a node, by their names, from the nodes made."
   def inputs(raw, name, made) do
     node = Enum.find(raw["nodes"], &(&1["name"] == name))

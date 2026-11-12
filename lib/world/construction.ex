@@ -657,15 +657,15 @@ defmodule World.Construction do
   end
 
   defp work(s, task) do
-    {drawing, level, made, lean} = {s.job.drawing, s.level, s.made, lean?(s)}
+    # The person gets its node and its inputs, not the whole drawing and
+    # each made node (plan 0007, D3): a crew gets its materials, not the
+    # whole site.
+    {node, inputs} = {World.Drawing.node(s.job.drawing, task.id), World.Drawing.inputs(s.job.drawing, task.id, s.made)}
+    {level, lean} = {s.level, lean?(s)}
 
     fn ->
       World.Detail.lean(lean, fn ->
-        {thing, _, _} =
-          result =
-          World.Detail.with(level, fn ->
-            World.Drawing.make(drawing, task.id, World.Drawing.inputs(drawing, task.id, made))
-          end)
+        {thing, _, _} = result = World.Detail.with(level, fn -> World.Drawing.make(node, task.id, inputs) end)
 
         elements = if thing, do: Build.elements(thing, level), else: []
         meshes = for {_, _, _, {shapes, _}} <- elements, m <- shapes, uniq: true, do: m
