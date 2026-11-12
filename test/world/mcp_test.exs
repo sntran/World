@@ -37,7 +37,7 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing)
+             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()

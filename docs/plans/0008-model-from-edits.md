@@ -488,3 +488,17 @@ The stone of 100 edits now: 452 bricks at 2 cm, 10 edits in a short
 list, 33 to 37 bricks (7% to 8%) made again after a move of one ball,
 and its meshes in 2.1 s at near, 0.35 s at mid and 0.12 s at far.
 
+### Step 6: the skill and the tools (2026-11-12)
+
+- The skill `sculpt` (`World.Skills.Sculpt`, the trade sculptor) takes
+  the edits in a node of a drawing or of a blueprint in data
+  (`docs/format.md`, "A sculpture"); `check_blueprint` and `check_order`
+  give each error with its path
+  (`options.drawing.nodes.0.skill.sculpt.edits.3.size`), R6.
+- The MCP tools `open_sculpture`, `edit_sculpture` and `close_sculpture`
+  open a live sculpture, change one edit at a time, and stop it.
+  `GET /sculptures/ID/events` is the stream of its pieces (each piece
+  with the mesh of each material, as JSON), and `GET /sculptures/ID.glb`
+  the GLB of its surface now. The node has at most 8 live sculptures at
+  one time.
+

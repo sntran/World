@@ -23,6 +23,7 @@ defmodule World.MCP do
   3. Call place_order. The answer has the hash of the order and the URLs of its files: the GLB at the near, mid and far levels, the list of the parts, the receipt, and the log of the people of the world that built it.
   The factory builds each file at its first GET (this can take some seconds; 503 means that the order needs more memory than the edge has), and keeps it. The same order always gives the same hash and the same URLs.
   To watch the people build a model: call plan_build for the tasks, the trades and the triangles of an order at a level, then build with a budget. The answer has the URL of the stream of the events of the construction (server-sent events), and each element as it comes.
+  A sculpture from edits (simple shapes that add, take away or paint, with a blend): send it in a node of the skill sculpt of a blueprint, or call open_sculpture for a live sculpture, then edit_sculpture for each change, and follow its stream of pieces.
   A new model for the catalog (an engineer): get_blueprint drawing gives the format of a drawing (its shapes, their materials and matter, standard parts, nodes and joints). Call check_drawing until the drawing has no errors and passes the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop, each part has a mass). Then call propose_drawing with the request: the owner reviews the proposal, and accepts or refuses it.
   """
 
@@ -62,6 +63,12 @@ defmodule World.MCP do
     "type" => "object",
     "description" =>
       "A drawing (docs/format.md, \"A drawing\"): name, kind, materials, parts (shapes or a standard part), nodes, clips, sources."
+  }
+
+  @edit %{
+    "type" => "object",
+    "description" =>
+      ~s<An edit (docs/format.md, "A sculpture"): {"shape": "ball", "size": [0.1], "at": [x, y, z], "axis": [x, y, z], "up": [x, y, z], "mode": "add" | "subtract" | "paint", "blend": M, "material": ROLE}.>
   }
 
   @tools [
@@ -179,10 +186,52 @@ defmodule World.MCP do
         "idempotentHint" => true,
         "openWorldHint" => false
       }
+    },
+    %{
+      "name" => "open_sculpture",
+      "title" => "Open a live sculpture",
+      "description" =>
+        "Open a live sculpture from a list of edits (the skill sculpt). The answer has its id, its version and the URLs of the stream of its pieces (server-sent events: a piece for each brick of its surface, then each new piece after each change) and of its GLB now. The same edits open the same sculpture.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "edits" => %{"type" => "array", "items" => @edit, "description" => "The edits, in their order: 1 to 10,000."},
+          "level" => @level,
+          "name" => %{
+            "type" => "string",
+            "description" => "A name for the sculpture (a-z, 0-9, _ and -): by default, the hash of its edits."
+          }
+        },
+        "required" => ["edits"]
+      }
+    },
+    %{
+      "name" => "edit_sculpture",
+      "title" => "Change one edit of a live sculpture",
+      "description" =>
+        "Change the edit at an index of a live sculpture (the index of the count of its edits adds one at the end; an edit of null takes it away). The new edit stops the work of the last one. The answer has the new version; the stream gives the new pieces, then done with the version.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "sculpture" => %{"type" => "string", "description" => "The id of the sculpture (open_sculpture)."},
+          "index" => %{"type" => "integer", "description" => "The index of the edit, from 0."},
+          "edit" => Map.put(@edit, "type", ["object", "null"])
+        },
+        "required" => ["sculpture", "index", "edit"]
+      }
+    },
+    %{
+      "name" => "close_sculpture",
+      "title" => "Close a live sculpture",
+      "description" => "Stop a live sculpture and its work: the stream of its pieces ends with closed.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{"sculpture" => %{"type" => "string", "description" => "The id of the sculpture."}},
+        "required" => ["sculpture"]
+      }
     }
   ]
 
-  @doc "The tools of the server."
   def tools, do: @tools
 
   @doc """
@@ -317,6 +366,27 @@ defmodule World.MCP do
 
       {:error, errors} ->
         result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("open_sculpture", args, origin) do
+    case World.Sculpt.Web.open(args, origin) do
+      {:ok, data} -> result(data)
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("edit_sculpture", args, _origin) do
+    case World.Sculpt.Web.edit(args) do
+      {:ok, data} -> result(data)
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("close_sculpture", args, _origin) do
+    case World.Sculpt.Web.close(args) do
+      :ok -> result(%{"sculpture" => args["sculpture"], "closed" => true})
+      {:error, errors} -> result(%{"errors" => errors}, true)
     end
   end
 

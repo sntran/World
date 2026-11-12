@@ -41,6 +41,11 @@ defmodule World.Service do
   - `GET /events`: the stream of the whole world, after the id of
     `Last-Event-ID` or of `?after=N`.
   - `GET /census`: the people of the node (`World.census/0`).
+  - `GET /sculptures/ID/events`: the stream of the pieces of a live
+    sculpture (`World.Sculpt.Web.follow/3`), until the end of the version
+    of `?until=V`.
+  - `GET /sculptures/ID.glb`: the GLB of the surface of a live sculpture
+    now.
 
   A body that is not JSON gives 400. A body of more than 1 MB gives 413.
   The header `x-world-origin` (from the Worker) is the start of the URLs
@@ -227,6 +232,27 @@ defmodule World.Service do
   get "/events" do
     conn = conn |> fetch_query_params() |> Stream.open(:world)
     Stream.follow(conn, :world, after_id(conn))
+  end
+
+  get "/sculptures/:id/events" do
+    conn = fetch_query_params(conn)
+
+    until =
+      case Integer.parse(conn.query_params["until"] || "") do
+        {n, ""} when n >= 0 -> n
+        _ -> nil
+      end
+
+    World.Sculpt.Web.follow(conn, id, until)
+  end
+
+  get "/sculptures/:file" do
+    with [id, "glb"] <- String.split(file, ".", parts: 2),
+         {:ok, glb} <- World.Sculpt.Web.glb(id) do
+      conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
+    else
+      _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such live sculpture"}]})
+    end
   end
 
   get "/census" do

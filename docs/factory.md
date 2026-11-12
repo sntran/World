@@ -55,6 +55,8 @@ An order is data, never code. World runs no code from an order.
 | `/builds/ID/elements/KEY.glb` | The GLB of one element of a build, while the build goes on and for 5 minutes after its end. |
 | `/events` | The events of the whole node as a stream: each construction, each hire, each element. |
 | `/census` | The people of the node by trade, free and busy, and the constructions that wait for a person. |
+| `/sculptures/ID/events` | The stream of a live sculpture (`text/event-stream`, `World.Sculpt.Web`): a `piece` for each brick of its surface now (its brick and the mesh of each material), its `state`, then each `piece`, `gone`, `done` or `failed` after each change, and `closed` at its end. With `?until=V`, the stream ends after the `done` of the version `V`. |
+| `/sculptures/ID.glb` | The GLB of the surface of a live sculpture now. |
 | `/places` | The places of the yard (`World.Places`): each with its kind, its point, the kinds of the models that it makes, and its building; a place with a terrain has its lots (the game point, the height of the ground, the point on the yard, the turn) and the path of its ground; the speed limit of the yard. |
 | `/places/NAME/ground.glb` | The ground of a place with a terrain (`World.Places.ground/1`): the mesh of the height tiles of the Vũng Tàu game in the box of the place, flat on each lot, in the frame of World from the point of the place at the height of the sea. |
 | `/m/BLUEPRINT.glb?OPTION=VALUE` (and the other files) | An order in the URL: `color.ROLE=%23rrggbb` gives a color, `joint.NAME=50` a joint, `target.LIMB=X,Y,Z` the end of a limb, `A,B` a list, and `OPTION.FIELD=VALUE` a field of an object (`origin.asian=1`: give each field, because a field that is not in the URL has its default). |
@@ -270,6 +272,9 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 | `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for the owner. |
 | `plan_build` | The plan of the people for an `order` at a `level`, with no build: each task with its trade and its waits, the tasks of each trade, and the estimate of the triangles. |
 | `build` | Keeps an `order` and starts its construction in its `budget`, as `POST /builds`: the id of the build, the URL of the stream of its events, and the URLs of its files. |
+| `open_sculpture` | Opens a live sculpture from its `edits` (the skill `sculpt`, `docs/format.md`, "A sculpture") at a `level`, with a `name` or the hash of its edits: its id, its version, and the URLs of its stream and of its GLB. The node has at most 8 at one time. |
+| `edit_sculpture` | Changes the `edit` at an `index` of a live sculpture (null takes it away; the count of the edits adds one at the end): its new version. The stream gives the new pieces. |
+| `close_sculpture` | Stops a live sculpture. |
 
 The result of a tool has the data as JSON text and as structured
 content. A wrong order is a result with `isError` and the errors, each

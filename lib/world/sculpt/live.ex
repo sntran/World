@@ -52,13 +52,19 @@ defmodule World.Sculpt.Live do
   def info(name), do: call(name, :info)
 
   @doc """
+  The pieces of the surface of a live sculpture, each with its brick:
+  `[{at, piece}]`, in the order of the bricks; or `{:error, :none}`.
+  """
+  def pieces(name), do: call(name, :pieces)
+
+  @doc """
   The meshes of the surface of a live sculpture (`World.Sculpt.Surface.meshes/2`,
   with its options), from the pieces that it has; or `{:error, :none}`.
   """
   def meshes(name, opts \\ []) do
-    case call(name, :pieces) do
+    case pieces(name) do
       {:error, _} = e -> e
-      pieces -> Surface.meshes(pieces, opts)
+      pieces -> Surface.meshes(Enum.map(pieces, &elem(&1, 1)), opts)
     end
   end
 
@@ -131,7 +137,7 @@ defmodule World.Sculpt.Live do
     do: {:reply, %{edits: s.edits, version: s.version, bricks: map_size(s.bricks), busy: s.work != nil}, s}
 
   def handle_call(:pieces, _from, s),
-    do: {:reply, s.bricks |> Enum.sort() |> Enum.map(fn {_, {_, piece}} -> piece end), s}
+    do: {:reply, s.bricks |> Enum.sort() |> Enum.map(fn {at, {_, piece}} -> {at, piece} end), s}
 
   @impl true
   def handle_info({:piece, v, at, key, piece}, %{version: v} = s), do: {:noreply, put(s, at, key, piece)}
