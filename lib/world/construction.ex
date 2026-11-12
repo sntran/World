@@ -85,6 +85,11 @@ defmodule World.Construction do
 
   @impl true
   def init(job) do
+    # A full sweep of the heap after each 10 collections: the state of a
+    # big construction is large, and the garbage of its messages and of
+    # its records stays in the old heap until a full sweep.
+    Process.flag(:fullsweep_after, 10)
+
     job =
       job
       |> Map.put_new(:scene, &Build.scene/2)
@@ -305,6 +310,28 @@ defmodule World.Construction do
   end
 
   def handle_info(m, %{drafter: {_, _}} = s), do: {:noreply, %{s | deferred: [m | s.deferred]}}
+
+  # The GLB of the joiner, or its crash; a cancel or a deadline stops it,
+  # and each other message waits for the end of the join.
+  def handle_info({:joined, pid, glb}, %{joiner: {pid, ref}} = s) do
+    Process.demonitor(ref, [:flush])
+    joined(%{s | joiner: nil}, glb)
+  end
+
+  def handle_info({:DOWN, ref, :process, pid, reason}, %{joiner: {pid, ref}} = s) do
+    message = Exception.format_exit(reason)
+    s = record(%{s | joiner: nil}, "failed", nil, %{"task" => "join", "message" => message})
+    reply(s, {:failed, s.id, message})
+    {:stop, :normal, s}
+  end
+
+  def handle_info(m, %{joiner: {pid, ref}} = s) when m in [:cancel, :deadline] do
+    Process.demonitor(ref, [:flush])
+    Process.exit(pid, :kill)
+    stop(%{s | joiner: nil}, %{"reason" => reason(m), "done" => MapSet.size(s.done)})
+  end
+
+  def handle_info(m, %{joiner: {_, _}} = s), do: {:noreply, %{s | deferred: [m | s.deferred]}}
 
   def handle_info({:hired, ref, p}, s) do
     {trade, requests} = Map.pop(s.requests, ref)
@@ -905,9 +932,31 @@ defmodule World.Construction do
   defp finish(%{waiting: waiting, running: running, stale: stale} = s)
        when waiting == %{} and running == %{} and stale == %{} do
     s = Enum.reduce(s.idle, s, &let_go(&2, &1))
-    s = if s.job.drawing, do: %{s | item: World.Drawing.assemble(s.job.drawing, s.made)}, else: s
-    scene = fn -> geo(s.job.scene.(s.item, level: s.level, triangles: s.triangles, parallel: true), s.job) end
-    glb = World.Detail.lean(lean?(s), fn -> GLB.encode(scene.()) end)
+    {me, job, level} = {self(), s.job, s.level}
+    {item, made, triangles} = {s.item, s.made, s.triangles}
+
+    # The joiner joins the model in a process of its own (plan 0007, D6):
+    # it has the model now, and its memory goes back to the node at its
+    # end; the construction lets the model go, and takes a cancel or a
+    # deadline while the joiner works. No person waits for the joiner, so
+    # it collects its garbage after each big step (`World.Detail.lean/2`).
+    joiner =
+      spawn_monitor(fn ->
+        Process.set_label({:joiner, job.id})
+        item = if job.drawing, do: World.Drawing.assemble(job.drawing, made), else: item
+        scene = fn -> geo(job.scene.(item, level: level, triangles: triangles, parallel: true), job) end
+        send(me, {:joined, self(), World.Detail.lean(true, fn -> GLB.encode(scene.()) end)})
+      end)
+
+    s = %{s | item: nil, triangles: %{}, elements: %{}, made: %{}}
+    :erlang.garbage_collect()
+    {:noreply, Map.merge(s, %{joiner: joiner, deferred: []})}
+  end
+
+  defp finish(s), do: {:noreply, s}
+
+  # The GLB of the model from the joiner: the end of the construction.
+  defp joined(s, glb) do
     s = record(s, "done", nil, %{"bytes" => byte_size(glb), "level" => Atom.to_string(s.level)})
     send(s.sampler, :peak)
     {what, peak} = receive do: ({:peak, peak} -> peak)
@@ -934,14 +983,14 @@ defmodule World.Construction do
       {:ok, _} ->
         linger = Keyword.get(Application.get_env(:world, __MODULE__, []), :linger, 300_000)
         Process.send_after(self(), :close, linger)
-        {:noreply, %{s | item: nil, triangles: %{}, elements: %{}, made: %{}, over: true}}
+        # The messages that came while the joiner worked.
+        for m <- Enum.reverse(s.deferred), do: send(self(), m)
+        {:noreply, %{s | deferred: [], over: true}}
 
       {:error, {:already_registered, _}} ->
         {:stop, :normal, s}
     end
   end
-
-  defp finish(s), do: {:noreply, s}
 
   # --- The stages of a site (plan 0006, D6; World.Method) ---------------------------
 

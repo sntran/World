@@ -369,4 +369,50 @@ defmodule World.ConstructionTest do
     {:ok, ^id} = World.build(%{id: id, item: fn _ -> Process.sleep(:infinity) end, budget: %{"seconds" => 0.05}})
     assert {:error, {:stopped, "seconds"}} = World.await(id, 2_000)
   end
+
+  test "the joiner joins the model in a process of its own: a crash fails the build, a cancel stops it, a pause waits for its end" do
+    wall = fn level -> World.Detail.with(level, fn -> World.Buildings.masonry_wall("row", "brick_vn", 0.5, 0.5) end) end
+
+    # The construction while its joiner works.
+    joining = fn id ->
+      [{pid, _}] = Registry.lookup(World.Names, id)
+
+      wait = fn wait ->
+        if Map.get(:sys.get_state(pid), :joiner),
+          do: pid,
+          else:
+            (
+              Process.sleep(5)
+              wait.(wait)
+            )
+      end
+
+      wait.(wait)
+    end
+
+    # A scene that raises: the build fails with its message.
+    id = "join-#{System.unique_integer([:positive])}"
+    {:ok, ^id} = World.build(%{id: id, item: wall, scene: fn _, _ -> raise "no scene" end})
+    assert {:error, {:failed, message}} = World.await(id, 30_000)
+    assert message =~ "no scene"
+
+    # A cancel while the joiner works stops it at once.
+    id = "join-#{System.unique_integer([:positive])}"
+    {:ok, ^id} = World.build(%{id: id, item: wall, scene: fn _, _ -> Process.sleep(:infinity) end})
+    joining.(id)
+    :ok = World.cancel(id)
+    assert {:error, {:stopped, "cancelled"}} = World.await(id, 1_000)
+
+    # A pause while the joiner works waits for its end, and changes nothing after it.
+    id = "join-#{System.unique_integer([:positive])}"
+
+    {:ok, ^id} =
+      World.build(%{id: id, item: wall, scene: fn item, opts -> Process.sleep(200) && Build.scene(item, opts) end})
+
+    pid = joining.(id)
+    :ok = World.pause(id)
+    assert {:ok, %{glb: <<"glTF", _::binary>>}} = World.await(id, 30_000)
+    Process.sleep(50)
+    assert Process.alive?(pid) and Map.get(:sys.get_state(pid), :deferred) == []
+  end
 end

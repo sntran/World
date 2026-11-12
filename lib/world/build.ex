@@ -602,14 +602,10 @@ defmodule World.Build do
 
   defp primitive({mat, shapes}, given) do
     # The triangles of a mesh, kept for the next part with the same mesh,
-    # for this material only.
-    {corners, _} =
-      Enum.flat_map_reduce(shapes, %{}, fn {f, m}, memo ->
-        tris = Map.get_lazy(memo, m, fn -> Map.get_lazy(given, m, fn -> Mesh.triangles(m) end) end)
-        {place(tris, f), Map.put(memo, m, tris)}
-      end)
-
-    mat |> Scene.primitive(corners) |> Detail.collect()
+    # for this material only; each mesh placed when the primitive comes
+    # to it (no list of all the corners).
+    memo = Map.new(for {_, m} <- shapes, uniq: true, do: {m, Map.get_lazy(given, m, fn -> Mesh.triangles(m) end)})
+    mat |> Scene.primitive(shapes, fn {f, m} -> place(memo[m], f) end) |> Detail.collect()
   end
 
   defp place(corners, f), do: for({p, n} <- corners, do: {Frame.point(f, p), Frame.dir(f, n)})

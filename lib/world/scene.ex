@@ -68,15 +68,27 @@ defmodule World.Scene do
   A primitive from the corners of `World.Mesh.triangles/2` (three for
   each triangle). Corners with the same point and normal share an index.
   """
-  def primitive(material, corners) do
-    {indices, {_, verts, _}} =
-      Enum.map_reduce(corners, {%{}, [], 0}, fn {p, n}, {seen, verts, count} ->
-        key = {round6(p), round6(n)}
+  def primitive(material, corners), do: primitive(material, [corners], & &1)
 
-        case seen do
-          %{^key => i} -> {i, {seen, verts, count}}
-          _ -> {count, {Map.put(seen, key, count), [key | verts], count + 1}}
-        end
+  @doc """
+  A primitive from many lists of corners, with no list of all of them:
+  `place` gives the corners of each item of `items` when it comes to it
+  (a mesh at its place), so only the points of the primitive are live,
+  not each corner. The same primitive as `primitive/2` of all the corners
+  in their order.
+  """
+  def primitive(material, items, place) do
+    {indices, verts, _seen, _count} =
+      Enum.reduce(items, {[], [], %{}, 0}, fn item, acc ->
+        Enum.reduce(place.(item), acc, fn {p, n}, {indices, verts, seen, count} ->
+          {rp, rn} = {round6(p), round6(n)}
+          key = key(rp, rn)
+
+          case seen do
+            %{^key => i} -> {[i | indices], verts, seen, count}
+            _ -> {[count | indices], [{rp, rn} | verts], Map.put(seen, key, count), count + 1}
+          end
+        end)
       end)
 
     verts = Enum.reverse(verts)
@@ -85,9 +97,14 @@ defmodule World.Scene do
       material: material,
       positions: Enum.map(verts, &elem(&1, 0)),
       normals: Enum.map(verts, &elem(&1, 1)),
-      indices: indices
+      indices: Enum.reverse(indices)
     }
   end
+
+  # The key of a corner in the map of the points seen: a binary of its six
+  # numbers (smaller than two tuples of boxed floats; the same keys:
+  # 0.0 and -0.0 are two keys in each).
+  defp key({a, b, c}, {d, e, f}), do: <<a::float-64, b::float-64, c::float-64, d::float-64, e::float-64, f::float-64>>
 
   defp round6({x, y, z}), do: {Float.round(x / 1, 6), Float.round(y / 1, 6), Float.round(z / 1, 6)}
 
