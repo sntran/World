@@ -591,6 +591,13 @@ of a site: its days, the dirt, the weeds, the parts that go),
 time and the memory). A comment line
 (`: ping`) comes each 15 s when there is no event.
 
+The construction keeps the model and the elements of its tasks; the
+people make the shapes; a joiner (a process of its own) joins the model
+at the end, and its memory goes back to the node when it ends. The most
+memory of a build is in the join: `house_brick_vn` at near (7,594 tasks)
+needs about 680 MB at the peak, and `mix world.bench` gives the peak of
+each model (plan 0007, section 10).
+
 A game shows the elements as they come (the GLB of each key once, and
 an instance of it for each `element` event), then at `done` reads the
 model of the order (`/o/HASH.glb`) in their place. A client that comes

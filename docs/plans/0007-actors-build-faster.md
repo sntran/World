@@ -256,3 +256,53 @@ from the GLBs that the people make for each element (D6), or instances
 for the meshes that repeat (33 meshes for 7,108 bricks); each changes
 the form of the GLB of a model, and the owner decides it.
 
+### Step 7: the measure again (2026-11-12)
+
+The machine started again during step 6 and is slower than the machine
+of step 1, so the bench of step 1 (82323ab) ran again on this machine,
+next to the bench of the tip (243526b): `MIX_ENV=test mix world.bench
+--level mid --timeout 300`, 4 schedulers.
+
+| Measure | Step 1, 4 people | Now, 4 people | Step 1, 8 people | Now, 8 people |
+|---|---|---|---|---|
+| Built | 180 of 182 | 183 of 183 | 180 of 182 | 183 of 183 |
+| The time of all the builds | 99.2 s | 64.0 s | 168.3 s | 66.6 s |
+| The schedulers that work, on average over the time | 0.91 of 4 | 0.85 of 4 | 0.95 of 4 | 0.89 of 4 |
+| The most memory of the VM | 1,613 MB (`statue`) | 1,512 MB (`statue`) | 1,637 MB | 1,504 MB |
+
+The two egg chairs fail no more (a stretch with no target node), and the
+carp from edits (plan 0008) is a new model. R8: 100% of the models, in
+less time than in step 1.
+
+| Model | Step 1, 4 people | Now, 4 people |
+|---|---|---|
+| `house_brick_vn` | 49.3 s, 968 MB | 8.9 s, 1,014 MB |
+| `statue` | 4.8 s, 1,613 MB | 4.4 s, 1,512 MB |
+| `tuong_chua_kito_vua` | 4.1 s, 1,377 MB | 3.5 s, 1,316 MB |
+| `banh_mi_cart` | 4.1 s, 216 MB | 4.1 s, 208 MB |
+| `carp_edits` | (none) | 2.2 s, 240 MB, 2.27 cores |
+| `douc` | 1.6 s, 392 MB | 1.8 s, 410 MB |
+| `macaque` | 1.5 s, 939 MB | 1.8 s, 976 MB |
+
+With 8 people, `house_brick_vn` takes 119.6 s in step 1 and 14.6 s now:
+the queue of the tasks that can start (step 3) took the work of the
+foreman for each task away. It is still faster with 4 people than with
+8 (8.9 s against 14.6 s): each person more is a hire, a release and
+more messages for the one construction.
+
+What is open:
+
+- **The schedulers** work 0.85 of 4 on average: 63 models are of one
+  task (the animals, the people), and the time of such a model is the
+  code that makes its one part in one process. Step 2 (the people build
+  each model) is open; for a body that is a field, a model from edits
+  (plan 0008) uses each scheduler (the carp: 2.27 cores).
+- **R6** is not met: `house_brick_vn` at near needs about 680 MB at the
+  peak (1,222 MB before step 6), and R6 asks for less than 424 MB. The
+  join from the GLBs of the elements (D6), or instances for the meshes
+  that repeat, changes the form of the GLB of a model: the owner
+  decides it.
+- **The animals** take 10% to 20% more time than in step 1 (a sample of
+  one run each; the full sweeps of the construction, step 6, cost a
+  little for a model of one task).
+

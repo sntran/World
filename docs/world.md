@@ -640,6 +640,27 @@ What they tell:
 - The log of an order (`/o/HASH.log.json`) is a run at the near level;
   since F4, part 2 the log of a traveler is there at the edge too.
 
+## The measure of the catalog
+
+`mix world.bench` (`World.Bench`, plan 0007) builds each model of the
+catalog and each blueprint in data through a construction, one at a
+time, and gives for each one: its result, its time, the most memory of
+the VM, the use of the schedulers, its tasks and its triangles
+(`--level`, `--workers`, `--clock`, `--scale`, `--timeout`, and
+`--out FILE` for the JSON). Plan 0007 has the numbers before and after
+its steps, on one machine: at mid with 4 people, 183 of 183 models are
+built in 64.0 s, against 180 of 182 in 99.2 s before the plan; with 8
+people, 66.6 s against 168.3 s. The time of a model of one task (an
+animal, a person) is the code that makes its one part
+(`docs/plans/0007-actors-build-faster.md`, section 10).
+
+A construction has three helpers, each a process of its own that gives
+its memory back at its end: the drafter makes the model and the plan at
+the start, a person makes each task in a hand (a stop of the person
+kills the hand), and the joiner joins the model at the end. The log of
+the node keeps its last events in a table (ETS), so a publish takes the
+same work with any count of events in the log.
+
 ## The decisions
 
 | Topic | Decision | Why |
