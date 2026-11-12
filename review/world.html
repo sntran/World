@@ -386,8 +386,8 @@ function act(p, name) {
 const WAY = 4;
 // A move to a new lot: the film waits REST s at the old site, then the
 // camera goes up the road in RIDE s.
-const REST = 1.5;
-const RIDE = 16;
+const REST = 1;
+const RIDE = 8;
 const SPEED = 12;
 const HOP = 2.5;
 const CROWD = 60;
@@ -1345,8 +1345,75 @@ function wreck(b, key, from, to) {
       o.material = o.material.clone();
       o.material.clippingPlanes = [...planes, plane];
     });
-    (b.growing ??= []).push({ part, plane, box, from, to, down: true });
+    (b.growing ??= []).push({ part, plane, box, from, to, down: true, heap: heap(b, box) });
   }
+}
+// The rubble of a part that is taken down (the owner, 2026-11-12): a heap
+// of broken concrete round its foot on the ground, that grows as the part
+// goes, and pieces that fall from its top while it goes. The heap stays.
+const chunk = new THREE.BoxGeometry(1, 1, 1);
+const broken = new THREE.MeshStandardMaterial({ color: 0x9a968e, roughness: 1 });
+function hillAt(v) {
+  const hill = [...places.values()].find((p) => p.terrain)?.ground;
+  if (!hill) return v.y;
+  reach.set(v.clone().setY(1000), new THREE.Vector3(0, -1, 0));
+  reach.far = Infinity;
+  const hit = reach.intersectObject(hill, true)[0];
+  return hit ? hit.point.y : v.y;
+}
+function heap(b, box) {
+  const size = box.getSize(new THREE.Vector3());
+  const c = box.getCenter(new THREE.Vector3());
+  const n = Math.round(Math.min(Math.max(size.x * size.y * size.z * 0.6, 30), 160));
+  const mesh = new THREE.InstancedMesh(chunk, broken, n);
+  mesh.castShadow = mesh.receiveShadow = true;
+  let seed = Math.round(c.x * 7 + c.z * 13) || 1;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const m = new THREE.Matrix4();
+  const half = Math.max(size.x, size.z) / 2;
+  // On the ground of the lot, under any part.
+  const floor = lotAt(b).y;
+  // Two heaps at the sides of the part, low at their edges.
+  const sides = [rand() * 2 * Math.PI];
+  sides.push(sides[0] + Math.PI * (0.6 + 0.6 * rand()));
+  for (let i = 0; i < n; i++) {
+    const a = sides[i % 2] + (rand() - 0.5) * 1.2;
+    const r = rand();
+    const at = new THREE.Vector3(c.x + Math.cos(a) * (half + 0.5 + r * 3), 0, c.z + Math.sin(a) * (half + 0.5 + r * 3));
+    const k = 0.25 + rand() * 0.5;
+    at.y = Math.max(hillAt(at), floor) + (1 - r) * 1.2 * rand() + k / 2;
+    m.compose(at, new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3)), new THREE.Vector3(k, k * (0.5 + rand()), k * (0.6 + rand() * 0.6)));
+    mesh.setMatrixAt(i, m);
+  }
+  mesh.count = 0;
+  scene.add(mesh);
+  // The pieces that fall.
+  const fall = new THREE.InstancedMesh(chunk, broken, 10);
+  fall.count = 0;
+  scene.add(fall);
+  return { mesh, n, fall, box, ground: Math.max(hillAt(c), floor) };
+}
+// A heap at a part of the take-down `f` (0 to 1), and the pieces that fall
+// at the second `t` of the film.
+function crumble(h, f, t) {
+  h.mesh.count = Math.round(h.n * f);
+  h.fall.count = f > 0 && f < 1 ? 10 : 0;
+  if (!h.fall.count) return;
+  const top = h.box.min.y + (h.box.max.y - h.box.min.y) * (1 - f);
+  const m = new THREE.Matrix4();
+  for (let i = 0; i < 10; i++) {
+    const s = (t + i * 0.37) / 0.7;
+    const k = Math.floor(s);
+    const u = s - k;
+    const a = hash(i + 1, k) * 2 * Math.PI;
+    const x = h.box.min.x + (h.box.max.x - h.box.min.x) * (0.5 + 0.55 * Math.cos(a));
+    const z = h.box.min.z + (h.box.max.z - h.box.min.z) * (0.5 + 0.55 * Math.sin(a));
+    const y = top - (top - h.ground) * u * u;
+    const q = 0.2 + 0.25 * hash(i + 1, k + 3);
+    m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(u * 4, u * 3, 0)), new THREE.Vector3(q, q, q));
+    h.fall.setMatrixAt(i, m);
+  }
+  h.fall.instanceMatrix.needsUpdate = true;
 }
 function growing(b, day) {
   b.growing = (b.growing ?? []).filter((g) => {
@@ -1354,7 +1421,9 @@ function growing(b, day) {
     // A part that goes: its top comes down; at the end nothing of it is seen.
     if (g.down) {
       g.plane.constant = g.box.max.y + 0.05 - (g.box.max.y - g.box.min.y + 0.1) * f;
-      return f < 1 && !!g.part.parent;
+      const more = f < 1 && !!g.part.parent;
+      crumble(g.heap, more ? f : 1, lapse?.t ?? 0);
+      return more;
     }
     g.plane.constant = g.box.min.y + (g.box.max.y - g.box.min.y + 0.05) * f;
     if (f < 1 && g.part.parent) return true;
