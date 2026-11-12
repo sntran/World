@@ -88,7 +88,22 @@ defmodule World.Build do
     targets = Keyword.get(opts, :targets, %{})
     name = item.name
     acc = walk(keep_root(item), Frame.identity(), 0, start(item, targets), level, pose)
-    fixed = %{acc | parts: Map.new(acc.parts, fn {i, ps} -> {i, Enum.reject(ps, fn {_, p, _} -> stretch?(p) end)} end)}
+    # A part that stretches to a node that is not in the item (a part of
+    # a model alone, as a person makes it) stays at rest.
+    names = MapSet.new(acc.nodes, & &1.name)
+
+    {stretches, _alone} =
+      Enum.split_with(acc.stretches, fn {_, p, _} -> MapSet.member?(names, p.params["stretch"]["to"]) end)
+
+    acc = %{acc | stretches: stretches}
+    skinned = MapSet.new(stretches, fn {_, p, _} -> p end)
+
+    fixed = %{
+      acc
+      | parts:
+          Map.new(acc.parts, fn {i, ps} -> {i, Enum.reject(ps, fn {_, p, _} -> MapSet.member?(skinned, p) end)} end)
+    }
+
     {nodes, _} = finish(fixed, {Keyword.get(opts, :split, false), Keyword.get(opts, :instances, true)})
     {nodes, skins} = stretched(nodes, acc.skins, Enum.reverse(acc.stretches), acc.moves)
 
@@ -624,7 +639,7 @@ defmodule World.Build do
 
     Enum.reduce(stretches, {nodes, skins}, fn {f, p, node}, {nodes, skins} ->
       %{"to" => to, "from" => a, "end" => b} = p.params["stretch"]
-      j = Enum.find_index(nodes, &(&1.name == to)) || raise ArgumentError, "no node #{to} for the stretch of #{p.name}"
+      j = Enum.find_index(nodes, &(&1.name == to))
       {ra, rb} = {rest.(node), rest.(j)}
       place = Frame.compose(ra, f)
       {pa, pb} = {Frame.point(place, List.to_tuple(a)), Frame.point(place, List.to_tuple(b))}

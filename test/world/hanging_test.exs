@@ -199,8 +199,9 @@ defmodule World.HangingTest do
     {{_, _, lo0}, {_, _, hi0}} = Scene.bounds(only.(Build.scene(item)))
     assert_in_delta lo, lo0 - 0.02, 1.0e-6
     assert_in_delta hi, hi0, 1.0e-6
-    # A part that stretches to a node that is not there is an error.
-    bad =
+    # A part that stretches to a node that is not there (a part alone, as a
+    # person of a construction makes it) stays at rest: no skin.
+    alone =
       put_in(
         Hanging.egg_chair().nodes,
         Enum.map(item.nodes, fn
@@ -215,7 +216,14 @@ defmodule World.HangingTest do
         end)
       )
 
-    assert_raise ArgumentError, ~r/no node none/, fn -> Build.scene(bad) end
+    rest = Build.scene(alone)
+    assert rest.skins == [] and Scene.triangles(rest) > 0
+  end
+
+  test "the people build the egg chair: the person that makes the spring alone makes it at rest" do
+    {:ok, job} = World.Orders.job(%{"blueprint" => "catalog", "options" => %{"name" => "egg_chair"}}, "mid")
+    {:ok, id} = World.build(%{job | id: "egg-chair-#{System.unique_integer([:positive])}"})
+    assert {:ok, %{glb: <<"glTF", _::binary>>}} = World.await(id, 60_000)
   end
 
   test "people on the swings and in the beds: the diagonal lay, the hands on the ropes, the back in the basket" do
