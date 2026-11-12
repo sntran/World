@@ -301,7 +301,7 @@ defmodule World.Construction do
   def handle_info(m, %{drafter: {pid, ref}} = s) when m in [:cancel, :deadline] do
     Process.demonitor(ref, [:flush])
     Process.exit(pid, :kill)
-    stop(%{s | drafter: nil}, %{"reason" => if(m == :cancel, do: "cancelled", else: "seconds"), "done" => 0})
+    stop(%{s | drafter: nil}, %{"reason" => reason(m), "done" => 0})
   end
 
   def handle_info(m, %{drafter: {_, _}} = s), do: {:noreply, %{s | deferred: [m | s.deferred]}}
@@ -395,12 +395,11 @@ defmodule World.Construction do
 
   def handle_info(:resume, s), do: {:noreply, s}
 
-  def handle_info(:cancel, %{over: true} = s), do: {:noreply, s}
-  def handle_info(:cancel, s), do: stop(s, %{"reason" => "cancelled", "done" => MapSet.size(s.done)})
+  # A cancel, or the deadline of the budget: the construction stops.
+  def handle_info(m, %{over: true} = s) when m in [:cancel, :deadline], do: {:noreply, s}
 
-  # The plan comes before any message, so the deadline finds it.
-  def handle_info(:deadline, %{over: true} = s), do: {:noreply, s}
-  def handle_info(:deadline, s), do: stop(s, %{"reason" => "seconds", "done" => MapSet.size(s.done)})
+  def handle_info(m, s) when m in [:cancel, :deadline],
+    do: stop(s, %{"reason" => reason(m), "done" => MapSet.size(s.done)})
 
   def handle_info(:close, s), do: {:stop, :normal, s}
 
@@ -720,6 +719,9 @@ defmodule World.Construction do
   end
 
   defp method(s), do: Map.get(s.job, :method, "today")
+
+  defp reason(:cancel), do: "cancelled"
+  defp reason(:deadline), do: "seconds"
 
   # The construction stops: each person with a task stops it at once (a
   # message of priority, plan 0007, D5), as the people of a site stop at
