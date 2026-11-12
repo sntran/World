@@ -211,10 +211,13 @@ parallel work second.
   each point of the grid of its bounds, and the surface is the same as
   the surface of the full grid. (A brick has 11³ points for its 8³
   cells, so with larger cells its border costs more: 20% at 4 cm.)
-- **R3.** The surface of a sculpture is closed and has its faces to the
-  outside (`World.Check.model/1`), with no gap at the faces of the
-  bricks; a box of hard edits has its 12 edges sharp (the angle of its
-  faces within 1° of 90°).
+- **R3.** The surface of a sculpture is closed (each edge of the mesh in
+  as many faces one way as the other) and has its faces to the outside,
+  with no gap at the faces of the bricks; a box of hard edits has its 12
+  edges sharp (each face within 1° of a face of the box) and its volume
+  within 0.1%. (Step 3: at a face of a cell whose inside corners are on
+  its diagonal, two sheets of the surface touch at an edge in four
+  faces; manifold dual contouring [P12] splits them later.)
 - **R4.** On 4 schedulers, a sculpture of 1,000 edits takes less than
   half the time that it takes on 1 scheduler (`+S 1`), and a stop of its
   person ends each process of its tree in less than 100 ms.
@@ -265,9 +268,11 @@ on each commit, and the full check on the tip before a push.
 - **The model of step 6.** A simple animal (its body is a field today,
   `World.Blob`), the rubble of the take-down of plan 0006, or another
   one?
-- **The manifold mesh.** Dual contouring can give a vertex shared by two
-  sheets of the surface (a thin wall). Manifold dual contouring [P12]
-  splits it; is it needed in step 3, or later when a model needs it?
+- **The manifold mesh.** Step 3 found the case: at a face of a cell
+  whose inside corners are on its diagonal, two sheets of the surface
+  touch at one edge (10 edges of a stone of 41 edits). The mesh stays
+  closed. Manifold dual contouring [P12] splits them; it comes when a
+  model needs it (a print of the model, a check of its edges).
 - **The sizes of the cells** of D8 are an estimate: the measure of step
   3 sets them.
 - **A live sculpture** is a part of this plan (the owner, 2026-11-12):
