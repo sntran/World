@@ -206,9 +206,11 @@ parallel work second.
   than the true distance, and within 10% of it near the surface) for the
   others, at points inside, on and outside it; and the blend of D2 (the
   hard minimum when the distances are more than the blend apart).
-- **R2.** For a sculpture of 100 edits, the evaluations of an edit at a
-  cell are less than 5% of 100 edits at each cell of the grid of its
-  bounds, and the surface is the same as the surface of the full grid.
+- **R2.** For a sculpture of 100 edits with cells of 2 cm or less, the
+  evaluations of an edit at a point are less than 5% of 100 edits at
+  each point of the grid of its bounds, and the surface is the same as
+  the surface of the full grid. (A brick has 11³ points for its 8³
+  cells, so with larger cells its border costs more: 20% at 4 cm.)
 - **R3.** The surface of a sculpture is closed and has its faces to the
   outside (`World.Check.model/1`), with no gap at the faces of the
   bricks; a box of hard edits has its 12 edges sharp (the angle of its
@@ -346,3 +348,22 @@ Papers and references:
 
 Open code to read: libfive and Fidget (M. Keeter), fogleman/sdf, hg_sdf
 (Mercury), sdf-explorer (Takikawa, Glassner, McGuire, JCGT 2022).
+
+## 13. The measure
+
+### Step 2 (2026-11-12)
+
+A stone of 100 edits (an ellipsoid with balls added and taken away on
+its surface, blends of 3 cm), on a machine with 4 schedulers:
+
+| Cells | Bricks | Evaluations, of the brute force | 4 schedulers | 1 scheduler (`+S 1`) | The tree, against one process (4 / 1 schedulers) |
+|---|---|---|---|---|---|
+| 4 cm | 120 | 20.3% | 1.4 s | 4.2 s | 8.8 / 2.0 times faster |
+| 2 cm | 500 | 3.9% | 2.3 s | 7.2 s | 7.1 / 2.4 times faster |
+| 1 cm | 2,164 | 0.94% | 5.1 s | 14.6 s | 8.0 / 2.9 times faster |
+
+The tree is about 3 times faster on 4 schedulers than on 1 (R4). It is
+also 2 to 3 times faster than one process on one scheduler: one process
+keeps all the data on one heap, and its collection of garbage grows;
+each small process of the tree has its own small heap, and gives it back
+when it ends.
