@@ -13,7 +13,10 @@ defmodule World.Sculpt do
   the field in it (`World.SDF.cell/4`, in its ball grown by the border
   of the bricks), and a child with no surface in it stops. Each child
   with a surface is a process of its own (fork and join), so the work
-  goes to each scheduler of the node as the tree grows.
+  goes to each scheduler of the node as the tree grows. The processes of
+  the tree are linked to the process that starts the tree (the hand of a
+  sculptor, D4), so a stop of that process stops each one of them, and
+  each has the label `{:sculpt, at, span}`.
 
   The field has a limit (`limit/2`, `World.SDF.field/3`): far from the
   surface each value is the limit, so an edit there changes nothing, and
@@ -150,13 +153,21 @@ defmodule World.Sculpt do
     results =
       if how.parallel do
         work
-        |> Enum.map(fn {c, kept} -> Task.async(fn -> cell(kept, c, how) end) end)
+        |> Enum.map(fn {c, kept} -> Task.async(fn -> crew(kept, c, how) end) end)
         |> Task.await_many(:infinity)
       else
         Enum.map(work, fn {c, kept} -> cell(kept, c, how) end)
       end
 
     Enum.reduce(results, {[], n}, fn {bricks, m}, {all, n} -> {bricks ++ all, n + m} end)
+  end
+
+  # A cell in a process of the crew: linked to the process that made it
+  # (to the hand of the sculptor at the root), so a stop of the hand stops
+  # the whole tree (D4).
+  defp crew(edits, {at, span} = c, how) do
+    Process.set_label({:sculpt, at, span})
+    cell(edits, c, how)
   end
 
   # The edits of a cell (in its ball, grown by the border of a brick), or

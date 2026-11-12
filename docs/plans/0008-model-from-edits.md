@@ -424,3 +424,24 @@ The bricks that are made again are all near the old or the new edit
 (`test/world/sculpt_cache_test.exs`), and the other bricks come from the
 cache with the same pieces (R5).
 
+### Step 4: the crew (2026-11-12)
+
+The tree of a sculpture runs in the hand of a sculptor: its processes
+are linked to the hand, and a stop of the person (a message of
+priority) ends each of them in less than 100 ms
+(`test/world/sculpt_crew_test.exs`, R4).
+
+A stone of 1,000 edits (the same ellipsoid of 1.6 m with 999 balls on
+it, so the balls lie on each other), its meshes with no cache:
+
+| Level | Faces | The tree, 4 schedulers | The tree, 1 scheduler (`+S 1`) | One process |
+|---|---|---|---|---|
+| mid | 5,508 | 9.9 s | 38.2 s | 38.9 s |
+| near | 104,928 | 35.3 s | 152.1 s | 118.8 s |
+
+On 4 schedulers the tree is 3.8 and 4.3 times faster than on 1 (R4).
+The time is in the field: the short lists of this stone are long (many
+balls near each brick), and each point of a brick takes each edit of
+its list. A compiled form of a short list (D10) is the next step of
+speed, when a model needs it.
+
