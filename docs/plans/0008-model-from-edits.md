@@ -1,16 +1,18 @@
-# 0008 A model from edits: shapes added and taken away, as in Dreams
+# 0008 A model from edits, made by many hands at once
 
 | Field | Value |
 |---|---|
 | Status | Draft |
 | Depends on | Plan 0007 (the people build each model as actors). It comes before the open steps of plan 0007 (the owner, 2026-11-12). |
-| Changes | A new module of fields of distances (`World.SDF`); sparse bricks of the field that the people evaluate at the same time; a surface with sharp edges and no gaps between bricks; a skill `sculpt` for blueprints and drawings; the format of a sculpture in `docs/format.md`; one model of the catalog made again from edits. |
+| Changes | A new module of fields of distances (`World.SDF`); a tree of processes that finds the cells near the surface; bricks of the field in binaries; a surface with sharp edges and no gaps between bricks; a cache of bricks by hash; a skill `sculpt` for blueprints and drawings; the format of a sculpture in `docs/format.md`; one model of the catalog made again from edits. |
 
 ## 1. Goal
 
 The vision of the owner (`docs/world.md`, "The vision"): World is an
 engine that outside users use to make any content and models, and fast,
-as Dreams is.
+as Dreams is. Dreams and the papers are a reference (sections 3 and 4):
+World learns from them, and chooses the way that is best for it, on the
+parallel architecture of Erlang (the owner, 2026-11-12).
 
 At the end:
 
@@ -22,10 +24,13 @@ At the end:
   it over MCP in a blueprint or a drawing, World checks it (with the
   path of each error), and the edits are the source of the part: World
   makes the part again from them, as Dreams does.
-- **Fast.** World evaluates only the bricks of cells near the surface,
-  each with the short list of the edits that reach it, and the people of
-  a construction evaluate the bricks at the same time (plan 0007). When
-  one edit changes, only the bricks that it reaches are made again.
+- **Fast, on the BEAM.** A tree of processes finds the cells near the
+  surface: each cell process takes the short list of the edits that can
+  reach it, and starts a process only for each child cell that the
+  surface can cross. So the work goes to each scheduler as the tree
+  grows, and only the cells near the surface do the work of the field.
+  When one edit changes, only the bricks that it reaches are made
+  again.
 - **Each level of detail from the same edits**, and in the budget of its
   triangles.
 - **One model of the catalog** comes from edits, and the measure
@@ -47,11 +52,16 @@ On 2026-11-12:
 > outside users can use to make any content and models. And do them
 > fast!
 
-Then "Yes" to the order: this plan before the open steps of plan 0007.
+Then "Yes" to the order: this plan before the open steps of plan 0007,
+and:
 
-## 3. What Dreams does
+> The research is just for reference. We learn from them and choose the
+> best approach for us, taking advantage of the parallel architecture of
+> Erlang.
 
-The sources are in section 11 ([E1] and the others).
+## 3. What Dreams does (a reference)
+
+The sources are in section 12 ([E1] and the others).
 
 **The model.** A sculpture of Dreams is a flat list of edits in order,
 not a tree: 1 to about 100,000 edits [E1]. The shapes: strokes along a
@@ -97,7 +107,7 @@ No patent of Media Molecule or Sony covers Dreams. A later patent of
 Alex Evans at NVIDIA covers rays through sparse grids of fields
 (US11887245B2) [E6].
 
-## 4. What the papers give
+## 4. What the papers give (a reference)
 
 - **The distance of each shape** [P1]. The ball, the box, the round
   box, the capsule, the cylinder, the capped cone and the ring have an
@@ -161,16 +171,25 @@ Alex Evans at NVIDIA covers rays through sparse grids of fields
 
 ## 7. Decisions
 
+What the BEAM is good at: many small processes, messages (and messages
+of priority), supervision, and large binaries that go from one process
+to another with no copy. What it is not good at: arithmetic in bulk
+(no GPU, no SIMD). So each evaluation of a cell costs much, and World
+must evaluate few cells: the cut of the work comes first, and the
+parallel work second.
+
 | # | Decision | Why |
 |---|---|---|
-| D1 | **A sculpture is an ordered list of edits.** Each edit: `shape` (`ball`, `box`, `round_box`, `capsule`, `cylinder`, `cone`, `ring`, `ellipsoid`, `superellipsoid` with a power for each axis, `tube` through the points of a curve), its sizes (m), its place and turn (a frame), `mode` (`add`, `subtract`, `paint`), `blend` (m; 0 is a hard edge), and a `material` (a role of the palette). The edits are the source: World keeps them, and makes the part again from them. | The model of Dreams [E1]: simple to write, to send, to check and to keep. |
-| D2 | **The blend of Dreams** (the quadratic smooth minimum; its mirror for `subtract`; `paint` changes the material only, in its blend). A shape with no exact distance (the ellipsoid, the superellipsoid, a stretch) gives a bound with a Lipschitz constant of 1 [P1][P3][P11]. | An edit reaches only its blend past its shape, and each field stays a safe bound: a cell can skip each edit that cannot reach it [E1][P4]. |
-| D3 | **Sparse bricks of 8 × 8 × 8 cells**, a payload of 7 × 7 × 7 and a border of one cell, as the hulls of Dreams [E2][E3]. From the bounds of the sculpture, a hierarchy of cells (each split in 4 × 4 × 4 as in Dreams [E1]) keeps for each cell the edits that can reach it (by their bounds, grown by their blend, and their Lipschitz bounds [P8]); empty and full cells stop; only the bricks that the surface crosses are evaluated. | The work is near the surface only: Dreams skips more than 99% of it [E1]. |
-| D4 | **Each brick is a task of a person** (plan 0007): the construction gives the bricks, with their short lists, to its people, and joins their surfaces. The key of a brick is a hash of its place, its level and its edits, so a brick that a change does not reach keeps its surface (the hashes of the elements of World today). | The work of one part goes to many people at once, and a change makes only its bricks again: the two speeds of the vision. |
-| D5 | **The surface by dual contouring in each brick**: one point in each cell that the surface crosses, at the least squared distance to the planes of its cut edges (probabilistic quadrics [P13]), kept in its cell; a quad across each cut edge [P10]. Each shared edge has one owner brick, and the border cell of each brick makes the points of the next one match [P14]. | Sharp edges stay sharp where the edits are hard, and the surface has no gap between bricks. Surface nets is the same method with the point at the mean. |
-| D6 | **The levels of detail:** cells of 2 cm, 8 cm and 32 cm (an estimate) at near, mid and far (the levels of `World.Detail`), then an edge collapse by quadric error metrics to the budget of triangles of the level [P16]. | The same edits at each level, each level in its budget. |
-| D7 | **The skill `sculpt`** takes the edits in a node of a blueprint or a drawing, and the trade `sculptor` makes it. Its format is in `docs/format.md` ("A sculpture"), and `check_blueprint` checks it (the shapes, the sizes, the modes, at most 10,000 edits: an estimate). | A user sends a sculpture as it sends any blueprint. |
-| D8 | **The euclidean distance.** The max norm of Dreams comes only if the measure says that it is needed. | Dual contouring wants a field with good gradients; the max norm is a choice of speed on a GPU [E1]. |
+| D1 | **A sculpture is an ordered list of edits.** Each edit: `shape` (`ball`, `box`, `round_box`, `capsule`, `cylinder`, `cone`, `ring`, `ellipsoid`, `superellipsoid` with a power for each axis, `tube` through the points of a curve), its sizes (m), its place and turn (a frame), `mode` (`add`, `subtract`, `paint`), `blend` (m; 0 is a hard edge), and a `material` (a role of the palette). The edits are the source: World keeps them, and makes the part again from them. | Simple to write, to send, to check and to keep [E1]. |
+| D2 | **The quadratic smooth minimum** for a blend (its mirror for `subtract`; `paint` changes the material only, in its blend). A shape with no exact distance (the ellipsoid, the superellipsoid, a stretch) gives a bound with a Lipschitz constant of 1. | An edit reaches only its blend past its shape, and each field stays a safe bound, so a cell can skip each edit that cannot reach it [E1][P2][P4]. |
+| D3 | **A tree of processes finds the cells near the surface.** The cell of the bounds of the sculpture is a process with the edits that can reach it. It splits in 4 × 4 × 4: for each child, the bounds of the edits (grown by their blends) and a bound of the field at its center give its short list, or tell that it is empty or full. It starts a process only for each child that the surface can cross, and waits for their results (fork and join). A cell of 8 × 8 × 8 cells of the grid is a leaf: a brick. | Only the cells near the surface do the work of the field; the work spreads to each scheduler as the tree grows, with no plan of the work before it [E1][P6][P7][P8]. |
+| D4 | **One sculptor and its crew.** The construction gives one task `sculpt` to a person of the trade `sculptor`; the tree of D3 is the crew of its hand (plan 0007, D5): the processes of the tree are linked to the hand, so a stop of the person (a message of priority) stops the whole tree at once. The log has the task, not each brick. | The construction and its log stay small (a sculpture can have thousands of bricks), and the tree uses each scheduler, not only the people of the budget. |
+| D5 | **A brick is a binary.** The field of a brick (its 9 × 9 × 9 points with a border of one cell: 2.9 KB of floats of 32 bits) and its piece of the surface are binaries. A binary of more than 64 bytes goes from one process to another with no copy (a reference). A brick gives its piece of the surface as soon as it is made, so the pieces stream to the hand. | The data of the work moves between the processes with no cost, and the memory stays in the bricks near the surface. |
+| D6 | **A cache of bricks by hash.** The key of a brick is a hash of its place, its level and its short list of edits; its piece of the surface goes into a table (ETS) of the node by that key. A brick with the same key is not made again: in the next build of the same sculpture, after a change of one edit (only the bricks that the edit reaches have a new key), or in the sculpture of another user. | The two speeds of the vision: the work of many processes at once, and no work for what did not change. |
+| D7 | **The surface by dual contouring in each brick**: one point in each cell that the surface crosses, at the least squared distance to the planes of its cut edges (probabilistic quadrics [P13]), kept in its cell; a quad across each cut edge [P10]. Each shared edge has one owner brick, and the border of each brick makes its points match those of the next one [P14]. | Sharp edges stay sharp where the edits are hard, and the surface has no gap between bricks. Surface nets (World today) is the same method with the point at the mean. |
+| D8 | **The levels of detail:** cells of 2 cm, 8 cm and 32 cm (an estimate) at near, mid and far (the levels of `World.Detail`), then an edge collapse by quadric error metrics to the budget of triangles of the level [P16]. | The same edits at each level, each level in its budget. |
+| D9 | **The skill `sculpt`** takes the edits in a node of a blueprint or a drawing. Its format is in `docs/format.md` ("A sculpture"), and `check_blueprint` checks it (the shapes, the sizes, the modes, at most 10,000 edits: an estimate). | A user sends a sculpture as it sends any blueprint. |
+| D10 | **The euclidean distance, in plain Erlang.** No NIF (the node runs at the edge in WebAssembly too). Each function of the field takes and gives floats in tuples, with no maps in the hot path. A compiled form of the short list of a brick (a function made for it) comes only if the measure asks for it [P7]. | One code at the edge and on a server; the measure decides each change of speed. |
 
 ## 8. Requirements
 
@@ -186,11 +205,12 @@ Alex Evans at NVIDIA covers rays through sparse grids of fields
   outside (`World.Check.model/1`), with no gap at the faces of the
   bricks; a box of hard edits has its 12 edges sharp (the angle of its
   faces within 1° of 90°).
-- **R4.** With 4 people, a sculpture of 1,000 edits takes less than half
-  the time that it takes with 1 person.
+- **R4.** On 4 schedulers, a sculpture of 1,000 edits takes less than
+  half the time that it takes on 1 scheduler (`+S 1`), and a stop of its
+  person ends each process of its tree in less than 100 ms.
 - **R5.** When one edit of a sculpture of 1,000 edits changes, the bricks
   that are made again are only the bricks that it reaches, before or
-  after the change.
+  after the change; the others come from the cache.
 - **R6.** A sculpture comes in a blueprint over MCP (`check_blueprint`,
   `build`), and each error has its path.
 - **R7.** The model of step 6 comes from at most 200 edits, has the
@@ -202,15 +222,15 @@ Alex Evans at NVIDIA covers rays through sparse grids of fields
 Each step is a small commit (or a few), with its tests, the quick checks
 on each commit, and the full check on the tip before a push.
 
-1. **`World.SDF`** (D1, D2, D8; R1): the shapes, the modes, the blend,
+1. **`World.SDF`** (D1, D2, D10; R1): the shapes, the modes, the blend,
    their tests.
-2. **The bricks and their lists** (D3; R2): the hierarchy, the lists of
-   edits, the sparse bricks.
-3. **The surface** (D5, D6; R3): dual contouring in each brick, the
+2. **The tree of cells** (D3, D5; R2, R4): the processes of the cells,
+   their short lists, the bricks as binaries.
+3. **The surface** (D7, D8; R3): dual contouring in each brick, the
    seams, the levels, the edge collapse.
-4. **The people make the bricks** (D4; R4, R5): each brick a task of the
-   construction, the hash of a brick.
-5. **The skill `sculpt` and its format** (D7; R6), `docs/format.md`.
+4. **The sculptor and its crew, and the cache** (D4, D6; R4, R5): the
+   task `sculpt`, the tree as the crew of the hand, the table of bricks.
+5. **The skill `sculpt` and its format** (D9; R6), `docs/format.md`.
 6. **One model from edits** (R7): a model of the catalog made again,
    with its shots and the measure.
 
@@ -229,8 +249,12 @@ on each commit, and the full check on the tip before a push.
 - **The manifold mesh.** Dual contouring can give a vertex shared by two
   sheets of the surface (a thin wall). Manifold dual contouring [P12]
   splits it; is it needed in step 3, or later when a model needs it?
-- **The sizes of the cells** of D6 are an estimate: the measure of step
+- **The sizes of the cells** of D8 are an estimate: the measure of step
   3 sets them.
+- **A live sculpture.** Later, a sculpture can be a process that keeps
+  its edits and takes an edit as a message: it makes again only the
+  bricks of that edit, and streams them. Is it a part of this plan, or
+  of a later one?
 
 ## 12. Sources
 
