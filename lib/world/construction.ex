@@ -524,11 +524,12 @@ defmodule World.Construction do
 
   # A task is done: each task that waits for it has one less to wait for.
   defp unblock(s, id) do
-    Enum.reduce(Map.get(s.next, id, []), s, fn t, s ->
-      case s.left do
-        %{^t => 1} -> %{s | left: Map.put(s.left, t, 0), open: :gb_sets.add({s.rank[t], t}, s.open)}
-        %{^t => n} -> %{s | left: Map.put(s.left, t, n - 1)}
-        _ -> s
+    waiting = for t <- Map.get(s.next, id, []), Map.has_key?(s.left, t), do: t
+
+    Enum.reduce(waiting, s, fn t, s ->
+      case s.left[t] do
+        1 -> %{s | left: Map.put(s.left, t, 0), open: :gb_sets.add({s.rank[t], t}, s.open)}
+        n -> %{s | left: Map.put(s.left, t, n - 1)}
       end
     end)
   end
