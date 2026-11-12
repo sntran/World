@@ -478,7 +478,7 @@ Durable Object at the edge (`World.Log.Server`, `World.Log.Store`).
 | `element` | A person | The task, the part, the key of its GLB, and its frame in the axes of glTF. |
 | `done` | The construction | The bytes of the model, its level. |
 | `stopped`, `failed` | The construction | The reason (`seconds`, `triangles`), or the message of the error. |
-| `run_done` | The construction | The time of the wall clock (`ms`), and the memory of the VM: the most (`memory_peak`) and at the end (`memory_end`), with what they count (`memory`). |
+| `run_done` | The construction | The time of the wall clock (`ms`), the memory of the VM: the most (`memory_peak`) and at the end (`memory_end`), with what they count (`memory`), and the work of the construction process (`reductions`). |
 | `started` | The log of the node | A new log after a stop of the VM: it leaves 50 ids after the last id of its store (`specs/LogStore.tla`). |
 
 Each event of a construction has: `at` (the time of the world), `wall`,

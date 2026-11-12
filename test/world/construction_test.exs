@@ -310,4 +310,28 @@ defmodule World.ConstructionTest do
   test "await gives a timeout when no result comes" do
     assert World.await("nothing", 0) == {:error, :timeout}
   end
+
+  test "the work of the construction grows with the tasks, not with their square (plan 0007, R3)" do
+    work = fn length ->
+      id = "row-#{length}-#{System.unique_integer([:positive])}"
+
+      item = fn level ->
+        World.Detail.with(level, fn -> World.Buildings.masonry_wall("row", "brick_vn", length, 1.5) end)
+      end
+
+      {:ok, ^id} = World.build(%{id: id, item: item, budget: %{"workers" => 4}})
+      {:ok, %{log: log}} = World.await(id, 120_000)
+      events = World.Log.events(log)
+      tasks = Enum.count(events, &(&1.kind == "task_started"))
+      {tasks, List.last(events).data["reductions"]}
+    end
+
+    {n, small} = work.(1.0)
+    {n8, big} = work.(8.0)
+    assert n8 >= 6 * n and n > 20
+    # Linear work: the ratio of the work is about the ratio of the tasks
+    # (the work of a walk of each waiting task at each event was 15 times
+    # for 7 times the tasks).
+    assert big / small < 1.5 * n8 / n
+  end
 end

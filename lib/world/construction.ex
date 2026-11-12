@@ -148,7 +148,7 @@ defmodule World.Construction do
             made: %{},
             placed: MapSet.new(),
             hauls: %{},
-            waiting: plan.tasks,
+            waiting: %{},
             done: MapSet.new(),
             running: %{},
             workers: %{},
@@ -171,7 +171,7 @@ defmodule World.Construction do
             workers_limit: Map.get(s.job.budget, "workers", Map.get(s.job, :workers, @workers))
           })
 
-        s = record(s, "plan_made", nil, Map.put(Plan.to_data(plan), "level", Atom.to_string(level)))
+        s = record(queue(s, plan.tasks), "plan_made", nil, Map.put(Plan.to_data(plan), "level", Atom.to_string(level)))
         {:noreply, s |> next_stage() |> assign()}
 
       {:error, triangles} ->
@@ -274,6 +274,7 @@ defmodule World.Construction do
 
   def handle_info({:done, p, id, result}, s) do
     task = s.running[p]
+    s = if MapSet.member?(s.done, id), do: s, else: unblock(s, id)
 
     s = %{
       s
@@ -319,12 +320,11 @@ defmodule World.Construction do
   # A person that stopped: its task goes back to the tasks that wait.
   def handle_info({:DOWN, _, :process, p, _}, s) do
     {task, running} = Map.pop(s.running, p)
-    waiting = if task, do: [task | s.waiting], else: s.waiting
+    s = if task, do: back(s, task), else: s
 
     s = %{
       s
       | running: running,
-        waiting: waiting,
         workers: Map.delete(s.workers, p),
         idle: List.delete(s.idle, p),
         watched: Map.delete(s.watched, p),
@@ -425,15 +425,68 @@ defmodule World.Construction do
 
   # The tasks that can start now: not given, each task they wait for is
   # done, and their materials are at the place.
-  defp ready(%{job: %{haul: haul, drawing: d}} = s) when haul == nil or d == nil, do: waits_done(s)
-  defp ready(s), do: Enum.filter(waits_done(s), &(s.hauls[&1.id] == :here))
+  defp ready(s), do: Enum.filter(waits_done(s), &here?(s, &1))
+
+  defp here?(%{job: %{haul: haul, drawing: d}}, _t) when haul == nil or d == nil, do: true
+  defp here?(s, t), do: s.hauls[t.id] == :here
 
   defp waits_done(s) do
     now = Clock.wall()
 
-    Enum.filter(s.waiting, fn t ->
-      allowed?(s, t.id) and Enum.all?(t.waits, &(MapSet.member?(s.done, &1) and Map.get(s.cured, &1, 0) <= now))
+    for {_, id} <- :gb_sets.to_list(s.open), t = s.waiting[id], can?(s, t, now), do: t
+  end
+
+  # A task with each wait done can start when its stage allows it and the
+  # tasks that it waits for are cured.
+  defp can?(s, t, now), do: allowed?(s, t.id) and Enum.all?(t.waits, &(Map.get(s.cured, &1, 0) <= now))
+
+  # The tasks that wait (plan 0007, D3): by their id, with their order in
+  # the plan (`rank`), how many of the tasks that each one waits for are
+  # not done (`left`), the tasks that wait for each task (`next`), and the
+  # tasks that wait for none, in the order of the plan (`open`, a set of
+  # `{rank, id}`). When a task is done, only the tasks that wait for it
+  # change, as on a site the crew that waits for a task hears that it is
+  # done.
+  defp queue(s, tasks) do
+    left = Map.new(tasks, fn t -> {t.id, t.waits |> Enum.uniq() |> Enum.count(&(not MapSet.member?(s.done, &1)))} end)
+    next = for t <- tasks, w <- Enum.uniq(t.waits), reduce: %{}, do: (acc -> Map.update(acc, w, [t.id], &[t.id | &1]))
+
+    rank = Map.new(Enum.with_index(tasks), fn {t, i} -> {t.id, i} end)
+
+    Map.merge(s, %{
+      waiting: Map.new(tasks, &{&1.id, &1}),
+      rank: rank,
+      left: left,
+      next: next,
+      open: :gb_sets.from_list(for {id, 0} <- left, do: {rank[id], id})
+    })
+  end
+
+  # The waiting tasks in the order of the plan.
+  defp ordered(s), do: s.waiting |> Map.values() |> Enum.sort_by(&s.rank[&1.id])
+
+  # A task is done: each task that waits for it has one less to wait for.
+  defp unblock(s, id) do
+    Enum.reduce(Map.get(s.next, id, []), s, fn t, s ->
+      case s.left do
+        %{^t => 1} -> %{s | left: Map.put(s.left, t, 0), open: :gb_sets.add({s.rank[t], t}, s.open)}
+        %{^t => n} -> %{s | left: Map.put(s.left, t, n - 1)}
+        _ -> s
+      end
     end)
+  end
+
+  # A task back from a person that stopped: it waits again, first.
+  defp back(s, task) do
+    first = Enum.min([0 | Map.values(s.rank)]) - 1
+
+    %{
+      s
+      | waiting: Map.put(s.waiting, task.id, task),
+        rank: Map.put(s.rank, task.id, first),
+        left: Map.put(s.left, task.id, 0),
+        open: :gb_sets.add({first, task.id}, s.open)
+    }
   end
 
   defp allowed?(%{allowed: :all}, _id), do: true
@@ -471,16 +524,34 @@ defmodule World.Construction do
 
   defp assign(s) do
     s = ask(s)
+    {s, wanted} = give_ready(s, :gb_sets.iterator(s.open), Clock.wall(), [])
+    hire(s, Enum.reverse(wanted))
+  end
 
-    {s, wanted} =
-      Enum.reduce(ready(s), {s, []}, fn t, {s, wanted} ->
-        case Enum.find(s.idle, &(s.workers[&1] == t.trade)) do
-          nil -> {s, wanted ++ [t.trade]}
-          p -> {give(s, p, t), wanted}
+  # The tasks that can start, in the order of the plan: each to a free
+  # person of its trade, and the trades with no free person (once each).
+  # The walk stops when no person is free and the construction can hire
+  # nobody more: the other tasks wait for a person anyway.
+  defp give_ready(s, iter, now, wanted) do
+    full = s.idle == [] and map_size(s.workers) + map_size(s.requests) >= s.workers_limit
+
+    case :gb_sets.next(iter) do
+      _ when full ->
+        {s, wanted}
+
+      :none ->
+        {s, wanted}
+
+      {{_, id}, iter} ->
+        t = s.waiting[id]
+
+        cond do
+          not (can?(s, t, now) and here?(s, t)) -> give_ready(s, iter, now, wanted)
+          p = Enum.find(s.idle, &(s.workers[&1] == t.trade)) -> give_ready(give(s, p, t), iter, now, wanted)
+          t.trade in wanted -> give_ready(s, iter, now, wanted)
+          true -> give_ready(s, iter, now, [t.trade | wanted])
         end
-      end)
-
-    hire(s, wanted)
+    end
   end
 
   # The heap of a person for one task, in words: its part of the memory of
@@ -497,8 +568,15 @@ defmodule World.Construction do
     {days, wait} = days(s, task)
     {days, wait} = {days * s.fit, wait * s.fit}
     task = Map.merge(task, %{days: days, wait: wait})
-    waiting = Enum.reject(s.waiting, &(&1.id == task.id))
-    s = %{s | idle: List.delete(s.idle, p), running: Map.put(s.running, p, task), waiting: waiting}
+
+    s = %{
+      s
+      | waiting: Map.delete(s.waiting, task.id),
+        left: Map.delete(s.left, task.id),
+        open: :gb_sets.delete_any({s.rank[task.id], task.id}, s.open)
+    }
+
+    s = %{s | idle: List.delete(s.idle, p), running: Map.put(s.running, p, task)}
     s = %{s | days: Map.put(s.days, task.id, days)}
     data = %{"days" => days, "wait" => wait, "crew" => crew(s, task)}
     s = record(s, "task_started", p, Map.merge(task_data(task), data))
@@ -643,13 +721,14 @@ defmodule World.Construction do
         plan: plan,
         done: done,
         running: running,
-        waiting: waiting,
         stale: Map.merge(s.stale, stale),
         made: Map.drop(s.made, changed),
         hauls: Map.drop(s.hauls, changed),
         placed: placed,
         built: s.built -- changed
     }
+
+    s = queue(s, waiting)
 
     # A change in a stage of a site: the tasks that take down are of it.
     allowed = if s.allowed == :all, do: :all, else: MapSet.union(s.allowed, MapSet.new(removes, & &1.id))
@@ -697,13 +776,14 @@ defmodule World.Construction do
   # The end of a stage of the site: each task of a build or a change is
   # done.
   defp finish(%{stage: %{work: work}, running: running} = s) when work != "pause" and running == %{} do
-    if Enum.any?(s.waiting, &allowed?(s, &1.id)), do: {:noreply, s}, else: s |> stage_done() |> finish()
+    if Enum.any?(Map.keys(s.waiting), &allowed?(s, &1)), do: {:noreply, s}, else: s |> stage_done() |> finish()
   end
 
   defp finish(%{stage: %{}} = s), do: {:noreply, s}
   defp finish(%{stages: [_ | _]} = s), do: {:noreply, s}
 
-  defp finish(%{waiting: [], running: running, stale: stale} = s) when running == %{} and stale == %{} do
+  defp finish(%{waiting: waiting, running: running, stale: stale} = s)
+       when waiting == %{} and running == %{} and stale == %{} do
     s = Enum.reduce(s.idle, s, &let_go(&2, &1))
     s = if s.job.drawing, do: %{s | item: World.Drawing.assemble(s.job.drawing, s.made)}, else: s
     scene = fn -> geo(s.job.scene.(s.item, level: s.level, triangles: s.triangles, parallel: true), s.job) end
@@ -718,7 +798,9 @@ defmodule World.Construction do
         "ms" => System.monotonic_time(:millisecond) - s.start,
         "memory_peak" => max(peak, now),
         "memory_end" => now,
-        "memory" => what
+        "memory" => what,
+        # The work of the construction itself (plan 0007, R3).
+        "reductions" => elem(Process.info(self(), :reductions), 1)
       })
 
     reply(s, {:built, s.id, %{glb: glb, log: s.log, level: s.level, plan: s.plan, glbs: s.glbs}})
@@ -775,7 +857,7 @@ defmodule World.Construction do
         job = Map.merge(st.job, %{lot: st.lot, geo: Map.get(Map.get(s.job, :geos, %{}), st.lot)})
         # The new statue is new: it has no age.
         s = change(%{s | age: 0.0}, job, Enum.map(job.drawing["nodes"], & &1["name"]))
-        removes = for t <- s.waiting, t.action == :remove, do: t
+        removes = for t <- ordered(s), t.action == :remove, do: t
         span = Enum.sum([0.0 | for(t <- removes, do: elem(days(s, t), 0))])
         s = %{s | allowed: MapSet.new(removes, & &1.id), fit: fit(s, st, span)}
         record(s, "stage_started", nil, stage_data(s, st))
@@ -792,8 +874,8 @@ defmodule World.Construction do
     trades = Map.new(s.plan.tasks, &{&1.id, &1.trade})
     again = for n <- names, do: %Plan.Task{id: "again/" <> n, action: :again, item: n, trade: trades[n], waits: []}
     ids = Enum.map(again, & &1.id)
-    waiting = for t <- s.waiting, do: if(t.id in rest, do: %{t | waits: t.waits ++ ids}, else: t)
-    s = %{s | waiting: again ++ waiting, plan: %{s.plan | tasks: again ++ s.plan.tasks}}
+    waiting = for t <- ordered(s), do: if(t.id in rest, do: %{t | waits: t.waits ++ ids}, else: t)
+    s = queue(%{s | plan: %{s.plan | tasks: again ++ s.plan.tasks}}, again ++ waiting)
     add = for t <- again, do: %{"id" => t.id, "action" => "again", "waits" => [], "trade" => Atom.to_string(t.trade)}
     data = %{"redo" => [], "keep" => [], "remove" => [], "add" => add, "waits" => Map.new(rest, &{&1, ids})}
     {record(s, "changed", nil, data), again}
