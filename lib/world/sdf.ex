@@ -58,7 +58,15 @@ defmodule World.SDF do
 
   defmodule Edit do
     @moduledoc "An edit of a sculpture (`World.SDF.edit/3`)."
-    defstruct shape: :ball, size: {0.5}, frame: nil, back: nil, mode: :add, blend: 0.0, material: nil, box: nil
+    defstruct shape: :ball,
+              size: {0.5},
+              frame: nil,
+              back: nil,
+              local: nil,
+              mode: :add,
+              blend: 0.0,
+              material: nil,
+              box: nil
   end
 
   @doc "The shapes of an edit."
@@ -85,6 +93,7 @@ defmodule World.SDF do
       size: size,
       frame: frame,
       back: Frame.invert(frame),
+      local: local(Frame.invert(frame)),
       mode: mode,
       blend: blend,
       material: Keyword.get(opts, :material),
@@ -96,7 +105,22 @@ defmodule World.SDF do
   defp floats(size), do: size |> Tuple.to_list() |> Enum.map(&(&1 / 1)) |> List.to_tuple()
 
   @doc "The distance from a point (in the axes of the sculpture) to the shape of an edit, or a bound of it."
-  def distance(%Edit{shape: shape, size: size, back: back}, p), do: local(shape, size, Frame.point(back, p))
+  def distance(%Edit{shape: shape, size: size, local: m}, p), do: local(shape, size, point(m, p))
+
+  # The frame from the axes of the sculpture to the axes of an edit, as a
+  # tuple of numbers (the hot path has no maps): a move only, or a turn
+  # and a move.
+  defp local(%Frame{x: x, y: y, z: z, at: {tx, ty, tz}})
+       when x == {1.0, +0.0, +0.0} and y == {+0.0, 1.0, +0.0} and z == {+0.0, +0.0, 1.0},
+       do: {:move, tx, ty, tz}
+
+  defp local(%Frame{x: {a, b, c}, y: {d, e, f}, z: {g, h, i}, at: {tx, ty, tz}}),
+    do: {:turn, a, b, c, d, e, f, g, h, i, tx, ty, tz}
+
+  defp point({:move, tx, ty, tz}, {x, y, z}), do: {x + tx, y + ty, z + tz}
+
+  defp point({:turn, a, b, c, d, e, f, g, h, i, tx, ty, tz}, {x, y, z}),
+    do: {tx + a * x + d * y + g * z, ty + b * x + e * y + h * z, tz + c * x + f * y + i * z}
 
   @doc """
   The field of the edits at a point, and the material of the surface
@@ -230,13 +254,16 @@ defmodule World.SDF do
   defp cube(r), do: {{-r, -r, -r}, {r, r, r}}
 
   # The distance from a point in the axes of the shape.
-  defp local(:ball, {r}, p), do: Vec.len(p) - r
+  defp local(:ball, {r}, {x, y, z}), do: :math.sqrt(x * x + y * y + z * z) - r
 
   defp local(:box, {hx, hy, hz}, {x, y, z}), do: box(abs(x) - hx, abs(y) - hy, abs(z) - hz)
 
   defp local(:round_box, {hx, hy, hz, r}, {x, y, z}), do: box(abs(x) - hx + r, abs(y) - hy + r, abs(z) - hz + r) - r
 
-  defp local(:capsule, {h, r}, {x, y, z}), do: Vec.len({x, y, z - min(max(z, -h), h)}) - r
+  defp local(:capsule, {h, r}, {x, y, z}) do
+    w = z - min(max(z, -h), h)
+    :math.sqrt(x * x + y * y + w * w) - r
+  end
 
   defp local(:cylinder, {r, h}, {x, y, z}) do
     {dx, dz} = {:math.sqrt(x * x + y * y) - r, abs(z) - h}
@@ -259,9 +286,11 @@ defmodule World.SDF do
   # The ellipsoid: a bound (Inigo Quilez), with the center inside by its
   # least radius.
   defp local(:ellipsoid, {rx, ry, rz}, {x, y, z}) do
-    k0 = Vec.len({x / rx, y / ry, z / rz})
-    k1 = Vec.len({x / (rx * rx), y / (ry * ry), z / (rz * rz)})
-    if k1 == 0.0, do: -Enum.min([rx, ry, rz]), else: k0 * (k0 - 1.0) / k1
+    {ax, ay, az} = {x / rx, y / ry, z / rz}
+    {bx, by, bz} = {ax / rx, ay / ry, az / rz}
+    k0 = :math.sqrt(ax * ax + ay * ay + az * az)
+    k1 = :math.sqrt(bx * bx + by * by + bz * bz)
+    if k1 == 0.0, do: -min(rx, min(ry, rz)), else: k0 * (k0 - 1.0) / k1
   end
 
   # The superellipsoid: its norm of the power `e`, less 1, times its least

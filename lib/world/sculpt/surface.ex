@@ -38,9 +38,8 @@ defmodule World.Sculpt.Surface do
   @pull 1.0e-3
   # The bricks of a region of the collapse, on each axis.
   @region 8
-  # The least faces of the budget of a region: with fewer, the points of
-  # its borders, which stay, take too much of its budget.
-  @least 1_000
+  # The least faces of a region for a collapse by regions.
+  @least 2_000
 
   @doc """
   The piece of the surface of a brick (`World.Sculpt.bricks/3`): its quads
@@ -118,10 +117,11 @@ defmodule World.Sculpt.Surface do
   end
 
   # Fewer faces, in two passes: each region of bricks (8 on each axis) in
-  # a process of its own, to twice its share of the budget, with the
-  # points that it shares with the other regions where they are; then the
-  # whole mesh to the budget, with the quadrics of the first pass. With a
-  # budget of less than 1,000 faces for each region, one pass.
+  # a process of its own, to 1.1 times its share of the budget or to a
+  # quarter of its faces (the more of the two: the points that it shares
+  # with the other regions stay where they are, and must not take its
+  # budget); then the whole mesh to the budget, with the quadrics of the
+  # first pass. With fewer than 2,000 faces for each region, one pass.
   defp fewer(pts, tris, _keys, budget) when length(tris) <= budget, do: {pts, tris}
 
   defp fewer(pts, tris, keys, budget) do
@@ -129,7 +129,7 @@ defmodule World.Sculpt.Surface do
     groups = Enum.group_by(tris, fn {[a | _], _} -> region(elem(keys, a)) end)
 
     {pts, tris, quadrics} =
-      if map_size(groups) > 1 and budget / map_size(groups) >= @least,
+      if map_size(groups) > 1 and length(tris) / map_size(groups) >= @least,
         do: regions(List.to_tuple(pts), groups, length(tris), budget),
         else: {pts, tris, nil}
 
@@ -148,7 +148,9 @@ defmodule World.Sculpt.Surface do
     groups
     |> Enum.sort()
     |> Task.async_stream(
-      fn {_, faces} -> region_collapse(all, faces, shared, round(2 * budget * length(faces) / total)) end,
+      fn {_, faces} ->
+        region_collapse(all, faces, shared, max(round(1.1 * budget * length(faces) / total), div(length(faces), 4)))
+      end,
       max_concurrency: System.schedulers_online(),
       timeout: :infinity
     )

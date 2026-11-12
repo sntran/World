@@ -59,18 +59,20 @@ defmodule World.Simplify do
     locked = for({v, n} <- kinds, n > 1, into: MapSet.new(), do: v) |> MapSet.union(stay)
     fixed = for({v, n} <- kinds, n > 2, into: MapSet.new(), do: v) |> MapSet.union(stay)
 
+    # The faces of each edge, once.
+    edges =
+      for {f, {a, b, c, _}} <- fs, {x, y} <- [{a, b}, {b, c}, {c, a}], reduce: %{} do
+        acc -> Map.update(acc, {min(x, y), max(x, y)}, [f], &[f | &1])
+      end
+
     q =
       case opts[:quadrics] do
-        nil ->
-          q = Map.new(pts, fn {v, _} -> {v, Enum.reduce(vfaces[v] || [], zero(), &add(&2, plane(pts, fs[&1])))} end)
-          Enum.reduce(fs, q, fn {_, face}, q -> border(q, pts, fs, vfaces, face) end)
-
-        list ->
-          list |> Enum.with_index() |> Map.new(fn {q, i} -> {i, q} end)
+        nil -> quadrics(pts, fs, edges)
+        list -> list |> Enum.with_index() |> Map.new(fn {q, i} -> {i, q} end)
       end
 
     s = %{pts: pts, fs: fs, vf: vfaces, q: q, locked: locked, fixed: fixed, ver: %{}, count: map_size(fs)}
-    heap = Enum.reduce(edges(s), :gb_sets.new(), fn {a, b}, h -> push(h, s, a, b) end)
+    heap = edges |> Map.keys() |> Enum.flat_map(&List.wrap(entry(s, &1))) |> :gb_sets.from_list()
     s = run(s, heap, budget)
     pack(s)
   end
@@ -94,34 +96,40 @@ defmodule World.Simplify do
     end
   end
 
-  # The edges of the faces, each once.
-  defp edges(s) do
-    for {_, {a, b, c, _}} <- s.fs, {x, y} <- [{a, b}, {b, c}, {c, a}], uniq: true, do: {min(x, y), max(x, y)}
-  end
+  # The quadric of each point: the planes of its faces (each plane made
+  # once), and the planes of the borders of the materials: for each edge
+  # whose two faces have two materials, the plane through the edge at a
+  # right angle to each face, with a large weight. So a point on a border
+  # moves along it, and the border keeps its line.
+  defp quadrics(pts, fs, edges) do
+    q =
+      Enum.reduce(fs, %{}, fn {_, {a, b, c, _} = face}, q ->
+        p = plane(pts, face)
+        Enum.reduce([a, b, c], q, fn v, q -> Map.update(q, v, p, &add(&1, p)) end)
+      end)
 
-  # The quadrics of the borders of the materials: for each edge of a face
-  # whose face across it has another material, the plane through the edge
-  # at a right angle to the face, with a large weight. So a point on a
-  # border moves along it, and the border keeps its line.
-  defp border(q, pts, fs, vf, {a, b, c, m}) do
-    Enum.reduce([{a, b}, {b, c}, {c, a}], q, fn {x, y}, q ->
-      other = for f <- vf[x], f in vf[y], {_, _, _, m2} = fs[f], m2 != m, do: f
-
-      if other == [] do
-        q
-      else
-        n = normal([pts[a], pts[b], pts[c]])
-        side = Vec.cross(Vec.sub(pts[y], pts[x]), n)
+    for {{x, y}, list} <- edges,
+        list |> Enum.map(&elem(fs[&1], 3)) |> Enum.uniq() |> length() > 1,
+        f <- list,
+        reduce: q do
+      q ->
+        {a, b, c, _} = fs[f]
+        side = Vec.cross(Vec.sub(pts[y], pts[x]), normal([pts[a], pts[b], pts[c]]))
         plane = plane_of(side, pts[x], @border)
         q |> Map.update!(x, &add(&1, plane)) |> Map.update!(y, &add(&1, plane))
-      end
-    end)
+    end
   end
 
   # An edge into the heap, with its cost and its place. A point where
   # three materials meet stays; a point on a border moves only along it.
   defp push(heap, s, a, b) do
-    {a, b} = {min(a, b), max(a, b)}
+    case entry(s, {min(a, b), max(a, b)}) do
+      nil -> heap
+      e -> :gb_sets.add(e, heap)
+    end
+  end
+
+  defp entry(s, {a, b}) do
     {la, lb} = {MapSet.member?(s.locked, a), MapSet.member?(s.locked, b)}
     {fa, fb} = {MapSet.member?(s.fixed, a), MapSet.member?(s.fixed, b)}
     both = [s.pts[a], s.pts[b], Vec.scale(Vec.add(s.pts[a], s.pts[b]), 0.5)]
@@ -142,12 +150,12 @@ defmodule World.Simplify do
 
     case places do
       [] ->
-        heap
+        nil
 
       _ ->
         qe = add(s.q[a], s.q[b])
         {cost, place} = places |> Enum.map(&{error(qe, &1), &1}) |> Enum.min_by(&elem(&1, 0))
-        :gb_sets.add({cost, a, b, Map.get(s.ver, a, 0), Map.get(s.ver, b, 0), place}, heap)
+        {cost, a, b, Map.get(s.ver, a, 0), Map.get(s.ver, b, 0), place}
     end
   end
 

@@ -590,3 +590,32 @@ each collapses 31,016 faces in one pass. The next steps: a faster
 collapse (it is half of the time, and its last pass is one process) and
 a compiled form of the short lists (D10).
 
+Then the two next steps:
+
+- **A compiled form of each edit** (D10): the frame from the axes of the
+  sculpture to the axes of an edit is a tuple of numbers (a move only,
+  or a turn and a move), and the ball, the capsule and the ellipsoid
+  take numbers, not vectors. An ellipsoid at a point took 521 ns, and
+  takes 123 ns; ten edits, 5.2 µs and 1.7 µs. The field of the bricks of
+  the near carp takes 0.54 s, not 0.94 s.
+- **A faster collapse:** the plane of each face is made once (not once
+  for each of its points), one map gives the faces of each edge, and
+  the heap is made from a list in one step: the start of the collapse
+  of 31,024 faces takes 0.68 s, not 0.85 s. Each region goes to 1.1
+  times its share of the budget, or to a quarter of its faces (the more
+  of the two), so the last pass has little to do, also at mid and far.
+  The collapse of the carp: 1.07 s at near (it was 1.75 s), 1.10 s at mid
+  (2.45 s) and 1.18 s at far (2.61 s), with the same volume.
+
+| The carp from edits (the bench, a fresh node) | At the start | Cells of the budget, and the cache | Now |
+|---|---|---|---|
+| near | 6.6 s | 4.0 s | 3.3 s |
+| mid | 3.1 s | 4.2 s | 2.7 s |
+| far | 2.4 s | 4.4 s | 2.5 s |
+| The three levels (`mix world.build carp_edits`) | about 30 s | 17.7 s | 7.7 s |
+| A second build of the same edits, near | | 3 ms and its GLB (0.41 s) | 3 ms and its GLB (0.43 s) |
+
+Now the GLB of the near level (0.43 s, one process: the normals of the
+faces and the scene) is the most of a second build, and of a cold build
+the bricks (1.0 s), the mesh (0.6 s) and the collapse (1.1 s).
+
