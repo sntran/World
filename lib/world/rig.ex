@@ -259,12 +259,17 @@ defmodule World.Rig do
     # The color, its alpha, the length of the fur and the direction of
     # the fur of a point (when the mesh has them) go with its weights in
     # the smooth steps, as the keys :r, :g, :b, :a, :fur, :dx, :dy and :dz.
-    {colors, fur, dirs} = {Map.get(mesh, :colors), Map.get(mesh, :fur), Map.get(mesh, :fur_dirs)}
-    fade = Map.get(mesh, :fade)
-    color = fn i -> if colors, do: Enum.at(colors, i) |> then(fn {r, g, b} -> %{r: r, g: g, b: b} end), else: %{} end
-    alpha = fn i -> if fade, do: %{a: Enum.at(fade, i)}, else: %{} end
-    fur_of = fn i -> if fur, do: %{fur: Enum.at(fur, i)}, else: %{} end
-    dir_of = fn i -> if dirs, do: Enum.at(dirs, i) |> then(fn {x, y, z} -> %{dx: x, dy: y, dz: z} end), else: %{} end
+    # (Tuples: the value of a point in one step, not a walk of a list.)
+    tuple = fn list -> list && List.to_tuple(list) end
+
+    {colors, fur, dirs} =
+      {tuple.(Map.get(mesh, :colors)), tuple.(Map.get(mesh, :fur)), tuple.(Map.get(mesh, :fur_dirs))}
+
+    fade = tuple.(Map.get(mesh, :fade))
+    color = fn i -> if colors, do: elem(colors, i) |> then(fn {r, g, b} -> %{r: r, g: g, b: b} end), else: %{} end
+    alpha = fn i -> if fade, do: %{a: elem(fade, i)}, else: %{} end
+    fur_of = fn i -> if fur, do: %{fur: elem(fur, i)}, else: %{} end
+    dir_of = fn i -> if dirs, do: elem(dirs, i) |> then(fn {x, y, z} -> %{dx: x, dy: y, dz: z} end), else: %{} end
 
     start =
       points

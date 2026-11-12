@@ -133,7 +133,10 @@ defmodule World.People.Skeleton do
   # The kind of a bone for its limits: the joints of the four fingers are
   # the same.
   defp kind(name) do
-    base = String.replace(name, ~r/_[lr]$/, "")
+    # The name with no side (`_l`, `_r`): a match of its last bytes, not a
+    # regular expression (it runs for each bone at each turn).
+    n = byte_size(name)
+    base = if n > 2 and binary_part(name, n - 2, 2) in ["_l", "_r"], do: binary_part(name, 0, n - 2), else: name
 
     case String.split(base, "_") do
       [f, n] when f in @fingers -> "finger_" <> n
