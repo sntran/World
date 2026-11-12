@@ -302,6 +302,7 @@ defmodule World.Construction do
   end
 
   def handle_info({:failed, _p, id, message}, s) do
+    whistle(s)
     s = record(s, "failed", nil, %{"task" => id, "message" => message})
     reply(s, {:failed, s.id, message})
     {:stop, :normal, s}
@@ -473,6 +474,7 @@ defmodule World.Construction do
   defp part?(nil, _node), do: false
 
   defp stop(s, data) do
+    whistle(s)
     s = record(s, "stopped", nil, data)
     reply(s, {:stopped, s.id, data["reason"]})
     {:stop, :normal, s}
@@ -663,6 +665,11 @@ defmodule World.Construction do
   end
 
   defp method(s), do: Map.get(s.job, :method, "today")
+
+  # The construction stops: each person with a task stops it at once (a
+  # message of priority, plan 0007, D5), as the people of a site stop at
+  # the call, not at the end of their tasks.
+  defp whistle(s), do: Enum.each(Map.keys(Map.get(s, :running, %{})), &Person.stop/1)
 
   # The people of the crew of a task: the person and its helpers (the
   # crew of the rate of its work, `World.Site.crew/3`).

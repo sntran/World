@@ -237,7 +237,11 @@ A client can pause a construction (`paused`: no task starts, the people
 end the tasks in hand, the free people go), change it in the pause (a
 new order of the same blueprint in data: each node whose data is the
 same stays made; `changed`), resume it (`resumed`), or cancel it
-(`stopped`, the reason `cancelled`). A change has a cost on the site
+(`stopped`, the reason `cancelled`). A person does each task in a hand
+(a process that it watches), and takes a stop of priority while the hand
+works: when a construction stops, fails or is cancelled, each person with
+a task stops it at once and is free (plan 0007, D5); the hand sends its
+result to the construction itself. A change has a cost on the site
 (plan 0006, D7): each built element that it drops is taken down by
 people before its node is made again, the last built first (a task
 `remove/NODE` of the trade of the node, `action` `remove`, a third of

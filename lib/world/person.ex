@@ -33,22 +33,41 @@ defmodule World.Person do
 
   @doc """
   Give a task to a person: `work` is a function with no arguments. The
-  person sends `{:done, person, id, result}` to the process that calls,
-  or `{:failed, person, id, message}` when the work raises. With `heap`
-  (words), the work runs in a process of its own with that limit of its
-  heap and of the binaries that it holds (`max_heap_size`, Erlang/OTP
-  27): over it, the work stops alone, and the message is `"memory"`.
+  person does it in a hand (a process of its own that it watches), so it
+  can take a stop while the hand works (plan 0007, D5). The hand sends
+  `{:done, person, id, result}` to the process that calls, or the person
+  sends `{:failed, person, id, message}` when the work raises. With
+  `heap` (words), the hand has that limit of its heap and of the binaries
+  that it holds (`max_heap_size`, Erlang/OTP 27): over it, the work stops
+  alone, and the message is `"memory"`.
   """
   def work(person, id, work, heap \\ nil) when is_function(work, 0),
     do: GenServer.cast(person, {:work, self(), id, work, heap})
 
-  @doc "The job and the trade of a person."
+  @doc """
+  Stop the task of a person at once: a message of priority to its alias,
+  so it comes before the other messages (Erlang/OTP 28). The hand stops,
+  no result goes, and the person is free. Nothing for a person with no
+  task.
+  """
+  def stop(person) do
+    case Registry.lookup(World.Names, {:person, person}) do
+      [{_, alias}] -> :erlang.send(alias, :stop, [:priority])
+      [] -> :ok
+    end
+
+    :ok
+  end
+
+  @doc "The job and the trade of a person, and its hand (`nil` with no task)."
   def info(person), do: GenServer.call(person, :info)
 
   @impl true
   def init(opts) do
-    s = %{trade: Map.fetch!(opts, :trade), job: Map.get(opts, :job, :worker)}
+    s = %{trade: Map.fetch!(opts, :trade), job: Map.get(opts, :job, :worker), hand: nil}
     Process.set_label({:person, s.job, s.trade})
+    # The alias of priority of the person: a stop comes before the rest.
+    {:ok, _} = Registry.register(World.Names, {:person, self()}, :erlang.alias([:priority]))
     {:ok, s}
   end
 
@@ -57,35 +76,42 @@ defmodule World.Person do
 
   @impl true
   def handle_cast({:work, from, id, work, heap}, s) do
-    send(from, run(id, work, heap))
-    # The result is with the construction now: the person gives its
-    # memory back before the next task (the edge has 128 MB).
-    {:noreply, s, :hibernate}
-  end
-
-  defp run(id, work, nil), do: tag(outcome(work), id)
-
-  defp run(id, work, heap) do
     me = self()
 
     {pid, ref} =
       spawn_monitor(fn ->
-        Process.flag(:max_heap_size, %{size: heap, kill: true, error_logger: false, include_shared_binaries: true})
-        send(me, {self(), outcome(work)})
+        if heap,
+          do:
+            Process.flag(:max_heap_size, %{size: heap, kill: true, error_logger: false, include_shared_binaries: true})
+
+        # The result goes to the construction from the hand: one copy.
+        send(from, tag(outcome(work), id, me))
       end)
 
-    receive do
-      {^pid, outcome} ->
-        Process.demonitor(ref, [:flush])
-        tag(outcome, id)
-
-      {:DOWN, ^ref, :process, ^pid, :killed} ->
-        {:failed, me, id, "memory"}
-
-      {:DOWN, ^ref, :process, ^pid, reason} ->
-        {:failed, me, id, inspect(reason)}
-    end
+    {:noreply, %{s | hand: {pid, ref, from, id}}}
   end
+
+  @impl true
+  def handle_info({:DOWN, ref, :process, pid, reason}, %{hand: {pid, ref, from, id}} = s) do
+    cond do
+      reason == :normal -> :ok
+      reason == :killed -> send(from, {:failed, self(), id, "memory"})
+      true -> send(from, {:failed, self(), id, inspect(reason)})
+    end
+
+    # The result is with the construction now: the person gives its
+    # memory back before the next task (the edge has 128 MB).
+    {:noreply, %{s | hand: nil}, :hibernate}
+  end
+
+  # A stop: the hand stops, and no result goes.
+  def handle_info(:stop, %{hand: {pid, ref, _, _}} = s) do
+    Process.demonitor(ref, [:flush])
+    Process.exit(pid, :kill)
+    {:noreply, %{s | hand: nil}, :hibernate}
+  end
+
+  def handle_info(_message, s), do: {:noreply, s}
 
   defp outcome(work) do
     {:ok, work.()}
@@ -93,6 +119,6 @@ defmodule World.Person do
     e -> {:error, Exception.message(e)}
   end
 
-  defp tag({:ok, result}, id), do: {:done, self(), id, result}
-  defp tag({:error, message}, id), do: {:failed, self(), id, message}
+  defp tag({:ok, result}, id, person), do: {:done, person, id, result}
+  defp tag({:error, message}, id, person), do: {:failed, person, id, message}
 end
