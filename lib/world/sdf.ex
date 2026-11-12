@@ -66,6 +66,7 @@ defmodule World.SDF do
               mode: :add,
               blend: 0.0,
               material: nil,
+              color: nil,
               box: nil
   end
 
@@ -78,8 +79,9 @@ defmodule World.SDF do
   @doc """
   An edit: a shape with its sizes (see the module), and the options
   `frame` (a `World.Frame`: the place and the turn of the shape; none
-  by default), `mode` (`:add` by default), `blend` (m, 0 by default) and
-  `material` (a role of the palette).
+  by default), `mode` (`:add` by default), `blend` (m, 0 by default),
+  `material` (a role of the palette) and `color` (`{r, g, b}`, 0 to 255:
+  the color of the surface of the edit, `color/3`).
   """
   def edit(shape, size, opts \\ []) when shape in @shapes do
     frame = Keyword.get(opts, :frame, Frame.identity())
@@ -97,6 +99,7 @@ defmodule World.SDF do
       mode: mode,
       blend: blend,
       material: Keyword.get(opts, :material),
+      color: linear(Keyword.get(opts, :color)),
       box: placed(local_bounds(shape, size), frame)
     }
   end
@@ -153,7 +156,62 @@ defmodule World.SDF do
   defp step(%Edit{mode: :subtract, blend: r, material: m}, {d, mat}, de),
     do: {smax(d, -de, r), if(m != nil and -de > d, do: m, else: mat)}
 
-  defp step(%Edit{mode: :paint, material: m}, {d, mat}, de), do: {d, if(de <= 0.0, do: m, else: mat)}
+  # A paint with no material (a color only) keeps the material under it.
+  defp step(%Edit{mode: :paint, material: m}, {d, mat}, de), do: {d, if(m != nil and de <= 0.0, do: m, else: mat)}
+
+  @doc """
+  The color of the surface of the edits at a point: `{r, g, b}`, 0 to
+  255 (`docs/plans/0009-sculpture-finish.md`, D2). The color is the fold
+  of the edits in their order, from white: an edit that adds takes the
+  color to its own color by the weight of its smooth minimum (all of it
+  where the edit is the surface, none where the sculpture so far is,
+  and a mix across its blend); an edit with a color that takes away
+  gives it to the surface that it cuts, in the same way; an edit with a
+  color that paints gives it in its shape, with a smooth step across its
+  border over its blend. An edit that adds with no color is white: the
+  color of its material shows as it is.
+  """
+  def color(edits, p, limit \\ @far) do
+    {_, {r, g, b}} =
+      Enum.reduce(edits, {limit, {1.0, 1.0, 1.0}}, fn e, {d, col} ->
+        de = distance(e, p)
+
+        case e.mode do
+          :add -> {clamp(smin(d, de, e.blend), limit), mix(col, e.color || {1.0, 1.0, 1.0}, weight(d - de, e.blend))}
+          :subtract -> {clamp(smax(d, -de, e.blend), limit), mix(col, e.color, weight(-de - d, e.blend))}
+          :paint -> {d, mix(col, e.color, smooth(weight(-2 * de, e.blend)))}
+        end
+      end)
+
+    {srgb(r), srgb(g), srgb(b)}
+  end
+
+  # The weight of the second of two values in their smooth minimum: 1
+  # when it is less by the blend or more, 0 when it is more by the blend,
+  # a line between (a step with no blend).
+  defp weight(more, r) when r <= 0.0, do: if(more > 0.0, do: 1.0, else: 0.0)
+  defp weight(more, r), do: min(max(0.5 + 0.5 * more / r, 0.0), 1.0)
+
+  defp smooth(w), do: w * w * (3.0 - 2.0 * w)
+
+  defp mix(col, nil, _w), do: col
+  defp mix(col, _to, w) when w == 0.0, do: col
+  defp mix({a, b, c}, {d, e, f}, w), do: {a + (d - a) * w, b + (e - b) * w, c + (f - c) * w}
+
+  # A color of sRGB (0 to 255) as linear light (0 to 1), and back: a mix
+  # of two colors is a mix of their light.
+  defp linear(nil), do: nil
+  defp linear({r, g, b}), do: {linear(r), linear(g), linear(b)}
+
+  defp linear(c) do
+    c = c / 255
+    if c <= 0.04045, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
+  end
+
+  defp srgb(c) do
+    c = min(max(c, 0.0), 1.0)
+    round(255 * if(c <= 0.0031308, do: 12.92 * c, else: 1.055 * :math.pow(c, 1 / 2.4) - 0.055))
+  end
 
   @doc """
   The smooth minimum of two values with the blend `r` (Dave Smith, Media
@@ -196,7 +254,8 @@ defmodule World.SDF do
   its least value is at least the most value of the field so far and its
   blend; an edit that takes away, when its least value is at least its
   blend less the least value of the field so far; an edit that paints,
-  when its shape does not reach the cell.
+  when its shape, grown by half of its blend (the border of its color,
+  `color/3`), does not reach the cell.
   """
   def prune(edits, center, half, limit \\ @far), do: elem(cell(edits, center, half, limit), 0)
 
@@ -216,7 +275,7 @@ defmodule World.SDF do
           :add -> {[e | kept], {clamp(smin(lo, dlo, e.blend), limit), clamp(smin(hi, dhi, e.blend), limit)}}
           :subtract when dlo >= e.blend - lo -> {kept, range}
           :subtract -> {[e | kept], {clamp(smax(lo, -dhi, e.blend), limit), clamp(smax(hi, -dlo, e.blend), limit)}}
-          :paint when dlo > 0.0 -> {kept, range}
+          :paint when dlo > e.blend / 2 -> {kept, range}
           :paint -> {[e | kept], range}
         end
       end)

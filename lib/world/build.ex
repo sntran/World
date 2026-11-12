@@ -622,7 +622,12 @@ defmodule World.Build do
     mat |> Scene.primitive(shapes, fn {f, m} -> place(memo[m], f) end) |> Detail.collect()
   end
 
-  defp place(corners, f), do: for({p, n} <- corners, do: {Frame.point(f, p), Frame.dir(f, n)})
+  defp place(corners, f) do
+    Enum.map(corners, fn
+      {p, n} -> {Frame.point(f, p), Frame.dir(f, n)}
+      {p, n, c} -> {Frame.point(f, p), Frame.dir(f, n), c}
+    end)
+  end
 
   # A part that stretches between its node and another node (a spring):
   # `"stretch"` in its params, `%{"to" => node, "from" => point, "end" =>

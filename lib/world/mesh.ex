@@ -8,7 +8,16 @@ defmodule World.Mesh do
   into triangles (`wings_tesselation:triangulate/2`).
   """
   alias World.{Frame, Vec}
-  defstruct points: [], faces: [], material: :paint, smooth: 0, angle: 40.0, skin: nil, matter: nil
+
+  defstruct points: [],
+            faces: [],
+            material: :paint,
+            smooth: 0,
+            angle: 40.0,
+            skin: nil,
+            matter: nil,
+            normals: nil,
+            colors: nil
 
   @type t :: %__MODULE__{
           points: [Vec.t()],
@@ -17,7 +26,9 @@ defmodule World.Mesh do
           smooth: non_neg_integer,
           angle: number,
           skin: number | nil,
-          matter: atom | nil
+          matter: atom | nil,
+          normals: [Vec.t()] | nil,
+          colors: [{0..255, 0..255, 0..255}] | nil
         }
 
   @doc """
@@ -57,8 +68,19 @@ defmodule World.Mesh do
     }
   end
 
+  @doc """
+  A mesh of triangles with the normal of each point (unit vectors: the
+  normals of the true surface, where the mesh comes from a field) and,
+  or, the color of each point (`{r, g, b}`, 0 to 255, which the color of
+  the material multiplies). A corner takes the normal of its point when
+  it is within the angle of the mesh from the normal of its face (a hard
+  edge stays hard: there the rule of the angle holds, `triangles/2`).
+  """
+  def finish(%__MODULE__{} = mesh, normals, colors), do: %{mesh | normals: normals, colors: colors}
+
   @doc "The mesh, moved by a frame."
-  def transform(%__MODULE__{points: ps} = m, %Frame{} = f), do: %{m | points: Enum.map(ps, &Frame.point(f, &1))}
+  def transform(%__MODULE__{points: ps, normals: ns} = m, %Frame{} = f),
+    do: %{m | points: Enum.map(ps, &Frame.point(f, &1)), normals: ns && Enum.map(ns, &Frame.dir(f, &1))}
 
   @doc "The box of the points: `{min, max}`."
   def bounds(%__MODULE__{points: ps}), do: Vec.bounds(ps)
@@ -85,11 +107,32 @@ defmodule World.Mesh do
   @doc """
   The triangles of the mesh at a smooth level (the level of the mesh by
   default): a list of corners `{point, normal}`, three for each triangle.
+  A mesh with the colors of its points (`finish/3`) gives corners
+  `{point, normal, color}`.
   """
   def triangles(%__MODULE__{} = m, level \\ nil) do
     level = if level == nil, do: m.smooth, else: level
     {tris, pos} = wings_triangles(m, level)
-    normals(tris, pos, if(level > 0, do: 180.0, else: m.angle))
+    corners = normals(tris, pos, if(level > 0, do: 180.0, else: m.angle))
+    if m.normals || m.colors, do: own(m, corners), else: corners
+  end
+
+  # The corners with the normals and the colors of the points of the mesh
+  # (a mesh of triangles: its faces are its triangles, in their order).
+  defp own(%__MODULE__{faces: faces, normals: normals, colors: colors, angle: angle}, corners) do
+    limit = :math.cos(angle * :math.pi() / 180) - 1.0e-6
+    {nt, ct} = {normals && List.to_tuple(normals), colors && List.to_tuple(colors)}
+
+    faces
+    |> Enum.zip(Enum.chunk_every(corners, 3))
+    |> Enum.flat_map(fn {vs, [{a, _}, {b, _}, {c, _}] = cs} ->
+      face = Vec.norm(Vec.cross(Vec.sub(b, a), Vec.sub(c, a)))
+
+      for {v, {p, n}} <- Enum.zip(vs, cs) do
+        n = if nt && Vec.dot(elem(nt, v), face) >= limit, do: elem(nt, v), else: n
+        if ct, do: {p, n, elem(ct, v)}, else: {p, n}
+      end
+    end)
   end
 
   # A mesh of triangles only (a cast, a skin of surface nets) needs no

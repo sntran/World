@@ -85,6 +85,13 @@ defmodule World.Skills.SculptTest do
     assert_in_delta hz - lz, 0.2, 1.0e-9
   end
 
+  test "an edit with a color: the part has the color of each point" do
+    data = %{"edits" => [%{"shape" => "ball", "size" => [0.2], "color" => "#a88840"}], "cells" => %{"far" => 0.05}}
+    far = Detail.with(:far, fn -> Drawing.build(drawing(data)) end)
+    {"stone", part, _} = hd(far.nodes)
+    assert [%{colors: [{168, 136, 64} | _], normals: [_ | _]}] = part.shapes
+  end
+
   test "the estimate of the triangles: in the budget, and none for data with errors" do
     near = Skill.estimate(data(), :near)
     assert near > 2_000 and near <= 20_000
@@ -131,8 +138,8 @@ defmodule World.Skills.SculptTest do
        ["#{p}.edits.0.size.points.1", "#{p}.edits.0.size.radii.1"]},
       {edit.(Map.merge(ball, %{"at" => [0, 0], "axis" => [0, 0, 0], "up" => "z"})),
        ["#{p}.edits.0.at", "#{p}.edits.0.axis", "#{p}.edits.0.up"]},
-      {edit.(Map.merge(ball, %{"mode" => "cut", "blend" => -1, "material" => "gold!"})),
-       ["#{p}.edits.0.mode", "#{p}.edits.0.blend", "#{p}.edits.0.material"]}
+      {edit.(Map.merge(ball, %{"mode" => "cut", "blend" => -1, "material" => "gold!", "color" => "red"})),
+       ["#{p}.edits.0.mode", "#{p}.edits.0.blend", "#{p}.edits.0.material", "#{p}.edits.0.color"]}
     ]
 
     for {d, expected} <- cases, do: assert(paths.(d) == expected, inspect({expected, paths.(d)}))

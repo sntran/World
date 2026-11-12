@@ -51,8 +51,10 @@ defmodule World.Sculpt do
   @doc """
   The meshes of a sculpture (a `World.Mesh` for each material): its
   bricks, the piece of the surface of each brick in the process of the
-  brick, and the meshes of the pieces (`World.Sculpt.Surface`), with no
-  piece of the surface less than two cells across. The
+  brick, the meshes of the pieces (`World.Sculpt.Surface`), with no
+  piece of the surface less than two cells across, and their finish
+  (each point on the surface, with its normal and its color,
+  `World.Sculpt.Finish`). The
   options: `level` (the level of detail of `World.Detail` by default),
   `step` (the size of the cells, the size of the level by default),
   `budget` (the most faces, `World.Simplify`), `parallel`, and `cache`
@@ -67,7 +69,13 @@ defmodule World.Sculpt do
 
     with nil <- key && Cache.get(key) do
       %{bricks: bricks} = bricks(edits, step, opts)
-      meshes = Surface.meshes(Enum.map(bricks, & &1.piece), budget: opts[:budget], small: 2 * step)
+
+      meshes =
+        bricks
+        |> Enum.map(& &1.piece)
+        |> Surface.meshes(budget: opts[:budget], small: 2 * step)
+        |> World.Sculpt.Finish.meshes(Map.new(bricks, &{&1.at, &1.edits}), edits, step)
+
       if key, do: Cache.put(key, meshes)
       meshes
     end

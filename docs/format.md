@@ -439,7 +439,24 @@ An edit has its `shape` and its `size`, and these keys:
   and the sculpture is hard; with more, the joint is smooth (the
   quadratic smooth minimum), and the edit reaches `blend` past its shape
   and no more;
-- `material`: a role of the palette (`priv/palette.json`).
+- `material`: a role of the palette (`priv/palette.json`);
+- `color` (`#rrggbb`): the color of the surface of the edit. The color at
+  a point of the surface is the fold of the edits in their order, as its
+  shape is: an edit that adds takes the color to its own across its
+  `blend` (a soft border for a smooth joint, a sharp one for a hard
+  joint); an edit that paints gives its color in its shape, with a soft
+  border as wide as its `blend`; an edit that takes away gives its color
+  to the surface that it cuts. An edit that adds with no color is white.
+  The mesh has the color of each point (`COLOR_0`), and the color of the
+  material multiplies it: with a white material (a role with the color
+  `#ffffff` in the `materials` of the drawing), the colors are as they
+  are written. A border of two colors of one material is smooth; a border
+  of two materials follows the cells.
+
+After the cut to its budget, each point of the mesh goes back onto the
+surface of the edits, and takes the normal of the surface there
+(`World.Sculpt.Finish`): a mesh of few triangles is on the true shape and
+has its smooth light, and a hard edge of hard edits stays hard.
 
 | Shape | Size (m) |
 |---|---|

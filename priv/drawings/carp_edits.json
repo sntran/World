@@ -6,20 +6,8 @@
   ],
   "materials": {
     "skin": {
-      "color": "#a88840",
+      "color": "#ffffff",
       "roughness": 0.6
-    },
-    "dark": {
-      "color": "#60522c",
-      "roughness": 0.6
-    },
-    "white": {
-      "color": "#d6c496",
-      "roughness": 0.6
-    },
-    "bronze": {
-      "color": "#846034",
-      "roughness": 0.7
     },
     "black": {
       "color": "#28221a",
@@ -44,7 +32,8 @@
                 0.03,
                 0.086
               ],
-              "material": "skin"
+              "material": "skin",
+              "color": "#a88840"
             },
             {
               "shape": "ellipsoid",
@@ -59,7 +48,8 @@
                 0.083
               ],
               "blend": 0.03,
-              "material": "skin"
+              "material": "skin",
+              "color": "#a88840"
             },
             {
               "shape": "ellipsoid",
@@ -74,7 +64,8 @@
                 0.079
               ],
               "blend": 0.02,
-              "material": "skin"
+              "material": "skin",
+              "color": "#a88840"
             },
             {
               "shape": "ellipsoid",
@@ -89,7 +80,8 @@
                 0.089
               ],
               "blend": 0.03,
-              "material": "skin"
+              "material": "skin",
+              "color": "#a88840"
             },
             {
               "shape": "ellipsoid",
@@ -104,7 +96,8 @@
                 0.185
               ],
               "mode": "paint",
-              "material": "dark"
+              "blend": 0.03,
+              "color": "#60522c"
             },
             {
               "shape": "ellipsoid",
@@ -119,7 +112,8 @@
                 -0.002
               ],
               "mode": "paint",
-              "material": "white"
+              "blend": 0.03,
+              "color": "#d6c496"
             },
             {
               "shape": "ellipsoid",
@@ -233,7 +227,8 @@
                 0.1045
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -258,7 +253,8 @@
                 -0.4226
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -283,7 +279,8 @@
                 0.5592
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -308,7 +305,8 @@
                 -0.5592
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -323,7 +321,8 @@
                 0.09
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -348,7 +347,8 @@
                 -0.184
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -373,7 +373,8 @@
                 -0.1233
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -398,7 +399,8 @@
                 -0.184
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -423,7 +425,8 @@
                 -0.1233
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             },
             {
               "shape": "ellipsoid",
@@ -448,7 +451,8 @@
                 -0.5547
               ],
               "blend": 0.006,
-              "material": "bronze"
+              "material": "skin",
+              "color": "#846034"
             }
           ],
           "ports": {

@@ -4,7 +4,7 @@ defmodule World.Skills.Sculpt do
   D9): a part from a list of edits (`docs/format.md`, "A sculpture").
 
   Its data: `edits` (a list of 1 to 10,000 edits: each with its `shape`
-  and its `size`, and `at`, `axis`, `up`, `mode`, `blend`, `material`),
+  and its `size`, and `at`, `axis`, `up`, `mode`, `blend`, `material`, `color`),
   and `ports`, `sources`, `budget` (the most triangles at `near`, `mid`
   and `far`) and `cells` (the size of the cells at `near`, `mid` and
   `far`, m). With no `cells` for a level and a budget, the cells fit the
@@ -18,7 +18,7 @@ defmodule World.Skills.Sculpt do
   alias World.{Drawing, GLB, Part, Port, SDF, Vec}
 
   @keys ~w(edits ports sources budget cells)
-  @edit ~w(shape size at axis up mode blend material)
+  @edit ~w(shape size at axis up mode blend material color)
   @most 10_000
   @size 1_000
   # The atoms of the names of the shapes and of the modes.
@@ -112,7 +112,8 @@ defmodule World.Skills.Sculpt do
       frame: Port.frame(port),
       mode: @atoms[Map.get(e, "mode", "add")],
       blend: Map.get(e, "blend", 0),
-      material: e["material"] && GLB.role(e["material"])
+      material: e["material"] && GLB.role(e["material"]),
+      color: e["color"] && rgb(e["color"])
     )
   end
 
@@ -138,7 +139,8 @@ defmodule World.Skills.Sculpt do
       optional(e, "up", path, &direction/2) ++
       optional(e, "mode", path, &choice(&1, &2, ~w(add subtract paint))) ++
       optional(e, "blend", path, &number(&1, &2, 0, 10)) ++
-      optional(e, "material", path, &choice(&1, &2, GLB.palette() |> Map.keys() |> Enum.sort()))
+      optional(e, "material", path, &choice(&1, &2, GLB.palette() |> Map.keys() |> Enum.sort())) ++
+      optional(e, "color", path, &color/2)
   end
 
   defp edit(_e, path), do: [{path, "must be an object"}]
@@ -186,6 +188,11 @@ defmodule World.Skills.Sculpt do
   defp extra(_shape, v, path) do
     if Enum.all?(v, &(&1 > 0)), do: [], else: [{path, "each size must be more than 0"}]
   end
+
+  defp color(v, path),
+    do: if(is_binary(v) and v =~ ~r/^#[0-9a-fA-F]{6}$/, do: [], else: [{path, "must be a color #rrggbb"}])
+
+  defp rgb("#" <> hex), do: for(<<c::binary-size(2) <- hex>>, do: String.to_integer(c, 16)) |> List.to_tuple()
 
   defp point(v, path) do
     if match?([_, _, _], v) and Enum.all?(v, &(is_number(&1) and abs(&1) <= @size)),

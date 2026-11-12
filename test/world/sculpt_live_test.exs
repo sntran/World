@@ -101,7 +101,7 @@ defmodule World.Sculpt.LiveTest do
     assert %{busy: false} = Live.info(name)
     # A message that is not for it (a piece of an old work) changes nothing.
     [{pid, _}] = Registry.lookup(World.Names, {:sculpture, name})
-    send(pid, {:piece, 7, {0, 0, 0}, "key", %{}})
+    send(pid, {:piece, 7, {0, 0, 0}, "key", %{}, []})
     assert %{version: 0, bricks: 0} = Live.info(name)
     assert Live.stop(name) == :ok
     assert Live.info(name) == {:error, :none}

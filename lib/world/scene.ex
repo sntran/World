@@ -124,18 +124,21 @@ defmodule World.Scene do
   `place` gives the corners of each item of `items` when it comes to it
   (a mesh at its place), so only the points of the primitive are live,
   not each corner. The same primitive as `primitive/2` of all the corners
-  in their order.
+  in their order. A corner can be `{point, normal, color}` (the color of
+  a point of a mesh, `World.Mesh.finish/3`): the primitive then has the
+  color of each point.
   """
   def primitive(material, items, place) do
-    {indices, verts, _seen, _count} =
-      Enum.reduce(items, {[], [], %{}, 0}, fn item, acc ->
-        Enum.reduce(place.(item), acc, fn {p, n}, {indices, verts, seen, count} ->
+    {indices, verts, _seen, _count, colors?} =
+      Enum.reduce(items, {[], [], %{}, 0, false}, fn item, acc ->
+        Enum.reduce(place.(item), acc, fn corner, {indices, verts, seen, count, colors?} ->
+          {p, n, c} = with {p, n} <- corner, do: {p, n, nil}
           {rp, rn} = {round6(p), round6(n)}
           key = key(rp, rn)
 
           case seen do
-            %{^key => i} -> {[i | indices], verts, seen, count}
-            _ -> {[count | indices], [{rp, rn} | verts], Map.put(seen, key, count), count + 1}
+            %{^key => i} -> {[i | indices], verts, seen, count, colors?}
+            _ -> {[count | indices], [{rp, rn, c} | verts], Map.put(seen, key, count), count + 1, colors? or c != nil}
           end
         end)
       end)
@@ -146,7 +149,9 @@ defmodule World.Scene do
       material: material,
       positions: Enum.map(verts, &elem(&1, 0)),
       normals: Enum.map(verts, &elem(&1, 1)),
-      indices: Enum.reverse(indices)
+      indices: Enum.reverse(indices),
+      # A corner with no color in a primitive with colors is white.
+      colors: if(colors?, do: Enum.map(verts, &(elem(&1, 2) || {255, 255, 255})))
     }
   end
 

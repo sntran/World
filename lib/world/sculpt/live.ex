@@ -60,12 +60,14 @@ defmodule World.Sculpt.Live do
   @doc """
   The meshes of the surface of a live sculpture (`World.Sculpt.Surface.meshes/2`,
   with its options; with no piece less than two cells across, as
-  `World.Sculpt.model/2`), from the pieces that it has; or `{:error, :none}`.
+  `World.Sculpt.model/2`, and with its finish, `World.Sculpt.Finish`),
+  from the pieces that it has; or `{:error, :none}`.
   """
   def meshes(name, opts \\ []) do
-    with %{step: step} <- info(name),
-         pieces when is_list(pieces) <- pieces(name) do
-      Surface.meshes(Enum.map(pieces, &elem(&1, 1)), Keyword.put_new(opts, :small, 2 * step))
+    with {pieces, lists, edits, step} <- call(name, :surface) do
+      pieces
+      |> Surface.meshes(Keyword.put_new(opts, :small, 2 * step))
+      |> World.Sculpt.Finish.meshes(lists, edits, step)
     end
   end
 
@@ -139,16 +141,23 @@ defmodule World.Sculpt.Live do
       {:reply, %{edits: s.edits, version: s.version, step: s.step, bricks: map_size(s.bricks), busy: s.work != nil}, s}
 
   def handle_call(:pieces, _from, s),
-    do: {:reply, s.bricks |> Enum.sort() |> Enum.map(fn {at, {_, piece}} -> {at, piece} end), s}
+    do: {:reply, s.bricks |> Enum.sort() |> Enum.map(fn {at, {_, piece, _}} -> {at, piece} end), s}
+
+  # The pieces, the short list of edits of each brick, the edits and the cells.
+  def handle_call(:surface, _from, s) do
+    bricks = Enum.sort(s.bricks)
+    pieces = Enum.map(bricks, fn {_, {_, piece, _}} -> piece end)
+    {:reply, {pieces, Map.new(bricks, fn {at, {_, _, list}} -> {at, list} end), s.edits, s.step}, s}
+  end
 
   @impl true
-  def handle_info({:piece, v, at, key, piece}, %{version: v} = s), do: {:noreply, put(s, at, key, piece)}
+  def handle_info({:piece, v, at, key, piece, list}, %{version: v} = s), do: {:noreply, put(s, at, key, piece, list)}
 
   # The pieces of a work, all of them: each brick that did not come before,
   # and the bricks that have no surface now.
   def handle_info({:built, v, keys, pieces}, %{version: v, work: {_, ref, _}} = s) do
     Process.demonitor(ref, [:flush])
-    s = Enum.reduce(pieces, s, fn {at, {key, piece}}, s -> put(s, at, key, piece) end)
+    s = Enum.reduce(pieces, s, fn {at, {key, piece, list}}, s -> put(s, at, key, piece, list) end)
 
     gone = for at <- Map.keys(s.bricks), not Map.has_key?(keys, at), do: at
     for at <- gone, do: notify(s, {:gone, at})
@@ -164,14 +173,14 @@ defmodule World.Sculpt.Live do
   # A piece of a work that a newer edit stopped.
   def handle_info(_message, s), do: {:noreply, s}
 
-  defp put(s, at, key, piece) do
+  defp put(s, at, key, piece, list) do
     case s.bricks[at] do
-      {^key, _} ->
+      {^key, _, _} ->
         s
 
       _ ->
         notify(s, {:piece, at, piece})
-        %{s | bricks: Map.put(s.bricks, at, {key, piece})}
+        %{s | bricks: Map.put(s.bricks, at, {key, piece, list})}
     end
   end
 
@@ -185,8 +194,8 @@ defmodule World.Sculpt.Live do
   # cache; each brick with a new key sends its piece when it is made.
   defp work(%{edits: edits, step: step, version: v} = s) do
     live = self()
-    known = Map.new(s.bricks, fn {at, {key, _}} -> {at, key} end)
-    sink = fn b -> send(live, {:piece, v, b.at, b.key, b.piece}) end
+    known = Map.new(s.bricks, fn {at, {key, _, _}} -> {at, key} end)
+    sink = fn b -> send(live, {:piece, v, b.at, b.key, b.piece, b.edits}) end
 
     {pid, ref} =
       spawn_monitor(fn ->
@@ -196,7 +205,7 @@ defmodule World.Sculpt.Live do
 
         pieces =
           for b <- bricks, known[b.at] != b.key, into: %{} do
-            {b.at, {b.key, Sculpt.piece(b, step)}}
+            {b.at, {b.key, Sculpt.piece(b, step), b.edits}}
           end
 
         send(live, {:built, v, keys, pieces})

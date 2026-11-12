@@ -114,4 +114,32 @@ the steps.
 
 ## 10. The measure
 
-(Each step adds its numbers here.)
+### Steps 1 and 2: the finish pass and the colors (2026-11-12)
+
+`World.Sculpt.Finish` runs after the collapse, in `World.Sculpt.model/2`
+and in the meshes of a live sculpture. The carp from edits (cells of
+3.5 mm at each level), the distance of its points from the surface of
+its edits, as a part of a cell:
+
+| Level | Points | Before: the most, the mean | After: the most, the mean | The time of the pass |
+|---|---|---|---|---|
+| near (20,000 faces) | 10,642 | 62%, 1.8% | 0.01%, 0.0007% | 0.24 s |
+| mid (3,000) | 1,815 | 62%, 2.9% | 0.01%, 0.0008% | 0.06 s |
+| far (600) | 428 | 41%, 4.2% | 0.01%, 0.001% | 0.03 s |
+
+R1 is met. The volume of the far carp is 2,006 cm³, not 1,990 (the
+surface has 2,121): the points are on the surface again, and the rest is
+the flat faces between them.
+
+Two steps of Newton were not enough at the tip of a thin fin (8% of a
+cell): there the field of an ellipsoid is only a bound, with a short
+gradient. A point takes up to five steps, and stops as soon as it is on
+the surface, so only such points pay.
+
+The carp has its colors on its edits now, on one white material: a
+gold body, a dark back and a pale belly as paints with a blend of 3 cm,
+bronze fins. The borders of the colors are smooth at each level (the
+shots went to the owner), and the far level has the light of the true
+surface. One fault came out: a paint with a color and no material gave
+its faces no material (a second mesh, in blocks); a paint with no
+material keeps the material under it.
