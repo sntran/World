@@ -48,7 +48,7 @@ defmodule World.Sculpt.Live do
   """
   def edit(name, i, edit), do: call(name, {:edit, i, edit})
 
-  @doc "The edits, the version, and the count of the bricks of a live sculpture, or `{:error, :none}`."
+  @doc "The edits, the version, the size of the cells and the count of the bricks of a live sculpture, or `{:error, :none}`."
   def info(name), do: call(name, :info)
 
   @doc """
@@ -59,12 +59,13 @@ defmodule World.Sculpt.Live do
 
   @doc """
   The meshes of the surface of a live sculpture (`World.Sculpt.Surface.meshes/2`,
-  with its options), from the pieces that it has; or `{:error, :none}`.
+  with its options; with no piece less than two cells across, as
+  `World.Sculpt.model/2`), from the pieces that it has; or `{:error, :none}`.
   """
   def meshes(name, opts \\ []) do
-    case pieces(name) do
-      {:error, _} = e -> e
-      pieces -> Surface.meshes(Enum.map(pieces, &elem(&1, 1)), opts)
+    with %{step: step} <- info(name),
+         pieces when is_list(pieces) <- pieces(name) do
+      Surface.meshes(Enum.map(pieces, &elem(&1, 1)), Keyword.put_new(opts, :small, 2 * step))
     end
   end
 
@@ -134,7 +135,8 @@ defmodule World.Sculpt.Live do
   end
 
   def handle_call(:info, _from, s),
-    do: {:reply, %{edits: s.edits, version: s.version, bricks: map_size(s.bricks), busy: s.work != nil}, s}
+    do:
+      {:reply, %{edits: s.edits, version: s.version, step: s.step, bricks: map_size(s.bricks), busy: s.work != nil}, s}
 
   def handle_call(:pieces, _from, s),
     do: {:reply, s.bricks |> Enum.sort() |> Enum.map(fn {at, {_, piece}} -> {at, piece} end), s}

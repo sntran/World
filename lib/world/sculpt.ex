@@ -51,7 +51,8 @@ defmodule World.Sculpt do
   @doc """
   The meshes of a sculpture (a `World.Mesh` for each material): its
   bricks, the piece of the surface of each brick in the process of the
-  brick, and the meshes of the pieces (`World.Sculpt.Surface`). The
+  brick, and the meshes of the pieces (`World.Sculpt.Surface`), with no
+  piece of the surface less than two cells across. The
   options: `level` (the level of detail of `World.Detail` by default),
   `step` (the size of the cells, the size of the level by default),
   `budget` (the most faces, `World.Simplify`), `parallel`, and `cache`
@@ -62,7 +63,7 @@ defmodule World.Sculpt do
     step = opts[:step] || step(opts[:level] || Detail.level())
     opts = opts |> Keyword.put(:each, &Surface.piece(&1, step)) |> Keyword.put_new(:cache, true)
     %{bricks: bricks} = bricks(edits, step, opts)
-    Surface.meshes(Enum.map(bricks, & &1.piece), budget: opts[:budget])
+    Surface.meshes(Enum.map(bricks, & &1.piece), budget: opts[:budget], small: 2 * step)
   end
 
   @doc """
@@ -164,9 +165,16 @@ defmodule World.Sculpt do
 
     results =
       if how.parallel do
+        # At most two processes for each scheduler at one time in each
+        # cell: the work goes to each scheduler, and the heaps of the
+        # bricks that wait for a scheduler do not fill the memory.
         work
-        |> Enum.map(fn {c, kept} -> Task.async(fn -> crew(kept, c, how) end) end)
-        |> Task.await_many(:infinity)
+        |> Task.async_stream(fn {c, kept} -> crew(kept, c, how) end,
+          max_concurrency: 2 * System.schedulers_online(),
+          ordered: false,
+          timeout: :infinity
+        )
+        |> Enum.map(fn {:ok, result} -> result end)
       else
         Enum.map(work, fn {c, kept} -> cell(kept, c, how) end)
       end

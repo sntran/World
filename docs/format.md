@@ -420,12 +420,16 @@ The data of the skill:
 - `budget`: the most triangles at `near`, `mid` and `far` (12 to
   1,000,000 each). With a budget, an edge collapse by quadric error
   metrics takes the faces to the budget, and keeps the shape and the
-  borders of the materials.
+  borders of the materials;
+- `cells`: the size of the cells at `near`, `mid` and `far` (m, 0.001 to
+  1), for a model smaller or larger than the cells of the levels (below):
+  a part thinner than about two cells can go.
 
 An edit has its `shape` and its `size`, and these keys:
 
 - `at`, `axis`, `up`: the place of the shape and its turn (its z on
-  `axis`, its y on `up`), as a port;
+  `axis`, its y on `up`), as a port; with no `axis`, z up, and with no
+  `up`, y to the front (z, when the axis is along y);
 - `mode`: `add` (by default), `subtract` or `paint` (the shape gives its
   material to the surface in it, and does not change the shape);
 - `blend` (m, 0 by default, at most 10): with 0 the edge between the edit

@@ -5,8 +5,10 @@ defmodule World.Skills.Sculpt do
 
   Its data: `edits` (a list of 1 to 10,000 edits: each with its `shape`
   and its `size`, and `at`, `axis`, `up`, `mode`, `blend`, `material`),
-  and `ports`, `sources` and `budget` (the most triangles at `near`,
-  `mid` and `far`). The sculptor makes the part with the tree of the
+  and `ports`, `sources`, `budget` (the most triangles at `near`, `mid`
+  and `far`) and `cells` (the size of the cells at `near`, `mid` and
+  `far`, m: for a small model, smaller cells than the cells of the
+  levels, `World.Sculpt.step/1`). The sculptor makes the part with the tree of the
   bricks of the edits (`World.Sculpt.model/2`) in its hand: the tree is
   the crew of the hand, so a stop of the person stops it (D4).
   """
@@ -14,7 +16,7 @@ defmodule World.Skills.Sculpt do
 
   alias World.{Drawing, GLB, Part, Port, SDF, Vec}
 
-  @keys ~w(edits ports sources budget)
+  @keys ~w(edits ports sources budget cells)
   @edit ~w(shape size at axis up mode blend material)
   @most 10_000
   @size 1_000
@@ -46,7 +48,8 @@ defmodule World.Skills.Sculpt do
       optional(data, "edits", path, &edits/2) ++
       optional(data, "ports", path, &Drawing.check_ports/2) ++
       optional(data, "sources", path, &sources/2) ++
-      optional(data, "budget", path, &budget/2)
+      optional(data, "budget", path, &budget/2) ++
+      optional(data, "cells", path, &cells/2)
   end
 
   def check(_data, path), do: [{path, "must be an object"}]
@@ -55,7 +58,7 @@ defmodule World.Skills.Sculpt do
   def make(data, _inputs, %{level: level, name: name}) do
     edits = edits(data["edits"])
     budget = get_in(data, ["budget", Atom.to_string(level)])
-    meshes = World.Sculpt.model(edits, level: level, budget: budget)
+    meshes = World.Sculpt.model(edits, step: step(data, level), budget: budget)
     ports = Drawing.ports(Map.get(data, "ports", %{}))
     {Part.new(name, :part, meshes, ports, sources: Map.get(data, "sources", [])), %{}, %{}}
   end
@@ -65,7 +68,7 @@ defmodule World.Skills.Sculpt do
     with [] <- check(data, ""),
          {{x0, y0, z0}, {x1, y1, z1}} <- SDF.bounds(edits(data["edits"])) do
       {a, b, c} = {x1 - x0, y1 - y0, z1 - z0}
-      step = World.Sculpt.step(level)
+      step = step(data, level)
       # Two faces for each cell of the surface of the box round it, a bit less for a round shape.
       faces = round(1.4 * (a * b + b * c + c * a) / (step * step))
       min(faces, get_in(data, ["budget", Atom.to_string(level)]) || faces)
@@ -74,11 +77,25 @@ defmodule World.Skills.Sculpt do
     end
   end
 
+  # The size of the cells of a level: from the data, else of the level.
+  defp step(data, level), do: get_in(data, ["cells", Atom.to_string(level)]) || World.Sculpt.step(level)
+
   @doc "The edits of a sculpture from its data (`World.SDF.edit/3`)."
   def edits(list), do: Enum.map(list, &edit/1)
 
   defp edit(e) do
-    [port] = Drawing.ports(%{"edit" => Map.put_new(e, "at", [0, 0, 0])})
+    # The axes of the sculpture by default: z up and y to the front (z
+    # up when the axis is along y).
+    axis = Map.get(e, "axis", [0, 0, 1])
+    along_y = Vec.len(Vec.cross(Vec.float(List.to_tuple(axis)), {0.0, 1.0, 0.0})) < 1.0e-6
+
+    frame = %{
+      "at" => Map.get(e, "at", [0, 0, 0]),
+      "axis" => axis,
+      "up" => e["up"] || if(along_y, do: [0, 0, 1], else: [0, 1, 0])
+    }
+
+    [port] = Drawing.ports(%{"edit" => frame})
 
     SDF.edit(@atoms[e["shape"]], size(e["shape"], e["size"]),
       frame: Port.frame(port),
@@ -194,4 +211,11 @@ defmodule World.Skills.Sculpt do
   end
 
   defp budget(_v, path), do: [{path, "must be an object of near, mid and far"}]
+
+  defp cells(v, path) when is_map(v) do
+    World.Skill.keys(v, path, ~w(near mid far)) ++
+      Enum.flat_map(Enum.sort(v), fn {k, n} -> number(n, "#{path}.#{k}", 0.001, 1) end)
+  end
+
+  defp cells(_v, path), do: [{path, "must be an object of near, mid and far"}]
 end

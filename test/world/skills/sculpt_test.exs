@@ -54,11 +54,33 @@ defmodule World.Skills.SculptTest do
     assert Map.has_key?(part.ports, "base") and part.sources == ["A test."]
     assert part.shapes == World.Sculpt.model(Skill.edits(data()["edits"]), level: :mid, budget: 2_000)
 
+    # Smaller cells: more faces.
+    fine = Detail.with(:far, fn -> Drawing.build(drawing(Map.put(data(), "cells", %{"far" => 0.1}))) end)
+    {"stone", fine_part, _} = hd(fine.nodes)
+    assert fine_part.shapes == Sculpt.model(Skill.edits(data()["edits"]), step: 0.1)
+    assert Skill.estimate(Map.put(data(), "cells", %{"far" => 0.1}), :far) > Skill.estimate(data(), :far)
+
     # Far has no budget: all the faces of its cells.
     far = Detail.with(:far, fn -> Drawing.build(drawing(data())) end)
     {"stone", far_part, _} = hd(far.nodes)
     assert far_part.shapes == Sculpt.model(Skill.edits(data()["edits"]), level: :far)
     assert Enum.all?(far_part.shapes, &(Mesh.bounds(&1) != nil))
+  end
+
+  test "an edit with no turn has the axes of the sculpture: the long side of an ellipsoid stays on its axis" do
+    [long_y, along_y] =
+      Skill.edits([
+        %{"shape" => "ellipsoid", "size" => [0.1, 0.5, 0.2]},
+        %{"shape" => "cylinder", "size" => [0.1, 0.5], "axis" => [0, 1, 0]}
+      ])
+
+    assert {{lx, ly, lz}, {hx, hy, hz}} = World.SDF.bounds([long_y])
+    assert_in_delta hx - lx, 0.2, 1.0e-9
+    assert_in_delta hy - ly, 1.0, 1.0e-9
+    assert_in_delta hz - lz, 0.4, 1.0e-9
+    {{_, ly, lz}, {_, hy, hz}} = World.SDF.bounds([along_y])
+    assert_in_delta hy - ly, 1.0, 1.0e-9
+    assert_in_delta hz - lz, 0.2, 1.0e-9
   end
 
   test "the estimate of the triangles: in the budget, and none for data with errors" do
@@ -90,6 +112,8 @@ defmodule World.Skills.SculptTest do
       {drawing(%{"edits" => [ball], "budget" => %{"near" => 5, "high" => 100}}),
        ["#{p}.budget.high", "#{p}.budget.near"]},
       {drawing(%{"edits" => [ball], "budget" => 5}), ["#{p}.budget"]},
+      {drawing(%{"edits" => [ball], "cells" => %{"near" => 0, "low" => 0.1}}), ["#{p}.cells.low", "#{p}.cells.near"]},
+      {drawing(%{"edits" => [ball], "cells" => [0.1]}), ["#{p}.cells"]},
       {drawing(%{"edits" => [ball], "sources" => "no"}), ["#{p}.sources"]},
       {drawing(%{"edits" => [ball], "ports" => %{"a" => %{}}}), ["#{p}.ports.a.at"]},
       {edit.(5), ["#{p}.edits.0"]},
@@ -119,6 +143,6 @@ defmodule World.Skills.SculptTest do
     node = JSON.decode!(json)
     d = %{"name" => "stone", "kind" => "item", "nodes" => [node]}
     assert {:ok, _} = Orders.check(order(d))
-    assert [{"stone", %World.Part{shapes: [_ | _]}, _}] = Detail.with(:far, fn -> Drawing.build(d) end).nodes
+    assert [{"stone", %World.Part{shapes: [_ | _]}, _}] = Detail.with(:mid, fn -> Drawing.build(d) end).nodes
   end
 end

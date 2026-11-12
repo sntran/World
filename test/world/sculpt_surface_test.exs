@@ -91,4 +91,22 @@ defmodule World.Sculpt.SurfaceTest do
     assert Enum.map(meshes, & &1.material) |> Enum.sort() == [:moss, :paint, :stone]
     assert volume(meshes) > 0.8
   end
+
+  test "fewer faces: in one region, and in many regions with their shared points; small pieces go" do
+    faces = fn meshes -> meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() end
+    # One region: a small ball.
+    one = Surface.meshes(pieces([SDF.edit(:ball, {0.1})], 0.01), budget: 200)
+    assert faces.(one) <= 200
+    assert_in_delta volume(one), 4 / 3 * :math.pi() * 0.001, 0.0004
+    # Many regions: a long capsule across them, to its budget, with its volume.
+    long = [SDF.edit(:capsule, {1.0, 0.1}, frame: Frame.move({0.3, 0.3, 0.01}))]
+    many = Surface.meshes(pieces(long, 0.01), budget: 4_000)
+    assert faces.(many) <= 4_000
+    assert_in_delta volume(many), :math.pi() * 0.01 * 2.0 + 4 / 3 * :math.pi() * 0.001, 0.001
+    # A ball of 1 cm next to a ball of 10 cm, with cells of 1 cm: the small one goes.
+    two = [SDF.edit(:ball, {0.1}), SDF.edit(:ball, {0.004}, frame: Frame.move({0.3, 0.0, 0.0}))]
+    assert faces.(Surface.meshes(pieces(two, 0.01), small: 0.02)) == faces.(Surface.meshes(pieces([hd(two)], 0.01)))
+    # A budget of more faces than the mesh has: the same mesh.
+    assert Surface.meshes(pieces([hd(two)], 0.01), budget: 1_000_000) == Surface.meshes(pieces([hd(two)], 0.01))
+  end
 end

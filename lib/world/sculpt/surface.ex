@@ -36,6 +36,11 @@ defmodule World.Sculpt.Surface do
   # point only along the ways that the planes do not hold (along a sharp
   # edge, in a flat face), not off a corner.
   @pull 1.0e-3
+  # The bricks of a region of the collapse, on each axis.
+  @region 8
+  # The least faces of the budget of a region: with fewer, the points of
+  # its borders, which stay, take too much of its budget.
+  @least 1_000
 
   @doc """
   The piece of the surface of a brick (`World.Sculpt.bricks/3`): its quads
@@ -84,9 +89,12 @@ defmodule World.Sculpt.Surface do
 
   @doc """
   The meshes of the pieces of a sculpture: one `World.Mesh` for each
-  material, with its quads in two triangles. With the option `budget`
-  (faces), fewer faces for all the materials together, with their shape
-  (`World.Simplify.collapse/3`).
+  material, with its quads in two triangles. With the option `small`
+  (m), no piece of the surface less than `small` across (a part thinner
+  than the cells leaves such pieces); with the option `budget` (faces),
+  fewer faces for all the materials together, with their shape
+  (`World.Simplify.collapse/4`): first each region of 8 × 8 × 8 bricks
+  in a process of its own, then the whole mesh.
   """
   def meshes(pieces, opts \\ []) do
     points = Enum.reduce(pieces, %{}, &Map.merge(&2, &1.points))
@@ -95,7 +103,8 @@ defmodule World.Sculpt.Surface do
     ids = keys |> Enum.with_index() |> Map.new()
     tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
     pts = Enum.map(keys, &points[&1])
-    {pts, tris} = if opts[:budget], do: World.Simplify.collapse(pts, tris, opts[:budget]), else: {pts, tris}
+    tris = if opts[:small], do: drop_small(List.to_tuple(pts), tris, opts[:small]), else: tris
+    {pts, tris} = if opts[:budget], do: fewer(pts, tris, keys, opts[:budget]), else: {pts, tris}
     all = List.to_tuple(pts)
 
     tris
@@ -106,6 +115,82 @@ defmodule World.Sculpt.Surface do
       local = used |> Enum.with_index() |> Map.new()
       Mesh.new(Enum.map(used, &elem(all, &1)), Enum.map(faces, fn f -> Enum.map(f, &local[&1]) end), material || :paint)
     end)
+  end
+
+  # Fewer faces, in two passes: each region of bricks (8 on each axis) in
+  # a process of its own, to twice its share of the budget, with the
+  # points that it shares with the other regions where they are; then the
+  # whole mesh to the budget, with the quadrics of the first pass. With a
+  # budget of less than 1,000 faces for each region, one pass.
+  defp fewer(pts, tris, _keys, budget) when length(tris) <= budget, do: {pts, tris}
+
+  defp fewer(pts, tris, keys, budget) do
+    keys = List.to_tuple(keys)
+    groups = Enum.group_by(tris, fn {[a | _], _} -> region(elem(keys, a)) end)
+
+    {pts, tris, quadrics} =
+      if map_size(groups) > 1 and budget / map_size(groups) >= @least,
+        do: regions(List.to_tuple(pts), groups, length(tris), budget),
+        else: {pts, tris, nil}
+
+    %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, quadrics: quadrics)
+    {pts, tris}
+  end
+
+  # Each region in a process of its own, to its share of the budget, then
+  # the regions together.
+  defp regions(all, groups, total, budget) do
+    shared =
+      for {r, faces} <- groups, {f, _} <- faces, v <- f, reduce: %{} do
+        acc -> Map.update(acc, v, [r], &if(r in &1, do: &1, else: [r | &1]))
+      end
+
+    groups
+    |> Enum.sort()
+    |> Task.async_stream(
+      fn {_, faces} -> region_collapse(all, faces, shared, round(2 * budget * length(faces) / total)) end,
+      max_concurrency: System.schedulers_online(),
+      timeout: :infinity
+    )
+    |> Enum.map(fn {:ok, part} -> part end)
+    |> join()
+  end
+
+  # One region: its faces on its own points, the shared points fixed;
+  # its points and faces after the collapse, with the global indices of
+  # its points and their quadrics.
+  defp region_collapse(all, faces, shared, budget) do
+    used = faces |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+    local = used |> Enum.with_index() |> Map.new()
+    fixed = for v <- used, length(shared[v]) > 1, do: local[v]
+    local_faces = Enum.map(faces, fn {f, m} -> {Enum.map(f, &local[&1]), m} end)
+    r = World.Simplify.collapse(Enum.map(used, &elem(all, &1)), local_faces, budget, fixed: fixed)
+    global = List.to_tuple(used)
+    {r.points, r.faces, Enum.map(r.ids, &elem(global, &1)), r.quadrics}
+  end
+
+  # The regions together: a shared point (the same global index) is one
+  # point, with the sum of its quadrics in each region.
+  defp join(parts) do
+    {index, points, quadrics} =
+      for {pts, _, ids, qs} <- parts, {p, g, q} <- Enum.zip([pts, ids, qs]), reduce: {%{}, [], %{}} do
+        {index, points, quadrics} ->
+          if Map.has_key?(index, g),
+            do: {index, points, Map.update!(quadrics, g, &World.Simplify.add(&1, q))},
+            else: {Map.put(index, g, map_size(index)), [p | points], Map.put(quadrics, g, q)}
+      end
+
+    faces =
+      for {_, fs, ids, _} <- parts, ids = List.to_tuple(ids), {f, m} <- fs, do: {Enum.map(f, &index[elem(ids, &1)]), m}
+
+    order = index |> Enum.sort_by(&elem(&1, 1)) |> Enum.map(&quadrics[elem(&1, 0)])
+    {Enum.reverse(points), faces, order}
+  end
+
+  # The region of the key of a point: its cell, in regions of bricks.
+  defp region({{i, j, k}, _}) do
+    n = Sculpt.cells() * @region
+    {Integer.floor_div(i, n), Integer.floor_div(j, n), Integer.floor_div(k, n)}
   end
 
   # The field of the edits of a brick at a point: with the short list of
@@ -125,6 +210,37 @@ defmodule World.Sculpt.Surface do
   end
 
   defp field(_brick, edits, limit, _step), do: &SDF.field(edits, &1, limit)
+
+  # The faces of each piece of the surface (faces joined by their points)
+  # whose box is at least `small` m across: a smaller piece is the noise of
+  # a part thinner than the cells.
+  defp drop_small(pts, tris, small) do
+    near =
+      Enum.reduce(tris, %{}, fn {[a, b, c], _}, acc -> acc |> link(a, [b, c]) |> link(b, [a, c]) |> link(c, [a, b]) end)
+
+    {keep, _} =
+      Enum.reduce(Map.keys(near), {MapSet.new(), MapSet.new()}, fn v, {keep, seen} ->
+        if MapSet.member?(seen, v) do
+          {keep, seen}
+        else
+          piece = flood(near, [v], MapSet.new([v]))
+          {{x0, y0, z0}, {x1, y1, z1}} = piece |> Enum.map(&elem(pts, &1)) |> Vec.bounds()
+          big = Vec.len({x1 - x0, y1 - y0, z1 - z0}) >= small
+          {if(big, do: MapSet.union(keep, piece), else: keep), MapSet.union(seen, piece)}
+        end
+      end)
+
+    Enum.filter(tris, fn {[a, _, _], _} -> MapSet.member?(keep, a) end)
+  end
+
+  defp link(acc, v, us), do: Map.update(acc, v, us, &(us ++ &1))
+
+  defp flood(_near, [], seen), do: seen
+
+  defp flood(near, [v | rest], seen) do
+    next = for u <- near[v], not MapSet.member?(seen, u), uniq: true, do: u
+    flood(near, next ++ rest, Enum.reduce(next, seen, &MapSet.put(&2, &1)))
+  end
 
   # The part of the surface of a cell that the inside corner `inside` is
   # in: its least corner.
