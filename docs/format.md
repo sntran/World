@@ -404,6 +404,72 @@ A model of the catalog can be an order of a blueprint
 Núi Nhỏ is `priv/drawings/tuong_chua_kito_vua.json`, an order of the
 blueprint `statue`.
 
+## A sculpture
+
+A sculpture is a part from a list of edits (`World.Skills.Sculpt`, the
+skill `sculpt` of a sculptor; `docs/plans/0008-model-from-edits.md`).
+Each edit is a simple shape at a place, with a mode: it adds to the
+sculpture, takes away from it, or paints its surface. The edits are the
+source: World makes the part again from them at each level.
+
+The data of the skill:
+
+- `edits`: a list of 1 to 10,000 edits, in their order;
+- `ports`: the ports of the part (as in "A drawing");
+- `sources`: at most 16 texts;
+- `budget`: the most triangles at `near`, `mid` and `far` (12 to
+  1,000,000 each). With a budget, an edge collapse by quadric error
+  metrics takes the faces to the budget, and keeps the shape and the
+  borders of the materials.
+
+An edit has its `shape` and its `size`, and these keys:
+
+- `at`, `axis`, `up`: the place of the shape and its turn (its z on
+  `axis`, its y on `up`), as a port;
+- `mode`: `add` (by default), `subtract` or `paint` (the shape gives its
+  material to the surface in it, and does not change the shape);
+- `blend` (m, 0 by default, at most 10): with 0 the edge between the edit
+  and the sculpture is hard; with more, the joint is smooth (the
+  quadratic smooth minimum), and the edit reaches `blend` past its shape
+  and no more;
+- `material`: a role of the palette (`priv/palette.json`).
+
+| Shape | Size (m) |
+|---|---|
+| `ball` | `[r]` |
+| `box` | `[hx, hy, hz]`: the half sizes |
+| `round_box` | `[hx, hy, hz, r]`: the half sizes, and the radius of its edges (at most the least half size) |
+| `capsule` | `[h, r]`: a segment from z = -h to z = h, and its radius |
+| `cylinder` | `[r, h]`: from z = -h to z = h |
+| `cone` | `[r1, r2, h]`: the radius `r1` at z = -h and `r2` at z = h |
+| `ring` | `[big, r]`: a torus round z, the radius of its circle and of its tube |
+| `ellipsoid` | `[rx, ry, rz]` |
+| `superellipsoid` | `[rx, ry, rz, e]`: `|x/rx|^e + |y/ry|^e + |z/rz|^e = 1`, the power `e` from 2 (the ellipsoid) to 64 (near a box) |
+| `tube` | `{"points": [[x, y, z], ...], "radii": [r, ...]}`: round cones through 2 to 256 points, with the radius at each point |
+
+The levels: cells of 2 cm at near, 8 cm at mid and 32 cm at far. The
+grid of each level is the same for each sculpture, so a brick (8 × 8 × 8
+cells) keeps its place when an edit changes, and the node keeps the
+piece of each brick in a cache by the hash of its place, its cells and
+its edits: the next build of the same edits, or of the edits after a
+change of one, makes only the bricks that the change reaches. A
+sculpture can also be live (`World.Sculpt.Live`): a process that takes a
+change of one edit at a time, and sends the new pieces of its surface as
+they come.
+
+A stone with a hole and a handle:
+
+```json
+{"name": "stone", "skill": {"sculpt": {
+  "edits": [
+    {"shape": "ellipsoid", "size": [0.4, 0.3, 0.25], "material": "stone_wash"},
+    {"shape": "cylinder", "size": [0.08, 0.4], "axis": [1, 0, 0], "up": [0, 0, 1], "mode": "subtract", "blend": 0.02},
+    {"shape": "tube", "size": {"points": [[-0.2, 0, 0.2], [0, 0, 0.4], [0.2, 0, 0.2]], "radii": [0.03, 0.03, 0.03]}, "blend": 0.03}
+  ],
+  "budget": {"near": 20000, "mid": 2000}
+}}}
+```
+
 ## A statue
 
 A statue (`priv/blueprints/statue.json`, W13 of Vũng Tàu; the blueprint

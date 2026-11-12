@@ -17,6 +17,7 @@ defmodule World.Skills do
     Rail,
     Robe,
     Scaffold,
+    Sculpt,
     Set,
     Shell,
     Site,
@@ -31,7 +32,24 @@ defmodule World.Skills do
   alias World.Skills.{BicycleFork, BicycleFrame, Crankset, Knuckle, Stand, Wheel}
   alias World.Skills.{Body, Engine, Fastener, Fork, Frame, Glass, Lamp, Panel, Seat, Spring, Swingarm}
 
-  @skills [Base, Carve, Crane, Figure, Grille, Halo, Mixing, Rail, Robe, Scaffold, Set, Shell, Site, SiteStep, Stair] ++
+  @skills [
+            Base,
+            Carve,
+            Crane,
+            Figure,
+            Grille,
+            Halo,
+            Mixing,
+            Rail,
+            Robe,
+            Scaffold,
+            Sculpt,
+            Set,
+            Shell,
+            Site,
+            SiteStep,
+            Stair
+          ] ++
             [Lantern, SpiralStair, Tower, TowerBody, TowerSite] ++
             [CastField, CastOutside, CastSurvey, Formwork, Pour, ShellSlab] ++
             [Column, Course, Flight, Footing, HousePlan, Iron, Opening, Paint, Plaster, Roof, Slab] ++

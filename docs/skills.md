@@ -113,6 +113,12 @@ plan, and each other node takes it in `from`.
 | `rail` | mason | `material`, `rail`, `base_width`, `base_depth`, `base_height`, `base_plan`, `base_curve` | The rail round the base, along its curves. |
 | `site` | surveyor | `hand`, `hollow`, `well`, `base_width`, `base_depth`, `base_height`, `plinth_radius`, `feet`, `base_room` | The ports and the collision of the site: data only. |
 
+## A sculpture (`World.Skills.Sculpt`)
+
+| Skill | Trade | Data | What it makes |
+|---|---|---|---|
+| `sculpt` | sculptor | `edits`, `ports`, `sources`, `budget` | A part from a list of edits: simple shapes that add, take away or paint, each with a blend (`docs/format.md`, "A sculpture"). The tree of its bricks is the crew of the hand of the sculptor. |
+
 ## A tower (`World.Skills.Towers`)
 
 | Skill | Trade | Data | What it makes |
