@@ -17,7 +17,9 @@ defmodule World.Sculpt.SurfaceTest do
   # in two quads each way: two sheets touch there.)
   defp closed?(pieces) do
     edges =
-      pieces |> Enum.flat_map(& &1.quads) |> Enum.flat_map(fn {[a, b, c, d], _} -> [{a, b}, {b, c}, {c, d}, {d, a}] end)
+      pieces
+      |> Enum.flat_map(&Surface.decode(&1).quads)
+      |> Enum.flat_map(fn {[a, b, c, d], _} -> [{a, b}, {b, c}, {c, d}, {d, a}] end)
 
     count = Enum.frequencies(edges)
     Enum.all?(count, fn {{a, b}, n} -> count[{b, a}] == n end)
@@ -26,7 +28,7 @@ defmodule World.Sculpt.SurfaceTest do
   # Each edge in one quad each way: two faces.
   defp manifold?(pieces) do
     pieces
-    |> Enum.flat_map(& &1.quads)
+    |> Enum.flat_map(&Surface.decode(&1).quads)
     |> Enum.flat_map(fn {[a, b, c, d], _} -> [{a, b}, {b, c}, {c, d}, {d, a}] end)
     |> Enum.frequencies()
     |> Map.values()
@@ -108,5 +110,14 @@ defmodule World.Sculpt.SurfaceTest do
     assert faces.(Surface.meshes(pieces(two, 0.01), small: 0.02)) == faces.(Surface.meshes(pieces([hd(two)], 0.01)))
     # A budget of more faces than the mesh has: the same mesh.
     assert Surface.meshes(pieces([hd(two)], 0.01), budget: 1_000_000) == Surface.meshes(pieces([hd(two)], 0.01))
+  end
+
+  test "a piece is binaries: its points with their keys, its quads; a cell too far from the origin has no key" do
+    [piece | _] = pieces([SDF.edit(:ball, {0.1})], 0.02)
+    assert is_binary(piece.points) and is_binary(piece.quads) and piece.materials == [nil]
+    %{points: points, quads: quads} = Surface.decode(piece)
+    assert map_size(points) == div(byte_size(piece.points), 32) and length(quads) == div(byte_size(piece.quads), 17)
+    assert Surface.key({-3, 4, 5}, 2) != Surface.key({-3, 4, 5}, 3)
+    assert_raise ArgumentError, fn -> Surface.key({200_000, 0, 0}, 0) end
   end
 end

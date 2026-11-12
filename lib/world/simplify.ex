@@ -83,9 +83,13 @@ defmodule World.Simplify do
     if :gb_sets.is_empty(heap) do
       s
     else
-      {{_cost, a, b, va, vb, place}, heap} = :gb_sets.take_smallest(heap)
+      {{_cost, a, b, va, vb}, heap} = :gb_sets.take_smallest(heap)
 
       if Map.get(s.ver, a, 0) == va and Map.get(s.ver, b, 0) == vb and Map.has_key?(s.pts, a) and Map.has_key?(s.pts, b) do
+        # The place again, as the entry found it (the two points have not
+        # changed since): the heap keeps no place, so it is smaller.
+        {_, ^a, ^b, place} = best(s, {min(a, b), max(a, b)})
+
         case merge(s, a, b, place) do
           {:ok, s} -> run(s, Enum.reduce(around(s, a), heap, &push(&2, s, a, &1)), budget)
           :no -> run(s, heap, budget)
@@ -129,7 +133,16 @@ defmodule World.Simplify do
     end
   end
 
-  defp entry(s, {a, b}) do
+  defp entry(s, edge) do
+    case best(s, edge) do
+      nil -> nil
+      {cost, a, b, _place} -> {cost, a, b, Map.get(s.ver, a, 0), Map.get(s.ver, b, 0)}
+    end
+  end
+
+  # The cost of an edge, the point that stays, the point that goes and the
+  # place: or nil.
+  defp best(s, {a, b}) do
     {la, lb} = {MapSet.member?(s.locked, a), MapSet.member?(s.locked, b)}
     {fa, fb} = {MapSet.member?(s.fixed, a), MapSet.member?(s.fixed, b)}
     both = [s.pts[a], s.pts[b], Vec.scale(Vec.add(s.pts[a], s.pts[b]), 0.5)]
@@ -155,7 +168,7 @@ defmodule World.Simplify do
       _ ->
         qe = add(s.q[a], s.q[b])
         {cost, place} = places |> Enum.map(&{error(qe, &1), &1}) |> Enum.min_by(&elem(&1, 0))
-        {cost, a, b, Map.get(s.ver, a, 0), Map.get(s.ver, b, 0), place}
+        {cost, a, b, place}
     end
   end
 

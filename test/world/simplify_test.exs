@@ -9,7 +9,7 @@ defmodule World.SimplifyTest do
   # The triangles of a sculpture with their materials, before the meshes.
   defp triangles(edits, step) do
     %{bricks: bricks} = Sculpt.bricks(edits, step)
-    pieces = Enum.map(bricks, &Surface.piece(&1, step))
+    pieces = Enum.map(bricks, &Surface.decode(Surface.piece(&1, step)))
     points = Enum.reduce(pieces, %{}, &Map.merge(&2, &1.points))
     quads = Enum.flat_map(pieces, & &1.quads)
     keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()

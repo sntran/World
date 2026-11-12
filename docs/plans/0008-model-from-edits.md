@@ -619,3 +619,46 @@ Now the GLB of the near level (0.43 s, one process: the normals of the
 faces and the scene) is the most of a second build, and of a cold build
 the bricks (1.0 s), the mesh (0.6 s) and the collapse (1.1 s).
 
+### The memory of a sculpture (2026-11-12)
+
+The owner asked why a sculpture needs so much memory, when each worker
+gives its memory back at the end of its task. The workers do: after the
+tree of the bricks of the near carp, the node had 72 MB (53 MB before
+the build). The peak was in the work after the tree, which was not in
+workers: one process took the pieces of all the bricks (each message is
+a copy), and made the whole mesh and its collapse from them (186 MB at
+the peak). A face of a piece took 271 bytes (each float is a value of
+24 bytes, in maps with tuples for keys), and the collapse needed about
+1.7 KB for each face, half of it for the copies of the collector.
+
+Now the crews hand over small results, as on a site:
+
+- **A piece is binaries:** each point is its key (its cell and its part
+  in one integer) and three floats of 64 bits, each quad four indices
+  and a material: 33 bytes for each face, and a piece goes from one
+  process to another with no copy.
+- **Each region of 4 × 4 × 4 bricks joins and collapses its own pieces,**
+  with the points at its borders fixed, and gives back only its fewer
+  faces. No process has the whole mesh before the collapse.
+- **The last pass has only the band** of faces round the points that the
+  regions share; the other faces are done. When the band cannot reach
+  the budget (a small budget), the last pass takes the whole mesh, which
+  is small by then.
+
+| The carp from edits (the bench, a fresh node) | The peak, more than the carp of the catalog | Time |
+|---|---|---|
+| near, before | 374 MB, +222 MB | 3.3 s |
+| near, now | 196 MB, +40 MB | 1.8 s |
+| mid, before | 223 MB, +111 MB | 2.7 s |
+| mid, now | 145 MB, +33 MB | 1.9 s |
+| far, before | 202 MB, +83 MB | 2.5 s |
+| far, now | 143 MB, +24 MB | 1.6 s |
+
+The bench measures the whole node, with the code and the catalog: the
+carp of the catalog (its mesh is a file) has a peak of 157 MB at near,
+112 MB at mid and 119 MB at far. The three levels of the carp from edits
+(`mix world.build carp_edits`) take 5.0 s, not 7.7 s. The volume stays
+at near (2,121 cm³); at mid it is 3% less (2,064 cm³) and at far 6% less
+(1,990 cm³), as before within 1% and 5%: a region at a small budget
+goes to a quarter of its faces, with its borders fixed.
+

@@ -37,17 +37,25 @@ defmodule World.Sculpt.Surface do
   # edge, in a flat face), not off a corner.
   @pull 1.0e-3
   # The bricks of a region of the collapse, on each axis.
-  @region 8
-  # The least faces of a region for a collapse by regions.
-  @least 2_000
+  @region 4
+  # The least faces of a region, on the mean, for a collapse by regions.
+  @least 500
+
+  # A key of a point: its cell (18 bits for each axis, from -2^17) and its
+  # part (3 bits), in one small integer.
+  @bits 18
+  @half 1 <<< (@bits - 1)
+  @mask (1 <<< @bits) - 1
 
   @doc """
-  The piece of the surface of a brick (`World.Sculpt.bricks/3`): its quads
-  (`{keys, material}`: the keys of the points of the four cells, in turn
-  round the edge, the outside to the right hand) and its points (a key of
-  a cell and of a part of its surface to the place of its point). A key
-  is `{cell, part}`: the index of the cell in the grid, and the least
-  corner of the part.
+  The piece of the surface of a brick (`World.Sculpt.bricks/3`), as
+  binaries that go from one process to another with no copy:
+  `%{at: brick, points: binary, quads: binary, materials: list}`. Each
+  point is its key (`key/2`, 64 bits) and its place (three floats of 64
+  bits); each quad is the indices of its four points in the piece (in
+  turn round its edge, the outside to the right hand; 32 bits each) and
+  the index of its material in `materials` (8 bits). `decode/1` gives
+  the quads and the points as terms.
   """
   def piece(%{at: {bi, bj, bk}, edits: edits, limit: limit} = brick, step) do
     n = Sculpt.cells()
@@ -78,12 +86,57 @@ defmodule World.Sculpt.Surface do
         {if(v1 > v0, do: keys, else: Enum.reverse(keys)), material}
       end
 
+    keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+    index = keys |> Enum.with_index() |> Map.new()
+    materials = quads |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+    mindex = materials |> Enum.with_index() |> Map.new()
+
     points =
-      for key <- quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq(), into: %{} do
-        {key, point(key, base, step, cuts, v)}
+      for {cell, part} = k <- keys, into: <<>> do
+        {x, y, z} = point(k, base, step, cuts, v)
+        <<key(cell, part)::64, x::float-64, y::float-64, z::float-64>>
       end
 
-    %{quads: quads, points: points}
+    quads =
+      for {ks, m} <- quads, into: <<>> do
+        [a, b, c, d] = Enum.map(ks, &index[&1])
+        <<a::32, b::32, c::32, d::32, mindex[m]::8>>
+      end
+
+    %{at: {bi, bj, bk}, points: points, quads: quads, materials: materials}
+  end
+
+  @doc "The key of a point: its cell `{i, j, k}` and its part (0 to 7), in one integer."
+  def key({i, j, k}, part) do
+    for c <- [i, j, k],
+        c + @half < 0 or c + @half > @mask,
+        do: raise(ArgumentError, "a cell is too far from the origin")
+
+    (i + @half) <<< (2 * @bits + 3) ||| (j + @half) <<< (@bits + 3) ||| (k + @half) <<< 3 ||| part
+  end
+
+  # The cell of a key.
+  defp cell(key) do
+    {(key >>> (2 * @bits + 3) &&& @mask) - @half, (key >>> (@bits + 3) &&& @mask) - @half,
+     (key >>> 3 &&& @mask) - @half}
+  end
+
+  @doc """
+  The quads and the points of a piece as terms: `%{quads: [{keys,
+  material}], points: %{key => {x, y, z}}}`.
+  """
+  def decode(%{points: points, quads: quads, materials: materials}) do
+    keys = for <<k::64, _::binary-size(24) <- points>>, do: k
+    t = List.to_tuple(keys)
+    m = List.to_tuple(materials)
+
+    %{
+      points: Map.new(for(<<k::64, x::float-64, y::float-64, z::float-64 <- points>>, do: {k, {x, y, z}})),
+      quads:
+        for(<<a::32, b::32, c::32, d::32, i::8 <- quads>>,
+          do: {[elem(t, a), elem(t, b), elem(t, c), elem(t, d)], elem(m, i)}
+        )
+    }
   end
 
   @doc """
@@ -92,18 +145,34 @@ defmodule World.Sculpt.Surface do
   (m), no piece of the surface less than `small` across (a part thinner
   than the cells leaves such pieces); with the option `budget` (faces),
   fewer faces for all the materials together, with their shape
-  (`World.Simplify.collapse/4`): first each region of 8 × 8 × 8 bricks
-  in a process of its own, then the whole mesh.
+  (`World.Simplify.collapse/4`): first each region of 4 × 4 × 4 bricks
+  in a process of its own, then the band of faces at the borders of the
+  regions.
   """
   def meshes(pieces, opts \\ []) do
-    points = Enum.reduce(pieces, %{}, &Map.merge(&2, &1.points))
-    quads = Enum.flat_map(pieces, & &1.quads)
-    keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
-    ids = keys |> Enum.with_index() |> Map.new()
-    tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
-    pts = Enum.map(keys, &points[&1])
+    budget = opts[:budget]
+    groups = Enum.group_by(pieces, &region(&1.at))
+    faces = fn ps -> ps |> Enum.map(&div(byte_size(&1.quads), 17)) |> Enum.sum() |> Kernel.*(2) end
+    total = faces.(pieces)
+
+    {pts, tris} =
+      if budget && total > budget && map_size(groups) > 1 && total / map_size(groups) >= @least do
+        groups
+        |> Enum.sort()
+        |> Task.async_stream(
+          fn {r, ps} -> region_collapse(r, ps, max(round(1.1 * budget * faces.(ps) / total), div(faces.(ps), 4))) end,
+          max_concurrency: System.schedulers_online(),
+          timeout: :infinity
+        )
+        |> Enum.map(fn {:ok, part} -> part end)
+        |> join()
+        |> last_pass(budget)
+      else
+        {_keys, pts, tris} = triangles(pieces)
+        if budget, do: World.Simplify.collapse(pts, tris, budget), else: {pts, tris}
+      end
+
     tris = if opts[:small], do: drop_small(List.to_tuple(pts), tris, opts[:small]), else: tris
-    {pts, tris} = if opts[:budget], do: fewer(pts, tris, keys, opts[:budget]), else: {pts, tris}
     all = List.to_tuple(pts)
 
     tris
@@ -116,83 +185,116 @@ defmodule World.Sculpt.Surface do
     end)
   end
 
-  # Fewer faces, in two passes: each region of bricks (8 on each axis) in
-  # a process of its own, to 1.1 times its share of the budget or to a
-  # quarter of its faces (the more of the two: the points that it shares
-  # with the other regions stay where they are, and must not take its
-  # budget); then the whole mesh to the budget, with the quadrics of the
-  # first pass. With fewer than 2,000 faces for each region, one pass.
-  defp fewer(pts, tris, _keys, budget) when length(tris) <= budget, do: {pts, tris}
-
-  defp fewer(pts, tris, keys, budget) do
-    keys = List.to_tuple(keys)
-    groups = Enum.group_by(tris, fn {[a | _], _} -> region(elem(keys, a)) end)
-
-    {pts, tris, quadrics} =
-      if map_size(groups) > 1 and length(tris) / map_size(groups) >= @least,
-        do: regions(List.to_tuple(pts), groups, length(tris), budget),
-        else: {pts, tris, nil}
-
-    %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, quadrics: quadrics)
-    {pts, tris}
+  # The triangles of some pieces, on their points (one point for each key):
+  # `{keys, points, triangles}`.
+  defp triangles(pieces) do
+    decoded = Enum.map(pieces, &decode/1)
+    points = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.points))
+    quads = Enum.flat_map(decoded, & &1.quads)
+    keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+    ids = keys |> Enum.with_index() |> Map.new()
+    tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
+    {keys, Enum.map(keys, &points[&1]), tris}
   end
 
-  # Each region in a process of its own, to its share of the budget, then
-  # the regions together.
-  defp regions(all, groups, total, budget) do
-    shared =
-      for {r, faces} <- groups, {f, _} <- faces, v <- f, reduce: %{} do
-        acc -> Map.update(acc, v, [r], &if(r in &1, do: &1, else: [r | &1]))
-      end
-
-    groups
-    |> Enum.sort()
-    |> Task.async_stream(
-      fn {_, faces} ->
-        region_collapse(all, faces, shared, max(round(1.1 * budget * length(faces) / total), div(length(faces), 4)))
-      end,
-      max_concurrency: System.schedulers_online(),
-      timeout: :infinity
-    )
-    |> Enum.map(fn {:ok, part} -> part end)
-    |> join()
-  end
-
-  # One region: its faces on its own points, the shared points fixed;
-  # its points and faces after the collapse, with the global indices of
-  # its points and their quadrics.
-  defp region_collapse(all, faces, shared, budget) do
-    used = faces |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
-    local = used |> Enum.with_index() |> Map.new()
-    fixed = for v <- used, length(shared[v]) > 1, do: local[v]
-    local_faces = Enum.map(faces, fn {f, m} -> {Enum.map(f, &local[&1]), m} end)
-    r = World.Simplify.collapse(Enum.map(used, &elem(all, &1)), local_faces, budget, fixed: fixed)
-    global = List.to_tuple(used)
+  # Fewer faces, in two passes: each region of bricks (4 on each axis) in
+  # a process of its own, with its own pieces, to 1.1 times its share of
+  # the budget or to a quarter of its faces (the more of the two: the
+  # points at its borders, which the next regions share, stay where they
+  # are, and must not take its budget); then the band of faces near the
+  # borders of the regions to the budget, with the quadrics of the first
+  # pass. With fewer than 500 faces for each region, one pass. A region
+  # gives back only its fewer faces, and the last pass has only the band,
+  # so no process has the whole mesh in a collapse.
+  defp region_collapse(r, pieces, budget) do
+    {keys, pts, tris} = triangles(pieces)
+    {lo, hi} = cells(r)
+    fixed = for {k, i} <- Enum.with_index(keys), border?(cell(k), lo, hi), do: i
+    r = World.Simplify.collapse(pts, tris, budget, fixed: fixed)
+    global = List.to_tuple(keys)
     {r.points, r.faces, Enum.map(r.ids, &elem(global, &1)), r.quadrics}
   end
 
-  # The regions together: a shared point (the same global index) is one
-  # point, with the sum of its quadrics in each region.
+  # A cell at a border of its region, or out of it: the next region can
+  # have its point too.
+  defp border?({i, j, k}, {li, lj, lk}, {hi, hj, hk}),
+    do: i <= li or j <= lj or k <= lk or i >= hi or j >= hj or k >= hk
+
+  # The regions together: a shared point (the same key) is one point,
+  # with the sum of its quadrics in each region. Also the indices of the
+  # shared points.
   defp join(parts) do
-    {index, points, quadrics} =
-      for {pts, _, ids, qs} <- parts, {p, g, q} <- Enum.zip([pts, ids, qs]), reduce: {%{}, [], %{}} do
-        {index, points, quadrics} ->
+    {index, points, quadrics, shared} =
+      for {pts, _, ids, qs} <- parts, {p, g, q} <- Enum.zip([pts, ids, qs]), reduce: {%{}, [], %{}, []} do
+        {index, points, quadrics, shared} ->
           if Map.has_key?(index, g),
-            do: {index, points, Map.update!(quadrics, g, &World.Simplify.add(&1, q))},
-            else: {Map.put(index, g, map_size(index)), [p | points], Map.put(quadrics, g, q)}
+            do: {index, points, Map.update!(quadrics, g, &World.Simplify.add(&1, q)), [index[g] | shared]},
+            else: {Map.put(index, g, map_size(index)), [p | points], Map.put(quadrics, g, q), shared}
       end
 
     faces =
       for {_, fs, ids, _} <- parts, ids = List.to_tuple(ids), {f, m} <- fs, do: {Enum.map(f, &index[elem(ids, &1)]), m}
 
     order = index |> Enum.sort_by(&elem(&1, 1)) |> Enum.map(&quadrics[elem(&1, 0)])
-    {Enum.reverse(points), faces, order}
+    {Enum.reverse(points), faces, order, MapSet.new(shared)}
   end
 
-  # The region of the key of a point: its cell, in regions of bricks.
-  defp region({{i, j, k}, _}) do
+  # The last pass: only the faces near the borders of the regions (two
+  # rings of faces round the shared points), with the points that they
+  # share with the other faces where they are; the other faces are done.
+  # When the band cannot reach the budget, the whole mesh.
+  defp last_pass({pts, tris, quadrics, shared}, budget) do
+    ring = fn set -> for {f, _} <- tris, Enum.any?(f, &MapSet.member?(set, &1)), v <- f, into: MapSet.new(), do: v end
+    near = ring.(shared)
+    {band, rest} = Enum.split_with(tris, fn {f, _} -> Enum.any?(f, &MapSet.member?(near, &1)) end)
+    target = length(band) - (length(tris) - budget)
+    outside = for {f, _} <- rest, v <- f, into: MapSet.new(), do: v
+
+    with true <- target > 0,
+         {used, r} = band_collapse(pts, quadrics, band, outside, target),
+         true <- length(r.faces) <= target do
+      join_band(pts, rest, used, r)
+    else
+      _ ->
+        %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, quadrics: quadrics)
+        {pts, tris}
+    end
+  end
+
+  # The band on its own points: the points that the other faces use stay.
+  defp band_collapse(pts, quadrics, band, outside, target) do
+    used = band |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+    local = used |> Enum.with_index() |> Map.new()
+    {all, qs} = {List.to_tuple(pts), List.to_tuple(quadrics)}
+    fixed = for v <- used, MapSet.member?(outside, v), do: local[v]
+    faces = Enum.map(band, fn {f, m} -> {Enum.map(f, &local[&1]), m} end)
+
+    {used,
+     World.Simplify.collapse(Enum.map(used, &elem(all, &1)), faces, target,
+       fixed: fixed,
+       quadrics: Enum.map(used, &elem(qs, &1))
+     )}
+  end
+
+  # The faces of the band after its collapse, with the other faces: the
+  # points of the band that stay keep their index, and its moved points
+  # take their new places.
+  defp join_band(pts, rest, used, r) do
+    used = List.to_tuple(used)
+    global = Enum.map(r.ids, &elem(used, &1))
+    moved = Map.new(Enum.zip(global, r.points))
+    pts = pts |> Enum.with_index() |> Enum.map(fn {p, i} -> Map.get(moved, i, p) end)
+    g = List.to_tuple(global)
+    {pts, rest ++ Enum.map(r.faces, fn {f, m} -> {Enum.map(f, &elem(g, &1)), m} end)}
+  end
+
+  # The region of a brick, and the first and the last cells of a region.
+  defp region({i, j, k}),
+    do: {Integer.floor_div(i, @region), Integer.floor_div(j, @region), Integer.floor_div(k, @region)}
+
+  defp cells({i, j, k}) do
     n = Sculpt.cells() * @region
-    {Integer.floor_div(i, n), Integer.floor_div(j, n), Integer.floor_div(k, n)}
+    {{i * n, j * n, k * n}, {(i + 1) * n - 1, (j + 1) * n - 1, (k + 1) * n - 1}}
   end
 
   # The field of the edits of a brick at a point: with the short list of
