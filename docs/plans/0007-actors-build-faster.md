@@ -149,3 +149,39 @@ on each commit, and the full check on the tip before a push.
 ## 9. Open questions
 
 - None yet.
+
+## 10. The measure
+
+### Step 1 (2026-11-12, 82323ab)
+
+`MIX_ENV=test mix world.bench --level mid --workers 4 --timeout 300`, on
+a machine with 4 schedulers:
+
+| Measure | Value |
+|---|---|
+| Built | 180 of 182 |
+| Failed | `egg_chair`, `egg_chair_person` ("no node bounce_egg_chair for the stretch of spring_egg_chair") |
+| The time of all the builds | 81.2 s (82.9 s with the failures) |
+| The schedulers that work, on average over the time | 0.9 of 4 |
+| Models of one task | 62 of 180 |
+| The most memory of the VM | 1,607 MB (the blueprint `statue`) |
+
+The ten builds that take the most time:
+
+| Model | Kind | ms | Most MB | Cores | Tasks | Triangles |
+|---|---|---|---|---|---|---|
+| `house_brick_vn` | catalog | 37,129 | 967.4 | 0.97 | 7,594 | 1,072 |
+| `statue` | blueprint | 4,723 | 1,606.9 | 0.78 | 57 | 8,440 |
+| `banh_mi_cart` | catalog | 4,540 | 216.2 | 0.67 | 12 | 15,162 |
+| `tuong_chua_kito_vua` | catalog | 3,742 | 1,373.5 | 0.72 | 57 | 8,620 |
+| `douc` | catalog | 1,627 | 405.6 | 0.67 | 1 | 8,244 |
+| `rhesus_macaque` | catalog | 1,437 | 1,099.8 | 0.73 | 1 | 8,314 |
+| `macaque` | catalog | 1,384 | 938.3 | 0.75 | 1 | 8,314 |
+| `pig_tailed_macaque` | catalog | 1,359 | 1,017.6 | 0.75 | 1 | 8,314 |
+| `gibbon` | catalog | 964 | 616.1 | 0.89 | 1 | 7,847 |
+| `swing_porch_person` | catalog | 898 | 1,178.8 | 0.67 | 9 | 9,918 |
+
+`house_brick_vn` takes 45% of the time with 1,072 triangles: the work
+of the construction for each of its 7,594 tasks, not the shapes. The
+models of one task (the animals, the people) are one part that one
+person makes.
