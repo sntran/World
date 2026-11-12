@@ -15,8 +15,8 @@ real life on a real site (the owner, 2026-11-12).
 
 At the end:
 
-- **A measure.** One task builds each model of the catalog, each
-  blueprint in data and each drawing through the people
+- **A measure.** One task builds each model of the catalog (with the
+  drawings) and each blueprint in data through the people
   (`World.build/1`), and gives for each model: the result, the time, the
   most memory, and how busy the schedulers were.
 - **The people build each model.** For each model, the people make its
@@ -101,8 +101,8 @@ From the code at `feat/0006-hill` (9a7fd0d):
 
 ## 6. Requirements
 
-- **R1.** `mix world.bench` builds each model of the catalog, each
-  blueprint in data and each drawing (or the names that it gets), and
+- **R1.** `mix world.bench` builds each model of the catalog (with the
+  drawings) and each blueprint in data (or the names that it gets), and
   prints, for each one: the result (`built`, `failed`, `stopped`,
   `timeout`, or the error of the order), the wall time in ms, the most
   memory in MB, the use of the schedulers, the tasks and the triangles;
