@@ -192,3 +192,43 @@ The ten builds that take the most time:
 of the construction for each of its 7,594 tasks, not the shapes. The
 models of one task (the animals, the people) are one part that one
 person makes.
+
+### Step 6, the first part (2026-11-12)
+
+- **The log server** (D7, R7) keeps its last 2,000 events in a table
+  (ETS) ordered by id. A publish adds one event and takes away the
+  oldest one. Before, each publish copied the list of the recent events:
+  at 10,000 events in the log, a publish took 9 times the work of a
+  publish at 10 events (4,126 against 451 reductions). Now it takes the
+  same work (`test/world/log_server_test.exs`).
+- **The memory of `house_brick_vn` at near** (D6, R6). The bench gave
+  1,222 MB at the peak. Its memory over the build: the construction has
+  about 180 MB of live state (its elements, its model, its plan, the
+  tasks that wait, the triangles, the log) and as much garbage in its old
+  heap; the peak of the node is at the end, in the join: the scene keeps
+  the primitives of the brick and of the mortar (7,108 and 7,256 meshes,
+  of only 33 different meshes for the brick) as lists of tuples of
+  boxed floats, and made each one from a list of all its corners. Three
+  changes:
+  - a **joiner** joins the model in a process of its own, as the
+    drafter makes it at the start; the construction lets the model go,
+    and the memory of the join goes back to the node at the end of the
+    joiner;
+  - the construction makes a **full sweep** of its heap after each 10
+    collections;
+  - a **primitive in one pass**: the corners of each mesh when the
+    primitive comes to them, with no list of all of them, and a binary of
+    the six numbers as the key of a point that it saw (the same bytes for
+    each file of the catalog). The scene of the house alone: 397 MB at
+    the peak, not 562 MB.
+
+  The bench of `house_brick_vn` at near: **801 MB, not 1,222 MB**, in
+  14.8 s. R6 asks for less than 424 MB. The rest of the peak is the
+  join: the primitives of a scene are lists of boxed floats (about 37 MB
+  for the brick), copied from each process of a material to the joiner.
+  The next change: the points and the normals of a primitive as binaries
+  (in the processes of the materials, so they go to the joiner with no
+  copy), with the box of the model and the GLB from them, the same bytes;
+  and the elements of a task made when the task starts, not all of them
+  at the start of the construction.
+
