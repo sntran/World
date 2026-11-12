@@ -36,7 +36,8 @@ defmodule World.Rig do
   skin that the build makes: `%{points, faces, weights, smooth,
   material, roles, colors}`, the weights a map of a bone to a list of
   `{point, weight}`, `roles` the material of each face, or one `material`
-  for all, `colors` an `{r, g, b}` (0 to 255) for each point: the
+  for all, `normals` a unit vector for each point, in place of the
+  normals from the faces (for a mesh with no smooth step), `colors` an `{r, g, b}` (0 to 255) for each point: the
   colors of the vertices, that the color of the material multiplies;
   `fur` a length for each point (m: the fur of the point, `_FUR` in the
   GLB); `fur_dirs` a direction for each point (the hair lies that way;
@@ -360,6 +361,10 @@ defmodule World.Rig do
         {name, moves, changes}
       end
 
+    # The normals of the mesh itself (the normals of a true surface), when
+    # it has them and no smooth step makes new points.
+    given = if steps == 0, do: tuple.(Map.get(mesh, :normals))
+
     verts =
       for {{p, ws}, i} <- Enum.with_index(points) do
         top = ws |> Enum.filter(&is_integer(elem(&1, 0))) |> Enum.sort_by(fn {b, w} -> {-w, b} end) |> Enum.take(4)
@@ -367,7 +372,7 @@ defmodule World.Rig do
         top = if sum > 0, do: Enum.map(top, fn {b, w} -> {b, w / sum} end), else: [{0, 1.0}]
         top = top ++ List.duplicate({0, 0.0}, 4 - length(top))
 
-        n = Vec.norm(Map.get(normals, i, {0.0, 0.0, 1.0}))
+        n = if given, do: elem(given, i), else: Vec.norm(Map.get(normals, i, {0.0, 0.0, 1.0}))
 
         {p, n, {List.to_tuple(Enum.map(top, &elem(&1, 0))), List.to_tuple(Enum.map(top, &elem(&1, 1)))},
          if(colors, do: {ws.r, ws.g, ws.b, if(fade, do: ws.a, else: 1.0)}), nil, if(fur, do: ws.fur),

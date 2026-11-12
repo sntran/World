@@ -527,6 +527,56 @@ A stone with a hole and a handle:
 }}}
 ```
 
+### A sculpture with bones
+
+With `bones`, the sculptor makes a figure in place of a part
+(`World.Sculpt.Bones`): one skinned mesh that follows the bones, as the
+skin of an animal does. The data:
+
+- `bones`: a list of 1 to 64 bones, parents first. Each has a `name`
+  (small letters, digits and `_`), a `head` and a `tail` (points in the
+  axes of the sculpture) and, but for the first bone (the root), a
+  `parent`: the name of a bone before it. A bone turns round its head;
+- `bone_blend` (m, 0.001 to 10; half the mean length of the bones by
+  default): each point follows the bone nearest to it (the distance to
+  the line from its head to its tail), and each other bone less as it is
+  farther, down to nothing at `bone_blend` more than the nearest. A
+  wider blend gives a softer bend at a joint;
+- `plan`: the name of a body plan (`fish`). The bones must have the
+  names of the bones of the plan ("Species and body plans"), and can
+  have more. The plan gives its limbs, its joints, its ports (a port of
+  the data with the same name replaces it) and its animations (`swim`
+  and `idle` of a fish, the y of the sculpture to the front); `gait`
+  gives its numbers (`period`, `stride`);
+- `clips`: at most 16 clips from keys. A clip has a `name`, a `length`
+  (s, 0.1 to 60) and 1 to 64 `keys`; a key has its time `at` (s) and a
+  `pose`: a bone to its turns from its rest in degrees (`flex` round the
+  hinge of the bone, `spread` to the side, `twist` round its length).
+  The pose between two keys is the mean by the time; before the first
+  key and after the last, the pose of that key. The clip has 12 frames
+  in a second.
+
+The hinge of a bone is the x of the sculpture (the z, for a bone along
+x), or the hinge of its plan. A port of the data is on the bone nearest
+to it. The normals of a sculpture with bones are the normals of its
+surface at each point: a hard edge of hard edits is not hard there.
+
+A worm of two bones that lifts its head:
+
+```json
+{"name": "worm", "skill": {"sculpt": {
+  "edits": [{"shape": "capsule", "size": [0.1, 0.02], "axis": [0, 1, 0], "color": "#b06a50"}],
+  "bones": [
+    {"name": "body", "head": [0, -0.1, 0], "tail": [0, 0, 0]},
+    {"name": "neck", "parent": "body", "head": [0, 0, 0], "tail": [0, 0.1, 0]}
+  ],
+  "clips": [{"name": "look", "length": 2, "keys": [
+    {"at": 0, "pose": {}},
+    {"at": 1, "pose": {"neck": {"flex": 40}}},
+    {"at": 2, "pose": {}}]}]
+}}}
+```
+
 ## A statue
 
 A statue (`priv/blueprints/statue.json`, W13 of Vũng Tàu; the blueprint

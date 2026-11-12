@@ -15,12 +15,23 @@ defmodule World.Skills.Sculpt do
   cells of the level (`World.Sculpt.step/1`). The sculptor makes the part with the tree of the
   bricks of the edits (`World.Sculpt.model/2`) in its hand: the tree is
   the crew of the hand, so a stop of the person stops it (D4).
+
+  With `bones`, the sculptor makes a figure in place of a part
+  (`World.Sculpt.Bones`, plan 0009, D6): one skinned mesh that follows
+  the bones. `bones` is a list of bones, parents first (each a `name`, a
+  `head`, a `tail` and, but for the first, a `parent`); `bone_blend` the
+  width of the blend of the weights of two bones (m); `plan` the name of
+  a body plan, which gives its clips (`gait`: its numbers); `clips` a
+  list of clips from keys (a `name`, a `length` and `keys`, each key a
+  time `at` and a `pose`: a bone to its `flex`, `spread` and `twist` in
+  degrees).
   """
   @behaviour World.Skill
 
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
+  alias World.Sculpt.Bones
 
-  @keys ~w(edits groups ports sources budget cells)
+  @keys ~w(edits groups ports sources budget cells bones bone_blend plan gait clips)
   @edit ~w(shape size at axis up mode blend material color mirror repeat)
   @use ~w(shape group at axis up scale mirror repeat)
   @most 10_000
@@ -57,7 +68,15 @@ defmodule World.Skills.Sculpt do
       optional(data, "ports", path, &Drawing.check_ports/2) ++
       optional(data, "sources", path, &sources/2) ++
       optional(data, "budget", path, &budget/2) ++
-      optional(data, "cells", path, &cells/2)
+      optional(data, "cells", path, &cells/2) ++
+      optional(data, "bones", path, &bones/2) ++
+      optional(data, "bone_blend", path, &number(&1, &2, 0.001, 10)) ++
+      optional(data, "plan", path, &plan(&1, &2, data["bones"])) ++
+      optional(data, "gait", path, &gait(&1, &2, data["plan"])) ++
+      optional(data, "clips", path, &clips(&1, &2, data["bones"], data["plan"])) ++
+      if Map.has_key?(data, "bones"),
+        do: [],
+        else: for(k <- ~w(bone_blend clips gait plan), Map.has_key?(data, k), do: {"#{path}.#{k}", "needs bones"})
   end
 
   def check(_data, path), do: [{path, "must be an object"}]
@@ -68,7 +87,32 @@ defmodule World.Skills.Sculpt do
     budget = get_in(data, ["budget", Atom.to_string(level)])
     meshes = World.Sculpt.model(edits, step: step(data, level), budget: budget)
     ports = Drawing.ports(Map.get(data, "ports", %{}))
-    {Part.new(name, :part, meshes, ports, sources: Map.get(data, "sources", [])), %{}, %{}}
+    sources = Map.get(data, "sources", [])
+
+    case data["bones"] do
+      nil -> {Part.new(name, :part, meshes, ports, sources: sources), %{}, %{}}
+      bones -> {figure(name, meshes, bones, ports, sources, data), %{}, %{}}
+    end
+  end
+
+  # The figure of a sculpture with bones.
+  defp figure(name, meshes, bones, ports, sources, data) do
+    point = fn [x, y, z] -> {x, y, z} end
+
+    Bones.figure(
+      name,
+      meshes,
+      for(b <- bones, do: %{name: b["name"], parent: b["parent"], head: point.(b["head"]), tail: point.(b["tail"])}),
+      plan: data["plan"],
+      gait: Map.get(data, "gait", %{}),
+      blend: data["bone_blend"],
+      ports: ports,
+      sources: sources,
+      clips:
+        for c <- Map.get(data, "clips", []) do
+          %{name: c["name"], length: c["length"], keys: for(k <- c["keys"], do: {k["at"], k["pose"]})}
+        end
+    )
   end
 
   @impl true
@@ -376,4 +420,128 @@ defmodule World.Skills.Sculpt do
   end
 
   defp cells(_v, path), do: [{path, "must be an object of near, mid and far"}]
+
+  # The bones: parents first, the first is the root.
+  defp bones(v, path) when is_list(v) and v != [] and length(v) <= 64 do
+    {errors, _} =
+      v
+      |> Enum.with_index()
+      |> Enum.reduce({[], []}, fn {b, i}, {errors, names} ->
+        {errors ++ bone(b, "#{path}.#{i}", names),
+         if(is_map(b) and is_binary(b["name"]), do: [b["name"] | names], else: names)}
+      end)
+
+    errors
+  end
+
+  defp bones(_v, path), do: [{path, "must be a list of 1 to 64 bones"}]
+
+  defp bone(b, path, names) when is_map(b) do
+    name =
+      cond do
+        not (is_binary(b["name"]) and b["name"] =~ ~r/^[a-z][a-z0-9_]{0,31}$/) ->
+          [{"#{path}.name", "must be a name of small letters, digits and _"}]
+
+        b["name"] in names ->
+          [{"#{path}.name", "is the name of a bone before it"}]
+
+        true ->
+          []
+      end
+
+    parent =
+      cond do
+        names == [] and Map.has_key?(b, "parent") ->
+          [{"#{path}.parent", "the first bone is the root: it has no parent"}]
+
+        names == [] or b["parent"] in names ->
+          []
+
+        true ->
+          [{"#{path}.parent", "must be the name of a bone before it"}]
+      end
+
+    ends = Enum.flat_map(~w(head tail), &point(b[&1], "#{path}.#{&1}"))
+    short = if ends == [] and b["head"] == b["tail"], do: [{"#{path}.tail", "must not be the head"}], else: []
+    World.Skill.keys(b, path, ~w(name parent head tail), ~w(name head tail)) ++ name ++ parent ++ ends ++ short
+  end
+
+  defp bone(_b, path, _names), do: [{path, "must be an object"}]
+
+  defp names(bones), do: if(is_list(bones), do: for(%{"name" => n} <- bones, do: n), else: [])
+
+  # The body plan: its name, and each of its bones in the bones.
+  defp plan(v, path, bones) do
+    with [] <- choice(v, path, Bones.plans()),
+         [] <- if(is_list(bones), do: Bones.bones(v) -- names(bones), else: []) do
+      []
+    else
+      [{_, _} | _] = errors -> errors
+      missing -> [{path, "needs the bones: #{Enum.join(missing, ", ")}"}]
+    end
+  end
+
+  defp gait(v, path, plan) when is_map(v) and is_binary(plan) do
+    World.Skill.keys(v, path, ~w(period stride)) ++
+      optional(v, "period", path, &number(&1, &2, 0.1, 10)) ++ optional(v, "stride", path, &number(&1, &2, 0, 5))
+  end
+
+  defp gait(_v, path, _plan), do: [{path, "must be an object of period and stride, with a plan"}]
+
+  # The clips from keys.
+  defp clips(v, path, bones, plan) when is_list(v) and length(v) <= 16 do
+    bones = names(bones)
+    errors = v |> Enum.with_index() |> Enum.flat_map(fn {c, i} -> clip(c, "#{path}.#{i}", bones) end)
+    # The names of the clips with the names of the animations of the plan: each one time.
+    names = for(%{"name" => n} <- v, do: n) ++ if(plan in Bones.plans(), do: Bones.animations(plan), else: [])
+    if errors == [] and names != Enum.uniq(names), do: [{path, "has two clips of one name"}], else: errors
+  end
+
+  defp clips(_v, path, _bones, _plan), do: [{path, "must be a list of at most 16 clips"}]
+
+  defp clip(c, path, bones) when is_map(c) do
+    # The keys of a clip with a wrong length are checked to the longest length.
+    length = if number(c["length"], path, 0.1, 60) == [], do: c["length"], else: 60
+
+    World.Skill.keys(c, path, ~w(name length keys), ~w(name length keys)) ++
+      optional(c, "name", path, fn v, p ->
+        if is_binary(v) and v =~ ~r/^[a-z][a-z0-9_]{0,31}$/,
+          do: [],
+          else: [{p, "must be a name of small letters, digits and _"}]
+      end) ++
+      optional(c, "length", path, &number(&1, &2, 0.1, 60)) ++
+      optional(c, "keys", path, fn v, p ->
+        if is_list(v) and v != [] and length(v) <= 64,
+          do: v |> Enum.with_index() |> Enum.flat_map(fn {k, i} -> key(k, "#{p}.#{i}", length, bones) end),
+          else: [{p, "must be a list of 1 to 64 keys"}]
+      end)
+  end
+
+  defp clip(_c, path, _bones), do: [{path, "must be an object"}]
+
+  defp key(k, path, length, bones) when is_map(k) do
+    World.Skill.keys(k, path, ~w(at pose), ~w(at pose)) ++
+      optional(k, "at", path, &number(&1, &2, 0, length)) ++
+      optional(k, "pose", path, fn v, p ->
+        if is_map(v),
+          do: Enum.flat_map(Enum.sort(v), fn {bone, turns} -> turns(bone, turns, "#{p}.#{bone}", bones) end),
+          else: [{p, "must be an object: a bone to its turns"}]
+      end)
+  end
+
+  defp key(_k, path, _length, _bones), do: [{path, "must be an object"}]
+
+  defp turns(bone, turns, path, bones) do
+    cond do
+      bone not in bones ->
+        [{path, "is not a bone of the sculpture"}]
+
+      not is_map(turns) ->
+        [{path, "must be an object of #{Enum.join(Bones.turns(), ", ")}"}]
+
+      true ->
+        World.Skill.keys(turns, path, Bones.turns()) ++
+          for {k, v} <- Enum.sort(turns), k in Bones.turns(), e <- number(v, "#{path}.#{k}", -180, 180), do: e
+    end
+  end
 end

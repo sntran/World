@@ -162,3 +162,34 @@ path. Two points of the work:
 A change of a live sculpture is one shape: an edit with a mirror or a
 repeat is refused there with its path.
 
+### Step 5: bones (2026-11-12)
+
+The data of the skill `sculpt` takes `bones`, `bone_blend`, `plan`,
+`gait` and `clips` (`docs/format.md`, "A sculpture with bones"). With
+bones, the sculptor makes a `World.Figure` in place of a part
+(`World.Sculpt.Bones`): the build, the people and the GLB take it as
+they take an animal of the catalog. The points of the work:
+
+- **The weights come from the distance to the bones.** Each point
+  follows the bone nearest to it (the line from its head to its tail),
+  and each other bone less, down to nothing at `bone_blend` more than
+  the nearest. This is the rule of `World.Blob`; a sculpture has no
+  radius for each bone, so its user gives only the lines of the bones.
+- **The rig takes the normals of the surface** (`World.Rig`, the mesh
+  option `normals`): the finish pass gave them, and the normals from the
+  faces of a mesh in its budget are less smooth.
+- **A body plan gives its clips where its animations need no clips of a
+  template:** `fish` now (`swim`, `idle`). The other plans (a bird, an
+  animal of four legs, a primate) need bones and limbs that a test must
+  cover first: they stay open.
+- **Clips from keys** are for each other motion: a key is a time and a
+  pose (a bone to its `flex`, `spread` and `twist`), the pose between
+  two keys is the mean by the time.
+
+R6 by test (`test/world/sculpt_bones_test.exs`): a fish of two edits and
+seven bones is one skinned mesh in the GLB, each point has weights that
+add to 1, its `swim` moves the points of its tail more than 5 cm and
+the middle of its body less than a quarter of that, and a clip of three
+keys puts its head down at the middle key. The validator of glTF checks
+the carp of step 6.
+
