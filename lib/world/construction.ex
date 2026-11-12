@@ -142,13 +142,37 @@ defmodule World.Construction do
   end
 
   @impl true
+  # The drafter makes the model and its plan in a process of its own, as
+  # the engineer of a site draws the plan (plan 0007): the construction
+  # takes a cancel or a deadline while it works, and other constructions
+  # make their models at the same time.
   def handle_continue(:plan, s) do
-    case fit(s.job, s.job.budget["triangles"]) do
-      {:ok, level, item} ->
-        drawing = s.job.drawing
-        plan = if drawing, do: Plan.of_drawing(drawing), else: Plan.flat(item)
-        elements = if drawing, do: [], else: Build.elements(item, level, s.job.pose)
+    {me, job} = {self(), s.job}
 
+    drafter =
+      spawn_monitor(fn ->
+        Process.set_label({:drafter, job.id})
+        send(me, {:planned, self(), draft(job)})
+      end)
+
+    {:noreply, Map.merge(s, %{drafter: drafter, deferred: []})}
+  end
+
+  # The model at the level that fits, its plan and its elements.
+  defp draft(job) do
+    case fit(job, job.budget["triangles"]) do
+      {:ok, level, item} ->
+        plan = if job.drawing, do: Plan.of_drawing(job.drawing), else: Plan.flat(item)
+        {:ok, level, item, plan, if(job.drawing, do: [], else: Build.elements(item, level, job.pose))}
+
+      {:error, triangles} ->
+        {:error, triangles}
+    end
+  end
+
+  defp planned(s, result) do
+    case result do
+      {:ok, level, item, plan, elements} ->
         s =
           Map.merge(s, %{
             level: level,
@@ -182,6 +206,8 @@ defmodule World.Construction do
           })
 
         s = record(queue(s, plan.tasks), "plan_made", nil, Map.put(Plan.to_data(plan), "level", Atom.to_string(level)))
+        # The messages that came while the drafter worked (a pause).
+        for m <- Enum.reverse(s.deferred), do: send(self(), m)
         {:noreply, s |> next_stage() |> assign()}
 
       {:error, triangles} ->
@@ -253,6 +279,33 @@ defmodule World.Construction do
   end
 
   @impl true
+  # The plan of the drafter, or its crash; a cancel or a deadline stops it,
+  # and each other message (a pause, a resume) waits for the plan.
+  def handle_info({:planned, pid, result}, %{drafter: {pid, ref}} = s) do
+    Process.demonitor(ref, [:flush])
+    planned(%{s | drafter: nil}, result)
+  end
+
+  def handle_info({:DOWN, ref, :process, pid, reason}, %{drafter: {pid, ref}} = s) do
+    message =
+      case reason do
+        {%{__exception__: true} = e, _} -> Exception.message(e)
+        other -> inspect(other)
+      end
+
+    s = record(%{s | drafter: nil}, "failed", nil, %{"task" => "plan", "message" => message})
+    reply(s, {:failed, s.id, message})
+    {:stop, :normal, s}
+  end
+
+  def handle_info(m, %{drafter: {pid, ref}} = s) when m in [:cancel, :deadline] do
+    Process.demonitor(ref, [:flush])
+    Process.exit(pid, :kill)
+    stop(%{s | drafter: nil}, %{"reason" => if(m == :cancel, do: "cancelled", else: "seconds"), "done" => 0})
+  end
+
+  def handle_info(m, %{drafter: {_, _}} = s), do: {:noreply, %{s | deferred: [m | s.deferred]}}
+
   def handle_info({:hired, ref, p}, s) do
     {trade, requests} = Map.pop(s.requests, ref)
     s = %{s | requests: requests}
@@ -309,6 +362,7 @@ defmodule World.Construction do
   end
 
   # A person that stopped: its task goes back to the tasks that wait.
+
   def handle_info({:DOWN, _, :process, p, _}, s) do
     {task, running} = Map.pop(s.running, p)
     s = if task, do: back(s, task), else: s

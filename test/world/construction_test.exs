@@ -334,4 +334,39 @@ defmodule World.ConstructionTest do
     # for 7 times the tasks).
     assert big / small < 1.5 * n8 / n
   end
+
+  test "the drafter makes the model in a process of its own: a cancel stops it at once, a pause waits for the plan, a crash fails the build" do
+    wall = fn level -> World.Detail.with(level, fn -> World.Buildings.masonry_wall("row", "brick_vn", 0.5, 0.5) end) end
+
+    # A model that takes long to make: the construction takes the cancel.
+    id = "draft-#{System.unique_integer([:positive])}"
+    {:ok, ^id} = World.build(%{id: id, item: fn _ -> Process.sleep(:infinity) end})
+    t0 = System.monotonic_time(:millisecond)
+    :ok = World.cancel(id)
+    assert {:error, {:stopped, "cancelled"}} = World.await(id, 1_000)
+    assert System.monotonic_time(:millisecond) - t0 < 500
+
+    # A pause while the drafter works comes after the plan.
+    id = "draft-#{System.unique_integer([:positive])}"
+    World.watch(id)
+    {:ok, ^id} = World.build(%{id: id, item: fn level -> Process.sleep(100) && wall.(level) end})
+    :ok = World.pause(id)
+    assert_receive {:world, %{"kind" => "plan_made"}}, 5_000
+    assert_receive {:world, %{"kind" => "paused"}}, 5_000
+    :ok = World.resume(id)
+    assert {:ok, %{log: log}} = World.await(id, 30_000)
+    assert World.Log.check(log) == :ok
+
+    # A model that raises: the build fails with its message.
+    id = "draft-#{System.unique_integer([:positive])}"
+    {:ok, ^id} = World.build(%{id: id, item: fn _ -> raise "no drawing" end})
+    assert {:error, {:failed, "no drawing"}} = World.await(id, 5_000)
+    id = "draft-#{System.unique_integer([:positive])}"
+    {:ok, ^id} = World.build(%{id: id, item: fn _ -> exit(:gone) end})
+    assert {:error, {:failed, ":gone"}} = World.await(id, 5_000)
+    # A deadline while the drafter works.
+    id = "draft-#{System.unique_integer([:positive])}"
+    {:ok, ^id} = World.build(%{id: id, item: fn _ -> Process.sleep(:infinity) end, budget: %{"seconds" => 0.05}})
+    assert {:error, {:stopped, "seconds"}} = World.await(id, 2_000)
+  end
 end
