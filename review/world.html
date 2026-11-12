@@ -415,7 +415,7 @@ function placeOf(b, task) {
   const m = /_(\d+)$/.exec(task ?? '');
   const key = m && 'scaffold_' + m[1];
   const sc = key && b.parts[key];
-  const own = b.parts[(task ?? '').replace(/^again\//, '')];
+  const own = b.parts[(task ?? '').replace(/^(again|remove)\//, '')];
   const list = sc?.length ? sc : own?.length ? own : null;
   if (!list) return lotRing(b);
   const name = sc?.length ? key : task;
@@ -1209,6 +1209,10 @@ async function grow(b, e) {
   if (done < 0 || lapse.pending[done].kind !== 'task_done') return;
   const to = (lapse.pending[done].at - lapse.t0) / DAY;
   const from = (e.at - lapse.t0) / DAY;
+  // A task that takes a part down: the part goes from its top to its foot
+  // over the days of the task (the owner, 2026-11-11: it must not just
+  // disappear).
+  if (key.startsWith('remove/')) return wreck(b, key.slice(7), from, to);
   // The finished model ahead in the log: a pour is a band of it, the render
   // covers it with its stone, the halo is its steel (the owner, 2026-11-11:
   // the statue that the people built must not change at the end).
@@ -1329,9 +1333,29 @@ async function coat(b, fin, key, from, to) {
   (b.growing ??= []).push({ part, plane, box, from, to });
   if (key === 'shell') b.coated = true;
 }
+function wreck(b, key, from, to) {
+  for (const part of b.parts[key] ?? []) {
+    part.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(part);
+    if (box.isEmpty()) continue;
+    const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), box.max.y + 0.05);
+    part.traverse((o) => {
+      if (!o.isMesh) return;
+      const planes = o.material.clippingPlanes ?? [];
+      o.material = o.material.clone();
+      o.material.clippingPlanes = [...planes, plane];
+    });
+    (b.growing ??= []).push({ part, plane, box, from, to, down: true });
+  }
+}
 function growing(b, day) {
   b.growing = (b.growing ?? []).filter((g) => {
     const f = Math.min(Math.max((day - g.from) / Math.max(g.to - g.from, 1e-6), 0), 1);
+    // A part that goes: its top comes down; at the end nothing of it is seen.
+    if (g.down) {
+      g.plane.constant = g.box.max.y + 0.05 - (g.box.max.y - g.box.min.y + 0.1) * f;
+      return f < 1 && !!g.part.parent;
+    }
     g.plane.constant = g.box.min.y + (g.box.max.y - g.box.min.y + 0.05) * f;
     if (f < 1 && g.part.parent) return true;
     g.part.traverse((o) => { if (o.isMesh) o.material.clippingPlanes = g.keep ?? []; });
@@ -1629,13 +1653,14 @@ const next = (e) => { events.push(e); queue = queue.then(() => take(e)).catch((e
 // The time lapse (plan 0006, D11): the events of a recorded log on the
 // clock of the log, at `days` days of the world in one second.
 const DAY = 86400000;
-// The move to a new lot (the owner, 2026-11-11: "the camera should be
-// from the first person perspective going up the road to the hill"): the
-// view of the old site for REST s, then down to the eye of a person at the
-// old lot, along the ground to the foot of the path and up the path, 2 m
-// over the road and looking along it, and back to the view of the new lot
-// at the end.
-const EYE = 2;
+// The move to a new lot (the owner, 2026-11-11: up the road to the hill,
+// "back a bit as third person, but follow to the hill from up high"): the
+// view of the old site for REST s, then from the old lot along the ground
+// to the foot of the path and up the path, BACK m behind the point of the
+// road and HIGH m over it, looking along the road, and back to the view of
+// the new lot at the end.
+const BACK = 30;
+const HIGH = 22;
 function ride(b, move, u, from, to) {
   if (u < REST) return from;
   const r = (u - REST) / RIDE;
@@ -1650,12 +1675,16 @@ function ride(b, move, u, from, to) {
     move.road = pathOf(pts);
   }
   const road = move.road;
+  // Behind the point of the road and up high, looking far along the road
+  // (the way of the road over 50 m, so that the camera does not swing).
+  const len = road.cum.at(-1);
   const at = (f) => {
-    const x = Math.min(Math.max(f, 0), 1) * road.cum.at(-1);
-    const p = alongPts(road, f).at;
-    const ahead = alongPts(road, Math.min((x + 12) / road.cum.at(-1), 1)).at;
-    if (ahead.distanceTo(p) < 1) ahead.copy(lotAt(b));
-    return { pos: p.clone().setY(p.y + EYE), target: ahead.clone().setY(ahead.y + EYE * 0.8) };
+    const x = Math.min(Math.max(f, 0), 1) * len;
+    const p = alongPts(road, x / len).at;
+    const way = alongPts(road, Math.min((x + 25) / len, 1)).at.sub(alongPts(road, Math.max((x - 25) / len, 0)).at).setY(0);
+    if (way.lengthSq() < 1e-6) way.copy(lotAt(b)).sub(p).setY(0);
+    way.normalize();
+    return { pos: p.clone().addScaledVector(way, -BACK).setY(p.y + HIGH), target: p.clone().addScaledVector(way, 45).setY(p.y + 4) };
   };
   const E = 0.1;
   const blend = (a, c, f) => ({ pos: a.pos.clone().lerp(c.pos, f), target: a.target.clone().lerp(c.target, f) });
@@ -1784,7 +1813,7 @@ const lapse = params.get('follow') ? {
     camera.position.copy(pos);
     // The camera stays 10 m over the ground of a hill.
     const hill = [...places.values()].find((p) => p.terrain)?.ground;
-    if (hill && !riding) {
+    if (hill) {
       down.set(camera.position.clone().setY(1000), new THREE.Vector3(0, -1, 0));
       const hit = down.intersectObject(hill, true)[0];
       if (hit && camera.position.y < hit.point.y + 10) camera.position.y = hit.point.y + 10;

@@ -304,10 +304,12 @@ steps of the work keep their days to each other. At the start of each
 stage the day waits 4 s: the people of the stage walk in (at a pause:
 the people and the carriers walk out). The first stage on a new lot
 waits longer: 1.5 s at the old site when it is down, then 16 s up the
-road to the new lot, with the camera at the eye of a person (2 m over
-the road, looking along it) from the old lot along the ground to the
-foot of the path and up the path, while the people of the stage walk up
-with it. Each part grows from
+road to the new lot: the camera follows the road from the old lot along
+the ground to the foot of the path and up the path, 30 m behind and 22 m
+over it, looking along the road to the hill, while the people of the
+stage walk up with it. A task that takes a part down (`remove/NODE`)
+takes it from its top to its foot over its days, and its crew works at
+the part. Each part grows from
 its foot to its top over the days of its task. The film shows the
 finished model from the first pour: each pour is the band of the
 finished model at the heights of its rough band, in its concrete; the

@@ -244,9 +244,16 @@ What is not as the plan says:
   the first person perspective going up the road to the hill. Also only
   moves after the old site is fully taken down, with a small pause"): the
   first stage on the new lot waits 17.5 s, not 4 s: 1.5 s at the cape when
-  the old statue is down, then 16 s with the camera at the eye of a person
-  from the cape to the foot of the path and up the path to the top, with
-  the people of the stage.
+  the old statue is down, then 16 s with the camera from the cape to the
+  foot of the path and up the path to the top, with the people of the
+  stage ("move it back a bit as third person, but follow to the hill from
+  up high": 30 m behind the road and 22 m over it).
+- The take-down of the first statue ("the building of the first site just
+  disappeared ... Did somebody demolish it?"): yes, the history says that
+  the first statue was taken down after the agreement of 16 February
+  1974 (viwiki, vietcatholic). Each task `remove/NODE` now takes its part
+  from its top to its foot over its days, with its crew at the part;
+  before, the part went at the end of its task in one frame.
 - The reliefs are a part of the base, not a stage of their own.
 - A person is a task: the crews of the rates are in the days of a task,
   and the page shows one person for each task.
