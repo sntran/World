@@ -125,9 +125,9 @@ defmodule World.ConstructionTest do
 
   @tag timeout: 300_000
   test "the statue on Núi Nhỏ at the level far: the bytes of a build with no world" do
-    {:ok, id} = World.build(job("tuong_chua_kito_vua", level: :far))
+    {:ok, id} = World.build(job("tuong_chua_kito_vua_cong_truong", level: :far))
     assert {:ok, r} = World.await(id)
-    assert r.glb == glb("tuong_chua_kito_vua", :far)
+    assert r.glb == glb("tuong_chua_kito_vua_cong_truong", :far)
   end
 
   test "the budget of triangles: the level that fits, or a stop" do

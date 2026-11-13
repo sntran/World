@@ -177,7 +177,7 @@ test('the time lapse of the statue on the hill: the clock of its log, the scaffo
     // The end: the statue stands, the scaffold and the forms are down.
     await page.evaluate((d) => window.TIMELAPSE.to(d), end);
     const last = await page.evaluate((order) => Object.keys(window.WORLD.builds.get(order).parts).sort(), id);
-    assert.ok(last.includes('tuong_chua_kito_vua') && !last.some((p) => /^(scaffold|form|pour)_/.test(p)), JSON.stringify(last));
+    assert.ok(last.includes('tuong_chua_kito_vua_cong_truong') && !last.some((p) => /^(scaffold|form|pour)_/.test(p)), JSON.stringify(last));
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

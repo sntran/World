@@ -9,10 +9,10 @@ defmodule World.MethodTest do
 
   @moduletag :tmp_dir
 
-  defp order(method), do: put_in(Drawing.raw("tuong_chua_kito_vua"), ["options", "method"], method)
+  defp order(method), do: put_in(Drawing.raw("tuong_chua_kito_vua_cong_truong"), ["options", "method"], method)
 
   test "the history of the statue: each fact names its sources, each stage its facts, the dates in order" do
-    h = Method.history("tuong_chua_kito_vua")
+    h = Method.history("tuong_chua_kito_vua_cong_truong")
     sources = Map.keys(h["sources"])
     facts = for f <- h["facts"], into: %{}, do: {f["id"], f}
     assert map_size(facts) == 14 and length(sources) == 6
@@ -168,11 +168,11 @@ defmodule World.MethodTest do
 
     for i <- 1..8 do
       assert nodes["scaffold_#{i}"] == "unscaffold" and nodes["form_#{i}"] == "strip_#{i}"
-      assert nodes["pour_#{i}"] == "tuong_chua_kito_vua"
+      assert nodes["pour_#{i}"] == "tuong_chua_kito_vua_cong_truong"
     end
 
     # The parts of the end stay: no task takes them down.
-    assert Map.has_key?(nodes, "tuong_chua_kito_vua") and nodes["be"] == nil
+    assert Map.has_key?(nodes, "tuong_chua_kito_vua_cong_truong") and nodes["be"] == nil
     {:ok, job} = Orders.job(order("1974"), "mid")
     stream = World.Detail.with(:mid, fn -> Drawing.build(job.model, stream: true) end)
     assert World.Check.model(stream) == :ok
@@ -187,7 +187,7 @@ defmodule World.MethodTest do
     # The board of the mixing by hand of 1974.
     assert Enum.any?(job.model["nodes"], &(&1["name"] == "mixing"))
     refute Enum.any?(today.drawing["nodes"], &(&1["name"] == "mixing"))
-    assert nodes["mixing"] == "tuong_chua_kito_vua"
+    assert nodes["mixing"] == "tuong_chua_kito_vua_cong_truong"
     stream = World.Detail.with(:mid, fn -> Drawing.build(today.drawing, stream: true) end)
     assert World.Check.model(stream) == :ok
     {p, _, _} = World.Skills.Crane.make(crane["skill"]["crane"], %{}, %{name: "crane"})

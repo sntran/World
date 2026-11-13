@@ -537,6 +537,9 @@
     },
     {
       "name": "ring"
+    },
+    {
+      "name": "scale"
     }
   ],
   "drawing": {

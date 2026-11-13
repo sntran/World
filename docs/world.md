@@ -331,7 +331,7 @@ A site has a method (plan 0006, D6; `World.Method`): the option
 the rates of the crews (`World.Site`), the most people on the site (50),
 and the stages of the construction. Today is one stage that builds
 each node. 1974 is the true history of the statue on Núi Nhỏ
-(`priv/history/tuong_chua_kito_vua.json`, each fact with its sources):
+(`priv/history/tuong_chua_kito_vua_cong_truong.json`, each fact with its sources):
 
 1. `first_build`: the first statue (8.6 m on a base of 5 m) at the cape
    of Nghinh Phong, up to the fourth band of its cast, from 1 July 1972;

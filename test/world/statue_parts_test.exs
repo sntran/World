@@ -10,7 +10,7 @@ defmodule World.StatuePartsTest do
   @moduletag timeout: 1_800_000
 
   test "the statue in parts has the sizes of its sources: 31 m to the top of its halo, 18.4 m from fingertip to fingertip" do
-    {:ok, fun} = Catalog.fetch("tuong_chua_giang_tay")
+    {:ok, fun} = Catalog.fetch("tuong_chua_kito_vua")
     model = Detail.with(:far, fun)
     assert model.kind == :statue
     assert Enum.any?(model.sources, &(&1 =~ "kitovungtau.com"))
@@ -50,5 +50,32 @@ defmodule World.StatuePartsTest do
     assert_in_delta right - left, 14.15, 0.3
     {{h0, _, _}, {h1, _, _}} = box.("hao_quang")
     assert_in_delta h1 - h0, 4.6, 0.2
+  end
+
+  test "the statue has its inside at the near level: a room, a well, a stair of 133 steps, six open windows" do
+    drawing = "priv/drawings/tuong_chua_kito_vua.json" |> File.read!() |> JSON.decode!()
+    data = Map.new(drawing["nodes"], &{&1["name"], &1["skill"]["sculpt"]})
+    inside = fn name -> for e <- data[name]["edits"], e["levels"] == ["near"], e["mode"] == "subtract", do: e end
+    # The room of the base with its door and the hole in its roof; the dome; the well in the robe and in the cape.
+    assert length(inside.("de")) == 3 and length(inside.("vom")) == 2
+    assert length(inside.("ao_choang")) == 2
+    # The well of the robe, and an opening for each of its three windows (each goes through the front and the back).
+    assert length(inside.("ao")) == 4
+    # At mid and far the windows are paints.
+    assert Enum.count(data["ao"]["edits"], &(&1["levels"] == ["mid", "far"] and &1["mode"] == "paint")) == 3 * 14
+
+    # The stair is a detail of the robe at near: 133 steps of 18.6 cm round a post, 12 steps for each turn,
+    # from the floor of the room (0.3 m over the ground) to the floor of the shoulders.
+    [stair] = data["ao"]["details"]
+    assert stair["levels"] == ["near"]
+    [step | _] = stair["edits"]
+    assert %{"count" => 133, "angle" => 30, "move" => [0, 0, rise]} = step["repeat"]
+    assert_in_delta rise, 0.186, 0.001
+    [_, _, first] = step["at"]
+    assert_in_delta first + 0.04 - rise, -8.7, 0.001
+    assert_in_delta first + 0.04 + 132 * rise, 16.0, 0.01
+    # The grilles of the six windows are in the same detail.
+    assert length(stair["edits"]) == 2 + 6 * 13
+    assert World.Drawing.check(drawing, "d") |> elem(0) == :ok
   end
 end

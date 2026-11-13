@@ -15,7 +15,7 @@
 [method, level, step] = rest ++ Enum.drop(["today", "mid", "8"], length(rest))
 File.mkdir_p!(dir)
 
-order = put_in(World.Drawing.raw("tuong_chua_kito_vua"), ["options", "method"], method)
+order = put_in(World.Drawing.raw("tuong_chua_kito_vua_cong_truong"), ["options", "method"], method)
 {:ok, job} = World.Orders.job(order, level)
 {:ok, hill} = World.Places.fetch("nui_nho")
 lot = Map.get(job, :lot) || "top"

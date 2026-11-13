@@ -38,7 +38,7 @@ defmodule World.SiteTest do
   end
 
   test "the schedule of the statue on Núi Nhỏ: each band after the cure of the band under it" do
-    {:ok, job} = Orders.job(Drawing.raw("tuong_chua_kito_vua"), "near")
+    {:ok, job} = Orders.job(Drawing.raw("tuong_chua_kito_vua_cong_truong"), "near")
     d = job.drawing
     today = Site.schedule(d)
     old = Site.schedule(d, "1974")

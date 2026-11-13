@@ -1,6 +1,6 @@
 {
   "rates": {
-    "source": "The rates of the crews of a site (plan 0006, D1): the work of one crew in one day (the unit of each work is its unit), for each method of a site (D6). The norms of Việt Nam (Định mức dự toán xây dựng công trình, Phụ lục II of Thông tư 12/2021/TT-BXD) give the days of people for each unit of work, but the chapters of the concrete, the masonry and the finish were not found (2026-11-10): each rate is an estimate with its reason. The method 1974 has no machine: the people mix the concrete on the site and carry the materials up the path of the hill (priv/history/tuong_chua_kito_vua.json, the facts carry and scaffold_hard).",
+    "source": "The rates of the crews of a site (plan 0006, D1): the work of one crew in one day (the unit of each work is its unit), for each method of a site (D6). The norms of Việt Nam (Định mức dự toán xây dựng công trình, Phụ lục II of Thông tư 12/2021/TT-BXD) give the days of people for each unit of work, but the chapters of the concrete, the masonry and the finish were not found (2026-11-10): each rate is an estimate with its reason. The method 1974 has no machine: the people mix the concrete on the site and carry the materials up the path of the hill (priv/history/tuong_chua_kito_vua_cong_truong.json, the facts carry and scaffold_hard).",
     "unit": "1/day",
     "fields": ["unit", "crew", "today", "1974", "source"],
     "sizes": {

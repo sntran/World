@@ -94,7 +94,7 @@ defmodule World.MCPTest do
     assert Enum.sum(Map.values(r["trades"])) == length(r["tasks"])
 
     # A drawing with skills: a task for each node, and the estimate of the skills.
-    statue = %{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua"}}
+    statue = %{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua_cong_truong"}}
     r = tool("plan_build", %{"order" => statue})["structuredContent"]
 
     assert r["level"] == "near" and length(r["tasks"]) == 57 and r["trades"]["caster"] == 11 and

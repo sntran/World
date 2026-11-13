@@ -400,8 +400,9 @@ blueprint itself, so its hash names the blueprint and its options. The
 skills that a blueprint can use are in `docs/skills.md`.
 
 A model of the catalog can be an order of a blueprint
-(`priv/drawings/NAME.json` with `blueprint` and `options`): the statue on
-Núi Nhỏ is `priv/drawings/tuong_chua_kito_vua.json`, an order of the
+(`priv/drawings/NAME.json` with `blueprint` and `options`): the statue
+of the site on Núi Nhỏ is
+`priv/drawings/tuong_chua_kito_vua_cong_truong.json`, an order of the
 blueprint `statue`.
 
 ## A sculpture
@@ -532,6 +533,14 @@ An edit has its `shape` and its `size`, and these keys:
   through a fin makes a ray, a thin box along a body makes a groove.
   With maps for a level (below), a raise of less than half a cell is in
   the maps only, not in the mesh.
+
+An edit can be only at some levels:
+
+- `levels`: a list of `near`, `mid` and `far` (all by default): the
+  edit is in the sculpture only at those levels. The inside of a large
+  model (a room, a well for a stair, an opening for a window) is at
+  `near` only: at `mid` and `far` the model is solid, and a paint is in
+  the place of the opening.
 
 An edit can have copies, so a few edits make much:
 
@@ -776,7 +785,7 @@ landmark in parts (plan 0014).
 | `ghe_danh_ca_vung_tau` | A motor fishing boat of Vũng Tàu with a beak (ghe mỏ nhọn), 11 m long: the class C5-T2-A of the Blue Book of Coastal Vessels (1967) | A hollow hull: a `tube` along the sheer, the same tube smaller taken away, a `crop` by the side view (the sheer) and a `crop` by the tube again, so the decks and the cabin end at the hull. The same cells at each level (a thin wall needs two cells), and a detail that the far level does not have. The port `waterline`. |
 | `toyota_vios` | A Toyota Vios (XP150), 4425 by 1730 by 1475 mm | The side view as an `extrude`, with a `crop` by the plan and a `crop` by the section (each with a blend: round edges); the glass and the pillars by paints of side views; wheels as a `revolve` with a `repeat` for the spokes. |
 | `cay_bang` | A cây bàng (Terminalia catappa) of a street, 9 m high | Tiers of level branches by a `repeat`, leaves as rings of small flat clumps with the surface `leaves`, old leaves by paints with an `opacity`. |
-| `tuong_chua_giang_tay` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key and the grilles of the windows by paints with a raise; groups with a scale for the head and the hands. |
+| `tuong_chua_kito_vua` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key by paints with a raise; groups with a scale for the head and the hands. Its inside is at near only (`levels`): a room in the base, the dome, a well, six open windows, and a stair of 133 steps as one edit with a `repeat` (a turn and a move). |
 
 ### A sculpture with bones
 
@@ -924,7 +933,8 @@ of a stand), the ports (`light` at the corners of the base, `door` at its
 back, and with `hollow` the `stair` and a `view` at each balcony), the
 collision boxes (the base, the plinth, the robe, the arms, the head), and
 the corners of the base for `World.Surface`. The receipt of an order of a
-statue has the list `sizes`.
+statue has the list `sizes`. The source `scale` is not the source of one
+size: it says where the scale of the sizes comes from.
 
 A model that the people build on a lot of a place with a terrain (a
 statue on the hill of Núi Nhỏ, plan 0006) has its place in the Vũng Tàu
@@ -936,9 +946,14 @@ from the north to the east (the front of a model is +y: with a turn of
 0 it looks to the north). The game puts the model on its ground with no
 other data.
 
-The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
-from the feet to the top of the halo, the hands 18.4 m apart, the hands
-2.2 m, 133 steps inside, a base of 12 by 12 by 4 m with four reliefs.
+The statue on Núi Nhỏ (`tuong_chua_kito_vua_cong_truong`) is the first
+order: 27.5 m from the feet to the top of the halo, the hands 23.5 m
+apart (18.4 m from cuff to cuff), the hands 2.6 m, 133 steps inside, a
+base of 14.5 by 14.5 by 4 m with four reliefs. It is the model of the
+site and of its time lapse (plan 0006). Its scale is not right: 18.4 m
+is from fingertip to fingertip, so the model is about 28% too large.
+The model `tuong_chua_kito_vua` has the true sizes: it is a model in
+parts (see "A model in parts").
 
 The people make a statue as on a site, one node of the drawing each:
 

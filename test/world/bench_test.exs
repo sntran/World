@@ -14,8 +14,9 @@ defmodule World.BenchTest do
     assert Enum.all?(World.Drawing.names(), fn d -> Enum.any?(all, &(elem(&1, 0) == d)) end)
     assert {:ok, ^all} = Bench.select([])
     # In the order of all the orders.
-    assert {:ok, [{"alpaca", "catalog", _}, {"tuong_chua_kito_vua", "catalog", _}, {"scooter", "blueprint", _}]} =
-             Bench.select(["tuong_chua_kito_vua", "scooter", "alpaca"])
+    assert {:ok,
+            [{"alpaca", "catalog", _}, {"tuong_chua_kito_vua_cong_truong", "catalog", _}, {"scooter", "blueprint", _}]} =
+             Bench.select(["tuong_chua_kito_vua_cong_truong", "scooter", "alpaca"])
 
     assert {:error, ["nothing"]} = Bench.select(["alpaca", "nothing"])
   end
@@ -41,7 +42,7 @@ defmodule World.BenchTest do
     # A deadline before the end: the build stops.
     assert [%{"result" => "stopped"}] = Bench.run([alpaca], level: "near", budget: %{"seconds" => 0.001})
     # No time to wait: the measure stops the build and goes on.
-    {:ok, [statue]} = Bench.select(["tuong_chua_kito_vua"])
+    {:ok, [statue]} = Bench.select(["tuong_chua_kito_vua_cong_truong"])
     assert [%{"result" => "timeout", "ms" => _}] = Bench.run([statue], timeout: 1)
     wrong = {"nothing", "catalog", %{"blueprint" => "catalog", "options" => %{"name" => "nothing"}}}
     assert [%{"result" => "order", "error" => _} = order] = Bench.run([wrong])

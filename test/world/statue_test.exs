@@ -7,7 +7,11 @@ defmodule World.StatueTest do
   defp scene(item, level), do: Build.scene(item, level: level)
   defp roles(s), do: for(n <- s.nodes, p <- n.primitives, uniq: true, do: p.material)
   defp part(item, name), do: item.nodes |> List.keyfind(name, 0) |> elem(1)
-  defp nui_nho(level), do: Detail.with(level, fn -> Drawing.file("tuong_chua_kito_vua") end)
+  # The statue on Núi Nhỏ as the people of a site cast it: the model of
+  # the site. Its scale is not right (18.4 m is from fingertip to
+  # fingertip); the model `tuong_chua_kito_vua` has the true sizes
+  # (plan 0014).
+  defp nui_nho(level), do: Detail.with(level, fn -> Drawing.file("tuong_chua_kito_vua_cong_truong") end)
 
   # A statue of the blueprint in data, with the options of an order.
   defp statue(level, options) do
@@ -92,7 +96,7 @@ defmodule World.StatueTest do
     h = measured()
     near = nui_nho(:near)
     feet = 4.0 + 3.7
-    statue = part(near, "tuong_chua_kito_vua")
+    statue = part(near, "tuong_chua_kito_vua_cong_truong")
     points = fn keep -> for m <- statue.shapes, keep.(m), p <- m.points, do: p end
     stone = points.(&(&1.material != :steel))
     z = fn {_, _, z} -> z - feet end

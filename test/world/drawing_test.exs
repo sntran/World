@@ -139,7 +139,7 @@ defmodule World.DrawingTest do
   end
 
   test "the drawing of one node: a person makes the node from it and its inputs, as from the whole drawing (plan 0007, D3)" do
-    {:ok, %{drawing: raw}} = Orders.job(Drawing.raw("tuong_chua_kito_vua"), "far")
+    {:ok, %{drawing: raw}} = Orders.job(Drawing.raw("tuong_chua_kito_vua_cong_truong"), "far")
 
     made =
       Enum.reduce(["figure", "robe"], %{}, fn n, made ->
