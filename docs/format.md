@@ -537,7 +537,9 @@ An edit can have copies, so a few edits make much:
 
 - `mirror`: `x`, `y` or `z`, or a list of them: the copy of the edit
   across that plane of the sculpture (through its origin); two planes
-  give four copies, three give eight;
+  give four copies, three give eight (an edit with the mode
+  `crop` and a mirror keeps only what is in the two shapes: for a cut
+  of two sides, write one outline with the two sides);
 - `repeat`: `{"count": N}` (2 to 1,000) gives a ring of N copies round
   the z of the sculpture; `axis` and `center` give another axis, `angle`
   the degrees from one copy to the next (360 / N by default), and `move`
@@ -716,6 +718,35 @@ two surfaces, one in the other, as two sculptures of Dreams are.
 }}}
 ```
 
+### A model in parts
+
+A large model (a statue, a building) is not one sculpture. One
+sculpture has cells of one size, and its cost is its surface in cells:
+a face that needs cells of 2 cm and a robe of 250 m2 that needs cells
+of 5 cm do not go together. So the model is some nodes, each a
+sculpture of its own, as the elements of a scene of Dreams and as the
+parts of a statue that a workshop makes away from its site:
+
+- each node has its `edits`, its `cells`, its `budget` and its `bake`:
+  small cells and a large image only where the eye looks;
+- each node with a `bake` uses a role of its own for its edits, so it
+  has its own images. The palette has the roles `part_01` to `part_16`
+  for that (white, a roughness of 0.6): give each node one of them, and
+  put them in the `materials` of the drawing;
+- the parts do not blend: a part goes into the next one at a line of
+  the thing (a cuff, a collar, a hem), and they overlap a little;
+- with no `at`, a node is at the origin of the first node: write the
+  edits of each part in the axes of the model. The extras `place` of
+  the drawing move the whole model (the ground under a base);
+- World makes the sculptures of a drawing at the same time, each in a
+  process of its own with its crew (`World.Crew`), the largest first;
+  the gate of the node (`World.Sculpt.Gate`) lets some of them work at
+  one time.
+
+A relief of a paint that is half a cell or more is in the mesh, and a
+thin relief in the mesh costs many triangles: keep the raise of a
+paint under half a cell, so it is in the maps only.
+
 ### The sculptures of the catalog
 
 Some models of the catalog are a sculpture each, from edits only: no
@@ -723,7 +754,8 @@ code of World makes their kind (`priv/drawings/NAME.json`; plans 0011
 and 0012). They are the examples of the format. The first ten are not
 copies of real things; the next four have the sizes of real things,
 each with its source; the last three are real things from their
-sources, each with its form too (plan 0013).
+sources, each with its form too (plan 0013); the last one is a
+landmark in parts (plan 0014).
 
 | Model | What | It shows |
 |---|---|---|
@@ -744,6 +776,7 @@ sources, each with its form too (plan 0013).
 | `ghe_danh_ca_vung_tau` | A motor fishing boat of Vũng Tàu with a beak (ghe mỏ nhọn), 11 m long: the class C5-T2-A of the Blue Book of Coastal Vessels (1967) | A hollow hull: a `tube` along the sheer, the same tube smaller taken away, a `crop` by the side view (the sheer) and a `crop` by the tube again, so the decks and the cabin end at the hull. The same cells at each level (a thin wall needs two cells), and a detail that the far level does not have. The port `waterline`. |
 | `toyota_vios` | A Toyota Vios (XP150), 4425 by 1730 by 1475 mm | The side view as an `extrude`, with a `crop` by the plan and a `crop` by the section (each with a blend: round edges); the glass and the pillars by paints of side views; wheels as a `revolve` with a `repeat` for the spokes. |
 | `cay_bang` | A cây bàng (Terminalia catappa) of a street, 9 m high | Tiers of level branches by a `repeat`, leaves as rings of small flat clumps with the surface `leaves`, old leaves by paints with an `opacity`. |
+| `tuong_chua_giang_tay` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key and the grilles of the windows by paints with a raise; groups with a scale for the head and the hands. |
 
 ### A sculpture with bones
 
