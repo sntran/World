@@ -669,15 +669,24 @@ skin of an animal does. The data:
   follows the bones of the wing, and the body next to it does not. An
   edit with no bone inside it has all the bones (a long fin on a body
   bends with the body);
-- `plan`: the name of a body plan (`fish` or `bird`). The bones must
+- `plan`: the name of a body plan (`fish`, `bird` or `biped`). The bones must
   have the names of the bones of the plan ("Species and body plans"),
   and can have more. The left side of a body (`_l`) is at -x: x is to
   the right side. The plan gives its limbs, its joints, its ports (a port of
   the data with the same name replaces it), its animations (`swim`
   and `idle` of a fish, the y of the sculpture to the front) and its
   speeds (`swim_speed` in the list of the parts); `gait` gives its
-  numbers (`period`, `stride`). A bird has `walk`, `idle`, `peck` and
-  `flap`, and `walk_speed`;
+  numbers (`period`, `stride`, `lift`). A bird has `walk`, `idle`,
+  `peck` and `flap`, and `walk_speed`. A `biped` is a body on two legs
+  with the names of the bones of a person of World (`pelvis`,
+  `spine_01`, `neck_01`, `head`, and on each side `upperarm`,
+  `lowerarm`, `hand`, `thigh`, `calf`, `foot`): a puppet, a robot, a
+  person of a sculptor. It has `walk`, `run` and `idle`, with
+  `walk_speed` and `run_speed`: the feet go in turn, each flat on the
+  ground for its part of the step; the hips are as high as the legs let
+  them; the arms come down from their rest (out to the sides or down)
+  and swing against the legs. Its ports are `ground`, `head`, `grip_l`
+  and `grip_r`;
 - `clips`: at most 16 clips from keys. A clip has a `name`, a `length`
   (s, 0.1 to 60) and 1 to 64 `keys`; a key has its time `at` (s) and a
   `pose`: a bone to its turns from its rest in degrees (`flex` round the
@@ -1753,6 +1762,33 @@ highest point (the top of the head, or of the comb).
   in short jerks, in 3 s), `peck` (the neck goes down to the ground
   twice, the body leans a little) and `flap` (the wings open, beat three
   times and fold, in 1.2 s). In each, the feet stay on the ground.
+
+A body on two legs (`World.Animals.Biped`; the plan `biped` of a
+sculpture with bones, "A sculpture with bones"): its bones have the
+names of a person of World: `pelvis` (the root), `spine_01`, `neck_01`,
+`head`, and for each side the arm (`upperarm_l`, `lowerarm_l`,
+`hand_l`) and the leg (`thigh_l`, `calf_l`, `foot_l`). Its size (its
+`height`) is the height of its highest point. No species of the catalog
+has this plan: a person of the catalog is a `World.People.Human`.
+
+- Joints: the balls `shoulder_l`, `shoulder_r`, `hip_l`, `hip_r`,
+  `neck`, and the hinges `elbow_l`, `elbow_r`, `knee_l`, `knee_r`. The
+  hinge of an elbow takes the hand to the front and the hinge of a knee
+  takes the foot to the back, for a body made in any pose (the arms out
+  to the sides, or down).
+- Limbs: `arm_l`, `arm_r` (the end is the wrist), `leg_l`, `leg_r` (the
+  end is the ankle).
+- Ports: `ground`, `head` (the top of the head), `grip_l`, `grip_r`.
+- Animations: `walk` (the feet in turn, each flat on the ground for 0.6
+  of the step; the hips are as high as the two legs let them, with a
+  small bend of the knee: up over the foot on the ground, down between
+  two steps; the hands hang at the sides and swing against the legs;
+  the speed is in `walk_speed`), `run` (a step of 0.65 of the period
+  and 1.5 times the stride, each foot on the ground for 0.35 of it: the
+  body is in the air between two steps; the elbows bent, the body to
+  the front; `run_speed`) and `idle` (the body stands and breathes, in
+  3 s). The gait: `period` (1.1 s), `stride` (0.36 of the height) and
+  `lift` (0.05 of the height).
 
 A new species: write `priv/animals/species/NAME.json` with the
 template of the nearest body, the numbers of its shape, its colors,

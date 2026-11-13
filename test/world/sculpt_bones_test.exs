@@ -185,7 +185,161 @@ defmodule World.Sculpt.BonesTest do
     [q] = List.last(wide.nodes).primitives
     two = fn prim -> Enum.count(prim.weights, fn {_, w, _, _} -> w > 0 end) end
     assert two.(q) > two.(p)
-    assert Bones.plans() == ~w(bird fish) and Bones.turns() == ~w(flex spread twist)
+    assert Bones.plans() == ~w(biped bird fish) and Bones.turns() == ~w(flex spread twist)
+  end
+
+  # A puppet of 1 m on two legs. With `out`, its arms are out to the sides (a T); with no `out`, down.
+  defp puppet(out) do
+    arm = fn s, sign ->
+      points =
+        if out,
+          do: [[sign * 0.12, 0, 0.78], [sign * 0.3, 0, 0.78], [sign * 0.46, 0, 0.78], [sign * 0.54, 0, 0.78]],
+          else: [[sign * 0.12, 0, 0.78], [sign * 0.14, 0, 0.6], [sign * 0.15, 0, 0.44], [sign * 0.155, 0, 0.36]]
+
+      [{"upperarm", "spine_01"}, {"lowerarm", "upperarm_#{s}"}, {"hand", "lowerarm_#{s}"}]
+      |> Enum.zip(Enum.chunk_every(points, 2, 1, :discard))
+      |> Enum.map(fn {{name, parent}, [head, tail]} ->
+        %{"name" => "#{name}_#{s}", "parent" => parent, "head" => head, "tail" => tail}
+      end)
+    end
+
+    leg = fn s, sign ->
+      x = sign * 0.07
+
+      [
+        %{"name" => "thigh_#{s}", "parent" => "pelvis", "head" => [x, 0, 0.5], "tail" => [x, 0, 0.27]},
+        %{"name" => "calf_#{s}", "parent" => "thigh_#{s}", "head" => [x, 0, 0.27], "tail" => [x, 0, 0.05]},
+        %{"name" => "foot_#{s}", "parent" => "calf_#{s}", "head" => [x, 0, 0.05], "tail" => [x, 0.1, 0.01]}
+      ]
+    end
+
+    limb =
+      if out,
+        do: %{"shape" => "capsule", "size" => [0.2, 0.03], "at" => [0.34, 0, 0.78], "axis" => [1, 0, 0]},
+        else: %{"shape" => "capsule", "size" => [0.2, 0.03], "at" => [0.14, 0, 0.58]}
+
+    %{
+      "edits" => [
+        %{"shape" => "capsule", "size" => [0.12, 0.09], "at" => [0, 0, 0.66], "color" => "#4060a0"},
+        %{"shape" => "ball", "size" => [0.09], "at" => [0, 0, 0.92], "color" => "#d0a080"},
+        Map.merge(limb, %{"mirror" => "x", "color" => "#d0a080"}),
+        %{"shape" => "capsule", "size" => [0.22, 0.04], "at" => [0.07, 0, 0.27], "mirror" => "x", "color" => "#303030"},
+        %{"shape" => "box", "size" => [0.035, 0.07, 0.02], "at" => [0.07, 0.04, 0.02], "mirror" => "x"}
+      ],
+      "cells" => %{"mid" => 0.012},
+      "bones" =>
+        [
+          %{"name" => "pelvis", "head" => [0, 0, 0.5], "tail" => [0, 0, 0.6]},
+          %{"name" => "spine_01", "parent" => "pelvis", "head" => [0, 0, 0.6], "tail" => [0, 0, 0.8]},
+          %{"name" => "neck_01", "parent" => "spine_01", "head" => [0, 0, 0.8], "tail" => [0, 0, 0.85]},
+          %{"name" => "head", "parent" => "neck_01", "head" => [0, 0, 0.85], "tail" => [0, 0, 1.0]}
+          # The left side is at -x.
+        ] ++ arm.("l", -1) ++ leg.("l", -1) ++ arm.("r", 1) ++ leg.("r", 1),
+      "plan" => "biped",
+      "gait" => %{"period" => 1.0, "stride" => 0.3, "lift" => 0.05}
+    }
+  end
+
+  # The mean move of the points of the figure at rest that are in a region.
+  defp move(rest, moved, where) do
+    moves = for {p, q} <- Enum.zip(rest, moved), where.(p), do: Vec.sub(q, p)
+    Vec.scale(Enum.reduce(moves, &Vec.add/2), 1 / length(moves))
+  end
+
+  test "a sculpture with the bones of a person has the walk of a body on two legs: its feet move in turn (plan 0010, R12)" do
+    data = puppet(false)
+    assert paths(data) == []
+    {"fish", figure, _} = hd(Detail.with(:mid, fn -> Drawing.build(drawing(data)) end).nodes)
+    assert Enum.map(figure.animations, & &1.name) == ~w(walk run idle)
+    assert figure.kind == :animal
+    # A stride of 0.3 heights of 1.01 m in 0.6 of a period of 1 s.
+    assert_in_delta figure.params["walk_speed"], 0.5, 0.011
+    assert figure.params["run_speed"] > 2 * figure.params["walk_speed"]
+    assert Map.keys(figure.ports) |> Enum.sort() == ~w(grip_l grip_r ground head)
+    assert figure.ports["grip_l"].bone == "hand_l" and figure.ports["head"].bone == "head"
+    rest = Contact.points(figure)
+    walk = Enum.find(figure.animations, &(&1.name == "walk"))
+    at = fn clip, k -> Contact.points(at_frame(figure, clip, k)) end
+    foot = fn sign -> fn {x, _, z} -> x * sign > 0 and z < 0.045 end end
+    # (The legs are 0.11 m out at the most.)
+    hand = fn sign -> fn {x, _, z} -> x * sign > 0.12 and z < 0.42 end end
+    stride = 0.3 * 1.01
+
+    # The start of a step: the left foot is half a stride to the front,
+    # the right foot is to the back, the two flat on the ground.
+    {_, ly, lz} = move(rest, at.(walk, 0), foot.(-1))
+    {_, ry, rz} = move(rest, at.(walk, 0), foot.(1))
+    assert_in_delta ly, stride / 2, 0.004
+    assert_in_delta ry, -stride / 3, 0.004
+    assert abs(lz) < 0.002 and abs(rz) < 0.002
+
+    # A foot on the ground does not go up or down, and goes to the back
+    # at one speed (the body goes to the front over it): the left foot
+    # for the first 0.6 of the step.
+    for k <- 1..9 do
+      {x, y, z} = move(rest, at.(walk, k), foot.(-1))
+      assert abs(x) < 0.002 and abs(z) < 0.002
+      assert_in_delta y, stride * (0.5 - k / 16 / 0.6), 0.004
+    end
+
+    # Then it goes up and to the front, while the right foot is on the ground.
+    {_, _, up} = move(rest, at.(walk, 13), foot.(-1))
+    assert up > 0.03
+    assert abs(elem(move(rest, at.(walk, 13), foot.(1)), 2)) < 0.002
+    # Half a step later, the feet are the other way.
+    assert_in_delta elem(move(rest, at.(walk, 8), foot.(1)), 1), stride / 2, 0.004
+    assert elem(move(rest, at.(walk, 8), foot.(-1)), 1) < -0.08
+
+    # The hands swing against the feet.
+    assert elem(move(rest, at.(walk, 0), hand.(-1)), 1) < -0.04 and elem(move(rest, at.(walk, 0), hand.(1)), 1) > 0.04
+    assert elem(move(rest, at.(walk, 8), hand.(-1)), 1) > 0.04 and elem(move(rest, at.(walk, 8), hand.(1)), 1) < -0.04
+    # The head is low when the feet are far from each other, and high over the foot on the ground.
+    head = fn {_, _, z} -> z > 0.9 end
+    assert elem(move(rest, at.(walk, 0), head), 2) < elem(move(rest, at.(walk, 5), head), 2) - 0.02
+    assert elem(move(rest, at.(walk, 5), head), 2) <= 0.0
+
+    # The run: in the middle of a step the body is in the air (no foot
+    # at the ground), and the hands are in front of the body, the elbows bent.
+    run = Enum.find(figure.animations, &(&1.name == "run"))
+    assert Enum.any?(0..16, fn k -> Enum.all?([-1, 1], &(elem(move(rest, at.(run, k), foot.(&1)), 2) > 0.005)) end)
+    for sign <- [-1, 1], do: assert(elem(move(rest, at.(run, 4), hand.(sign)), 1) > 0.05)
+    # The idle: the feet stay, the body goes down and up a little.
+    idle = Enum.find(figure.animations, &(&1.name == "idle"))
+    assert Vec.len(move(rest, at.(idle, 6), foot.(-1))) < 0.002
+    assert elem(move(rest, at.(idle, 6), head), 2) < elem(move(rest, at.(idle, 0), head), 2) - 0.002
+
+    # A body with its arms out to the sides: the walk takes the two hands down to the sides, the same way.
+    t = puppet(true)
+    assert paths(t) == []
+    {"fish", wide, _} = hd(Detail.with(:mid, fn -> Drawing.build(drawing(t)) end).nodes)
+    rest = Contact.points(wide)
+    tip = fn sign -> fn {x, _, _} -> x * sign > 0.47 end end
+
+    for name <- ~w(walk run) do
+      clip = Enum.find(wide.animations, &(&1.name == name))
+      moved = Contact.points(at_frame(wide, clip, 4))
+      {lx, ly, lz} = move(rest, moved, tip.(-1))
+      {rx, ry, rz} = move(rest, moved, tip.(1))
+      # The hands come in and down; in the run they are in front of the body, on the two sides.
+      assert lx > 0.25 and lz < -0.15
+      assert_in_delta lx, -rx, 0.01
+      assert_in_delta lz, rz, 0.01
+      assert_in_delta ly, ry, 0.01
+      if name == "run", do: assert(ly > 0.1)
+    end
+
+    # The hinge of a forearm or of a calf that points to the front is across the body.
+    assert World.Animals.Biped.hinge("lowerarm_l", {0.0, 1.0, 0.0}) == {1.0, 0.0, 0.0}
+    assert World.Animals.Biped.hinge("calf_r", {0.0, -1.0, 0.0}) == {-1.0, 0.0, 0.0}
+    assert World.Animals.Biped.hinge("lowerarm_l", {0.0, 0.0, -1.0}) == {1.0, 0.0, 0.0}
+    assert World.Animals.Biped.hinge("calf_l", {0.0, 0.0, -1.0}) == {-1.0, 0.0, 0.0}
+
+    # A body with no hand: the plan needs each of its bones. A lift of the gait is a part of the height.
+    assert paths(Map.put(data, "bones", Enum.reject(data["bones"], &(&1["name"] == "hand_l")))) == [
+             "options.drawing.nodes.0.skill.sculpt.plan"
+           ]
+
+    assert paths(put_in(data, ["gait", "lift"], 2)) == ["options.drawing.nodes.0.skill.sculpt.gait.lift"]
   end
 
   # The bones of one side of a small bird: its wing, folded to the back, and its leg.
@@ -234,7 +388,7 @@ defmodule World.Sculpt.BonesTest do
     }
 
     assert paths(data) == []
-    assert Bones.plans() == ~w(bird fish)
+    assert Bones.plans() == ~w(biped bird fish)
     {"fish", figure, _} = hd(Detail.with(:mid, fn -> Drawing.build(drawing(data)) end).nodes)
     assert Enum.map(figure.animations, & &1.name) == ~w(walk idle peck flap)
     assert figure.kind == :animal and Map.has_key?(figure.params, "walk_speed")
@@ -287,8 +441,8 @@ defmodule World.Sculpt.BonesTest do
     assert bad.("plan", "snake") == ["#{at}.plan"]
     assert bad.("bone_blend", 0) == ["#{at}.bone_blend"]
 
-    assert bad.("gait", %{"period" => 0, "stride" => 9, "lift" => 1}) ==
-             ~w(lift period stride) |> Enum.map(&"#{at}.gait.#{&1}")
+    assert bad.("gait", %{"period" => 0, "stride" => 9, "lift" => 2}) ==
+             ~w(period stride lift) |> Enum.map(&"#{at}.gait.#{&1}")
 
     assert bad.("gait", 3) == ["#{at}.gait"]
     assert paths(Map.delete(d, "plan")) == ["#{at}.gait"]

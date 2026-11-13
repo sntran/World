@@ -22,8 +22,9 @@ defmodule World.Sculpt.Bones do
   The clips come from two places:
 
   - a body plan (`plans/0`), when the bones have its names: its limbs,
-    its joints, its ports, its animations (a fish swims) and its speeds
-    (the figure is of the kind `:animal` then);
+    its joints, its ports, its animations (a fish swims, a bird walks
+    and opens its wings, a body on two legs walks and runs) and its
+    speeds (the figure is of the kind `:animal` then);
   - the `clips` of the data: each a name, a length (s) and keys, each key
     a time and a pose (a bone to its turns in degrees: `flex`, `spread`,
     `twist`). The pose between two keys is the mean by the time.
@@ -31,7 +32,7 @@ defmodule World.Sculpt.Bones do
   alias World.{Mesh, Rig, SDF, Vec}
 
   # The body plans whose animations need no clips of a template.
-  @plans %{"bird" => World.Animals.Bird, "fish" => World.Animals.Fish}
+  @plans %{"biped" => World.Animals.Biped, "bird" => World.Animals.Bird, "fish" => World.Animals.Fish}
   @turns %{"flex" => :flex, "spread" => :spread, "twist" => :twist}
   # The frames of a clip from keys in one second.
   @rate 12

@@ -641,11 +641,12 @@ defmodule World.Skills.Sculpt do
   end
 
   defp gait(v, path, plan) when is_map(v) and is_binary(plan) do
-    World.Skill.keys(v, path, ~w(period stride)) ++
-      optional(v, "period", path, &number(&1, &2, 0.1, 10)) ++ optional(v, "stride", path, &number(&1, &2, 0, 5))
+    World.Skill.keys(v, path, ~w(period stride lift)) ++
+      optional(v, "period", path, &number(&1, &2, 0.1, 10)) ++
+      optional(v, "stride", path, &number(&1, &2, 0, 5)) ++ optional(v, "lift", path, &number(&1, &2, 0, 1))
   end
 
-  defp gait(_v, path, _plan), do: [{path, "must be an object of period and stride, with a plan"}]
+  defp gait(_v, path, _plan), do: [{path, "must be an object of period, stride and lift, with a plan"}]
 
   # The clips from keys.
   defp clips(v, path, bones, plan) when is_list(v) and length(v) <= 16 do
