@@ -242,6 +242,27 @@ hand of the sculptor is a site, and the workers of its crew do its jobs
   workers then serve the sites of this node too, when the two nodes
   have the same code.
 
+A second node, on the same machine or on another one:
+
+```sh
+# The first node, with the name world4371 on its address.
+ERL_FLAGS="-start_epmd false -epmd_module Elixir.World.Epmd" \
+  WORLD_NODE=world4371@10.0.0.2 WORLD_COOKIE=secret WORLD_SERVER=true mix.com run --no-halt
+# The second node gives its workers to the first.
+ERL_FLAGS="-start_epmd false -epmd_module Elixir.World.Epmd" \
+  WORLD_NODE=world4372@10.0.0.3 WORLD_COOKIE=secret WORLD_JOIN=world4371@10.0.0.2 mix.com run --no-halt
+```
+
+The runtime of World has no port mapper daemon of Erlang (`epmd`), so
+the port of a node is the digits at the end of its name (`World.Epmd`:
+`world4371` listens on 4371). The two nodes have the same cookie, and
+the port of each is open for the other. The second node tries each 3 s
+until the first answers, and again when the first comes back. When the
+second node stops in the middle of a build, its jobs go back to their
+site, and the build ends with the same bytes
+(`test/world/crew_nodes_test.exs`). The edge (one Durable Object, with
+one scheduler) cannot join: a node with many cores can.
+
 `GET /census` has the crews: the workers, the nodes, and each site with
 its jobs and its workers. The gate of plan 0011
 (`World.Sculpt.Gate`) still says how many sculptures are in work at one

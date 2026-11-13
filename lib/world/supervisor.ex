@@ -56,9 +56,22 @@ defmodule World.Supervisor do
       World.Census,
       World.Sculpt.Cache,
       World.Sculpt.Gate,
-      World.Crew,
+      {World.Crew, crews(env)},
       {DynamicSupervisor, name: World.Sculptures, strategy: :one_for_one}
     ] ++ yard(env) ++ server(env)
+  end
+
+  @doc """
+  The options of the crews for the environment `env`: with `WORLD_NODE`
+  (a name with a host, as `world4371@10.0.0.2`), this VM is an Erlang
+  node of that name, with the cookie `WORLD_COOKIE`; with `WORLD_JOIN`
+  (the name of another node), its crews join the crews of that node
+  (`World.Crew`, `World.Epmd`).
+  """
+  def crews(env) do
+    for {key, option} <- [{"WORLD_NODE", :node}, {"WORLD_COOKIE", :cookie}, {"WORLD_JOIN", :join}],
+        value = env[key],
+        do: {option, String.to_atom(value)}
   end
 
   @doc "The haul and the yard for the environment `env`, or nothing."

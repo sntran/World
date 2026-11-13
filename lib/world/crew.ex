@@ -38,11 +38,19 @@ defmodule World.Crew do
   A node can join the crews of another node (`join/1`): its workers
   then serve the sites of that node as its own workers do, and its own
   sites get workers from there. The two nodes must have the same code
-  (`version/0`). When the other node goes away, the node has its own
-  crews again.
+  (`version/0`): the function of a job goes to a worker of the other
+  node, so it must be a function of a module that both have. When the
+  other node goes away, the node has its own crews again.
 
   The options (`config :world, World.Crew, ...`, or the options of
-  `start_link/1`): `workers`, the count of workers of this node.
+  `start_link/1`):
+
+  - `workers`: the count of workers of this node.
+  - `node`: the name of this VM as an Erlang node (with a host), and
+    `cookie`: the crews start the node (`World.Epmd` has its port).
+  - `join`: the name of another node. The crews join the crews of that
+    node, try again each `retry` ms (3,000) while it does not answer,
+    and join again when it comes back.
   """
   use GenServer
 
@@ -295,9 +303,22 @@ defmodule World.Crew do
        lead: nil,
        guests: %{},
        # The hash of the code (an option for a test of two codes).
-       version: Keyword.get_lazy(opts, :version, &version/0)
+       version: Keyword.get_lazy(opts, :version, &version/0),
+       # The node to join, and the wait before the next try.
+       join: opts[:join],
+       retry: Keyword.get(opts, :retry, 3_000)
      }
-     |> own()}
+     |> own(), {:continue, {:node, opts[:node], opts[:cookie], Keyword.get(opts, :distribution, &Node.start/2)}}}
+  end
+
+  # This VM as an Erlang node, then the crews of the other node.
+  @impl true
+  def handle_continue({:node, name, cookie, start}, s) do
+    if name, do: {:ok, _} = start.(name, :longnames)
+    if cookie != nil and Node.alive?(), do: Node.set_cookie(cookie)
+
+    if s.join, do: send(self(), :join)
+    {:noreply, s}
   end
 
   # The workers of this node serve these crews.
@@ -325,23 +346,8 @@ defmodule World.Crew do
   end
 
   def handle_call({:join, node}, _from, s) do
-    # (The crews of a node by its name; in a test, crews of this node by their process.)
-    crews = if is_atom(node), do: {__MODULE__, node}, else: node
-
-    case (try do
-            GenServer.call(crews, {:guest, self(), s.own, s.version}, 10_000)
-          catch
-            :exit, _ -> {:error, :down}
-          end) do
-      {:ok, lead} ->
-        Process.monitor(lead)
-        for w <- s.own, do: send(w, {:crews, lead})
-        # (The sites of this node go on with the crews of the other node at their next map.)
-        {:reply, :ok, %{s | lead: lead, workers: Map.drop(s.workers, s.own)}}
-
-      {:error, reason} ->
-        {:reply, {:error, reason}, s}
-    end
+    {result, s} = joined(s, node)
+    {:reply, result, s}
   end
 
   def handle_call({:guest, crews, workers, version}, _from, s) do
@@ -359,7 +365,8 @@ defmodule World.Crew do
 
   def handle_call(:leave, _from, s) do
     send(s.lead, {:gone, self()})
-    {:reply, :ok, home(s)}
+    # (A node that leaves does not join again by itself.)
+    {:reply, :ok, home(%{s | join: nil})}
   end
 
   @impl true
@@ -367,6 +374,20 @@ defmodule World.Crew do
 
   @impl true
   def handle_info({:demand, site, ref, count}, s), do: {:noreply, share(demand(s, site, ref, count))}
+
+  # The crews of the node of the options: a try now, and the next try later with no answer.
+  def handle_info(:join, %{lead: nil, join: node} = s) when node != nil do
+    case joined(s, node) do
+      {:ok, s} ->
+        {:noreply, s}
+
+      {{:error, _}, s} ->
+        Process.send_after(self(), :join, s.retry)
+        {:noreply, s}
+    end
+  end
+
+  def handle_info(:join, s), do: {:noreply, s}
 
   # A worker with no more jobs at its site: it is free for another site.
   def handle_info({:free, worker, ref}, s) do
@@ -431,10 +452,36 @@ defmodule World.Crew do
   @impl true
   def terminate(_reason, s), do: for(w <- s.own, do: Process.exit(w, :kill))
 
-  # The crews of this node again, after the crews of another node.
+  # The crews of this node again, after the crews of another node. (With
+  # a node to join in the options, the next try comes.)
   defp home(s) do
     for w <- s.own, do: send(w, {:crews, self()})
+    if s.join, do: Process.send_after(self(), :join, s.retry)
     own(%{s | lead: nil})
+  end
+
+  # Join the crews of a node: `{:ok, state}` or `{{:error, reason}, state}`.
+  defp joined(s, node) do
+    # (The crews of a node by its name; in a test, crews of this node by their process.)
+    crews = if is_atom(node), do: {__MODULE__, node}, else: node
+
+    answer =
+      try do
+        GenServer.call(crews, {:guest, self(), s.own, s.version}, 10_000)
+      catch
+        :exit, _ -> {:error, :down}
+      end
+
+    case answer do
+      {:ok, lead} ->
+        Process.monitor(lead)
+        for w <- s.own, do: send(w, {:crews, lead})
+        # (The sites of this node go on with the crews of the other node at their next map.)
+        {:ok, %{s | lead: lead, workers: Map.drop(s.workers, s.own)}}
+
+      {:error, reason} ->
+        {{:error, reason}, s}
+    end
   end
 
   # The crews of a node that joined went away: its workers too.
