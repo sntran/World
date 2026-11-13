@@ -226,21 +226,26 @@ two constructions never wait for each other at the limit of the node
 
 The task of a sculptor is much work in many small jobs (the bricks of
 the field, the regions of the collapse, the texels of the maps). The
-hand of the sculptor is a site, and the workers of its crew do its jobs
-(`World.Crew`, plan 0012):
+hand of the sculptor is a site, and each stage of its work is a stream
+of tasks (`World.Crew.map/3`, plan 0012): one light process for each
+job (`Task.Supervisor.async_stream/4`), and some of them at one time.
+The tasks of a site are its crew.
 
-- the node has workers (processes; two for each scheduler by default);
-- a site gives the jobs of a stage with one call (`World.Crew.map/3`).
-  A worker of its crew asks the site for a job, does it, gives the
-  result back and asks again;
-- the node gives its workers to the sites with jobs now, in equal
-  parts: all of them to one site, half each to two sites, and so on. A
-  site with fewer jobs than its part takes only that many workers. A
-  worker moves at the end of its job;
-- a site that stops (a stop of its person) stops its jobs at once;
-- the crews of another Erlang node can join (`World.Crew.join/1`): its
-  workers then serve the sites of this node too, when the two nodes
-  have the same code.
+- The node has workers: the tasks that it runs at one time for all its
+  sites (two for each scheduler by default).
+- A stream of a site runs its part of them at one time: all the
+  workers with one site, half with two sites, and so on. The part is
+  counted at the start of each stream, from the sites with a stream
+  then (a stage is short).
+- The tasks are linked to their site: a site that stops (a stop of its
+  person) stops its tasks at once.
+- Two Erlang nodes that are connected, with the same code, share their
+  workers: a stream gives a part of its jobs to tasks of the supervisor
+  of the other node (`{World.Crew.Tasks, node}`), by the workers of
+  each. A job that the other node does not end is done on this node.
+
+So a node with more cores builds faster with no change, and a second
+node adds its cores.
 
 A second node, on the same machine or on another one:
 
@@ -258,15 +263,16 @@ the port of a node is the digits at the end of its name (`World.Epmd`:
 `world4371` listens on 4371). The two nodes have the same cookie, and
 the port of each is open for the other. The second node tries each 3 s
 until the first answers, and again when the first comes back. When the
-second node stops in the middle of a build, its jobs go back to their
-site, and the build ends with the same bytes
+second node stops in the middle of a build, its jobs are done on the
+first, and the build ends with the same bytes
 (`test/world/crew_nodes_test.exs`). The edge (one Durable Object, with
 one scheduler) cannot join: a node with many cores can.
 
-`GET /census` has the crews: the workers, the nodes, and each site with
-its jobs and its workers. The gate of plan 0011
-(`World.Sculpt.Gate`) still says how many sculptures are in work at one
-time (for the memory of the node); the crews say who works on each.
+`GET /census` has the crews: the workers of the node, the nodes that
+share their workers, and the count of the sites with a stream now. The
+gate of plan 0011 (`World.Sculpt.Gate`) still says how many sculptures
+are in work at one time (for the memory of the node); the crews say how
+many tasks each of them has.
 
 ## A job, from start to end
 

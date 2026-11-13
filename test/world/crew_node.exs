@@ -25,13 +25,13 @@ build = fn ->
   Base.encode16(:crypto.hash(:sha256, glb), case: :lower)
 end
 
-# The workers of another node that serve a site of this node now.
-theirs = fn -> for %{crew: crew} <- Crew.state().sites, w <- crew, node(w) != node(), do: w end
+# The tasks of the other node now (the jobs that it does for this node).
+theirs = fn other -> Task.Supervisor.children({World.Crew.Tasks, other}) end
 
 case role do
   "guest" ->
-    # The crews of this node gave their workers to the crews of the other node.
-    wait.(wait, fn -> Crew.state().workers == 0 end, 3_000)
+    # This node shares its workers with the other node.
+    wait.(wait, fn -> length(Crew.state().nodes) == 2 end, 3_000)
     say.("joined", true)
     Process.sleep(:infinity)
 
@@ -39,7 +39,7 @@ case role do
     wait.(wait, fn -> length(Crew.state().nodes) == 2 end, 3_000)
     [other] = Crew.state().nodes -- [node()]
     say.("workers", Crew.state().workers)
-    # Small jobs: the workers of each node do some. (The function of a
+    # Small jobs: the tasks of each node do some. (The function of a
     # job is of a module that the two nodes have: a function of this
     # file is not on the other node.)
     done = Crew.map(List.duplicate(&Node.self/0, 20_000), &:timer.tc/1)
@@ -47,7 +47,7 @@ case role do
     say.("jobs_here", Map.get(counts, node(), 0))
     say.("jobs_there", Map.get(counts, other, 0))
 
-    # A model: a process counts the looks at the crews where a worker of the other node serves its site.
+    # A model: a process counts the looks at the other node where it has tasks of this build.
     me = self()
 
     watch =
@@ -56,7 +56,7 @@ case role do
           receive do
             :stop -> send(me, {:seen, seen})
           after
-            5 -> look.(look, seen + if(theirs.() == [], do: 0, else: 1))
+            5 -> look.(look, seen + if(theirs.(other) == [], do: 0, else: 1))
           end
         end
 
@@ -67,12 +67,12 @@ case role do
     send(watch, :stop)
 
     receive do
-      {:seen, seen} -> say.("looks_with_their_workers", seen)
+      {:seen, seen} -> say.("looks_with_their_tasks", seen)
     end
 
-    # The model again: the other node stops while its workers have jobs of the site.
+    # The model again: the other node stops while it has tasks of this build.
     spawn_link(fn ->
-      wait.(wait, fn -> theirs.() != [] end, 3_000)
+      wait.(wait, fn -> theirs.(other) != [] end, 3_000)
       Process.sleep(300)
       :erpc.cast(other, System, :halt, [0])
       send(me, :halted)
@@ -87,7 +87,6 @@ case role do
     end
 
     wait.(wait, fn -> Crew.state().nodes == [node()] end, 500)
-    say.("workers_after", Crew.state().workers)
     # The node works alone again.
     say.("third", build.())
 end

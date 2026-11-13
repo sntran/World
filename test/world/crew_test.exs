@@ -1,221 +1,250 @@
 defmodule World.CrewTest do
-  # The crews of the sites of the node (plan 0012, D6 to D8; R5).
-  use ExUnit.Case, async: true
+  # The crews of the sites of the node: streams of tasks (plan 0012, D6
+  # to D8; R5). The test counts the sites of the node, so it does not
+  # run with the others.
+  use ExUnit.Case, async: false
 
   alias World.Crew
 
-  defp crews(opts), do: start_supervised!({Crew, [name: nil] ++ opts}, id: make_ref())
+  @tasks World.Crew.Tasks
 
-  # The state of the crews when it is as the test needs (a worker moves at the end of its job).
-  defp settled(crews, done?, tries \\ 400) do
-    state = Crew.state(crews)
+  # Each test starts with no site and no task of a test before it.
+  setup do
+    wait = fn wait ->
+      if Crew.state().sites == 0 and Task.Supervisor.children(@tasks) == [], do: :ok, else: wait.(wait)
+    end
 
-    cond do
-      done?.(state) ->
-        state
+    wait.(wait)
+  end
 
-      tries > 0 ->
-        Process.sleep(5)
-        settled(crews, done?, tries - 1)
+  # The most tasks of a stream that work at one time: each job says when it starts and when it ends.
+  defp counter, do: :counters.new(2, [:atomics])
 
-      true ->
-        flunk("the crews did not get there: #{inspect(state)}")
+  defp job(counter, ms) do
+    fn i ->
+      :counters.add(counter, 1, 1)
+      now = :counters.get(counter, 1)
+      # (The most so far: a job writes it when it sees more.)
+      if now > :counters.get(counter, 2), do: :counters.put(counter, 2, now)
+      Process.sleep(ms)
+      :counters.sub(counter, 1, 1)
+      i
     end
   end
 
-  # A site in a process of its own: a map of `count` jobs of `ms` each. It tells the test its result.
-  defp site(crews, name, count, ms) do
+  defp most(counter), do: :counters.get(counter, 2)
+
+  # A site in a process of its own: it tells the test the result of its stream.
+  defp site(name, fun) do
+    test = self()
+    spawn(fn -> send(test, {:mapped, name, fun.()}) end)
+  end
+
+  test "a stream: the results in the order of the items, each job in a task of the node; no items; a stream in a job" do
+    me = self()
+    assert Crew.map([], fn _ -> flunk("no job") end) == []
+    done = Crew.map(1..200, fn i -> {i * i, self()} end)
+    assert Enum.map(done, &elem(&1, 0)) == Enum.map(1..200, &(&1 * &1))
+    tasks = done |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+    # One light process for each job, not this one.
+    assert length(tasks) == 200 and me not in tasks
+    assert Crew.map([:a], &{&1, 1}) == [{:a, 1}]
+    # A job with jobs of its own does them in its task, one after the other.
+    [{inner, task}] = Crew.map([1], fn _ -> {Crew.map(1..3, fn i -> {i, self()} end), self()} end)
+    assert inner == for(i <- 1..3, do: {i, task})
+    # The crews after the streams: no site, and no task.
+    assert Crew.state() == %{workers: 2 * System.schedulers_online(), nodes: [node()], sites: 0}
+
+    assert Crew.census() == %{
+             "workers" => 2 * System.schedulers_online(),
+             "nodes" => [Atom.to_string(node())],
+             "sites" => 0
+           }
+
+    assert Task.Supervisor.children(@tasks) == []
+  end
+
+  test "the tasks of a stream are linked to its site: a job that raises stops the site, and a site that stops, stops its tasks" do
     test = self()
 
-    spawn_link(fn ->
-      result =
-        Crew.map(
-          1..count,
-          fn i ->
-            Process.sleep(ms)
-            {i, self()}
-          end,
-          crews
-        )
+    # A job raises: the site ends with that, and the other tasks of its stream end too.
+    {raiser, ref} =
+      spawn_monitor(fn ->
+        Crew.map(1..50, fn i ->
+          send(test, {:task, self()})
+          if i == 7, do: raise(ArgumentError, "no"), else: Process.sleep(5_000)
+        end)
+      end)
 
-      send(test, {:mapped, name, result})
-    end)
-  end
+    assert_receive {:DOWN, ^ref, :process, ^raiser, {%ArgumentError{message: "no"}, _}}, 2_000
+    tasks = for _ <- 1..3, do: receive(do: ({:task, pid} -> pid))
+    Process.sleep(50)
+    refute Enum.any?(tasks, &Process.alive?/1)
 
-  defp workers(state, site), do: Enum.find_value(state.sites, 0, &(&1.site == site && &1.workers))
+    # A site with long jobs stops: its tasks stop at once.
+    site =
+      spawn(fn ->
+        Crew.map(1..50, fn _ ->
+          send(test, {:long, self()})
+          Process.sleep(60_000)
+        end)
+      end)
 
-  test "a map: the results in the order of the items, each job in a worker; no items; no crews; a map in a job" do
-    c = crews(workers: 4)
-    me = self()
-    assert Crew.map([], fn _ -> flunk("no job") end, c) == []
-    done = Crew.map(1..200, fn i -> {i * i, self()} end, c)
-    assert Enum.map(done, &elem(&1, 0)) == Enum.map(1..200, &(&1 * &1))
-    used = done |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
-    assert me not in used and length(used) in 1..4
-    # A list of one item, and more workers than jobs.
-    assert Crew.map([:a], &{&1, 1}, c) == [{:a, 1}]
-    # With no crews, the jobs are done here, one after the other.
-    assert Crew.map(1..3, fn i -> {i, self()} end, :no_crews_with_this_name) == for(i <- 1..3, do: {i, me})
-    # A job with jobs of its own does them in its worker.
-    [{inner, worker}] = Crew.map([1], fn _ -> {Crew.map(1..3, fn i -> {i, self()} end, c), self()} end, c)
-    assert inner == for(i <- 1..3, do: {i, worker})
-    # The crews after the maps: no site, each worker free.
-    assert settled(c, &(&1.sites == [])) == %{workers: 4, nodes: [node()], sites: []}
-    assert Crew.census(c) == %{"workers" => 4, "nodes" => [Atom.to_string(node())], "sites" => []}
-  end
-
-  test "a job that raises, exits or throws stops its map with the same; the crews do the next map" do
-    c = crews(workers: 3)
-
-    assert_raise ArgumentError, "no", fn ->
-      Crew.map(1..50, fn i -> if(i == 7, do: raise(ArgumentError, "no"), else: i) end, c)
+    tasks = for _ <- 1..2, do: receive(do: ({:long, pid} -> pid))
+    refs = Enum.map(tasks, &Process.monitor/1)
+    Process.exit(site, :kill)
+    for ref <- refs, do: assert_receive({:DOWN, ^ref, :process, _, _}, 100)
+    # The node has no site and no task after that, and the next stream works.
+    wait = fn wait ->
+      if Crew.state().sites == 0 and Task.Supervisor.children(@tasks) == [], do: :ok, else: wait.(wait)
     end
 
-    assert catch_exit(Crew.map(1..50, fn i -> if(i == 3, do: exit(:gone), else: i) end, c)) == :gone
-    assert catch_throw(Crew.map(1..50, fn i -> if(i == 9, do: throw(:ball), else: i) end, c)) == :ball
-    # (The words of the maps that stopped do not stay in the way of the next map: a
-    # late result, a late failure, a job that comes back, a worker that asks.)
-    old = make_ref()
-    [{_, worker}] = Crew.map([1], &{&1, self()}, c)
-    send(self(), {:done, old, worker, 0, :late})
-    send(self(), {:failed, old, worker, :error, :late, []})
-    send(self(), {:back, old, worker, 0, :moved})
-    send(self(), {:ready, old, worker, false})
-    # (And a worker takes no word about a map that is not its map.)
-    send(worker, {:none, old})
-    # (An order that a worker has already changes nothing: the second of two.)
-    order = make_ref()
-    send(worker, {:serve, self(), order, c})
-    send(worker, {:serve, self(), order, c})
-    assert Crew.map(1..100, &(&1 + 1), c) == Enum.to_list(2..101)
-    # (Only a worker that asks after the end of a map can have a word here: the next map answers it.)
-    {:messages, left} = Process.info(self(), :messages)
-    assert Enum.all?(left, &match?({:ready, _, _, _}, &1))
-    assert Crew.map(1..100, &(&1 * 2), c) == Enum.map(1..100, &(&1 * 2))
-    assert settled(c, &(&1.sites == [])).workers == 3
+    assert wait.(wait) == :ok
+    assert Crew.map(1..10, &(&1 * 2)) == Enum.map(1..10, &(&1 * 2))
   end
 
-  test "a worker that stops gives its job back, and the crews have a new worker; a site that stops frees its workers" do
-    c = crews(workers: 3)
-    {:ok, killed} = Agent.start_link(fn -> false end)
+  test "a stream has its part of the workers: all with one site, half with two, at least one (R5)" do
+    # One site: all the workers at one time, and not more.
+    alone = counter()
+    assert Crew.map(1..40, job(alone, 20), workers: 8) == Enum.to_list(1..40)
+    assert most(alone) == 8
+
+    # Two sites at one time: the stream of each has half of the workers.
+    {a, b} = {counter(), counter()}
+    site(:a, fn -> Crew.map(1..40, job(a, 30), workers: 8) end)
+    wait = fn wait -> if Crew.state().sites == 1, do: :ok, else: wait.(wait) end
+    wait.(wait)
+    # (The first site has all the workers for the stream that it has now; its next stream has half.)
+    site(:b, fn -> Crew.map(1..24, job(b, 30), workers: 8) end)
+    assert_receive {:mapped, :b, done_b}, 5_000
+    assert done_b == Enum.to_list(1..24) and most(b) == 4
+    assert_receive {:mapped, :a, done_a}, 5_000
+    assert done_a == Enum.to_list(1..40) and most(a) == 8
+    again = counter()
+    site(:b2, fn -> Crew.map(1..400, job(again, 30), workers: 8) end)
+    wait.(wait)
+    # The first site starts its next stream while the other site works: half.
+    next = counter()
+    assert Crew.map(1..16, job(next, 20), workers: 8) == Enum.to_list(1..16)
+    assert most(next) == 4
+    assert_receive {:mapped, :b2, _}, 30_000
+
+    # More sites than workers: one task at a time for each stream that starts with the others.
+    few = counter()
+    for i <- 1..3, do: site({:few, i}, fn -> Crew.map(1..10, job(few, 20), workers: 2) end)
+    for i <- 1..3, do: assert_receive({:mapped, {:few, ^i}, _}, 5_000)
+    # (The stream that starts first, alone, has the two workers.)
+    assert most(few) in 2..4
+  end
+
+  # The supervisor of the task that a job runs in.
+  defp parent(_item), do: hd(Process.get(:"$ancestors"))
+
+  test "a stream gives jobs to the tasks of another supervisor by its workers; the jobs that it does not end are done here" do
+    {:ok, other} = Task.Supervisor.start_link()
+    here = Process.whereis(@tasks)
+    # 3 workers here and 1 there: three of each four jobs here.
+    done = Crew.map(1..400, &{&1, parent(&1)}, workers: 3, others: [{other, 1}])
+    assert Enum.map(done, &elem(&1, 0)) == Enum.to_list(1..400)
+    assert Enum.frequencies_by(done, &elem(&1, 1)) == %{here => 300, other => 100}
+    # Fewer jobs than workers: the other supervisor has none.
+    assert Crew.map(1..2, &{&1, parent(&1)}, workers: 3, others: [{other, 1}]) == [{1, here}, {2, here}]
+
+    # The other supervisor stops in the middle: each job is done, in order.
+    Process.flag(:trap_exit, true)
+    spawn(fn -> Process.sleep(60) && Process.exit(other, :kill) end)
 
     done =
-      Crew.map(
-        1..40,
-        fn i ->
-          # One worker stops in the middle of its job, one time.
-          if i == 5 and Agent.get_and_update(killed, &{&1, true}) == false, do: Process.exit(self(), :kill)
-          Process.sleep(2)
-          i
-        end,
-        c
-      )
+      Crew.map(1..60, fn i -> Process.sleep(10) && {i, parent(i)} end, workers: 2, others: [{other, 2}])
 
-    assert done == Enum.to_list(1..40)
-    assert settled(c, &(&1.sites == [])).workers == 3
+    assert Enum.map(done, &elem(&1, 0)) == Enum.to_list(1..60)
+    assert Enum.all?(done, fn {_, sup} -> sup in [here, other] end)
+    # A supervisor that is not there: all the jobs here.
+    done = Crew.map(1..20, &{&1, parent(&1)}, workers: 2, others: [{:no_supervisor_with_this_name, 2}])
+    assert done == for(i <- 1..20, do: {i, here})
 
-    # A site with long jobs stops: its jobs in work stop at once (their
-    # workers stop, and new workers take their places).
-    Process.flag(:trap_exit, true)
-    a = site(c, :a, 1_000, 5_000)
-    [%{crew: [_, _, _] = busy}] = settled(c, &(workers(&1, a) == 3)).sites
-    refs = for w <- busy, do: Process.monitor(w)
-    Process.exit(a, :kill)
-    assert_receive {:EXIT, ^a, :killed}
-    for ref <- refs, do: assert_receive({:DOWN, ^ref, :process, _, :killed}, 100)
-    assert settled(c, &(&1.sites == [])).workers == 3
-    assert Crew.map(1..10, & &1, c) == Enum.to_list(1..10)
+    # A job that raises there is done again here, and raises here: the site ends with that.
+    {:ok, other} = Task.Supervisor.start_link()
+
+    {raiser, ref} =
+      spawn_monitor(fn ->
+        Crew.map(1..8, fn i -> if(i == 4, do: raise(ArgumentError, "no"), else: i) end,
+          workers: 1,
+          others: [{other, 3}]
+        )
+      end)
+
+    assert_receive {:DOWN, ^ref, :process, ^raiser, {%ArgumentError{message: "no"}, _}}, 2_000
   end
 
-  test "the workers go to the sites in equal parts, at most the jobs of a site (R5)" do
-    c = crews(workers: 8)
-    a = site(c, :a, 600, 10)
-    # One site: all the workers.
-    assert workers(settled(c, &(workers(&1, a) == 8)), a) == 8
-    # Two sites: half each.
-    b = site(c, :b, 600, 10)
-    state = settled(c, &(workers(&1, a) == 4 and workers(&1, b) == 4))
-    assert [%{site: ^a, jobs: jobs, workers: 4}, %{site: ^b, jobs: 600, workers: 4}] = state.sites
+  # Crews with a name of their own (the streams read the crews of a name).
+  defp crews(name, opts), do: start_supervised!({Crew, [name: name] ++ opts}, id: name)
 
-    assert %{"workers" => 8, "sites" => [%{"site" => "<" <> _, "jobs" => _, "workers" => 4}, %{"workers" => 4}]} =
-             Crew.census(c)
+  test "the nodes that share their workers: a node with the same code, a try again, a node that goes and comes back" do
+    me = node()
+    assert byte_size(Crew.version()) == 16 and Crew.hello(Crew.version()) == {:ok, 2 * System.schedulers_online()}
+    assert Crew.hello("another code") == {:error, :code}
 
-    # The end of a map that is not the map of a site now does not take the site away.
-    GenServer.cast(c, {:demand, a, make_ref(), 0})
-    assert workers(Crew.state(c), a) == 4
-    # (The jobs of a site: of its map at its start, or the jobs that wait when a worker gave a job back.)
-    assert jobs in 1..600
-    # A third site with two jobs has two workers; the others have three each.
-    small = site(c, :small, 2, 400)
-    assert workers(settled(c, &(workers(&1, small) == 2)), small) == 2
-    state = settled(c, &(workers(&1, a) == 3 and workers(&1, b) == 3))
-    assert workers(state, small) == 2
-    # The small site ends: its workers go back to the others.
-    assert_receive {:mapped, :small, [{1, _}, {2, _}]}, 5_000
-    settled(c, &(workers(&1, a) == 4 and workers(&1, b) == 4))
-    # Each site has its results in order, from workers of the crews.
-    assert_receive {:mapped, :a, done_a}, 20_000
-    assert_receive {:mapped, :b, done_b}, 20_000
+    # (In the place of the connect of Erlang: this node is the other node of the test.)
+    c = crews(:crew_test_a, workers: 3, connect: fn _ -> true end)
+    assert Crew.state(:crew_test_a) == %{workers: 3, nodes: [me], sites: 0}
+    assert Crew.join(me, :crew_test_a) == :ok
+    assert Crew.state(:crew_test_a).nodes == [me, me]
+    # A stream of these crews: its jobs go to the supervisor of the tasks here, and to the one of the other node.
+    assert Crew.map(1..100, &(&1 + 1), crews: :crew_test_a) == Enum.to_list(2..101)
+    assert Crew.leave(me, :crew_test_a) == :ok
+    assert Crew.state(:crew_test_a).nodes == [me]
 
-    assert Enum.map(done_a, &elem(&1, 0)) == Enum.to_list(1..600) and
-             Enum.map(done_b, &elem(&1, 0)) == Enum.to_list(1..600)
+    # A node that does not connect, a node that does not answer, a node with another code.
+    assert Crew.join(me, crews(:crew_test_b, connect: fn _ -> false end)) == {:error, :down}
+    assert Crew.join(:nobody@nowhere, c) == {:error, :down}
+    assert Crew.join(me, crews(:crew_test_c, version: "another code", connect: fn _ -> true end)) == {:error, :code}
 
-    assert settled(c, &(&1.sites == [])).workers == 8
+    # A node of the options: no connect at first, then it comes; it goes away, and comes back.
+    {:ok, tries} = Agent.start_link(fn -> 0 end)
+    connect = fn _ -> Agent.get_and_update(tries, &{&1 >= 3, &1 + 1}) end
+    d = crews(:crew_test_d, join: me, retry: 10, connect: connect)
+    wait = fn wait, done? -> if done?.(), do: :ok, else: Process.sleep(5) && wait.(wait, done?) end
+    wait.(wait, fn -> Crew.state(:crew_test_d).nodes == [me, me] end)
+    assert Agent.get(tries, & &1) == 4
+    send(d, {:nodedown, me})
+    wait.(wait, fn -> Agent.get(tries, & &1) == 5 end)
+    wait.(wait, fn -> Crew.state(:crew_test_d).nodes == [me, me] end)
+    # (A try when the node shares its workers already changes nothing; any other word too.)
+    send(d, :join)
+    send(d, :hello)
+    assert Crew.state(:crew_test_d).nodes == [me, me]
+    # Another node goes: nothing to try. A node comes by itself: it shares when it has the code.
+    send(c, {:nodedown, :other@host})
+    send(c, {:nodeup, me})
+    wait.(wait, fn -> Crew.state(:crew_test_a).nodes == [me, me] end)
+    # A leave of the node of the options: no more tries.
+    assert Crew.leave(me, :crew_test_d) == :ok
+    Process.sleep(40)
+    assert Crew.state(:crew_test_d).nodes == [me]
+
+    # At their end, the crews take away what their streams read: the crews by default.
+    stop_supervised!(:crew_test_d)
+    assert Crew.state(:crew_test_d) == %{workers: 2 * System.schedulers_online(), nodes: [me], sites: 0}
   end
 
-  test "crews that join other crews give their workers, and their sites get workers from there; they come home when the others go" do
-    home = crews(workers: 2)
-    Process.flag(:trap_exit, true)
-    {:ok, lead} = Crew.start_link(name: nil, workers: 3)
-    assert Crew.version() == Crew.version() and byte_size(Crew.version()) == 16
-    # Crews with another code do not join.
-    other = crews(workers: 1, version: "another code")
-    assert Crew.join(lead, other) == {:error, :code}
-    assert Crew.join(:nobody@nowhere, other) == {:error, :down}
-    assert Crew.leave(other) == :ok
+  test "the options of the crews from the environment; the crews start the node with their name" do
+    assert World.Supervisor.crews(%{}) == []
 
-    assert Crew.join(lead, home) == :ok
-    assert Crew.state(lead).workers == 5 and Crew.state(home).workers == 0
-    # A site of the crews that joined gets the five workers.
-    done = Crew.map(1..300, fn i -> {i, self()} end, home)
-    assert Enum.map(done, &elem(&1, 0)) == Enum.to_list(1..300)
-    used = done |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
-    assert length(used) in 3..5
-    # A worker of the crews that joined stops: a new one takes its place in the other crews.
-    victim = hd(:sys.get_state(home).own)
-    Process.exit(victim, :kill)
-    settled(lead, &(&1.workers == 5 and not is_map_key(:sys.get_state(lead).workers, victim)))
-    assert victim not in :sys.get_state(home).own and length(:sys.get_state(home).own) == 2
-    assert Enum.all?(:sys.get_state(home).own, &is_map_key(:sys.get_state(lead).workers, &1))
-    # (A new worker of crews that did not join is not a worker of these crews.)
-    send(lead, {:new, self(), self()})
-    assert Crew.state(lead).workers == 5
-    # A site of the other crews gets them too.
-    a = site(lead, :a, 400, 10)
-    assert workers(settled(lead, &(workers(&1, a) == 5)), a) == 5
+    assert World.Supervisor.crews(%{"WORLD_NODE" => "a4371@127.0.0.1", "WORLD_COOKIE" => "c", "WORLD_JOIN" => "b@h"}) ==
+             [node: :"a4371@127.0.0.1", cookie: :c, join: :b@h]
 
-    # The crews leave: their two workers are theirs again, and the site goes on with three.
-    assert Crew.leave(home) == :ok
-    assert Crew.state(home).workers == 2
-    assert workers(settled(lead, &(workers(&1, a) == 3)), a) == 3
-    assert Crew.map(1..20, & &1, home) == Enum.to_list(1..20)
-    assert_receive {:mapped, :a, done}, 20_000
-    assert Enum.map(done, &elem(&1, 0)) == Enum.to_list(1..400)
+    # (Here: a function in the place of the start of a node.)
+    me = self()
 
-    # They join again; the other crews stop in the middle of a map of a site of home: the map ends at home.
-    assert Crew.join(lead, home) == :ok
-    b = site(home, :b, 300, 10)
-    settled(lead, &(workers(&1, b) == 5))
-    GenServer.stop(lead)
-    assert_receive {:mapped, :b, done}, 20_000
-    assert Enum.map(done, &elem(&1, 0)) == Enum.to_list(1..300)
-    assert settled(home, &(&1.sites == [])).workers == 2
-  end
+    started = fn name, kind ->
+      send(me, {:node, name, kind})
+      {:ok, me}
+    end
 
-  test "the node has crews with two workers for each scheduler; the census has them" do
-    assert Crew.state().workers == 2 * System.schedulers_online()
-    assert Crew.map(1..10, &(&1 * 3)) == Enum.map(1..10, &(&1 * 3))
-    assert %{"crews" => %{"workers" => _, "nodes" => [_], "sites" => sites}, "people" => _} = World.census()
-    assert is_list(sites)
+    crews(:crew_test_e, workers: 1, node: :"a4371@127.0.0.1", cookie: Node.get_cookie(), distribution: started)
+    assert_receive {:node, :"a4371@127.0.0.1", :longnames}
+    assert Crew.state(:crew_test_e).workers == 1
+    assert %{"crews" => %{"workers" => _, "nodes" => [_], "sites" => _}, "people" => _} = World.census()
   end
 end
