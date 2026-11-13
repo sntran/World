@@ -155,6 +155,18 @@ defmodule World.SDFTest do
 
     # A ball at the left of a side that goes from under it to over it: that side is crossed from each point.
     assert [%{parts: {true, [_ | _], []}}] = SDF.focus([extrude], Frame.point(extrude.frame, {0.0, 0.045, 0.0}), 0.02)
+
+    # A point of a flat side of an outline is at 0 to the last bit: each point of a face on a plane of the grid is on one side.
+    can = SDF.edit(:revolve, {[{0, -3}, {3.9, -3}, {3.9, 0}, {0, 0}]})
+
+    for i <- -70..70, j <- [0, 7, 33], x = i * 0.05, y = j * 0.05, x * x + y * y < 3.8 * 3.8, z <- [-3.0, 0.0] do
+      assert SDF.distance(can, {x, y, z}) == 0.0
+    end
+
+    # (Past the end of a side: the distance to its end.)
+    assert_in_delta SDF.distance(can, {4.2, 0.0, 0.4}), 0.5, 1.0e-12
+    assert_in_delta SDF.distance(can, {4.2, 0.0, -3.4}), 0.5, 1.0e-12
+
     # Two points of a tube at one place: a cone between them has no length.
     assert_raise ArgumentError, fn -> SDF.edit(:tube, {[{0, 0, 0}, {0.0, 0, 0}, {1, 0, 0}], [0.1, 0.1, 0.1]}) end
     # A profile with all its sides on the axis has no shape.

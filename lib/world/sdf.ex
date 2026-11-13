@@ -311,11 +311,28 @@ defmodule World.SDF do
     least(rest, px, py, if(v < least, do: v, else: least))
   end
 
+  # The square of the distance to a side. Next to the side (not past
+  # its ends) it is from the cross product: for a point on the line of
+  # a level or an upright side it is 0 to the last bit, so each point of
+  # a flat face on a plane of the grid is on the same side of the
+  # surface (a value of 1e-16 over or under 0 gave a mesh of two sheets
+  # there).
   defp square({ax, ay, _by, ex, ey, long}, px, py) do
     {wx, wy} = {px - ax, py - ay}
-    t = if long > 0.0, do: min(max((wx * ex + wy * ey) / long, 0.0), 1.0), else: 0.0
-    {dx, dy} = {wx - ex * t, wy - ey * t}
-    dx * dx + dy * dy
+    along = wx * ex + wy * ey
+
+    cond do
+      along <= 0.0 ->
+        wx * wx + wy * wy
+
+      along >= long ->
+        {vx, vy} = {wx - ex, wy - ey}
+        vx * vx + vy * vy
+
+      true ->
+        across = wx * ey - wy * ex
+        across * across / long
+    end
   end
 
   defp inside([], _px, _py, inside), do: inside
