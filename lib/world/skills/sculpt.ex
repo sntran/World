@@ -544,8 +544,11 @@ defmodule World.Skills.Sculpt do
 
   defp sizes("tube", %{"points" => points, "radii" => radii}, path)
        when is_list(points) and is_list(radii) and length(points) in 2..256 and length(points) == length(radii) do
-    (points |> Enum.with_index() |> Enum.flat_map(fn {p, i} -> point(p, "#{path}.points.#{i}") end)) ++
-      (radii |> Enum.with_index() |> Enum.flat_map(fn {r, i} -> number(r, "#{path}.radii.#{i}", 0.0001, @size) end))
+    errors =
+      (points |> Enum.with_index() |> Enum.flat_map(fn {p, i} -> point(p, "#{path}.points.#{i}") end)) ++
+        (radii |> Enum.with_index() |> Enum.flat_map(fn {r, i} -> number(r, "#{path}.radii.#{i}", 0.0001, @size) end))
+
+    if errors == [], do: twins(points, "#{path}.points"), else: errors
   end
 
   defp sizes("tube", _v, path),
@@ -583,6 +586,13 @@ defmodule World.Skills.Sculpt do
     else
       [{path, "must be a list of #{n} sizes in meters, from 0 to #{@size} m (docs/format.md, \"A sculpture\")"}]
     end
+  end
+
+  # Two points of a tube next to each other are not at one place: a cone between them needs a length.
+  defp twins(points, path) do
+    for {[a, b], i} <- points |> Enum.chunk_every(2, 1, :discard) |> Enum.with_index(1),
+        Enum.map(a, &(&1 / 1)) == Enum.map(b, &(&1 / 1)),
+        do: {"#{path}.#{i}", "must not be at the place of the point before it"}
   end
 
   # The points of an outline: 3 to 256 points of two numbers, the first from `least`.

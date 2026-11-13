@@ -136,6 +136,11 @@ defmodule World.Skills.SculptTest do
       {edit.(%{"shape" => "tube", "size" => %{"points" => [[0, 0, 0]], "radii" => [0.1]}}), ["#{p}.edits.0.size"]},
       {edit.(%{"shape" => "tube", "size" => %{"points" => [[0, 0, 0], [0, 0]], "radii" => [0.1, 0]}}),
        ["#{p}.edits.0.size.points.1", "#{p}.edits.0.size.radii.1"]},
+      # (Two points next to each other at one place: a cone between them has no length.)
+      {edit.(%{
+         "shape" => "tube",
+         "size" => %{"points" => [[0, 0, 0], [0, 0, 0.0], [0, 1, 0]], "radii" => [0.1, 0.1, 0.1]}
+       }), ["#{p}.edits.0.size.points.1"]},
       {edit.(Map.merge(ball, %{"at" => [0, 0], "axis" => [0, 0, 0], "up" => "z"})),
        ["#{p}.edits.0.at", "#{p}.edits.0.axis", "#{p}.edits.0.up"]},
       {edit.(Map.merge(ball, %{"mode" => "cut", "blend" => -1, "material" => "gold!", "color" => "red"})),

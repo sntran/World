@@ -92,6 +92,76 @@ defmodule World.SDFTest do
     assert_in_delta SDF.distance(cone, {0, 0, 1.1}), 0.0, 1.0e-9
   end
 
+  test "a long tube and a long outline in a ball: only their parts near the ball, and the same field (focus)" do
+    # A tube of 60 cones along a wave, an outline of 48 sides (a star), and a profile of 40 sides (a vase).
+    wave = for i <- 0..60, do: {i * 0.1 - 3.0, 0.4 * :math.sin(i * 0.3), 0.3 * :math.cos(i * 0.2)}
+    tube = SDF.edit(:tube, {wave, for(i <- 0..60, do: 0.15 + 0.1 * :math.sin(i * 0.5))}, mode: :subtract)
+
+    star =
+      for i <- 0..47,
+          a = i * :math.pi() / 24,
+          r = if(rem(i, 2) == 0, do: 1.0, else: 0.7),
+          do: {r * :math.cos(a), r * :math.sin(a)}
+
+    extrude = SDF.edit(:extrude, {star, 0.3, 0.02}, frame: Frame.turn({1, 0, 0}, 30))
+
+    vase =
+      for(i <- 0..19, do: {0.3 + 0.15 * :math.sin(i * 0.6), i * 0.1 - 1.0}) ++
+        for(i <- 19..0//-1, do: {0.2 + 0.15 * :math.sin(i * 0.6), i * 0.1 - 1.0})
+
+    revolve = SDF.edit(:revolve, {vase})
+    # (A profile with a side on the axis: that side is not a side of the shape.)
+    solid = SDF.edit(:revolve, {[{0, -1}, {0.4, -1}, {0.6, 0}, {0.4, 1}, {0, 1}]}, mode: :crop)
+    edits = [extrude, revolve, tube, solid]
+
+    count = fn %{parts: parts} ->
+      if is_list(parts), do: length(parts), else: length(elem(parts, 1)) + length(elem(parts, 2))
+    end
+
+    :rand.seed(:exsss, {4, 5, 6})
+
+    kept =
+      for _ <- 1..300 do
+        c = {(:rand.uniform() - 0.5) * 3.0, (:rand.uniform() - 0.5) * 3.0, (:rand.uniform() - 0.5) * 3.0}
+        half = 0.02 + :rand.uniform() * 0.3
+        near = SDF.focus(edits, c, half)
+        # The edits are the same edits, with fewer parts.
+        assert SDF.ids(near) == SDF.ids(edits)
+
+        for _ <- 1..20 do
+          dir = Vec.norm({:rand.normal(), :rand.normal(), :rand.normal()})
+          p = Vec.add(c, Vec.scale(dir, :rand.uniform() * half))
+          for {e, n} <- Enum.zip(edits, near), do: assert(SDF.distance(n, p) == SDF.distance(e, p))
+          assert SDF.field(near, p) == SDF.field(edits, p)
+          # The short list of a cell has the edits with their parts near the cell, and the hot loop reads them.
+          short = SDF.prune(edits, c, half)
+          assert SDF.value(short, p) == SDF.value(edits, p)
+          assert SDF.value(SDF.fast(short), p) == SDF.value(edits, p)
+        end
+
+        Enum.map(near, count)
+      end
+
+    # A ball keeps a part of the parts in the mean, and a small ball at the shape keeps few of them.
+    for {e, i} <- Enum.with_index(edits) do
+      mean = Enum.sum(Enum.map(kept, &Enum.at(&1, i))) / length(kept)
+      assert mean < 0.3 * count.(e) or e == solid
+    end
+
+    assert [%{parts: cones}] = SDF.focus([tube], {0.0, 0.2, 0.3}, 0.02)
+    assert length(cones) <= 4
+    assert [%{parts: {_, sides, cross}}] = SDF.focus([extrude], {1.0, 0.0, 0.0}, 0.02)
+    assert length(sides) <= 4 and length(cross) <= 4
+
+    # A ball at the left of a side that goes from under it to over it: that side is crossed from each point.
+    assert [%{parts: {true, [_ | _], []}}] = SDF.focus([extrude], Frame.point(extrude.frame, {0.0, 0.045, 0.0}), 0.02)
+    # Two points of a tube at one place: a cone between them has no length.
+    assert_raise ArgumentError, fn -> SDF.edit(:tube, {[{0, 0, 0}, {0.0, 0, 0}, {1, 0, 0}], [0.1, 0.1, 0.1]}) end
+    # A profile with all its sides on the axis has no shape.
+    none = SDF.edit(:revolve, {[{0, 0}, {0, 1}, {0, 2}]})
+    assert SDF.focus([none], {0.0, 0.0, 0.0}, 0.1) == [none] and SDF.distance(none, {0.1, 0, 0}) > 1.0e10
+  end
+
   test "the ellipsoid and the superellipsoid: a bound, never more than the distance, and near it at the surface" do
     for {shape, size} <- [
           {:ellipsoid, {0.6, 0.3, 0.2}},
@@ -300,6 +370,7 @@ defmodule World.SDFTest do
       assert Inline.blend(:crop, d, de, k, 1.0, limit) == clamp.(-SDF.chamfer(-d, -de, k))
       assert Inline.clamp(d * 3, limit) == clamp.(d * 3)
       assert Inline.positive(d) == max(d, 0.0)
+      assert Inline.sign(d) == if(d > 0.0, do: 1.0, else: -1.0) and Inline.sign(d - d) == 0.0
       least = min(d, de)
       assert Inline.soft(least, d, de, k, 0.0) == SDF.smin(d, de, k)
       # A paint with a raise: the field of a ball with the paint of a box at a point.

@@ -61,6 +61,7 @@ defmodule World.SDF do
   """
 
   alias World.{Frame, Vec}
+  require World.SDF.Inline, as: Inline
 
   # The field of no edit: far outside.
   @far 1.0e30
@@ -102,7 +103,9 @@ defmodule World.SDF do
               glow: nil,
               surface: nil,
               box: nil,
-              id: nil
+              id: nil,
+              # The round cones of a tube (`World.SDF.focus/3`).
+              parts: nil
   end
 
   @doc "The shapes of an edit."
@@ -152,7 +155,8 @@ defmodule World.SDF do
       metal: number(opts[:metal]),
       glow: number(opts[:glow]),
       surface: opts[:surface],
-      box: placed(local_bounds(shape, size), frame)
+      box: placed(local_bounds(shape, size), frame),
+      parts: parts(shape, size)
     }
 
     # The id of the edit: a hash of what it is, made once. The keys of the
@@ -204,7 +208,177 @@ defmodule World.SDF do
   defp flat(points), do: for({x, y} <- points, do: {x / 1, y / 1})
 
   @doc "The distance from a point (in the axes of the sculpture) to the shape of an edit, or a bound of it."
+  def distance(%Edit{shape: :tube, parts: [_ | _] = parts, local: m}, p) do
+    {x, y, z} = point(m, p)
+    cones(parts, x, y, z, @far)
+  end
+
+  # The extrude: the distance to the outline in its plane and the
+  # distance to its two flat ends, as for a box; the outline and the
+  # ends are in by the radius of the edges, and the shape is out by it.
+  def distance(%Edit{shape: :extrude, size: {_, h, r}, parts: parts, local: m}, p) do
+    {x, y, z} = point(m, p)
+    d = outline(parts, x, y) + r
+    w = abs(z) - h + r
+    min(max(d, w), 0.0) + :math.sqrt(sq(max(d, 0.0)) + sq(max(w, 0.0))) - r
+  end
+
+  # The revolve: the distance to the profile in the half plane of the point.
+  def distance(%Edit{shape: :revolve, parts: parts, local: m}, p) do
+    {x, y, z} = point(m, p)
+    outline(parts, :math.sqrt(x * x + y * y), z)
+  end
+
   def distance(%Edit{shape: shape, size: size, local: m}, p), do: local(shape, size, point(m, p))
+
+  # The parts of a shape that is many small shapes, each with the
+  # numbers that its distance needs, made one time: the round cones of a
+  # tube, the sides of an outline. The short list of a cell keeps only
+  # the parts that count in the cell (`focus/3`).
+  defp parts(:tube, {[_, _ | _] = points, radii}) do
+    points
+    |> Enum.zip(radii)
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.map(fn [{a, ra}, {b, rb}] -> part(a, b, ra, rb) end)
+  end
+
+  # An outline: `{inside, near, cross}`. `near` are the sides for the
+  # distance, `cross` the sides that a line from a point to the right
+  # can cross, and `inside` is true when that line crosses an odd count
+  # of the sides that are not in `cross`. A side on the axis of a
+  # revolve is not a side of the shape: the inside goes through the axis.
+  defp parts(:extrude, {points, _h, _r}), do: (fn sides -> {false, sides, sides} end).(sides(points, false))
+  defp parts(:revolve, {points}), do: (fn sides -> {false, sides, sides} end).(sides(points, true))
+  defp parts(_shape, _size), do: nil
+
+  defp part({ax, ay, az}, {bx, by, bz}, r1, r2) do
+    {ex, ey, ez} = {bx - ax, by - ay, bz - az}
+    l2 = ex * ex + ey * ey + ez * ez
+    if l2 == 0.0, do: raise(ArgumentError, "two points of a tube next to each other are at one place")
+    rr = r1 - r2
+    {ax, ay, az, ex, ey, ez, l2, rr, l2 - rr * rr, 1.0 / l2, r1, r2}
+  end
+
+  # Each side of an outline from a point to the next one, and from the
+  # last to the first: `{ax, ay, by, ex, ey, long}`.
+  defp sides([first | _] = points, axis?) do
+    for [{ax, ay}, {bx, by}] <- Enum.chunk_every(points, 2, 1, [first]), not (axis? and ax == 0.0 and bx == 0.0) do
+      {ex, ey} = {bx - ax, by - ay}
+      {ax, ay, by, ex, ey, ex * ex + ey * ey}
+    end
+  end
+
+  # The least distance to some round cones.
+  defp cones([], _x, _y, _z, d), do: d
+
+  defp cones([cone | rest], x, y, z, d) do
+    v = cone(cone, x, y, z)
+    cones(rest, x, y, z, if(v < d, do: v, else: d))
+  end
+
+  # The distance to a cone with round ends from `a` (radius `r1`) to
+  # `b` (radius `r2`) (Inigo Quilez, exact).
+  defp cone({ax, ay, az, ex, ey, ez, l2, rr, a2, il2, r1, r2}, px, py, pz) do
+    {wx, wy, wz} = {px - ax, py - ay, pz - az}
+    y = wx * ex + wy * ey + wz * ez
+    z = y - l2
+    {cx, cy, cz} = {wx * l2 - ex * y, wy * l2 - ey * y, wz * l2 - ez * y}
+    x2 = cx * cx + cy * cy + cz * cz
+    y2 = y * y * l2
+    z2 = z * z * l2
+    k = Inline.sign(rr) * rr * rr * x2
+
+    cond do
+      Inline.sign(z) * a2 * z2 > k -> :math.sqrt(x2 + z2) * il2 - r2
+      Inline.sign(y) * a2 * y2 < k -> :math.sqrt(x2 + y2) * il2 - r1
+      true -> (:math.sqrt(x2 * a2 * il2) + y * rr) * il2 - r1
+    end
+  end
+
+  # The distance from a point of a plane to a closed outline (less than
+  # 0 inside): the least distance to a side, and inside when a line from
+  # the point to the right crosses an odd count of sides.
+  defp outline({inside, near, cross}, px, py) do
+    least = :math.sqrt(least(near, px, py, @far))
+    if inside(cross, px, py, inside), do: -least, else: least
+  end
+
+  # The square of the least distance to some sides.
+  defp least([], _px, _py, least), do: least
+
+  defp least([side | rest], px, py, least) do
+    v = square(side, px, py)
+    least(rest, px, py, if(v < least, do: v, else: least))
+  end
+
+  defp square({ax, ay, _by, ex, ey, long}, px, py) do
+    {wx, wy} = {px - ax, py - ay}
+    t = if long > 0.0, do: min(max((wx * ex + wy * ey) / long, 0.0), 1.0), else: 0.0
+    {dx, dy} = {wx - ex * t, wy - ey * t}
+    dx * dx + dy * dy
+  end
+
+  defp inside([], _px, _py, inside), do: inside
+
+  defp inside([{ax, ay, by, ex, ey, _long} | rest], px, py, inside) do
+    crosses = ay > py != by > py and px < ax + ex * (py - ay) / ey
+    inside(rest, px, py, if(crosses, do: not inside, else: inside))
+  end
+
+  @doc """
+  The edits for the ball of the radius `half` round `center`, with the
+  same field at each point of the ball. A shape that is many small
+  shapes keeps only those that count in the ball:
+
+  - a tube, its round cones that can be the nearest one at a point of
+    the ball. The distance to a cone changes by the length of a move at
+    the most, so a cone that is more than the width of the ball farther
+    from the center than the nearest one is the nearest one at no point
+    of the ball;
+  - an outline (an extrude, a revolve), its sides that can be the
+    nearest one, in the same way, and the sides that the line from a
+    point of the ball to the right can cross. A side over or under the
+    ball, or at its left, is crossed from no point; a side at its right
+    that goes from under the ball to over it is crossed from each point.
+
+  The short list of a cell has such edits (`cell/4`): a long tube or an
+  outline of many points costs as much as its few parts near the cell.
+  """
+  def focus(edits, center, half), do: Enum.map(edits, &elem(near(&1, center, half), 1))
+
+  # The distance from the center of a ball to the shape of an edit, and
+  # the edit for the ball (`focus/3`).
+  defp near(%Edit{shape: :tube, parts: [_, _ | _] = parts, local: m} = e, center, half) do
+    {x, y, z} = point(m, center)
+    all = Enum.map(parts, &{cone(&1, x, y, z), &1})
+    d = all |> Enum.map(&elem(&1, 0)) |> Enum.min()
+    most = d + 2 * half + 1.0e-9
+    {d, %{e | parts: for({v, part} <- all, v <= most, do: part)}}
+  end
+
+  defp near(%Edit{shape: shape, parts: {inside, [_ | _] = near, cross}, local: m} = e, center, half) do
+    {x, y, z} = point(m, center)
+    {px, py} = if shape == :extrude, do: {x, y}, else: {:math.sqrt(x * x + y * y), z}
+    all = Enum.map(near, &{square(&1, px, py), &1})
+    most = sq(:math.sqrt(all |> Enum.map(&elem(&1, 0)) |> Enum.min()) + 2 * half + 1.0e-9)
+    reach = half + 1.0e-9
+
+    {inside, cross} =
+      Enum.reduce(cross, {inside, []}, fn {ax, ay, by, ex, _ey, _long} = side, {inside, cross} ->
+        {low, high} = if ay < by, do: {ay, by}, else: {by, ay}
+        {left, right} = if ex > 0.0, do: {ax, ax + ex}, else: {ax + ex, ax}
+
+        cond do
+          high < py - reach or low > py + reach or right < px - reach -> {inside, cross}
+          left > px + reach and low < py - reach and high > py + reach -> {not inside, cross}
+          true -> {inside, [side | cross]}
+        end
+      end)
+
+    {distance(e, center), %{e | parts: {inside, for({v, side} <- all, v <= most, do: side), Enum.reverse(cross)}}}
+  end
+
+  defp near(e, center, _half), do: {distance(e, center), e}
 
   # The frame from the axes of the sculpture to the axes of an edit, as a
   # tuple of numbers (the hot path has no maps): a move only, or a turn
@@ -274,8 +448,6 @@ defmodule World.SDF do
   defp numbers(list), do: Enum.map(list, &(&1 * 1.0))
   # A hard blend, as a number of the hot loop.
   defp hard(%Edit{hard: hard}), do: if(hard, do: 1.0, else: 0.0)
-
-  require World.SDF.Inline, as: Inline
 
   defp run([], _x, _y, _z, d, _limit), do: d
 
@@ -820,7 +992,8 @@ defmodule World.SDF do
   def cell(edits, center, half, limit \\ @far) do
     {kept, range} =
       Enum.reduce(edits, {[], {limit, limit}}, fn e, {kept, {lo, hi} = range} ->
-        d = distance(e, center)
+        # (A tube of the short list has only its cones near the cell.)
+        {d, e} = near(e, center, half)
         {dlo, dhi} = {d - half, d + half}
 
         case e.mode do
@@ -972,53 +1145,8 @@ defmodule World.SDF do
     Enum.max([-z - h, side.(x, hx), side.(y, hy)])
   end
 
-  # The extrude: the distance to the outline in its plane and the
-  # distance to its two flat ends, as for a box; the outline and the
-  # ends are in by the radius of the edges, and the shape is out by it.
-  defp local(:extrude, {points, h, r}, {x, y, z}) do
-    d = outline(points, x, y, false) + r
-    w = abs(z) - h + r
-    min(max(d, w), 0.0) + :math.sqrt(sq(max(d, 0.0)) + sq(max(w, 0.0))) - r
-  end
-
-  # The revolve: the distance to the profile in the half plane of the point.
-  defp local(:revolve, {points}, {x, y, z}), do: outline(points, :math.sqrt(x * x + y * y), z, true)
-
-  defp local(:tube, {[a | rest], [ra | radii]}, p) do
-    {d, _, _} =
-      Enum.zip(rest, radii)
-      |> Enum.reduce({@far, a, ra}, fn {b, rb}, {d, a, ra} -> {min(d, round_cone(p, a, b, ra, rb)), b, rb} end)
-
-    if rest == [], do: Vec.len(Vec.sub(p, a)) - ra, else: d
-  end
-
-  # The distance from a point of a plane to a closed outline (less than
-  # 0 inside): the least distance to a side, and inside when a line from
-  # the point to the right crosses an odd count of sides. With `axis?`
-  # (a profile that turns round the axis), a side on the axis is not a
-  # side of the shape: the inside goes through the axis.
-  defp outline([first | _] = points, px, py, axis?) do
-    {square, inside} = sides(points, first, px, py, {@far, false}, axis?)
-    if inside, do: -:math.sqrt(square), else: :math.sqrt(square)
-  end
-
-  # (Each side from a point to the next one, and from the last to the first.)
-  defp sides([a], first, px, py, so_far, axis?), do: side(a, first, px, py, so_far, axis?)
-
-  defp sides([a, b | rest], first, px, py, so_far, axis?),
-    do: sides([b | rest], first, px, py, side(a, b, px, py, so_far, axis?), axis?)
-
-  defp side({ax, _}, {bx, _}, _px, _py, so_far, true) when ax == 0.0 and bx == 0.0, do: so_far
-
-  defp side({ax, ay}, {bx, by}, px, py, {least, inside}, _axis?) do
-    {ex, ey} = {bx - ax, by - ay}
-    {wx, wy} = {px - ax, py - ay}
-    long = ex * ex + ey * ey
-    t = if long > 0.0, do: min(max((wx * ex + wy * ey) / long, 0.0), 1.0), else: 0.0
-    {dx, dy} = {wx - ex * t, wy - ey * t}
-    crosses = ay > py != by > py and px < ax + ex * (py - ay) / ey
-    {min(least, dx * dx + dy * dy), if(crosses, do: not inside, else: inside)}
-  end
+  # (A tube of one point is a ball; a tube of more points, an extrude and a revolve have parts: `distance/2`.)
+  defp local(:tube, {[a], [ra]}, p), do: Vec.len(Vec.sub(p, a)) - ra
 
   # A step of Newton for the root of the nearest point of an ellipsoid.
   defp root(t, _ux, _uy, _uz, _sx, _sy, _sz, 0), do: t
@@ -1036,33 +1164,6 @@ defmodule World.SDF do
   defp box(qx, qy, qz) do
     :math.sqrt(sq(max(qx, 0.0)) + sq(max(qy, 0.0)) + sq(max(qz, 0.0))) + min(max(qx, max(qy, qz)), 0.0)
   end
-
-  # The cone with round ends from `a` (radius `r1`) to `b` (radius `r2`)
-  # (Inigo Quilez, exact).
-  defp round_cone(p, a, b, r1, r2) do
-    ba = Vec.sub(b, a)
-    l2 = Vec.dot(ba, ba)
-    rr = r1 - r2
-    a2 = l2 - rr * rr
-    il2 = 1.0 / l2
-    pa = Vec.sub(p, a)
-    y = Vec.dot(pa, ba)
-    z = y - l2
-    x2 = pa |> Vec.scale(l2) |> Vec.sub(Vec.scale(ba, y)) |> then(&Vec.dot(&1, &1))
-    y2 = y * y * l2
-    z2 = z * z * l2
-    k = sign(rr) * rr * rr * x2
-
-    cond do
-      sign(z) * a2 * z2 > k -> :math.sqrt(x2 + z2) * il2 - r2
-      sign(y) * a2 * y2 < k -> :math.sqrt(x2 + y2) * il2 - r1
-      true -> (:math.sqrt(x2 * a2 * il2) + y * rr) * il2 - r1
-    end
-  end
-
-  defp sign(v) when v > 0.0, do: 1.0
-  defp sign(v) when v < 0.0, do: -1.0
-  defp sign(_), do: 0.0
 
   defp sq(v), do: v * v
   defp dot2({a, b}), do: a * a + b * b

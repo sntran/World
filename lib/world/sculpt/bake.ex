@@ -211,7 +211,11 @@ defmodule World.Sculpt.Bake do
           end)
           |> World.Crew.map(fn {some, group, whole} ->
             some = List.to_tuple(some)
-            edits = fn {t, at} -> {%{t | list: Enum.map(t.list, &elem(some, &1))}, at} end
+            # (A tube of the list has only its cones near the triangle: `World.SDF.focus/3`.)
+            edits = fn {t, at} ->
+              {center, far} = ball(t, 1 / scale)
+              {%{t | list: SDF.focus(Enum.map(t.list, &elem(some, &1)), center, far)}, at}
+            end
 
             for s <- group do
               # The field of the part of the rectangle (of its first triangle).

@@ -129,6 +129,19 @@ defmodule World.SDF.Inline do
     end
   end
 
+  @doc "The sign of a value: 1, -1 or 0."
+  defmacro sign(v) do
+    quote do
+      value = unquote(v)
+
+      cond do
+        value > 0.0 -> 1.0
+        value < 0.0 -> -1.0
+        true -> 0.0
+      end
+    end
+  end
+
   @doc "The larger of a value and 0."
   defmacro positive(v) do
     quote do
