@@ -1,0 +1,260 @@
+{
+  "name": "tree_edits",
+  "kind": "item",
+  "sources": [
+    "A tree of a sculptor, 5 m high: a trunk with roots, three branches, a crown of leaves. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "tree",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "cone",
+              "size": [
+                0.26,
+                0.13,
+                1.1
+              ],
+              "at": [
+                0,
+                0,
+                1.1
+              ],
+              "material": "paint",
+              "color": "#6b4a2e",
+              "roughness": 0.95
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0,
+                    0,
+                    2.0
+                  ],
+                  [
+                    0.5,
+                    0.2,
+                    2.6
+                  ],
+                  [
+                    0.9,
+                    0.3,
+                    3.0
+                  ]
+                ],
+                "radii": [
+                  0.12,
+                  0.08,
+                  0.05
+                ]
+              },
+              "color": "#6b4a2e",
+              "material": "paint",
+              "blend": 0.1,
+              "roughness": 0.95
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0,
+                    0,
+                    2.0
+                  ],
+                  [
+                    -0.5,
+                    0.3,
+                    2.7
+                  ],
+                  [
+                    -0.8,
+                    0.5,
+                    3.2
+                  ]
+                ],
+                "radii": [
+                  0.12,
+                  0.08,
+                  0.05
+                ]
+              },
+              "color": "#6b4a2e",
+              "material": "paint",
+              "blend": 0.1,
+              "roughness": 0.95
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0,
+                    0,
+                    2.0
+                  ],
+                  [
+                    0.1,
+                    -0.5,
+                    2.7
+                  ],
+                  [
+                    0.0,
+                    -0.8,
+                    3.3
+                  ]
+                ],
+                "radii": [
+                  0.12,
+                  0.08,
+                  0.05
+                ]
+              },
+              "color": "#6b4a2e",
+              "material": "paint",
+              "blend": 0.1,
+              "roughness": 0.95
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.15,
+                    0.1,
+                    0.25
+                  ],
+                  [
+                    0.5,
+                    0.3,
+                    0.05
+                  ]
+                ],
+                "radii": [
+                  0.12,
+                  0.05
+                ]
+              },
+              "color": "#6b4a2e",
+              "material": "paint",
+              "blend": 0.12,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.85
+              ],
+              "at": [
+                0.8,
+                0.3,
+                3.3
+              ],
+              "material": "paint",
+              "color": "#4f8a3a",
+              "roughness": 0.8
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.9
+              ],
+              "at": [
+                -0.8,
+                0.5,
+                3.5
+              ],
+              "material": "paint",
+              "color": "#4f8a3a",
+              "blend": 0.35,
+              "roughness": 0.8
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.85
+              ],
+              "at": [
+                0.0,
+                -0.8,
+                3.6
+              ],
+              "material": "paint",
+              "color": "#5a9a40",
+              "blend": 0.35,
+              "roughness": 0.8
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.95
+              ],
+              "at": [
+                0,
+                0.1,
+                4.2
+              ],
+              "material": "paint",
+              "color": "#5a9a40",
+              "blend": 0.4,
+              "roughness": 0.8
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.35
+              ],
+              "at": [
+                0.9,
+                0.9,
+                3.6
+              ],
+              "material": "paint",
+              "color": "#7ab850",
+              "mode": "paint",
+              "blend": 0.3,
+              "opacity": 0.7,
+              "repeat": {
+                "count": 7,
+                "center": [
+                  0,
+                  0,
+                  3.6
+                ]
+              }
+            }
+          ],
+          "cells": {
+            "near": 0.05,
+            "mid": 0.1,
+            "far": 0.2
+          },
+          "budget": {
+            "near": 6000,
+            "mid": 2000,
+            "far": 400
+          },
+          "bake": {
+            "near": 512,
+            "mid": 256,
+            "far": 128
+          }
+        }
+      }
+    }
+  ]
+}

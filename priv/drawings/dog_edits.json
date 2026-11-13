@@ -1,0 +1,568 @@
+{
+  "name": "dog_edits",
+  "kind": "item",
+  "sources": [
+    "A small dog of a sculptor, 0.5 m high, that walks and trots on four legs. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "dog",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "capsule",
+              "size": [
+                0.17,
+                0.085
+              ],
+              "at": [
+                0,
+                -0.02,
+                0.34
+              ],
+              "material": "paint",
+              "color": "#b98a55",
+              "axis": [
+                0,
+                1,
+                0
+              ]
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.075,
+                0.09,
+                0.095
+              ],
+              "at": [
+                0,
+                0.1,
+                0.33
+              ],
+              "material": "paint",
+              "color": "#b98a55",
+              "blend": 0.04
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0,
+                    0.14,
+                    0.37
+                  ],
+                  [
+                    0,
+                    0.27,
+                    0.45
+                  ]
+                ],
+                "radii": [
+                  0.055,
+                  0.045
+                ]
+              },
+              "color": "#b98a55",
+              "material": "paint",
+              "blend": 0.03
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.055,
+                0.07,
+                0.055
+              ],
+              "at": [
+                0,
+                0.3,
+                0.47
+              ],
+              "material": "paint",
+              "color": "#b98a55",
+              "blend": 0.03
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.032,
+                0.05,
+                0.03
+              ],
+              "at": [
+                0,
+                0.375,
+                0.455
+              ],
+              "material": "paint",
+              "color": "#d8b890",
+              "blend": 0.02
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.014
+              ],
+              "at": [
+                0,
+                0.425,
+                0.462
+              ],
+              "material": "paint",
+              "color": "#1c1814",
+              "roughness": 0.2
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.009
+              ],
+              "at": [
+                0.028,
+                0.345,
+                0.495
+              ],
+              "material": "paint",
+              "color": "#1c1814",
+              "mirror": "x",
+              "roughness": 0.1
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.012,
+                0.03,
+                0.045
+              ],
+              "at": [
+                0.052,
+                0.275,
+                0.49
+              ],
+              "material": "paint",
+              "color": "#8a5f35",
+              "mirror": "x",
+              "blend": 0.01
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.07,
+                    0.13,
+                    0.32
+                  ],
+                  [
+                    0.07,
+                    0.08,
+                    0.19
+                  ],
+                  [
+                    0.07,
+                    0.13,
+                    0.05
+                  ]
+                ],
+                "radii": [
+                  0.032,
+                  0.026,
+                  0.022
+                ]
+              },
+              "color": "#8a5f35",
+              "material": "paint",
+              "mirror": "x",
+              "blend": 0.02
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.07,
+                    -0.17,
+                    0.32
+                  ],
+                  [
+                    0.07,
+                    -0.11,
+                    0.19
+                  ],
+                  [
+                    0.07,
+                    -0.19,
+                    0.06
+                  ]
+                ],
+                "radii": [
+                  0.032,
+                  0.026,
+                  0.022
+                ]
+              },
+              "color": "#8a5f35",
+              "material": "paint",
+              "mirror": "x",
+              "blend": 0.02
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.026
+              ],
+              "at": [
+                0.07,
+                0.16,
+                0.026
+              ],
+              "material": "paint",
+              "color": "#8a5f35",
+              "mirror": "x"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.026
+              ],
+              "at": [
+                0.07,
+                -0.165,
+                0.026
+              ],
+              "material": "paint",
+              "color": "#8a5f35",
+              "mirror": "x"
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0,
+                    -0.2,
+                    0.37
+                  ],
+                  [
+                    0,
+                    -0.3,
+                    0.44
+                  ],
+                  [
+                    0,
+                    -0.33,
+                    0.52
+                  ]
+                ],
+                "radii": [
+                  0.022,
+                  0.016,
+                  0.01
+                ]
+              },
+              "color": "#b98a55",
+              "material": "paint",
+              "blend": 0.02
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.06,
+                0.07,
+                0.08
+              ],
+              "at": [
+                0,
+                0.15,
+                0.27
+              ],
+              "material": "paint",
+              "color": "#f0e6d2",
+              "mode": "paint",
+              "blend": 0.04
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.05,
+                0.012
+              ],
+              "at": [
+                0,
+                0.2,
+                0.41
+              ],
+              "material": "paint",
+              "color": "#b02020",
+              "mode": "paint",
+              "axis": [
+                0,
+                0.75,
+                0.66
+              ],
+              "blend": 0.006,
+              "roughness": 0.5,
+              "raise": 0.004
+            }
+          ],
+          "bones": [
+            {
+              "name": "pelvis",
+              "head": [
+                0,
+                -0.2,
+                0.35
+              ],
+              "tail": [
+                0,
+                -0.1,
+                0.36
+              ]
+            },
+            {
+              "name": "spine_01",
+              "parent": "pelvis",
+              "head": [
+                0,
+                -0.1,
+                0.36
+              ],
+              "tail": [
+                0,
+                0.15,
+                0.36
+              ]
+            },
+            {
+              "name": "neck_01",
+              "parent": "spine_01",
+              "head": [
+                0,
+                0.15,
+                0.36
+              ],
+              "tail": [
+                0,
+                0.25,
+                0.45
+              ]
+            },
+            {
+              "name": "head",
+              "parent": "neck_01",
+              "head": [
+                0,
+                0.25,
+                0.45
+              ],
+              "tail": [
+                0,
+                0.36,
+                0.47
+              ]
+            },
+            {
+              "name": "front_upper_l",
+              "parent": "spine_01",
+              "head": [
+                -0.07,
+                0.13,
+                0.32
+              ],
+              "tail": [
+                -0.07,
+                0.08,
+                0.19
+              ]
+            },
+            {
+              "name": "front_lower_l",
+              "parent": "front_upper_l",
+              "head": [
+                -0.07,
+                0.08,
+                0.19
+              ],
+              "tail": [
+                -0.07,
+                0.13,
+                0.05
+              ]
+            },
+            {
+              "name": "front_foot_l",
+              "parent": "front_lower_l",
+              "head": [
+                -0.07,
+                0.13,
+                0.05
+              ],
+              "tail": [
+                -0.07,
+                0.17,
+                0.01
+              ]
+            },
+            {
+              "name": "hind_upper_l",
+              "parent": "pelvis",
+              "head": [
+                -0.07,
+                -0.17,
+                0.32
+              ],
+              "tail": [
+                -0.07,
+                -0.11,
+                0.19
+              ]
+            },
+            {
+              "name": "hind_lower_l",
+              "parent": "hind_upper_l",
+              "head": [
+                -0.07,
+                -0.11,
+                0.19
+              ],
+              "tail": [
+                -0.07,
+                -0.19,
+                0.06
+              ]
+            },
+            {
+              "name": "hind_foot_l",
+              "parent": "hind_lower_l",
+              "head": [
+                -0.07,
+                -0.19,
+                0.06
+              ],
+              "tail": [
+                -0.07,
+                -0.16,
+                0.01
+              ]
+            },
+            {
+              "name": "front_upper_r",
+              "parent": "spine_01",
+              "head": [
+                0.07,
+                0.13,
+                0.32
+              ],
+              "tail": [
+                0.07,
+                0.08,
+                0.19
+              ]
+            },
+            {
+              "name": "front_lower_r",
+              "parent": "front_upper_r",
+              "head": [
+                0.07,
+                0.08,
+                0.19
+              ],
+              "tail": [
+                0.07,
+                0.13,
+                0.05
+              ]
+            },
+            {
+              "name": "front_foot_r",
+              "parent": "front_lower_r",
+              "head": [
+                0.07,
+                0.13,
+                0.05
+              ],
+              "tail": [
+                0.07,
+                0.17,
+                0.01
+              ]
+            },
+            {
+              "name": "hind_upper_r",
+              "parent": "pelvis",
+              "head": [
+                0.07,
+                -0.17,
+                0.32
+              ],
+              "tail": [
+                0.07,
+                -0.11,
+                0.19
+              ]
+            },
+            {
+              "name": "hind_lower_r",
+              "parent": "hind_upper_r",
+              "head": [
+                0.07,
+                -0.11,
+                0.19
+              ],
+              "tail": [
+                0.07,
+                -0.19,
+                0.06
+              ]
+            },
+            {
+              "name": "hind_foot_r",
+              "parent": "hind_lower_r",
+              "head": [
+                0.07,
+                -0.19,
+                0.06
+              ],
+              "tail": [
+                0.07,
+                -0.16,
+                0.01
+              ]
+            }
+          ],
+          "plan": "quadruped",
+          "gait": {
+            "period": 0.9,
+            "stride": 0.24,
+            "lift": 0.06
+          },
+          "cells": {
+            "near": 0.005,
+            "mid": 0.01,
+            "far": 0.02
+          },
+          "budget": {
+            "near": 8000,
+            "mid": 3000,
+            "far": 600
+          },
+          "bake": {
+            "near": 1024,
+            "mid": 512,
+            "far": 256
+          }
+        }
+      }
+    }
+  ]
+}

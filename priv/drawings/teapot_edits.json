@@ -1,0 +1,223 @@
+{
+  "name": "teapot_edits",
+  "kind": "item",
+  "sources": [
+    "A teapot of a sculptor, 0.19 m high: a body, a spout, a handle, a lid, a band of gold and flowers. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "teapot",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "cylinder",
+              "size": [
+                0.055,
+                0.008
+              ],
+              "at": [
+                0,
+                0,
+                0.008
+              ],
+              "material": "paint",
+              "color": "#f4f1e8",
+              "finish": "shiny"
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.09,
+                0.09,
+                0.07
+              ],
+              "at": [
+                0,
+                0,
+                0.082
+              ],
+              "material": "paint",
+              "color": "#f4f1e8",
+              "blend": 0.01,
+              "finish": "shiny"
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0,
+                    0.07,
+                    0.06
+                  ],
+                  [
+                    0,
+                    0.125,
+                    0.09
+                  ],
+                  [
+                    0,
+                    0.155,
+                    0.135
+                  ]
+                ],
+                "radii": [
+                  0.022,
+                  0.015,
+                  0.011
+                ]
+              },
+              "color": "#f4f1e8",
+              "material": "paint",
+              "blend": 0.012,
+              "finish": "shiny"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.008
+              ],
+              "at": [
+                0,
+                0.159,
+                0.141
+              ],
+              "material": "paint",
+              "color": "#d8d2c0",
+              "mode": "subtract",
+              "blend": 0.002
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.045,
+                0.01
+              ],
+              "at": [
+                0,
+                -0.105,
+                0.09
+              ],
+              "material": "paint",
+              "color": "#f4f1e8",
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "blend": 0.012,
+              "finish": "shiny"
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.05,
+                0.05,
+                0.014
+              ],
+              "at": [
+                0,
+                0,
+                0.152
+              ],
+              "material": "paint",
+              "color": "#f4f1e8",
+              "finish": "shiny"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.013
+              ],
+              "at": [
+                0,
+                0,
+                0.174
+              ],
+              "material": "paint",
+              "color": "#c8a040",
+              "blend": 0.004,
+              "finish": "shiny_metal"
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.2,
+                0.006
+              ],
+              "at": [
+                0,
+                0,
+                0.1
+              ],
+              "material": "paint",
+              "color": "#c8a040",
+              "mode": "paint",
+              "blend": 0.003,
+              "finish": "shiny_metal"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.016
+              ],
+              "at": [
+                0.086,
+                0,
+                0.07
+              ],
+              "material": "paint",
+              "color": "#b02838",
+              "mode": "paint",
+              "blend": 0.006,
+              "repeat": {
+                "count": 8
+              }
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.007
+              ],
+              "at": [
+                0.089,
+                0,
+                0.07
+              ],
+              "material": "paint",
+              "color": "#f0c040",
+              "mode": "paint",
+              "blend": 0.003,
+              "repeat": {
+                "count": 8
+              }
+            }
+          ],
+          "cells": {
+            "near": 0.003,
+            "mid": 0.006,
+            "far": 0.012
+          },
+          "budget": {
+            "near": 6000,
+            "mid": 2000,
+            "far": 500
+          },
+          "bake": {
+            "near": 512,
+            "mid": 256,
+            "far": 128
+          }
+        }
+      }
+    }
+  ]
+}

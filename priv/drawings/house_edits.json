@@ -1,0 +1,231 @@
+{
+  "name": "house_edits",
+  "kind": "item",
+  "sources": [
+    "A small house of a sculptor, 5 m by 6 m: walls, a roof of two slopes, a door, windows with light, a chimney. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "house",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "box",
+              "size": [
+                2.6,
+                3.1,
+                0.15
+              ],
+              "at": [
+                0,
+                0,
+                0.15
+              ],
+              "material": "paint",
+              "color": "#8c8a84",
+              "roughness": 0.9
+            },
+            {
+              "shape": "box",
+              "size": [
+                2.5,
+                3.0,
+                1.3
+              ],
+              "at": [
+                0,
+                0,
+                1.5
+              ],
+              "material": "paint",
+              "color": "#e6dcc0",
+              "roughness": 0.85
+            },
+            {
+              "shape": "wedge",
+              "size": [
+                2.75,
+                1.7,
+                0.75
+              ],
+              "at": [
+                0,
+                1.7,
+                3.55
+              ],
+              "material": "paint",
+              "color": "#a3412c",
+              "mirror": "y",
+              "roughness": 0.8
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.25,
+                0.25,
+                0.7
+              ],
+              "at": [
+                1.5,
+                -1.0,
+                4.0
+              ],
+              "material": "paint",
+              "color": "#9a4a36",
+              "roughness": 0.9
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.7,
+                0.35,
+                0.15
+              ],
+              "at": [
+                0,
+                3.4,
+                0.15
+              ],
+              "material": "paint",
+              "color": "#8c8a84",
+              "roughness": 0.9
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.45,
+                0.2,
+                0.95
+              ],
+              "at": [
+                0,
+                3.0,
+                1.25
+              ],
+              "material": "paint",
+              "color": "#6a4424",
+              "mode": "paint",
+              "blend": 0.05,
+              "roughness": 0.6,
+              "raise": -0.04
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.04
+              ],
+              "at": [
+                0.3,
+                3.0,
+                1.2
+              ],
+              "material": "paint",
+              "color": "#c8a040",
+              "finish": "shiny_metal"
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.5,
+                0.2,
+                0.45
+              ],
+              "at": [
+                1.5,
+                3.0,
+                1.75
+              ],
+              "material": "paint",
+              "color": "#9cc8e8",
+              "mode": "paint",
+              "mirror": "x",
+              "blend": 0.04,
+              "roughness": 0.05,
+              "glow": 0.25,
+              "raise": -0.03
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.2,
+                0.6,
+                0.45
+              ],
+              "at": [
+                2.5,
+                0.9,
+                1.75
+              ],
+              "material": "paint",
+              "color": "#9cc8e8",
+              "mode": "paint",
+              "mirror": [
+                "x",
+                "y"
+              ],
+              "blend": 0.04,
+              "roughness": 0.05,
+              "glow": 0.25,
+              "raise": -0.03
+            },
+            {
+              "shape": "box",
+              "size": [
+                2.74,
+                0.03,
+                0.12
+              ],
+              "at": [
+                0,
+                0.75,
+                3.98
+              ],
+              "material": "paint",
+              "color": "#7c2e1e",
+              "mode": "paint",
+              "axis": [
+                0,
+                0.404,
+                0.915
+              ],
+              "mirror": "y",
+              "blend": 0.03,
+              "repeat": {
+                "count": 3,
+                "move": [
+                  0,
+                  0.75,
+                  -0.33
+                ]
+              },
+              "raise": -0.02
+            }
+          ],
+          "cells": {
+            "near": 0.05,
+            "mid": 0.1,
+            "far": 0.2
+          },
+          "budget": {
+            "near": 6000,
+            "mid": 2000,
+            "far": 500
+          },
+          "bake": {
+            "near": 1024,
+            "mid": 512,
+            "far": 256
+          }
+        }
+      }
+    }
+  ]
+}

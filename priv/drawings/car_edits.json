@@ -1,0 +1,382 @@
+{
+  "name": "car_edits",
+  "kind": "item",
+  "sources": [
+    "A small car of a sculptor, 3.7 m long: a body with hard edges, glass, wheels and lamps that glow. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "car",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "round_box",
+              "size": [
+                0.8,
+                1.85,
+                0.3,
+                0.14
+              ],
+              "at": [
+                0,
+                0,
+                0.62
+              ],
+              "material": "paint",
+              "color": "#c0281e",
+              "roughness": 0.25,
+              "metal": 0.3
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.7,
+                0.95,
+                0.32,
+                0.22
+              ],
+              "at": [
+                0,
+                -0.25,
+                1.1
+              ],
+              "material": "paint",
+              "color": "#c0281e",
+              "blend": 0.1,
+              "roughness": 0.25,
+              "metal": 0.3
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.4,
+                0.95
+              ],
+              "at": [
+                0,
+                1.15,
+                0.36
+              ],
+              "material": "paint",
+              "color": "#101012",
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "mode": "subtract",
+              "blend": 0.03
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.4,
+                0.95
+              ],
+              "at": [
+                0,
+                -1.15,
+                0.36
+              ],
+              "material": "paint",
+              "color": "#101012",
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "mode": "subtract",
+              "blend": 0.03
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.33,
+                0.11
+              ],
+              "at": [
+                0.74,
+                1.15,
+                0.33
+              ],
+              "material": "paint",
+              "color": "#18181a",
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "mirror": [
+                "x",
+                "y"
+              ],
+              "roughness": 0.9
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.19,
+                0.12
+              ],
+              "at": [
+                0.74,
+                1.15,
+                0.33
+              ],
+              "material": "paint",
+              "color": "#b8bcc2",
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "mirror": [
+                "x",
+                "y"
+              ],
+              "finish": "shiny_metal",
+              "blend": 0.02
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.72,
+                0.03,
+                0.2
+              ],
+              "at": [
+                0,
+                0.62,
+                1.13
+              ],
+              "material": "paint",
+              "color": "#1e2a36",
+              "mode": "paint",
+              "axis": [
+                0,
+                0.5,
+                1
+              ],
+              "blend": 0.02,
+              "roughness": 0.05
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.72,
+                0.03,
+                0.2
+              ],
+              "at": [
+                0,
+                -1.12,
+                1.13
+              ],
+              "material": "paint",
+              "color": "#1e2a36",
+              "mode": "paint",
+              "axis": [
+                0,
+                -0.5,
+                1
+              ],
+              "blend": 0.02,
+              "roughness": 0.05
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.03,
+                0.34,
+                0.17
+              ],
+              "at": [
+                0.7,
+                0.1,
+                1.14
+              ],
+              "material": "paint",
+              "color": "#1e2a36",
+              "mode": "paint",
+              "mirror": "x",
+              "blend": 0.02,
+              "roughness": 0.05
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.03,
+                0.3,
+                0.17
+              ],
+              "at": [
+                0.7,
+                -0.68,
+                1.14
+              ],
+              "material": "paint",
+              "color": "#1e2a36",
+              "mode": "paint",
+              "mirror": "x",
+              "blend": 0.02,
+              "roughness": 0.05
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.13,
+                0.05,
+                0.08
+              ],
+              "at": [
+                0.55,
+                1.84,
+                0.68
+              ],
+              "material": "paint",
+              "color": "#fff4d0",
+              "mirror": "x",
+              "glow": 0.9,
+              "roughness": 0.1
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.14,
+                0.03,
+                0.05,
+                0.02
+              ],
+              "at": [
+                0.58,
+                -1.85,
+                0.7
+              ],
+              "material": "paint",
+              "color": "#ff2010",
+              "mirror": "x",
+              "glow": 0.6,
+              "roughness": 0.2
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.78,
+                0.06,
+                0.07,
+                0.03
+              ],
+              "at": [
+                0,
+                1.88,
+                0.4
+              ],
+              "material": "paint",
+              "color": "#26262a",
+              "roughness": 0.7
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.78,
+                0.06,
+                0.07,
+                0.03
+              ],
+              "at": [
+                0,
+                -1.88,
+                0.4
+              ],
+              "material": "paint",
+              "color": "#26262a",
+              "roughness": 0.7
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.35,
+                0.04,
+                0.06
+              ],
+              "at": [
+                0,
+                1.86,
+                0.62
+              ],
+              "material": "paint",
+              "color": "#16161a",
+              "mode": "paint",
+              "blend": 0.02,
+              "roughness": 0.6,
+              "raise": -0.01
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.005,
+                0.42,
+                0.25
+              ],
+              "at": [
+                0.8,
+                -0.28,
+                0.72
+              ],
+              "material": "paint",
+              "color": "#b0241a",
+              "mode": "paint",
+              "mirror": "x",
+              "blend": 0.012,
+              "raise": -0.006
+            },
+            {
+              "shape": "capsule",
+              "size": [
+                0.05,
+                0.012
+              ],
+              "at": [
+                0.82,
+                -0.02,
+                0.86
+              ],
+              "material": "paint",
+              "color": "#b8bcc2",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "mirror": "x",
+              "finish": "shiny_metal"
+            }
+          ],
+          "cells": {
+            "near": 0.03,
+            "mid": 0.06,
+            "far": 0.12
+          },
+          "budget": {
+            "near": 10000,
+            "mid": 3000,
+            "far": 600
+          },
+          "bake": {
+            "near": 1024,
+            "mid": 512,
+            "far": 256
+          }
+        }
+      }
+    }
+  ]
+}

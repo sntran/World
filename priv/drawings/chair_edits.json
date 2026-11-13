@@ -1,0 +1,200 @@
+{
+  "name": "chair_edits",
+  "kind": "item",
+  "sources": [
+    "A chair of a sculptor, 0.9 m high: a seat with a cushion, four legs, a back with slats. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "chair",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "round_box",
+              "size": [
+                0.22,
+                0.22,
+                0.02,
+                0.01
+              ],
+              "at": [
+                0,
+                0,
+                0.45
+              ],
+              "material": "paint",
+              "color": "#b98b55",
+              "roughness": 0.5
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.02,
+                0.02,
+                0.22
+              ],
+              "at": [
+                0.19,
+                0.19,
+                0.22
+              ],
+              "material": "paint",
+              "color": "#b98b55",
+              "mirror": "x",
+              "roughness": 0.5
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.02,
+                0.02,
+                0.45
+              ],
+              "at": [
+                0.19,
+                -0.19,
+                0.45
+              ],
+              "material": "paint",
+              "color": "#b98b55",
+              "mirror": "x",
+              "roughness": 0.5
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.21,
+                0.016,
+                0.035,
+                0.01
+              ],
+              "at": [
+                0,
+                -0.19,
+                0.86
+              ],
+              "material": "paint",
+              "color": "#b98b55",
+              "roughness": 0.5
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.19,
+                0.012,
+                0.02
+              ],
+              "at": [
+                0,
+                -0.19,
+                0.55
+              ],
+              "material": "paint",
+              "color": "#b98b55",
+              "roughness": 0.5
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.014,
+                0.01,
+                0.14
+              ],
+              "at": [
+                -0.12,
+                -0.19,
+                0.7
+              ],
+              "material": "paint",
+              "color": "#a57a48",
+              "repeat": {
+                "count": 4,
+                "move": [
+                  0.08,
+                  0,
+                  0
+                ]
+              },
+              "roughness": 0.5
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.19,
+                0.012,
+                0.015
+              ],
+              "at": [
+                0,
+                0.19,
+                0.18
+              ],
+              "material": "paint",
+              "color": "#b98b55",
+              "roughness": 0.5
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.012,
+                0.19,
+                0.015
+              ],
+              "at": [
+                0.19,
+                0,
+                0.14
+              ],
+              "material": "paint",
+              "color": "#b98b55",
+              "mirror": "x",
+              "roughness": 0.5
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.17,
+                0.17,
+                0.05
+              ],
+              "at": [
+                0,
+                0.02,
+                0.47
+              ],
+              "material": "paint",
+              "color": "#9a3a2a",
+              "mode": "paint",
+              "blend": 0.02,
+              "roughness": 0.9,
+              "raise": 0.008
+            }
+          ],
+          "cells": {
+            "near": 0.004,
+            "mid": 0.008,
+            "far": 0.015
+          },
+          "budget": {
+            "near": 8000,
+            "mid": 2500,
+            "far": 600
+          },
+          "bake": {
+            "near": 512,
+            "mid": 256,
+            "far": 128
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,506 @@
+{
+  "name": "bird_edits",
+  "kind": "item",
+  "sources": [
+    "A white bird of a sculptor, 0.3 m high, that walks, pecks and opens its wings. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "bird",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.06,
+                0.09,
+                0.06
+              ],
+              "at": [
+                0,
+                0,
+                0.17
+              ],
+              "material": "paint",
+              "color": "#f2ecd8"
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0,
+                    0.05,
+                    0.2
+                  ],
+                  [
+                    0,
+                    0.08,
+                    0.26
+                  ]
+                ],
+                "radii": [
+                  0.03,
+                  0.026
+                ]
+              },
+              "color": "#f2ecd8",
+              "material": "paint",
+              "blend": 0.02
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.035
+              ],
+              "at": [
+                0,
+                0.09,
+                0.275
+              ],
+              "material": "paint",
+              "color": "#f2ecd8",
+              "blend": 0.02
+            },
+            {
+              "shape": "cone",
+              "size": [
+                0.014,
+                0.004,
+                0.022
+              ],
+              "at": [
+                0,
+                0.135,
+                0.272
+              ],
+              "material": "paint",
+              "color": "#e08a24",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "roughness": 0.4
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.006
+              ],
+              "at": [
+                0.024,
+                0.108,
+                0.287
+              ],
+              "material": "paint",
+              "color": "#101010",
+              "mirror": "x",
+              "roughness": 0.1
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.012,
+                0.06,
+                0.035
+              ],
+              "at": [
+                0.062,
+                -0.03,
+                0.185
+              ],
+              "material": "paint",
+              "color": "#d8d0b8",
+              "mirror": "x",
+              "blend": 0.004
+            },
+            {
+              "shape": "capsule",
+              "size": [
+                0.05,
+                0.008
+              ],
+              "at": [
+                0.03,
+                -0.008,
+                0.06
+              ],
+              "material": "paint",
+              "color": "#e08a24",
+              "mirror": "x"
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.014,
+                0.03,
+                0.005
+              ],
+              "at": [
+                0.03,
+                0.012,
+                0.005
+              ],
+              "material": "paint",
+              "color": "#e08a24",
+              "mirror": "x"
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.03,
+                0.05,
+                0.012
+              ],
+              "at": [
+                0,
+                -0.1,
+                0.18
+              ],
+              "material": "paint",
+              "color": "#f2ecd8",
+              "blend": 0.02
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.002,
+                0.05,
+                0.03
+              ],
+              "at": [
+                0.07,
+                -0.035,
+                0.185
+              ],
+              "material": "paint",
+              "color": "#b8b098",
+              "mode": "paint",
+              "mirror": "x",
+              "blend": 0.003,
+              "repeat": {
+                "count": 3,
+                "move": [
+                  0,
+                  0,
+                  0.012
+                ]
+              },
+              "raise": -0.002
+            }
+          ],
+          "bones": [
+            {
+              "name": "pelvis",
+              "head": [
+                0,
+                -0.06,
+                0.16
+              ],
+              "tail": [
+                0,
+                0.0,
+                0.17
+              ]
+            },
+            {
+              "name": "spine_01",
+              "parent": "pelvis",
+              "head": [
+                0,
+                0.0,
+                0.17
+              ],
+              "tail": [
+                0,
+                0.06,
+                0.19
+              ]
+            },
+            {
+              "name": "neck_01",
+              "parent": "spine_01",
+              "head": [
+                0,
+                0.06,
+                0.19
+              ],
+              "tail": [
+                0,
+                0.08,
+                0.26
+              ]
+            },
+            {
+              "name": "head",
+              "parent": "neck_01",
+              "head": [
+                0,
+                0.08,
+                0.26
+              ],
+              "tail": [
+                0,
+                0.1,
+                0.29
+              ]
+            },
+            {
+              "name": "beak",
+              "parent": "head",
+              "head": [
+                0,
+                0.1,
+                0.28
+              ],
+              "tail": [
+                0,
+                0.15,
+                0.272
+              ]
+            },
+            {
+              "name": "tail_01",
+              "parent": "pelvis",
+              "head": [
+                0,
+                -0.06,
+                0.16
+              ],
+              "tail": [
+                0,
+                -0.13,
+                0.19
+              ]
+            },
+            {
+              "name": "upperarm_l",
+              "parent": "spine_01",
+              "head": [
+                -0.05,
+                0.03,
+                0.2
+              ],
+              "tail": [
+                -0.06,
+                -0.02,
+                0.19
+              ]
+            },
+            {
+              "name": "lowerarm_l",
+              "parent": "upperarm_l",
+              "head": [
+                -0.06,
+                -0.02,
+                0.19
+              ],
+              "tail": [
+                -0.06,
+                -0.06,
+                0.18
+              ]
+            },
+            {
+              "name": "hand_l",
+              "parent": "lowerarm_l",
+              "head": [
+                -0.06,
+                -0.06,
+                0.18
+              ],
+              "tail": [
+                -0.05500000000000001,
+                -0.1,
+                0.17
+              ]
+            },
+            {
+              "name": "thigh_l",
+              "parent": "pelvis",
+              "head": [
+                -0.03,
+                -0.01,
+                0.15
+              ],
+              "tail": [
+                -0.03,
+                0.0,
+                0.11
+              ]
+            },
+            {
+              "name": "calf_l",
+              "parent": "thigh_l",
+              "head": [
+                -0.03,
+                0.0,
+                0.11
+              ],
+              "tail": [
+                -0.03,
+                -0.015,
+                0.06
+              ]
+            },
+            {
+              "name": "foot_l",
+              "parent": "calf_l",
+              "head": [
+                -0.03,
+                -0.015,
+                0.06
+              ],
+              "tail": [
+                -0.03,
+                -0.005,
+                0.01
+              ]
+            },
+            {
+              "name": "ball_l",
+              "parent": "foot_l",
+              "head": [
+                -0.03,
+                -0.005,
+                0.01
+              ],
+              "tail": [
+                -0.03,
+                0.03,
+                0.005
+              ]
+            },
+            {
+              "name": "upperarm_r",
+              "parent": "spine_01",
+              "head": [
+                0.05,
+                0.03,
+                0.2
+              ],
+              "tail": [
+                0.06,
+                -0.02,
+                0.19
+              ]
+            },
+            {
+              "name": "lowerarm_r",
+              "parent": "upperarm_r",
+              "head": [
+                0.06,
+                -0.02,
+                0.19
+              ],
+              "tail": [
+                0.06,
+                -0.06,
+                0.18
+              ]
+            },
+            {
+              "name": "hand_r",
+              "parent": "lowerarm_r",
+              "head": [
+                0.06,
+                -0.06,
+                0.18
+              ],
+              "tail": [
+                0.05500000000000001,
+                -0.1,
+                0.17
+              ]
+            },
+            {
+              "name": "thigh_r",
+              "parent": "pelvis",
+              "head": [
+                0.03,
+                -0.01,
+                0.15
+              ],
+              "tail": [
+                0.03,
+                0.0,
+                0.11
+              ]
+            },
+            {
+              "name": "calf_r",
+              "parent": "thigh_r",
+              "head": [
+                0.03,
+                0.0,
+                0.11
+              ],
+              "tail": [
+                0.03,
+                -0.015,
+                0.06
+              ]
+            },
+            {
+              "name": "foot_r",
+              "parent": "calf_r",
+              "head": [
+                0.03,
+                -0.015,
+                0.06
+              ],
+              "tail": [
+                0.03,
+                -0.005,
+                0.01
+              ]
+            },
+            {
+              "name": "ball_r",
+              "parent": "foot_r",
+              "head": [
+                0.03,
+                -0.005,
+                0.01
+              ],
+              "tail": [
+                0.03,
+                0.03,
+                0.005
+              ]
+            }
+          ],
+          "plan": "bird",
+          "gait": {
+            "period": 0.5,
+            "stride": 0.3
+          },
+          "cells": {
+            "near": 0.003,
+            "mid": 0.006,
+            "far": 0.012
+          },
+          "budget": {
+            "near": 6000,
+            "mid": 2000,
+            "far": 500
+          },
+          "bake": {
+            "near": 512,
+            "mid": 256,
+            "far": 128
+          }
+        }
+      }
+    }
+  ]
+}
