@@ -22,6 +22,15 @@ into the steps of `AGENTS.md`.
 - **The factories of a planet, for Humans Must Die.** Emergency
   vehicles, airplanes, ships, aircraft carriers, buildings: each family
   is a new factory of the world, with its modules and its sources.
+- **More of the houses from rules (plan 0016).** The types that are not
+  made yet (a shop with a sign over all its front, a house with
+  moldings, a hotel, a villa, an empty lot), a count of the houses of
+  one real street for the shares, a street with two sides and its
+  trees and wires, the inside of a house, and the people of World who
+  build such a house.
+- **People with parts from edits (plan 0017, proposed).** The body of
+  MakeHuman stays; hair, hats, helmets, shoes and thick clothes come
+  from edits. First the tools that measure a person, then a proof.
 - **A hẻm of tube houses (nhà ống).** A blueprint for the narrow houses
   of a town of Việt Nam: a front of 3 to 5 m, 2 to 4 floors on a frame
   of concrete, walls of `brick_vn`, a roof of clay tiles or a flat

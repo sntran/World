@@ -353,6 +353,47 @@ of the parts:
   (`den_duong`) and the bin of 240 L (`thung_rac_240l`, its lid on a
   hinge of the role `open`).
 
+### A house and a street from rules
+
+A house of a street of Vũng Tàu that looks real is a drawing from
+rules (`World.Town.House`; `docs/plans/0016-a-house-and-a-street.md`):
+a model in parts from edits (below, "A model in parts"), with maps.
+`World.Buildings.Lot` (above) stays for a town of thousands of cheap
+houses.
+
+- **The request** is a map. Each key has a default:
+
+  | Key | Values | Default |
+  |---|---|---|
+  | `type` | `cap4` (one storey, a roof of steel), `pho2_flat` (two storeys, a terrace), `pho2_tile` (two storeys, red tiles), `pho3` (three storeys, a terrace) | `pho2_flat` |
+  | `family` | `old` (1985 to 2000), `steel` (2000 to 2015), `modern` (2015 to now) | by the seed |
+  | `width`, `depth` | 3 to 8 m, 6 to 30 m | 5 and 16 |
+  | `road` | The width of the road (m): it gives the reach of each balcony (TCVN 9411:2012) | 13 |
+  | `seed` | A whole number | 1 |
+  | `left`, `right` | `shared` (a bare wall at a neighbor) or `free` | `shared` |
+  | `wall`, `ground`, `rail`, `sign`, `awning`, `vents`, `roof`, `age`, `flip` | A choice of the rules (`World.Town.House.request/1` shows each) | by the family and the seed |
+
+- **The parts.** `NAME_mat_tien` (the front: cells of 2.5 cm, an image
+  of 2048, and the thin rails and the awning in a detail at near),
+  `NAME_than` (the body with its side walls and its back) and
+  `NAME_mai` (the roof: a terrace with its parapet, the head of the
+  stair and a tank; or tiles; or steel sheet). The kind is `house`.
+- **The axes.** x across the front, the front wall at y = 0, the street
+  to +y, z up from the sidewalk. The floor is 0.3 m over the sidewalk.
+  The balcony, the sign, the awning and the step go out over the
+  sidewalk.
+- **The extras.** `house` is the request with each choice made, and
+  `lot` has the width and the depth.
+- **A street** (`World.Town.Street`): `plan/1` gives a row of lots (each
+  the request of its house, with `at`, its place along the street), and
+  `drawing/2` the drawing of a row of 5 houses at the most on its
+  sidewalk, with `street` (the plan) in its extras. A project makes a
+  longer street lot by lot.
+- **The tools of the MCP server:** `draw_house` (the argument `house`:
+  a request) and `plan_street` (the argument `street`: `seed`, `road`,
+  `count` or `length`, `depth`, and `types`, `families`, `widths` as
+  lists of `[value, weight]`).
+
 ### The words of IFC
 
 The words of a construction are the words of IFC (ISO 16739, the format
@@ -785,6 +826,8 @@ landmark in parts (plan 0014).
 | `ghe_danh_ca_vung_tau` | A motor fishing boat of Vũng Tàu with a beak (ghe mỏ nhọn), 11 m long: the class C5-T2-A of the Blue Book of Coastal Vessels (1967) | A hollow hull: a `tube` along the sheer, the same tube smaller taken away, a `crop` by the side view (the sheer) and a `crop` by the tube again, so the decks and the cabin end at the hull. The same cells at each level (a thin wall needs two cells), and a detail that the far level does not have. The port `waterline`. |
 | `toyota_vios` | A Toyota Vios (XP150), 4425 by 1730 by 1475 mm | The side view as an `extrude`, with a `crop` by the plan and a `crop` by the section (each with a blend: round edges); the glass and the pillars by paints of side views; wheels as a `revolve` with a `repeat` for the spokes. |
 | `cay_bang` | A cây bàng (Terminalia catappa) of a street, 9 m high | Tiers of level branches by a `repeat`, leaves as rings of small flat clumps with the surface `leaves`, old leaves by paints with an `opacity`. |
+| `nha_pho_2_tang_vung_tau` | The most common town house of Vũng Tàu: two storeys, 5 m by 16 m, a terrace | From the rules of `World.Town.House` (above, "A house and a street from rules"): a roll-up door between piers of granite, a sign with no words at the balcony, a rail of stainless tubes in a detail, the head of the stair and a tank. |
+| `day_pho_vung_tau` | A row of five houses of Vũng Tàu on their sidewalk, 26 m long | From `World.Town.Street`: each type and each family, wall to wall; 16 parts, each with its image. |
 | `tuong_chua_kito_vua` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key by paints with a raise; groups with a scale for the head and the hands. Its inside is at near only (`levels`): a room in the base, the dome, six open windows, and a stair of 133 steps round an open well of eight sides: the steps as one edit with a `repeat` (a turn and a move), the handrail as one tube through 67 corners, and the balusters in a detail with cells of 12 mm. Each balcony has a rail of bars. |
 
 ### A sculpture with bones

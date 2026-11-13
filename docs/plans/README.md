@@ -48,3 +48,5 @@ builder does not change the requirements: the owner does.
 | 0013 | [Real things from their sources, and long shapes at the cost of their near parts](0013-real-things.md) | Done |
 | 0014 | [A landmark in parts, as a site builds it](0014-a-landmark-in-parts.md) | Done |
 | 0015 | [The face and the stair of the statue, a faster build, and the basket boats](0015-the-face-the-stair-and-speed.md) | Done |
+| 0016 | [A house of Vũng Tàu that looks real, and the rules for a street of houses](0016-a-house-and-a-street.md) | Done for the first four types |
+| 0017 | [People: the body of MakeHuman with parts from edits](0017-people-with-parts-from-edits.md) | Proposed |
