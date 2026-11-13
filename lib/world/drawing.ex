@@ -44,7 +44,7 @@ defmodule World.Drawing do
   alias World.{Assembly, Detail, Frame, GLB, Part, Port, Shape, Vec}
   alias World.Orders.Blueprints
 
-  @kinds ~w(appliance building electrical furniture house item prop statue tower vehicle)
+  @kinds ~w(appliance building electrical furniture house item plant prop statue tower vehicle)
   @roles ~w(crank door drawer handle knob lid open pedal recline slide spin stand steer suspension vane wheel)
   @shapes ~w(box cylinder sphere prism lathe tube loft body arc rings)
   # The options of a shape: the points of each ring, the steps of the
