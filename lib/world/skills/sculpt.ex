@@ -33,7 +33,7 @@ defmodule World.Skills.Sculpt do
   alias World.Sculpt.{Bones, Texture}
 
   @keys ~w(edits groups details ports sources budget cells bake look occlusion dirt wear bones bone_blend plan gait clips)
-  @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow surface mirror repeat)
+  @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow surface mirror repeat levels)
   # The finishes with a name: a roughness and a metal.
   @finishes %{
     "plastic" => {0.4, 0.0},
@@ -114,7 +114,7 @@ defmodule World.Skills.Sculpt do
     # a sculpture of its own, with its edits, its cells and its budget.
     built =
       for d <- [data | details(data, level)] do
-        {edits, step} = {all(d), step(d, level)}
+        {edits, step} = {all(d, level), step(d, level)}
         # With maps, the mesh has no relief smaller than its cells: the maps have it.
         from = if side, do: SDF.coarse(edits, step), else: edits
         meshes = World.Sculpt.model(from, step: step, budget: get_in(d, ["budget", Atom.to_string(level)]))
@@ -247,7 +247,7 @@ defmodule World.Skills.Sculpt do
   @impl true
   def estimate(data, level) do
     with [] <- check(data, ""),
-         {{x0, y0, z0}, {x1, y1, z1}} <- SDF.bounds(all(data)) do
+         {{x0, y0, z0}, {x1, y1, z1}} <- SDF.bounds(all(data, level)) do
       {a, b, c} = {x1 - x0, y1 - y0, z1 - z0}
       step = step(data, level)
       # Two faces for each cell of the surface of the box round it, a bit less for a round shape.
@@ -266,12 +266,17 @@ defmodule World.Skills.Sculpt do
 
     cond do
       cells = get_in(data, ["cells", l]) -> cells
-      budget = get_in(data, ["budget", l]) -> World.Sculpt.fit(all(data), budget) || World.Sculpt.step(level)
+      budget = get_in(data, ["budget", l]) -> World.Sculpt.fit(all(data, level), budget) || World.Sculpt.step(level)
       true -> World.Sculpt.step(level)
     end
   end
 
-  defp all(data), do: edits(data["edits"], Map.get(data, "groups", %{}))
+  # The edits of a sculpture at a level: an edit with `levels` is only
+  # in the list at those levels (the inside of a large model at near).
+  defp all(data, level) do
+    here = for e <- data["edits"], Atom.to_string(level) in Map.get(e, "levels", ~w(near mid far)), do: e
+    edits(here, Map.get(data, "groups", %{}))
+  end
 
   @doc """
   The edits of a sculpture from its data (`World.SDF.edit/3`): each edit
@@ -478,6 +483,7 @@ defmodule World.Skills.Sculpt do
       optional(e, "mode", path, &choice(&1, &2, ~w(add subtract paint crop))) ++
       optional(e, "blend", path, &number(&1, &2, 0, 10)) ++
       optional(e, "blend_type", path, &choice(&1, &2, ~w(soft hard))) ++
+      optional(e, "levels", path, &levels/2) ++
       optional(e, "opacity", path, fn v, p ->
         cond do
           number(v, p, 0, 1) != [] -> number(v, p, 0, 1)
@@ -615,6 +621,13 @@ defmodule World.Skills.Sculpt do
 
   defp outline(_points, path, _least), do: [{path, "must be a list of 3 to 256 points"}]
 
+  # The levels of a detail or of an edit: some of near, mid and far.
+  defp levels(l, path) do
+    if is_list(l) and l != [] and l -- ~w(near mid far) == [] and l == Enum.uniq(l),
+      do: [],
+      else: [{path, "must be a list of near, mid and far"}]
+  end
+
   defp whole(v, path, lo, hi),
     do: if(is_integer(v) and v >= lo and v <= hi, do: [], else: [{path, "must be a whole number from #{lo} to #{hi}"}])
 
@@ -730,11 +743,7 @@ defmodule World.Skills.Sculpt do
           optional(d, "edits", p, &edits(&1, &2, groups)) ++
           optional(d, "cells", p, &cells/2) ++
           optional(d, "budget", p, &budget/2) ++
-          optional(d, "levels", p, fn l, lp ->
-            if is_list(l) and l != [] and l -- ~w(near mid far) == [] and l == Enum.uniq(l),
-              do: [],
-              else: [{lp, "must be a list of near, mid and far"}]
-          end)
+          optional(d, "levels", p, &levels/2)
       else
         [{p, "must be an object"}]
       end

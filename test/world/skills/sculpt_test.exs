@@ -111,6 +111,46 @@ defmodule World.Skills.SculptTest do
     assert [{"body", %{shapes: [_ | _]}, _}, {"head", _, _}] = far.nodes
   end
 
+  test "an edit with levels is only in the sculpture at those levels: the inside of a large model at near (plan 0014, D12)" do
+    solid = %{"shape" => "box", "size" => [1, 1, 1]}
+    room = %{"shape" => "box", "size" => [0.7, 0.7, 0.7], "mode" => "subtract", "levels" => ["near"]}
+
+    door = %{
+      "shape" => "box",
+      "size" => [0.3, 0.6, 0.5],
+      "at" => [0, 0.8, -0.2],
+      "mode" => "subtract",
+      "levels" => ["near"]
+    }
+
+    data = %{
+      "edits" => [solid, room, door],
+      "cells" => %{"near" => 0.1, "mid" => 0.1},
+      "budget" => %{"near" => 4000, "mid" => 4000}
+    }
+
+    assert Skill.check(data, "s") == []
+
+    area = fn level ->
+      model = Detail.with(level, fn -> Drawing.build(drawing(data)) end)
+      {"stone", part, _} = hd(model.nodes)
+
+      for %{points: points, faces: faces} <- part.shapes, [a, b, c] <- faces, reduce: 0.0 do
+        sum ->
+          [p, q, r] = Enum.map([a, b, c], &Enum.at(points, &1))
+          sum + World.Vec.len(World.Vec.cross(World.Vec.sub(q, p), World.Vec.sub(r, p))) / 2
+      end
+    end
+
+    # At near: the faces of the outside, of the room and of the door. At mid: a solid box of 24 m2.
+    assert_in_delta area.(:mid), 24.0, 0.5
+    assert area.(:near) > 34.0
+    # The estimate and the errors.
+    assert Skill.estimate(data, :near) > 0 and Skill.estimate(data, :mid) > 0
+    bad = %{data | "edits" => [solid, %{room | "levels" => ["low"]}, %{door | "levels" => []}]}
+    assert Enum.map(Skill.check(bad, "s"), &elem(&1, 0)) == ["s.edits.1.levels", "s.edits.2.levels"]
+  end
+
   test "an edit with no turn has the axes of the sculpture: the long side of an ellipsoid stays on its axis" do
     [long_y, along_y] =
       Skill.edits([
