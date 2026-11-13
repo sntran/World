@@ -1,7 +1,9 @@
 # Plan 0010: The detail of a sculpture in maps, in parts, and at once
 
-Status: In progress (the owner, 2026-11-13: "You make decisions and
-proceed all the way to achieve that level of Sony Dreams!").
+Status: Done (2026-11-13), but for R7 (the coarse piece first: dropped
+by its measure). The owner, 2026-11-13: "You make decisions and proceed
+all the way to achieve that level of Sony Dreams!". The open points are
+in section 9.
 
 Depends on: plan 0009 (a sculpture with a fine finish, a rich
 vocabulary, and motion).
@@ -87,7 +89,7 @@ the end of the section), next to World on 2026-11-13.
 | # | Decision | Why |
 |---|---|---|
 | D1 | **Maps from the field.** With `bake` in its data (the side of the image at a level, in texels), a sculpture has a color map and a normal map. Each texel is a place on a triangle of the mesh; its color is the color of the edits there, and its normal comes from the gradient of the field there. The mesh has no color for each point then. | This is how a model of a game gets its detail: a fine surface is baked on a mesh of few triangles. World has the fine surface as a function, so the bake needs no fine mesh. Dreams draws its field as points; a GLB for any app needs maps. |
-| D2 | **A chart for each triangle.** Each triangle has its own right triangle of texels, two in a square, with a border of one texel that has the values of the field past the edge. The size of a square follows the area of its triangle. The squares go into the image in rows, the largest first. The sampler of the image has no smaller copies (no mipmaps): a level of detail has its own image. | A chart for each triangle needs no cut of the mesh into flat pieces, and has no stretch that the user must repair. The border keeps a texel of one chart out of the next one. |
+| D2 | **Charts of patches of triangles** (changed in step 8, by a measure: section 10). A chart is a patch of triangles next to each other on the surface that face about one direction, seen flat from that direction, in a rectangle with a border of two texels that has the values of the texels next to it. The rectangles go into the image in rows, the highest first. The sampler of the image has no smaller copies (no mipmaps): a level of detail has its own image. (First: a chart for each triangle. An app with antialiasing reads the maps a pixel past the edge of a triangle, at the texels of another triangle.) | A patch needs no cut of the mesh by the user and has almost no stretch (a texel has one size on the surface, to 15%). The border lets an app with antialiasing read the same surface past an edge. |
 | D3 | **The gradient at a texel from its neighbors.** The texels of a chart are on the plane of its triangle. The change of the field from a texel to the next gives the gradient in the plane, and one more value off the plane gives the rest. The edits of a triangle are the edits of its brick that reach its ball. | Two values of the field for each texel, each with a short list: the bake of an image of 512 texels must take about one second. |
 | D4 | **The normal map is in the tangent space of glTF**, with the tangents that `World.GLB` gives to a primitive with a normal map. The bake uses the same rule for the tangent of each corner. | A skinned mesh turns its tangents with its bones; each app reads the same map. |
 | D5 | **Details** (`details` in the data of the skill): each one is a sculpture of its own (its edits, its cells, its budget, a mirror), built with its own tree, and its meshes are in the same part or figure. | Dreams makes a figure from many sculptures, each with its own detail. A barbel of 3 mm needs cells of 1 mm only in its own small box. |
@@ -167,7 +169,19 @@ The steps changed on 2026-11-13, after the research of section 2a.
 - **R5 of plan 0009** (a change in less than 7% of the whole): the field
   of each eighth of a brick in the cache. It is not in this plan; D6
   gives the answer that the eye needs.
-- **A map of the roughness** (an edit with its own roughness).
+- **The points of a mesh at the crease of two hard shapes.** The joint
+  of two shapes with no blend (a ball on a flat face) has a small
+  sawtooth in its color: the points of the mesh are near the crease, not
+  on it, so some triangles cross it. A step of the finish pass that
+  moves a point to the place where the planes of its faces meet was
+  tried (it moved 800 of the 6,000 points of the robot onto creases),
+  but a point on the round side of a joint is often a cell from the
+  crease, and its move turned faces over. It is not in the code. A
+  small blend at a joint is the answer of a sculptor for now.
+- **The finish of a texel is a second fold of the edits** (11 µs of the
+  32 µs of a texel with a finish). One fold for the color and the finish
+  would make the bake of a sculpture with finishes a third faster.
+- **The eighth cache of a brick** (plan 0009, R5) is still open.
 
 ## 10. The measure
 
@@ -351,3 +365,89 @@ change comes after 0.07 s to 0.12 s already. R7 (60 ms for a first
 coarse piece) is not met and is no more a goal; what would help is the
 field of a part of a brick in the cache (plan 0009, R5).
 
+### Steps 4 and 5: the finish, the glow, the crop, the hard blend, the opacity, three shapes (2026-11-13)
+
+An edit has a `finish` (or a `roughness` and a `metal`) and a `glow`
+(D10). The finish at a point is a fold of the edits with the weights of
+the fold of the colors (`World.SDF.finish/3`), and a level with maps
+has two more images when an edit has them: the roughness and the metal
+(`metallicRoughnessTexture`), and the color times the glow
+(`emissiveTexture`). R10 is met by test: a part of metal with a soft
+border, a wet spot and a lamp on one ball are in the maps at each
+texel, and the GLB passes the validator.
+
+An edit can crop, can have a hard blend (a flat slope: the minimum less
+half of what is missing to the blend), and a paint has an opacity; the
+shapes `wedge`, `prism` and `pyramid` are the most of the distances to
+the planes of their faces (D11). R11 is met by test: the slope of the
+field is at most 1 with them (500 pairs of points), the prune of a cell
+gives the same field, and the hot loop gives the same values to the bit
+for each shape, each mode and each blend (416 edits).
+
+### Step 6: a body on two legs (2026-11-13)
+
+`World.Animals.Biped` is the plan `biped` of a sculpture with bones
+(D12): 16 bones with the names of a person of World. R12 is met by
+test on a puppet of 1 m: in the walk a foot on the ground does not move
+up or down (less than 2 mm) and goes to the back at one speed, the two
+feet go in turn, the hands swing against the feet, and the head is
+lowest when the feet are far from each other. The hips are as high as
+the two legs let them at each time (a leg is at most 0.98 of its
+length), so the walk has the rise and the fall of a real one with no
+number for it. A puppet with its arms out to the sides walks with its
+hands down: the hinge of an elbow and of a knee comes from the
+direction of the bone.
+
+### Step 8: the robot, and the charts of the maps (2026-11-13)
+
+The robot of the catalog (`priv/drawings/robot_edits.json`, 29 edits,
+0.95 m) uses each new word of an edit and walks on two legs. It is the
+first sculpture with flat faces, long triangles and a smooth shiny
+paint, and it showed four faults of the maps of step 1 that the carp
+(small round triangles, a busy pattern) did not show:
+
+- **A sliver stopped the bake** (a division by an area of 0).
+- **One normal for all the faces round a point of a hard edge** made
+  streaks of light along a long triangle. A corner more than 35 degrees
+  from its face has the normal of its face now.
+- **An app with antialiasing reads past the edge of a triangle.** In a
+  far view each edge of each triangle had a dotted line. With
+  antialiasing off the robot was clean: the renderer takes the UV of a
+  pixel at its center, which can be outside the triangle, and a chart
+  for each triangle has the texels of another triangle there. A wider
+  border for each triangle (2 texels) made the far view clean, but then
+  only 16% of the image was in triangles (53% before) and a texel was
+  2.3 mm (1.25 mm before).
+- **A thin triangle had many texels across its thin side** (a square
+  chart for each triangle), so a pixel past its edge was many texels.
+
+So D2 changed. The measure of the ways that were tried, on the robot at
+near (12,000 triangles, an image of 1,024 texels):
+
+| Charts | The image in triangles | A texel | The bake | A far view with antialiasing |
+|---|---|---|---|---|
+| A triangle in half of a square (step 1) | 53% | 1.25 mm | 4.7 s | dotted lines |
+| Two triangles with a common edge, laid flat, a border of 2 texels | 16% | 2.3 mm | 5.3 s | clean |
+| A strip of 16 triangles, laid flat | 36% | 1.56 mm | 7.1 s | clean |
+| A patch of at most 256 triangles, seen flat (now) | 48% | 1.35 mm | 3.9 s | clean |
+
+A patch is fast for two reasons that the measure found: a texel takes
+its gradient from the values of the texels next to it in the patch
+(each at its own place: the least squares), and a texel of the border
+copies the texel next to it and does not read the field. (And the work
+goes to the processes by the count of the texels: a patch can have 2
+texels or 20,000.)
+
+The catalog now, on 4 schedulers:
+
+| | The carp | The robot |
+|---|---|---|
+| Triangles: near, mid, far | 10,800, 3,240, 600 | 12,000, 4,000, 600 |
+| The build: near, mid, far | 4.9 s, 2.4 s, 1.1 s | 7.4 s, 2.1 s, 0.7 s |
+| The files: near, mid, far | 1.65 MB, 0.53 MB, 0.15 MB | 1.96 MB, 0.74 MB, 0.20 MB |
+
+The carp was 6.8 s, 3.9 s and 2.8 s, and 4.33 MB, 1.35 MB and 0.35 MB,
+in step 2: the build is faster, and the files are less than half (the
+texels with no chart are one gray, and the triangles of a patch have
+points in common in the file). R9 is met: the shots of the carp and of
+the robot at each level went to the owner.

@@ -579,19 +579,29 @@ With `bake` for a level, the sculpture has a color map and a normal map
 at that level (`World.Sculpt.Bake`), and its mesh has no color for each
 point. The maps come from the field of the edits, not from the mesh:
 
-- each triangle of the mesh has its own chart in the image (a right
-  triangle of texels, two in a square), as large as its area allows;
-- the color of a texel is the color of the edits at its place on the
+- the triangles of the mesh are in charts: a chart is a patch of
+  triangles that are next to each other on the surface and face about
+  one direction (less than 30 degrees from the first one, and less than
+  35 degrees across an edge), seen flat from that direction. A texel
+  has one size on the surface for each triangle of the image, a long
+  thin one too, and nothing is cut at an edge inside a patch;
+- the color of a texel is the color of the edits at its place on its
   triangle;
 - the normal of a texel is the gradient of the field there, in the
-  tangent space of glTF (the mesh has a tangent for each point).
+  tangent space of glTF (the mesh has a tangent for each point);
+- a chart has a border of two texels with the values of the texels next
+  to it. An app with antialiasing reads the maps as far as a pixel past
+  the edge of a triangle: it reads the same surface there, when a pixel
+  is not more than two texels. So show each level at the distance where
+  that holds (a level has its own image).
 
 So the detail of the model is the detail of the edits at the size of a
 texel. A mesh of 600 triangles shows a pattern of colors and a round
 shape, and an edit that is smaller than the cells (a bump, a groove)
 shows in the light, but not in the outline of the model. The image must
 have a place for the triangles of the budget: about 20 texels for each
-triangle or more (the check gives the least side). With an edit that is
+triangle or more (the check gives the least side). About half of the
+image is in the triangles; the rest is the borders of the charts. With an edit that is
 thinner than the cells must be, give `cells`: with no `cells`, World
 takes them from the thinnest edit (the ring of 8 mm below would make
 cells of 4 mm). The two images are
