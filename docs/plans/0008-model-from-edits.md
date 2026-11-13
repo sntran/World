@@ -274,9 +274,10 @@ on each commit, and the full check on the tip before a push.
   binaries in the tree, fewer points in the collapse).
 - **The borders of the materials** follow the grid in steps, because
   each quad has one material. A color for each point, with a blend at
-  the border, makes them smooth.
+  the border, makes them smooth (done: plan 0009, step 2).
 - **An animal from edits has no rig yet.** The carp from edits is a
-  static model; the carp of the catalog has its bones and swims.
+  static model; the carp of the catalog has its bones and swims (done:
+  plan 0009, step 5; the carp from edits swims).
 - **The manifold mesh.** Step 3 found the case: at a face of a cell
   whose inside corners are on its diagonal, two sheets of the surface
   touch at one edge (10 edges of a stone of 41 edits). The mesh stays

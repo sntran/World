@@ -91,7 +91,9 @@ defmodule World.Sculpt.BonesTest do
   test "a sculptor makes a figure of a sculpture with bones: one skinned mesh, the clips of its plan and of its keys" do
     assert paths(data()) == []
     {"fish", figure, _} = hd(Detail.with(:mid, fn -> Drawing.build(drawing(data())) end).nodes)
-    assert %Figure{skins: [%{joints: joints}], sources: ["A test."]} = figure
+    assert %Figure{skins: [%{joints: joints}], sources: ["A test."], kind: :animal} = figure
+    # The speed of the swim of the plan: a stride of 0.6 lengths of 1 m in a period of 0.8 s.
+    assert_in_delta figure.params["swim_speed"], 0.75, 0.011
     assert length(joints) == 7
     assert Enum.map(figure.animations, & &1.name) == ~w(swim idle nod)
     assert Map.keys(figure.ports) |> Enum.sort() == ~w(ground hook mouth)
@@ -158,6 +160,7 @@ defmodule World.Sculpt.BonesTest do
     clip = %{name: "bend", length: 0.01, keys: [{0.0, %{"b" => %{"spread" => 30}}}]}
     figure = Bones.figure("worm", ball, bones, blend: 0.1, clips: [clip])
     assert figure.animations |> Enum.map(& &1.name) == ["bend"] and figure.ports == %{}
+    assert figure.kind == :item and figure.params == %{}
     [p] = List.last(figure.nodes).primitives
     assert p.colors == nil
 

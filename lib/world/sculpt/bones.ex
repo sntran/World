@@ -14,7 +14,8 @@ defmodule World.Sculpt.Bones do
   The clips come from two places:
 
   - a body plan (`plans/0`), when the bones have its names: its limbs,
-    its joints, its ports and its animations (a fish swims);
+    its joints, its ports, its animations (a fish swims) and its speeds
+    (the figure is of the kind `:animal` then);
   - the `clips` of the data: each a name, a length (s) and keys, each key
     a time and a pose (a bone to its turns in degrees: `flex`, `spread`,
     `twist`). The pose between two keys is the mean by the time.
@@ -55,12 +56,13 @@ defmodule World.Sculpt.Bones do
     weights = weights(mesh.points, bones, blend)
     gait = Keyword.get(opts, :gait, %{})
 
-    planned =
+    # With a plan: its animations, and its speeds for the size of the sculpture.
+    {planned, speeds} =
       if plan do
         h = plan.height(mesh.points, weights)
-        for a <- plan.animations(), do: &plan.animation(a, &1, h, gait)
+        {for(a <- plan.animations(), do: &plan.animation(a, &1, h, gait)), plan.speeds(h, gait)}
       else
-        []
+        {[], %{}}
       end
 
     Rig.figure(name,
@@ -72,7 +74,8 @@ defmodule World.Sculpt.Bones do
         if(plan, do: plan.ports(by), else: []) ++
           for(p <- Keyword.get(opts, :ports, []), do: {p.name, nearest(p.at, bones), p}),
       animations: planned ++ for(c <- Keyword.get(opts, :clips, []), do: &clip(c, &1)),
-      kind: :item,
+      kind: if(plan, do: :animal, else: :item),
+      params: speeds,
       sources: Keyword.get(opts, :sources, [])
     )
   end

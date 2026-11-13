@@ -54,7 +54,7 @@ defmodule World.Sculpt.FinishTest do
     end
   end
 
-  test "the color of each point is the color of the edits at its place, with a soft border for a paint with a blend (R2)" do
+  test "the color of each point is the color of the edits there, even over its faces, with a soft border for a paint with a blend (R2)" do
     red = {200, 30, 30}
     blue = {20, 40, 220}
 
@@ -69,13 +69,17 @@ defmodule World.Sculpt.FinishTest do
     assert {_, nil} = SDF.field(edits, {0.0, 0.0, 0.5})
     assert {_, :wood} = SDF.field([SDF.edit(:ball, {0.5}, material: :wood) | tl(edits)], {0.0, 0.0, 0.5})
 
-    for {{_, _, z} = p, c} <- Enum.zip(mesh.points, mesh.colors) do
-      assert c == SDF.color(edits, p)
+    # Away from the border, the color of the edits at the point; across
+    # the border, near it (the mean with the colors at the centers of the
+    # faces round the point).
+    for {{_, _, z} = p, {r, g, b} = c} <- Enum.zip(mesh.points, mesh.colors) do
+      {r0, g0, b0} = SDF.color(edits, p)
+      assert abs(r - r0) <= 20 and abs(g - g0) <= 20 and abs(b - b0) <= 20
 
       cond do
-        z < -0.1 -> assert c == red
-        z > 0.1 -> assert c == blue
-        true -> assert elem(c, 0) in 20..200 and elem(c, 2) in 30..220
+        z < -0.2 -> assert c == red
+        z > 0.2 -> assert c == blue
+        true -> assert r in 20..200 and b in 30..220
       end
     end
 
@@ -84,6 +88,27 @@ defmodule World.Sculpt.FinishTest do
     assert length(between) > 10
     # The corners of the mesh carry the colors.
     assert [{_, _, {_, _, _}} | _] = Mesh.triangles(mesh)
+  end
+
+  test "a pattern of colors smaller than the faces gives its mean, not the color of the place of each point" do
+    # A ball with thin dark bands: 2 cm of each 4 cm, and faces of about 15 cm.
+    bands =
+      for k <- -12..12 do
+        SDF.edit(:box, {1.0, 1.0, 0.01}, frame: Frame.move({0.0, 0.0, k * 0.04}), mode: :paint, color: {0, 0, 0})
+      end
+
+    edits = [SDF.edit(:ball, {0.5}, color: {200, 200, 200}) | bands]
+    [mesh] = Sculpt.model(edits, step: 0.05, budget: 300, cache: false)
+    spread = fn values -> Enum.sum(for v <- values, do: abs(v - 100)) / length(values) end
+    even = spread.(for {r, _, _} <- mesh.colors, do: r)
+    own = spread.(for p <- mesh.points, do: elem(SDF.color(edits, p), 0))
+    # At a point, the color is one of the two; over the faces round it, nearer to their mean.
+    assert own > 80 and even < 0.75 * own
+
+    # A point with no face keeps the color of its place.
+    lone = %{mesh | points: mesh.points ++ [{0.0, 0.0, 0.5}]}
+    [done] = Finish.meshes([lone], %{}, edits, 0.05)
+    assert List.last(done.colors) == SDF.color(edits, List.last(done.points))
   end
 
   test "the color of an edit that adds across its blend, of an edit that takes away, and white with no color" do

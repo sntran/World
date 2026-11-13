@@ -37,17 +37,57 @@ defmodule World.Sculpt.Finish do
 
     Enum.map(meshes, fn %Mesh{} = mesh ->
       done = points(mesh.points, lists, edits, step, limit, colors?)
-
-      %{mesh | points: Enum.map(done, &elem(&1, 0))}
-      |> Mesh.finish(Enum.map(done, &elem(&1, 1)), if(colors?, do: Enum.map(done, &elem(&1, 2))))
+      points = Enum.map(done, &elem(&1, 0))
+      colors = if colors?, do: even(points, mesh.faces, Enum.map(done, &elem(&1, 2)), lists, edits, step, limit)
+      Mesh.finish(%{mesh | points: points}, Enum.map(done, &elem(&1, 1)), colors)
     end)
+  end
+
+  # The color of each point, even over the faces round it: half its own
+  # color, half the mean of the colors at the centers of its faces (each
+  # as large as its face). Where the mesh has many points for a change of
+  # the color, that is the color at the point; where the colors change
+  # in less than a face (a pattern at a level of few faces), it is their
+  # mean, not the color of a place that the point happens to be at.
+  defp even(points, faces, colors, lists, edits, step, limit) do
+    at = List.to_tuple(points)
+    corners = for [a, b, c] <- faces, do: {elem(at, a), elem(at, b), elem(at, c)}
+    centers = for {p, q, r} <- corners, do: Vec.scale(Vec.add(Vec.add(p, q), r), 1 / 3)
+    seen = each(centers, lists, edits, step, fn p, list -> SDF.color(list, p, limit) end)
+
+    sums =
+      for {[a, b, c], {p, q, r}, {cr, cg, cb}} <- Enum.zip([faces, corners, seen]),
+          area = Vec.len(Vec.cross(Vec.sub(q, p), Vec.sub(r, p))),
+          v <- [a, b, c],
+          reduce: %{} do
+        acc ->
+          add = {area * cr, area * cg, area * cb, area}
+
+          Map.update(acc, v, add, fn {r0, g0, b0, a0} -> {r0 + area * cr, g0 + area * cg, b0 + area * cb, a0 + area} end)
+      end
+
+    for {{r, g, b} = own, i} <- Enum.with_index(colors) do
+      case sums[i] do
+        {sr, sg, sb, area} when area > 0.0 ->
+          {round((r + sr / area) / 2), round((g + sg / area) / 2), round((b + sb / area) / 2)}
+
+        _ ->
+          own
+      end
+    end
   end
 
   @doc """
   Each point on the surface, with its normal and its color (nil with no
   `colors?`): `[{point, normal, color}]`, in the order of the points.
   """
-  def points(points, lists, edits, step, limit, colors?) do
+  def points(points, lists, edits, step, limit, colors?),
+    do: each(points, lists, edits, step, &point(&1, &2, step, limit, colors?))
+
+  # The value of `f` for each point, with the short list of edits of its
+  # brick, in the order of the points: the points of some bricks in one
+  # process.
+  defp each(points, lists, edits, step, f) do
     size = Sculpt.cells() * step
 
     points
@@ -56,7 +96,7 @@ defmodule World.Sculpt.Finish do
     |> Enum.map(fn {at, ps} -> {Map.get(lists, at, edits), ps} end)
     |> Enum.chunk_every(@group)
     |> Task.async_stream(
-      fn group -> for {list, ps} <- group, {p, i} <- ps, do: {i, point(p, list, step, limit, colors?)} end,
+      fn group -> for {list, ps} <- group, {p, i} <- ps, do: {i, f.(p, list)} end,
       max_concurrency: System.schedulers_online(),
       ordered: false,
       timeout: :infinity

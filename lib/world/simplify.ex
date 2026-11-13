@@ -39,9 +39,12 @@ defmodule World.Simplify do
   @doc """
   `collapse/3` with options: `fixed` (the indices of the points that
   stay where they are: the points that a mesh shares with the next
-  one), and `quadrics` (the quadric of each point, from a collapse
+  one), `quadrics` (the quadric of each point, from a collapse
   before: the planes of the first surface, in place of the planes of
-  these faces). Gives `%{points, faces, ids, quadrics}`: `ids` are the
+  these faces), and `pins` (a weight for each point, or nil: the cost
+  of a move of the point from its first place, the weight times the
+  square of the distance; so a point with a large pin stays near its
+  place, as a point where the colors of a mesh change). Gives `%{points, faces, ids, quadrics}`: `ids` are the
   indices in `points` of the points that stay, and `quadrics` their
   quadrics, for a collapse after.
   """
@@ -67,7 +70,7 @@ defmodule World.Simplify do
 
     q =
       case opts[:quadrics] do
-        nil -> quadrics(pts, fs, edges)
+        nil -> pts |> quadrics(fs, edges) |> pinned(pts, opts[:pins])
         list -> list |> Enum.with_index() |> Map.new(fn {q, i} -> {i, q} end)
       end
 
@@ -121,6 +124,19 @@ defmodule World.Simplify do
         side = Vec.cross(Vec.sub(pts[y], pts[x]), normal([pts[a], pts[b], pts[c]]))
         plane = plane_of(side, pts[x], @border)
         q |> Map.update!(x, &add(&1, plane)) |> Map.update!(y, &add(&1, plane))
+    end
+  end
+
+  # The quadrics with the pins of the points: the quadric of a pin is
+  # its weight times the square of the distance to the point.
+  defp pinned(q, _pts, nil), do: q
+
+  defp pinned(q, pts, pins) do
+    for {w, i} <- Enum.with_index(pins), w > 0.0, is_map_key(q, i), reduce: q do
+      q ->
+        {x, y, z} = pts[i]
+        pin = {w, 0.0, 0.0, -w * x, w, 0.0, -w * y, w, -w * z, w * (x * x + y * y + z * z)}
+        Map.update!(q, i, &add(&1, pin))
     end
   end
 

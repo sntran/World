@@ -453,7 +453,14 @@ An edit has its `shape` and its `size`, and these keys:
   material multiplies it: with a white material (a role with the color
   `#ffffff` in the `materials` of the drawing), the colors are as they
   are written. A border of two colors of one material is smooth; a border
-  of two materials follows the cells.
+  of two materials follows the cells. The cut to a budget keeps the
+  points where the colors change (a point there has a cost for a move,
+  as large as the change), when the budget keeps many of the faces; and
+  the color of a point is even over the faces round it (half the color
+  at the point, half the mean of the colors at the centers of its
+  faces). So a small spot keeps its border at near, and a pattern
+  smaller than the faces of mid or far is its mean color there, with no
+  noise.
 
 An edit can have copies, so a few edits make much:
 
@@ -547,9 +554,10 @@ skin of an animal does. The data:
 - `plan`: the name of a body plan (`fish`). The bones must have the
   names of the bones of the plan ("Species and body plans"), and can
   have more. The plan gives its limbs, its joints, its ports (a port of
-  the data with the same name replaces it) and its animations (`swim`
-  and `idle` of a fish, the y of the sculpture to the front); `gait`
-  gives its numbers (`period`, `stride`);
+  the data with the same name replaces it), its animations (`swim`
+  and `idle` of a fish, the y of the sculpture to the front) and its
+  speeds (`swim_speed` in the list of the parts); `gait` gives its
+  numbers (`period`, `stride`);
 - `clips`: at most 16 clips from keys. A clip has a `name`, a `length`
   (s, 0.1 to 60) and 1 to 64 `keys`; a key has its time `at` (s) and a
   `pose`: a bone to its turns from its rest in degrees (`flex` round the

@@ -1,10 +1,12 @@
 # Plan 0009: A sculpture with a fine finish, a rich vocabulary, and motion
 
-Status: In progress (the owner, 2026-11-12: "Let get this `World`
+Status: Done, but for R5: a change of one edit takes 9% to 12% of the
+time of the whole sculpture, not less than 7% (section 10, step 4). The
+owner, 2026-11-12: "Let get this `World`
 project to the finish line ... build the world-class model builder that
 rival Sony Dreams in concept and performance, and can produce AAA-level
 models fast and accurate, taking advantaged of latest Erlang and Elixir.
-Go.").
+Go." 
 
 Depends on: plan 0008 (a model from edits), plan 0007 (the people build
 each model as actors).
@@ -74,8 +76,9 @@ the steps.
   level; before it, the points of the far carp are up to some cells away.
 - **R2.** A sculpture of one material with two colors and a paint with a
   blend has no step of the grid at the border of the colors: the color of
-  each point is the color of the fold of the edits at its place, within
-  1 of 255.
+  each point is the color of the fold of the edits there. (Step 6
+  changed "at its place, within 1 of 255" to: even over the faces round
+  the point, so a pattern smaller than the faces gives its mean.)
 - **R3.** The normal of each corner of a smooth sculpture (a ball) is
   within 1° of the normal of the true surface; a box of hard edits keeps
   its hard edges.
@@ -110,7 +113,20 @@ the steps.
 ## 9. Open questions
 
 - **The model of step 6.** The carp from edits, with its scales and its
-  colors, unless the owner names another one.
+  colors (done). The owner can name another one.
+- **R5** (step 4): less than 7% for each change needs the field of each
+  eighth of a brick in the cache.
+- **Cells of one size.** A detail smaller than about three cells (the
+  pupil of an eye, a barbel, a ray of a fin) needs smaller cells for
+  the whole sculpture, and the time grows with the square of that. A
+  tree with smaller cells only where the edits are small is the next
+  large step for the detail of a model.
+- **The rim of a thin plate** (an ellipsoid of 4 cells of thickness with
+  its middle plane on a plane of the grid) can leave some edges of the
+  mesh in one face, where the plate is thinner than a cell. The fins of
+  the carp have none.
+- **The body plans of a bird, an animal of four legs and a primate** for
+  a sculpture with bones (step 5).
 
 ## 10. The measure
 
@@ -240,4 +256,73 @@ add to 1, its `swim` moves the points of its tail more than 5 cm and
 the middle of its body less than a quarter of that, and a clip of three
 keys puts its head down at the middle key. The validator of glTF checks
 the carp of step 6.
+
+### Step 6: the carp, and the measure (2026-11-13)
+
+The carp from edits (`priv/drawings/carp_edits.json`) has the words of
+this plan: 26 edits in its data, 145 with their copies.
+
+- **Colors:** a gold coat, a dark back and a pale belly as paints with a
+  blend of 3 cm, bronze fins, lips, nostrils.
+- **A group with a mirror:** the eye (a ball, and its pupil as a paint),
+  used one time with `mirror: x`. The gill covers, the nostrils and the
+  paired fins are one edit each with a mirror.
+- **A repeat:** 7 rows of scales, each row one paint with a repeat (a
+  cylinder across the body paints the two sides).
+- **Bones:** the 7 bones of the body plan of a fish. The model has the
+  clips `swim` and `idle`, and passes the validator of glTF as a skinned
+  mesh (R6).
+
+The first build of this carp showed three faults. Each one has its fix
+and its test:
+
+1. **The cut to the budget took the small colors away.** The collapse
+   knew only the shape, so the pupil of an eye became one dark point,
+   and the scales a noise. Now a piece has the color of each point, and
+   a point where the colors change has a pin in the collapse: a cost for
+   a move, as large as the change (`World.Simplify`, `pins`). The pins
+   count less when the budget keeps few of the faces (the weight times
+   the square of the part of the faces that stays), so mid and far keep
+   the shape. D2 said that the collapse needs no rule for a border of
+   two colors: it does.
+2. **A pattern smaller than the faces was noise at mid and far.** The
+   color of a point was the color of its place, one of the two colors of
+   the pattern. Now it is even over the faces round the point
+   (`World.Sculpt.Finish`): the scales are their mean color at mid and
+   far.
+3. **A hole in the surface** next to the anal fin, at cells of 2.5 mm.
+   The cause was older than this plan: the formula of the distance of an
+   ellipsoid was only the first step of Newton. Next to the long axes
+   and deep in a thin ellipsoid its slope is in the thousands, and the
+   tree takes the range of the field in a cell from the value at its
+   center and a slope of at most 1. A cell with its center in the middle
+   plane of a fin had "no surface". The two steps of the walk (step 4)
+   put more centers there. Now the distance outside is the true distance
+   (at most 8 steps of Newton, 3 to 5 as a rule), and the value inside
+   has a slope of at most 1. A test takes a thin plate and checks each
+   brick that the tree left out. The tree of the carp has fewer bricks
+   also (522, not 674 at cells of 2.5 mm), because the true distance
+   comes to the limit of the field sooner.
+
+The carp, before this plan and now (the shots went to the owner):
+
+| | Before (plan 0008) | Now |
+|---|---|---|
+| Edits in the data | 21 | 26 (145 with their copies) |
+| Cells at near | 3.5 mm | 2.5 mm |
+| Triangles: near, mid, far | 20,000, 3,000, 600 | 30,000, 3,000, 600 |
+| Colors | one color for each material | a color for each point; scales, eyes with a pupil, lips |
+| Motion | none | `swim`, `idle` (7 bones) |
+| The build at near (the bench, fast clock) | 1.8 s | 3.9 s |
+| The build at mid, at far | 1.9 s, 1.6 s | 2.6 s, 2.0 s |
+| The peak of the memory of the node: near, mid, far | 196 MB, 145 MB, 143 MB | 187 MB, 139 MB, 135 MB |
+
+The time at near, in `World.Sculpt.model/2` (3.2 s): the bricks and
+their pieces 1.15 s (522 bricks), the collapse from 61,000 faces to
+30,000 1.6 s, the finish pass 0.5 s. With the cells and the budget of
+before (3.5 mm, 20,000) the same edits take 2.0 s. So the detail has its
+price: the cells of one size (section 9).
+
+R7 is met: the model shows the colors with soft borders, the mirror,
+the repeat and the bones, with its shots, its triangles and its times.
 

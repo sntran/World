@@ -112,6 +112,40 @@ defmodule World.Sculpt.SurfaceTest do
     assert Surface.meshes(pieces([hd(two)], 0.01), budget: 1_000_000) == Surface.meshes(pieces([hd(two)], 0.01))
   end
 
+  test "the collapse keeps the points where the colors change, when the budget keeps many of the faces" do
+    # A ball with a dark spot (a paint: the shape is the same with no color).
+    spot = SDF.edit(:ball, {0.15}, frame: Frame.move({0.0, 0.0, 0.5}), mode: :paint, blend: 0.01, color: {10, 10, 10})
+    colored = [SDF.edit(:ball, {0.5}, color: {200, 160, 60}), spot]
+    plain = Enum.map(colored, &%{&1 | color: nil})
+    [piece | _] = with_colors = pieces(colored, 0.025)
+    # A piece has three bytes for each point, and the same points as with no colors.
+    assert byte_size(piece.colors) == 3 * div(byte_size(piece.points), 32)
+    assert map_size(Surface.decode(piece).colors) == div(byte_size(piece.points), 32)
+    assert Enum.map(with_colors, &Map.delete(&1, :colors)) == pieces(plain, 0.025)
+    assert Surface.decode(hd(pieces(plain, 0.025))).colors == %{}
+
+    # The points of a mesh at the border of the spot (a circle round the pole).
+    faces = fn meshes -> meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() end
+    total = faces.(Surface.meshes(with_colors))
+
+    at_border = fn meshes ->
+      for m <- meshes, {x, y, z} <- m.points, z > 0, abs(Vec.len({x, y, 0.0}) - 0.15) < 0.02, do: 1
+    end
+
+    rich = div(total, 2)
+    {kept, bare} = {Surface.meshes(with_colors, budget: rich), Surface.meshes(pieces(plain, 0.025), budget: rich)}
+    assert faces.(kept) <= rich and faces.(bare) <= rich
+    assert length(at_border.(kept)) > 1.5 * length(at_border.(bare))
+
+    # A budget that keeps few of the faces: the pins count little, and the shape stays.
+    few = Surface.meshes(with_colors, budget: div(total, 20))
+    assert faces.(few) <= div(total, 20)
+    assert_in_delta volume(few), 4 / 3 * :math.pi() * 0.125, 0.03
+    # The pieces from the tree (with the lists of the eighths of each brick) have the same colors.
+    %{bricks: bricks} = Sculpt.bricks(colored, 0.025, each: &Surface.piece(&1, 0.025))
+    assert Enum.map(bricks, & &1.piece) == with_colors
+  end
+
   test "a piece is binaries: its points with their keys, its quads; a cell too far from the origin has no key" do
     [piece | _] = pieces([SDF.edit(:ball, {0.1})], 0.02)
     assert is_binary(piece.points) and is_binary(piece.quads) and piece.materials == [nil]

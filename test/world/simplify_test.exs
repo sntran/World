@@ -104,6 +104,27 @@ defmodule World.SimplifyTest do
     assert {_, ^tetra} = Simplify.collapse(Enum.take(points, 4), tetra, 2)
   end
 
+  test "a pin keeps a point at its place: the cost of a move from there" do
+    # A flat sheet of 10 x 10 squares: each collapse in it costs nothing.
+    points = for j <- 0..10, i <- 0..10, do: {i * 0.1, j * 0.1, 0.0}
+    at = fn i, j -> j * 11 + i end
+
+    faces =
+      for j <- 0..9,
+          i <- 0..9,
+          f <- [[at.(i, j), at.(i + 1, j), at.(i + 1, j + 1)], [at.(i, j), at.(i + 1, j + 1), at.(i, j + 1)]],
+          do: {f, :m}
+
+    marks = [at.(2, 3), at.(5, 5), at.(7, 2), at.(3, 8), at.(8, 7)]
+    pins = for i <- 0..120, do: if(i in marks, do: 100.0, else: 0.0)
+    here = fn result -> Enum.count(marks, &(Enum.at(points, &1) in result.points)) end
+
+    pinned = Simplify.collapse(points, faces, 50, pins: pins)
+    assert length(pinned.faces) <= 50 and here.(pinned) == 5
+    assert here.(Simplify.collapse(points, faces, 50, [])) < 5
+    assert Simplify.collapse(points, faces, 50, pins: nil) == Simplify.collapse(points, faces, 50, [])
+  end
+
   test "a budget of more faces than the mesh has: the same mesh" do
     {points, faces} = triangles([SDF.edit(:ball, {0.3})], 0.1)
     assert Simplify.collapse(points, faces, length(faces)) == {points, faces}

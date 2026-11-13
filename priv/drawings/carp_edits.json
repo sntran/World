@@ -2,16 +2,12 @@
   "name": "carp_edits",
   "kind": "item",
   "sources": [
-    "A common carp (cá chép, Cyprinus carpio) from edits: the sizes of the carp of the catalog (priv/animals/species/carp.json: 50 cm long, a robust body, a long dorsal fin, a forked tail fin), and its colors: a dark gold coat with a darker back and a pale belly, bronze fins. A model of plan 0008, step 7."
+    "A common carp (cá chép, Cyprinus carpio) from edits: the sizes of the carp of the catalog (priv/animals/species/carp.json: 50 cm long, a robust body, a long dorsal fin, a forked tail fin), and its colors: a dark gold coat with a darker back and a pale belly, bronze fins, rows of scales. A model of plan 0008, step 7, and of plan 0009, step 6: its eyes are a group with a mirror, its scales a repeat, and it swims with the bones of a fish."
   ],
   "materials": {
     "skin": {
       "color": "#ffffff",
-      "roughness": 0.6
-    },
-    "black": {
-      "color": "#28221a",
-      "roughness": 0.3
+      "roughness": 0.55
     }
   },
   "nodes": [
@@ -84,6 +80,237 @@
               "color": "#a88840"
             },
             {
+              "shape": "cylinder",
+              "size": [
+                0.006,
+                0.05
+              ],
+              "at": [
+                0,
+                0.118,
+                0.047
+              ],
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "up": [
+                0,
+                0,
+                1
+              ],
+              "mode": "paint",
+              "blend": 0.003,
+              "color": "#c9ab5c",
+              "repeat": {
+                "count": 17,
+                "move": [
+                  0,
+                  -0.016,
+                  0
+                ]
+              }
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.006,
+                0.05
+              ],
+              "at": [
+                0,
+                0.11,
+                0.0601
+              ],
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "up": [
+                0,
+                0,
+                1
+              ],
+              "mode": "paint",
+              "blend": 0.003,
+              "color": "#c9ab5c",
+              "repeat": {
+                "count": 17,
+                "move": [
+                  0,
+                  -0.016,
+                  0
+                ]
+              }
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.006,
+                0.05
+              ],
+              "at": [
+                0,
+                0.118,
+                0.0732
+              ],
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "up": [
+                0,
+                0,
+                1
+              ],
+              "mode": "paint",
+              "blend": 0.003,
+              "color": "#c9ab5c",
+              "repeat": {
+                "count": 17,
+                "move": [
+                  0,
+                  -0.016,
+                  0
+                ]
+              }
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.006,
+                0.05
+              ],
+              "at": [
+                0,
+                0.11,
+                0.0864
+              ],
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "up": [
+                0,
+                0,
+                1
+              ],
+              "mode": "paint",
+              "blend": 0.003,
+              "color": "#c9ab5c",
+              "repeat": {
+                "count": 17,
+                "move": [
+                  0,
+                  -0.016,
+                  0
+                ]
+              }
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.006,
+                0.05
+              ],
+              "at": [
+                0,
+                0.118,
+                0.0995
+              ],
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "up": [
+                0,
+                0,
+                1
+              ],
+              "mode": "paint",
+              "blend": 0.003,
+              "color": "#c9ab5c",
+              "repeat": {
+                "count": 17,
+                "move": [
+                  0,
+                  -0.016,
+                  0
+                ]
+              }
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.006,
+                0.05
+              ],
+              "at": [
+                0,
+                0.11,
+                0.1126
+              ],
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "up": [
+                0,
+                0,
+                1
+              ],
+              "mode": "paint",
+              "blend": 0.003,
+              "color": "#c9ab5c",
+              "repeat": {
+                "count": 17,
+                "move": [
+                  0,
+                  -0.016,
+                  0
+                ]
+              }
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.006,
+                0.05
+              ],
+              "at": [
+                0,
+                0.118,
+                0.1257
+              ],
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "up": [
+                0,
+                0,
+                1
+              ],
+              "mode": "paint",
+              "blend": 0.003,
+              "color": "#c9ab5c",
+              "repeat": {
+                "count": 17,
+                "move": [
+                  0,
+                  -0.016,
+                  0
+                ]
+              }
+            },
+            {
               "shape": "ellipsoid",
               "size": [
                 0.08,
@@ -116,68 +343,65 @@
               "color": "#d6c496"
             },
             {
-              "shape": "ellipsoid",
+              "shape": "ring",
               "size": [
-                0.012,
-                0.012,
-                0.004
+                0.0095,
+                0.0042
               ],
               "at": [
                 0,
-                0.251,
-                0.072
-              ],
-              "mode": "subtract",
-              "blend": 0.003
-            },
-            {
-              "shape": "ball",
-              "size": [
-                0.0085
-              ],
-              "at": [
-                -0.0235,
-                0.205,
-                0.098
-              ],
-              "material": "black"
-            },
-            {
-              "shape": "ball",
-              "size": [
-                0.0085
-              ],
-              "at": [
-                0.0235,
-                0.205,
-                0.098
-              ],
-              "material": "black"
-            },
-            {
-              "shape": "ellipsoid",
-              "size": [
-                0.004,
-                0.006,
-                0.04
-              ],
-              "at": [
-                -0.03,
-                0.13,
-                0.082
+                0.2475,
+                0.0725
               ],
               "axis": [
                 0,
-                0.2079,
-                0.9781
+                1,
+                -0.25
               ],
-              "up": [
+              "blend": 0.004,
+              "material": "skin",
+              "color": "#b8946a"
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.009,
+                0.012,
+                0.0045
+              ],
+              "at": [
                 0,
-                0.9781,
-                -0.2079
+                0.252,
+                0.072
               ],
               "mode": "subtract",
-              "blend": 0.004
+              "blend": 0.003,
+              "color": "#5a3a30"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.0042
+              ],
+              "at": [
+                0.011,
+                0.232,
+                0.099
+              ],
+              "mode": "paint",
+              "blend": 0.002,
+              "color": "#1c1712",
+              "mirror": "x"
+            },
+            {
+              "shape": "group",
+              "group": "eye",
+              "at": [
+                0.0215,
+                0.205,
+                0.098
+              ],
+              "mirror": "x"
             },
             {
               "shape": "ellipsoid",
@@ -202,7 +426,9 @@
                 -0.2079
               ],
               "mode": "subtract",
-              "blend": 0.004
+              "blend": 0.004,
+              "color": "#7a6230",
+              "mirror": "x"
             },
             {
               "shape": "ellipsoid",
@@ -332,58 +558,6 @@
                 0.011
               ],
               "at": [
-                -0.034,
-                0.1174,
-                0.0402
-              ],
-              "axis": [
-                0.8838,
-                -0.4679,
-                0.0
-              ],
-              "up": [
-                -0.4599,
-                -0.8687,
-                -0.184
-              ],
-              "blend": 0.006,
-              "material": "skin",
-              "color": "#846034"
-            },
-            {
-              "shape": "ellipsoid",
-              "size": [
-                0.0035,
-                0.03,
-                0.009
-              ],
-              "at": [
-                -0.0239,
-                -0.0203,
-                0.0333
-              ],
-              "axis": [
-                0.932,
-                -0.3624,
-                0.0
-              ],
-              "up": [
-                -0.3597,
-                -0.9249,
-                -0.1233
-              ],
-              "blend": 0.006,
-              "material": "skin",
-              "color": "#846034"
-            },
-            {
-              "shape": "ellipsoid",
-              "size": [
-                0.0035,
-                0.034,
-                0.011
-              ],
-              "at": [
                 0.034,
                 0.1174,
                 0.0402
@@ -400,7 +574,8 @@
               ],
               "blend": 0.006,
               "material": "skin",
-              "color": "#846034"
+              "color": "#846034",
+              "mirror": "x"
             },
             {
               "shape": "ellipsoid",
@@ -426,7 +601,8 @@
               ],
               "blend": 0.006,
               "material": "skin",
-              "color": "#846034"
+              "color": "#846034",
+              "mirror": "x"
             },
             {
               "shape": "ellipsoid",
@@ -455,6 +631,33 @@
               "color": "#846034"
             }
           ],
+          "groups": {
+            "eye": [
+              {
+                "shape": "ball",
+                "size": [
+                  0.0098
+                ],
+                "color": "#d2ae4e",
+                "material": "skin",
+                "blend": 0.006
+              },
+              {
+                "shape": "ball",
+                "size": [
+                  0.0058
+                ],
+                "at": [
+                  0.0088,
+                  0,
+                  0
+                ],
+                "mode": "paint",
+                "blend": 0.0015,
+                "color": "#1c1712"
+              }
+            ]
+          },
           "ports": {
             "ground": {
               "at": [
@@ -482,9 +685,116 @@
             }
           },
           "budget": {
-            "near": 20000,
+            "near": 30000,
             "mid": 3000,
             "far": 600
+          },
+          "cells": {
+            "near": 0.0025
+          },
+          "bones": [
+            {
+              "name": "pelvis",
+              "head": [
+                0,
+                0.0,
+                0.086
+              ],
+              "tail": [
+                0,
+                0.07,
+                0.086
+              ]
+            },
+            {
+              "name": "spine_01",
+              "head": [
+                0,
+                0.07,
+                0.086
+              ],
+              "tail": [
+                0,
+                0.15,
+                0.086
+              ],
+              "parent": "pelvis"
+            },
+            {
+              "name": "head",
+              "head": [
+                0,
+                0.15,
+                0.086
+              ],
+              "tail": [
+                0,
+                0.25,
+                0.086
+              ],
+              "parent": "spine_01"
+            },
+            {
+              "name": "tail_01",
+              "head": [
+                0,
+                0.0,
+                0.086
+              ],
+              "tail": [
+                0,
+                -0.06,
+                0.086
+              ],
+              "parent": "pelvis"
+            },
+            {
+              "name": "tail_02",
+              "head": [
+                0,
+                -0.06,
+                0.086
+              ],
+              "tail": [
+                0,
+                -0.12,
+                0.086
+              ],
+              "parent": "tail_01"
+            },
+            {
+              "name": "tail_03",
+              "head": [
+                0,
+                -0.12,
+                0.086
+              ],
+              "tail": [
+                0,
+                -0.18,
+                0.086
+              ],
+              "parent": "tail_02"
+            },
+            {
+              "name": "tail_04",
+              "head": [
+                0,
+                -0.18,
+                0.086
+              ],
+              "tail": [
+                0,
+                -0.27,
+                0.086
+              ],
+              "parent": "tail_03"
+            }
+          ],
+          "plan": "fish",
+          "gait": {
+            "period": 0.9,
+            "stride": 0.55
           }
         }
       }
