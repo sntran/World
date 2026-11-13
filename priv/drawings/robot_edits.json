@@ -1,0 +1,784 @@
+{
+  "name": "robot_edits",
+  "kind": "item",
+  "sources": [
+    "A small robot of a sculptor, 0.95 m high: not a real machine. A model of plan 0010: a body on two legs from edits, with the bones of a person of World.",
+    "It shows the words of an edit: a crop (the round corners of the head), a hard blend (the hips, the pack, the points of the shoulders), the shapes wedge (the brow, the feet), prism (the pack, the hands) and pyramid, a finish for each edit (paint, steel, brass), a glow (the eyes, the lamps), a paint with a raise (the groove, the rivets) and a paint with an opacity (the rust)."
+  ],
+  "materials": {
+    "aluminum": {
+      "color": "#ffffff"
+    }
+  },
+  "nodes": [
+    {
+      "name": "robot",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "round_box",
+              "size": [
+                0.09,
+                0.08,
+                0.07,
+                0.02
+              ],
+              "at": [
+                0,
+                0,
+                0.8
+              ],
+              "color": "#e08a2a",
+              "material": "aluminum",
+              "roughness": 0.45,
+              "metal": 0.0
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.108
+              ],
+              "at": [
+                0,
+                0,
+                0.8
+              ],
+              "mode": "crop",
+              "blend": 0.01,
+              "blend_type": "hard",
+              "color": "#e08a2a",
+              "material": "aluminum",
+              "roughness": 0.45,
+              "metal": 0.0
+            },
+            {
+              "shape": "wedge",
+              "size": [
+                0.075,
+                0.02,
+                0.01
+              ],
+              "at": [
+                0,
+                0.072,
+                0.842
+              ],
+              "color": "#3a3f46",
+              "material": "aluminum",
+              "finish": "metal",
+              "blend": 0.004
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.02
+              ],
+              "at": [
+                0.035,
+                0.078,
+                0.805
+              ],
+              "color": "#40e0ff",
+              "material": "aluminum",
+              "mirror": "x",
+              "glow": 1.0,
+              "roughness": 0.2,
+              "metal": 0.0
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.04,
+                0.012,
+                0.01
+              ],
+              "at": [
+                0,
+                0.082,
+                0.765
+              ],
+              "mode": "paint",
+              "color": "#20242a",
+              "material": "aluminum",
+              "blend": 0.004,
+              "raise": -0.003,
+              "roughness": 0.8,
+              "metal": 0.0
+            },
+            {
+              "shape": "capsule",
+              "size": [
+                0.03,
+                0.01
+              ],
+              "at": [
+                0.05,
+                0,
+                0.895
+              ],
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "finish": "shiny_metal"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.016
+              ],
+              "at": [
+                0.05,
+                0,
+                0.94
+              ],
+              "color": "#ff4030",
+              "material": "aluminum",
+              "glow": 0.9,
+              "roughness": 0.3,
+              "metal": 0.0
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.03,
+                0.035
+              ],
+              "at": [
+                0,
+                0,
+                0.715
+              ],
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "finish": "metal"
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.13,
+                0.09,
+                0.13,
+                0.03
+              ],
+              "at": [
+                0,
+                0,
+                0.59
+              ],
+              "color": "#e08a2a",
+              "material": "aluminum",
+              "roughness": 0.45,
+              "metal": 0.0
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.1,
+                0.07,
+                0.03,
+                0.015
+              ],
+              "at": [
+                0,
+                0,
+                0.43
+              ],
+              "color": "#3a3f46",
+              "material": "aluminum",
+              "finish": "metal",
+              "blend": 0.03,
+              "blend_type": "hard"
+            },
+            {
+              "shape": "prism",
+              "size": [
+                0.06,
+                0.04,
+                6
+              ],
+              "at": [
+                0,
+                -0.1,
+                0.6
+              ],
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "finish": "metal",
+              "blend": 0.02,
+              "blend_type": "hard"
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.03,
+                0.012
+              ],
+              "at": [
+                0,
+                0.088,
+                0.62
+              ],
+              "color": "#ffb030",
+              "material": "aluminum",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "glow": 0.9,
+              "roughness": 0.3,
+              "metal": 0.0
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.036,
+                0.007
+              ],
+              "at": [
+                0,
+                0.092,
+                0.62
+              ],
+              "color": "#b08a3c",
+              "material": "aluminum",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "finish": "shiny_metal"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.045
+              ],
+              "at": [
+                0.17,
+                0,
+                0.66
+              ],
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "mirror": "x",
+              "finish": "metal"
+            },
+            {
+              "shape": "pyramid",
+              "size": [
+                0.025,
+                0.025,
+                0.02
+              ],
+              "at": [
+                0.17,
+                0,
+                0.715
+              ],
+              "color": "#3a3f46",
+              "material": "aluminum",
+              "mirror": "x",
+              "finish": "metal",
+              "blend": 0.008,
+              "blend_type": "hard"
+            },
+            {
+              "shape": "capsule",
+              "size": [
+                0.06,
+                0.028
+              ],
+              "at": [
+                0.18,
+                0,
+                0.56
+              ],
+              "color": "#e08a2a",
+              "material": "aluminum",
+              "mirror": "x",
+              "axis": [
+                0.1,
+                0,
+                1
+              ],
+              "roughness": 0.45,
+              "metal": 0.0
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.033
+              ],
+              "at": [
+                0.19,
+                0,
+                0.47
+              ],
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "mirror": "x",
+              "finish": "metal"
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.036,
+                0.065
+              ],
+              "at": [
+                0.19,
+                0,
+                0.385
+              ],
+              "color": "#e08a2a",
+              "material": "aluminum",
+              "mirror": "x",
+              "roughness": 0.45,
+              "metal": 0.0
+            },
+            {
+              "shape": "prism",
+              "size": [
+                0.03,
+                0.035,
+                6
+              ],
+              "at": [
+                0.19,
+                0,
+                0.268
+              ],
+              "color": "#3a3f46",
+              "material": "aluminum",
+              "mirror": "x",
+              "finish": "metal"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.04
+              ],
+              "at": [
+                0.065,
+                0,
+                0.375
+              ],
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "mirror": "x",
+              "finish": "metal"
+            },
+            {
+              "shape": "capsule",
+              "size": [
+                0.06,
+                0.034
+              ],
+              "at": [
+                0.065,
+                0,
+                0.285
+              ],
+              "color": "#e08a2a",
+              "material": "aluminum",
+              "mirror": "x",
+              "roughness": 0.45,
+              "metal": 0.0
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.038
+              ],
+              "at": [
+                0.065,
+                0,
+                0.2
+              ],
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "mirror": "x",
+              "finish": "metal"
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.04,
+                0.07
+              ],
+              "at": [
+                0.065,
+                0,
+                0.115
+              ],
+              "color": "#e08a2a",
+              "material": "aluminum",
+              "mirror": "x",
+              "roughness": 0.45,
+              "metal": 0.0
+            },
+            {
+              "shape": "wedge",
+              "size": [
+                0.045,
+                0.08,
+                0.025
+              ],
+              "at": [
+                0.065,
+                0.03,
+                0.025
+              ],
+              "color": "#3a3f46",
+              "material": "aluminum",
+              "mirror": "x",
+              "finish": "metal"
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.2,
+                0.2,
+                0.003
+              ],
+              "at": [
+                0,
+                0,
+                0.52
+              ],
+              "mode": "paint",
+              "color": "#8a5218",
+              "material": "aluminum",
+              "blend": 0.006,
+              "raise": -0.004
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.009
+              ],
+              "at": [
+                0.1,
+                0.09,
+                0.69
+              ],
+              "mode": "paint",
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "blend": 0.006,
+              "raise": 0.005,
+              "mirror": "x",
+              "finish": "shiny_metal"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.009
+              ],
+              "at": [
+                0.1,
+                0.09,
+                0.55
+              ],
+              "mode": "paint",
+              "color": "#9aa3ad",
+              "material": "aluminum",
+              "blend": 0.006,
+              "raise": 0.005,
+              "mirror": "x",
+              "finish": "shiny_metal"
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.07
+              ],
+              "at": [
+                -0.1,
+                0.07,
+                0.5
+              ],
+              "mode": "paint",
+              "color": "#6a3418",
+              "material": "aluminum",
+              "blend": 0.05,
+              "opacity": 0.6,
+              "roughness": 0.95,
+              "metal": 0.0
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.05
+              ],
+              "at": [
+                0.07,
+                0.05,
+                0.86
+              ],
+              "mode": "paint",
+              "color": "#6a3418",
+              "material": "aluminum",
+              "blend": 0.04,
+              "opacity": 0.5,
+              "roughness": 0.95,
+              "metal": 0.0
+            }
+          ],
+          "cells": {
+            "near": 0.005,
+            "mid": 0.008,
+            "far": 0.02
+          },
+          "budget": {
+            "near": 12000,
+            "mid": 4000,
+            "far": 600
+          },
+          "bake": {
+            "near": 1024,
+            "mid": 512,
+            "far": 256
+          },
+          "bones": [
+            {
+              "name": "pelvis",
+              "head": [
+                0,
+                0,
+                0.38
+              ],
+              "tail": [
+                0,
+                0,
+                0.46
+              ]
+            },
+            {
+              "name": "spine_01",
+              "parent": "pelvis",
+              "head": [
+                0,
+                0,
+                0.46
+              ],
+              "tail": [
+                0,
+                0,
+                0.7
+              ]
+            },
+            {
+              "name": "neck_01",
+              "parent": "spine_01",
+              "head": [
+                0,
+                0,
+                0.7
+              ],
+              "tail": [
+                0,
+                0,
+                0.75
+              ]
+            },
+            {
+              "name": "head",
+              "parent": "neck_01",
+              "head": [
+                0,
+                0,
+                0.75
+              ],
+              "tail": [
+                0,
+                0,
+                0.88
+              ]
+            },
+            {
+              "name": "upperarm_l",
+              "parent": "spine_01",
+              "head": [
+                -0.17,
+                0,
+                0.66
+              ],
+              "tail": [
+                -0.19,
+                0,
+                0.47
+              ]
+            },
+            {
+              "name": "lowerarm_l",
+              "parent": "upperarm_l",
+              "head": [
+                -0.19,
+                0,
+                0.47
+              ],
+              "tail": [
+                -0.19,
+                0,
+                0.31
+              ]
+            },
+            {
+              "name": "hand_l",
+              "parent": "lowerarm_l",
+              "head": [
+                -0.19,
+                0,
+                0.31
+              ],
+              "tail": [
+                -0.19,
+                0,
+                0.23
+              ]
+            },
+            {
+              "name": "thigh_l",
+              "parent": "pelvis",
+              "head": [
+                -0.065,
+                0,
+                0.375
+              ],
+              "tail": [
+                -0.065,
+                0,
+                0.2
+              ]
+            },
+            {
+              "name": "calf_l",
+              "parent": "thigh_l",
+              "head": [
+                -0.065,
+                0,
+                0.2
+              ],
+              "tail": [
+                -0.065,
+                0,
+                0.045
+              ]
+            },
+            {
+              "name": "foot_l",
+              "parent": "calf_l",
+              "head": [
+                -0.065,
+                0,
+                0.045
+              ],
+              "tail": [
+                -0.065,
+                0.1,
+                0.01
+              ]
+            },
+            {
+              "name": "upperarm_r",
+              "parent": "spine_01",
+              "head": [
+                0.17,
+                0,
+                0.66
+              ],
+              "tail": [
+                0.19,
+                0,
+                0.47
+              ]
+            },
+            {
+              "name": "lowerarm_r",
+              "parent": "upperarm_r",
+              "head": [
+                0.19,
+                0,
+                0.47
+              ],
+              "tail": [
+                0.19,
+                0,
+                0.31
+              ]
+            },
+            {
+              "name": "hand_r",
+              "parent": "lowerarm_r",
+              "head": [
+                0.19,
+                0,
+                0.31
+              ],
+              "tail": [
+                0.19,
+                0,
+                0.23
+              ]
+            },
+            {
+              "name": "thigh_r",
+              "parent": "pelvis",
+              "head": [
+                0.065,
+                0,
+                0.375
+              ],
+              "tail": [
+                0.065,
+                0,
+                0.2
+              ]
+            },
+            {
+              "name": "calf_r",
+              "parent": "thigh_r",
+              "head": [
+                0.065,
+                0,
+                0.2
+              ],
+              "tail": [
+                0.065,
+                0,
+                0.045
+              ]
+            },
+            {
+              "name": "foot_r",
+              "parent": "calf_r",
+              "head": [
+                0.065,
+                0,
+                0.045
+              ],
+              "tail": [
+                0.065,
+                0.1,
+                0.01
+              ]
+            }
+          ],
+          "plan": "biped",
+          "gait": {
+            "period": 1.0,
+            "stride": 0.34,
+            "lift": 0.06
+          }
+        }
+      }
+    }
+  ]
+}
