@@ -46,6 +46,13 @@ defmodule World.BenchTest do
     wrong = {"nothing", "catalog", %{"blueprint" => "catalog", "options" => %{"name" => "nothing"}}}
     assert [%{"result" => "order", "error" => _} = order] = Bench.run([wrong])
 
+    # Two orders at one time: the results in the order of the orders, and the measure of all.
+    {:ok, [_, _] = two} = Bench.select(["alpaca", "scooter"])
+    {results, all} = Bench.total(fn -> Bench.run(two, level: "far", at_once: 2) end)
+    assert [%{"name" => "alpaca", "result" => "built"}, %{"name" => "scooter", "result" => "built"}] = results
+    assert all["ms"] >= Enum.max(for r <- results, do: r["ms"])
+    assert all["peak_mb"] > 0 and all["cores"] >= 0 and all["busy"] >= 0
+
     lines = Bench.table([built, order])
     assert hd(lines) =~ ~r/^name +kind +result +ms +peak MB +busy +cores +tasks +triangles$/
     assert Enum.at(lines, 1) =~ ~r/^alpaca +catalog +built +\d+/
@@ -80,6 +87,11 @@ defmodule World.BenchTest do
       end)
 
     assert io =~ "alpaca: built in " and io =~ "1 of 1 built, "
+    assert io =~ ~r/All, 1 at a time: \d+ ms, [\d.]+ cores at work, [\d.]+ MB of memory at most/
+
+    assert capture_io(fn -> Mix.Tasks.World.Bench.run(["alpaca", "scooter", "--level", "far", "--at-once", "2"]) end) =~
+             ~r/2 of 2 built, \d+ ms\nAll, 2 at a time: /
+
     assert [%{"name" => "alpaca", "result" => "built"}] = JSON.decode!(File.read!(out))
     assert_raise Mix.Error, ~r/Not a model or a blueprint: nothing/, fn -> Mix.Tasks.World.Bench.run(["nothing"]) end
   end

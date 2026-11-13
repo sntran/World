@@ -14,6 +14,7 @@ defmodule Mix.Tasks.World.Bench do
       mix world.bench --scale 86400      # the world clock (one day in 1 ms)
       mix world.bench --clock fast       # the fast clock (world by default)
       mix world.bench --timeout 120      # the seconds of each build (600)
+      mix world.bench --at-once 8        # the builds in work at one time (1)
       mix world.bench --out bench.json   # the results as JSON too
   """
   use Mix.Task
@@ -22,7 +23,15 @@ defmodule Mix.Tasks.World.Bench do
   def run(args) do
     {opts, names} =
       OptionParser.parse!(args,
-        strict: [level: :string, workers: :integer, scale: :integer, timeout: :integer, out: :string, clock: :string]
+        strict: [
+          level: :string,
+          workers: :integer,
+          scale: :integer,
+          timeout: :integer,
+          out: :string,
+          clock: :string,
+          at_once: :integer
+        ]
       )
 
     Mix.Task.run("app.start")
@@ -33,18 +42,28 @@ defmodule Mix.Tasks.World.Bench do
         {:error, unknown} -> Mix.raise("Not a model or a blueprint: #{Enum.join(unknown, ", ")}")
       end
 
-    results =
-      World.Bench.run(orders,
-        level: Keyword.get(opts, :level, "mid"),
-        workers: Keyword.get(opts, :workers, 4),
-        budget: %{"clock" => Keyword.get(opts, :clock, "world")},
-        scale: Keyword.get(opts, :scale, 86_400_000),
-        timeout: Keyword.get(opts, :timeout, 600) * 1000,
-        each: &Mix.shell().info("#{&1["name"]}: #{&1["result"]} in #{&1["ms"]} ms")
-      )
-
     shell = Mix.shell()
+    at_once = Keyword.get(opts, :at_once, 1)
+
+    {results, all} =
+      World.Bench.total(fn ->
+        World.Bench.run(orders,
+          level: Keyword.get(opts, :level, "mid"),
+          workers: Keyword.get(opts, :workers, 4),
+          budget: %{"clock" => Keyword.get(opts, :clock, "world")},
+          scale: Keyword.get(opts, :scale, 86_400_000),
+          timeout: Keyword.get(opts, :timeout, 600) * 1000,
+          at_once: at_once,
+          each: &shell.info("#{&1["name"]}: #{&1["result"]} in #{&1["ms"]} ms")
+        )
+      end)
+
     Enum.each(World.Bench.table(results), &shell.info/1)
+
+    shell.info(
+      "All, #{at_once} at a time: #{all["ms"]} ms, #{all["cores"]} cores at work, #{all["peak_mb"]} MB of memory at most"
+    )
+
     if opts[:out], do: File.write!(opts[:out], JSON.encode!(results))
   end
 end

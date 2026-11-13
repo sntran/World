@@ -647,7 +647,11 @@ catalog and each blueprint in data through a construction, one at a
 time, and gives for each one: its result, its time, the most memory of
 the VM, the use of the schedulers, its tasks and its triangles
 (`--level`, `--workers`, `--clock`, `--scale`, `--timeout`, and
-`--out FILE` for the JSON). Plan 0007 has the numbers before and after
+`--out FILE` for the JSON). With `--at-once N`, N builds are in work at
+one time; the last line gives the time, the schedulers at work and the
+most memory for all the builds (plan 0011, section 10: 8 models from
+edits at near take 25.8 s at one time and 30.0 s one at a time). Plan
+0007 has the numbers before and after
 its steps, on one machine: at mid with 4 people, 183 of 183 models are
 built in 64.0 s, against 180 of 182 in 99.2 s before the plan; with 8
 people, 66.6 s against 168.3 s. The time of a model of one task (an

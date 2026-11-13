@@ -4,7 +4,10 @@ defmodule World.Bench do
   D1 and R1): each order goes through the people (`World.build/1`), one
   at a time, and gives its result, its wall time, the most memory of
   the VM, the use of the schedulers, its tasks, its elements and its
-  triangles.
+  triangles. With `at_once`, some orders are in work at one time
+  (`docs/plans/0011-any-model.md`, R5): the memory and the schedulers
+  of a result are then those of the node while that order was in work,
+  and `total/1` gives the measure of all the orders.
 
   The scale of the world clock is that of the call (one day in 1 ms by
   default), so the days of the tasks do not hide the work of the
@@ -50,8 +53,10 @@ defmodule World.Bench do
   Build each order and measure it. The options: `level` (`"mid"`),
   `workers` (4), `budget` (more of the budget of each build), `scale`
   (the world seconds in a second of the wall: 86,400,000, one day in
-  1 ms), `timeout` (ms for each build: 600,000), and `each` (a function
-  that takes each result when it is ready). The result: a list of maps.
+  1 ms), `timeout` (ms for each build: 600,000), `at_once` (the orders
+  in work at one time: 1), and `each` (a function that takes each
+  result when it is ready). The result: a list of maps, in the order of
+  the orders.
   """
   def run(orders, opts \\ []) do
     level = Keyword.get(opts, :level, "mid")
@@ -62,15 +67,35 @@ defmodule World.Bench do
     Application.put_env(:world, :scale, Keyword.get(opts, :scale, 86_400_000))
     :erlang.system_flag(:scheduler_wall_time, true)
 
+    one = fn order ->
+      result = measure(order, level, budget, timeout)
+      each.(result)
+      result
+    end
+
     try do
-      for order <- orders do
-        result = measure(order, level, budget, timeout)
-        each.(result)
-        result
-      end
+      orders
+      |> Task.async_stream(one, max_concurrency: Keyword.get(opts, :at_once, 1), timeout: :infinity)
+      |> Enum.map(fn {:ok, result} -> result end)
     after
       Application.put_env(:world, :scale, old)
     end
+  end
+
+  @doc """
+  Do `fun` and measure the node while it works: `{result, measure}`,
+  with the wall time (`"ms"`), the most memory of the VM (`"peak_mb"`)
+  and the use of the schedulers (`"busy"`, `"cores"`).
+  """
+  def total(fun) do
+    :erlang.system_flag(:scheduler_wall_time, true)
+    sampler = sampler()
+    s0 = :erlang.statistics(:scheduler_wall_time)
+    t0 = System.monotonic_time(:millisecond)
+    result = fun.()
+    ms = System.monotonic_time(:millisecond) - t0
+    use = schedulers(s0, :erlang.statistics(:scheduler_wall_time))
+    {result, Map.merge(use, %{"ms" => ms, "peak_mb" => Float.round(peak(sampler) / 1_048_576, 1)})}
   end
 
   defp measure({name, kind, order}, level, budget, timeout) do
