@@ -304,7 +304,11 @@ defmodule World.Sculpt.Bake do
       |> World.Crew.map(&patches/1)
       |> Enum.concat()
 
-    if place(strips, 0.0, side) == :small do
+    # (The search of the scale needs only the size of each rectangle:
+    # the places of the triangles are made one time, at the end.)
+    sizes = for %{w: w, h: h, tris: [{t, _} | _]} <- strips, do: {w, h, t.id}
+
+    if rows(sizes, 0.0, side) == :small do
       :small
     else
       mean = Enum.sum(Enum.map(triangles, &:math.sqrt(2 * &1.area))) / max(length(triangles), 1)
@@ -314,7 +318,7 @@ defmodule World.Sculpt.Bake do
       {scale, _} =
         Enum.reduce(1..16, {0.0, high}, fn _, {lo, hi} ->
           mid = (lo + hi) / 2
-          if place(strips, mid, side) == :small, do: {lo, mid}, else: {mid, hi}
+          if rows(sizes, mid, side) == :small, do: {lo, mid}, else: {mid, hi}
         end)
 
       {place(strips, scale, side), scale}
@@ -523,29 +527,34 @@ defmodule World.Sculpt.Bake do
     %{tris: for({t, {a, b, c}} <- tris, do: {t, {move.(a), move.(b), move.(c)}}), w: w, h: h}
   end
 
-  # The rectangles at a scale (texels for each meter), in rows.
+  # The rectangles at a scale (texels for each meter), in rows: each
+  # with the texels of its triangles and its place.
   defp place(strips, scale, side) do
+    by = Map.new(strips, fn %{tris: [{t, _} | _]} = s -> {t.id, s} end)
+
+    for {id, at, w, h} <- rows(for(%{w: w, h: h, tris: [{t, _} | _]} <- strips, do: {w, h, t.id}), scale, side) do
+      texel = fn {x, y} -> {@border + x * scale, @border + y * scale} end
+      %{w: w, h: h, at: at, tris: for({t, {a, b, c}} <- by[id].tris, do: {t, {texel.(a), texel.(b), texel.(c)}})}
+    end
+  end
+
+  # The place of each rectangle of a size `{w, h, id}` (m) at a scale,
+  # in rows from the tallest: `[{id, at, w, h}]` in texels, or `:small`
+  # when the image has no room for them.
+  defp rows(sizes, scale, side) do
     sized =
-      strips
-      |> Enum.map(fn %{tris: tris, w: w, h: h} ->
-        texel = fn {x, y} -> {@border + x * scale, @border + y * scale} end
+      sizes
+      |> Enum.map(fn {w, h, id} -> {ceil(w * scale) + 2 * @border, ceil(h * scale) + 2 * @border, id} end)
+      |> Enum.sort_by(fn {w, h, id} -> {-h, -w, id} end)
 
-        %{
-          w: ceil(w * scale) + 2 * @border,
-          h: ceil(h * scale) + 2 * @border,
-          tris: for({t, {a, b, c}} <- tris, do: {t, {texel.(a), texel.(b), texel.(c)}})
-        }
-      end)
-      |> Enum.sort_by(fn %{w: w, h: h, tris: [{t, _} | _]} -> {-h, -w, t.id} end)
-
-    {squares, _, y, height} =
-      Enum.reduce(sized, {[], 0, 0, 0}, fn %{w: w, h: h} = s, {squares, x, y, height} ->
+    {placed, _, y, height} =
+      Enum.reduce(sized, {[], 0, 0, 0}, fn {w, h, id}, {placed, x, y, height} ->
         # A new row when the rectangle does not fit in this one.
         {x, y, height} = if x + w > side, do: {0, y + height, h}, else: {x, y, max(height, h)}
-        {[Map.put(s, :at, {x, y}) | squares], x + w, y, height}
+        {[{id, {x, y}, w, h} | placed], x + w, y, height}
       end)
 
-    if y + height > side or Enum.any?(sized, &(&1.w > side)), do: :small, else: Enum.reverse(squares)
+    if y + height > side or Enum.any?(sized, &(elem(&1, 0) > side)), do: :small, else: Enum.reverse(placed)
   end
 
   # --- The edits of each triangle ---------------------------------------------

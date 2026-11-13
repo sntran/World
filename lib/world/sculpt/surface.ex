@@ -422,22 +422,29 @@ defmodule World.Sculpt.Surface do
         end
       end)
 
+    # (A job is some groups: it gets the points of the mesh one time,
+    # and makes the points and the faces of each of its groups itself.)
     done =
       groups
       |> Enum.sort()
-      |> Enum.map(fn {g, faces} ->
-        faces = Enum.reverse(faces)
-        used = faces |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
-        local = used |> Enum.with_index() |> Map.new()
+      |> lots()
+      |> World.Crew.map(fn lot ->
+        for {g, faces} <- lot do
+          faces = Enum.reverse(faces)
+          used = faces |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+          local = used |> Enum.with_index() |> Map.new()
 
-        {{g, used}, Enum.map(used, &elem(all, &1)), Enum.map(faces, fn {f, m} -> {Enum.map(f, &local[&1]), m} end),
-         [
-           limit: free(step),
-           fixed: for(v <- used, not is_map_key(of, v), do: local[v]),
-           quadrics: Enum.map(used, &elem(qs, &1))
-         ]}
+          opts = [
+            limit: free(step),
+            fixed: for(v <- used, not is_map_key(of, v), do: local[v]),
+            quadrics: Enum.map(used, &elem(qs, &1))
+          ]
+
+          faces = Enum.map(faces, fn {f, m} -> {Enum.map(f, &local[&1]), m} end)
+          {{g, used}, World.Simplify.collapse(Enum.map(used, &elem(all, &1)), faces, 1, opts)}
+        end
       end)
-      |> World.Crew.map(fn {key, points, faces, opts} -> {key, World.Simplify.collapse(points, faces, 1, opts)} end)
+      |> Enum.concat()
       |> Enum.sort_by(&elem(&1, 0))
 
     # A point of a group that stays in the mesh has its new place and its
@@ -478,6 +485,26 @@ defmodule World.Sculpt.Surface do
 
   defp pairs([a, b, c]), do: [[a, b], [b, c], [c, a]]
 
+  # The groups of faces in lots with about the same count of faces: two
+  # lots for each scheduler. (A group is a tuple with its faces second.)
+  defp lots(groups) do
+    total = groups |> Enum.map(&length(elem(&1, 1))) |> Enum.sum()
+    most = max(div(total, 2 * System.schedulers_online()), 1)
+
+    Enum.chunk_while(
+      groups,
+      {[], 0},
+      fn g, {lot, faces} ->
+        faces = faces + length(elem(g, 1))
+        if faces >= most, do: {:cont, Enum.reverse([g | lot]), {[], 0}}, else: {:cont, {[g | lot], faces}}
+      end,
+      fn
+        {[], _} -> {:cont, nil}
+        {lot, _} -> {:cont, Enum.reverse(lot), nil}
+      end
+    )
+  end
+
   # A quadric less a quadric: the planes that a point got.
   defp less(a, b), do: List.to_tuple(Enum.zip_with(Tuple.to_list(a), Tuple.to_list(b), &(&1 - &2)))
 
@@ -512,18 +539,20 @@ defmodule World.Sculpt.Surface do
     done =
       groups
       |> Enum.sort()
-      |> Enum.map(fn {g, faces} ->
-        used = faces |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
-        local = used |> Enum.with_index() |> Map.new()
-        {budget, opts} = plan.(length(faces), g)
+      # (The budget of each group here: a job has no function of this process.)
+      |> Enum.map(fn {g, faces} -> {g, faces, plan.(length(faces), g)} end)
+      |> lots()
+      |> World.Crew.map(fn lot ->
+        for {g, faces, {budget, opts}} <- lot do
+          used = faces |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+          local = used |> Enum.with_index() |> Map.new()
+          opts = opts ++ [fixed: for(v <- used, of[v] == :many, do: local[v]), quadrics: Enum.map(used, &elem(qs, &1))]
+          local_faces = Enum.map(faces, fn {f, m} -> {Enum.map(f, &local[&1]), m} end)
 
-        {{g, used, length(faces)}, Enum.map(used, &elem(all, &1)),
-         Enum.map(faces, fn {f, m} -> {Enum.map(f, &local[&1]), m} end), budget,
-         opts ++ [fixed: for(v <- used, of[v] == :many, do: local[v]), quadrics: Enum.map(used, &elem(qs, &1))]}
+          {{g, used, length(faces)}, World.Simplify.collapse(Enum.map(used, &elem(all, &1)), local_faces, budget, opts)}
+        end
       end)
-      |> World.Crew.map(fn {key, points, faces, budget, opts} ->
-        {key, World.Simplify.collapse(points, faces, budget, opts)}
-      end)
+      |> Enum.concat()
       |> Enum.sort_by(&elem(&1, 0))
 
     case done do
