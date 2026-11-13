@@ -424,7 +424,11 @@ The data of the skill:
 - `budget`: the most triangles at `near`, `mid` and `far` (12 to
   1,000,000 each). With a budget, an edge collapse by quadric error
   metrics takes the faces to the budget, and keeps the shape and the
-  borders of the materials;
+  borders of the materials. A flat part keeps few faces, also when the
+  budget has room for more (a collapse that moves the surface by less
+  than a fiftieth of a cell costs nothing). The budget goes to the
+  parts of the sculpture by the cost of their collapses, so a small
+  part with hard edges (a chimney on a roof) keeps its corners;
 - `cells`: the size of the cells at `near`, `mid` and `far` (m, 0.001 to
   1). A part thinner than about two cells can go. With no `cells` for a
   level that has a budget, World chooses them: the largest cells that
@@ -658,6 +662,26 @@ two surfaces, one in the other, as two sculptures of Dreams are.
   }]
 }}}
 ```
+
+### The sculptures of the catalog
+
+Ten models of the catalog are a sculpture each, from edits only: no
+code of World makes their kind (`priv/drawings/NAME.json`; plan 0011).
+They are the examples of the format, and none is a copy of a real
+thing.
+
+| Model | What | It shows |
+|---|---|---|
+| `carp_edits` | A carp of 0.5 m | Groups, a mirror, a repeat, details, the body plan `fish`. |
+| `robot_edits` | A robot of 0.95 m | Hard edges, a finish of metal, a glow, the body plan `biped`. |
+| `dog_edits` | A dog of 0.5 m | The body plan `quadruped`: it walks and trots. |
+| `bird_edits` | A bird of 0.3 m | The body plan `bird`: it walks, pecks and opens its wings. |
+| `car_edits` | A car of 3.7 m | Hard edges, windows by a paint, wheels by a mirror, lamps that glow. |
+| `house_edits` | A house of 5 m by 6 m | Flat walls and a roof with few faces, a small chimney. |
+| `tree_edits` | A tree of 5 m | Tubes for the trunk and the branches, a soft crown. |
+| `chair_edits` | A chair of 0.9 m | Thin parts (the slats of the back), a paint for the cushion. |
+| `teapot_edits` | A teapot of 0.19 m | A ring, a tube, a band of gold, flowers by a repeat. |
+| `hammer_edits` | A hammer of 0.3 m | A handle of wood and a head with the finish of metal, in one mesh. |
 
 ### A sculpture with bones
 
