@@ -2,7 +2,8 @@
   "name": "carp_edits",
   "kind": "item",
   "sources": [
-    "A common carp (cá chép, Cyprinus carpio) from edits: the sizes of the carp of the catalog (priv/animals/species/carp.json: 50 cm long, a robust body, a long dorsal fin, a forked tail fin), and its colors: a dark gold coat with a darker back and a pale belly, bronze fins, rows of scales. A model of plan 0008, step 7, and of plan 0009, step 6: its eyes are a group with a mirror, its scales a repeat, and it swims with the bones of a fish."
+    "A common carp (cá chép, Cyprinus carpio) from edits: the sizes of the carp of the catalog (priv/animals/species/carp.json: 50 cm long, a robust body, a long dorsal fin, a forked tail fin), and its colors: a dark gold coat with a darker back and a pale belly, bronze fins, rows of scales.",
+    "A model of plans 0008, 0009 and 0010: its eyes are a group with a mirror, its scales a repeat, it swims with the bones of a fish, and its scales, the rays of its fins and its lateral line are paints with a raise, in its color map and its normal map."
   ],
   "materials": {
     "skin": {
@@ -102,6 +103,7 @@
               ],
               "mode": "paint",
               "blend": 0.003,
+              "raise": 0.0008,
               "color": "#c9ab5c",
               "repeat": {
                 "count": 17,
@@ -135,6 +137,7 @@
               ],
               "mode": "paint",
               "blend": 0.003,
+              "raise": 0.0008,
               "color": "#c9ab5c",
               "repeat": {
                 "count": 17,
@@ -168,6 +171,7 @@
               ],
               "mode": "paint",
               "blend": 0.003,
+              "raise": 0.0008,
               "color": "#c9ab5c",
               "repeat": {
                 "count": 17,
@@ -201,6 +205,7 @@
               ],
               "mode": "paint",
               "blend": 0.003,
+              "raise": 0.0008,
               "color": "#c9ab5c",
               "repeat": {
                 "count": 17,
@@ -234,6 +239,7 @@
               ],
               "mode": "paint",
               "blend": 0.003,
+              "raise": 0.0008,
               "color": "#c9ab5c",
               "repeat": {
                 "count": 17,
@@ -267,6 +273,7 @@
               ],
               "mode": "paint",
               "blend": 0.003,
+              "raise": 0.0008,
               "color": "#c9ab5c",
               "repeat": {
                 "count": 17,
@@ -300,6 +307,7 @@
               ],
               "mode": "paint",
               "blend": 0.003,
+              "raise": 0.0008,
               "color": "#c9ab5c",
               "repeat": {
                 "count": 17,
@@ -381,7 +389,7 @@
             {
               "shape": "ball",
               "size": [
-                0.0042
+                0.0036
               ],
               "at": [
                 0.011,
@@ -390,6 +398,7 @@
               ],
               "mode": "paint",
               "blend": 0.002,
+              "raise": -0.0015,
               "color": "#1c1712",
               "mirror": "x"
             },
@@ -629,6 +638,134 @@
               "blend": 0.006,
               "material": "skin",
               "color": "#846034"
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.007,
+                0.07,
+                0.0007
+              ],
+              "at": [
+                0,
+                -0.2231,
+                0.1492
+              ],
+              "axis": [
+                0.0,
+                -0.788,
+                -0.6157
+              ],
+              "up": [
+                0.0,
+                -0.6157,
+                0.788
+              ],
+              "mode": "paint",
+              "blend": 0.0008,
+              "raise": 0.0005,
+              "color": "#6a4a26",
+              "repeat": {
+                "count": 16,
+                "axis": [
+                  1,
+                  0,
+                  0
+                ],
+                "center": [
+                  0,
+                  -0.18,
+                  0.094
+                ],
+                "angle": 7
+              }
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.007,
+                0.03,
+                0.0007
+              ],
+              "at": [
+                0,
+                0.082,
+                0.168
+              ],
+              "axis": [
+                0.0,
+                -0.8829,
+                -0.4695
+              ],
+              "up": [
+                0.0,
+                -0.4695,
+                0.8829
+              ],
+              "mode": "paint",
+              "blend": 0.0008,
+              "raise": 0.0005,
+              "color": "#6a4a26",
+              "repeat": {
+                "count": 17,
+                "move": [
+                  0,
+                  -0.0105,
+                  0
+                ]
+              }
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.007,
+                0.03,
+                0.0007
+              ],
+              "at": [
+                0,
+                -0.085,
+                0.045
+              ],
+              "axis": [
+                0.0,
+                0.5547,
+                -0.8321
+              ],
+              "up": [
+                0.0,
+                -0.8321,
+                -0.5547
+              ],
+              "mode": "paint",
+              "blend": 0.0008,
+              "raise": 0.0005,
+              "color": "#6a4a26",
+              "repeat": {
+                "count": 5,
+                "move": [
+                  0,
+                  -0.006,
+                  0.004
+                ]
+              }
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.06,
+                0.14,
+                0.0006
+              ],
+              "at": [
+                0,
+                -0.02,
+                0.09
+              ],
+              "mode": "paint",
+              "blend": 0.0008,
+              "raise": -0.0005,
+              "color": "#7a6430"
             }
           ],
           "groups": {
@@ -685,12 +822,14 @@
             }
           },
           "budget": {
-            "near": 30000,
+            "near": 10000,
             "mid": 3000,
             "far": 600
           },
-          "cells": {
-            "near": 0.0025
+          "bake": {
+            "near": 1024,
+            "mid": 512,
+            "far": 256
           },
           "bones": [
             {

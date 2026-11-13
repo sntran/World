@@ -465,6 +465,15 @@ An edit has its `shape` and its `size`, and these keys:
   smaller than the faces of mid or far is its mean color there, with no
   noise.
 
+- `raise` (m, from -0.1 to 0.1; for an edit of the mode `paint`, and at
+  most its `blend`): the surface moves out by that much in the shape of
+  the edit, or in with less than 0, with a slope across its border as
+  wide as its `blend`. The relief follows the surface under it: a
+  cylinder across a body makes a round scale on each side, a thin box
+  through a fin makes a ray, a thin box along a body makes a groove.
+  With maps for a level (below), a raise of less than half a cell is in
+  the maps only, not in the mesh.
+
 An edit can have copies, so a few edits make much:
 
 - `mirror`: `x`, `y` or `z`, or a list of them: the copy of the edit

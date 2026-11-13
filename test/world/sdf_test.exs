@@ -221,6 +221,66 @@ defmodule World.SDFTest do
            ]
   end
 
+  test "a paint with a raise moves the surface in its shape, out or in, with a slope across its border" do
+    ball = SDF.edit(:ball, {0.5})
+    bump = SDF.edit(:ball, {0.1}, frame: Frame.move({0.0, 0.0, 0.5}), mode: :paint, blend: 0.04, raise: 0.02)
+
+    dent =
+      SDF.edit(:ball, {0.1},
+        frame: Frame.move({0.5, 0.0, 0.0}),
+        mode: :paint,
+        blend: 0.04,
+        raise: -0.02,
+        color: {9, 9, 9}
+      )
+
+    edits = [ball, bump, dent]
+    # In the shape of the paint the surface is 2 cm out (or in); away from it, where it was.
+    assert_in_delta SDF.value(edits, {0.0, 0.0, 0.52}), 0.0, 1.0e-12
+    assert_in_delta SDF.value(edits, {0.48, 0.0, 0.0}), 0.0, 1.0e-12
+    assert_in_delta SDF.value(edits, {0.0, 0.5, 0.0}), 0.0, 1.0e-12
+    # Across the border of the paint (4 cm wide): between the two.
+    edge = Vec.scale(Vec.norm({0.0, 0.1, 0.49}), 0.51)
+    assert SDF.value(edits, edge) > -0.01 and SDF.value(edits, edge) < 0.01 and SDF.value(edits, edge) != 0.01
+    # The three folds agree.
+    for p <- points(200, 0.7, 11) do
+      assert {d, _} = SDF.field(edits, p)
+      assert_in_delta d, SDF.value(edits, p), 1.0e-12
+      assert_in_delta elem(SDF.sample(edits, p), 0), d, 1.0e-12
+    end
+
+    assert SDF.color(edits, {0.48, 0.0, 0.0}) == {9, 9, 9}
+    assert_in_delta SDF.relief(edits), 0.04, 1.0e-12
+    assert SDF.relief([ball]) == 0.0
+    # The bounds hold the surface that a raise moves out.
+    assert {_, {_, _, top}} = SDF.bounds(edits)
+    assert top >= 0.52
+    assert_raise ArgumentError, fn -> SDF.edit(:ball, {0.1}, raise: 0.01) end
+
+    # For a mesh with maps: a raise of less than half a cell is not in the mesh (a new edit, with its own id).
+    assert SDF.coarse(edits, 0.03) == edits
+    assert [^ball, flat, flat_dent] = SDF.coarse(edits, 0.05)
+    assert flat.raise == 0.0 and flat.id != bump.id and flat_dent.color == dent.color
+    assert flat == SDF.edit(:ball, {0.1}, frame: Frame.move({0.0, 0.0, 0.5}), mode: :paint, blend: 0.04)
+
+    # A cell keeps the paints with a raise that reach it, and the field of those is the field of all.
+    :rand.seed(:exsss, {4, 4, 4})
+
+    for _ <- 1..300 do
+      c = {(:rand.uniform() - 0.5) * 1.4, (:rand.uniform() - 0.5) * 1.4, (:rand.uniform() - 0.5) * 1.4}
+      half = 0.01 + :rand.uniform() * 0.2
+      {kept, {lo, hi}} = SDF.cell(edits, c, half)
+
+      for _ <- 1..20 do
+        dir = Vec.norm({:rand.normal(), :rand.normal(), :rand.normal()})
+        p = Vec.add(c, Vec.scale(dir, :rand.uniform() * half))
+        assert SDF.field(kept, p) == SDF.field(edits, p)
+        # The range of the cell holds the value at each of its points.
+        assert SDF.value(edits, p) >= lo - 1.0e-12 and SDF.value(edits, p) <= hi + 1.0e-12
+      end
+    end
+  end
+
   test "the bounds of a sculpture hold its inside: the boxes of its shapes that add, grown by a quarter of its blends" do
     edits = sculpture()
     bounds = SDF.bounds(edits)

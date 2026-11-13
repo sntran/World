@@ -32,7 +32,7 @@ defmodule World.Skills.Sculpt do
   alias World.Sculpt.Bones
 
   @keys ~w(edits groups ports sources budget cells bake bones bone_blend plan gait clips)
-  @edit ~w(shape size at axis up mode blend material color mirror repeat)
+  @edit ~w(shape size at axis up mode blend material color raise mirror repeat)
   @use ~w(shape group at axis up scale mirror repeat)
   @most 10_000
   @size 1_000
@@ -87,8 +87,10 @@ defmodule World.Skills.Sculpt do
     edits = all(data)
     budget = get_in(data, ["budget", Atom.to_string(level)])
     step = step(data, level)
-    meshes = World.Sculpt.model(edits, step: step, budget: budget)
-    {meshes, materials} = maps(meshes, edits, step, get_in(data, ["bake", Atom.to_string(level)]))
+    side = get_in(data, ["bake", Atom.to_string(level)])
+    # With maps, the mesh has no relief smaller than its cells: the maps have it.
+    meshes = World.Sculpt.model(if(side, do: SDF.coarse(edits, step), else: edits), step: step, budget: budget)
+    {meshes, materials} = maps(meshes, edits, step, side)
     ports = Drawing.ports(Map.get(data, "ports", %{}))
     sources = Map.get(data, "sources", [])
 
@@ -181,7 +183,7 @@ defmodule World.Skills.Sculpt do
       |> Enum.flat_map(&specs(&1, %{}))
       |> Enum.map(fn s ->
         at = %{s.frame | at: Vec.scale(s.frame.at, k)}
-        %{s | frame: Frame.compose(place, at), size: scaled(s.shape, s.size, k), blend: s.blend * k}
+        %{s | frame: Frame.compose(place, at), size: scaled(s.shape, s.size, k), blend: s.blend * k, raise: s.raise * k}
       end)
 
     # Each copy is the whole group, in the order of its edits.
@@ -196,7 +198,8 @@ defmodule World.Skills.Sculpt do
       mode: @atoms[Map.get(e, "mode", "add")],
       blend: Map.get(e, "blend", 0) / 1,
       material: e["material"] && GLB.role(e["material"]),
-      color: e["color"] && rgb(e["color"])
+      color: e["color"] && rgb(e["color"]),
+      raise: Map.get(e, "raise", 0) / 1
     }
 
     for copy <- copies(e), do: copy.(spec)
@@ -315,10 +318,24 @@ defmodule World.Skills.Sculpt do
       optional(e, "mode", path, &choice(&1, &2, ~w(add subtract paint))) ++
       optional(e, "blend", path, &number(&1, &2, 0, 10)) ++
       optional(e, "material", path, &choice(&1, &2, GLB.palette() |> Map.keys() |> Enum.sort())) ++
-      optional(e, "color", path, &color/2)
+      optional(e, "color", path, &color/2) ++
+      optional(e, "raise", path, &lift(&1, &2, e))
   end
 
   defp edit(_e, path, _groups), do: [{path, "must be an object"}]
+
+  # The raise of an edit that paints: at most its blend, so the border
+  # of the relief is a slope, not a step.
+  defp lift(v, path, e) do
+    blend = if is_number(e["blend"]), do: e["blend"], else: 0
+
+    cond do
+      number(v, path, -0.1, 0.1) != [] -> number(v, path, -0.1, 0.1)
+      e["mode"] != "paint" -> [{path, "is for an edit of the mode paint"}]
+      abs(v) > blend -> [{path, "must be at most the blend of the edit (#{blend})"}]
+      true -> []
+    end
+  end
 
   # The place of an edit, and its copies.
   defp placed(e, path) do

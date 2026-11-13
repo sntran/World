@@ -67,6 +67,7 @@ defmodule World.SDF do
               blend: 0.0,
               material: nil,
               color: nil,
+              raise: 0.0,
               box: nil,
               id: nil
   end
@@ -81,14 +82,19 @@ defmodule World.SDF do
   An edit: a shape with its sizes (see the module), and the options
   `frame` (a `World.Frame`: the place and the turn of the shape; none
   by default), `mode` (`:add` by default), `blend` (m, 0 by default),
-  `material` (a role of the palette) and `color` (`{r, g, b}`, 0 to 255:
-  the color of the surface of the edit, `color/3`).
+  `material` (a role of the palette), `color` (`{r, g, b}`, 0 to 255:
+  the color of the surface of the edit, `color/3`) and `raise` (m, for
+  an edit that paints: the surface moves out by that much in its shape,
+  or in with less than 0, with a smooth step across its border over its
+  blend: a relief that follows the surface, as a scale or a groove).
   """
   def edit(shape, size, opts \\ []) when shape in @shapes do
     frame = Keyword.get(opts, :frame, Frame.identity())
     mode = Keyword.get(opts, :mode, :add)
     blend = Keyword.get(opts, :blend, 0.0) / 1
     unless mode in @modes, do: raise(ArgumentError, "the mode of an edit is add, subtract or paint")
+    lift = Keyword.get(opts, :raise, 0.0) / 1
+    if lift != 0.0 and mode != :paint, do: raise(ArgumentError, "only an edit that paints has a raise")
     size = floats(size)
 
     edit = %Edit{
@@ -101,13 +107,39 @@ defmodule World.SDF do
       blend: blend,
       material: Keyword.get(opts, :material),
       color: linear(Keyword.get(opts, :color)),
+      raise: lift,
       box: placed(local_bounds(shape, size), frame)
     }
 
     # The id of the edit: a hash of what it is, made once. The keys of the
     # cache of a sculpture hash the ids of its edits, not the edits.
-    %{edit | id: :erlang.md5(:erlang.term_to_binary({shape, size, frame, mode, blend, edit.material, edit.color}))}
+    identify(edit)
   end
+
+  defp identify(%Edit{} = e) do
+    %{
+      e
+      | id:
+          :erlang.md5(:erlang.term_to_binary({e.shape, e.size, e.frame, e.mode, e.blend, e.material, e.color, e.raise}))
+    }
+  end
+
+  @doc """
+  The edits for a mesh with cells of `step` m, when maps have the fine
+  relief (`World.Sculpt.Bake`): a paint with a raise of less than half a
+  cell has no raise (its relief is smaller than the mesh can show, and
+  makes its points uneven).
+  """
+  def coarse(edits, step) do
+    for e <- edits, do: if(e.raise != 0.0 and abs(e.raise) < step / 2, do: identify(%{e | raise: 0.0}), else: e)
+  end
+
+  @doc """
+  The most that the paints of some edits move the surface (m): the sum
+  of their raises, each as a length. With a relief the field is not a
+  bound of the distance any more: it is at most this far from one.
+  """
+  def relief(edits), do: Enum.reduce(edits, 0.0, &(abs(&1.raise) + &2))
 
   @doc "The ids of some edits (`edit/3`), in their order."
   def ids(edits), do: Enum.map(edits, & &1.id)
@@ -163,7 +195,11 @@ defmodule World.SDF do
   defp fold([%Edit{mode: :subtract, blend: r} = e | rest], p, d, limit),
     do: fold(rest, p, clamp(smax(d, -distance(e, p), r), limit), limit)
 
-  # A paint does not change the value.
+  # A paint with a raise moves the surface in its shape; a paint with
+  # none does not change the value.
+  defp fold([%Edit{mode: :paint, raise: h, blend: r} = e | rest], p, d, limit) when h != 0.0,
+    do: fold(rest, p, clamp(d - h * smooth(weight(-2 * distance(e, p), r)), limit), limit)
+
   defp fold([%Edit{mode: :paint} | rest], p, d, limit), do: fold(rest, p, d, limit)
 
   defp clamp(d, limit), do: min(max(d, -limit), limit)
@@ -176,7 +212,8 @@ defmodule World.SDF do
     do: {smax(d, -de, r), if(m != nil and -de > d, do: m, else: mat)}
 
   # A paint with no material (a color only) keeps the material under it.
-  defp step(%Edit{mode: :paint, material: m}, {d, mat}, de), do: {d, if(m != nil and de <= 0.0, do: m, else: mat)}
+  defp step(%Edit{mode: :paint, material: m, raise: h, blend: r}, {d, mat}, de),
+    do: {d - h * smooth(weight(-2 * de, r)), if(m != nil and de <= 0.0, do: m, else: mat)}
 
   @doc """
   The color of the surface of the edits at a point: `{r, g, b}`, 0 to
@@ -215,8 +252,10 @@ defmodule World.SDF do
     tint(rest, p, clamp(smax(d, -de, r), limit), mix(col, c, weight(-de - d, r)), limit)
   end
 
-  defp tint([%Edit{mode: :paint, blend: r, color: c} = e | rest], p, d, col, limit),
-    do: tint(rest, p, d, mix(col, c, smooth(weight(-2 * distance(e, p), r))), limit)
+  defp tint([%Edit{mode: :paint, blend: r, color: c, raise: h} = e | rest], p, d, col, limit) do
+    w = smooth(weight(-2 * distance(e, p), r))
+    tint(rest, p, clamp(d - h * w, limit), mix(col, c, w), limit)
+  end
 
   # The weight of the second of two values in their smooth minimum: 1
   # when it is less by the blend or more, 0 when it is more by the blend,
@@ -266,12 +305,13 @@ defmodule World.SDF do
   `nil` with no edit that adds: the boxes of the shapes that add, grown
   by a quarter of the sum of the blends (each smooth minimum lowers the
   field by at most a quarter of its blend, so the field is less than 0
-  only that near a shape that adds).
+  only that near a shape that adds), and by the relief of the paints
+  (`relief/1`).
   """
   def bounds(edits) do
     case for(%Edit{mode: :add, box: box} <- edits, do: box) do
       [] -> nil
-      boxes -> boxes |> Enum.reduce(&join/2) |> grow(Enum.sum(Enum.map(edits, & &1.blend)) / 4)
+      boxes -> boxes |> Enum.reduce(&join/2) |> grow(Enum.sum(Enum.map(edits, & &1.blend)) / 4 + relief(edits))
     end
   end
 
@@ -308,7 +348,8 @@ defmodule World.SDF do
           :subtract when dlo >= e.blend - lo -> {kept, range}
           :subtract -> {[e | kept], {clamp(smax(lo, -dhi, e.blend), limit), clamp(smax(hi, -dlo, e.blend), limit)}}
           :paint when dlo > e.blend / 2 -> {kept, range}
-          :paint -> {[e | kept], range}
+          # A raise lowers the field by its height at the most (or lifts it, with less than 0).
+          :paint -> {[e | kept], {clamp(lo - max(e.raise, 0.0), limit), clamp(hi - min(e.raise, 0.0), limit)}}
         end
       end)
 

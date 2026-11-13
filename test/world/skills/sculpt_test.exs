@@ -310,6 +310,35 @@ defmodule World.Skills.SculptTest do
     end
   end
 
+  test "a paint with a raise: the errors with their paths, and the raise of a group at its scale" do
+    ball = %{"shape" => "ball", "size" => [0.3]}
+
+    paint = %{
+      "shape" => "ball",
+      "size" => [0.1],
+      "at" => [0, 0, 0.3],
+      "mode" => "paint",
+      "blend" => 0.02,
+      "raise" => 0.01
+    }
+
+    assert paths(drawing(%{"edits" => [ball, paint]})) == []
+    at = "options.drawing.nodes.0.skill.sculpt.edits.1.raise"
+    bad = fn change -> paths(drawing(%{"edits" => [ball, change.(paint)]})) end
+    assert bad.(&Map.put(&1, "raise", "high")) == [at]
+    assert bad.(&Map.put(&1, "raise", 0.5)) == [at]
+    assert bad.(&Map.put(&1, "mode", "add")) == [at]
+    assert bad.(&Map.delete(&1, "mode")) == [at]
+    # More than the blend: the border of the relief would be a step.
+    assert bad.(&Map.put(&1, "raise", -0.03)) == [at]
+    assert bad.(&Map.delete(&1, "blend")) == [at]
+
+    [_, one] = Skill.edits([ball, paint])
+    assert one.raise == 0.01
+    [scaled] = Skill.edits([%{"shape" => "group", "group" => "g", "scale" => 3}], %{"g" => [paint]})
+    assert_in_delta scaled.raise, 0.03, 1.0e-12
+  end
+
   test "the errors of a mirror, a repeat and a group, each with its path; the count of the copies" do
     p = "options.drawing.nodes.0.skill.sculpt"
     ball = %{"shape" => "ball", "size" => [0.1]}

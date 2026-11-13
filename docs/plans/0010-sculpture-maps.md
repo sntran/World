@@ -57,6 +57,7 @@ here; the owner can change each one.
 | D4 | **The normal map is in the tangent space of glTF**, with the tangents that `World.GLB` gives to a primitive with a normal map. The bake uses the same rule for the tangent of each corner. | A skinned mesh turns its tangents with its bones; each app reads the same map. |
 | D5 | **Details** (`details` in the data of the skill): each one is a sculpture of its own (its edits, its cells, its budget, a mirror), built with its own tree, and its meshes are in the same part or figure. | Dreams makes a figure from many sculptures, each with its own detail. A barbel of 3 mm needs cells of 1 mm only in its own small box. |
 | D6 | **A live sculpture gives a coarse piece first.** A change walks the tree at cells of 4 times the size first (1/16 of the work), sends those pieces with their level, then the fine pieces. | The eye needs an answer in less than 0.1 s; the fine surface can come later. |
+| D8 | **A paint with a raise** (added in step 2): an edit of the mode `paint` can move the surface out or in by a height in its shape, with a slope across its border. With maps, a raise of less than half a cell is in the maps only: the mesh is made from the edits with no such raise. | The carp needs scales, rays and grooves that follow its surface. A shape that adds does not follow a surface; a paint already has its place on any surface. The relief that a mesh cannot show makes its points uneven, so it stays out of the mesh. |
 | D7 | **The body plan of a bird** for a sculpture with bones, with its clips (`walk`, `idle`, `peck`, `flap`): its animations need no clips of a template. | A second body plan proves that the bones of a sculpture are general. |
 
 ## 6. Requirements
@@ -118,12 +119,13 @@ here; the owner can change each one.
 (`docs/format.md`, "The maps of a sculpture"). The carp of plan 0009
 with maps, on 4 schedulers:
 
-| Level | Triangles | Image | Texels with a chart | The bake | The whole level |
-|---|---|---|---|---|---|
-| near | 10,000 | 1,024 | | 3.9 s | 6.0 s |
-| mid | 3,000 | 512 | 247,000 (94%) | 1.2 s | 3.3 s |
-| far | 600 | 256 | | | 2.4 s |
+| Level | Triangles | Image | The bake | The whole level |
+|---|---|---|---|---|
+| near | 10,000 | 1,024 | 3.9 s | 6.0 s |
+| mid | 3,000 | 512 | 1.2 s | 3.3 s |
+| far | 600 | 256 | (not measured alone) | 2.4 s |
 
+At mid, 247,000 of the 262,000 texels of the image are in a chart (94%).
 R4 is met (1.2 s at 512, 3.9 s at 1,024). The mid level and the far
 level now show the scales and the pupil of the carp, which only the
 near level of 30,000 triangles showed before; the shots are in step 2.
@@ -154,3 +156,48 @@ What the work found:
   each face, through `World.Build` and `World.Scene` to the GLB. The
   maps of a node go to the materials of the model as the data
   `materials` of its skill (`World.Drawing.assemble/3`).
+
+### Step 2: a paint with a raise, and the carp with maps (2026-11-13)
+
+The carp of the catalog (`priv/drawings/carp_edits.json`) has 30 edits
+in its data now. Its scales, the rays of its tail fin, of its dorsal fin
+and of its anal fin, its lateral line and its nostrils are paints with
+a raise of 0.5 mm to 1.5 mm (D8), and it has maps at each level. The
+carp of plan 0009 and this one, on the bench (the fast clock, 4
+schedulers):
+
+| | Plan 0009 | Now |
+|---|---|---|
+| Triangles: near, mid, far | 30,000, 3,000, 600 | 10,000, 3,000, 600 |
+| Cells at near | 2.5 mm | 3.5 mm |
+| The detail of the colors and of the relief | a point of the mesh (2.5 mm at near; a mean color at mid and far) | a texel: about 0.5 mm at near, 1 mm at mid, 2 mm at far (from the area of the carp and the texels in its charts) |
+| The build: near, mid, far | 3.9 s, 2.6 s, 2.0 s | 6.8 s, 3.9 s, 2.8 s |
+| The peak of the memory of the node: near, mid, far | 187 MB, 139 MB, 135 MB | 223 MB, 139 MB, 140 MB |
+| The files: near, mid, far | 1.09 MB, 0.12 MB, 0.04 MB | 4.33 MB, 1.35 MB, 0.35 MB |
+
+The shots went to the owner: the mid level and the far level have the
+scales, the rays and the round pupil of the near level. The price is the
+time of the bake (about 1 s for each 250,000 texels) and the size of the
+files (two PNG images, and three points for each triangle: a chart for
+each triangle has its own UVs).
+
+What the work found:
+
+- **A relief smaller than the cells made the outline rough:** the points
+  of the mesh went onto the ridges and the valleys of the rays at
+  random. With maps, the mesh is made from the edits with no raise of
+  less than half a cell (`World.SDF.coarse/2`), and the maps have the
+  relief from all the edits.
+- **The field with a relief is not a bound of the distance:** a raise
+  moves the value by its height at the most. The ranges of a cell take
+  that (the least value less the raise), and the tests of the tree for
+  "no surface" take twice the relief more. A test checks each brick that
+  the tree left out, for a ball with bumps and dents higher than its
+  cells.
+- **The memory of the bake: a message is a copy, a third time.** The
+  first bench of the near level showed a peak of 413 MB: each triangle
+  got its own copies of its edits back from the processes that find the
+  lists (10,000 lists of 13 edits). The lists are places in the list of
+  the edits now, and a process gets the edits of its squares one time:
+  the bake adds 75 MB at near, not 310 MB, and is 15% faster.
+

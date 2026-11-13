@@ -60,6 +60,39 @@ defmodule World.SculptTest do
     assert length(bricks) > 100
   end
 
+  test "a relief of paints: the tree has each brick whose field changes its sign, and the mesh is on the moved surface" do
+    # A ball with bumps and dents higher than its cells: the relief is in the mesh.
+    relief =
+      for {at, raise} <- [
+            {{0.0, 0.0, 0.5}, 0.06},
+            {{0.5, 0.0, 0.0}, -0.06},
+            {{0.0, -0.5, 0.0}, 0.04},
+            {{-0.35, 0.35, 0.0}, 0.05}
+          ] do
+        SDF.edit(:ball, {0.15}, frame: World.Frame.move(at), mode: :paint, blend: 0.08, raise: raise)
+      end
+
+    edits = [SDF.edit(:ball, {0.5}) | relief]
+    step = 0.02
+    %{bricks: bricks} = Sculpt.bricks(edits, step)
+    have = MapSet.new(bricks, & &1.at)
+    limit = Sculpt.limit(edits, step)
+    assert_in_delta limit, 2 * step + 2 * 0.08 + 2 * 0.21, 1.0e-12
+
+    for i <- -5..4, j <- -5..4, k <- -5..4, at = {i, j, k}, not MapSet.member?(have, at) do
+      brick = Sculpt.brick(at, edits, step, limit)
+      values = for a <- 0..8, b <- 0..8, c <- 0..8, do: Sculpt.at(brick, {a, b, c})
+      refute Enum.any?(values, &(&1 < 0)) and Enum.any?(values, &(&1 >= 0)), inspect(at)
+    end
+
+    [mesh] = Sculpt.model(edits, step: step, cache: false)
+    # The top of the bump, and the bottom of the dent.
+    {{_, _, _}, {_, _, top}} = World.Vec.bounds(mesh.points)
+    assert_in_delta top, 0.56, 0.002
+    assert Enum.any?(mesh.points, fn {x, y, z} -> abs(x - 0.44) < 0.003 and abs(y) < 0.02 and abs(z) < 0.02 end)
+    for p <- mesh.points, do: assert(abs(SDF.value(edits, p)) < 1.0e-4)
+  end
+
   test "the processes and one process give the same bricks; a sculpture with no edit that adds has none" do
     edits = stone(20)
     assert Sculpt.bricks(edits, 0.05) == Sculpt.bricks(edits, 0.05, parallel: false)

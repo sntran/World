@@ -251,6 +251,28 @@ defmodule World.Sculpt.BakeTest do
     assert g["images"] == nil and Map.has_key?(hd(hd(g["meshes"])["primitives"])["attributes"], "COLOR_0")
   end
 
+  test "with maps, a relief smaller than the cells is in the maps only; with no maps, it is in the mesh" do
+    data = %{
+      "edits" => [
+        %{"shape" => "ball", "size" => [0.3], "color" => "#c08020"},
+        %{"shape" => "ball", "size" => [0.1], "at" => [0, 0, 0.3], "mode" => "paint", "blend" => 0.02, "raise" => 0.02}
+      ],
+      "cells" => %{"far" => 0.05},
+      "budget" => %{"far" => 2_000}
+    }
+
+    top = fn data ->
+      {"ball", part, _} = hd(Detail.with(:far, fn -> Drawing.build(drawing(data)) end).nodes)
+      part.shapes |> Enum.flat_map(& &1.points) |> Enum.map(&elem(&1, 2)) |> Enum.max()
+    end
+
+    assert_in_delta top.(data), 0.32, 0.002
+    assert_in_delta top.(Map.put(data, "bake", %{"far" => 256})), 0.3, 0.005
+    # A relief of half a cell or more stays in the mesh with maps too.
+    high = put_in(data, ["cells", "far"], 0.03) |> Map.put("bake", %{"far" => 256})
+    assert_in_delta top.(high), 0.32, 0.002
+  end
+
   test "a part of a baked mesh and a mesh with no maps of one material: each point has a UV" do
     edits = [SDF.edit(:ball, {0.3}, color: {200, 100, 50})]
     {[baked], _} = Bake.maps(Sculpt.model(edits, step: 0.1, cache: false), edits, 0.1, 128)

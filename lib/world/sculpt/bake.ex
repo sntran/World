@@ -88,16 +88,27 @@ defmodule World.Sculpt.Bake do
         legs = for s <- squares, t <- [s.lower, s.upper], t != nil, into: %{}, do: {t.id, s.n - 4}
         lists = lists(triangles, legs, edits, limit)
         how = %{limit: limit, step: step}
-        # Each triangle with its short list: a process gets the lists of
-        # its squares only (a message is a copy).
-        listed = fn t -> t && Map.put(t, :list, Map.fetch!(lists, t.id)) end
+        all = List.to_tuple(edits)
 
+        # A message is a copy: a process gets the edits of its squares one
+        # time, and the short list of each triangle as places in them.
         done =
           squares
-          |> Enum.map(&%{&1 | lower: listed.(&1.lower), upper: listed.(&1.upper)})
           |> Enum.chunk_every(@group)
+          |> Stream.map(fn group ->
+            used = for(s <- group, t <- [s.lower, s.upper], t != nil, i <- Map.fetch!(lists, t.id), uniq: true, do: i)
+            place = used |> Enum.with_index() |> Map.new()
+            listed = fn t -> t && Map.put(t, :list, Enum.map(Map.fetch!(lists, t.id), &Map.fetch!(place, &1))) end
+
+            {Enum.map(used, &elem(all, &1)),
+             Enum.map(group, &%{&1 | lower: listed.(&1.lower), upper: listed.(&1.upper)})}
+          end)
           |> Task.async_stream(
-            fn group -> for s <- group, do: {s.at, s.n, texels(s, how)} end,
+            fn {some, group} ->
+              some = List.to_tuple(some)
+              edits = fn t -> t && %{t | list: Enum.map(t.list, &elem(some, &1))} end
+              for s <- group, do: {s.at, s.n, texels(%{s | lower: edits.(s.lower), upper: edits.(s.upper)}, how)}
+            end,
             max_concurrency: System.schedulers_online(),
             timeout: :infinity
           )
@@ -184,24 +195,27 @@ defmodule World.Sculpt.Bake do
 
   # --- The edits of each triangle ---------------------------------------------
 
-  # The short list of each triangle: the edits that reach its ball. First
+  # The short list of each triangle: the edits that reach its ball (their
+  # places in the list of the edits). First
   # the edits of each cube of a grid of the triangles (a cube of 8 times
   # the mean size of a triangle), then the edits of each triangle from
   # the list of its cube.
   defp lists(triangles, legs, edits, limit) do
-    balls = Map.new(triangles, &{&1.id, ball(&1, legs[&1.id])})
-    mean = Enum.sum(for {_, {_, r}} <- balls, do: r) / max(map_size(balls), 1)
+    balls = for t <- triangles, do: {t.id, ball(t, legs[t.id])}
+    mean = Enum.sum(for {_, {_, r}} <- balls, do: r) / max(length(balls), 1)
     size = max(8 * mean, 1.0e-6)
-    cube = fn {{x, y, z}, _} -> {floor(x / size), floor(y / size), floor(z / size)} end
+    # The place of each edit in the list, by its id: a list of a triangle
+    # is places, not edits (the lists come back in messages).
+    place = edits |> Enum.with_index() |> Map.new(fn {e, i} -> {e.id, i} end)
 
-    triangles
-    |> Enum.group_by(&cube.(balls[&1.id]))
+    balls
+    |> Enum.group_by(fn {_, {{x, y, z}, _}} -> {floor(x / size), floor(y / size), floor(z / size)} end)
     |> Task.async_stream(
       fn {{i, j, k}, group} ->
-        most = Enum.max(for t <- group, do: elem(balls[t.id], 1))
+        most = Enum.max(for {_, {_, r}} <- group, do: r)
         center = {(i + 0.5) * size, (j + 0.5) * size, (k + 0.5) * size}
         near = SDF.prune(edits, center, size * :math.sqrt(3) / 2 + most, limit)
-        for t <- group, {c, r} = balls[t.id], do: {t.id, SDF.prune(near, c, r, limit)}
+        for {id, {c, r}} <- group, do: {id, for(e <- SDF.prune(near, c, r, limit), do: Map.fetch!(place, e.id))}
       end,
       max_concurrency: System.schedulers_online(),
       timeout: :infinity

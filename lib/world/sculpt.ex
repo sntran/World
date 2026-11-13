@@ -178,9 +178,11 @@ defmodule World.Sculpt do
   of their search, are in the field with no limit, unless three blends
   meet there; and the field at the center of an eighth of a brick can
   be more than its half diagonal (3.5 cells) from 0, so the tree can
-  tell that it has no surface.
+  tell that it has no surface. With a relief of the paints
+  (`World.SDF.relief/1`), twice the relief more.
   """
-  def limit(edits, step), do: max(2 * step + 2 * Enum.reduce(edits, 0.0, &max(&1.blend, &2)), 4 * step)
+  def limit(edits, step),
+    do: max(2 * step + 2 * Enum.reduce(edits, 0.0, &max(&1.blend, &2)), 4 * step) + 2 * SDF.relief(edits)
 
   # The brick of a point, and the least power of 4 that holds n bricks.
   defp index({x, y, z}, size), do: {floor(x / size), floor(y / size), floor(z / size)}
@@ -364,18 +366,22 @@ defmodule World.Sculpt do
     half = side * :math.sqrt(3) / 2
     {kept, {lo, hi}} = SDF.cell(edits, center, half + border(step), limit)
     used = length(edits) + length(kept)
+    # With a relief of the paints, the field is that far from a bound of
+    # the distance at the most: a surface in a ball needs a value at its
+    # center within its radius and twice the relief.
+    more = 2 * SDF.relief(kept)
 
     cond do
       lo > 0 or hi < 0 ->
         {nil, used}
 
-      span == 1 and not Enum.any?(parts(center, side), &(abs(SDF.value(kept, &1, limit)) <= half / 2)) ->
+      span == 1 and not Enum.any?(parts(center, side), &(abs(SDF.value(kept, &1, limit)) <= half / 2 + more)) ->
         {nil, used + 8 * length(kept)}
 
       span == 1 ->
         {kept, used + 8 * length(kept)}
 
-      abs(SDF.value(kept, center, limit)) > half ->
+      abs(SDF.value(kept, center, limit)) > half + more ->
         {nil, used + length(kept)}
 
       true ->
