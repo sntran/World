@@ -440,7 +440,11 @@ The data of the skill:
   sculpture" below). A level with a bake needs a budget;
 - `occlusion` (true by default), `dirt` and `wear` (0 to 1, 0 by
   default): the look of the surface from its shape, in the maps of a
-  level with a bake ("The maps of a sculpture" below).
+  level with a bake ("The maps of a sculpture" below);
+- `look`: `real` (by default) or `flat`. With `flat`, the model has flat
+  faces, each with one color (the color of the edits at its middle),
+  and no image at any level (a `bake` is not used): the look of a game
+  with low-poly models. Give a small `budget`: each triangle shows.
 
 An edit has its `shape` and its `size`, and these keys:
 
@@ -580,6 +584,8 @@ has its smooth light, and a hard edge of hard edits stays hard.
 | `wedge` | `[hx, hy, hz]`: a box of these half sizes with a slope from its top edge at the back (y = -hy) to its bottom edge at the front (y = hy): a ramp, a roof, a blade |
 | `prism` | `[r, h, n]`: `n` flat sides (3 to 12) round z, each `r` from the axis, from z = -h to z = h: with 6, a nut or a pencil |
 | `pyramid` | `[hx, hy, h]`: a base of `2 hx` by `2 hy` at z = -h, and its point at z = h |
+| `extrude` | `{"outline": [[x, y], ...], "depth": d}`: a closed outline of 3 to 256 points in the plane of x and y of the edit, `d` deep along its z (half to each side). `round` (0 to half of the depth): the radius of the edges of its two flat ends. `smooth` (0 to 3): each time, each corner of the outline is cut, so a few points make a curve. The side of a car, the section of a hull, a gear, a letter |
+| `revolve` | `{"profile": [[r, z], ...]}`: a closed profile of 3 to 256 points (`r` of 0 or more), turned round the z of the edit; `smooth` as for the extrude. A bottle, a bowl, a baluster, a wheel. A profile away from the axis makes a hollow thing |
 
 The levels: cells of 2 cm at near, 8 cm at mid and 32 cm at far. The
 grid of each level is the same for each sculpture, so a brick (8 × 8 × 8

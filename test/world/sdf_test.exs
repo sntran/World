@@ -247,6 +247,8 @@ defmodule World.SDFTest do
       :wedge -> {u.(0.05, 0.3), u.(0.05, 0.3), u.(0.05, 0.3)}
       :prism -> {u.(0.05, 0.3), u.(0.05, 0.3), 6}
       :pyramid -> {u.(0.05, 0.3), u.(0.05, 0.3), u.(0.05, 0.3)}
+      :extrude -> {[{-0.2, -0.1}, {0.2, -0.1}, {0.25, 0.1}, {0.0, 0.05}, {-0.2, 0.15}], u.(0.05, 0.2), 0.02}
+      :revolve -> {[{0.0, -0.2}, {0.2, -0.15}, {0.1, 0.0}, {0.25, 0.2}, {0.0, 0.2}]}
     end
 
     edits =
@@ -262,7 +264,7 @@ defmodule World.SDFTest do
     # A paint with no raise is not in the list of the value.
     plain = SDF.edit(:ball, {0.2}, mode: :paint, color: {1, 2, 3})
     assert {:fast, list} = SDF.fast(edits ++ [plain])
-    assert length(list) == length(edits) and length(edits) == 13 * 2 * 4 * 2 * 2
+    assert length(list) == length(edits) and length(edits) == 15 * 2 * 4 * 2 * 2
     points = for _ <- 1..2_000, do: {u.(-1, 1), u.(-1, 1), u.(-1, 1)}
 
     # All the edits in their order, and each edit after one ball (each clause of the loop, on the two sides of 0).
@@ -501,6 +503,60 @@ defmodule World.SDFTest do
     assert SDF.bounds([SDF.edit(:ball, {1}, blend: 0.4)]) == {{-1.1, -1.1, -1.1}, {1.1, 1.1, 1.1}}
   end
 
+  test "an outline: an extrude of a rectangle is a box, a revolve of a rectangle is a cylinder; a hollow outline; round edges (plan 0012, D4)" do
+    :rand.seed(:exsss, {5, 5, 5})
+    places = for _ <- 1..600, do: {:rand.uniform() - 0.5, :rand.uniform() - 0.5, :rand.uniform() - 0.5}
+    frame = Frame.new({0.03, -0.02, 0.05}, {0.2, 0.3, 0.9}, {1.0, 0.1, 0.0})
+
+    # A rectangle of 0.4 by 0.2, 0.3 deep: the box of the half sizes 0.2, 0.1 and 0.15 (the points in each order).
+    rect = [{-0.2, -0.1}, {0.2, -0.1}, {0.2, 0.1}, {-0.2, 0.1}]
+    box = SDF.edit(:box, {0.2, 0.1, 0.15}, frame: frame)
+
+    for points <- [rect, Enum.reverse(rect)] do
+      solid = SDF.edit(:extrude, {points, 0.15, 0}, frame: frame)
+      for p <- places, do: assert_in_delta(SDF.distance(solid, p), SDF.distance(box, p), 1.0e-9)
+      assert solid.box == box.box
+    end
+
+    # A rectangle from the axis, turned round it: a cylinder.
+    can = SDF.edit(:cylinder, {0.2, 0.15}, frame: frame)
+    turned = SDF.edit(:revolve, {[{0, -0.15}, {0.2, -0.15}, {0.2, 0.15}, {0, 0.15}]}, frame: frame)
+    for p <- places, do: assert_in_delta(SDF.distance(turned, p), SDF.distance(can, p), 1.0e-9)
+    assert turned.box == can.box
+
+    # An outline with a notch (an L): a point of the notch is outside, and its distance is to the nearest side.
+    ell = SDF.edit(:extrude, {[{0, 0}, {0.3, 0}, {0.3, 0.1}, {0.1, 0.1}, {0.1, 0.3}, {0, 0.3}], 0.05, 0})
+    assert_in_delta SDF.distance(ell, {0.2, 0.2, 0.0}), 0.1, 1.0e-12
+    assert_in_delta SDF.distance(ell, {0.05, 0.2, 0.0}), -0.05, 1.0e-12
+    assert_in_delta SDF.distance(ell, {0.05, 0.2, 0.09}), 0.04, 1.0e-12
+    assert_in_delta SDF.distance(ell, {0.4, 0.2, 0.0}), :math.sqrt(0.02), 1.0e-12
+
+    # A profile away from the axis: a ring with a square section, hollow in its middle.
+    band = SDF.edit(:revolve, {[{0.2, -0.05}, {0.3, -0.05}, {0.3, 0.05}, {0.2, 0.05}]})
+    assert_in_delta SDF.distance(band, {0.0, 0.0, 0.0}), 0.2, 1.0e-12
+    assert_in_delta SDF.distance(band, {0.0, -0.25, 0.0}), -0.05, 1.0e-12
+    assert_in_delta SDF.distance(band, {0.25, 0.0, 0.1}), 0.05, 1.0e-12
+
+    # Round edges: the flat faces and the outline stay; the edge between them is in by the radius.
+    sharp = SDF.edit(:extrude, {rect, 0.15, 0})
+    round = SDF.edit(:extrude, {rect, 0.15, 0.03})
+    assert_in_delta SDF.distance(round, {0.0, 0.0, 0.15}), 0.0, 1.0e-12
+    assert_in_delta SDF.distance(round, {0.2, 0.0, 0.0}), 0.0, 1.0e-12
+    assert_in_delta SDF.distance(round, {0.2, 0.0, 0.15}), 0.03 * (:math.sqrt(2) - 1), 1.0e-12
+    assert_in_delta SDF.distance(sharp, {0.2, 0.0, 0.15}), 0.0, 1.0e-12
+    assert round.box == sharp.box
+
+    # The slope of each is at most 1 (the cells of the tree need it), and the bounds hold the inside.
+    for e <- [ell, band, round, turned] do
+      {lo, hi} = SDF.bounds([e])
+
+      for [p, q] <- Enum.chunk_every(places, 2) do
+        assert abs(SDF.distance(e, p) - SDF.distance(e, q)) <= Vec.len(Vec.sub(p, q)) * (1 + 1.0e-9)
+        if SDF.distance(e, p) < 0, do: assert(inside?({lo, hi}, p))
+      end
+    end
+  end
+
   test "the bounds hold a blend at a sharp edge: a wedge, a prism, a pyramid, a superellipsoid" do
     # The field of these shapes is less than the distance at an edge, so
     # two of them with a blend have their inside far past the edge.
@@ -573,7 +629,7 @@ defmodule World.SDFTest do
     # No edit: far outside; a cut of nothing is nothing.
     assert SDF.field([], {0, 0, 0}) == {1.0e30, nil}
     assert SDF.value([hole], {0, 0, 0}) >= 1.0e30
-    assert SDF.shapes() |> length() == 13 and SDF.modes() == [:add, :subtract, :paint, :crop]
+    assert SDF.shapes() |> length() == 15 and SDF.modes() == [:add, :subtract, :paint, :crop]
     assert_raise ArgumentError, ~r/the mode of an edit/, fn -> SDF.edit(:ball, {1}, mode: :melt) end
   end
 end

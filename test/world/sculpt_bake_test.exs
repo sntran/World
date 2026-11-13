@@ -831,6 +831,87 @@ defmodule World.Sculpt.BakeTest do
     assert_in_delta s, 0.06, 1.0e-12
   end
 
+  test "an outline in the data: an extrude and a revolve, with smooth corners; in a group at a scale" do
+    at = "options.drawing.nodes.0.skill.sculpt"
+
+    with_edit = fn e ->
+      Map.update!(@data, "edits", fn [first | rest] -> [Map.merge(Map.take(first, ["material"]), e) | rest] end)
+    end
+
+    square = [[0, 0], [0.2, 0], [0.2, 0.2], [0, 0.2]]
+    extrude = fn size -> with_edit.(%{"shape" => "extrude", "size" => size}) end
+    revolve = fn size -> with_edit.(%{"shape" => "revolve", "size" => size}) end
+    assert paths(extrude.(%{"outline" => square, "depth" => 0.1})) == []
+    assert paths(extrude.(%{"outline" => square, "depth" => 0.1, "round" => 0.05, "smooth" => 2})) == []
+    assert paths(revolve.(%{"profile" => square, "smooth" => 1})) == []
+    # The errors, each with its path.
+    assert paths(extrude.([0.1, 0.1])) == ["#{at}.edits.0.size"]
+    assert paths(extrude.(%{"outline" => Enum.take(square, 2), "depth" => 0.1})) == ["#{at}.edits.0.size.outline"]
+
+    assert paths(extrude.(%{"outline" => [[0, 0], [1], "c"], "depth" => 0.1})) == [
+             "#{at}.edits.0.size.outline.1",
+             "#{at}.edits.0.size.outline.2"
+           ]
+
+    assert paths(extrude.(%{"outline" => square, "depth" => 0})) == ["#{at}.edits.0.size.depth"]
+    assert paths(extrude.(%{"outline" => square, "depth" => 0.1, "round" => 0.06})) == ["#{at}.edits.0.size.round"]
+    assert paths(extrude.(%{"outline" => square, "depth" => 0.1, "smooth" => 4})) == ["#{at}.edits.0.size.smooth"]
+    assert paths(extrude.(%{"outline" => square, "depth" => 0.1, "height" => 1})) == ["#{at}.edits.0.size.height"]
+    assert paths(revolve.(%{"outline" => square})) == ["#{at}.edits.0.size"]
+    assert paths(revolve.(%{"profile" => [[-0.1, 0], [0.2, 0], [0.2, 0.2]]})) == ["#{at}.edits.0.size.profile.0"]
+    assert paths(revolve.(%{"profile" => square, "depth" => 1})) == ["#{at}.edits.0.size.depth"]
+    assert paths(with_edit.(%{"shape" => "sweep", "size" => [1]})) == ["#{at}.edits.0.shape"]
+
+    edits = fn list, groups -> World.Skills.Sculpt.edits(list, groups) end
+    e = %{"shape" => "extrude", "size" => %{"outline" => square, "depth" => 0.1, "round" => 0.01}}
+    assert [%{shape: :extrude, size: {points, 0.05, 0.01}}] = edits.([e], %{})
+    assert points == [{0.0, 0.0}, {0.2, 0.0}, {0.2, 0.2}, {0.0, 0.2}]
+    # Smooth corners: each time, two points for each side; the corners are cut.
+    assert [%{size: {curve, _, _}}] = edits.([put_in(e, ["size", "smooth"], 2)], %{})
+    assert length(curve) == 16 and {0.0, 0.0} not in curve
+    assert Enum.all?(curve, fn {x, y} -> x >= 0 and x <= 0.2 and y >= 0 and y <= 0.2 end)
+    r = %{"shape" => "revolve", "size" => %{"profile" => square, "smooth" => 1}}
+    assert [%{shape: :revolve, size: {profile}}] = edits.([r], %{})
+    assert length(profile) == 8
+    # In a group at a scale of 2: two times as large.
+    group = [%{"shape" => "group", "group" => "g", "scale" => 2}]
+
+    assert [%{size: {[_, {0.4, 0.0} | _], 0.1, 0.02}}, %{size: {[_, {0.4, 0.0} | _]}}] =
+             edits.(group, %{"g" => [e, put_in(r, ["size", "smooth"], 0)]})
+  end
+
+  test "the flat look: flat faces with one color each, and no image (plan 0012, R4)" do
+    assert paths(Map.put(@data, "look", "flat")) == [] and paths(Map.put(@data, "look", "real")) == []
+    assert paths(Map.put(@data, "look", "toon")) == ["options.drawing.nodes.0.skill.sculpt.look"]
+
+    g = gltf(Map.put(@data, "look", "flat"))
+    assert g["images"] == nil and g["textures"] == nil
+    assert Enum.all?(g["materials"], &(not is_map_key(&1["pbrMetallicRoughness"], "baseColorTexture")))
+
+    # Each face has its own three points, with one normal and one color.
+    model = Detail.with(:far, fn -> Drawing.build(drawing(Map.put(@data, "look", "flat"))) end)
+    [{_, part, _}] = model.nodes
+    assert part.shapes != []
+
+    for m <- part.shapes do
+      assert m.uvs == nil and m.normals == nil and m.angle == 0.0
+      assert length(m.points) == 3 * length(m.faces)
+      assert m.faces == for(i <- 0..(length(m.faces) - 1), do: [3 * i, 3 * i + 1, 3 * i + 2])
+      for [a, a, a] <- Enum.chunk_every(m.colors, 3), do: assert(is_tuple(a))
+      assert length(Enum.chunk_every(m.colors, 3)) == length(m.faces)
+
+      for [{_, n1, _}, {_, n2, _}, {_, n3, _}] <- Enum.chunk_every(Mesh.triangles(m), 3) do
+        assert Vec.len(Vec.sub(n1, n2)) < 1.0e-9 and Vec.len(Vec.sub(n1, n3)) < 1.0e-9
+      end
+    end
+
+    # A sculpture with no color: flat faces with no colors.
+    plain = Map.update!(@data, "edits", fn edits -> Enum.map(edits, &Map.delete(&1, "color")) end)
+    model = Detail.with(:far, fn -> Drawing.build(drawing(Map.put(plain, "look", "flat"))) end)
+    [{_, part, _}] = model.nodes
+    assert Enum.all?(part.shapes, &(&1.colors == nil and &1.angle == 0.0))
+  end
+
   test "a part of a baked mesh and a mesh with no maps of one material: each point has a UV" do
     edits = [SDF.edit(:ball, {0.3}, color: {200, 100, 50})]
     {[baked], _} = Bake.maps(Sculpt.model(edits, step: 0.1, cache: false), edits, 0.1, 128)

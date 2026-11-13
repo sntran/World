@@ -32,7 +32,7 @@ defmodule World.Skills.Sculpt do
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
   alias World.Sculpt.{Bones, Texture}
 
-  @keys ~w(edits groups details ports sources budget cells bake occlusion dirt wear bones bone_blend plan gait clips)
+  @keys ~w(edits groups details ports sources budget cells bake look occlusion dirt wear bones bone_blend plan gait clips)
   @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow surface mirror repeat)
   # The finishes with a name: a roughness and a metal.
   @finishes %{
@@ -84,6 +84,7 @@ defmodule World.Skills.Sculpt do
       optional(data, "cells", path, &cells/2) ++
       optional(data, "details", path, &details(&1, &2, groups)) ++
       optional(data, "bake", path, &bake(&1, &2, data)) ++
+      optional(data, "look", path, &choice(&1, &2, ~w(flat real))) ++
       optional(data, "occlusion", path, &flag/2) ++
       optional(data, "dirt", path, &number(&1, &2, 0, 1)) ++
       optional(data, "wear", path, &number(&1, &2, 0, 1)) ++
@@ -105,7 +106,9 @@ defmodule World.Skills.Sculpt do
   # (In the gate of the node: a sculpture gives its work to each
   # scheduler, so only some sculptures work at one time.)
   defp sculpture(data, _inputs, %{level: level, name: name}) do
-    side = get_in(data, ["bake", Atom.to_string(level)])
+    # The flat look has no maps: flat faces, each with one color.
+    flat? = data["look"] == "flat"
+    side = if flat?, do: nil, else: get_in(data, ["bake", Atom.to_string(level)])
 
     # The sculpture, then each of its details at this level: each one is
     # a sculpture of its own, with its edits, its cells and its budget.
@@ -114,7 +117,8 @@ defmodule World.Skills.Sculpt do
         {edits, step} = {all(d), step(d, level)}
         # With maps, the mesh has no relief smaller than its cells: the maps have it.
         from = if side, do: SDF.coarse(edits, step), else: edits
-        {World.Sculpt.model(from, step: step, budget: get_in(d, ["budget", Atom.to_string(level)])), edits, step}
+        meshes = World.Sculpt.model(from, step: step, budget: get_in(d, ["budget", Atom.to_string(level)]))
+        {if(flat?, do: Enum.map(meshes, &facets(&1, edits)), else: meshes), edits, step}
       end
 
     # (The images of the maps become PNG files in their own processes,
@@ -143,6 +147,33 @@ defmodule World.Skills.Sculpt do
       end
 
     {made, materials.(), %{}}
+  end
+
+  # A mesh for the flat look (`"look": "flat"`; plan 0012, D5): each face
+  # has its own three points, the normal of the face, and one color, the
+  # color of the edits at its middle. So a face is flat in each light,
+  # and the model needs no image.
+  defp facets(%World.Mesh{points: points, faces: faces} = mesh, edits) do
+    at = List.to_tuple(points)
+    colors? = Enum.any?(edits, & &1.color)
+    corners = for [a, b, c] <- faces, do: {elem(at, a), elem(at, b), elem(at, c)}
+
+    colors =
+      if colors? do
+        for {p, q, r} <- corners,
+            color = SDF.color(edits, Vec.scale(Vec.add(Vec.add(p, q), r), 1 / 3)),
+            _ <- 1..3,
+            do: color
+      end
+
+    %{
+      mesh
+      | points: for({p, q, r} <- corners, point <- [p, q, r], do: point),
+        faces: for(i <- 0..(length(faces) - 1)//1, do: [3 * i, 3 * i + 1, 3 * i + 2]),
+        normals: nil,
+        colors: colors,
+        angle: 0.0
+    }
   end
 
   # With `bake` for the level: the meshes with their UVs, and the maps of
@@ -323,6 +354,8 @@ defmodule World.Skills.Sculpt do
 
   # The sizes of a shape at a scale (the power of a superellipsoid stays).
   defp scaled(:tube, {points, radii}, k), do: {Enum.map(points, &Vec.scale(&1, k)), Enum.map(radii, &(&1 * k))}
+  defp scaled(:extrude, {points, h, r}, k), do: {for({x, y} <- points, do: {x * k, y * k}), h * k, r * k}
+  defp scaled(:revolve, {points}, k), do: {for({x, y} <- points, do: {x * k, y * k})}
   defp scaled(:superellipsoid, {x, y, z, e}, k), do: {x * k, y * k, z * k, e}
   defp scaled(:prism, {r, h, n}, k), do: {r * k, h * k, n}
   defp scaled(_shape, size, k), do: size |> Tuple.to_list() |> Enum.map(&(&1 * k)) |> List.to_tuple()
@@ -368,7 +401,27 @@ defmodule World.Skills.Sculpt do
   end
 
   defp size("tube", %{"points" => points, "radii" => radii}), do: {Enum.map(points, &List.to_tuple/1), radii}
+
+  # An outline with a depth: the half depth, and the radius of its edges.
+  defp size("extrude", %{"outline" => points, "depth" => depth} = s),
+    do: {curve(points, Map.get(s, "smooth", 0)), depth / 2, Map.get(s, "round", 0)}
+
+  defp size("revolve", %{"profile" => points} = s), do: {curve(points, Map.get(s, "smooth", 0))}
   defp size(_shape, size), do: List.to_tuple(size)
+
+  # The points of an outline, with its corners cut `times` times (each
+  # side gives the points at a quarter and at three quarters of it): a
+  # few points make a smooth curve.
+  defp curve(points, 0), do: Enum.map(points, &List.to_tuple/1)
+
+  defp curve(points, times) do
+    cut =
+      for {[ax, ay], [bx, by]} <- Enum.zip(points, tl(points) ++ [hd(points)]),
+          p <- [[0.75 * ax + 0.25 * bx, 0.75 * ay + 0.25 * by], [0.25 * ax + 0.75 * bx, 0.25 * ay + 0.75 * by]],
+          do: p
+
+    curve(cut, times - 1)
+  end
 
   # The checks of the data.
 
@@ -479,11 +532,13 @@ defmodule World.Skills.Sculpt do
 
   defp repeat(_v, path), do: [{path, "must be an object: count, and axis, angle, move, center"}]
 
-  defp shape(%{"shape" => shape} = e, path) when is_map_key(@sizes, shape) or shape == "tube",
+  defp shape(%{"shape" => shape} = e, path) when is_map_key(@sizes, shape) or shape in ~w(tube extrude revolve),
     do: optional(e, "size", path, &sizes(shape, &1, &2))
 
-  defp shape(%{"shape" => _}, path),
-    do: [{"#{path}.shape", "must be one of: #{Enum.join(Enum.sort(["tube", "group" | Map.keys(@sizes)]), ", ")}"}]
+  defp shape(%{"shape" => _}, path) do
+    names = Enum.sort(~w(tube extrude revolve group) ++ Map.keys(@sizes))
+    [{"#{path}.shape", "must be one of: #{Enum.join(names, ", ")}"}]
+  end
 
   defp shape(_e, _path), do: []
 
@@ -496,6 +551,30 @@ defmodule World.Skills.Sculpt do
   defp sizes("tube", _v, path),
     do: [{path, "must be {\"points\": [[x, y, z], ...], \"radii\": [r, ...]}: 2 to 256 points, a radius for each"}]
 
+  defp sizes("extrude", %{"outline" => points, "depth" => depth} = v, path) when is_list(points) do
+    World.Skill.keys(v, path, ~w(outline depth round smooth), ~w(outline depth)) ++
+      outline(points, "#{path}.outline", -@size) ++
+      number(depth, "#{path}.depth", 0.0002, @size) ++
+      optional(v, "smooth", path, &whole(&1, &2, 0, 3)) ++
+      optional(v, "round", path, fn r, at ->
+        if is_number(r) and is_number(depth) and r >= 0 and r <= depth / 2,
+          do: [],
+          else: [{at, "must be a radius from 0 to half of the depth"}]
+      end)
+  end
+
+  defp sizes("extrude", _v, path),
+    do: [{path, "must be {\"outline\": [[x, y], ...], \"depth\": d}: 3 to 256 points; and round, smooth"}]
+
+  # (The profile is on one side of the axis: no r less than 0.)
+  defp sizes("revolve", %{"profile" => points} = v, path) when is_list(points) do
+    World.Skill.keys(v, path, ~w(profile smooth), ~w(profile)) ++
+      outline(points, "#{path}.profile", 0) ++ optional(v, "smooth", path, &whole(&1, &2, 0, 3))
+  end
+
+  defp sizes("revolve", _v, path),
+    do: [{path, "must be {\"profile\": [[r, z], ...]}: 3 to 256 points, each r of 0 or more; and smooth"}]
+
   defp sizes(shape, v, path) do
     n = @sizes[shape]
 
@@ -505,6 +584,21 @@ defmodule World.Skills.Sculpt do
       [{path, "must be a list of #{n} sizes in meters, from 0 to #{@size} m (docs/format.md, \"A sculpture\")"}]
     end
   end
+
+  # The points of an outline: 3 to 256 points of two numbers, the first from `least`.
+  defp outline(points, path, least) when length(points) in 3..256 do
+    points
+    |> Enum.with_index()
+    |> Enum.flat_map(fn
+      {[a, b], _} when is_number(a) and is_number(b) and a >= least and a <= @size and abs(b) <= @size -> []
+      {_, i} -> [{"#{path}.#{i}", "must be two numbers in meters (the first from #{least}), at most #{@size} m"}]
+    end)
+  end
+
+  defp outline(_points, path, _least), do: [{path, "must be a list of 3 to 256 points"}]
+
+  defp whole(v, path, lo, hi),
+    do: if(is_integer(v) and v >= lo and v <= hi, do: [], else: [{path, "must be a whole number from #{lo} to #{hi}"}])
 
   # The rules of the sizes of some shapes.
   defp extra("round_box", [x, y, z, r], path) do

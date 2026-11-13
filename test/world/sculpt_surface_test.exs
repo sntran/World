@@ -157,6 +157,34 @@ defmodule World.Sculpt.SurfaceTest do
     assert length(ps) == 8 and closed?(ps) and manifold?(ps)
   end
 
+  test "an outline of 32 points builds: closed, and each point of its mesh within a cell of it (plan 0012, R3)" do
+    # The outline of a gear of 16 teeth, 0.1 deep, with round edges.
+    points =
+      for i <- 0..31,
+          a = i * :math.pi() / 16,
+          r = if(rem(i, 2) == 0, do: 0.3, else: 0.22),
+          do: {r * :math.cos(a), r * :math.sin(a)}
+
+    gear = SDF.edit(:extrude, {points, 0.05, 0.01}, frame: Frame.move({0.011, 0.007, 0.003}))
+    ps = pieces([gear], 0.01)
+    assert closed?(ps)
+    [mesh] = Surface.meshes(ps)
+    assert length(mesh.faces) > 5_000
+    for p <- mesh.points, do: assert(abs(SDF.distance(gear, p)) < 0.01)
+    # Its volume: the area of the outline times its depth, less the round edges.
+    area = 16 * 0.3 * 0.22 * :math.sin(:math.pi() / 16)
+    assert_in_delta volume([mesh]), area * 0.1, 0.004
+
+    # A profile of 32 points turned round the axis (a bowl with a thick wall): closed too.
+    outer = for i <- 0..15, a = i * :math.pi() / 30, do: {0.3 * :math.sin(a) + 0.001, -0.3 * :math.cos(a)}
+    inner = for i <- 15..0//-1, a = i * :math.pi() / 30, do: {0.26 * :math.sin(a) + 0.001, -0.26 * :math.cos(a)}
+    bowl = SDF.edit(:revolve, {outer ++ inner})
+    ps = pieces([bowl], 0.01)
+    assert closed?(ps)
+    [mesh] = Surface.meshes(ps)
+    for p <- mesh.points, do: assert(abs(SDF.distance(bowl, p)) < 0.01)
+  end
+
   test "the collapse keeps the points where the colors change, when the budget keeps many of the faces" do
     # A ball with a dark spot (a paint: the shape is the same with no color).
     spot = SDF.edit(:ball, {0.15}, frame: Frame.move({0.0, 0.0, 0.5}), mode: :paint, blend: 0.01, color: {10, 10, 10})

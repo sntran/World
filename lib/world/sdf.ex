@@ -49,7 +49,12 @@ defmodule World.SDF do
   - `:prism` `{r, h, n}` (`n` sides round z, each `r` from the axis, from
     z = -h to z = h; a bound);
   - `:pyramid` `{hx, hy, h}` (a base of `2 hx` by `2 hy` at z = -h, and
-    its point at z = h; a bound).
+    its point at z = h; a bound);
+  - `:extrude` `{points, h, r}` (a closed outline in the plane of x and
+    y, a list of `{x, y}`, from z = -h to z = h, with round edges of the
+    radius `r`: the side of a car, the section of a hull);
+  - `:revolve` `{points}` (a closed profile, a list of `{r, z}` with `r`
+    of 0 or more, turned round z: a bottle, a bowl, a baluster).
 
   The distances follow the formulas of Inigo Quilez
   (https://iquilezles.org/articles/distfunctions/).
@@ -72,7 +77,9 @@ defmodule World.SDF do
     :tube,
     :wedge,
     :prism,
-    :pyramid
+    :pyramid,
+    :extrude,
+    :revolve
   ]
   @modes [:add, :subtract, :paint, :crop]
 
@@ -186,8 +193,15 @@ defmodule World.SDF do
   @doc "The ids of some edits (`edit/3`), in their order."
   def ids(edits), do: Enum.map(edits, & &1.id)
 
-  defp floats({points, radii}) when is_list(points), do: {Enum.map(points, &Vec.float/1), Enum.map(radii, &(&1 / 1))}
+  defp floats({points, radii}) when is_list(points) and is_list(radii),
+    do: {Enum.map(points, &Vec.float/1), Enum.map(radii, &(&1 / 1))}
+
+  # (An outline: its points in a plane, and for an extrude its half depth and the radius of its edges.)
+  defp floats({points, h, r}) when is_list(points), do: {flat(points), h / 1, r / 1}
+  defp floats({points}) when is_list(points), do: {flat(points)}
   defp floats(size), do: size |> Tuple.to_list() |> Enum.map(&(&1 / 1)) |> List.to_tuple()
+
+  defp flat(points), do: for({x, y} <- points, do: {x / 1, y / 1})
 
   @doc "The distance from a point (in the axes of the sculpture) to the shape of an edit, or a bound of it."
   def distance(%Edit{shape: shape, size: size, local: m}, p), do: local(shape, size, point(m, p))
@@ -854,6 +868,17 @@ defmodule World.SDF do
   defp local_bounds(:prism, {r, h, n}),
     do: (fn far -> {{-far, -far, -h}, {far, far, h}} end).(r / :math.cos(:math.pi() / n))
 
+  defp local_bounds(:extrude, {points, h, _r}) do
+    {xs, ys} = Enum.unzip(points)
+    {{Enum.min(xs), Enum.min(ys), -h}, {Enum.max(xs), Enum.max(ys), h}}
+  end
+
+  defp local_bounds(:revolve, {points}) do
+    {rs, zs} = Enum.unzip(points)
+    far = Enum.max(rs)
+    {{-far, -far, Enum.min(zs)}, {far, far, Enum.max(zs)}}
+  end
+
   defp local_bounds(:tube, {points, radii}) do
     boxes = Enum.zip_with(points, radii, fn p, r -> {Vec.sub(p, {r, r, r}), Vec.add(p, {r, r, r})} end)
     Enum.reduce(boxes, &join/2)
@@ -947,12 +972,52 @@ defmodule World.SDF do
     Enum.max([-z - h, side.(x, hx), side.(y, hy)])
   end
 
+  # The extrude: the distance to the outline in its plane and the
+  # distance to its two flat ends, as for a box; the outline and the
+  # ends are in by the radius of the edges, and the shape is out by it.
+  defp local(:extrude, {points, h, r}, {x, y, z}) do
+    d = outline(points, x, y, false) + r
+    w = abs(z) - h + r
+    min(max(d, w), 0.0) + :math.sqrt(sq(max(d, 0.0)) + sq(max(w, 0.0))) - r
+  end
+
+  # The revolve: the distance to the profile in the half plane of the point.
+  defp local(:revolve, {points}, {x, y, z}), do: outline(points, :math.sqrt(x * x + y * y), z, true)
+
   defp local(:tube, {[a | rest], [ra | radii]}, p) do
     {d, _, _} =
       Enum.zip(rest, radii)
       |> Enum.reduce({@far, a, ra}, fn {b, rb}, {d, a, ra} -> {min(d, round_cone(p, a, b, ra, rb)), b, rb} end)
 
     if rest == [], do: Vec.len(Vec.sub(p, a)) - ra, else: d
+  end
+
+  # The distance from a point of a plane to a closed outline (less than
+  # 0 inside): the least distance to a side, and inside when a line from
+  # the point to the right crosses an odd count of sides. With `axis?`
+  # (a profile that turns round the axis), a side on the axis is not a
+  # side of the shape: the inside goes through the axis.
+  defp outline([first | _] = points, px, py, axis?) do
+    {square, inside} = sides(points, first, px, py, {@far, false}, axis?)
+    if inside, do: -:math.sqrt(square), else: :math.sqrt(square)
+  end
+
+  # (Each side from a point to the next one, and from the last to the first.)
+  defp sides([a], first, px, py, so_far, axis?), do: side(a, first, px, py, so_far, axis?)
+
+  defp sides([a, b | rest], first, px, py, so_far, axis?),
+    do: sides([b | rest], first, px, py, side(a, b, px, py, so_far, axis?), axis?)
+
+  defp side({ax, _}, {bx, _}, _px, _py, so_far, true) when ax == 0.0 and bx == 0.0, do: so_far
+
+  defp side({ax, ay}, {bx, by}, px, py, {least, inside}, _axis?) do
+    {ex, ey} = {bx - ax, by - ay}
+    {wx, wy} = {px - ax, py - ay}
+    long = ex * ex + ey * ey
+    t = if long > 0.0, do: min(max((wx * ex + wy * ey) / long, 0.0), 1.0), else: 0.0
+    {dx, dy} = {wx - ex * t, wy - ey * t}
+    crosses = ay > py != by > py and px < ax + ex * (py - ay) / ey
+    {min(least, dx * dx + dy * dy), if(crosses, do: not inside, else: inside)}
   end
 
   # A step of Newton for the root of the nearest point of an ellipsoid.

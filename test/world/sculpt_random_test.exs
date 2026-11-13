@@ -44,6 +44,18 @@ defmodule World.Sculpt.RandomTest do
       map({size, size, size}, fn {x, y, z} -> %{"shape" => "wedge", "size" => [x, y, z]} end),
       map({size, size, integer(3..8)}, fn {r, h, n} -> %{"shape" => "prism", "size" => [r, h, n]} end),
       map({size, size, size}, fn {x, y, h} -> %{"shape" => "pyramid", "size" => [x, y, h]} end),
+      # An outline with `n` corners (each second one nearer to the middle), with a depth; and a profile turned round the axis.
+      map({size, integer(3..9), size, number(0.5, 1.0), integer(0..2)}, fn {r, n, depth, dent, smooth} ->
+        outline =
+          for i <- 0..(n - 1), a = 2 * :math.pi() * i / n, k = if(rem(i, 2) == 0, do: 1.0, else: dent) do
+            [Float.round(k * r * :math.cos(a), 3), Float.round(k * r * :math.sin(a), 3)]
+          end
+
+        %{"shape" => "extrude", "size" => %{"outline" => outline, "depth" => depth, "smooth" => smooth}}
+      end),
+      map({size, size, size, number(0.0, 0.1)}, fn {r1, r2, h, hole} ->
+        %{"shape" => "revolve", "size" => %{"profile" => [[hole, 0], [hole + r1, 0], [hole + r2, h], [hole, h]]}}
+      end),
       map({list_of(place(), min_length: 2, max_length: 4), number(0.03, 0.08)}, fn {points, r} ->
         %{"shape" => "tube", "size" => %{"points" => points, "radii" => List.duplicate(r, length(points))}}
       end)
