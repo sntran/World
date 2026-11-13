@@ -165,10 +165,15 @@ defmodule World.Sculpt.Bake do
         :small
 
       {squares, scale} ->
+        # The size of a texel on the surface. (When only the charts with
+        # no size fit the image, the scale is 0: each chart is then one
+        # texel, and a texel reads the field as from far away.)
+        texel = 1 / max(scale, 1.0e-9)
+
         lists =
           triangles
           |> Enum.group_by(fn %{id: {mi, _}} -> mi end)
-          |> Enum.map(fn {mi, group} -> lists(group, 1 / scale, elem(fields, mi)) end)
+          |> Enum.map(fn {mi, group} -> lists(group, texel, elem(fields, mi)) end)
           |> Enum.reduce(%{}, &Map.merge/2)
 
         all = List.to_tuple(edits)
@@ -213,7 +218,7 @@ defmodule World.Sculpt.Bake do
             some = List.to_tuple(some)
             # (A tube of the list has only its cones near the triangle: `World.SDF.focus/3`.)
             edits = fn {t, at} ->
-              {center, far} = ball(t, 1 / scale)
+              {center, far} = ball(t, texel)
               {%{t | list: SDF.focus(Enum.map(t.list, &elem(some, &1)), center, far)}, at}
             end
 
@@ -799,29 +804,33 @@ defmodule World.Sculpt.Bake do
     far = SDF.fast(SDF.prune(edits, center, half + (f2 + 0.5) * step, limit))
 
     # How much of the way along the normal is taken: 0 with nothing
-    # there, 1 with a surface at the place.
-    taken = fn list, p, n, cells ->
+    # there, 1 with a surface at the place. The way is from the value at
+    # the place: a place on a triangle is a little over or under the
+    # surface (the triangle is not the surface), and that is not a crease.
+    taken = fn list, p, n, cells, here ->
       d = cells * step
-      min(max((d - SDF.value(list, Vec.add(p, Vec.scale(n, d)), limit)) / d, 0.0), 1.0)
+      min(max((d + here - SDF.value(list, Vec.add(p, Vec.scale(n, d)), limit)) / d, 0.0), 1.0)
     end
 
     # How thin the solid is under the place: 0 under a flat face (the
     # field at a depth is that depth), more near a sharp edge.
-    thin = fn p, n ->
+    thin = fn p, n, here ->
       d = @under * step
-      min(max((d + SDF.value(near, Vec.sub(p, Vec.scale(n, d)), limit)) / d, 0.0), 1.0)
+      min(max((d - here + SDF.value(near, Vec.sub(p, Vec.scale(n, d)), limit)) / d, 0.0), 1.0)
     end
 
     fine = fn {c, p, _, _, {weights, _}} ->
       n = Vec.norm(mix(c.normals, weights))
-      edge = if look.wear > 0.0, do: thin.(p, n), else: 0.0
-      [taken.(near, p, n, n1), taken.(near, p, n, n2), edge]
+      here = SDF.value(near, p, limit)
+      edge = if look.wear > 0.0, do: thin.(p, n, here), else: 0.0
+      [taken.(near, p, n, n1, here), taken.(near, p, n, n2, here), edge]
     end
 
     wide = fn {c, p, _, _, {weights, _}} ->
       n = Vec.norm(mix(c.normals, weights))
+      here = SDF.value(far, p, limit)
       # (The square: a part that is far takes a small part of the sky.)
-      [taken.(far, p, n, f1) ** 2, taken.(far, p, n, f2) ** 2]
+      [taken.(far, p, n, f1, here) ** 2, taken.(far, p, n, f2, here) ** 2]
     end
 
     grid = fn every, read ->
