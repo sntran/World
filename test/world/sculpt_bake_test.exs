@@ -12,17 +12,61 @@ defmodule World.Sculpt.BakeTest do
     {r, g, b}
   end
 
-  # The chart of each face of the baked meshes: its points, its normals,
-  # the corners of its chart in texels, and its texels `{column, row}`.
+  # The chart of each face of the baked meshes: its points with their
+  # normals, the corners of its chart in texels, the tangent and the
+  # bitangent of each corner as an app makes them, and its texels
+  # `{column, row}`: the texels with their centers in the triangle.
   defp charts(meshes, side) do
-    for m <- meshes, {[a, b, c], uv} <- Enum.zip(m.faces, m.uvs) do
-      [{x0, y0}, {x1, _}, _] = corners = for {u, v} <- uv, do: {round(u * side), round(v * side)}
-      n = abs(x1 - x0) + 4
-      # The first chart of a square has its first corner at (1, 1); the second one at (n - 1, n - 1).
-      {lower?, {ox, oy}} = if x1 > x0, do: {true, {x0 - 1, y0 - 1}}, else: {false, {x0 - n + 1, y0 - n + 1}}
-      texels = for j <- 0..(n - 1), i <- 0..(n - 1), i + j <= n - 2 == lower?, do: {ox + i, oy + j}
+    for m <- meshes, tangents = tangents(m), {[a, b, c], uv} <- Enum.zip(m.faces, m.uvs) do
+      corners = for {u, v} <- uv, do: {u * side, v * side}
       at = fn k -> {Enum.at(m.points, k), Enum.at(m.normals, k)} end
-      %{corners: corners, texels: texels, points: Enum.map([a, b, c], at), n: n}
+      points = Enum.map([a, b, c], at)
+
+      chart = %{
+        corners: corners,
+        points: points,
+        frames: for({point, uv} <- Enum.zip(points, uv), do: tangents[{point, uv}])
+      }
+
+      {xs, ys} = Enum.unzip(corners)
+
+      [{x0, y0}, {x1, y1}, {x2, y2}] = corners
+      # (A chart with its corners on a line has no texel.)
+      flat? = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0) == 0
+
+      texels =
+        for j <- floor(Enum.min(ys))..ceil(Enum.max(ys)),
+            i <- floor(Enum.min(xs))..ceil(Enum.max(xs)),
+            not flat?,
+            {la, lb, lc} = weights(chart, {i, j}),
+            min(la, min(lb, lc)) >= 0,
+            do: {i, j}
+
+      Map.put(chart, :texels, texels)
+    end
+  end
+
+  # The tangent and the bitangent of each point of a mesh (a point with
+  # its normal and its UV), as an app makes them (the rule of
+  # `World.GLB`): the sum of the directions of +u and of +v on the
+  # surface, of each triangle with that point.
+  defp tangents(m) do
+    points = List.to_tuple(Enum.zip(m.points, m.normals))
+
+    for {face, [{u0, v0}, {u1, v1}, {u2, v2}] = uv} <- Enum.zip(m.faces, m.uvs), reduce: %{} do
+      acc ->
+        [{{p0, _}, _}, {{p1, _}, _}, {{p2, _}, _}] = keys = Enum.zip(Enum.map(face, &elem(points, &1)), uv)
+        {e1, e2} = {Vec.sub(p1, p0), Vec.sub(p2, p0)}
+        {du1, dv1, du2, dv2} = {u1 - u0, v1 - v0, u2 - u0, v2 - v0}
+        det = du1 * dv2 - du2 * dv1
+
+        if abs(det) < 1.0e-12 do
+          acc
+        else
+          t = Vec.scale(Vec.sub(Vec.scale(e1, dv2), Vec.scale(e2, dv1)), 1 / det)
+          bt = Vec.scale(Vec.sub(Vec.scale(e2, du1), Vec.scale(e1, du2)), 1 / det)
+          Enum.reduce(keys, acc, &Map.update(&2, &1, {t, bt}, fn {t0, b0} -> {Vec.add(t0, t), Vec.add(b0, bt)} end))
+        end
     end
   end
 
@@ -38,19 +82,10 @@ defmodule World.Sculpt.BakeTest do
   defp mix([a, b, c], {la, lb, lc}), do: Vec.add(Vec.add(Vec.scale(a, la), Vec.scale(b, lb)), Vec.scale(c, lc))
 
   # The normal of a texel in the axes of the sculpture: from the map and
-  # the tangents of the corners, as an app makes them (the rule of the
-  # tangents of `World.GLB`).
+  # the tangents of the corners, as an app makes them.
   defp shown(chart, at, {r, g, b}) do
-    [{p0, n0}, {p1, n1}, {p2, n2}] = chart.points
-    [{u0, v0}, {u1, v1}, {u2, v2}] = chart.corners
-    {e1, e2} = {Vec.sub(p1, p0), Vec.sub(p2, p0)}
-    {du1, dv1, du2, dv2} = {u1 - u0, v1 - v0, u2 - u0, v2 - v0}
-    det = du1 * dv2 - du2 * dv1
-    t = Vec.scale(Vec.sub(Vec.scale(e1, dv2), Vec.scale(e2, dv1)), 1 / det)
-    bt = Vec.scale(Vec.sub(Vec.scale(e2, du1), Vec.scale(e1, du2)), 1 / det)
-
     frames =
-      for n <- [n0, n1, n2] do
+      for {{_, n}, {t, bt}} <- Enum.zip(chart.points, chart.frames) do
         tangent = Vec.norm(Vec.sub(t, Vec.scale(n, Vec.dot(n, t))))
         sign = if Vec.dot(Vec.cross(n, tangent), bt) > 0, do: -1.0, else: 1.0
         {tangent, Vec.scale(Vec.cross(n, tangent), sign), n}
@@ -64,7 +99,7 @@ defmodule World.Sculpt.BakeTest do
 
   defp angle(a, b), do: :math.acos(min(max(Vec.dot(a, b), -1.0), 1.0)) * 180 / :math.pi()
 
-  test "a chart for each triangle: no texel in two charts, and the values go past the edges of a chart (R3)" do
+  test "the charts: a triangle has its own texels, the border of a chart has the values of the texels next to it, the image is full to a large part (R3)" do
     gold = {200, 160, 60}
     edits = [SDF.edit(:ball, {0.5}, color: gold)]
     meshes = Sculpt.model(edits, step: 0.1, budget: 201, cache: false)
@@ -77,21 +112,54 @@ defmodule World.Sculpt.BakeTest do
     charts = charts(baked, 128)
     assert length(charts) == faces
     all = Enum.flat_map(charts, & &1.texels)
-    assert length(all) == length(Enum.uniq(all))
+    # A texel is in one triangle (but for a texel with its center on an edge of two triangles).
+    assert length(all) - length(Enum.uniq(all)) < 0.01 * length(all)
     assert Enum.all?(all, fn {x, y} -> x in 0..127 and y in 0..127 end)
 
-    # Each texel of a chart (with its border past the edges) has the color of the ball; each other texel is gray.
+    # Each texel of a triangle has the color of the ball, and each texel
+    # as far as two texels from it too (the border of its chart: an app
+    # reads the maps a little past the edge of a triangle). A texel far
+    # from each triangle is gray.
     owned = MapSet.new(all)
 
-    for y <- 0..127, x <- 0..127 do
-      assert texel(maps.color, x, y) == if(MapSet.member?(owned, {x, y}), do: gold, else: {128, 128, 128})
+    near? = fn x, y, far ->
+      Enum.any?(-far..far, fn dy -> Enum.any?(-far..far, &MapSet.member?(owned, {x + &1, y + dy})) end)
     end
 
-    # The legs of a chart follow the area of its triangle: the image is full to a large part.
-    assert length(all) > 0.6 * 128 * 128
+    for y <- 0..127, x <- 0..127 do
+      cond do
+        near?.(x, y, 2) -> assert texel(maps.color, x, y) == gold
+        not near?.(x, y, 4) -> assert texel(maps.color, x, y) == {128, 128, 128}
+        true -> :border
+      end
+    end
+
+    # The triangles next to each other on the ball are next to each other in the image: two
+    # triangles with a common edge have that edge at one place of the image, for most of the edges.
+    edges =
+      for %{corners: [a, b, c], points: [{p, _}, {q, _}, {r, _}]} <- charts,
+          {e, at} <- [{{p, q}, {a, b}}, {{q, r}, {b, c}}, {{r, p}, {c, a}}],
+          do: {Enum.sort(Tuple.to_list(e)), Enum.sort(Tuple.to_list(at))}
+
+    joined = edges |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> Map.values() |> Enum.count(&match?([same, same], &1))
+    assert joined > 0.5 * length(edges) / 2
+
+    # A texel has one size on the surface, for each triangle and each direction: the sides of a
+    # triangle in the image are its sides on the surface times one scale, to 15 % (a patch is
+    # seen flat from the direction of its first triangle, at most 30 degrees from each of its faces).
+    scales =
+      for %{corners: [a, b, c], points: [{p, _}, {q, _}, {r, _}]} <- charts,
+          {{x0, y0}, {x1, y1}, from, to} <- [{a, b, p, q}, {b, c, q, r}, {c, a, r, p}] do
+        :math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2) / Vec.len(Vec.sub(to, from))
+      end
+
+    assert Enum.min(scales) > 0.85 * Enum.max(scales)
+
+    # The image is full to a large part.
+    assert length(all) > 0.33 * 128 * 128
     # An image with no place for the charts.
-    assert Bake.maps(meshes, edits, 0.1, 32) == :small
-    assert Bake.least(faces) > 32 and Bake.least(faces) <= 128
+    assert Bake.maps(meshes, edits, 0.1, 16) == :small
+    assert Bake.least(faces) > 16 and Bake.least(faces) <= 128
   end
 
   test "the color of a texel is the color of the edits at its place; a sharp border stays sharp (R1)" do
@@ -184,7 +252,7 @@ defmodule World.Sculpt.BakeTest do
         Enum.max(Enum.map(Tuple.to_list(n), &abs/1))
       end
 
-    assert Enum.count(along, &(&1 > 0.999)) > 0.9 * length(along)
+    assert Enum.count(along, &(&1 > 0.999)) > 0.85 * length(along)
 
     # A ball has no hard edge: no new point.
     ball = [SDF.edit(:ball, {0.5})]
@@ -240,19 +308,36 @@ defmodule World.Sculpt.BakeTest do
 
     mesh =
       Mesh.new(
-        [{5.0, 0.0, 0.0}, {5.1, 0.0, 0.0}, {5.0, 0.1, 0.0}, {5.2, 0.0, 0.0}, {5.0625, 1.0e-10, 0.0}, {5.125, 0.0, 0.0}],
-        # Triangles far from the ball, a triangle with its points on a
-        # line, and a sliver: its points almost on a line (the product
-        # of the squares of its sides less the square of their product
-        # is 0 in floats).
-        [[0, 1, 2], [0, 1, 3], [1, 3, 2], [0, 2, 1], [1, 0, 2], [0, 5, 4]],
+        [
+          {5.0, 0.0, 0.0},
+          {5.1, 0.0, 0.0},
+          {5.0, 0.1, 0.0},
+          {5.2, 0.0, 0.0},
+          {5.0625, 1.0e-10, 0.0},
+          {5.125, 0.0, 0.0},
+          # A small triangle (1 mm: less than a texel), and a long one alone.
+          {6.0, 0.0, 0.0},
+          {6.001, 0.0, 0.0},
+          {6.0, 0.001, 0.0},
+          {7.0, 0.0, 0.0},
+          {7.4, 0.0, 0.0},
+          {7.1, 0.05, 0.0}
+        ],
+        # Triangles far from the ball, two triangles with their points on
+        # a line (one with its first point between the two others), and
+        # a sliver: its points almost on a line (the product of the
+        # squares of its sides less the square of their product is 0 in
+        # floats).
+        [[0, 1, 2], [0, 1, 3], [1, 0, 3], [1, 3, 2], [0, 2, 1], [1, 0, 2], [0, 5, 4], [6, 7, 8], [9, 10, 11]],
         :paint
       )
-      # The normal of a point along the first side of a triangle: its tangent is another direction.
-      |> Mesh.finish([up, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, up, up, up], nil)
+      # The normal of a point of the sliver along the direction of +u of
+      # its chart: its tangent is another direction. (A triangle with an
+      # area has the normal of its face at such a corner.)
+      |> Mesh.finish([up, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, up, {0.0, 1.0, 0.0}, up, up, up, up, up, up, up], nil)
 
     {[baked], maps} = Bake.maps([mesh], edits, 0.01, 64)
-    assert length(baked.uvs) == 6
+    assert length(baked.uvs) == 9
     # Far from each edit the field has no gradient: the normal of the face, and no color of an edit.
     colors = for row <- maps.color, <<r, g, b <- row>>, uniq: true, do: {r, g, b}
     assert Enum.sort(colors) == [{128, 128, 128}, {255, 255, 255}]

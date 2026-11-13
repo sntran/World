@@ -6,15 +6,18 @@ defmodule World.Sculpt.Bake do
   of the edits at the size of a texel, not at the size of a cell or of a
   triangle.
 
-  **A chart for each triangle.** A triangle has a right triangle of
-  texels, two in a square of `n` texels on a side. The first is at the
-  corner of the square, the second is the first turned by a half turn.
-  The legs of a triangle are `n - 4` texels; each texel of the square
-  belongs to the triangle on its side of the diagonal, so each chart has
-  a border of one texel or more with the values of the field past its
-  edges, and a texel of one chart is never in the next one. The legs
-  follow the area of the triangle; the squares go into the image in
-  rows, the largest first, and the scale is the largest one that fits.
+  **The charts.** A chart is a patch of triangles of the mesh: a first
+  triangle, and the triangles round it that are joined to it by edges
+  (with less than 35 degrees between two faces at an edge) and that
+  face less than 25 degrees from the first one. The patch is seen flat
+  from the direction of its first triangle: a texel is as large on the
+  surface along each direction, to a tenth, for each triangle of the
+  image (the scale of the image), a long thin one too. So a chart is
+  one piece of the surface with nothing cut at an edge inside it. A
+  patch has 64 triangles at the most. A chart has the rectangle of its
+  patch (turned to the least area) with a border of two texels. The
+  rectangles go into the image in rows, the highest first, and the
+  scale is the largest one that fits.
 
   **A texel** is a place on the plane of its triangle. Its color is the
   color of the edits there (`World.SDF.sample/3`). Its normal is the
@@ -22,7 +25,13 @@ defmodule World.Sculpt.Bake do
   texels of the chart gives the part in the plane, and one value off the
   plane gives the rest. The edits of a triangle are the edits that reach
   its ball (`World.SDF.prune/4`), so a texel takes two values of a short
-  list.
+  list. A texel of the border (past an edge of its triangle) has the
+  values at the nearest place of the edge. An app with antialiasing
+  reads the maps as far as a pixel past the edge of a triangle: with
+  the border of two texels it reads the same surface there, when a
+  pixel is not more than two texels. (That is why a texel has one size
+  on the surface for each triangle: a pixel past the edge of a thin
+  triangle is then no more texels than past the edge of a large one.)
 
   **The normal map** has the normal in the tangent space of glTF: at a
   texel, the tangent, the bitangent and the normal are the means of
@@ -34,11 +43,14 @@ defmodule World.Sculpt.Bake do
 
   alias World.{Mesh, SDF, Sculpt, Vec}
 
-  # The least and the most legs of a chart, in texels.
-  @least 2
-  @most 252
-  # The squares of one process.
-  @group 24
+  # The border of a rectangle round its triangles, in texels.
+  @border 2
+  # The most triangles of a patch, and the cosine of the most angle from
+  # the face of its first triangle to the face of another one (25 degrees).
+  @patch 256
+  @tilt 0.866
+  # The texels round the triangles of a chart that have values.
+  @reach 3
   # The cosine of the most angle from the normal of a point to a face that keeps that normal (35 degrees).
   @hard 0.819
   # The corners of a tetrahedron: four values there give the gradient of a field at its center.
@@ -50,8 +62,9 @@ defmodule World.Sculpt.Bake do
   @plain <<255, 153, 0>>
 
   @doc """
-  The least side of an image (texels) for `faces` triangles: each pair
-  of triangles needs a square of 6 texels, and the rows lose some.
+  The least side of an image (texels) for `faces` triangles: a triangle
+  alone needs a rectangle of 4 by 4 texels (its border), and the rows
+  lose some.
   """
   def least(faces), do: ceil(:math.sqrt(faces * 18 * 1.1)) + 6
 
@@ -119,48 +132,62 @@ defmodule World.Sculpt.Bake do
       :small ->
         :small
 
-      squares ->
-        # The legs of the chart of each triangle: its texels go 1.5 texels past its corners.
-        legs = for s <- squares, t <- [s.lower, s.upper], t != nil, into: %{}, do: {t.id, s.n - 4}
-
+      {squares, scale} ->
         lists =
           triangles
           |> Enum.group_by(fn %{id: {mi, _}} -> mi end)
-          |> Enum.map(fn {mi, group} -> lists(group, legs, elem(fields, mi)) end)
+          |> Enum.map(fn {mi, group} -> lists(group, 1 / scale, elem(fields, mi)) end)
           |> Enum.reduce(&Map.merge/2)
 
         all = List.to_tuple(edits)
 
         # A message is a copy: a process gets the edits of its squares one
         # time, and the short list of each triangle as places in them.
+        # The rectangles of a process have about the same count of
+        # texels as those of each other process (a rectangle can be 2
+        # texels or 20,000).
+        most = max(div(Enum.sum(for s <- squares, do: s.w * s.h), 16 * System.schedulers_online()), 1)
+
         done =
           squares
-          |> Enum.chunk_every(@group)
+          |> Enum.chunk_while(
+            {[], 0},
+            fn s, {group, texels} ->
+              if texels + s.w * s.h >= most,
+                do: {:cont, Enum.reverse([s | group]), {[], 0}},
+                else: {:cont, {[s | group], texels + s.w * s.h}}
+            end,
+            fn
+              {[], _} -> {:cont, nil}
+              {group, _} -> {:cont, Enum.reverse(group), nil}
+            end
+          )
           |> Stream.map(fn group ->
-            used = for(s <- group, t <- [s.lower, s.upper], t != nil, i <- Map.fetch!(lists, t.id), uniq: true, do: i)
+            used = for(s <- group, {t, _} <- s.tris, i <- Map.fetch!(lists, t.id), uniq: true, do: i)
             place = used |> Enum.with_index() |> Map.new()
-            listed = fn t -> t && Map.put(t, :list, Enum.map(Map.fetch!(lists, t.id), &Map.fetch!(place, &1))) end
 
-            {Enum.map(used, &elem(all, &1)),
-             Enum.map(group, &%{&1 | lower: listed.(&1.lower), upper: listed.(&1.upper)})}
+            listed = fn {t, at} ->
+              {Map.put(t, :list, Enum.map(Map.fetch!(lists, t.id), &Map.fetch!(place, &1))), at}
+            end
+
+            {Enum.map(used, &elem(all, &1)), Enum.map(group, &%{&1 | tris: Enum.map(&1.tris, listed)})}
           end)
           |> Task.async_stream(
             fn {some, group} ->
               some = List.to_tuple(some)
-              edits = fn t -> t && %{t | list: Enum.map(t.list, &elem(some, &1))} end
-              for s <- group, do: {s.at, s.n, texels(%{s | lower: edits.(s.lower), upper: edits.(s.upper)}, defaults)}
+              edits = fn {t, at} -> {%{t | list: Enum.map(t.list, &elem(some, &1))}, at} end
+              for s <- group, do: {s.at, {s.w, s.h}, texels(%{s | tris: Enum.map(s.tris, edits)}, defaults, side)}
             end,
             max_concurrency: System.schedulers_online(),
             timeout: :infinity
           )
           |> Enum.flat_map(fn {:ok, group} -> group end)
 
+        # The UVs of the corners of each triangle (v down from the top of the image).
         uvs =
-          for s <- squares,
-              {t, half} <- [{s.lower, :lower}, {s.upper, :upper}],
-              t != nil,
-              into: %{},
-              do: {t.id, uv(s, half, side)}
+          for %{at: {x, y}} = s <- squares, {t, corners} <- s.tris, into: %{} do
+            {t.id, for({i, j} <- Tuple.to_list(corners), do: {(x + i) / side, (y + j) / side})}
+          end
 
         meshes =
           for {m, mi} <- Enum.with_index(meshes) do
@@ -195,7 +222,11 @@ defmodule World.Sculpt.Bake do
       Enum.reduce(faces, {[], [], tuple_size(pt)}, fn [a, b, c] = face, {faces, more, next} ->
         cross = Vec.cross(Vec.sub(elem(pt, b), elem(pt, a)), Vec.sub(elem(pt, c), elem(pt, a)))
 
-        if Vec.len(cross) < 1.0e-18 do
+        {e1, e2} = {Vec.sub(elem(pt, b), elem(pt, a)), Vec.sub(elem(pt, c), elem(pt, a))}
+
+        # A triangle with almost no area keeps the normals of its points:
+        # the normal of its face is not sure (its points are on a line).
+        if Vec.len(cross) < 1.0e-4 * (Vec.dot(e1, e1) + Vec.dot(e2, e2)) do
           {[face | faces], more, next}
         else
           flat = Vec.norm(cross)
@@ -224,57 +255,236 @@ defmodule World.Sculpt.Bake do
 
   # --- The charts -------------------------------------------------------------
 
-  # The squares of the triangles in the image: `[%{at: {x, y}, n: n,
-  # lower: triangle, upper: triangle or nil}]`, at the largest scale that
-  # fits (a search by halves), or `:small`.
+  # The rectangles of the charts in the image, and the scale of the
+  # image (texels for each meter): `{[%{at: {x, y}, w: w, h: h, tris:
+  # [{triangle, the texels of its corners in the rectangle}]}], scale}`,
+  # at the largest scale that fits (a search by halves), or `:small`.
   defp pack(triangles, side) do
-    if place(triangles, 0.0, side) == :small do
+    strips = patches(triangles)
+
+    if place(strips, 0.0, side) == :small do
       :small
     else
       mean = Enum.sum(Enum.map(triangles, &:math.sqrt(2 * &1.area))) / max(length(triangles), 1)
-      high = @most / max(mean, 1.0e-9)
+      # At this scale a triangle of the mean size is two times as wide as the image.
+      high = 2 * side / max(mean, 1.0e-9)
 
       {scale, _} =
         Enum.reduce(1..24, {0.0, high}, fn _, {lo, hi} ->
           mid = (lo + hi) / 2
-          if place(triangles, mid, side) == :small, do: {lo, mid}, else: {mid, hi}
+          if place(strips, mid, side) == :small, do: {lo, mid}, else: {mid, hi}
         end)
 
-      place(triangles, scale, side)
+      {place(strips, scale, side), scale}
     end
   end
 
-  # The squares at a scale (texels for each meter), in rows.
-  defp place(triangles, scale, side) do
-    sized =
-      triangles
-      |> Enum.map(&{legs(&1.area, scale), &1})
-      |> Enum.sort_by(fn {legs, t} -> {-legs, t.id} end)
-      |> Enum.chunk_every(2)
+  # The patches of the triangles, each seen flat: `[%{tris: [{triangle,
+  # the places of its corners on the plane of the patch (meters)}], w:
+  # the width of the patch, h: its height}]`. The largest free triangle
+  # starts a patch. The patch then takes, ring by ring, each free
+  # triangle of its mesh across an edge of one of its triangles, that is
+  # less than 35 degrees from that triangle and less than 25 degrees
+  # from the first one, and that does not lie on a triangle of the
+  # patch (a surface that goes round and over itself).
+  defp patches(triangles) do
+    by_id = Map.new(triangles, &{&1.id, &1})
 
-    {squares, _, y, height} =
-      Enum.reduce(sized, {[], 0, 0, 0}, fn [{legs, lower} | rest], {squares, x, y, height} ->
-        n = legs + 4
-        upper = with [{_, t}] <- rest, do: t, else: (_ -> nil)
-        # A new row when the square does not fit in this one.
-        {x, y, height} = if x + n > side, do: {0, y + height, n}, else: {x, y, max(height, n)}
-        {[%{at: {x, y}, n: n, lower: lower, upper: upper} | squares], x + n, y, height}
+    across =
+      for t <- triangles, {k, key, _} <- edges(t), reduce: %{} do
+        acc -> Map.update(acc, key, [{t.id, k}], &[{t.id, k} | &1])
+      end
+
+    {patches, _} =
+      triangles
+      |> Enum.sort_by(&{-&1.area, &1.id})
+      |> Enum.reduce({[], MapSet.new()}, fn t, {patches, used} ->
+        cond do
+          t.id in used ->
+            {patches, used}
+
+          Vec.len(flat(t)) < 1.0e-18 ->
+            # A triangle with no area has no direction: alone, on its longest edge.
+            [{k, _, length} | _] = edges(t)
+            {foot, height} = apex(t.points, k)
+            alone = [{t, unturned({{foot, height}, {0.0, 0.0}, {length, 0.0}}, k)}]
+            {[level(alone) | patches], MapSet.put(used, t.id)}
+
+          true ->
+            axis = Vec.norm(flat(t))
+            x = Vec.norm(Vec.cross(axis, if(abs(elem(axis, 0)) < 0.9, do: {1.0, 0.0, 0.0}, else: {0.0, 1.0, 0.0})))
+            y = Vec.cross(axis, x)
+
+            seen = fn %{points: {p0, p1, p2}} ->
+              for(p <- [p0, p1, p2], do: {Vec.dot(p, x), Vec.dot(p, y)}) |> List.to_tuple()
+            end
+
+            used = MapSet.put(used, t.id)
+            {tris, used} = grow([t], {[{t, seen.(t)}], 1}, used, {across, by_id, axis, seen})
+            {[level(tris) | patches], used}
+        end
       end)
 
-    if y + height > side, do: :small, else: Enum.reverse(squares)
+    Enum.reverse(patches)
   end
 
-  # The legs of the chart of a triangle (an even count of texels): the
-  # legs of a right triangle of its area, at the scale.
-  defp legs(area, scale), do: min(max(2 * round(scale * :math.sqrt(2 * area) / 2), @least), @most)
+  # The patch with the triangles round the triangles of `ring` (the
+  # triangles that it took last), ring by ring. Gives the patch and the
+  # triangles that are not free.
+  defp grow([], {tris, _count}, used, _mesh), do: {Enum.reverse(tris), used}
 
-  # The UVs of the three corners of a triangle in its square (v down
-  # from the top of the image).
-  defp uv(%{at: {x, y}, n: n}, :lower, side),
-    do: for({i, j} <- [{1, 1}, {n - 3, 1}, {1, n - 3}], do: {(x + i) / side, (y + j) / side})
+  defp grow(ring, patch, used, {across, by_id, axis, seen} = mesh) do
+    {next, patch, used} =
+      for t <- ring, {k, key, _} <- edges(t), {id, ko} <- Map.fetch!(across, key), reduce: {[], patch, used} do
+        {next, {tris, count} = patch, used} ->
+          o = by_id[id]
 
-  defp uv(%{at: {x, y}, n: n}, :upper, side),
-    do: for({i, j} <- [{n - 1, n - 1}, {3, n - 1}, {n - 1, 3}], do: {(x + i) / side, (y + j) / side})
+          # The two go round their edge in opposite directions, as the faces of a closed mesh do.
+          with true <- count < @patch and id not in used and smooth?(t, o),
+               true <- Vec.dot(flat(o), axis) >= @tilt * Vec.len(flat(o)),
+               true <-
+                 elem(t.points, rem(k + 1, 3)) == elem(o.points, rem(ko + 2, 3)) and
+                   elem(t.points, rem(k + 2, 3)) == elem(o.points, rem(ko + 1, 3)),
+               at = seen.(o),
+               false <- Enum.any?(tris, fn {_, other} -> overlap?(at, other) end) do
+            {[o | next], {[{o, at} | tris], count + 1}, MapSet.put(used, id)}
+          else
+            _ -> {next, patch, used}
+          end
+      end
+
+    grow(Enum.reverse(next), patch, used, mesh)
+  end
+
+  # The edges of a triangle, the longest first: `{k, key, length}`, the
+  # edge `k` is the edge with no corner `k`.
+  defp edges(%{id: {mesh, _}, points: points}) do
+    for k <- 0..2 do
+      {p, q} = {elem(points, rem(k + 1, 3)), elem(points, rem(k + 2, 3))}
+      {k, {mesh, min(p, q), max(p, q)}, Vec.len(Vec.sub(q, p))}
+    end
+    |> Enum.sort_by(fn {k, _, length} -> {-length, k} end)
+  end
+
+  defp smooth?(a, b) do
+    {na, nb} = {flat(a), flat(b)}
+    {la, lb} = {Vec.len(na), Vec.len(nb)}
+    la > 1.0e-18 and lb > 1.0e-18 and Vec.dot(na, nb) >= @hard * la * lb
+  end
+
+  defp flat(%{points: {p0, p1, p2}}), do: Vec.cross(Vec.sub(p1, p0), Vec.sub(p2, p0))
+
+  # The corner `k` of a triangle over its edge `k`: the place of its
+  # foot along the edge (from the corner after `k`), and its height.
+  defp apex(points, k) do
+    {p, a, b} = {elem(points, k), elem(points, rem(k + 1, 3)), elem(points, rem(k + 2, 3))}
+    length = Vec.len(Vec.sub(b, a))
+    along = if length > 1.0e-18, do: Vec.scale(Vec.sub(b, a), 1 / length), else: {1.0, 0.0, 0.0}
+    foot = Vec.dot(Vec.sub(p, a), along)
+    {foot, Vec.len(Vec.sub(Vec.sub(p, a), Vec.scale(along, foot)))}
+  end
+
+  # Three places `{of the corner k, of the corner after it, of the next one}` in the order of the corners.
+  defp unturned(places, 0), do: places
+  defp unturned({a, b, c}, 1), do: {c, a, b}
+  defp unturned({a, b, c}, 2), do: {b, c, a}
+
+  # Two flat triangles lie on each other: a corner of one is in the
+  # other, or two of their edges cross. (Two triangles with a common
+  # corner or a common edge, each on its side, do not.)
+  defp overlap?({{ax, ay}, {bx, by}, {cx, cy}} = one, {{dx, dy}, {ex, ey}, {fx, fy}} = other) do
+    # First their boxes: most triangles of a patch are far from each other.
+    if max(ax, max(bx, cx)) < min(dx, min(ex, fx)) or max(dx, max(ex, fx)) < min(ax, min(bx, cx)) or
+         max(ay, max(by, cy)) < min(dy, min(ey, fy)) or max(dy, max(ey, fy)) < min(ay, min(by, cy)) do
+      false
+    else
+      {a, b} = {Tuple.to_list(one), Tuple.to_list(other)}
+      sides = fn [p, q, r] -> [{p, q}, {q, r}, {r, p}] end
+
+      Enum.any?(a, &within?(&1, b)) or Enum.any?(b, &within?(&1, a)) or
+        Enum.any?(sides.(a), fn e -> Enum.any?(sides.(b), &cross?(e, &1)) end)
+    end
+  end
+
+  defp turn2({ax, ay}, {bx, by}, {cx, cy}), do: (bx - ax) * (cy - ay) - (cx - ax) * (by - ay)
+
+  # A place is in a flat triangle, not on its border.
+  defp within?(p, [a, b, c]) do
+    size = abs(turn2(a, b, c))
+    least = 1.0e-9 * size
+    turns = [turn2(a, b, p), turn2(b, c, p), turn2(c, a, p)]
+    size > 0.0 and (Enum.all?(turns, &(&1 > least)) or Enum.all?(turns, &(&1 < -least)))
+  end
+
+  # Two segments cross at a place that is not an end of one of them.
+  defp cross?({a, b}, {c, d}) do
+    turns = [turn2(a, b, c), turn2(a, b, d), turn2(c, d, a), turn2(c, d, b)]
+    least = 1.0e-9 * Enum.sum(Enum.map(turns, &abs/1))
+
+    [s1, s2, s3, s4] =
+      for t <- turns do
+        cond do
+          t > least -> 1
+          t < -least -> -1
+          true -> 0
+        end
+      end
+
+    s1 * s2 < 0 and s3 * s4 < 0
+  end
+
+  # The turns of a rectangle that are tried for a patch: each 2 degrees of a quarter turn.
+  @turns for k <- 0..44, a = k * :math.pi() / 90, do: {:math.cos(a), :math.sin(a)}
+
+  # The turn that gives the rectangle of a patch the least area (its
+  # cosine and its sine), and that rectangle: its corner, its width and
+  # its height.
+  defp fit(tris) do
+    places = for {_, at} <- tris, p <- Tuple.to_list(at), uniq: true, do: p
+
+    @turns
+    |> Enum.map(fn turn ->
+      {xs, ys} = places |> Enum.map(&turned(turn, &1)) |> Enum.unzip()
+      {{x0, x1}, {y0, y1}} = {Enum.min_max(xs), Enum.min_max(ys)}
+      {turn, {x0, y0, x1 - x0, y1 - y0}}
+    end)
+    |> Enum.min_by(fn {_, {_, _, w, h}} -> w * h end)
+  end
+
+  defp turned({cos, sin}, {x, y}), do: {x * cos + y * sin, y * cos - x * sin}
+
+  # A patch turned so that its rectangle has the least area, with the
+  # corner of its rectangle at the origin.
+  defp level(tris) do
+    {turn, {x0, y0, w, h}} = fit(tris)
+    move = fn p -> (fn {x, y} -> {x - x0, y - y0} end).(turned(turn, p)) end
+    %{tris: for({t, {a, b, c}} <- tris, do: {t, {move.(a), move.(b), move.(c)}}), w: w, h: h}
+  end
+
+  # The rectangles at a scale (texels for each meter), in rows.
+  defp place(strips, scale, side) do
+    sized =
+      strips
+      |> Enum.map(fn %{tris: tris, w: w, h: h} ->
+        texel = fn {x, y} -> {@border + x * scale, @border + y * scale} end
+
+        %{
+          w: ceil(w * scale) + 2 * @border,
+          h: ceil(h * scale) + 2 * @border,
+          tris: for({t, {a, b, c}} <- tris, do: {t, {texel.(a), texel.(b), texel.(c)}})
+        }
+      end)
+      |> Enum.sort_by(fn %{w: w, h: h, tris: [{t, _} | _]} -> {-h, -w, t.id} end)
+
+    {squares, _, y, height} =
+      Enum.reduce(sized, {[], 0, 0, 0}, fn %{w: w, h: h} = s, {squares, x, y, height} ->
+        # A new row when the rectangle does not fit in this one.
+        {x, y, height} = if x + w > side, do: {0, y + height, h}, else: {x, y, max(height, h)}
+        {[Map.put(s, :at, {x, y}) | squares], x + w, y, height}
+      end)
+
+    if y + height > side or Enum.any?(sized, &(&1.w > side)), do: :small, else: Enum.reverse(squares)
+  end
 
   # --- The edits of each triangle ---------------------------------------------
 
@@ -283,8 +493,8 @@ defmodule World.Sculpt.Bake do
   # the edits of each cube of a grid of the triangles (a cube of 8 times
   # the mean size of a triangle), then the edits of each triangle from
   # the list of its cube.
-  defp lists(triangles, legs, %{edits: edits, limit: limit, first: first}) do
-    balls = for t <- triangles, do: {t.id, ball(t, legs[t.id])}
+  defp lists(triangles, texel, %{edits: edits, limit: limit, first: first}) do
+    balls = for t <- triangles, do: {t.id, ball(t, texel)}
     mean = Enum.sum(for {_, {_, r}} <- balls, do: r) / max(length(balls), 1)
     size = max(8 * mean, 1.0e-6)
     # The place of each edit in the list, by its id: a list of a triangle
@@ -307,46 +517,54 @@ defmodule World.Sculpt.Bake do
     |> Map.new()
   end
 
-  # The ball of the texels of a triangle: its center, and the most
-  # distance to a corner of its chart with its border (1.5 texels past
-  # each corner of the triangle, for legs of that many texels; a small
-  # chart goes far past its triangle), and a part more for the value off
-  # the plane.
-  defp ball(%{points: {p0, p1, p2}}, legs) do
+  # The ball of the places where the texels of a triangle read the field:
+  # its center, and the most distance to a corner of the triangle, and
+  # two texels and a part more (a texel in the triangle reads the field
+  # as far as a texel from its place).
+  defp ball(%{points: {p0, p1, p2}}, texel) do
     c = Vec.scale(Vec.add(Vec.add(p0, p1), p2), 1 / 3)
     far = Enum.max(for p <- [p0, p1, p2], do: Vec.len(Vec.sub(p, c)))
-    {c, far * (1 + 4.5 / legs) * 1.1 + 1.0e-9}
+    {c, (far + 2.5 * texel) * 1.05 + 1.0e-9}
   end
 
   # --- The texels of a square -------------------------------------------------
 
-  # The rows of a square: `{colors, normals}`, each a list of `n`
-  # binaries from the top.
-  defp texels(%{n: n, lower: lower, upper: upper}, defaults) do
-    charts = {chart(lower, :lower, n), upper && chart(upper, :upper, n)}
-    owner = fn i, j -> if i + j <= n - 2, do: elem(charts, 0), else: elem(charts, 1) end
-    # The texels (i, j) and (k, l) are of one chart.
-    same = fn i, j, k, l -> i + j <= n - 2 == k + l <= n - 2 end
+  # The rows of a rectangle: `{colors, normals, finishes, glows}`, each a
+  # list of `h` binaries from the top.
+  defp texels(%{w: w, h: h, tris: tris}, defaults, side) do
+    # (An app makes no tangent from a triangle with almost no area of
+    # UVs: `World.GLB`. The UVs are the texels over the side of the image.)
+    least = 1.0e-12 * side * side
+    charts = tris |> Enum.map(fn {t, corners} -> chart(t, corners, least) end) |> framed() |> List.to_tuple()
 
-    # The value and the color of the field at each texel of the square.
+    # The chart, the place, the value and the color of the field at each
+    # texel of a triangle, and the weights of the corners of the
+    # triangle at that place.
     values =
-      for j <- 0..(n - 1), i <- 0..(n - 1), c = owner.(i, j), c != nil, c.flat == false, into: %{} do
-        {{i, j}, SDF.sample(c.list, spot(c, i, j), c.limit)}
+      for {{i, j}, {k, weights}} <- owners(charts, w, h), c = elem(charts, k), p = mix(c.points, weights), into: %{} do
+        {f, color} = SDF.sample(c.list, p, c.limit)
+        {{i, j}, {c, p, f, color, weights}}
       end
 
-    rows =
-      for j <- 0..(n - 1) do
-        for i <- 0..(n - 1), reduce: {<<>>, <<>>, <<>>, <<>>} do
-          {colors, normals, finishes, glows} ->
-            case {owner.(i, j), values[{i, j}]} do
-              {c, {f, {r, g, b}}} ->
-                # The finish of the texel, with the finish of an edit only.
-                {finish, glow} = if defaults, do: finish(c, i, j, {r, g, b}, defaults), else: {<<>>, <<>>}
+    done =
+      for {{i, j} = at, {c, p, f, {r, g, b}, weights}} <- values, into: %{} do
+        # The finish of the texel, with the finish of an edit only.
+        {finish, glow} = if defaults, do: finish(c, p, {r, g, b}, defaults), else: {<<>>, <<>>}
+        {at, {<<r, g, b>>, normal(c, i, j, {p, f, weights}, values), finish, glow}}
+      end
 
-                {<<colors::binary, r, g, b>>, <<normals::binary, normal(c, i, j, f, values, same)::binary>>,
+    done = spread(done, w, h)
+
+    rows =
+      for j <- 0..(h - 1) do
+        for i <- 0..(w - 1), reduce: {<<>>, <<>>, <<>>, <<>>} do
+          {colors, normals, finishes, glows} ->
+            case done[{i, j}] do
+              {color, normal, finish, glow} ->
+                {<<colors::binary, color::binary>>, <<normals::binary, normal::binary>>,
                  <<finishes::binary, finish::binary>>, <<glows::binary, glow::binary>>}
 
-              _ ->
+              nil ->
                 {<<colors::binary, @gray::binary>>, <<normals::binary, @flat::binary>>,
                  <<finishes::binary, @plain::binary>>, <<glows::binary, 0, 0, 0>>}
             end
@@ -357,47 +575,107 @@ defmodule World.Sculpt.Bake do
      Enum.map(rows, &elem(&1, 3))}
   end
 
+  # The texels next to a texel: the four at its sides first.
+  @next [{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}]
+
+  # The texels of a rectangle with the border of its triangles: ring by
+  # ring to `@reach` texels, a texel with no values takes the values of
+  # a texel next to it. An app reads the maps a little past the edge of
+  # a triangle (the mean of four texels; a pixel past the edge with
+  # antialiasing): it reads the same surface there.
+  #
+  # The normal of a texel of the first ring goes on with the change of
+  # the two texels before it (the texel next to it, and the one behind
+  # that): on a round surface the normals go on across the edge of a
+  # patch as they are on the next patch, with no step in the light. A
+  # texel of the border does not read the field: past an edge can be
+  # another part of the sculpture.
+  defp spread(inside, w, h) do
+    {done, _} =
+      Enum.reduce(1..@reach, {inside, Enum.sort(Map.keys(inside))}, fn ring, {done, from} ->
+        {done, next} =
+          for {i, j} <- from,
+              {di, dj} <- @next,
+              {k, l} = {i + di, j + dj},
+              k >= 0 and k < w and l >= 0 and l < h,
+              reduce: {done, []} do
+            {done, next} ->
+              if is_map_key(done, {k, l}) do
+                {done, next}
+              else
+                near = Map.fetch!(done, {i, j})
+                value = if ring == 1, do: on(near, inside[{i - di, j - dj}]), else: near
+                {Map.put(done, {k, l}, value), [{k, l} | next]}
+              end
+          end
+
+        {done, Enum.sort(next)}
+      end)
+
+    done
+  end
+
+  # The values one texel after `near`: its color and its finish, and its
+  # normal with the change from `far` to `near`, when that change is
+  # small (the two are of one smooth surface). The same with no `far`.
+  defp on(near, nil), do: near
+
+  defp on({color, <<x1, y1, z1>> = normal, finish, glow}, {_, <<x2, y2, z2>>, _, _}) do
+    if max(abs(x1 - x2), max(abs(y1 - y2), abs(z1 - z2))) <= 12,
+      do: {color, <<byte8(2 * x1 - x2), byte8(2 * y1 - y2), byte8(2 * z1 - z2)>>, finish, glow},
+      else: {color, normal, finish, glow}
+  end
+
+  defp byte8(v), do: min(max(v, 0), 255)
+
   # The bytes of the finish of a texel (the roughness in the green, the
   # metal in the blue), and of its glow (its color times its glow).
-  defp finish(c, i, j, {r, g, b}, defaults) do
-    {rough, metal, glow} = SDF.finish(c.list, spot(c, i, j), defaults)
+  defp finish(c, p, {r, g, b}, defaults) do
+    {rough, metal, glow} = SDF.finish(c.list, p, defaults)
     {<<255, round(rough * 255), round(metal * 255)>>, <<round(r * glow), round(g * glow), round(b * glow)>>}
   end
 
-  # The chart of a triangle in a square of n texels: the place of a
-  # texel is `base + i u + j v`; and the frames of its corners.
-  defp chart(%{points: {p0, p1, p2}, normals: {n0, n1, n2}, list: list, limit: limit, step: step}, half, n) do
-    legs = n - 4
+  # The chart of a triangle with the texels of its corners (the centers
+  # of the texels are at their numbers and a half): the place of a texel
+  # is `base + i u + j v`; and the frames of its corners.
+  defp chart(%{points: {p0, p1, p2}, normals: normals, list: list, limit: limit, step: step}, corners, least) do
+    {{x0, y0}, {x1, y1}, {x2, y2}} = corners
     {e1, e2} = {Vec.sub(p1, p0), Vec.sub(p2, p0)}
     cross = Vec.cross(e1, e2)
-    area = Vec.len(cross)
+    {d1x, d1y, d2x, d2y} = {x1 - x0, y1 - y0, x2 - x0, y2 - y0}
+    turn = d1x * d2y - d2x * d1y
 
-    if area < 1.0e-18 do
-      %{flat: true}
+    # The move on the surface for one texel along a row (u) and along a
+    # column (v): the two sides of the triangle are these moves times
+    # the texels between its corners.
+    moves =
+      if abs(turn) >= least do
+        {Vec.scale(Vec.sub(Vec.scale(e1, d2y), Vec.scale(e2, d1y)), 1 / turn),
+         Vec.scale(Vec.sub(Vec.scale(e2, d1x), Vec.scale(e1, d2x)), 1 / turn)}
+      end
+
+    if Vec.len(cross) < 1.0e-18 or moves == nil do
+      %{flat: true, moves: moves, normals: normals, corners: corners}
     else
-      face = Vec.norm(cross)
-      # The first chart: the corner at the texel (1, 1). The second one:
-      # at (n - 1, n - 1), with its legs to the other side.
-      {sign, first} = if half == :lower, do: {1.0, -0.5}, else: {-1.0, n - 1.5}
-      {u, v} = {Vec.scale(e1, sign / legs), Vec.scale(e2, sign / legs)}
-      base = Vec.add(p0, Vec.scale(Vec.add(e1, e2), first / legs))
+      {u, v} = moves
+      base = Vec.sub(p0, Vec.add(Vec.scale(u, x0 - 0.5), Vec.scale(v, y0 - 0.5)))
       {uu, uv, vv} = {Vec.dot(u, u), Vec.dot(u, v), Vec.dot(v, v)}
-      # The square of the area of u and v. (Not `uu * vv - uv * uv`: that is 0 for a thin triangle.)
-      det = area * area / (legs * legs * legs * legs)
+      det = uu * vv - uv * uv
       off = min(:math.sqrt(:math.sqrt(uu * vv)) / 2, step / 2)
 
       %{
         flat: false,
-        # A long chart: a texel is more than a cell from the next one, or
-        # the triangle is thin. A texel past an edge of its triangle
-        # would be far from it, at another part of the sculpture, and the
-        # texels are too far from each other for a gradient. Its texels
-        # read the field in the triangle, each with small steps round it.
-        long: max(uu, vv) > step * step or area < 0.02 * (Vec.dot(e1, e1) + Vec.dot(e2, e2)),
+        # A long chart: a texel is more than a cell from the next one,
+        # and the texels are too far from each other for a gradient. Its
+        # texels read the field each with small steps round it.
+        long: max(uu, vv) > step * step,
         points: {p0, p1, p2},
-        half: half,
-        legs: legs,
-        n: n,
+        normals: normals,
+        moves: moves,
+        corners: corners,
+        # The numbers for the weights of the corners at a texel.
+        corner: {x0, y0},
+        sides: {d1x / turn, d1y / turn, d2x / turn, d2y / turn},
         list: list,
         # The list for the hot loop of the value (`World.SDF.fast/1`).
         fast: SDF.fast(list),
@@ -409,34 +687,96 @@ defmodule World.Sculpt.Bake do
         # changes along u and along v.
         du: Vec.scale(Vec.sub(Vec.scale(u, vv), Vec.scale(v, uv)), 1 / det),
         dv: Vec.scale(Vec.sub(Vec.scale(v, uu), Vec.scale(u, uv)), 1 / det),
-        face: face,
-        off: off,
-        frames: for(k <- [n0, n1, n2], do: frame(k, Vec.scale(e1, sign), Vec.scale(e2, sign)))
+        face: Vec.norm(cross),
+        off: off
       }
+    end
+  end
+
+  # The charts of a rectangle with the frames of their corners. An app
+  # makes the tangent of a point from each triangle with that point
+  # (`World.GLB`: the sum of the moves along u of the triangles). The
+  # triangles of a strip have points in common (the same place in the
+  # image, and the same normal): the tangent of such a point is from
+  # each of them.
+  defp framed(charts) do
+    sums =
+      for %{moves: {u, v}, corners: corners, normals: normals} <- charts, k <- 0..2, reduce: %{} do
+        acc ->
+          Map.update(acc, {elem(corners, k), elem(normals, k)}, {u, v}, fn {a, b} -> {Vec.add(a, u), Vec.add(b, v)} end)
+      end
+
+    for chart <- charts do
+      if chart.flat do
+        chart
+      else
+        frames =
+          for k <- 0..2 do
+            {u, v} = Map.fetch!(sums, {elem(chart.corners, k), elem(chart.normals, k)})
+            frame(elem(chart.normals, k), u, v)
+          end
+
+        Map.put(chart, :frames, frames)
+      end
+    end
+  end
+
+  # The chart of each texel of a triangle (its place in `charts`), and
+  # the weights of the corners of the triangle at the place where the
+  # texel reads the field: `%{{i, j} => {chart, weights}}`. A texel with
+  # its center in a triangle is of that triangle, and reads the field at
+  # its center. A triangle with no center of a texel in it (it is
+  # thinner than a texel) has the free texels that it touches: each
+  # reads the field at the place of the triangle nearest to its center.
+  # A triangle with no area has no texel.
+  defp owners(charts, w, h) do
+    box = fn {{x0, y0}, {x1, y1}, {x2, y2}}, more ->
+      for j <- max(floor(Enum.min([y0, y1, y2]) - 0.5) - more, 0)..min(ceil(Enum.max([y0, y1, y2])) + more, h - 1)//1,
+          i <- max(floor(Enum.min([x0, x1, x2]) - 0.5) - more, 0)..min(ceil(Enum.max([x0, x1, x2])) + more, w - 1)//1,
+          do: {i, j}
+    end
+
+    {owned, thin} =
+      for {%{flat: false} = c, k} <- Enum.with_index(Tuple.to_list(charts)), reduce: {%{}, []} do
+        {owned, thin} ->
+          centers =
+            for {i, j} <- box.(c.corners, 0), weights = weights(c, i, j), in?(weights), do: {{i, j}, {k, weights}}
+
+          {Enum.reduce(centers, owned, fn {at, owner}, owned -> Map.put_new(owned, at, owner) end),
+           if(centers == [], do: [{c, k} | thin], else: thin)}
+      end
+
+    for {%{corners: {{x0, y0}, {x1, y1}, {x2, y2}}} = c, k} <- Enum.reverse(thin),
+        {i, j} <- box.(c.corners, 1),
+        reduce: owned do
+      owned ->
+        {l0, l1, l2} = weights = inside(weights(c, i, j))
+        {x, y} = {l0 * x0 + l1 * x1 + l2 * x2 - (i + 0.5), l0 * y0 + l1 * y1 + l2 * y2 - (j + 0.5)}
+        # (The triangle touches the square of the texel: its nearest place is in the circle round that square.)
+        if x * x + y * y <= 0.5, do: Map.put_new(owned, {i, j}, {k, weights}), else: owned
     end
   end
 
   # The place of a texel of a chart.
   defp at(c, i, j), do: Vec.add(c.base, Vec.add(Vec.scale(c.u, i * 1.0), Vec.scale(c.v, j * 1.0)))
 
-  # The place where a texel reads the field: its place; in a long chart,
-  # the place in the triangle at its weights with none less than 0.
-  defp spot(%{long: false} = c, i, j), do: at(c, i, j)
+  # A place with these weights of the corners of a triangle is in the triangle.
+  defp in?({l0, l1, l2}), do: l0 >= -1.0e-9 and l1 >= -1.0e-9 and l2 >= -1.0e-9
 
-  defp spot(%{points: {p0, p1, p2}} = c, i, j) do
-    {l0, l1, l2} = inside(weights(c, i, j))
-    Vec.add(Vec.add(Vec.scale(p0, l0), Vec.scale(p1, l1)), Vec.scale(p2, l2))
-  end
-
-  # The weights of the three corners at a texel.
-  defp weights(%{half: :lower, legs: legs}, i, j), do: weights((i - 0.5) / legs, (j - 0.5) / legs)
-  defp weights(%{n: n, legs: legs}, i, j), do: weights((n - 1.5 - i) / legs, (n - 1.5 - j) / legs)
-  defp weights(l1, l2), do: {1 - l1 - l2, l1, l2}
-
+  # The weights of the place of a triangle nearest (about) to a place with these weights: none less than 0.
   defp inside({a, b, c}) do
     {a, b, c} = {max(a, 0.0), max(b, 0.0), max(c, 0.0)}
     sum = a + b + c
     {a / sum, b / sum, c / sum}
+  end
+
+  defp mix({p0, p1, p2}, {l0, l1, l2}), do: Vec.add(Vec.add(Vec.scale(p0, l0), Vec.scale(p1, l1)), Vec.scale(p2, l2))
+
+  # The weights of the three corners at a texel.
+  defp weights(%{corner: {x0, y0}, sides: {d1x, d1y, d2x, d2y}}, i, j) do
+    {x, y} = {i + 0.5 - x0, j + 0.5 - y0}
+    {l1, l2} = {x * d2y - d2x * y, d1x * y - x * d1y}
+    {1 - l1 - l2, l1, l2}
   end
 
   # The tangent, the bitangent and the normal of a corner: the tangent is
@@ -454,11 +794,58 @@ defmodule World.Sculpt.Bake do
     {t, if(Vec.dot(side, b) > 0, do: Vec.scale(side, -1.0), else: side), n}
   end
 
-  # The three bytes of the normal of a texel: the gradient of the field
-  # there, in the frame of the texel.
-  defp normal(%{long: true} = c, i, j, _f, _values, _same) do
-    # Four values at the corners of a small tetrahedron round the place.
-    p = spot(c, i, j)
+  # The three bytes of the normal of a texel at the place `p` with the
+  # value `f`: the gradient of the field there, in the frame of the
+  # texel.
+  #
+  # The gradient is the vector that gives best the changes of the value
+  # to the four texels next to the texel (each at its own place on the
+  # surface: a texel of another triangle of the patch is on another
+  # plane) and to one place off the plane (the least squares). A texel
+  # next to it with no value (past the edge of the patch) has the value
+  # at its place on the plane of this triangle.
+  defp normal(%{long: true} = c, _i, _j, {p, _f, weights}, _values), do: direct(c, p, weights)
+
+  defp normal(c, i, j, {p, f, weights}, values) do
+    off = Vec.scale(c.face, c.off)
+
+    steps =
+      for {di, dj} <- [{1, 0}, {-1, 0}, {0, 1}, {0, -1}] do
+        case values[{i + di, j + dj}] do
+          {_, q, g, _, _} -> {Vec.sub(q, p), g - f}
+          nil -> (fn q -> {Vec.sub(q, p), SDF.value(c.fast, q, c.limit) - f} end).(at(c, i + di, j + dj))
+        end
+      end
+
+    bytes(c, slope([{off, SDF.value(c.fast, Vec.add(p, off), c.limit) - f} | steps]), weights)
+  end
+
+  # The vector `g` with the least squares of `g . move - change` for the
+  # moves and the changes. A small pull to no slope makes the answer
+  # sure when the moves do not give all of it (the texels next to a
+  # texel of a thin triangle can be on one line): the slope is then 0
+  # in the direction that they do not give.
+  defp slope(steps) do
+    {{xx, xy, xz, yy, yz, zz}, {bx, by, bz}} =
+      Enum.reduce(steps, {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}, fn {{x, y, z}, d},
+                                                                               {{xx, xy, xz, yy, yz, zz}, {bx, by, bz}} ->
+        {{xx + x * x, xy + x * y, xz + x * z, yy + y * y, yz + y * z, zz + z * z}, {bx + x * d, by + y * d, bz + z * d}}
+      end)
+
+    pull = 1.0e-6 * (xx + yy + zz) + 1.0e-300
+    {xx, yy, zz} = {xx + pull, yy + pull, zz + pull}
+    # The rule of Cramer for the symmetric matrix.
+    det = xx * (yy * zz - yz * yz) - xy * (xy * zz - yz * xz) + xz * (xy * yz - yy * xz)
+
+    {(bx * (yy * zz - yz * yz) - xy * (by * zz - yz * bz) + xz * (by * yz - yy * bz)) / det,
+     (xx * (by * zz - yz * bz) - bx * (xy * zz - yz * xz) + xz * (xy * bz - by * xz)) / det,
+     (xx * (yy * bz - by * yz) - xy * (xy * bz - by * xz) + bx * (xy * yz - yy * xz)) / det}
+  end
+
+  # The normal of a texel of a long chart (a texel is more than a cell
+  # from the next one): the gradient from four values at the corners of
+  # a small tetrahedron round its place.
+  defp direct(c, p, weights) do
     h = max(c.off, 1.0e-7)
 
     gradient =
@@ -466,30 +853,7 @@ defmodule World.Sculpt.Bake do
         sum -> Vec.add(sum, Vec.scale(k, SDF.value(c.fast, Vec.add(p, {x * h, y * h, z * h}), c.limit)))
       end
 
-    bytes(c, gradient, inside(weights(c, i, j)))
-  end
-
-  defp normal(c, i, j, f, values, same) do
-    # The change of the value for one texel along a side of the square:
-    # from the texels on the two sides. At the edge of the chart, the
-    # next texel is of the other chart: the value at that place then.
-    value = fn k, l ->
-      with true <- same.(i, j, k, l), {g, _} <- values[{k, l}] do
-        g
-      else
-        _ -> SDF.value(c.fast, at(c, k, l), c.limit)
-      end
-    end
-
-    slope = fn di, dj -> (value.(i + di, j + dj) - value.(i - di, j - dj)) / 2 end
-
-    p = at(c, i, j)
-    up = (SDF.value(c.fast, Vec.add(p, Vec.scale(c.face, c.off)), c.limit) - f) / c.off
-
-    gradient =
-      Vec.add(Vec.add(Vec.scale(c.du, slope.(1, 0)), Vec.scale(c.dv, slope.(0, 1))), Vec.scale(c.face, up))
-
-    bytes(c, gradient, weights(c, i, j))
+    bytes(c, gradient, weights)
   end
 
   # The bytes of a gradient in the frame of the chart at the weights of its corners.
@@ -540,13 +904,13 @@ defmodule World.Sculpt.Bake do
       |> Enum.sort()
       |> Enum.reduce({[], 0}, fn {y, squares}, {rows, _} ->
         squares = Enum.sort(squares)
-        height = squares |> Enum.map(&elem(&1, 1)) |> Enum.max()
-        width = squares |> Enum.map(&elem(&1, 1)) |> Enum.sum()
-        parts = for {_, n, texels} <- squares, do: {n, List.to_tuple(elem(texels, which))}
+        height = squares |> Enum.map(fn {_, {_, h}, _} -> h end) |> Enum.max()
+        width = squares |> Enum.map(fn {_, {w, _}, _} -> w end) |> Enum.sum()
+        parts = for {_, {w, h}, texels} <- squares, do: {w, h, List.to_tuple(elem(texels, which))}
 
         new =
           for r <- 0..(height - 1) do
-            [for({n, t} <- parts, do: if(r < n, do: elem(t, r), else: fill.(n))), fill.(side - width)]
+            [for({w, h, t} <- parts, do: if(r < h, do: elem(t, r), else: fill.(w))), fill.(side - width)]
             |> IO.iodata_to_binary()
           end
 
