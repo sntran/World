@@ -383,15 +383,23 @@ defmodule World.Skills.Sculpt do
   defp mirrors([plane | rest]), do: for(a <- [& &1, &mirror(&1, plane)], b <- mirrors(rest), do: &b.(a.(&1)))
 
   # The copy of an edit across a plane of the sculpture. The frame of the
-  # copy has the right hand again, so its x is the other way: each shape
-  # is the same across its x, but the points of a tube turn theirs.
+  # copy has the right hand again, so its x is the other way: most shapes
+  # are the same across their x. The points of a tube and of the outline
+  # of an extrude turn theirs. A prism with an odd count of sides is not
+  # the same across its x, but it is across its y: its frame has its y the
+  # other way.
   defp mirror(%{frame: f} = s, plane) do
     flip = fn {x, y, z} -> %{"x" => {-x, y, z}, "y" => {x, -y, z}, "z" => {x, y, -z}}[plane] end
 
-    size =
-      with {points, radii} when is_list(points) <- s.size, do: {Enum.map(points, fn {x, y, z} -> {-x, y, z} end), radii}
+    {size, up} =
+      case {s.shape, s.size} do
+        {:tube, {points, radii}} -> {{Enum.map(points, fn {x, y, z} -> {-x, y, z} end), radii}, flip.(f.y)}
+        {:extrude, {points, h, r}} -> {{Enum.map(points, fn {x, y} -> {-x, y} end), h, r}, flip.(f.y)}
+        {:prism, size} -> {size, Vec.scale(flip.(f.y), -1)}
+        {_, size} -> {size, flip.(f.y)}
+      end
 
-    %{s | frame: Frame.new(flip.(f.at), flip.(f.z), flip.(f.y)), size: size}
+    %{s | frame: Frame.new(flip.(f.at), flip.(f.z), up), size: size}
   end
 
   # The count of the plain edits of an edit of the data.

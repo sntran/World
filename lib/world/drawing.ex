@@ -834,13 +834,38 @@ defmodule World.Drawing do
   """
   def build(raw, opts \\ []) do
     g = graph(raw["nodes"])
+    by_name = Map.new(raw["nodes"], &{&1["name"], &1})
+    {parts, rest} = Enum.split_with(:graph.topsort(g), &sculpture?(by_name[&1]))
 
     made =
-      Enum.reduce(:graph.topsort(g), %{}, fn name, made ->
+      Enum.reduce(rest, at_once(raw, by_name, parts), fn name, made ->
         Map.put(made, name, make(raw, name, inputs(raw, name, made)))
       end)
 
     assemble(raw, made, opts)
+  end
+
+  # A node that is a sculpture, and needs no data of another node (the
+  # skill `sculpt` makes it from its own edits).
+  defp sculpture?(node), do: match?(%{"skill" => %{"sculpt" => _}}, node) and Map.get(node, "from", []) == []
+
+  # The sculptures of a model in parts (plan 0014, D2), made at the same
+  # time: each one in a process of its own, as a site with its crew
+  # (`World.Crew`), the largest first (it takes its place at the gate of
+  # the node first: `World.Sculpt.Gate`). A model with one sculpture makes
+  # it here, as each other node.
+  defp at_once(raw, _by_name, [name]), do: %{name => make(raw, name, %{})}
+
+  defp at_once(raw, by_name, names) do
+    {level, lean} = {Detail.level(), Process.get(:world_lean, true)}
+    size = fn name -> World.Skills.Sculpt.estimate(by_name[name]["skill"]["sculpt"], level) end
+
+    names
+    |> Enum.sort_by(&{-size.(&1), &1})
+    |> Enum.map(fn name ->
+      {name, Task.async(fn -> Detail.with(level, fn -> Detail.lean(lean, fn -> make(raw, name, %{}) end) end) end)}
+    end)
+    |> Map.new(fn {name, task} -> {name, Task.await(task, :infinity)} end)
   end
 
   @doc "The names of the nodes in the order of their waits: each node after the nodes that it waits for."

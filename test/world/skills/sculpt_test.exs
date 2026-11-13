@@ -69,6 +69,48 @@ defmodule World.Skills.SculptTest do
     assert Enum.all?(far_part.shapes, &(Mesh.bounds(&1) != nil))
   end
 
+  test "a model in parts: each sculpture of a drawing in a process of its own, with its cells, its role and its images (plan 0014, D1, D2)" do
+    part = fn role, r, cells, side, color ->
+      %{
+        "edits" => [%{"shape" => "ball", "size" => [r], "material" => role, "color" => color}],
+        "cells" => %{"near" => cells},
+        "budget" => %{"near" => 600},
+        "bake" => %{"near" => side}
+      }
+    end
+
+    d = %{
+      "name" => "two",
+      "kind" => "item",
+      "materials" => %{"part_01" => %{"color" => "#ffffff"}, "part_02" => %{"color" => "#ffffff"}},
+      "nodes" => [
+        %{"name" => "body", "skill" => %{"sculpt" => part.("part_01", 0.5, 0.05, 128, "#c02020")}},
+        %{
+          "name" => "head",
+          "skill" => %{"sculpt" => part.("part_02", 0.2, 0.02, 256, "#2020c0")},
+          "at" => %{"at" => [0, 0, 0.7]}
+        }
+      ]
+    }
+
+    assert {:ok, _} = Drawing.check(d, "d")
+    model = Drawing.build(d)
+    assert [{"body", body, _}, {"head", head, _}] = model.nodes
+    assert Enum.map(body.shapes, & &1.material) == [:part_01] and Enum.map(head.shapes, & &1.material) == [:part_02]
+    # Each part has the images of its own role, of its own size.
+    assert %{part_01: %{"image" => a}, part_02: %{"image" => b}} = model.materials
+    assert a != b
+    # The same model each time, and the same as its parts made one after the other.
+    glb = World.Build.glb(model)
+    assert World.Build.glb(Drawing.build(d)) == glb
+    one = fn name -> Drawing.build(%{d | "nodes" => Enum.filter(d["nodes"], &(&1["name"] == name))}) end
+    assert [{"body", ^body, _}] = one.("body").nodes
+    assert [{"head", ^head, _}] = one.("head").nodes
+    # A level and the lean mode of the site go to each part.
+    far = Detail.with(:far, fn -> Detail.lean(false, fn -> Drawing.build(d) end) end)
+    assert [{"body", %{shapes: [_ | _]}, _}, {"head", _, _}] = far.nodes
+  end
+
   test "an edit with no turn has the axes of the sculpture: the long side of an ellipsoid stays on its axis" do
     [long_y, along_y] =
       Skill.edits([
@@ -230,7 +272,18 @@ defmodule World.Skills.SculptTest do
       "axis" => [1, 0, 1]
     }
 
-    for e <- [cone, tube], plane <- ~w(x y z) do
+    # An outline and a prism of three sides are not the same across their x.
+    extrude = %{
+      "shape" => "extrude",
+      "size" => %{"outline" => [[0, 0], [0.3, 0], [0.3, 0.1], [0.1, 0.1], [0.1, 0.3], [0, 0.3]], "depth" => 0.1},
+      "at" => [0.2, 0.1, 0.0],
+      "axis" => [1, 0, 1],
+      "up" => [0, 1, 0]
+    }
+
+    prism = %{"shape" => "prism", "size" => [0.2, 0.1, 3], "at" => [0.2, 0.0, 0.1], "axis" => [0, 1, 1]}
+
+    for e <- [cone, tube, extrude, prism], plane <- ~w(x y z) do
       [one, copy] = Skill.edits([Map.put(e, "mirror", plane)])
       flip = fn {x, y, z} -> %{"x" => {-x, y, z}, "y" => {x, -y, z}, "z" => {x, y, -z}}[plane] end
       for p <- samples(), do: assert_in_delta(World.SDF.distance(copy, flip.(p)), World.SDF.distance(one, p), 1.0e-9)
