@@ -158,6 +158,82 @@ defmodule World.Sculpt.BakeTest do
     assert Enum.count(turned, &(&1 > 2.0)) < 0.05 * length(turned)
   end
 
+  test "a corner at a hard edge has the normal of its face; a corner of a smooth surface keeps the normal of its point" do
+    box = [SDF.edit(:box, {0.3, 0.2, 0.1}, color: {200, 60, 60})]
+    [mesh] = Sculpt.model(box, step: 0.05, budget: 300, cache: false)
+    {[baked], maps} = Bake.maps([mesh], box, 0.05, 128)
+    # The points at the edges of the box are there again, one for each face that is far from the normal of the point.
+    assert length(baked.points) > length(mesh.points)
+    assert Enum.take(baked.points, length(mesh.points)) == mesh.points
+    assert length(baked.normals) == length(baked.points) and baked.colors == nil
+    {pt, nt} = {List.to_tuple(baked.points), List.to_tuple(baked.normals)}
+
+    for [a, b, c] = face <- baked.faces do
+      flat = Vec.norm(Vec.cross(Vec.sub(elem(pt, b), elem(pt, a)), Vec.sub(elem(pt, c), elem(pt, a))))
+      for v <- face, do: assert(angle(elem(nt, v), flat) < 35.1)
+    end
+
+    # The normals of the map are the normals of the faces of the box, but
+    # for the texels at an edge (a texel there has a part of two faces).
+    along =
+      for chart <- charts([baked], 128),
+          {x, y} = at <- chart.texels,
+          {la, lb, lc} = weights(chart, at),
+          min(la, min(lb, lc)) > 0.05 do
+        n = shown(chart, at, texel(maps.normal, x, y))
+        Enum.max(Enum.map(Tuple.to_list(n), &abs/1))
+      end
+
+    assert Enum.count(along, &(&1 > 0.999)) > 0.9 * length(along)
+
+    # A ball has no hard edge: no new point.
+    ball = [SDF.edit(:ball, {0.5})]
+    [round] = Sculpt.model(ball, step: 0.1, budget: 200, cache: false)
+    {[same], _} = Bake.maps([round], ball, 0.1, 128)
+    assert same.points == round.points and same.faces == round.faces
+  end
+
+  test "a long chart reads the field in its triangle: no color of another part past its end, and the true normals" do
+    red = {200, 40, 40}
+    # A red cylinder with a blue ball past its end.
+    edits = [
+      SDF.edit(:cylinder, {0.05, 0.2}, color: red),
+      SDF.edit(:ball, {0.08}, frame: Frame.move({0.0, 0.0, 0.3}), color: {40, 40, 200})
+    ]
+
+    # Two long thin triangles on the side of the cylinder, from end to end: a texel
+    # of a small chart is 32 mm from the next one, and 1.5 texels past the end is at the ball.
+    turn = fn deg -> {0.05 * :math.cos(deg * :math.pi() / 180), 0.05 * :math.sin(deg * :math.pi() / 180)} end
+    side = fn deg, z -> (fn {x, y} -> {x, y, z} end).(turn.(deg)) end
+    points = [side.(0, -0.19), side.(0, 0.19), side.(10, -0.19), side.(10, 0.19)]
+    normals = for {x, y, _} <- points, do: Vec.norm({x, y, 0.0})
+    mesh = Mesh.new(points, [[0, 2, 1], [1, 2, 3]], :paint) |> Mesh.finish(normals, nil)
+    {[baked], maps} = Bake.maps([mesh], edits, 0.005, 16)
+    assert baked.points == points
+    charts = charts([baked], 16)
+    assert length(charts) == 2
+
+    for chart <- charts, {x, y} = at <- chart.texels do
+      # Each texel of the two charts, in the triangle or past its edge, is red.
+      assert texel(maps.color, x, y) == red
+      # Its normal is the normal of the cylinder at its place in the triangle.
+      {la, lb, lc} = weights(chart, at)
+      w = Enum.map([la, lb, lc], &max(&1, 0.0))
+      inside = List.to_tuple(Enum.map(w, &(&1 / Enum.sum(w))))
+      {px, py, _} = mix(Enum.map(chart.points, &elem(&1, 0)), inside)
+      {r, g, b} = texel(maps.normal, x, y)
+      # (The frame of the texel at that place: the weights with none less than 0.)
+      n = shown(%{chart | corners: chart.corners}, at, {r, g, b})
+      if min(la, min(lb, lc)) >= 0, do: assert(angle(n, Vec.norm({px, py, 0.0})) < 2.0)
+      assert b >= 250
+    end
+
+    # With cells as large as the texels, the texels read the field at their own places: the blue of the ball is there.
+    {_, wide} = Bake.maps([mesh], edits, 0.5, 16)
+    colors = for row <- wide.color, <<r, g, b <- row>>, uniq: true, do: {r, g, b}
+    assert red in colors
+  end
+
   test "a triangle with no area, a triangle far from each edit, one triangle alone; a frame with no volume" do
     edits = [SDF.edit(:ball, {0.1}, color: {10, 20, 30})]
     up = {0.0, 0.0, 1.0}

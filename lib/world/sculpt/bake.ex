@@ -39,6 +39,10 @@ defmodule World.Sculpt.Bake do
   @most 252
   # The squares of one process.
   @group 24
+  # The cosine of the most angle from the normal of a point to a face that keeps that normal (35 degrees).
+  @hard 0.819
+  # The corners of a tetrahedron: four values there give the gradient of a field at its center.
+  @tetrahedron [{1.0, -1.0, -1.0}, {-1.0, -1.0, 1.0}, {-1.0, 1.0, -1.0}, {1.0, 1.0, 1.0}]
   # The texel of a place with no chart: a mean gray, and the normal of the face.
   @gray <<128, 128, 128>>
   @flat <<128, 128, 255>>
@@ -82,7 +86,7 @@ defmodule World.Sculpt.Bake do
     glow? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, &((&1.glow || 0.0) > 0.0)) end)
     # The finish of the materials, when a texel needs it (nil with no finish of an edit).
     defaults = if finish?, do: defaults
-    meshes = Enum.flat_map(parts, &elem(&1, 0))
+    meshes = parts |> Enum.flat_map(&elem(&1, 0)) |> Enum.map(&split/1)
     # The edits of all the parts in one list: the list of a triangle is
     # places in it. Each part has its first place, its limit and its cells.
     {fields, edits, _} =
@@ -176,6 +180,46 @@ defmodule World.Sculpt.Bake do
            glow: if(glow?, do: image(done, side, 3, <<0, 0, 0>>))
          }}
     end
+  end
+
+  # A corner at a hard edge gets a point of its own, with the normal of
+  # its face: a corner whose face is more than `@hard` from the normal of
+  # its point. The frame of a triangle then turns little from corner to
+  # corner, so the normals of its texels are small turns from it. (With
+  # one normal for all the faces round a point of a hard edge, the frame
+  # turns much along a thin triangle, and the light shows streaks.)
+  defp split(%Mesh{points: points, normals: normals, faces: faces} = m) do
+    {pt, nt} = {List.to_tuple(points), List.to_tuple(normals)}
+
+    {faces, more, _} =
+      Enum.reduce(faces, {[], [], tuple_size(pt)}, fn [a, b, c] = face, {faces, more, next} ->
+        cross = Vec.cross(Vec.sub(elem(pt, b), elem(pt, a)), Vec.sub(elem(pt, c), elem(pt, a)))
+
+        if Vec.len(cross) < 1.0e-18 do
+          {[face | faces], more, next}
+        else
+          flat = Vec.norm(cross)
+
+          {face, more, next} =
+            Enum.reduce(face, {[], more, next}, fn v, {vs, more, next} ->
+              if Vec.dot(elem(nt, v), flat) >= @hard,
+                do: {[v | vs], more, next},
+                else: {[next | vs], [{elem(pt, v), flat} | more], next + 1}
+            end)
+
+          {[Enum.reverse(face) | faces], more, next}
+        end
+      end)
+
+    more = Enum.reverse(more)
+
+    %{
+      m
+      | points: points ++ Enum.map(more, &elem(&1, 0)),
+        normals: normals ++ Enum.map(more, &elem(&1, 1)),
+        faces: Enum.reverse(faces),
+        colors: nil
+    }
   end
 
   # --- The charts -------------------------------------------------------------
@@ -287,8 +331,7 @@ defmodule World.Sculpt.Bake do
     # The value and the color of the field at each texel of the square.
     values =
       for j <- 0..(n - 1), i <- 0..(n - 1), c = owner.(i, j), c != nil, c.flat == false, into: %{} do
-        p = at(c, i, j)
-        {{i, j}, SDF.sample(c.list, p, c.limit)}
+        {{i, j}, SDF.sample(c.list, spot(c, i, j), c.limit)}
       end
 
     rows =
@@ -317,7 +360,7 @@ defmodule World.Sculpt.Bake do
   # The bytes of the finish of a texel (the roughness in the green, the
   # metal in the blue), and of its glow (its color times its glow).
   defp finish(c, i, j, {r, g, b}, defaults) do
-    {rough, metal, glow} = SDF.finish(c.list, at(c, i, j), defaults)
+    {rough, metal, glow} = SDF.finish(c.list, spot(c, i, j), defaults)
     {<<255, round(rough * 255), round(metal * 255)>>, <<round(r * glow), round(g * glow), round(b * glow)>>}
   end
 
@@ -329,9 +372,7 @@ defmodule World.Sculpt.Bake do
     cross = Vec.cross(e1, e2)
     area = Vec.len(cross)
 
-    # A triangle with no area, or a sliver (its points almost on a line):
-    # it has no plane for a gradient.
-    if area < 1.0e-18 or area < 1.0e-6 * (Vec.dot(e1, e1) + Vec.dot(e2, e2)) do
+    if area < 1.0e-18 do
       %{flat: true}
     else
       face = Vec.norm(cross)
@@ -347,6 +388,13 @@ defmodule World.Sculpt.Bake do
 
       %{
         flat: false,
+        # A long chart: a texel is more than a cell from the next one, or
+        # the triangle is thin. A texel past an edge of its triangle
+        # would be far from it, at another part of the sculpture, and the
+        # texels are too far from each other for a gradient. Its texels
+        # read the field in the triangle, each with small steps round it.
+        long: max(uu, vv) > step * step or area < 0.02 * (Vec.dot(e1, e1) + Vec.dot(e2, e2)),
+        points: {p0, p1, p2},
         half: half,
         legs: legs,
         n: n,
@@ -371,6 +419,26 @@ defmodule World.Sculpt.Bake do
   # The place of a texel of a chart.
   defp at(c, i, j), do: Vec.add(c.base, Vec.add(Vec.scale(c.u, i * 1.0), Vec.scale(c.v, j * 1.0)))
 
+  # The place where a texel reads the field: its place; in a long chart,
+  # the place in the triangle at its weights with none less than 0.
+  defp spot(%{long: false} = c, i, j), do: at(c, i, j)
+
+  defp spot(%{points: {p0, p1, p2}} = c, i, j) do
+    {l0, l1, l2} = inside(weights(c, i, j))
+    Vec.add(Vec.add(Vec.scale(p0, l0), Vec.scale(p1, l1)), Vec.scale(p2, l2))
+  end
+
+  # The weights of the three corners at a texel.
+  defp weights(%{half: :lower, legs: legs}, i, j), do: weights((i - 0.5) / legs, (j - 0.5) / legs)
+  defp weights(%{n: n, legs: legs}, i, j), do: weights((n - 1.5 - i) / legs, (n - 1.5 - j) / legs)
+  defp weights(l1, l2), do: {1 - l1 - l2, l1, l2}
+
+  defp inside({a, b, c}) do
+    {a, b, c} = {max(a, 0.0), max(b, 0.0), max(c, 0.0)}
+    sum = a + b + c
+    {a / sum, b / sum, c / sum}
+  end
+
   # The tangent, the bitangent and the normal of a corner: the tangent is
   # the direction of +u (`t`) at a right angle to the normal; the
   # bitangent is their cross product, away from +v (`b`): up in the image.
@@ -388,6 +456,19 @@ defmodule World.Sculpt.Bake do
 
   # The three bytes of the normal of a texel: the gradient of the field
   # there, in the frame of the texel.
+  defp normal(%{long: true} = c, i, j, _f, _values, _same) do
+    # Four values at the corners of a small tetrahedron round the place.
+    p = spot(c, i, j)
+    h = max(c.off, 1.0e-7)
+
+    gradient =
+      for {x, y, z} = k <- @tetrahedron, reduce: {0.0, 0.0, 0.0} do
+        sum -> Vec.add(sum, Vec.scale(k, SDF.value(c.fast, Vec.add(p, {x * h, y * h, z * h}), c.limit)))
+      end
+
+    bytes(c, gradient, inside(weights(c, i, j)))
+  end
+
   defp normal(c, i, j, f, values, same) do
     # The change of the value for one texel along a side of the square:
     # from the texels on the two sides. At the edge of the chart, the
@@ -408,14 +489,13 @@ defmodule World.Sculpt.Bake do
     gradient =
       Vec.add(Vec.add(Vec.scale(c.du, slope.(1, 0)), Vec.scale(c.dv, slope.(0, 1))), Vec.scale(c.face, up))
 
-    # The weights of the three corners at the texel.
-    {l1, l2} =
-      if c.half == :lower,
-        do: {(i - 0.5) / c.legs, (j - 0.5) / c.legs},
-        else: {(c.n - 1.5 - i) / c.legs, (c.n - 1.5 - j) / c.legs}
+    bytes(c, gradient, weights(c, i, j))
+  end
 
+  # The bytes of a gradient in the frame of the chart at the weights of its corners.
+  defp bytes(c, gradient, {l0, l1, l2}) do
     [f0, f1, f2] = c.frames
-    mean = fn k -> mean(elem(f0, k), elem(f1, k), elem(f2, k), 1 - l1 - l2, l1, l2) end
+    mean = fn k -> mean(elem(f0, k), elem(f1, k), elem(f2, k), l0, l1, l2) end
     {t, b, n} = {mean.(0), mean.(1), mean.(2)}
     m = if Vec.len(gradient) > 1.0e-9, do: Vec.norm(gradient), else: n
 
