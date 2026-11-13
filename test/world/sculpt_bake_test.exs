@@ -164,16 +164,19 @@ defmodule World.Sculpt.BakeTest do
 
     mesh =
       Mesh.new(
-        [{5.0, 0.0, 0.0}, {5.1, 0.0, 0.0}, {5.0, 0.1, 0.0}, {5.2, 0.0, 0.0}],
-        # Triangles far from the ball, and a triangle with its points on a line.
-        [[0, 1, 2], [0, 1, 3], [1, 3, 2], [0, 2, 1], [1, 0, 2]],
+        [{5.0, 0.0, 0.0}, {5.1, 0.0, 0.0}, {5.0, 0.1, 0.0}, {5.2, 0.0, 0.0}, {5.0625, 1.0e-10, 0.0}, {5.125, 0.0, 0.0}],
+        # Triangles far from the ball, a triangle with its points on a
+        # line, and a sliver: its points almost on a line (the product
+        # of the squares of its sides less the square of their product
+        # is 0 in floats).
+        [[0, 1, 2], [0, 1, 3], [1, 3, 2], [0, 2, 1], [1, 0, 2], [0, 5, 4]],
         :paint
       )
       # The normal of a point along the first side of a triangle: its tangent is another direction.
-      |> Mesh.finish([up, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, up], nil)
+      |> Mesh.finish([up, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, up, up, up], nil)
 
     {[baked], maps} = Bake.maps([mesh], edits, 0.01, 64)
-    assert length(baked.uvs) == 5
+    assert length(baked.uvs) == 6
     # Far from each edit the field has no gradient: the normal of the face, and no color of an edit.
     colors = for row <- maps.color, <<r, g, b <- row>>, uniq: true, do: {r, g, b}
     assert Enum.sort(colors) == [{128, 128, 128}, {255, 255, 255}]

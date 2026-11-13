@@ -327,8 +327,11 @@ defmodule World.Sculpt.Bake do
     legs = n - 4
     {e1, e2} = {Vec.sub(p1, p0), Vec.sub(p2, p0)}
     cross = Vec.cross(e1, e2)
+    area = Vec.len(cross)
 
-    if Vec.len(cross) < 1.0e-18 do
+    # A triangle with no area, or a sliver (its points almost on a line):
+    # it has no plane for a gradient.
+    if area < 1.0e-18 or area < 1.0e-6 * (Vec.dot(e1, e1) + Vec.dot(e2, e2)) do
       %{flat: true}
     else
       face = Vec.norm(cross)
@@ -338,7 +341,8 @@ defmodule World.Sculpt.Bake do
       {u, v} = {Vec.scale(e1, sign / legs), Vec.scale(e2, sign / legs)}
       base = Vec.add(p0, Vec.scale(Vec.add(e1, e2), first / legs))
       {uu, uv, vv} = {Vec.dot(u, u), Vec.dot(u, v), Vec.dot(v, v)}
-      det = uu * vv - uv * uv
+      # The square of the area of u and v. (Not `uu * vv - uv * uv`: that is 0 for a thin triangle.)
+      det = area * area / (legs * legs * legs * legs)
       off = min(:math.sqrt(:math.sqrt(uu * vv)) / 2, step / 2)
 
       %{
