@@ -29,6 +29,41 @@ report named the limits: cells of one size, one body plan with clips,
 and R5 of plan 0009. The builder decides the order and each decision
 here; the owner can change each one.
 
+## 2a. What a user of Dreams has (the owner, 2026-11-13: "If not clear, do research on Sony Dreams in details to know what the expectations are.")
+
+Plan 0008, section 3, has the engine of Dreams (the list of edits, the
+evaluator, the renderers). This section has what a user of the sculpt
+mode, the coat mode and the puppets has, from the guide of Media
+Molecule and the reference of the community (sources [U1] to [U7] at
+the end of the section), next to World on 2026-11-13.
+
+| Dreams | World | Gap |
+|---|---|---|
+| **A sculpture is an ordered list of edits**; each edit changes only what the edits before it made [U1]. | The same (`World.SDF`). | None. |
+| **Shapes:** cube, cylinder, sphere, cone, donut, filled donut, wedge, hexagon, pyramid, rounded cube, curve (with a taper and a thickness along it); most shapes stretch on each side [U2]. | ball, box, round box, capsule, cylinder, cone, ring, ellipsoid, superellipsoid, tube. | **A wedge, a prism of n sides, a pyramid** (step 5). |
+| **Modes:** add, subtract, **crop** (only what is inside the shape stays), spraypaint (a color, with an opacity), looseness, **cutout** (the shape becomes a new sculpture) [U1][U3]. | add, subtract, paint (a color, and a raise since step 2). | **Crop, and an opacity for a paint** (step 5). A cutout is two lists of edits: a tool of a client can make them. |
+| **Blend:** soft (a smooth joint) or **hard (a flat slope between the two surfaces)**, with an amount [U1][U3]. | The soft blend. | **The hard blend** (a chamfer; step 5). |
+| **Each edit can move, turn, stretch, go, and be cloned**; many clones along a line or a spiral; the guides mirror and kaleidoscope [U1][U3]. | A live sculpture changes one edit at a time; `mirror`, `repeat` (a ring, a row, a spiral), `groups`. | None for the data. |
+| **Color and finish:** a color for each edit; a finish (default, plastic, shiny, rough, metal, wax, and their pairs) for a sculpture, for a stroke, or put on with a brush in the coat mode; tint, hue and **glow** with a brush [U4][U5]. | A color for each edit with soft borders; a material (a role of the palette) for each edit, with a border that follows the cells. | **A finish and a glow for each edit, with soft borders, in the maps** (step 4). |
+| **Detail:** each sculpture has its own detail; looseness makes a part of it coarser; the cost of a sculpture is its surface times its detail (the thermometer) [U1][U6]. | Cells for each sculpture and level; details with their own cells (step 3); the maps have the fine detail (steps 1 and 2). | None in kind. Dreams has no maps: its strokes are the detail. |
+| **Style** (flecks, looseness, impasto, ruffle): the painted look of the renderer [U3]. | Not in a GLB. | Out of scope (a renderer). |
+| **Speed of the evaluator:** 10 to 100 million cells in a second on a PS4 (a GPU); 8,274 edits make 5.2 million cells in 0.09 s; a smear adds a shape 60 times in a second [E1 of plan 0008][U1]. Dreams makes one sculpture at a time, and no sculpture changes while a game plays [U7]. | About 0.2 million points of the field in a second on 4 schedulers (a stone of 1,000 edits: 846,000 points of 636 bricks in 4.4 s). A change of one edit: 0.4 s to 0.5 s. | **A factor of 50 to 500, and it stays:** the field of World is Elixir on a CPU, with no code for a GPU (section 4). World gets its speed from what it does not make again: the cache of the bricks and of the cells, a change that walks only what it reaches, and maps that are baked one time. |
+| **Puppets:** a figure of sculptures on bones (each sculpture on its bone, joints between them); a walk, a run and a jump that the puppet makes itself; keyframes and recordings on top [U7][U8]. | A sculpture with bones: a skinned mesh, each point on the bones of the edit of its surface (step 3); the body plans of a fish and of a bird; clips from keys. | **A body plan on two legs with its walk** (step 6). A recording of a hand is a tool of a client. |
+
+- [U1] The reference of the community for the sculpt mode:
+  https://tapgiles.com/docs/modes/sculpt.html
+- [U2] The shapes: https://docs.indreams.me/en/create/resources/edit-mode-guide/sculpt/shapes
+- [U3] The tools of the sculpt mode and of the style mode:
+  https://docs.indreams.me/en/create/resources/edit-mode-guide/sculpt/tools,
+  https://docs.indreams.me/en/create/resources/edit-mode-guide/style/tools
+- [U4] The finishes: https://docs.indreams.me/en/create/resources/edit-mode-guide/sculpt/finishes
+- [U5] The tools of the coat mode: https://docs.indreams.me/en/create/resources/edit-mode-guide/coat/tools
+- [U6] The limits: https://tapgiles.com/docs/limits.html
+- [U7] "Dreams Under the Hood #2 with Alex Evans", a summary:
+  https://dreamskool.wordpress.com/2019/11/27/dreams-under-the-hood-2-with-alex-evans/
+- [U8] The puppets, from the forum of Dreams:
+  https://forums.indreams.me/hc/de/community/posts/360014021558-Creating-a-fully-custom-puppet
+
 ## 3. The state before this plan
 
 - The color of a sculpture is the color of each point of its mesh, and
@@ -58,6 +93,11 @@ here; the owner can change each one.
 | D5 | **Details** (`details` in the data of the skill): each one is a sculpture of its own (its edits, its cells, its budget, a mirror), built with its own tree, and its meshes are in the same part or figure. | Dreams makes a figure from many sculptures, each with its own detail. A barbel of 3 mm needs cells of 1 mm only in its own small box. |
 | D6 | **A live sculpture gives a coarse piece first.** A change walks the tree at cells of 4 times the size first (1/16 of the work), sends those pieces with their level, then the fine pieces. | The eye needs an answer in less than 0.1 s; the fine surface can come later. |
 | D8 | **A paint with a raise** (added in step 2): an edit of the mode `paint` can move the surface out or in by a height in its shape, with a slope across its border. With maps, a raise of less than half a cell is in the maps only: the mesh is made from the edits with no such raise. | The carp needs scales, rays and grooves that follow its surface. A shape that adds does not follow a surface; a paint already has its place on any surface. The relief that a mesh cannot show makes its points uneven, so it stays out of the mesh. |
+| D9 | **A point follows the bones of the edit of its surface** (added in step 3): the bones with a part of their line inside the shape of that edit; across a smooth joint of two edits, a part of each. | In Dreams each sculpture of a puppet is on its bone. With weights from the distance only, the back of a bird followed its wings. |
+| D10 | **A finish and a glow for each edit** (after the research, section 2a): `roughness`, `metal` and `glow` of an edit, folded as its color is, and baked into the maps (the metal and roughness map and the emissive map of glTF). | The coat mode of Dreams puts a finish and a glow on a part of a sculpture with a soft border. A material for each quad cannot do that. |
+| D11 | **Crop, the hard blend, an opacity for a paint, and three shapes** (after the research): the mode `crop`, `blend_type: hard` (a flat slope), `opacity` of a paint, and the shapes `wedge`, `prism` and `pyramid`. | The words of the sculpt mode of Dreams that World does not have. |
+| D12 | **A body plan on two legs** (after the research) for a sculpture with the bones of a person of World: its walk and its other clips. | The puppet of Dreams walks by itself. World has the walk of a person; a sculpture can take it. |
+| D13 | **The hot loop of the field with no boxes** (after the research): the short list of a cell becomes a list of tuples of numbers, one for each edit, and the fold is one function with a clause for each kind of edit, with guards that tell the JIT that each number is a float. The JIT of OTP then keeps the numbers of a clause in registers. A paint with no raise is not in the list of the value. The values are the same to the bit. | The speed of the evaluator is the largest gap to Dreams (section 2a). A measure on 2026-11-13: a list of 39 balls takes 150 ns for each edit in the fold of today and 44 ns in such a loop (3.4 times faster). |
 | D7 | **The body plan of a bird** for a sculpture with bones, with its clips (`walk`, `idle`, `peck`, `flap`): its animations need no clips of a template. | A second body plan proves that the bones of a sculpture are general. |
 
 ## 6. Requirements
@@ -83,19 +123,38 @@ here; the owner can change each one.
   its first coarse piece in less than 60 ms.
 - **R8.** A sculpture with the bones of a bird has its four clips, and
   its `flap` moves its wings.
+- **R10.** A sculpture of one material with a part of metal, a part of
+  wax and a part that glows has those in its maps, with soft borders
+  where the edits have a blend; the GLB passes the validator.
+- **R11.** The mode `crop` keeps only what is inside its shape; a hard
+  blend of two boxes has a flat slope between them; a paint with an
+  opacity of a half gives the mean of the two colors; each new shape has
+  a distance with a slope of at most 1.
+- **R12.** A sculpture with the bones of a person has the walk of a
+  person of World, and its feet move in turn.
+- **R13.** The stone of 1,000 edits at near takes less than 3 s (it
+  takes 4.4 s), and a change of one edit less than 0.35 s (it takes
+  0.41 s to 0.53 s), with the same bricks to the bit.
 - **R9.** The carp of the catalog shows the maps and a detail, with
   shots at each level next to the carp of plan 0009, and its times.
 
 ## 7. Steps
 
+The steps changed on 2026-11-13, after the research of section 2a.
+
 1. **The maps** (D1 to D4; R1 to R5): `World.Sculpt.Bake`, the UVs of a
-   mesh, the sampler, the data `bake` of the skill.
-2. **The carp with maps** (R9, first part): relief for its scales and
-   the rays of its fins, shots, times.
-3. **Details** (D5; R6): the barbels of the carp.
-4. **The coarse piece first** (D6; R7).
-5. **The body plan of a bird** (D7; R8).
-6. **The measure and the documents** (R9).
+   mesh, the sampler, the data `bake` of the skill. Done.
+2. **A paint with a raise, and the carp with maps** (D8; R9, first
+   part). Done.
+3. **Details, the body plan of a bird, and the bones of an edit** (D5,
+   D7, D9; R6, R8).
+4. **A finish and a glow for each edit** (D10; R10).
+5. **Crop, the hard blend, the opacity, three shapes** (D11; R11).
+6. **A body plan on two legs** (D12; R12).
+7. **The hot loop of the field** (D13; R13), and **the coarse piece
+   first** (D6; R7): a measure first; the coarse piece goes on only when
+   the measure allows R7.
+8. **The measure and the documents** (R9).
 
 ## 8. Acceptance criteria
 
