@@ -37,10 +37,31 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture)
+             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture draw_house plan_street)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()
+  end
+
+  test "draw_house and plan_street give the drawings of the rules of a town (plan 0016)" do
+    r = tool("draw_house", %{"house" => %{"type" => "pho3", "family" => "modern", "seed" => 7}})
+    drawing = r["structuredContent"]["drawing"]
+    assert drawing == World.Town.House.drawing(%{"type" => "pho3", "family" => "modern", "seed" => 7})
+    assert {:ok, _} = World.Drawing.check(drawing, "d")
+    refute Map.has_key?(r, "isError")
+    # With no request: the most common house. A wrong word is an error with its message.
+    assert tool("draw_house", %{})["structuredContent"]["drawing"]["extras"]["house"]["type"] == "pho2_flat"
+    wrong = tool("draw_house", %{"house" => %{"type" => "castle"}})
+    assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "the type of a house"
+
+    # A street: the plan, and the drawing of a row of 5 houses at the most.
+    r = tool("plan_street", %{"street" => %{"seed" => 4}})
+    plan = World.Town.Street.plan(%{"seed" => 4})
+    assert r["structuredContent"] == %{"plan" => plan, "drawing" => World.Town.Street.drawing(plan)}
+    long = tool("plan_street", %{"street" => %{"count" => 12}})["structuredContent"]
+    assert length(long["plan"]["lots"]) == 12 and long["drawing"] == nil
+    assert length(tool("plan_street", %{})["structuredContent"]["plan"]["lots"]) == 5
+    assert tool("plan_street", %{"street" => %{"count" => 0}})["isError"]
   end
 
   test "list_blueprints gives the name and the description of each blueprint" do

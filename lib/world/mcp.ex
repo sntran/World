@@ -229,6 +229,40 @@ defmodule World.MCP do
         "properties" => %{"sculpture" => %{"type" => "string", "description" => "The id of the sculpture."}},
         "required" => ["sculpture"]
       }
+    },
+    %{
+      "name" => "draw_house",
+      "title" => "Draw a house of a street of Vũng Tàu",
+      "description" =>
+        "Gives the drawing of a house from a request of a few words: the rules of World.Town.House make each choice, and the same request gives the same house. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "house" => %{
+            "type" => "object",
+            "description" =>
+              "The request: type (cap4, pho2_flat, pho2_tile or pho3), family (old, steel or modern), width (3 to 8 m), depth (6 to 30 m), road (the width of the road, m), seed (a whole number), left and right (shared or free), and a value for a choice of the rules (wall, ground, rail, sign, awning, vents, flip). Each key has a default."
+          }
+        }
+      },
+      "annotations" => @read
+    },
+    %{
+      "name" => "plan_street",
+      "title" => "Plan one side of a street of Vũng Tàu",
+      "description" =>
+        "Gives the plan of a row of houses wall to wall (each lot is the request of its house, with its place along the street), and, for a row of 5 houses at the most, the drawing of the row on its sidewalk. Each lot of a longer row goes to draw_house.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "street" => %{
+            "type" => "object",
+            "description" =>
+              "The request: seed, road (the width of the road, m), count (the lots, 1 to 200) or length (m), depth (of each house), and types, families and widths (each a list of [value, weight]) in the place of the shares of a common street."
+          }
+        }
+      },
+      "annotations" => @read
     }
   ]
 
@@ -388,6 +422,19 @@ defmodule World.MCP do
       :ok -> result(%{"sculpture" => args["sculpture"], "closed" => true})
       {:error, errors} -> result(%{"errors" => errors}, true)
     end
+  end
+
+  defp call("draw_house", args, _origin) do
+    result(%{"drawing" => World.Town.House.drawing(Map.get(args, "house", %{}))})
+  rescue
+    e in ArgumentError -> wrong(e.message)
+  end
+
+  defp call("plan_street", args, _origin) do
+    plan = World.Town.Street.plan(Map.get(args, "street", %{}))
+    result(%{"plan" => plan, "drawing" => if(length(plan["lots"]) <= 5, do: World.Town.Street.drawing(plan))})
+  rescue
+    e in ArgumentError -> wrong(e.message)
   end
 
   defp call(tool, _args, _origin) when tool in ~w(check_drawing propose_drawing),
