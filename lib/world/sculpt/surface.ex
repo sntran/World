@@ -195,6 +195,7 @@ defmodule World.Sculpt.Surface do
         |> Enum.map(&elem(&1, 1))
         |> join()
         |> between(budget, opts[:step])
+        |> wider(budget, opts[:step])
         |> last_pass(budget)
       else
         {_keys, pts, tris, pins} = triangles(pieces, pin)
@@ -345,28 +346,62 @@ defmodule World.Sculpt.Surface do
     if total <= budget do
       free
     else
-      limit = [limit: 625 * free(step)]
-
-      # The costs of the collapses of each region, each cost not less than the costs before it.
-      {_, costs} =
-        regions(free, step, 0.5, fn faces, _ ->
-          {max(round(budget * faces / total / 2), 1), [costs: true] ++ limit}
-        end)
-
-      # The faces of each region after the collapses with the least costs
-      # over all the regions, to the budget.
-      {targets, _} =
-        for({g, {faces, list}} <- costs, {cost, left} <- running(list), do: {cost, g, -left, faces})
-        |> Enum.sort()
-        |> Enum.reduce_while({%{}, total}, fn {_, g, left, faces}, {targets, count} ->
-          if count <= budget,
-            do: {:halt, {targets, count}},
-            else: {:cont, {Map.put(targets, g, -left), count - (Map.get(targets, g, faces) + left)}}
-        end)
-
-      {mesh, _} = regions(free, step, 0.5, fn faces, g -> {Map.get(targets, g, faces), limit} end)
+      {mesh, _} = shared(free, budget, step, total, [limit: 625 * free(step)], 1)
       mesh
     end
+  end
+
+  # More rounds, when the rounds before left more than four times the
+  # budget (a far level of a large model: no region there can do a
+  # collapse that moves the surface by more than half a cell, and the
+  # points of two regions stay). Each round has regions two times as
+  # large as the round before, and no limit for a collapse: each region
+  # gives the costs of its collapses, and the collapses with the least
+  # costs over all the regions are done, to a third of the faces. The
+  # rounds stop at two times the budget: the points of two regions stay,
+  # so a region with a small target must do a collapse that costs much
+  # (the corner of a small part), where the last pass, with the whole
+  # mesh, finds one that costs less. So the last pass, in one process,
+  # has two times the budget at the most to start with. A round that
+  # takes away less than a tenth of the faces is the last one.
+  defp wider(mesh, _budget, nil), do: mesh
+  defp wider({_, tris, _, _} = mesh, budget, step), do: wider(mesh, budget, step, 2, length(tris))
+
+  defp wider(mesh, budget, _step, scale, total) when total <= 4 * budget or scale > 64, do: mesh
+
+  defp wider(mesh, budget, step, scale, total) do
+    {mesh, _} = shared(mesh, max(2 * budget, div(total, 3)), step, total, [], scale)
+    left = length(elem(mesh, 1))
+    if left > 0.9 * total, do: mesh, else: wider(mesh, budget, step, 2 * scale, left)
+  end
+
+  # One budget for all the regions (moved by half a region), by the costs
+  # of their collapses: each region gives the cost of each of its
+  # collapses in their turn; the collapses with the least costs over all
+  # the regions are done, to the budget; and each region does its own.
+  defp shared(mesh, budget, step, total, limit, scale) do
+    # The costs of the collapses of each region, each cost not less than the costs before it.
+    {_, costs} =
+      regions(
+        mesh,
+        step,
+        0.5,
+        fn faces, _ -> {max(round(budget * faces / total / 2), 1), [costs: true] ++ limit} end,
+        scale
+      )
+
+    # The faces of each region after the collapses with the least costs
+    # over all the regions, to the budget.
+    {targets, _} =
+      for({g, {faces, list}} <- costs, {cost, left} <- running(list), do: {cost, g, -left, faces})
+      |> Enum.sort()
+      |> Enum.reduce_while({%{}, total}, fn {_, g, left, faces}, {targets, count} ->
+        if count <= budget,
+          do: {:halt, {targets, count}},
+          else: {:cont, {Map.put(targets, g, -left), count - (Map.get(targets, g, faces) + left)}}
+      end)
+
+    regions(mesh, step, 0.5, fn faces, g -> {Map.get(targets, g, faces), limit} end, scale)
   end
 
   # The cost of a collapse that moves the surface by a fiftieth of a
@@ -515,8 +550,8 @@ defmodule World.Sculpt.Surface do
   # and the options of its collapse (`World.Simplify.collapse/4`). Gives
   # the mesh after the collapses, and (for the option `costs`) the faces
   # and the costs of each region.
-  defp regions({pts, tris, quadrics, held}, step, shift, plan) do
-    size = size(step)
+  defp regions({pts, tris, quadrics, held}, step, shift, plan, scale) do
+    size = size(step) * scale
     {all, qs} = {List.to_tuple(pts), List.to_tuple(quadrics)}
 
     region = fn [a, b, c] ->

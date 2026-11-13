@@ -146,6 +146,22 @@ defmodule World.Sculpt.SurfaceTest do
     assert length(all.faces) > 30_000
   end
 
+  test "a small budget for a round thing of many regions: rounds in larger regions, then the last pass (plan 0015)" do
+    # A ball of 5 regions across. No region can do a collapse that moves the surface by more than
+    # half a cell, so the first rounds leave many times the budget; the rounds in larger regions go on to two times the budget.
+    ball = SDF.edit(:ellipsoid, {0.75, 0.7, 0.65}, frame: Frame.move({0.003, 0.007, 0.001}))
+    ps = pieces([ball], 0.02)
+    solid = 4 / 3 * :math.pi() * 0.75 * 0.7 * 0.65
+    [far] = Surface.meshes(ps, budget: 300, step: 0.02)
+    assert length(far.faces) in 250..300
+    assert_in_delta volume([far]), solid, 0.07 * solid
+    # Each edge is in two faces: the surface is closed.
+    edges = for [a, b, c] <- far.faces, {u, v} <- [{a, b}, {b, c}, {c, a}], do: {min(u, v), max(u, v)}
+    assert edges |> Enum.frequencies() |> Map.values() |> Enum.uniq() == [2]
+    # Two times, the same mesh.
+    assert Surface.meshes(ps, budget: 300, step: 0.02) == [far]
+  end
+
   test "a surface through a point of the grid is closed: the bricks give one place to the point" do
     # The base of the cone is at -1 cell, and its middle is at a corner of bricks.
     edits = [SDF.edit(:ball, {0.04}), SDF.edit(:cone, {0.04, 0.0, 0.154}, frame: Frame.move({0.0, 0.0, 0.111}))]
