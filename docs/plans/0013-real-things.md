@@ -116,11 +116,14 @@ build was about a third of the time.
   near level of the boat has an image of 2048: its bake is more than
   half of its build. Each texel reads the color with the slow fold of
   the edits. The next work for "fast": a hot loop for the color as for
-  the value, and a measure on a machine with more cores.
+  the value, and a measure on a machine with more cores. (Plan 0015 has the
+  hot loop, and one reading of the field less for most texels: the
+  bake is 12% faster.)
 - **The last pass of the collapse is in one process.** When the budget
   is much less than the faces (the far level of a large model), the
   rounds in the regions stop at their limit, and the last pass does
-  the rest alone.
+  the rest alone. (Plan 0015: rounds in larger regions go on
+  to two times the budget; the last pass was a tenth of the stage.)
 - **The near parts of a fat tube.** A cell near a tube that is wide
   keeps about 5 of its cones: the bound of the distance is loose there.
   A bound with the directions of the cones can keep 2.

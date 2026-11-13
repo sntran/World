@@ -1,7 +1,8 @@
 # Plan 0014: a landmark in parts, as a site builds it
 
-Status: Done (2026-11-13), but for the face as a copy and the budgets
-of the basket boat. Section 10 has the measure. (The owner,
+Status: Done (2026-11-13). Plan 0015 made the face from the close
+photos, the stair round its open well, and the budgets of the basket
+boat. Section 10 has the measure. (The owner,
 2026-11-13: "So far we have only built small to medium models, but what
 about buildings, landmarks? Can we build the 'Tượng Chúa giang tay' in
 Vũng Tàu? Do deep research for specs as I don't have them. Make sure
@@ -169,17 +170,16 @@ of 1994).
   shows that model, not the model with the true sizes. The next work:
   the site builds the model in parts (the bands of the robe, the parts
   from the workshop), and the cast model goes.
-- **The face is a face, not the face of the statue.** It has the form
-  of the photos (a long face, a moustache, a short beard, the hair as a
-  veil), but it is not a copy. A scan or a set of close photos from each
-  side makes it true.
-- **The figures of the reliefs**, and the true form of the inside: a
-  stair round an open well of eight sides with a rail, its landings,
-  the rooms of the base.
+- **The face is a face, not the face of the statue.** (Plan 0015 made
+  it again from the close photos; its depths have no source.)
+- **The figures of the reliefs**, and the true form of the inside: the
+  landings of the stair, the rooms of the base. (Plan 0015 made the
+  stair round its open well of eight sides, with its rail.)
 - **The surface of round edits that blend.** A relief of a surface
   (`plaster`) on many round edits that blend (the hair) made rough
   marks; the hair has no relief now.
-- **The serial pass of the collapse** (plan 0013) and the three
+- **The serial pass of the collapse** (plan 0013; plan 0015 gave it
+  less to do) and the three
   proposals of the research that are not done: a collapse in rounds
   with regions that move (as Nanite), a cache of each part by its hash
   (a change of the face then builds only the head), and a part that
