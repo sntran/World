@@ -125,6 +125,40 @@ defmodule World.SimplifyTest do
     assert Simplify.collapse(points, faces, 50, pins: nil) == Simplify.collapse(points, faces, 50, [])
   end
 
+  test "a limit for the cost of a collapse, collapses with no cost past the budget, and the costs in their turn" do
+    # A flat sheet of 10 x 10 squares with one point above it: a collapse
+    # in the flat part costs nothing, a collapse of the high point costs much.
+    top = {0.5, 0.5, 0.2}
+    points = for j <- 0..10, i <- 0..10, do: if({i, j} == {5, 5}, do: top, else: {i * 0.1, j * 0.1, 0.0})
+    at = fn i, j -> j * 11 + i end
+
+    faces =
+      for j <- 0..9,
+          i <- 0..9,
+          f <- [[at.(i, j), at.(i + 1, j), at.(i + 1, j + 1)], [at.(i, j), at.(i + 1, j + 1), at.(i, j + 1)]],
+          do: {f, :m}
+
+    # To the budget only: the high point goes.
+    plain = Simplify.collapse(points, faces, 4, [])
+    assert length(plain.faces) <= 4 and top not in plain.points
+    # With a limit: the collapse stops before the budget, and the high point stays.
+    limited = Simplify.collapse(points, faces, 4, limit: 1.0e-6)
+    assert length(limited.faces) in 5..120 and top in limited.points
+    # With free collapses: the same faces, also when the budget is more.
+    assert Simplify.collapse(points, faces, 150, free: 1.0e-6) == limited
+    assert length(Simplify.collapse(points, faces, 150, []).faces) in 149..150
+
+    # The costs: one for each collapse, with the faces after it; the first cost nothing, the last cost much.
+    costs = Simplify.collapse(points, faces, 4, costs: true)
+    assert [{first, 198} | _] = costs
+    assert {last, 4} = List.last(costs)
+    assert first < 1.0e-6 and last > 1.0e-3
+    assert costs |> Enum.map(&elem(&1, 1)) |> Enum.chunk_every(2, 1, :discard) |> Enum.all?(fn [a, b] -> b < a end)
+    # The collapse to the faces of a cost does the collapses before that cost.
+    {_, left} = Enum.find(costs, fn {cost, _} -> cost > 1.0e-6 end)
+    assert length(Simplify.collapse(points, faces, left + 2, []).faces) == length(limited.faces)
+  end
+
   test "a budget of more faces than the mesh has: the same mesh" do
     {points, faces} = triangles([SDF.edit(:ball, {0.3})], 0.1)
     assert Simplify.collapse(points, faces, length(faces)) == {points, faces}

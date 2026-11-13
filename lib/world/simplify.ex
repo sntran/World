@@ -36,6 +36,9 @@ defmodule World.Simplify do
     {points, faces}
   end
 
+  # The cost of the square of the length of an edge (m²), next to the error of its collapse.
+  @length 1.0e-7
+
   @doc """
   `collapse/3` with options: `fixed` (the indices of the points that
   stay where they are: the points that a mesh shares with the next
@@ -44,9 +47,21 @@ defmodule World.Simplify do
   these faces), and `pins` (a weight for each point, or nil: the cost
   of a move of the point from its first place, the weight times the
   square of the distance; so a point with a large pin stays near its
-  place, as a point where the colors of a mesh change). Gives `%{points, faces, ids, quadrics}`: `ids` are the
-  indices in `points` of the points that stay, and `quadrics` their
-  quadrics, for a collapse after.
+  place, as a point where the colors of a mesh change). Gives
+  `%{points, faces, ids, quadrics}`: `ids` are the indices in `points`
+  of the points that stay, and `quadrics` their quadrics, for a collapse
+  after.
+
+  With the option `limit`, no collapse costs more than it (the collapse
+  can stop with more faces than the budget). With the option `free`, the
+  collapse goes on past the budget while a collapse costs no more than
+  it (a flat part needs few faces).
+
+  With the option `costs: true`, it gives only the cost of each collapse
+  in its turn and the faces after it (`[{cost, faces}]`): the collapse
+  to a smaller budget does the same collapses first, so a caller with
+  many meshes can give each mesh the part of one budget where the costs
+  are the least.
   """
   def collapse(points, faces, budget, opts) do
     pts = points |> Enum.with_index() |> Map.new(fn {p, i} -> {i, Vec.float(p)} end)
@@ -76,32 +91,54 @@ defmodule World.Simplify do
 
     s = %{pts: pts, fs: fs, vf: vfaces, q: q, locked: locked, fixed: fixed, ver: %{}, count: map_size(fs)}
     heap = edges |> Map.keys() |> Enum.flat_map(&List.wrap(entry(s, &1))) |> :gb_sets.from_list()
-    s = run(s, heap, budget)
-    pack(s)
+
+    # (With `limit`: no collapse that costs more. With `free`: past the
+    # budget, each collapse that costs no more.)
+    s = Map.merge(s, %{limit: opts[:limit], free: opts[:free]})
+
+    if opts[:costs] do
+      # The cost of each collapse in its turn, and the faces that it left.
+      run(Map.put(s, :costs, []), heap, budget).costs |> Enum.reverse()
+    else
+      s = run(s, heap, budget)
+      pack(s)
+    end
   end
 
-  defp run(%{count: n} = s, _heap, budget) when n <= budget, do: s
+  defp run(%{count: n, free: nil} = s, _heap, budget) when n <= budget, do: s
 
   defp run(s, heap, budget) do
     if :gb_sets.is_empty(heap) do
       s
     else
-      {{_cost, a, b, va, vb}, heap} = :gb_sets.take_smallest(heap)
+      {{cost, a, b, va, vb}, heap} = :gb_sets.take_smallest(heap)
 
-      if Map.get(s.ver, a, 0) == va and Map.get(s.ver, b, 0) == vb and Map.has_key?(s.pts, a) and Map.has_key?(s.pts, b) do
-        # The place again, as the entry found it (the two points have not
-        # changed since): the heap keeps no place, so it is smaller.
-        {_, ^a, ^b, place} = best(s, {min(a, b), max(a, b)})
-
-        case merge(s, a, b, place) do
-          {:ok, s} -> run(s, Enum.reduce(around(s, a), heap, &push(&2, s, a, &1)), budget)
-          :no -> run(s, heap, budget)
-        end
-      else
-        run(s, heap, budget)
+      cond do
+        s.limit != nil and cost > s.limit -> s
+        s.count <= budget and cost > s.free -> s
+        true -> step(s, heap, budget, {cost, a, b, va, vb})
       end
     end
   end
+
+  defp step(s, heap, budget, {cost, a, b, va, vb}) do
+    if Map.get(s.ver, a, 0) == va and Map.get(s.ver, b, 0) == vb and Map.has_key?(s.pts, a) and Map.has_key?(s.pts, b) do
+      # The place again, as the entry found it (the two points have not
+      # changed since): the heap keeps no place, so it is smaller.
+      {_, ^a, ^b, place} = best(s, {min(a, b), max(a, b)})
+
+      case merge(s, a, b, place) do
+        {:ok, s} -> run(cost(s, cost), Enum.reduce(around(s, a), heap, &push(&2, s, a, &1)), budget)
+        :no -> run(s, heap, budget)
+      end
+    else
+      run(s, heap, budget)
+    end
+  end
+
+  # With the option `costs`: the cost of a collapse that was done, and the faces after it.
+  defp cost(%{costs: costs, count: count} = s, cost), do: %{s | costs: [{cost, count} | costs]}
+  defp cost(s, _cost), do: s
 
   # The quadric of each point: the planes of its faces (each plane made
   # once), and the planes of the borders of the materials: for each edge
@@ -184,7 +221,12 @@ defmodule World.Simplify do
       _ ->
         qe = add(s.q[a], s.q[b])
         {cost, place} = places |> Enum.map(&{error(qe, &1), &1}) |> Enum.min_by(&elem(&1, 0))
-        {cost, a, b, place}
+        # A very small cost for the length of the edge: on a flat part
+        # each collapse costs nothing, and the short edges go first. (With
+        # no such cost the order is by the numbers of the points: one
+        # point takes all the points round it, its faces are long and
+        # thin, and the work grows with the square of the faces.)
+        {cost + @length * Vec.dot(Vec.sub(s.pts[a], s.pts[b]), Vec.sub(s.pts[a], s.pts[b])), a, b, place}
     end
   end
 

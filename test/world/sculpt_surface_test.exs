@@ -112,6 +112,40 @@ defmodule World.Sculpt.SurfaceTest do
     assert Surface.meshes(pieces([hd(two)], 0.01), budget: 1_000_000) == Surface.meshes(pieces([hd(two)], 0.01))
   end
 
+  test "fewer faces, with the cells: a flat part keeps few faces, and a small part keeps its corners" do
+    # A slab of many regions with a small post on it (a roof with a chimney).
+    slab = SDF.edit(:box, {0.8, 0.8, 0.1}, frame: Frame.move({0.003, 0.007, 0.001}))
+    post = SDF.edit(:box, {0.06, 0.06, 0.15}, frame: Frame.move({0.213, 0.107, 0.2}))
+    ps = pieces([slab, post], 0.02)
+    [all] = Surface.meshes(ps)
+    solid = 1.6 * 1.6 * 0.2 + 0.12 * 0.12 * 0.15
+
+    corners =
+      for(x <- [-0.797, 0.803], y <- [-0.793, 0.807], z <- [-0.099, 0.101], do: {x, y, z}) ++
+        for x <- [0.153, 0.273], y <- [0.047, 0.167], do: {x, y, 0.35}
+
+    here = fn mesh ->
+      Enum.count(corners, fn c -> Enum.any?(mesh.points, &(Vec.len(Vec.sub(&1, c)) < 1.0e-3)) end)
+    end
+
+    assert here.(all) == 12
+
+    # A budget that the mesh does not need: the flat parts go all the same.
+    [rich] = Surface.meshes(ps, budget: 2_000, step: 0.02)
+    assert length(rich.faces) < 700 and here.(rich) == 12
+    assert_in_delta volume([rich]), solid, 2.0e-3
+    # A small budget: the corners of the slab and of the post stay, with the volume.
+    [poor] = Surface.meshes(ps, budget: 100, step: 0.02)
+    assert length(poor.faces) <= 100 and here.(poor) == 12
+    assert_in_delta volume([poor]), solid, 2.0e-3
+    # With no cells, a region does not know which collapse is free: the budget only.
+    [plain] = Surface.meshes(ps, budget: 2_000)
+    assert length(plain.faces) in 1_900..2_000
+    # Two times, the same mesh.
+    assert Surface.meshes(ps, budget: 100, step: 0.02) == [poor]
+    assert length(all.faces) > 30_000
+  end
+
   test "a surface through a point of the grid is closed: the bricks give one place to the point" do
     # The base of the cone is at -1 cell, and its middle is at a corner of bricks.
     edits = [SDF.edit(:ball, {0.04}), SDF.edit(:cone, {0.04, 0.0, 0.154}, frame: Frame.move({0.0, 0.0, 0.111}))]
