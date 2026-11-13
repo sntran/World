@@ -118,7 +118,11 @@
                 "x",
                 "y"
               ],
-              "roughness": 0.9
+              "roughness": 0.9,
+              "surface": {
+                "kind": "rubber",
+                "scale": 0.03
+              }
             },
             {
               "shape": "cylinder",
@@ -360,6 +364,8 @@
               "finish": "shiny_metal"
             }
           ],
+          "dirt": 0.5,
+          "wear": 0.15,
           "cells": {
             "near": 0.03,
             "mid": 0.06,

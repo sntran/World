@@ -31,7 +31,11 @@
               ],
               "material": "paint",
               "color": "#8c8a84",
-              "roughness": 0.9
+              "roughness": 0.9,
+              "surface": {
+                "kind": "concrete",
+                "scale": 0.08
+              }
             },
             {
               "shape": "box",
@@ -47,7 +51,11 @@
               ],
               "material": "paint",
               "color": "#e6dcc0",
-              "roughness": 0.85
+              "roughness": 0.85,
+              "surface": {
+                "kind": "plaster",
+                "scale": 0.05
+              }
             },
             {
               "shape": "wedge",
@@ -80,7 +88,11 @@
               ],
               "material": "paint",
               "color": "#9a4a36",
-              "roughness": 0.9
+              "roughness": 0.9,
+              "surface": {
+                "kind": "stone",
+                "scale": 0.08
+              }
             },
             {
               "shape": "box",
@@ -96,7 +108,11 @@
               ],
               "material": "paint",
               "color": "#8c8a84",
-              "roughness": 0.9
+              "roughness": 0.9,
+              "surface": {
+                "kind": "concrete",
+                "scale": 0.08
+              }
             },
             {
               "shape": "box",
@@ -115,6 +131,10 @@
               "mode": "paint",
               "blend": 0.05,
               "roughness": 0.6,
+              "surface": {
+                "kind": "wood",
+                "scale": 0.04
+              },
               "raise": -0.04
             },
             {
@@ -209,6 +229,8 @@
               "raise": -0.02
             }
           ],
+          "dirt": 0.6,
+          "wear": 0.2,
           "cells": {
             "near": 0.05,
             "mid": 0.1,

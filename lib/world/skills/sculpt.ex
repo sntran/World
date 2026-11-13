@@ -29,10 +29,10 @@ defmodule World.Skills.Sculpt do
   @behaviour World.Skill
 
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
-  alias World.Sculpt.Bones
+  alias World.Sculpt.{Bones, Texture}
 
   @keys ~w(edits groups details ports sources budget cells bake occlusion dirt wear bones bone_blend plan gait clips)
-  @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow mirror repeat)
+  @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow surface mirror repeat)
   # The finishes with a name: a roughness and a metal.
   @finishes %{
     "plastic" => {0.4, 0.0},
@@ -257,7 +257,15 @@ defmodule World.Skills.Sculpt do
       |> Enum.flat_map(&specs(&1, %{}))
       |> Enum.map(fn s ->
         at = %{s.frame | at: Vec.scale(s.frame.at, k)}
-        %{s | frame: Frame.compose(place, at), size: scaled(s.shape, s.size, k), blend: s.blend * k, raise: s.raise * k}
+
+        %{
+          s
+          | frame: Frame.compose(place, at),
+            size: scaled(s.shape, s.size, k),
+            blend: s.blend * k,
+            raise: s.raise * k,
+            surface: s.surface && {elem(s.surface, 0), elem(s.surface, 1) * k}
+        }
       end)
 
     # Each copy is the whole group, in the order of its edits.
@@ -279,13 +287,22 @@ defmodule World.Skills.Sculpt do
       # The finish of the edit: its own numbers, or the numbers of its finish with a name.
       roughness: e["roughness"] || elem(Map.get(@finishes, e["finish"], {nil, nil}), 0),
       metal: e["metal"] || elem(Map.get(@finishes, e["finish"], {nil, nil}), 1),
-      glow: e["glow"]
+      glow: e["glow"],
+      surface: surface(e["surface"])
     }
 
     for copy <- copies(e), do: copy.(spec)
   end
 
   defp to_edit(s), do: SDF.edit(s.shape, s.size, Keyword.new(Map.drop(s, [:shape, :size])))
+
+  # The surface of an edit: the name of a kind (with the scale of the
+  # kind), or a kind with a scale (m).
+  defp surface(nil), do: nil
+  defp surface(name) when is_binary(name), do: Texture.kind(name)
+
+  defp surface(%{"kind" => name} = s),
+    do: {elem(Texture.kind(name), 0), Map.get(s, "scale", elem(Texture.kind(name), 1)) / 1}
 
   # The frame of an edit: the axes of the sculpture by default, z up and
   # y to the front (z up when the axis is along y).
@@ -412,6 +429,7 @@ defmodule World.Skills.Sculpt do
       optional(e, "roughness", path, &number(&1, &2, 0, 1)) ++
       optional(e, "metal", path, &number(&1, &2, 0, 1)) ++
       optional(e, "glow", path, &number(&1, &2, 0, 1)) ++
+      optional(e, "surface", path, &surface/2) ++
       optional(e, "raise", path, &lift(&1, &2, e))
   end
 
@@ -525,6 +543,16 @@ defmodule World.Skills.Sculpt do
       errors -> errors
     end
   end
+
+  defp surface(name, path) when is_binary(name), do: choice(name, path, Texture.kinds())
+
+  defp surface(%{"kind" => name} = s, path) when is_binary(name),
+    do:
+      choice(name, "#{path}.kind", Texture.kinds()) ++
+        optional(s, "scale", path, &number(&1, &2, 0.0005, 10)) ++
+        for(k <- Map.keys(s) -- ~w(kind scale), do: {"#{path}.#{k}", "is not a word of a surface"})
+
+  defp surface(_v, path), do: [{path, "must be the name of a kind, or an object with a kind and a scale"}]
 
   defp flag(v, _path) when is_boolean(v), do: []
   defp flag(_v, path), do: [{path, "must be true or false"}]

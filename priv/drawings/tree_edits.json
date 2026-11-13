@@ -31,7 +31,11 @@
               ],
               "material": "paint",
               "color": "#6b4a2e",
-              "roughness": 0.95
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.07
+              }
             },
             {
               "shape": "tube",
@@ -62,7 +66,11 @@
               "color": "#6b4a2e",
               "material": "paint",
               "blend": 0.1,
-              "roughness": 0.95
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.07
+              }
             },
             {
               "shape": "tube",
@@ -93,7 +101,11 @@
               "color": "#6b4a2e",
               "material": "paint",
               "blend": 0.1,
-              "roughness": 0.95
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.07
+              }
             },
             {
               "shape": "tube",
@@ -124,7 +136,11 @@
               "color": "#6b4a2e",
               "material": "paint",
               "blend": 0.1,
-              "roughness": 0.95
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.07
+              }
             },
             {
               "shape": "tube",
@@ -152,7 +168,11 @@
               "repeat": {
                 "count": 5
               },
-              "roughness": 0.95
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.07
+              }
             },
             {
               "shape": "ball",
@@ -166,7 +186,11 @@
               ],
               "material": "paint",
               "color": "#4f8a3a",
-              "roughness": 0.8
+              "roughness": 0.8,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.16
+              }
             },
             {
               "shape": "ball",
@@ -181,7 +205,11 @@
               "material": "paint",
               "color": "#4f8a3a",
               "blend": 0.35,
-              "roughness": 0.8
+              "roughness": 0.8,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.16
+              }
             },
             {
               "shape": "ball",
@@ -196,7 +224,11 @@
               "material": "paint",
               "color": "#5a9a40",
               "blend": 0.35,
-              "roughness": 0.8
+              "roughness": 0.8,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.16
+              }
             },
             {
               "shape": "ball",
@@ -211,7 +243,11 @@
               "material": "paint",
               "color": "#5a9a40",
               "blend": 0.4,
-              "roughness": 0.8
+              "roughness": 0.8,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.16
+              }
             },
             {
               "shape": "ball",
@@ -238,6 +274,7 @@
               }
             }
           ],
+          "dirt": 0.5,
           "cells": {
             "near": 0.05,
             "mid": 0.1,

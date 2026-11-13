@@ -42,6 +42,7 @@ defmodule World.Sculpt.Bake do
   """
 
   alias World.{Mesh, SDF, Sculpt, Vec}
+  alias World.Sculpt.Texture
 
   # The border of a rectangle round its triangles, in texels.
   @border 2
@@ -118,12 +119,15 @@ defmodule World.Sculpt.Bake do
   def maps(parts, side, defaults, look) when is_map(look) do
     look = Map.merge(%{occlusion: false, dirt: 0.0, wear: 0.0}, look)
     shade? = look.occlusion or look.dirt > 0.0 or look.wear > 0.0
-    look = Map.put(look, :shade, shade?)
+    # (An edit with a surface: the relief, the color and the finish of each texel change.)
+    grain? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.surface) end)
+    look = Map.merge(look, %{shade: shade?, grain: grain?})
 
     colors? =
-      look.dirt > 0.0 or look.wear > 0.0 or Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.color) end)
+      grain? or look.dirt > 0.0 or look.wear > 0.0 or
+        Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.color) end)
 
-    finish? = shade? or Enum.any?(parts, fn {_, edits, _} -> SDF.finished?(edits) end)
+    finish? = shade? or grain? or Enum.any?(parts, fn {_, edits, _} -> SDF.finished?(edits) end)
     glow? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, &((&1.glow || 0.0) > 0.0)) end)
     # The finish of the materials, when a texel needs it (nil with no finish of an edit).
     defaults = if finish?, do: defaults
@@ -613,9 +617,11 @@ defmodule World.Sculpt.Bake do
     values =
       for {{i, j}, {k, weights}} <- owners(charts, w, h), c = elem(charts, k), p = mix(c.points, weights), into: %{} do
         {f, color, finish} =
-          if defaults,
-            do: SDF.sample(c.list, p, c.limit, defaults),
-            else: Tuple.insert_at(SDF.sample(c.list, p, c.limit), 2, nil)
+          cond do
+            look.grain -> grain(SDF.seen(c.list, p, c.limit, defaults), c, p)
+            defaults -> SDF.sample(c.list, p, c.limit, defaults)
+            true -> Tuple.insert_at(SDF.sample(c.list, p, c.limit), 2, nil)
+          end
 
         {{i, j}, {c, p, f, color, {weights, finish}}}
       end
@@ -629,7 +635,11 @@ defmodule World.Sculpt.Bake do
         {at, {<<r, g, b>>, normal(c, i, j, {p, f, weights}, values), finish, glow}}
       end
 
-    done = spread(done, w, h)
+    # (With the relief of a surface, the normals of two texels next to
+    # each other are not of one smooth surface: the border has the
+    # normal of the texel next to it.)
+    plain? = look.grain and Enum.any?(tris, fn {t, _} -> Enum.any?(t.list, & &1.surface) end)
+    done = spread(done, w, h, plain?)
 
     rows =
       for j <- 0..(h - 1) do
@@ -666,7 +676,7 @@ defmodule World.Sculpt.Bake do
   # patch as they are on the next patch, with no step in the light. A
   # texel of the border does not read the field: past an edge can be
   # another part of the sculpture.
-  defp spread(inside, w, h) do
+  defp spread(inside, w, h, plain?) do
     {done, _} =
       Enum.reduce(1..@reach, {inside, Enum.sort(Map.keys(inside))}, fn ring, {done, from} ->
         {done, next} =
@@ -680,7 +690,7 @@ defmodule World.Sculpt.Bake do
                 {done, next}
               else
                 near = Map.fetch!(done, {i, j})
-                value = if ring == 1, do: on(near, inside[{i - di, j - dj}]), else: near
+                value = if ring == 1 and not plain?, do: on(near, inside[{i - di, j - dj}]), else: near
                 {Map.put(done, {k, l}, value), [{k, l} | next]}
               end
           end
@@ -713,6 +723,54 @@ defmodule World.Sculpt.Bake do
     {<<round(open * 255), round(rough * 255), round(metal * 255)>>,
      <<round(r * glow), round(g * glow), round(b * glow)>>}
   end
+
+  # --- The surface of an edit --------------------------------------------------
+
+  # The value, the color and the finish of a texel with the surface of
+  # its edit (`World.Sculpt.Texture`): the relief moves the surface out
+  # (so the normals of the texels have it), and the color and the finish
+  # change. A mark of the surface that is smaller than 1.5 texels does not
+  # show (the image cannot have it); it shows in full from 3.5 texels.
+  defp grain({f, color, finish, %{surface: {kind, scale}} = e}, %{u: u, face: face}, p) do
+    fade = min(max((scale / Vec.len(u) - 1.5) / 2, 0.0), 1.0)
+
+    if fade == 0.0 do
+      {f, color, finish}
+    else
+      q = along(e, Vec.scale(World.Frame.point(e.back, p), 1 / scale))
+      {height, tone, more, less, to} = Texture.at(kind, q, along(e, World.Frame.dir(e.back, face)))
+      {r, g, b} = color
+      {rough, metal, glow} = finish
+      tone = 1.0 + (tone - 1.0) * fade
+      {r, g, b} = {r * tone, g * tone, b * tone}
+
+      {r, g, b} =
+        case to do
+          {{tr, tg, tb}, part} -> {r + (tr - r) * part * fade, g + (tg - g) * part * fade, b + (tb - b) * part * fade}
+          nil -> {r, g, b}
+        end
+
+      {f - height * scale * fade, {byte8(round(r)), byte8(round(g)), byte8(round(b))},
+       {min(max(rough + more * fade, 0.05), 1.0), metal * (1.0 + (less - 1.0) * fade), glow}}
+    end
+  end
+
+  defp grain({f, color, finish, _edit}, _chart, _p), do: {f, color, finish}
+
+  # A place in the axes of the surface of an edit: its z is the long
+  # axis of a box (the grain of a plank goes along the plank); for each
+  # other shape, the z of the edit.
+  defp along(%{shape: shape, size: size}, {x, y, z}) when shape in [:box, :round_box] do
+    {a, b, c} = {elem(size, 0), elem(size, 1), elem(size, 2)}
+
+    cond do
+      c >= a and c >= b -> {x, y, z}
+      a >= b -> {y, z, x}
+      true -> {z, x, y}
+    end
+  end
+
+  defp along(_edit, q), do: q
 
   # --- How open a place is ----------------------------------------------------
 

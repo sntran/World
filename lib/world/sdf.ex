@@ -93,6 +93,7 @@ defmodule World.SDF do
               roughness: nil,
               metal: nil,
               glow: nil,
+              surface: nil,
               box: nil,
               id: nil
   end
@@ -143,6 +144,7 @@ defmodule World.SDF do
       roughness: number(opts[:roughness]),
       metal: number(opts[:metal]),
       glow: number(opts[:glow]),
+      surface: opts[:surface],
       box: placed(local_bounds(shape, size), frame)
     }
 
@@ -156,6 +158,8 @@ defmodule World.SDF do
       {e.shape, e.size, e.frame, e.mode, e.blend, e.material, e.color, e.raise, e.roughness, e.metal, e.glow, e.hard,
        e.opacity}
 
+    # (An edit with no surface has the id that it had before the surfaces.)
+    what = if e.surface, do: Tuple.insert_at(what, tuple_size(what), e.surface), else: what
     %{e | id: :erlang.md5(:erlang.term_to_binary(what))}
   end
 
@@ -468,14 +472,28 @@ defmodule World.SDF do
   finish.
   """
   def sample(edits, p, limit, defaults) do
-    {d, {r, g, b}, finish} = look(edits, p, {limit, @far}, {1.0, 1.0, 1.0}, {0.6, 0.0, 0.0}, limit, defaults)
-    {d, {srgb(r), srgb(g), srgb(b)}, finish}
+    {d, color, finish, _top} = seen(edits, p, limit, defaults)
+    {d, color, finish}
+  end
+
+  @doc """
+  `sample/4` with the edit of the surface at the point too: `{value,
+  color, finish, edit}`. It is the last edit with more than half of the
+  weight of the color there: an edit that adds, or an edit with a
+  surface that takes away or paints (`World.Sculpt.Texture`). Nil with
+  no edit there.
+  """
+  def seen(edits, p, limit, defaults) do
+    {d, {r, g, b}, finish, top} =
+      look(edits, p, {limit, @far}, {1.0, 1.0, 1.0}, {0.6, 0.0, 0.0}, limit, defaults, nil)
+
+    {d, {srgb(r), srgb(g), srgb(b)}, finish, top}
   end
 
   # The fold of `tint/6` with the finish of `finish/3`.
-  defp look([], _p, {d, _u}, col, fin, _limit, _defaults), do: {d, col, fin}
+  defp look([], _p, {d, _u}, col, fin, _limit, _defaults, top), do: {d, col, fin, top}
 
-  defp look([%Edit{mode: :add, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults) do
+  defp look([%Edit{mode: :add, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults, top) do
     de = distance(e, p)
     w = weight(u - de, r)
     {rough, metal} = Map.get(defaults, e.material, {0.6, 0.0})
@@ -488,11 +506,12 @@ defmodule World.SDF do
       mix(col, c || {1.0, 1.0, 1.0}, w),
       part(fin, own, w),
       limit,
-      defaults
+      defaults,
+      if(w > 0.5, do: e, else: top)
     )
   end
 
-  defp look([%Edit{mode: :subtract, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults) do
+  defp look([%Edit{mode: :subtract, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults, top) do
     de = distance(e, p)
     w = weight(-de - u, r)
 
@@ -503,11 +522,12 @@ defmodule World.SDF do
       mix(col, c, w),
       part(fin, {e.roughness, e.metal, e.glow}, w),
       limit,
-      defaults
+      defaults,
+      own(e, w, top)
     )
   end
 
-  defp look([%Edit{mode: :crop, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults) do
+  defp look([%Edit{mode: :crop, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults, top) do
     de = distance(e, p)
     w = weight(de - u, r)
 
@@ -518,7 +538,8 @@ defmodule World.SDF do
       mix(col, c, w),
       part(fin, {e.roughness, e.metal, e.glow}, w),
       limit,
-      defaults
+      defaults,
+      own(e, w, top)
     )
   end
 
@@ -529,7 +550,8 @@ defmodule World.SDF do
          col,
          fin,
          limit,
-         defaults
+         defaults,
+         top
        ) do
     w = smooth(weight(-2 * distance(e, p), r))
 
@@ -540,9 +562,15 @@ defmodule World.SDF do
       mix(col, c, w * o),
       part(fin, {e.roughness, e.metal, e.glow}, w * o),
       limit,
-      defaults
+      defaults,
+      own(e, w * o, top)
     )
   end
+
+  # An edit that takes away or paints has the surface of a place when it
+  # has a surface of its own and more than half of the weight there.
+  defp own(%Edit{surface: surface} = e, w, _top) when surface != nil and w > 0.5, do: e
+  defp own(_e, _w, top), do: top
 
   @doc """
   The finish of the surface of the edits at a point: `{roughness, metal,

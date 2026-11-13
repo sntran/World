@@ -720,6 +720,117 @@ defmodule World.Sculpt.BakeTest do
     assert mean.(Enum.map(edge, &rough.(used, &1))) < mean.(Enum.map(middle, &rough.(used, &1))) - 10
   end
 
+  test "a surface of an edit: the color and the normals change inside the edit, the mesh does not (plan 0012, R2)" do
+    box = fn opts -> [SDF.edit(:box, {0.1, 0.06, 0.3}, [color: {180, 130, 80}] ++ opts)] end
+    plain = box.([])
+    meshes = Sculpt.model(plain, step: 0.02, budget: 600, cache: false)
+    # (The surface is not in the field of the mesh.)
+    wood = box.(surface: {:wood, 0.02})
+    assert Sculpt.model(wood, step: 0.02, budget: 600, cache: false) == meshes
+    assert hd(wood).id != hd(plain).id
+
+    {baked, flat} = Bake.maps([{meshes, plain, 0.02}], 256, %{})
+    {grained, maps} = Bake.maps([{meshes, wood, 0.02}], 256, %{})
+    assert Enum.map(grained, &{&1.points, &1.faces, &1.uvs}) == Enum.map(baked, &{&1.points, &1.faces, &1.uvs})
+    # The texels of a wide face of the box, away from its edges.
+    face = for {{x, y, z}, t} <- places(baked, 256), x > 0.095, abs(y) < 0.04, abs(z) < 0.25, do: t
+    assert length(face) > 300
+
+    spread = fn rows, part ->
+      face |> Enum.map(fn {i, j} -> elem(texel(rows, i, j), part) end) |> Enum.uniq() |> length()
+    end
+
+    # With no surface: one color, one normal. With wood: many colors, many normals, and a roughness that changes.
+    assert spread.(flat.color, 0) == 1 and spread.(flat.normal, 1) <= 2 and flat.finish == nil
+    assert spread.(maps.color, 0) > 20 and spread.(maps.normal, 1) > 8 and spread.(maps.finish, 1) > 3
+    # The mean color stays near the color of the edit.
+    mean = Enum.sum(for {i, j} <- face, do: elem(texel(maps.color, i, j), 0)) / length(face)
+    assert_in_delta mean, 180, 25
+
+    # A mark smaller than 1.5 texels does not show: the maps of the edit with no surface.
+    {_, fine} = Bake.maps([{meshes, box.(surface: {:wood, 0.0005}), 0.02}], 256, %{})
+    assert fine.color == flat.color and fine.normal == flat.normal
+
+    # Planks along x and along y have the grain along their length; a ball of steel has rust; a ball with no surface is plain.
+    mixed = [
+      SDF.edit(:box, {0.3, 0.05, 0.03}, color: {180, 130, 80}, surface: {:wood, 0.02}),
+      SDF.edit(:box, {0.05, 0.3, 0.03},
+        frame: Frame.move({0.0, 0.0, 0.2}),
+        color: {180, 130, 80},
+        surface: {:wood, 0.02}
+      ),
+      SDF.edit(:ball, {0.12},
+        frame: Frame.move({0.0, 0.0, 0.5}),
+        color: {150, 150, 155},
+        metal: 1.0,
+        surface: {:rust, 0.06}
+      ),
+      SDF.edit(:ball, {0.12}, frame: Frame.move({0.0, 0.0, 0.9}), color: {40, 90, 200})
+    ]
+
+    solids = Sculpt.model(mixed, step: 0.02, budget: 2_000, cache: false)
+    {done, both} = Bake.maps([{solids, mixed, 0.02}], 512, %{})
+
+    seen =
+      for {{x, y, z}, {i, j}} <- places(done, 512), do: {{x, y, z}, texel(both.color, i, j), texel(both.finish, i, j)}
+
+    tones = fn list -> list |> Enum.map(fn {_, {r, _, _}, _} -> r end) |> Enum.uniq() |> length() end
+    # On the top face of each plank, the color changes less along the plank than across it:
+    # the texels of one line along the plank are more even than the texels of one line across it.
+    even = fn points, line, bin ->
+      lines = points |> Enum.group_by(&round(line.(&1) / bin)) |> Map.values() |> Enum.filter(&(length(&1) >= 5))
+      spreads = for l <- lines, reds = Enum.map(l, fn {_, {r, _, _}, _} -> r end), do: Enum.max(reds) - Enum.min(reds)
+      Enum.sum(spreads) / length(spreads)
+    end
+
+    top_x = for {{x, y, z}, _, _} = t <- seen, z > 0.028, z < 0.035, abs(x) < 0.04, abs(y) < 0.04, do: t
+    top_y = for {{x, y, z}, _, _} = t <- seen, z > 0.228, z < 0.235, abs(y) < 0.04, abs(x) < 0.04, do: t
+    assert length(top_x) > 100 and length(top_y) > 100
+    {x_of, y_of} = {fn {{x, _, _}, _, _} -> x end, fn {{_, y, _}, _, _} -> y end}
+    # (A line along the plank along x has one y; a line across it has one x.)
+    assert even.(top_x, x_of, 0.004) > 1.5 * even.(top_x, y_of, 0.004)
+    assert even.(top_y, y_of, 0.004) > 1.5 * even.(top_y, x_of, 0.004)
+    # The ball of steel: places with no metal (rust) and places with metal.
+    steel = for {{_, _, z}, _, {_, _, metal}} <- seen, z > 0.4 and z < 0.6, do: metal
+    assert Enum.min(steel) < 30 and Enum.max(steel) > 225
+    # The ball with no surface has one color.
+    assert tones.(for {{_, _, z}, _, _} = t <- seen, z > 0.85, do: t) == 1
+
+    # An edit that paints with a surface has it in its shape; with no surface, the surface under it stays.
+    spot = fn opts -> SDF.edit(:ball, {0.05}, [frame: Frame.move({0.1, 0.0, 0.0}), mode: :paint] ++ opts) end
+    {_, _, _, top} = SDF.seen(wood ++ [spot.(surface: {:rust, 0.03})], {0.1, 0.0, 0.0}, 1.0, %{})
+    assert top.surface == {:rust, 0.03}
+    {_, _, _, top} = SDF.seen(wood ++ [spot.(color: {10, 10, 10})], {0.1, 0.0, 0.0}, 1.0, %{})
+    assert top.surface == {:wood, 0.02}
+    # An edit that takes away with a surface has the surface of its cut; far from each edit, no edit.
+    cut = SDF.edit(:ball, {0.05}, frame: Frame.move({0.1, 0.0, 0.0}), mode: :subtract, surface: {:cast, 0.003})
+    assert {_, _, _, %{surface: {:cast, _}}} = SDF.seen(wood ++ [cut], {0.06, 0.0, 0.0}, 1.0, %{})
+    assert {_, _, _, %{surface: {:wood, _}}} = SDF.seen(wood ++ [cut], {0.0, 0.0, 0.3}, 1.0, %{})
+    assert {_, _, _, nil} = SDF.seen([spot.([])], {0.1, 0.0, 0.0}, 1.0, %{})
+    assert SDF.sample(wood, {0.1, 0.0, 0.0}, 1.0, %{}) == Tuple.delete_at(SDF.seen(wood, {0.1, 0.0, 0.0}, 1.0, %{}), 3)
+  end
+
+  test "the surface of an edit in the data: a kind, or a kind with a scale; a group has it at its scale" do
+    at = "options.drawing.nodes.0.skill.sculpt"
+    edit = fn surface -> Map.update!(@data, "edits", fn [e | rest] -> [Map.put(e, "surface", surface) | rest] end) end
+    assert paths(edit.("wood")) == [] and paths(edit.(%{"kind" => "weave", "scale" => 0.05})) == []
+    assert paths(edit.("glass")) == ["#{at}.edits.0.surface"]
+    assert paths(edit.(%{"kind" => "glass"})) == ["#{at}.edits.0.surface.kind"]
+    assert paths(edit.(%{"kind" => "wood", "scale" => 0})) == ["#{at}.edits.0.surface.scale"]
+    assert paths(edit.(%{"kind" => "wood", "size" => 1})) == ["#{at}.edits.0.surface.size"]
+    assert paths(edit.(3)) == ["#{at}.edits.0.surface"]
+
+    edits = fn list, groups -> World.Skills.Sculpt.edits(list, groups) end
+    assert [%{surface: {:wood, 0.006}}] = edits.([%{"shape" => "ball", "size" => [0.1], "surface" => "wood"}], %{})
+    ball = %{"shape" => "ball", "size" => [0.1], "surface" => %{"kind" => "bark", "scale" => 0.02}}
+    assert [%{surface: {:bark, 0.02}}, %{surface: nil}] = edits.([ball, Map.delete(ball, "surface")], %{})
+    # In a group at a scale of 3, a mark is 3 times as large.
+    assert [%{surface: {:bark, s}}, %{surface: nil}] =
+             edits.([%{"shape" => "group", "group" => "g", "scale" => 3}], %{"g" => [ball, Map.delete(ball, "surface")]})
+
+    assert_in_delta s, 0.06, 1.0e-12
+  end
+
   test "a part of a baked mesh and a mesh with no maps of one material: each point has a UV" do
     edits = [SDF.edit(:ball, {0.3}, color: {200, 100, 50})]
     {[baked], _} = Bake.maps(Sculpt.model(edits, step: 0.1, cache: false), edits, 0.1, 128)

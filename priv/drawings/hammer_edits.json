@@ -35,7 +35,11 @@
                 1,
                 0
               ],
-              "roughness": 0.6
+              "roughness": 0.6,
+              "surface": {
+                "kind": "wood",
+                "scale": 0.004
+              }
             },
             {
               "shape": "cylinder",
@@ -58,6 +62,7 @@
               ],
               "blend": 0.004,
               "roughness": 0.95,
+              "surface": "rubber",
               "raise": 0.002
             },
             {
@@ -116,7 +121,8 @@
               ],
               "material": "paint",
               "color": "#8a8e94",
-              "finish": "metal"
+              "finish": "metal",
+              "surface": "cast"
             },
             {
               "shape": "cylinder",
@@ -138,7 +144,8 @@
               ],
               "blend": 0.004,
               "blend_type": "hard",
-              "finish": "shiny_metal"
+              "finish": "shiny_metal",
+              "surface": "brushed"
             },
             {
               "shape": "cone",
@@ -160,9 +167,12 @@
                 0
               ],
               "blend": 0.003,
-              "finish": "metal"
+              "finish": "metal",
+              "surface": "cast"
             }
           ],
+          "dirt": 0.5,
+          "wear": 0.6,
           "cells": {
             "near": 0.003,
             "mid": 0.006,

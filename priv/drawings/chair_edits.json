@@ -32,7 +32,8 @@
               ],
               "material": "paint",
               "color": "#b98b55",
-              "roughness": 0.5
+              "roughness": 0.5,
+              "surface": "wood"
             },
             {
               "shape": "box",
@@ -49,7 +50,8 @@
               "material": "paint",
               "color": "#b98b55",
               "mirror": "x",
-              "roughness": 0.5
+              "roughness": 0.5,
+              "surface": "wood"
             },
             {
               "shape": "box",
@@ -66,7 +68,8 @@
               "material": "paint",
               "color": "#b98b55",
               "mirror": "x",
-              "roughness": 0.5
+              "roughness": 0.5,
+              "surface": "wood"
             },
             {
               "shape": "round_box",
@@ -83,7 +86,8 @@
               ],
               "material": "paint",
               "color": "#b98b55",
-              "roughness": 0.5
+              "roughness": 0.5,
+              "surface": "wood"
             },
             {
               "shape": "box",
@@ -99,7 +103,8 @@
               ],
               "material": "paint",
               "color": "#b98b55",
-              "roughness": 0.5
+              "roughness": 0.5,
+              "surface": "wood"
             },
             {
               "shape": "box",
@@ -123,7 +128,8 @@
                   0
                 ]
               },
-              "roughness": 0.5
+              "roughness": 0.5,
+              "surface": "wood"
             },
             {
               "shape": "box",
@@ -139,7 +145,8 @@
               ],
               "material": "paint",
               "color": "#b98b55",
-              "roughness": 0.5
+              "roughness": 0.5,
+              "surface": "wood"
             },
             {
               "shape": "box",
@@ -156,7 +163,8 @@
               "material": "paint",
               "color": "#b98b55",
               "mirror": "x",
-              "roughness": 0.5
+              "roughness": 0.5,
+              "surface": "wood"
             },
             {
               "shape": "ellipsoid",
@@ -175,9 +183,12 @@
               "mode": "paint",
               "blend": 0.02,
               "roughness": 0.9,
+              "surface": "fabric",
               "raise": 0.008
             }
           ],
+          "dirt": 0.4,
+          "wear": 0.3,
           "cells": {
             "near": 0.004,
             "mid": 0.008,

@@ -70,6 +70,7 @@ defmodule World.Sculpt.RandomTest do
             glow <- one_of([constant(nil), number(0.0, 1.0)]),
             opacity <- number(0.0, 1.0),
             lift <- number(-1.0, 1.0),
+            surface <- member_of([nil, nil, "wood", "weave", "rust", %{"kind" => "plaster", "scale" => 0.03}]),
             copy <- member_of([nil, nil, :mirror, :ring, :row]) do
       %{"mode" => mode, "at" => at, "blend" => blend, "material" => material}
       |> put(hard and blend > 0, "blend_type", "hard")
@@ -78,6 +79,7 @@ defmodule World.Sculpt.RandomTest do
       |> put(color != nil, "color", color)
       |> put(finish != nil, "finish", finish)
       |> put(glow != nil, "glow", glow)
+      |> put(surface != nil, "surface", surface)
       |> put(mode == "paint", "opacity", opacity)
       |> put(mode == "paint" and blend > 0, "raise", Float.round(lift * min(blend, 0.1), 4))
       |> put(copy == :mirror, "mirror", "x")

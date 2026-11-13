@@ -494,6 +494,32 @@ An edit has its `shape` and its `size`, and these keys:
   of its material in the palette); an edit that paints or takes away
   gives the parts that it has, with a soft border as wide as its
   `blend`. So a part of one surface is metal, or wet, or a lamp;
+- `surface`: the surface of the edit, for a level with maps: the name
+  of a kind, or `{"kind": NAME, "scale": M}` (the size of one mark of
+  the kind in meters, 0.0005 to 10). A surface is a small relief, a
+  change of the color and a change of the roughness from place to
+  place, in the axes of the edit (the grain of a leg goes along the
+  leg, and turns with it; for a box, along its longest side). Only the
+  maps have it: the mesh does not change. A mark smaller than 1.5
+  texels of the image does not show at that level. An edit that paints
+  or takes away with a surface gives it in its shape (a patch of rust).
+  The kinds (`World.Sculpt.Texture`):
+
+  | Kind | What it is | One mark (the scale by default) |
+  |---|---|---|
+  | `wood` | Rings and streaks along the z of the edit. | A ring: 6 mm. |
+  | `bark` | Ridges along z, with dark cracks. | A ridge: 30 mm. |
+  | `brushed` | Fine lines along z: a metal from a mill. | A line: 2 mm. |
+  | `cast` | Small bumps: a cast or forged metal. | A bump: 3 mm. |
+  | `plaster` | Soft bumps and patches: a wall. | A bump: 10 mm. |
+  | `concrete` | Patches, fine grains and some pits. | A patch: 20 mm. |
+  | `fabric` | The threads of a cloth, on the side that the surface faces. | A thread: 2 mm. |
+  | `weave` | Strips over and under, flat across z and pressed to the shape: a basket. | A strip: 20 mm. |
+  | `leather` | A net of fine creases. | A cell: 4 mm. |
+  | `rubber` | A fine grain with no shine. | A grain: 3 mm. |
+  | `leaves` | Clumps, light at their tops and dark between them. | A clump: 120 mm. |
+  | `stone` | Bumps of three sizes and spots. | A bump: 50 mm. |
+  | `rust` | Patches of rust on a metal: brown, rough, no metal there. | A patch: 30 mm. |
 - `raise` (m, from -0.1 to 0.1; for an edit of the mode `paint`, and at
   most its `blend`): the surface moves out by that much in the shape of
   the edit, or in with less than 0, with a slope across its border as
