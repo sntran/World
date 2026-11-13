@@ -42,3 +42,4 @@ builder does not change the requirements: the owner does.
 | 0007 | [The people build each model as actors: faster, better, as on a real site](0007-actors-build-faster.md) | In progress |
 | 0008 | [A model from edits, made by many hands at once](0008-model-from-edits.md) | In progress |
 | 0009 | [A sculpture with a fine finish, a rich vocabulary, and motion](0009-sculpture-finish.md) | Done, but for R5 |
+| 0010 | [The detail of a sculpture in maps, in parts, and at once](0010-sculpture-maps.md) | In progress |
