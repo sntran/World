@@ -1,0 +1,1081 @@
+{
+  "name": "cay_bang",
+  "kind": "plant",
+  "sources": [
+    "A cây bàng (Terminalia catappa, the sea almond), a common tree of the streets and the beaches of Việt Nam (World Agroforestry, the species page; Thomson and Evans, Terminalia catappa, Species Profiles for Pacific Island Agroforestry, 2006).",
+    "The species: 15 to 25 m high, a crown as wide as the tree is high, branches almost level in tiers of 4 or 5, 1 to 2 m apart (the pagoda form), leaves of 15 to 36 cm that are dark green and shine, and red or yellow before they fall, a bark that is gray-brown with cracks.",
+    "Here: a street tree, 9 m high and 9 m wide, with a trunk of 0.5 m at its foot and four tiers (the sizes of a street tree are a guess from photos).",
+    "It is from edits only: no code of World knows this kind of model."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "cay_bang",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "cone",
+              "size": [
+                0.27,
+                0.07,
+                4.25
+              ],
+              "at": [
+                0,
+                0,
+                4.25
+              ],
+              "material": "paint",
+              "color": "#75685a",
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.12,
+                    0.05,
+                    0.5
+                  ],
+                  [
+                    0.42,
+                    0.12,
+                    0.12
+                  ],
+                  [
+                    0.75,
+                    0.2,
+                    0.02
+                  ]
+                ],
+                "radii": [
+                  0.16,
+                  0.1,
+                  0.05
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.18,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.0985,
+                    0.0174,
+                    2.75
+                  ],
+                  [
+                    1.9499,
+                    0.3438,
+                    3.02
+                  ],
+                  [
+                    3.8066,
+                    1.0915,
+                    2.98
+                  ]
+                ],
+                "radii": [
+                  0.151,
+                  0.107,
+                  0.04
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.08,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    1.7333,
+                    0.3056,
+                    3.0
+                  ],
+                  [
+                    2.6866,
+                    1.6788,
+                    3.04
+                  ]
+                ],
+                "radii": [
+                  0.05,
+                  0.035
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.05,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    1.7333,
+                    0.3056,
+                    3.0
+                  ],
+                  [
+                    3.0332,
+                    -0.5348,
+                    3.02
+                  ]
+                ],
+                "radii": [
+                  0.05,
+                  0.035
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.05,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.5,
+                0.41,
+                0.2
+              ],
+              "at": [
+                1.7333,
+                0.3056,
+                3.2399999999999998
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 7
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.56,
+                0.4592,
+                0.2
+              ],
+              "at": [
+                2.4307,
+                1.2385,
+                3.1999999999999997
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 11
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.52,
+                0.4264,
+                0.2
+              ],
+              "at": [
+                2.5954,
+                2.5063,
+                3.1399999999999997
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 15
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.42,
+                0.3444,
+                0.2
+              ],
+              "at": [
+                2.0905,
+                3.7714,
+                3.04
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 19
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.0695,
+                    0.0719,
+                    4.35
+                  ],
+                  [
+                    1.2504,
+                    1.2948,
+                    4.62
+                  ],
+                  [
+                    2.2164,
+                    2.8368,
+                    4.58
+                  ]
+                ],
+                "radii": [
+                  0.14,
+                  0.1,
+                  0.04
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.08,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    1.1115,
+                    1.1509,
+                    4.6
+                  ],
+                  [
+                    1.0789,
+                    2.6703,
+                    4.64
+                  ]
+                ],
+                "radii": [
+                  0.05,
+                  0.035
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.05,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    1.1115,
+                    1.1509,
+                    4.6
+                  ],
+                  [
+                    2.5166,
+                    1.2274,
+                    4.62
+                  ]
+                ],
+                "radii": [
+                  0.05,
+                  0.035
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.05,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.48863636363636365,
+                0.40068181818181814,
+                0.2
+              ],
+              "at": [
+                1.1115,
+                1.1509,
+                4.84
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 7
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.5472727272727274,
+                0.4487636363636364,
+                0.2
+              ],
+              "at": [
+                1.1259,
+                2.2097,
+                4.8
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 11
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.5081818181818182,
+                0.41670909090909086,
+                0.2
+              ],
+              "at": [
+                0.5696,
+                3.2302,
+                4.74
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 15
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.41045454545454546,
+                0.33657272727272725,
+                0.2
+              ],
+              "at": [
+                -0.4777,
+                3.8908,
+                4.64
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 19
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.094,
+                    0.0342,
+                    5.75
+                  ],
+                  [
+                    1.3954,
+                    0.5079,
+                    6.02
+                  ],
+                  [
+                    2.6694,
+                    1.302,
+                    5.98
+                  ]
+                ],
+                "radii": [
+                  0.1207,
+                  0.0877,
+                  0.04
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.08,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    1.2404,
+                    0.4515,
+                    6.0
+                  ],
+                  [
+                    1.7657,
+                    1.5899,
+                    6.04
+                  ]
+                ],
+                "radii": [
+                  0.05,
+                  0.035
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.05,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    1.2404,
+                    0.4515,
+                    6.0
+                  ],
+                  [
+                    2.31,
+                    0.0,
+                    6.02
+                  ]
+                ],
+                "radii": [
+                  0.05,
+                  0.035
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.05,
+              "repeat": {
+                "count": 5
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.46875,
+                0.38437499999999997,
+                0.19
+              ],
+              "at": [
+                1.2404,
+                0.4515,
+                6.24
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 7
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.525,
+                0.4305,
+                0.19
+              ],
+              "at": [
+                1.634,
+                1.2313,
+                6.2
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 11
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.48750000000000004,
+                0.39975,
+                0.19
+              ],
+              "at": [
+                1.5905,
+                2.1892,
+                6.140000000000001
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 15
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.39375,
+                0.32287499999999997,
+                0.19
+              ],
+              "at": [
+                1.0529,
+                3.0578,
+                6.04
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 19
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.05,
+                    0.0866,
+                    6.95
+                  ],
+                  [
+                    0.54,
+                    0.9353,
+                    7.22
+                  ],
+                  [
+                    0.8786,
+                    1.9733,
+                    7.18
+                  ]
+                ],
+                "radii": [
+                  0.096,
+                  0.072,
+                  0.04
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.08,
+              "repeat": {
+                "count": 4
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.48,
+                    0.8314,
+                    7.2
+                  ],
+                  [
+                    0.2405,
+                    1.7112,
+                    7.24
+                  ]
+                ],
+                "radii": [
+                  0.05,
+                  0.035
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.05,
+              "repeat": {
+                "count": 4
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "tube",
+              "size": {
+                "points": [
+                  [
+                    0.48,
+                    0.8314,
+                    7.2
+                  ],
+                  [
+                    1.287,
+                    1.0799,
+                    7.22
+                  ]
+                ],
+                "radii": [
+                  0.05,
+                  0.035
+                ]
+              },
+              "color": "#75685a",
+              "material": "paint",
+              "blend": 0.05,
+              "repeat": {
+                "count": 4
+              },
+              "roughness": 0.95,
+              "surface": {
+                "kind": "bark",
+                "scale": 0.09
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.4431818181818182,
+                0.3634090909090909,
+                0.18
+              ],
+              "at": [
+                0.48,
+                0.8314,
+                7.4399999999999995
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 6
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.4963636363636364,
+                0.40701818181818183,
+                0.18
+              ],
+              "at": [
+                0.3347,
+                1.4499,
+                7.3999999999999995
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 9
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.46090909090909093,
+                0.37794545454545453,
+                0.18
+              ],
+              "at": [
+                -0.1373,
+                1.9632,
+                7.34
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 12
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.37227272727272726,
+                0.30526363636363635,
+                0.18
+              ],
+              "at": [
+                -0.8429,
+                2.1958,
+                7.239999999999999
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "axis": [
+                0.1,
+                0.03,
+                1
+              ],
+              "repeat": {
+                "count": 15
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.5,
+                0.45,
+                0.2
+              ],
+              "at": [
+                0.7,
+                0.0,
+                8.2
+              ],
+              "material": "paint",
+              "color": "#2f6426",
+              "axis": [
+                0.1,
+                0,
+                1
+              ],
+              "repeat": {
+                "count": 5
+              },
+              "blend": 0.07,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ellipsoid",
+              "size": [
+                0.45,
+                0.4,
+                0.2
+              ],
+              "at": [
+                0.05,
+                0,
+                8.6
+              ],
+              "material": "paint",
+              "color": "#24531f",
+              "blend": 0.1,
+              "roughness": 0.5,
+              "surface": {
+                "kind": "leaves",
+                "scale": 0.14
+              }
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.5
+              ],
+              "at": [
+                2.8579,
+                1.65,
+                3.2
+              ],
+              "material": "paint",
+              "color": "#a8432a",
+              "mode": "paint",
+              "blend": 0.4,
+              "opacity": 0.55,
+              "repeat": {
+                "count": 7
+              }
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.4
+              ],
+              "at": [
+                0.4515,
+                2.5605,
+                4.9
+              ],
+              "material": "paint",
+              "color": "#c9772a",
+              "mode": "paint",
+              "blend": 0.35,
+              "opacity": 0.5,
+              "repeat": {
+                "count": 5
+              }
+            },
+            {
+              "shape": "ball",
+              "size": [
+                0.35
+              ],
+              "at": [
+                1.9696,
+                0.3473,
+                6.3
+              ],
+              "material": "paint",
+              "color": "#a8432a",
+              "mode": "paint",
+              "blend": 0.3,
+              "opacity": 0.5,
+              "repeat": {
+                "count": 4
+              }
+            }
+          ],
+          "dirt": 0.25,
+          "cells": {
+            "near": 0.05,
+            "mid": 0.08,
+            "far": 0.14
+          },
+          "budget": {
+            "near": 30000,
+            "mid": 8000,
+            "far": 2000
+          },
+          "bake": {
+            "near": 1024,
+            "mid": 512,
+            "far": 256
+          }
+        }
+      }
+    }
+  ]
+}

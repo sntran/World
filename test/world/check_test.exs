@@ -223,6 +223,8 @@ defmodule World.CheckTest do
   describe "the catalog" do
     for {name, _} <- World.Catalog.models(), name not in ~w(man woman traveler honda_vision_110_rider) do
       @name name
+      # (A large sculpture with maps takes minutes when the other tests work too.)
+      @tag timeout: 1_800_000
       test "#{name} is a true model" do
         {:ok, fun} = World.Catalog.fetch(@name)
         item = fun.()

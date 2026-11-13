@@ -36,6 +36,8 @@ defmodule World.WorldTest do
     # waits for the task of its parent.
     for {name, _} <- World.Catalog.models() do
       @name name
+      # (A large sculpture with maps takes minutes when the other tests work too.)
+      @tag timeout: 1_800_000
       test "the plan of #{name}" do
         {:ok, fun} = World.Catalog.fetch(@name)
         item = fun.()

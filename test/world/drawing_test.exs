@@ -171,7 +171,7 @@ defmodule World.DrawingTest do
       {[], [d]},
       {base.("color", 1), ["#{d}.color"]},
       {base.("name", "Box!"), ["#{d}.name"]},
-      {base.("kind", "boat"), ["#{d}.kind"]},
+      {base.("kind", "ship"), ["#{d}.kind"]},
       {base.("sources", "a"), ["#{d}.sources"]},
       {base.("sources", [String.duplicate("a", 501)]), ["#{d}.sources.0"]},
       {base.("materials", []), ["#{d}.materials"]},
