@@ -43,3 +43,4 @@ builder does not change the requirements: the owner does.
 | 0008 | [A model from edits, made by many hands at once](0008-model-from-edits.md) | In progress |
 | 0009 | [A sculpture with a fine finish, a rich vocabulary, and motion](0009-sculpture-finish.md) | Done, but for R5 |
 | 0010 | [The detail of a sculpture in maps, in parts, and at once](0010-sculpture-maps.md) | Done, but for R7 |
+| 0011 | [World builds any model, on each core](0011-any-model.md) | In progress |
