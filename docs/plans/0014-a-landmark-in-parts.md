@@ -107,12 +107,13 @@ of 1994).
 
 ## 4. Out of scope
 
-- The inside of the statue (the stair of 133 steps, the rooms of the
-  base): the earlier model has them.
+- The things in the rooms (pictures, the chapel), the rail of the
+  stair, the landings.
 - The figures of the four reliefs of the base (panels of the color of
   gold with no figures here).
 - The hill, the stairs, the cannons, the Pietà.
-- A change of the earlier model and of its time lapse.
+- A change of the sizes of the earlier cast model (it has a new name:
+  D10) and of its time lapse.
 - The collapse with no serial pass, a cache of each part, a part on
   another node (section 9).
 
@@ -129,14 +130,16 @@ of 1994).
 | D7 | The distance to a side of an outline is from the cross product next to the side: it is 0 to the last bit at a point of a level or an upright side. | A fault: a point of a flat face of a `revolve` on a plane of the grid was 1e-16 over or under 0, the mesh had two sheets there, and the collapse did not reach its budget (the dome: 11,400 triangles for 4,000; the basket boat of plan 0012 at mid and far). |
 | D8 | The occlusion of a texel is the change of the field from the place of the texel, not the field with 0 at the place. | A fault: a place on a triangle a little under the surface was dark, as a crease. |
 | D9 | When no scale of the charts fits the image, each chart is one texel (the bake does not stop). | A fault: a division by a scale of 0 for a part with many small charts in a small image. |
-| D10 | The new model has a new name, `tuong_chua_giang_tay` (the name that the people of Vũng Tàu use). | The earlier model has the tests, the measures and the time lapse of plans 0004 to 0006. |
+| D10 | The new model has the name of the statue, `tuong_chua_kito_vua`. The earlier cast model has the new name `tuong_chua_kito_vua_cong_truong` (the site): it stays for the site of plans 0002 to 0006 and its time lapse, with its tests, and its drawing says that its scale is not right. | The owner (2026-11-13): "Put the new model in its place, with the interior too". The place of the statue in the world (`priv/places.json`) now shows the model with the true sizes. |
 | D11 | The halo goes round the head and leans to the front by 30 degrees: its top is over the front of the crown, its sides pass the sides of the hair, its lower part goes down behind the neck, and the arms of its cross join the hair. | The owner (2026-11-13): "the halo is not behind the head". The close photos show it, and the measure of plan 0005 gave the lean (the top 1.5 m in front of the middle, at its scale). D6 of plan 0004 (the halo behind the head) was wrong, and the first model of this plan had it wrong too. |
+| D12 | An edit can have `levels`: it is in the sculpture only at those levels. | The inside of a large model is at near only. At mid and far the model is solid (a hollow model with few triangles has an inner face through its outer face), and a paint is in the place of an opening. |
+| D13 | The inside of the statue, at near: a room in the base (a door at its back, a hole in its roof under the dome), the hollow dome, a well in the robe and the cape, a room under the neck that opens to the two balconies, six windows as openings with grilles of bars, and a stair of 133 steps round a post (one edit with a repeat: a turn of 30 degrees and a move of 18.6 cm). The stair and the grilles are a detail of the robe. | The sources give the 133 steps (to the shoulders), the door at the back of the base and the windows in the form of the word Thọ. The walls (0.25 to 0.4 m), the post in place of the open well of eight sides, and the plan of the room are a guess. |
 
 ## 6. Requirements
 
 | # | Requirement |
 |---|---|
-| R1 | The statue is in the catalog, from edits only, with its sources. |
+| R1 | The statue is in the catalog under its name, from edits only, with its sources and its inside. |
 | R2 | Its sizes are those of section 3.1: the test of D5 passes. |
 | R3 | Its forms are those of the photos: shots next to the front photo. |
 | R4 | The parts are made at the same time; a test with a model in two parts. |
@@ -160,16 +163,19 @@ of 1994).
 
 ## 9. Open questions
 
-- **The earlier model `tuong_chua_kito_vua` is about 28% too large**
-  (section 3.1). Its sizes, its tests and its time lapse use 18.4 m
-  from cuff to cuff. The owner decides: give it the true scale, or put
-  the new model in its place.
+- **The cast model of the site (`tuong_chua_kito_vua_cong_truong`) is
+  about 28% too large** (section 3.1). Its sizes, its tests and its
+  time lapse use 18.4 m from cuff to cuff. The time lapse of the site
+  shows that model, not the model with the true sizes. The next work:
+  the site builds the model in parts (the bands of the robe, the parts
+  from the workshop), and the cast model goes.
 - **The face is a face, not the face of the statue.** It has the form
   of the photos (a long face, a moustache, a short beard, the hair as a
   veil), but it is not a copy. A scan or a set of close photos from each
   side makes it true.
-- **The inside** (the stair, the windows that light it, the balconies
-  as rooms) and **the figures of the reliefs**.
+- **The figures of the reliefs**, and the true form of the inside: a
+  stair round an open well of eight sides with a rail, its landings,
+  the rooms of the base.
 - **The surface of round edits that blend.** A relief of a surface
   (`plaster`) on many round edits that blend (the hair) made rough
   marks; the hair has no relief now.
@@ -191,23 +197,30 @@ time).
 
 | Part | Edits (with copies of a repeat as one) | Cells: near, mid, far | Triangles: near, mid, far | Image: near, mid, far |
 |---|---|---|---|---|
-| `de`, the base, with its rail as a detail | 13 and 11 | 7, 12, 25 cm (the rail: 3 cm) | 16,000; 1,500; 260 | 1024, 512, 128 |
-| `vom`, the dome with its stair | 5 and 4 | 5, 10, 20 cm | 4,600; 700; 60 | 512, 256, 64 |
-| `ao`, the robe with the mantle and the feet | 67 | 5, 8, 16 cm | 14,000; 2,500; 140 | 2048, 1024, 256 |
-| `ao_choang`, the cape with the heart | 21 | 4, 8, 16 cm | 8,000; 1,500; 70 | 1024, 512, 128 |
+| `de`, the base, with its rail as a detail | 16 and 11 | 7, 12, 25 cm (the rail: 3 cm) | 16,000; 1,500; 260 | 1024, 512, 128 |
+| `vom`, the dome with its stair | 7 and 4 | 5, 10, 20 cm | 4,600; 700; 60 | 512, 256, 64 |
+| `ao`, the robe with the mantle and the feet; the stair and the grilles as a detail at near | 71 and 80 | 5, 8, 16 cm (the stair: 3 cm) | 27,000; 2,500; 140 | 2048, 1024, 256 |
+| `ao_choang`, the cape with the heart | 23 | 4, 8, 16 cm | 8,000; 1,500; 70 | 1024, 512, 128 |
 | `tay_ao`, the sleeves | 13 | 4, 8, 16 cm | 9,000; 1,600; 80 | 1024, 512, 128 |
 | `ban_tay`, the hands (a group, two times) | 12 in the group | 2, 4, 8 cm | 9,000; 1,200; 180 | 1024, 256, 128 |
 | `dau`, the head (a group) | 26 in the group | 2, 4, 8 cm | 18,000; 2,500; 110 | 2048, 512, 128 |
-| `hao_quang`, the halo, with its rods as a detail | 4 and 10 | 3, 6, 6 cm (the rods: 1.5 cm) | 7,500; 1,300; 240 | 1024, 256, 128 |
-| All | | | 86,100; 12,800; 1,140 | |
+| `hao_quang`, the halo, with its rods as a detail | 7 and 10 | 3, 6, 6 cm (the rods: 1.5 cm) | 7,500; 1,300; 800 | 1024, 256, 256 |
+| All (the budgets) | | | 99,100; 12,800; 1,700 | |
 
 | | Near | Mid | Far |
 |---|---|---|---|
-| The file | 22.5 MB | 4.1 MB | 0.36 MB |
+| The file | 23.0 MB | 4.1 MB | 0.48 MB |
+| Triangles in the file | 95,860 | 12,800 | 1,700 |
 
-- The near level builds in 150 s; the three levels and the files with
-  `mix world.build` in 3 min 29 s. The far level alone (the test of the
-  sizes) builds in 6.5 s.
+- The three levels and the files build with `mix world.build` in 3 min
+  29 s (the near level with no inside: 150 s). The far level alone (the
+  test of the sizes) builds in 6.5 s.
+- The inside is at near only: 13 edits that take away (the room, the
+  door, the holes, the well, the windows), and a detail with the stair
+  of 133 steps and the grilles. A cut of the model shows the room, the
+  dome, the well and the stair up to the shoulders.
+- The halo, a thin ring with thin arms that leans, does not go under
+  about 770 triangles at the far level: its far budget is 800.
 - The test of D5 at the far level: the top of the halo at 31.0 m over
   the ground (in 0.3 m), 18.4 m from fingertip to fingertip (in 0.6 m),
   the base 6 m, the dome 3 m, the top of the head at 20.8 m, 14.15 m
@@ -238,8 +251,8 @@ right side as copies with no mirror).
 
 | # | Result |
 |---|---|
-| R1 | Met. |
-| R2 | Met: the test of the sizes passes. |
+| R1 | Met: the model has the name `tuong_chua_kito_vua`; the cast model of the site has the name `tuong_chua_kito_vua_cong_truong`. |
+| R2 | Met: the test of the sizes passes, and a test of the inside (the room, the well, the 133 steps, the windows). |
 | R3 | Met for the form of each part (shots next to the front photo of Wikimedia Commons). The face is not a copy of the face of the statue (section 9). |
 | R4 | Met: a model in two parts, each with its role and its image, and the same bytes each time. |
 | R5 | Met for the four faults; not for the budgets of the basket boat (a thin wall). |
