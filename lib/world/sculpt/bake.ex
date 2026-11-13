@@ -139,7 +139,7 @@ defmodule World.Sculpt.Bake do
           triangles
           |> Enum.group_by(fn %{id: {mi, _}} -> mi end)
           |> Enum.map(fn {mi, group} -> lists(group, 1 / scale, elem(fields, mi)) end)
-          |> Enum.reduce(&Map.merge/2)
+          |> Enum.reduce(%{}, &Map.merge/2)
 
         all = List.to_tuple(edits)
 

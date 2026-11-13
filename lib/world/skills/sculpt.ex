@@ -111,7 +111,8 @@ defmodule World.Skills.Sculpt do
 
     # (The images of the maps become PNG files in their own processes,
     # while this one makes the part or the figure.)
-    {meshes, materials} = maps(built, side)
+    # (A sculpture with no surface has no maps: a crop or a cut can take all of it away.)
+    {meshes, materials} = maps(built, if(Enum.any?(built, fn {ms, _, _} -> ms != [] end), do: side))
     ports = Drawing.ports(Map.get(data, "ports", %{}))
     sources = Map.get(data, "sources", [])
 

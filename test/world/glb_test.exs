@@ -193,6 +193,8 @@ defmodule World.GLBTest do
   test "a material with no role in the palette is grey, and a scene with no mesh" do
     json = GLBHelper.json(GLB.encode(%Scene{nodes: [%Scene.Node{}]}))
     refute Map.has_key?(json, "buffers")
+    # A list of glTF cannot be empty: no materials for a scene with no mesh.
+    refute Map.has_key?(json, "materials")
 
     m = Shape.box({0, 0, 0}, {1, 1, 1}, :unknown_role)
 

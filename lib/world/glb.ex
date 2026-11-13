@@ -136,9 +136,10 @@ defmodule World.GLB do
           %{"name" => scene.name, "nodes" => roots}
           |> put_some("extras", if(scene.extras == %{}, do: nil, else: scene.extras))
         ],
-        "nodes" => json_nodes,
-        "materials" => materials
+        "nodes" => json_nodes
       }
+      # (A list of glTF cannot be empty: a model with no surface has no materials.)
+      |> put_some("materials", nonempty(materials))
       |> put_some("meshes", nonempty(Enum.reverse(meshes)))
       |> put_some("skins", nonempty(skins))
       |> put_some("animations", nonempty(animations))
