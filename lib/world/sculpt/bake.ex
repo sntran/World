@@ -22,10 +22,13 @@ defmodule World.Sculpt.Bake do
   **A texel** is a place on the plane of its triangle. Its color is the
   color of the edits there (`World.SDF.sample/3`). Its normal is the
   gradient of the field there: the change of the value to the next
-  texels of the chart gives the part in the plane, and one value off the
-  plane gives the rest. The edits of a triangle are the edits that reach
-  its ball (`World.SDF.prune/4`), so a texel takes two values of a short
-  list. A texel of the border (past an edge of its triangle) has the
+  texels of the chart gives the part in the plane, and the slope off the
+  plane gives the rest. One texel of each 16 reads the field off its
+  plane for that slope; a texel between four such texels of its own
+  triangle takes the mean of their slopes
+  (`docs/plans/0015-the-face-the-stair-and-speed.md`, D5). The edits of
+  a triangle are the edits that reach its ball (`World.SDF.prune/4`), so
+  a texel takes one or two values of a short list. A texel of the border (past an edge of its triangle) has the
   values at the nearest place of the edge. An app with antialiasing
   reads the maps as far as a pixel past the edge of a triangle: with
   the border of two texels it reads the same surface there, when a
@@ -611,7 +614,7 @@ defmodule World.Sculpt.Bake do
     # (An app makes no tangent from a triangle with almost no area of
     # UVs: `World.GLB`. The UVs are the texels over the side of the image.)
     least = 1.0e-12 * side * side
-    charts = tris |> Enum.map(fn {t, corners} -> chart(t, corners, least) end) |> framed() |> List.to_tuple()
+    charts = tris |> Enum.map(fn {t, corners} -> chart(t, corners, least, defaults) end) |> framed() |> List.to_tuple()
 
     # The chart, the place, the value and the color of the field at each
     # texel of a triangle, and the weights of the corners of the
@@ -620,15 +623,26 @@ defmodule World.Sculpt.Bake do
     # the edits gives it with the color.)
     values =
       for {{i, j}, {k, weights}} <- owners(charts, w, h), c = elem(charts, k), p = mix(c.points, weights), into: %{} do
-        {f, color, finish} =
+        # (The value with the relief of a surface, and the value with none.)
+        {f, color, finish, plain} =
           cond do
-            look.grain -> grain(SDF.seen(c.list, p, c.limit, defaults), c, p)
-            defaults -> SDF.sample(c.list, p, c.limit, defaults)
-            true -> Tuple.insert_at(SDF.sample(c.list, p, c.limit), 2, nil)
+            look.grain ->
+              seen = SDF.seen(c.looks, p, c.limit, defaults)
+              Tuple.insert_at(grain(seen, c, p), 3, elem(seen, 0))
+
+            defaults ->
+              {f, color, finish} = SDF.sample(c.looks, p, c.limit, defaults)
+              {f, color, finish, f}
+
+            true ->
+              {f, color} = SDF.sample(c.list, p, c.limit)
+              {f, color, nil, f}
           end
 
-        {{i, j}, {c, p, f, color, {weights, finish}}}
+        {{i, j}, {c, p, {f, plain}, color, {weights, finish}}}
       end
+
+    grade = grade(values)
 
     shade = if look.shade and map_size(values) > 0, do: shade(values, look)
 
@@ -636,7 +650,7 @@ defmodule World.Sculpt.Bake do
       for {{i, j} = at, {c, p, f, color, {weights, finish}}} <- values, into: %{} do
         {{r, g, b}, finish} = if shade, do: shaded(color, finish, shade.(i, j), look), else: {color, finish}
         {finish, glow} = if finish, do: finish({r, g, b}, finish), else: {<<>>, <<>>}
-        {at, {<<r, g, b>>, normal(c, i, j, {p, f, weights}, values), finish, glow}}
+        {at, {<<r, g, b>>, normal(c, i, j, {p, f, weights}, values, grade), finish, glow}}
       end
 
     # (With the relief of a surface, the normals of two texels next to
@@ -786,6 +800,8 @@ defmodule World.Sculpt.Bake do
   # The grid of the texels that read the field, for the near distances and for the far ones.
   @fine 4
   @wide 16
+  # The grid of the texels that read the field off the plane of their chart, for the size of its gradient.
+  @slope 4
   # The part of each distance in how open a place is.
   @parts {0.3, 0.3, 0.25, 0.15}
   # The distance of the value under the surface for the wear of an edge, in cells.
@@ -855,27 +871,48 @@ defmodule World.Sculpt.Bake do
     {i0, j0} = {i - rem(i, every), j - rem(j, every)}
     {x, y} = {(i - i0) / every, (j - j0) / every}
 
-    near =
-      for {a, b, w} <- [
-            {i0, j0, (1 - x) * (1 - y)},
-            {i0 + every, j0, x * (1 - y)},
-            {i0, j0 + every, (1 - x) * y},
-            {i0 + every, j0 + every, x * y}
-          ],
-          v = grid[{a, b}],
-          do: {v, w + 1.0e-6}
-
-    case near do
-      [] ->
-        nil
-
-      [{v, _}] ->
-        v
-
-      _ ->
-        total = Enum.sum(for {_, w} <- near, do: w)
-        near |> Enum.map(fn {v, w} -> Enum.map(v, &(&1 * w / total)) end) |> Enum.zip_with(&Enum.sum/1)
+    # (The sums are in the order of the four texels, each from 0.)
+    case near(grid, [
+           {i0, j0, (1 - x) * (1 - y)},
+           {i0 + every, j0, x * (1 - y)},
+           {i0, j0 + every, (1 - x) * y},
+           {i0 + every, j0 + every, x * y}
+         ]) do
+      [] -> nil
+      [{v, _}] -> v
+      [{a, wa}, {b, wb}] -> mean2(a, b, wa, wb, 0 + wa + wb)
+      [{a, wa}, {b, wb}, {c, wc}] -> mean3(a, b, c, {wa, wb, wc}, 0 + wa + wb + wc)
+      [{a, wa}, {b, wb}, {c, wc}, {d, wd}] -> mean4(a, b, c, d, {wa, wb, wc, wd}, 0 + wa + wb + wc + wd)
     end
+  end
+
+  # The texels of a grid that have values, each with its weight.
+  defp near(_grid, []), do: []
+
+  defp near(grid, [{a, b, w} | rest]) do
+    key = {a, b}
+
+    case grid do
+      %{^key => v} -> [{v, w + 1.0e-6} | near(grid, rest)]
+      _ -> near(grid, rest)
+    end
+  end
+
+  # The mean of lists of values by their weights, value by value.
+  defp mean2([], [], _wa, _wb, _total), do: []
+
+  defp mean2([a | as], [b | bs], wa, wb, total),
+    do: [0 + a * wa / total + b * wb / total | mean2(as, bs, wa, wb, total)]
+
+  defp mean3([], [], [], _weights, _total), do: []
+
+  defp mean3([a | as], [b | bs], [c | cs], {wa, wb, wc} = weights, total),
+    do: [0 + a * wa / total + b * wb / total + c * wc / total | mean3(as, bs, cs, weights, total)]
+
+  defp mean4([], [], [], [], _weights, _total), do: []
+
+  defp mean4([a | as], [b | bs], [c | cs], [d | ds], {wa, wb, wc, wd} = weights, total) do
+    [0 + a * wa / total + b * wb / total + c * wc / total + d * wd / total | mean4(as, bs, cs, ds, weights, total)]
   end
 
   # The color and the finish of a texel with its dirt and its wear, and
@@ -891,7 +928,7 @@ defmodule World.Sculpt.Bake do
   # The chart of a triangle with the texels of its corners (the centers
   # of the texels are at their numbers and a half): the place of a texel
   # is `base + i u + j v`; and the frames of its corners.
-  defp chart(%{points: {p0, p1, p2}, normals: normals, list: list, limit: limit, step: step}, corners, least) do
+  defp chart(%{points: {p0, p1, p2}, normals: normals, list: list, limit: limit, step: step}, corners, least, defaults) do
     {{x0, y0}, {x1, y1}, {x2, y2}} = corners
     {e1, e2} = {Vec.sub(p1, p0), Vec.sub(p2, p0)}
     cross = Vec.cross(e1, e2)
@@ -932,6 +969,8 @@ defmodule World.Sculpt.Bake do
         list: list,
         # The list for the hot loop of the value (`World.SDF.fast/1`).
         fast: SDF.fast(list),
+        # The list for the hot loop of the color and the finish (`World.SDF.looks/2`).
+        looks: defaults && SDF.looks(list, defaults),
         limit: limit,
         base: base,
         u: u,
@@ -1057,20 +1096,67 @@ defmodule World.Sculpt.Bake do
   # plane) and to one place off the plane (the least squares). A texel
   # next to it with no value (past the edge of the patch) has the value
   # at its place on the plane of this triangle.
-  defp normal(%{long: true} = c, _i, _j, {p, _f, weights}, _values), do: direct(c, p, weights)
+  defp normal(%{long: true} = c, _i, _j, {p, _f, weights}, _values, _grade), do: direct(c, p, weights)
 
-  defp normal(c, i, j, {p, f, weights}, values) do
-    off = Vec.scale(c.face, c.off)
+  # The gradient of the field at a texel, by least squares: its changes
+  # to the texels next to it (no new value of the field), and its slope
+  # off the plane of the chart, from the texels of a grid in the same
+  # triangle (`grade/1`) or from one more value of the field. The relief
+  # of a surface changes the slope along the plane only: the slope off
+  # the plane is of the field with no relief.
+  defp normal(c, i, j, {p, fs, weights}, values, grade) do
+    out = grade.(i, j, c) || out(c, p, fs)
+    h = max(c.off, 1.0e-7)
+    bytes(c, slope([{Vec.scale(c.face, h), out * h} | across(c, i, j, p, fs, values)]), weights)
+  end
 
-    steps =
-      for {di, dj} <- [{1, 0}, {-1, 0}, {0, 1}, {0, -1}] do
-        case values[{i + di, j + dj}] do
-          {_, q, g, _, _} -> {Vec.sub(q, p), g - f}
-          nil -> (fn q -> {Vec.sub(q, p), SDF.value(c.fast, q, c.limit) - f} end).(at(c, i + di, j + dj))
-        end
+  # The moves from a texel to the four texels next to it, each with the
+  # change of the field (with the relief of a surface). A texel with no
+  # values there (past the edge of the rectangle) reads the field, with
+  # the relief of this texel.
+  defp across(c, i, j, p, {f, f0}, values) do
+    for {di, dj} <- [{1, 0}, {-1, 0}, {0, 1}, {0, -1}] do
+      case values[{i + di, j + dj}] do
+        {_, q, {g, _}, _, _} -> {Vec.sub(q, p), g - f}
+        nil -> (fn q -> {Vec.sub(q, p), SDF.value(c.fast, q, c.limit) - f0} end).(at(c, i + di, j + dj))
+      end
+    end
+  end
+
+  # The slope of the field (with no relief) off the plane of a chart at a
+  # texel: from one more value.
+  defp out(c, p, {_, f0}) do
+    h = max(c.off, 1.0e-7)
+    (SDF.value(c.fast, Vec.add(p, Vec.scale(c.face, h)), c.limit) - f0) / h
+  end
+
+  # A function from a texel and its chart to the slope of the field off
+  # the plane of the chart there, or nil: from the four texels of a grid
+  # round it (one texel of each 16 reads the field off its plane), by
+  # their distances, when the four are of the triangle of the texel. On
+  # a flat triangle that slope changes only as the surface under it
+  # turns. (With a grid texel of another triangle, the texel reads the
+  # field: the plane there is a different one.)
+  defp grade(values) do
+    grid =
+      for {{i, j}, {%{long: false} = c, p, fs, _, _}} <- values,
+          rem(i, @slope) == 0 and rem(j, @slope) == 0,
+          into: %{} do
+        {{i, j}, {c.corners, out(c, p, fs)}}
       end
 
-    bytes(c, slope([{off, SDF.value(c.fast, Vec.add(p, off), c.limit) - f} | steps]), weights)
+    fn i, j, %{corners: corners} ->
+      {i0, j0} = {i - rem(i, @slope), j - rem(j, @slope)}
+      {x, y} = {(i - i0) / @slope, (j - j0) / @slope}
+
+      with %{{^i0, ^j0} => {^corners, a}} <- grid,
+           {i1, j1} = {i0 + @slope, j0 + @slope},
+           %{{^i1, ^j0} => {^corners, b}, {^i0, ^j1} => {^corners, c}, {^i1, ^j1} => {^corners, d}} <- grid do
+        a * (1 - x) * (1 - y) + b * x * (1 - y) + c * (1 - x) * y + d * x * y
+      else
+        _ -> nil
+      end
+    end
   end
 
   # The vector `g` with the least squares of `g . move - change` for the
