@@ -41,6 +41,25 @@ defmodule World.SculptTest do
     end
   end
 
+  test "a thin plate with its middle plane on a plane of the grid: the tree has each brick whose field changes its sign" do
+    # The center of a cell of the tree is in the middle plane of the plate:
+    # the range of the field in the cell needs a field with a slope of at
+    # most 1 (the short formula of an ellipsoid lost these cells).
+    edits = [SDF.edit(:ellipsoid, {0.02, 0.5, 0.2})]
+    step = 0.01
+    %{bricks: bricks} = Sculpt.bricks(edits, step)
+    have = MapSet.new(bricks, & &1.at)
+    limit = Sculpt.limit(edits, step)
+
+    for i <- -2..1, j <- -8..7, k <- -4..3, at = {i, j, k}, not MapSet.member?(have, at) do
+      brick = Sculpt.brick(at, edits, step, limit)
+      values = for a <- 0..8, b <- 0..8, c <- 0..8, do: Sculpt.at(brick, {a, b, c})
+      refute Enum.any?(values, &(&1 < 0)) and Enum.any?(values, &(&1 >= 0)), inspect(at)
+    end
+
+    assert length(bricks) > 100
+  end
+
   test "the processes and one process give the same bricks; a sculpture with no edit that adds has none" do
     edits = stone(20)
     assert Sculpt.bricks(edits, 0.05) == Sculpt.bricks(edits, 0.05, parallel: false)

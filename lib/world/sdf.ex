@@ -361,14 +361,29 @@ defmodule World.SDF do
 
   defp local(:ring, {big, r}, {x, y, z}), do: :math.sqrt(sq(:math.sqrt(x * x + y * y) - big) + z * z) - r
 
-  # The ellipsoid: a bound (Inigo Quilez), with the center inside by its
-  # least radius.
+  # The ellipsoid. Outside, the true distance: the nearest point x of
+  # the surface has p = x + t x / r^2 on each axis, and t is the root of
+  # sum((r p / (t + r^2))^2) = 1, by steps of Newton from below (the sum
+  # falls and is convex, so each step is short of the root: 8 at most,
+  # to 2 parts in a million). Inside, its norm less 1, times its least
+  # radius: not the distance, but 0 at the surface, and with a slope of
+  # at most 1, as the distance has. So the range of the values in a ball
+  # is the value at its center, less and more its radius (`cell/4`): the
+  # short formula of the first step of Newton has no such limit, and a
+  # thin ellipsoid lost the cells with their centers in its middle plane.
   defp local(:ellipsoid, {rx, ry, rz}, {x, y, z}) do
     {ax, ay, az} = {x / rx, y / ry, z / rz}
-    {bx, by, bz} = {ax / rx, ay / ry, az / rz}
     k0 = :math.sqrt(ax * ax + ay * ay + az * az)
-    k1 = :math.sqrt(bx * bx + by * by + bz * bz)
-    if k1 == 0.0, do: -min(rx, min(ry, rz)), else: k0 * (k0 - 1.0) / k1
+
+    if k0 <= 1.0 do
+      (k0 - 1.0) * min(rx, min(ry, rz))
+    else
+      {ux, uy, uz} = {rx * abs(x), ry * abs(y), rz * abs(z)}
+      {sx, sy, sz} = {rx * rx, ry * ry, rz * rz}
+      t = root(max(max(ux - sx, uy - sy), max(uz - sz, 0.0)), ux, uy, uz, sx, sy, sz, 8)
+      {dx, dy, dz} = {x * t / (sx + t), y * t / (sy + t), z * t / (sz + t)}
+      :math.sqrt(dx * dx + dy * dy + dz * dz)
+    end
   end
 
   # The superellipsoid: its norm of the power `e`, less 1, times its least
@@ -385,6 +400,19 @@ defmodule World.SDF do
       |> Enum.reduce({@far, a, ra}, fn {b, rb}, {d, a, ra} -> {min(d, round_cone(p, a, b, ra, rb)), b, rb} end)
 
     if rest == [], do: Vec.len(Vec.sub(p, a)) - ra, else: d
+  end
+
+  # A step of Newton for the root of the nearest point of an ellipsoid.
+  defp root(t, _ux, _uy, _uz, _sx, _sy, _sz, 0), do: t
+
+  defp root(t, ux, uy, uz, sx, sy, sz, steps) do
+    {qx, qy, qz} = {t + sx, t + sy, t + sz}
+    {a, b, c} = {ux / qx, uy / qy, uz / qz}
+    f = a * a + b * b + c * c - 1.0
+
+    if f <= 1.0e-12,
+      do: t,
+      else: root(t + f / (2.0 * (a * a / qx + b * b / qy + c * c / qz)), ux, uy, uz, sx, sy, sz, steps - 1)
   end
 
   defp box(qx, qy, qz) do

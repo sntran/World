@@ -116,6 +116,43 @@ defmodule World.SDFTest do
     assert SDF.distance(SDF.edit(:ellipsoid, {0.6, 0.3, 0.2}), {0, 0, 0}) == -0.2
   end
 
+  test "an ellipsoid: the true distance outside, and a slope of at most 1 at each place (the ranges of the cells need it)" do
+    # A ball, and a point on an axis: the distance as it is.
+    assert_in_delta SDF.distance(SDF.edit(:ellipsoid, {0.3, 0.3, 0.3}), {0.5, 0.4, 0.1}), :math.sqrt(0.42) - 0.3, 1.0e-9
+    thin = SDF.edit(:ellipsoid, {0.0035, 0.09, 0.026})
+    assert_in_delta SDF.distance(thin, {0.0, 0.2, 0.0}), 0.11, 1.0e-9
+    assert_in_delta SDF.distance(thin, {0.01, 0.0, 0.0}), 0.0065, 1.0e-9
+    # Next to the long axis the distance is the same (the short formula gave a small part of it).
+    assert_in_delta SDF.distance(thin, {1.0e-5, 0.2, 0.0}), 0.11, 1.0e-6
+
+    # A point off the axes: the least distance to many points of the surface.
+    wide = SDF.edit(:ellipsoid, {0.4, 0.1, 0.2})
+    p = {0.3, 0.25, -0.2}
+
+    near =
+      for i <- 0..400, j <- 0..400, a = :math.pi() * i / 400, b = 2 * :math.pi() * j / 400, reduce: 1.0e9 do
+        best ->
+          q = {0.4 * :math.sin(a) * :math.cos(b), 0.1 * :math.sin(a) * :math.sin(b), 0.2 * :math.cos(a)}
+          min(best, Vec.len(Vec.sub(p, q)))
+      end
+
+    assert_in_delta SDF.distance(wide, p), near, 1.0e-4
+
+    # The slope between two points, inside, outside and across the surface, near the middle planes too.
+    :rand.seed(:exsss, {7, 7, 7})
+    u = fn lo, hi -> lo + (hi - lo) * :rand.uniform() end
+
+    for _ <- 1..2_000 do
+      {rx, ry, rz} = {:math.exp(u.(-5.8, -1.2)), :math.exp(u.(-5.8, -1.2)), :math.exp(u.(-5.8, -1.2))}
+      e = SDF.edit(:ellipsoid, {rx, ry, rz})
+      flat = if :rand.uniform() < 0.3, do: 1.0e-4, else: 1.0
+      p = {u.(-3, 3) * rx * flat, u.(-3, 3) * ry, u.(-3, 3) * rz}
+      far = Enum.min([rx, ry, rz]) * :math.pow(10, u.(-3, 0.5))
+      q = Vec.add(p, {u.(-1, 1) * far, u.(-1, 1) * far, u.(-1, 1) * far})
+      assert abs(SDF.distance(e, p) - SDF.distance(e, q)) <= Vec.len(Vec.sub(p, q)) * (1 + 1.0e-6) + 1.0e-12
+    end
+  end
+
   test "the blend: the minimum when the values are the blend apart, and at most a quarter of the blend less" do
     assert SDF.smin(0.3, 0.7, 0.0) == 0.3 and SDF.smin(0.3, 0.7, 0.4) == 0.3
     assert SDF.smax(0.3, 0.7, 0.4) == 0.7
