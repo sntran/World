@@ -679,7 +679,7 @@ skin of an animal does. The data:
   follows the bones of the wing, and the body next to it does not. An
   edit with no bone inside it has all the bones (a long fin on a body
   bends with the body);
-- `plan`: the name of a body plan (`fish`, `bird` or `biped`). The bones must
+- `plan`: the name of a body plan (`fish`, `bird`, `biped` or `quadruped`). The bones must
   have the names of the bones of the plan ("Species and body plans"),
   and can have more. The left side of a body (`_l`) is at -x: x is to
   the right side. The plan gives its limbs, its joints, its ports (a port of
@@ -696,7 +696,16 @@ skin of an animal does. The data:
   ground for its part of the step; the hips are as high as the legs let
   them; the arms come down from their rest (out to the sides or down)
   and swing against the legs. Its ports are `ground`, `head`, `grip_l`
-  and `grip_r`;
+  and `grip_r`. A `quadruped` is a body on four legs with the names of
+  the bones of a four-legged animal of World (`pelvis`, `spine_01`,
+  `neck_01`, `head`, and on each side `front_upper`, `front_lower`,
+  `front_foot`, `hind_upper`, `hind_lower`, `hind_foot`). It has `walk`
+  (one foot after the other: the left hind foot, the left front foot,
+  the right hind foot, the right front foot), `trot` (the two feet of a
+  diagonal at one time) and `idle`, with `walk_speed` and `trot_speed`.
+  Make its legs with a small bend at rest, so each foot reaches the two
+  ends of its path. Its ports are `ground`, `collar`, `back` and
+  `mouth`;
 - `clips`: at most 16 clips from keys. A clip has a `name`, a `length`
   (s, 0.1 to 60) and 1 to 64 `keys`; a key has its time `at` (s) and a
   `pose`: a bone to its turns from its rest in degrees (`flex` round the

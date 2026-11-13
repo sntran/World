@@ -185,7 +185,7 @@ defmodule World.Sculpt.BonesTest do
     [q] = List.last(wide.nodes).primitives
     two = fn prim -> Enum.count(prim.weights, fn {_, w, _, _} -> w > 0 end) end
     assert two.(q) > two.(p)
-    assert Bones.plans() == ~w(biped bird fish) and Bones.turns() == ~w(flex spread twist)
+    assert Bones.plans() == ~w(biped bird fish quadruped) and Bones.turns() == ~w(flex spread twist)
   end
 
   # A puppet of 1 m on two legs. With `out`, its arms are out to the sides (a T); with no `out`, down.
@@ -342,6 +342,137 @@ defmodule World.Sculpt.BonesTest do
     assert paths(put_in(data, ["gait", "lift"], 2)) == ["options.drawing.nodes.0.skill.sculpt.gait.lift"]
   end
 
+  # A dog of 0.5 m from edits, with the bones of a body on four legs. Its legs have a small bend at rest.
+  defp dog do
+    leg = fn part, parent, s, x, [hip, joint, foot, toe] ->
+      at = fn [y, z] -> [x, y, z] end
+
+      [
+        %{"name" => "#{part}_upper_#{s}", "parent" => parent, "head" => at.(hip), "tail" => at.(joint)},
+        %{"name" => "#{part}_lower_#{s}", "parent" => "#{part}_upper_#{s}", "head" => at.(joint), "tail" => at.(foot)},
+        %{"name" => "#{part}_foot_#{s}", "parent" => "#{part}_lower_#{s}", "head" => at.(foot), "tail" => at.(toe)}
+      ]
+    end
+
+    front = [[0.13, 0.32], [0.08, 0.19], [0.13, 0.05], [0.17, 0.01]]
+    hind = [[-0.17, 0.32], [-0.11, 0.19], [-0.19, 0.06], [-0.16, 0.01]]
+
+    tube = fn [a, b, c, _] ->
+      %{"points" => for([y, z] <- [a, b, c], do: [0.07, y, z]), "radii" => [0.03, 0.025, 0.022]}
+    end
+
+    %{
+      "edits" => [
+        %{
+          "shape" => "capsule",
+          "size" => [0.17, 0.08],
+          "at" => [0, -0.02, 0.34],
+          "axis" => [0, 1, 0],
+          "color" => "#b08050"
+        },
+        %{
+          "shape" => "tube",
+          "size" => %{"points" => [[0, 0.14, 0.37], [0, 0.27, 0.45]], "radii" => [0.05, 0.04]},
+          "color" => "#b08050"
+        },
+        %{"shape" => "ellipsoid", "size" => [0.05, 0.08, 0.05], "at" => [0, 0.31, 0.46], "color" => "#b08050"},
+        %{"shape" => "tube", "size" => tube.(front), "mirror" => "x", "color" => "#906030"},
+        %{"shape" => "tube", "size" => tube.(hind), "mirror" => "x", "color" => "#906030"},
+        %{"shape" => "ball", "size" => [0.025], "at" => [0.07, 0.16, 0.025], "mirror" => "x", "color" => "#403020"},
+        %{"shape" => "ball", "size" => [0.025], "at" => [0.07, -0.165, 0.025], "mirror" => "x", "color" => "#403020"}
+      ],
+      "cells" => %{"mid" => 0.012},
+      "bones" =>
+        [
+          %{"name" => "pelvis", "head" => [0, -0.2, 0.35], "tail" => [0, -0.1, 0.36]},
+          %{"name" => "spine_01", "parent" => "pelvis", "head" => [0, -0.1, 0.36], "tail" => [0, 0.15, 0.36]},
+          %{"name" => "neck_01", "parent" => "spine_01", "head" => [0, 0.15, 0.36], "tail" => [0, 0.25, 0.45]},
+          %{"name" => "head", "parent" => "neck_01", "head" => [0, 0.25, 0.45], "tail" => [0, 0.36, 0.47]}
+          # The left side is at -x.
+        ] ++
+          leg.("front", "spine_01", "l", -0.07, front) ++
+          leg.("hind", "pelvis", "l", -0.07, hind) ++
+          leg.("front", "spine_01", "r", 0.07, front) ++ leg.("hind", "pelvis", "r", 0.07, hind),
+      "plan" => "quadruped",
+      "gait" => %{"period" => 1.0, "stride" => 0.24, "lift" => 0.06}
+    }
+  end
+
+  test "a sculpture with the bones of a body on four legs walks: its feet move in the order of a walk, and a foot on the ground does not slide (plan 0011, R3)" do
+    data = dog()
+    assert paths(data) == []
+    {"fish", figure, _} = hd(Detail.with(:mid, fn -> Drawing.build(drawing(data)) end).nodes)
+    assert Enum.map(figure.animations, & &1.name) == ~w(walk trot idle)
+    assert figure.kind == :animal and figure.params["trot_speed"] > 2 * figure.params["walk_speed"]
+    assert Map.keys(figure.ports) |> Enum.sort() == ~w(back collar ground mouth)
+    rest = Contact.points(figure)
+    top = rest |> Enum.map(&elem(&1, 2)) |> Enum.max()
+    {stride, lift} = {0.24 * top, 0.06 * top}
+    at = fn clip, k -> Contact.points(at_frame(figure, clip, k)) end
+    # The under side of a paw: the points of the ball of the paw near the ground.
+    paw = fn part, side -> fn {x, y, z} -> z < 0.02 and x * side > 0 and y * part > 0 end end
+    {front, hind, left, right} = {1, -1, -1, 1}
+    walk = Enum.find(figure.animations, &(&1.name == "walk"))
+
+    # The start of a step: the left hind foot comes down at the front of its path; the left
+    # front foot and the right hind foot are on the ground, each farther to the back; the right
+    # front foot is in the air.
+    for {part, side, along} <- [{hind, left, 0.5}, {front, left, 0.5 - 0.25 / 0.7}, {hind, right, 0.5 - 0.5 / 0.7}] do
+      {_, y, z} = move(rest, at.(walk, 0), paw.(part, side))
+      assert_in_delta y, stride * along, 0.004
+      assert abs(z) < 0.003
+    end
+
+    {_, y, z} = move(rest, at.(walk, 0), paw.(front, right))
+    assert_in_delta y, stride * ((0.75 - 0.7) / 0.3 - 0.5), 0.004
+    assert_in_delta z, lift * :math.sin(:math.pi() * (0.75 - 0.7) / 0.3), 0.004
+
+    # A foot on the ground goes to the back at one speed and does not go up or down: the left
+    # hind foot for 0.7 of the step.
+    for k <- 1..11 do
+      {x, y, z} = move(rest, at.(walk, k), paw.(hind, left))
+      assert abs(x) < 0.003 and abs(z) < 0.003
+      assert_in_delta y, stride * (0.5 - k / 16 / 0.7), 0.004
+    end
+
+    # One foot is in the air at a time, in the order of a walk: the right hind foot, the left
+    # front foot, the left hind foot, the right front foot.
+    up? = fn clip, k, part, side -> elem(move(rest, at.(clip, k), paw.(part, side)), 2) > 0.01 end
+
+    for {k, in_air} <- [{4, {hind, right}}, {8, {front, left}}, {12, {hind, left}}, {0, {front, right}}],
+        part <- [front, hind],
+        side <- [left, right] do
+      assert up?.(walk, k, part, side) == ({part, side} == in_air)
+    end
+
+    # The trot: the two feet of a diagonal are in the air at one time, the two others on the ground.
+    trot = Enum.find(figure.animations, &(&1.name == "trot"))
+
+    for part <- [front, hind], side <- [left, right] do
+      assert up?.(trot, 4, part, side) == {part, side} in [{hind, right}, {front, left}]
+      assert up?.(trot, 12, part, side) == {part, side} in [{hind, left}, {front, right}]
+    end
+
+    # The idle: the feet stay, the head goes down a little.
+    idle = Enum.find(figure.animations, &(&1.name == "idle"))
+
+    for part <- [front, hind],
+        side <- [left, right],
+        do: assert(Vec.len(move(rest, at.(idle, 6), paw.(part, side))) < 0.003)
+
+    assert elem(move(rest, at.(idle, 6), fn {_, y, _} -> y > 0.33 end), 2) < -0.003
+
+    # The hinge of a lower leg that points to the front is across the body.
+    assert World.Animals.FourLegs.hinge("front_lower_l", {0.0, 1.0, 0.0}) == {1.0, 0.0, 0.0}
+    assert World.Animals.FourLegs.hinge("hind_lower_l", {0.0, 0.0, -1.0}) == {-1.0, 0.0, 0.0}
+    assert World.Animals.FourLegs.hinge("front_lower_r", {0.0, 0.0, -1.0}) == {1.0, 0.0, 0.0}
+
+    # A dog with no head: the plan needs each of its bones.
+    assert paths(Map.put(data, "bones", Enum.reject(data["bones"], &(&1["name"] == "front_foot_r")))) == [
+             "options.drawing.nodes.0.skill.sculpt.plan"
+           ]
+  end
+
   # The bones of one side of a small bird: its wing, folded to the back, and its leg.
   defp bird_side(s, sign) do
     {x, l} = {sign * 0.05, sign * 0.03}
@@ -388,7 +519,7 @@ defmodule World.Sculpt.BonesTest do
     }
 
     assert paths(data) == []
-    assert Bones.plans() == ~w(biped bird fish)
+    assert Bones.plans() == ~w(biped bird fish quadruped)
     {"fish", figure, _} = hd(Detail.with(:mid, fn -> Drawing.build(drawing(data)) end).nodes)
     assert Enum.map(figure.animations, & &1.name) == ~w(walk idle peck flap)
     assert figure.kind == :animal and Map.has_key?(figure.params, "walk_speed")
