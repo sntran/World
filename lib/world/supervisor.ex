@@ -17,6 +17,7 @@ defmodule World.Supervisor do
   - `World.Persons`: the people (a dynamic supervisor).
   - `World.Constructions`: the constructions (a dynamic supervisor).
   - `World.Sculpt.Cache`: the pieces of the bricks of the sculptures.
+  - `World.Sculpt.Gate`: the builds of sculptures that work at one time.
   - `World.Sculptures`: the live sculptures (`World.Sculpt.Live`, a
     dynamic supervisor).
   """
@@ -53,6 +54,7 @@ defmodule World.Supervisor do
       {DynamicSupervisor, name: World.Constructions, strategy: :one_for_one},
       World.Census,
       World.Sculpt.Cache,
+      World.Sculpt.Gate,
       {DynamicSupervisor, name: World.Sculptures, strategy: :one_for_one}
     ] ++ yard(env) ++ server(env)
   end

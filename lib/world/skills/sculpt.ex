@@ -96,7 +96,11 @@ defmodule World.Skills.Sculpt do
   def check(_data, path), do: [{path, "must be an object"}]
 
   @impl true
-  def make(data, _inputs, %{level: level, name: name}) do
+  def make(data, inputs, context), do: World.Sculpt.Gate.with(fn -> sculpture(data, inputs, context) end)
+
+  # (In the gate of the node: a sculpture gives its work to each
+  # scheduler, so only some sculptures work at one time.)
+  defp sculpture(data, _inputs, %{level: level, name: name}) do
     side = get_in(data, ["bake", Atom.to_string(level)])
 
     # The sculpture, then each of its details at this level: each one is
