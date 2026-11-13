@@ -149,6 +149,13 @@ defmodule World do
       {"processes", Enum.sum(for info <- infos, do: info[:memory]) + Enum.sum(Map.values(binaries))}
   end
 
-  @doc "The people of the node and the requests that wait (`World.Census.people/1`)."
-  def census, do: World.Census.people()
+  @doc """
+  The people of the node and the requests that wait
+  (`World.Census.people/1`), and the crews of the sites
+  (`World.Crew.census/1`).
+  """
+  def census do
+    people = World.Census.people()
+    if GenServer.whereis(World.Crew), do: Map.put(people, "crews", World.Crew.census()), else: people
+  end
 end

@@ -13,8 +13,9 @@ defmodule World.Skills.Sculpt do
   `far`, m). With no `cells` for a level and a budget, the cells fit the
   budget and the thinnest edit (`World.Sculpt.fit/2`); with neither, the
   cells of the level (`World.Sculpt.step/1`). The sculptor makes the part with the tree of the
-  bricks of the edits (`World.Sculpt.model/2`) in its hand: the tree is
-  the crew of the hand, so a stop of the person stops it (D4).
+  bricks of the edits (`World.Sculpt.model/2`) in its hand. The hand is
+  a site: the workers of its crew do its jobs (`World.Crew`), and a stop
+  of the person stops them at once (D4).
 
   With `bones`, the sculptor makes a figure in place of a part
   (`World.Sculpt.Bones`, plan 0009, D6): one skinned mesh that follows

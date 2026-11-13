@@ -18,6 +18,7 @@ defmodule World.Supervisor do
   - `World.Constructions`: the constructions (a dynamic supervisor).
   - `World.Sculpt.Cache`: the pieces of the bricks of the sculptures.
   - `World.Sculpt.Gate`: the builds of sculptures that work at one time.
+  - `World.Crew`: the workers of the node, and the sites that they serve.
   - `World.Sculptures`: the live sculptures (`World.Sculpt.Live`, a
     dynamic supervisor).
   """
@@ -55,6 +56,7 @@ defmodule World.Supervisor do
       World.Census,
       World.Sculpt.Cache,
       World.Sculpt.Gate,
+      World.Crew,
       {DynamicSupervisor, name: World.Sculptures, strategy: :one_for_one}
     ] ++ yard(env) ++ server(env)
   end

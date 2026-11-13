@@ -152,14 +152,10 @@ defmodule World.Sculpt.Bones do
       end)
 
     groups
-    |> Task.async_stream(
-      fn {edits, group} ->
-        for {p, i} <- group, {name, w} <- follow(p, edits, bones, inside, blend), do: {name, {i, w}}
-      end,
-      max_concurrency: System.schedulers_online(),
-      timeout: :infinity
-    )
-    |> Enum.flat_map(fn {:ok, group} -> group end)
+    |> World.Crew.map(fn {edits, group} ->
+      for {p, i} <- group, {name, w} <- follow(p, edits, bones, inside, blend), do: {name, {i, w}}
+    end)
+    |> Enum.concat()
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> then(&Map.merge(Map.new(bones, fn b -> {b.name, []} end), &1))
   end

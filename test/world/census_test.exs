@@ -139,10 +139,10 @@ defmodule World.CensusTest do
     assert %{"by" => nil} = Enum.find(World.census()["people"], &(&1["name"] == Person.name(p)))
   end
 
-  test "the node has its registries, its people, its constructions, its census, the cache of bricks, the gate of the sculptures and the live sculptures; the server only with WORLD_SERVER" do
+  test "the node has its registries, its people, its constructions, its census, the cache of bricks, the gate of the sculptures, the crews and the live sculptures; the server only with WORLD_SERVER" do
     names = for {_, _, _, _} = c <- Supervisor.which_children(World.Supervisor), do: elem(c, 0)
     assert World.Census in names and World.Sculpt.Cache in names and World.Sculptures in names
-    assert World.Sculpt.Gate in names
+    assert World.Sculpt.Gate in names and World.Crew in names
     assert World.Supervisor.server(%{}) == []
     assert World.Supervisor.yard(%{}) == []
     assert World.Supervisor.yard(%{"WORLD_YARD" => "true"}) == [World.Haul, World.Yard]
@@ -150,7 +150,7 @@ defmodule World.CensusTest do
     assert opts[:plug] == World.Service and opts[:port] == 4100
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true"})
     assert opts[:port] == 4000
-    assert length(World.Supervisor.children(%{})) == 9
+    assert length(World.Supervisor.children(%{})) == 10
   end
 
   property "two constructions never hold one person" do

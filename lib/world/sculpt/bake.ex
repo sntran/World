@@ -209,24 +209,18 @@ defmodule World.Sculpt.Bake do
 
             {Enum.map(used, &elem(all, &1)), Enum.map(group, &%{&1 | tris: Enum.map(&1.tris, listed)}), whole}
           end)
-          |> Task.async_stream(
-            fn {some, group, whole} ->
-              some = List.to_tuple(some)
-              edits = fn {t, at} -> {%{t | list: Enum.map(t.list, &elem(some, &1))}, at} end
+          |> World.Crew.map(fn {some, group, whole} ->
+            some = List.to_tuple(some)
+            edits = fn {t, at} -> {%{t | list: Enum.map(t.list, &elem(some, &1))}, at} end
 
-              for s <- group do
-                # The field of the part of the rectangle (of its first triangle).
-                field = whole && whole[s.tris |> hd() |> elem(0) |> Map.fetch!(:id) |> elem(0)]
-                look = Map.put(look, :field, field)
-                {s.at, {s.w, s.h}, texels(%{s | tris: Enum.map(s.tris, edits)}, defaults, side, look)}
-              end
-            end,
-            # (Two tasks for each scheduler: a task waits at times, for memory or for the collector.)
-            max_concurrency: 2 * System.schedulers_online(),
-            ordered: false,
-            timeout: :infinity
-          )
-          |> Enum.flat_map(fn {:ok, group} -> group end)
+            for s <- group do
+              # The field of the part of the rectangle (of its first triangle).
+              field = whole && whole[s.tris |> hd() |> elem(0) |> Map.fetch!(:id) |> elem(0)]
+              look = Map.put(look, :field, field)
+              {s.at, {s.w, s.h}, texels(%{s | tris: Enum.map(s.tris, edits)}, defaults, side, look)}
+            end
+          end)
+          |> Enum.concat()
 
         # The UVs of the corners of each triangle (v down from the top of the image).
         uvs =
@@ -245,10 +239,7 @@ defmodule World.Sculpt.Bake do
 
         [color, normal, finish, glow] =
           [{colors?, 0, @gray}, {true, 1, @flat}, {finish?, 2, @plain}, {glow?, 3, <<0, 0, 0>>}]
-          |> Task.async_stream(fn {wanted?, which, blank} -> if wanted?, do: image(done, side, which, blank) end,
-            timeout: :infinity
-          )
-          |> Enum.map(fn {:ok, rows} -> rows end)
+          |> World.Crew.map(fn {wanted?, which, blank} -> if wanted?, do: image(done, side, which, blank) end)
 
         {meshes, %{side: side, color: color, normal: normal, finish: finish, glow: glow}}
     end
@@ -310,8 +301,8 @@ defmodule World.Sculpt.Bake do
     strips =
       triangles
       |> groups()
-      |> Task.async_stream(&patches/1, max_concurrency: System.schedulers_online(), ordered: false, timeout: :infinity)
-      |> Enum.flat_map(fn {:ok, patches} -> patches end)
+      |> World.Crew.map(&patches/1)
+      |> Enum.concat()
 
     if place(strips, 0.0, side) == :small do
       :small
@@ -574,18 +565,13 @@ defmodule World.Sculpt.Bake do
 
     balls
     |> Enum.group_by(fn {_, {{x, y, z}, _}} -> {floor(x / size), floor(y / size), floor(z / size)} end)
-    |> Task.async_stream(
-      fn {{i, j, k}, group} ->
-        most = Enum.max(for {_, {_, r}} <- group, do: r)
-        center = {(i + 0.5) * size, (j + 0.5) * size, (k + 0.5) * size}
-        near = SDF.prune(edits, center, size * :math.sqrt(3) / 2 + most, limit)
-        for {id, {c, r}} <- group, do: {id, for(e <- SDF.prune(near, c, r, limit), do: Map.fetch!(place, e.id))}
-      end,
-      max_concurrency: System.schedulers_online(),
-      ordered: false,
-      timeout: :infinity
-    )
-    |> Enum.flat_map(fn {:ok, group} -> group end)
+    |> World.Crew.map(fn {{i, j, k}, group} ->
+      most = Enum.max(for {_, {_, r}} <- group, do: r)
+      center = {(i + 0.5) * size, (j + 0.5) * size, (k + 0.5) * size}
+      near = SDF.prune(edits, center, size * :math.sqrt(3) / 2 + most, limit)
+      for {id, {c, r}} <- group, do: {id, for(e <- SDF.prune(near, c, r, limit), do: Map.fetch!(place, e.id))}
+    end)
+    |> Enum.concat()
     |> Map.new()
   end
 

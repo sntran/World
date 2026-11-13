@@ -95,14 +95,11 @@ defmodule World.Sculpt.Finish do
     |> Enum.group_by(fn {{x, y, z}, _} -> {floor(x / size), floor(y / size), floor(z / size)} end)
     |> Enum.map(fn {at, ps} -> {Map.get(lists, at, edits), ps} end)
     |> Enum.chunk_every(@group)
-    |> Task.async_stream(
-      # The list of a brick for the hot loop of the value too (`World.SDF.fast/1`).
-      fn group -> for {list, ps} <- group, fast = SDF.fast(list), {p, i} <- ps, do: {i, f.(p, list, fast)} end,
-      max_concurrency: System.schedulers_online(),
-      ordered: false,
-      timeout: :infinity
-    )
-    |> Enum.flat_map(fn {:ok, done} -> done end)
+    # The list of a brick for the hot loop of the value too (`World.SDF.fast/1`).
+    |> World.Crew.map(fn group ->
+      for {list, ps} <- group, fast = SDF.fast(list), {p, i} <- ps, do: {i, f.(p, list, fast)}
+    end)
+    |> Enum.concat()
     |> Enum.sort()
     |> Enum.map(&elem(&1, 1))
   end

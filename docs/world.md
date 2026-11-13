@@ -222,6 +222,31 @@ it gives back its free people of the trades that no task needs now, so
 two constructions never wait for each other at the limit of the node
 (`specs/Census.tla`).
 
+### The crews of the sites
+
+The task of a sculptor is much work in many small jobs (the bricks of
+the field, the regions of the collapse, the texels of the maps). The
+hand of the sculptor is a site, and the workers of its crew do its jobs
+(`World.Crew`, plan 0012):
+
+- the node has workers (processes; two for each scheduler by default);
+- a site gives the jobs of a stage with one call (`World.Crew.map/3`).
+  A worker of its crew asks the site for a job, does it, gives the
+  result back and asks again;
+- the node gives its workers to the sites with jobs now, in equal
+  parts: all of them to one site, half each to two sites, and so on. A
+  site with fewer jobs than its part takes only that many workers. A
+  worker moves at the end of its job;
+- a site that stops (a stop of its person) stops its jobs at once;
+- the crews of another Erlang node can join (`World.Crew.join/1`): its
+  workers then serve the sites of this node too, when the two nodes
+  have the same code.
+
+`GET /census` has the crews: the workers, the nodes, and each site with
+its jobs and its workers. The gate of plan 0011
+(`World.Sculpt.Gate`) still says how many sculptures are in work at one
+time (for the memory of the node); the crews say who works on each.
+
 ## A job, from start to end
 
 The example is a job of the blueprint `strut` at the level far.

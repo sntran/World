@@ -181,24 +181,16 @@ defmodule World.Sculpt.Surface do
       if budget && total > budget && map_size(groups) > 1 && total / map_size(groups) >= @least do
         groups
         |> Enum.sort()
-        |> Task.async_stream(
-          fn {r, ps} ->
-            {r,
-             region_collapse(
-               r,
-               ps,
-               max(round(1.1 * budget * faces.(ps) / total), div(faces.(ps), 4)),
-               pin,
-               free(opts[:step])
-             )}
-          end,
-          # (Two tasks for each scheduler: a task waits at times, for memory or for the collector.)
-          max_concurrency: 2 * System.schedulers_online(),
-          # (In any order: a region with much work does not keep the others back.)
-          ordered: false,
-          timeout: :infinity
-        )
-        |> Enum.map(fn {:ok, part} -> part end)
+        |> World.Crew.map(fn {r, ps} ->
+          {r,
+           region_collapse(
+             r,
+             ps,
+             max(round(1.1 * budget * faces.(ps) / total), div(faces.(ps), 4)),
+             pin,
+             free(opts[:step])
+           )}
+        end)
         |> Enum.sort_by(&elem(&1, 0))
         |> Enum.map(&elem(&1, 1))
         |> join()
@@ -445,14 +437,7 @@ defmodule World.Sculpt.Surface do
            quadrics: Enum.map(used, &elem(qs, &1))
          ]}
       end)
-      |> Task.async_stream(
-        fn {key, points, faces, opts} -> {key, World.Simplify.collapse(points, faces, 1, opts)} end,
-        # (Two tasks for each scheduler: a task waits at times, for memory or for the collector.)
-        max_concurrency: 2 * System.schedulers_online(),
-        ordered: false,
-        timeout: :infinity
-      )
-      |> Enum.map(fn {:ok, part} -> part end)
+      |> World.Crew.map(fn {key, points, faces, opts} -> {key, World.Simplify.collapse(points, faces, 1, opts)} end)
       |> Enum.sort_by(&elem(&1, 0))
 
     # A point of a group that stays in the mesh has its new place and its
@@ -536,14 +521,9 @@ defmodule World.Sculpt.Surface do
          Enum.map(faces, fn {f, m} -> {Enum.map(f, &local[&1]), m} end), budget,
          opts ++ [fixed: for(v <- used, of[v] == :many, do: local[v]), quadrics: Enum.map(used, &elem(qs, &1))]}
       end)
-      |> Task.async_stream(
-        fn {key, points, faces, budget, opts} -> {key, World.Simplify.collapse(points, faces, budget, opts)} end,
-        # (Two tasks for each scheduler: a task waits at times, for memory or for the collector.)
-        max_concurrency: 2 * System.schedulers_online(),
-        ordered: false,
-        timeout: :infinity
-      )
-      |> Enum.map(fn {:ok, part} -> part end)
+      |> World.Crew.map(fn {key, points, faces, budget, opts} ->
+        {key, World.Simplify.collapse(points, faces, budget, opts)}
+      end)
       |> Enum.sort_by(&elem(&1, 0))
 
     case done do

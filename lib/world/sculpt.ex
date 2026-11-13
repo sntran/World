@@ -289,37 +289,21 @@ defmodule World.Sculpt do
     parts = for x <- 0..1, y <- 0..1, z <- 0..1, do: {ax + 2 * x * child, ay + 2 * y * child, az + 2 * z * child}
 
     found =
-      if how.parallel and length(edits) >= @many do
-        parts
-        |> Task.async_stream(
-          fn at ->
-            Process.set_label({:sculpt, at, 2 * child})
-            children(edits, at, child, how)
-          end,
-          max_concurrency: System.schedulers_online(),
-          ordered: false,
-          timeout: :infinity
-        )
-        |> Enum.map(fn {:ok, result} -> result end)
-      else
-        Enum.map(parts, &children(edits, &1, child, how))
-      end
+      if how.parallel and length(edits) >= @many,
+        do: World.Crew.map(parts, &children(edits, &1, child, how)),
+        else: Enum.map(parts, &children(edits, &1, child, how))
 
     {work, n} = Enum.reduce(found, {[], 0}, fn {work, m}, {all, n} -> {work ++ all, n + m} end)
 
     results =
-      if how.parallel do
-        # At most two processes for each scheduler at one time in each
-        # cell: the work goes to each scheduler, and the heaps of the
-        # bricks that wait for a scheduler do not fill the memory.
-        work
-        |> Task.async_stream(fn {c, kept} -> crew(kept, c, how) end,
-          max_concurrency: 2 * System.schedulers_online(),
-          ordered: false,
-          timeout: :infinity
-        )
-        |> Enum.map(fn {:ok, result} -> result end)
+      if how.parallel and child <= 4 do
+        # The children are small (64 bricks at the most): each is a job
+        # of the crew of the site, which walks it with no more jobs.
+        inside = %{how | parallel: false}
+        World.Crew.map(work, fn {c, kept} -> cell(kept, c, inside) end)
       else
+        # (Large children, or a walk in a job: one after the other. A
+        # large child gives its own children to the crew.)
         Enum.map(work, fn {c, kept} -> cell(kept, c, how) end)
       end
 
@@ -350,14 +334,6 @@ defmodule World.Sculpt do
   # sign that the cache has it.
   defp hit(key, :keys), do: if(Cache.member?(key), do: :cached)
   defp hit(key, _), do: Cache.get(key)
-
-  # A cell in a process of the crew: linked to the process that made it
-  # (to the hand of the sculptor at the root), so a stop of the hand stops
-  # the whole tree (D4).
-  defp crew(edits, {at, span} = c, how) do
-    Process.set_label({:sculpt, at, span})
-    cell(edits, c, how)
-  end
 
   # The edits of a cell (in its ball, grown by the border of a brick), or
   # nil when the cell has no surface: the range of the field in its ball
