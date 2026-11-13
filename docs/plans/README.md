@@ -45,4 +45,5 @@ builder does not change the requirements: the owner does.
 | 0010 | [The detail of a sculpture in maps, in parts, and at once](0010-sculpture-maps.md) | Done, but for R7 |
 | 0011 | [World builds any model, on each core](0011-any-model.md) | Done, but for R1 |
 | 0012 | [A world of sites, with models that look real](0012-a-world-of-sites.md) | Done, but for a part of R8 |
-| 0013 | [Real things from their sources, and long shapes at the cost of their near parts](0013-real-things.md) | In work |
+| 0013 | [Real things from their sources, and long shapes at the cost of their near parts](0013-real-things.md) | Done |
+| 0014 | [A landmark in parts, as a site builds it](0014-a-landmark-in-parts.md) | Done, but for the face as a copy |
