@@ -501,6 +501,59 @@ defmodule World.SDFTest do
     assert SDF.bounds([SDF.edit(:ball, {1}, blend: 0.4)]) == {{-1.1, -1.1, -1.1}, {1.1, 1.1, 1.1}}
   end
 
+  test "the bounds hold a blend at a sharp edge: a wedge, a prism, a pyramid, a superellipsoid" do
+    # The field of these shapes is less than the distance at an edge, so
+    # two of them with a blend have their inside far past the edge.
+    # Two places of the shape for each case: with the axes of the world, and turned.
+    frames = [
+      {Frame.move({0.0, 0.0, 0.0}), Frame.turn({0.0, 0.0, 1.0}, 180, {0.03, 0.0, 0.0})},
+      {Frame.new({0.02, -0.01, 0.03}, {0.3, 0.5, 0.8}, {1.0, 0.2, 0.0}),
+       Frame.new({0.05, -0.01, 0.03}, {-0.3, 0.5, 0.8}, {1.0, -0.2, 0.0})}
+    ]
+
+    shapes = [
+      wedge: {0.115, 0.078, 0.05},
+      wedge: {0.1, 0.03, 0.2},
+      pyramid: {0.2, 0.05, 0.1},
+      pyramid: {0.05, 0.1, 0.3},
+      prism: {0.1, 0.05, 3},
+      prism: {0.1, 0.2, 5},
+      superellipsoid: {0.25, 0.04, 0.1, 4}
+    ]
+
+    :rand.seed(:exsss, {3, 3, 3})
+
+    past =
+      for {shape, size} <- shapes, hard <- [true, false], {first, second} <- frames do
+        one = SDF.edit(shape, size, frame: first, blend: 0.08, hard: hard)
+        edits = [one, SDF.edit(shape, size, frame: second, blend: 0.08, hard: hard)]
+        {lo, hi} = bounds = SDF.bounds(edits)
+        {{wx, wy, wz}, mid} = {Vec.sub(hi, lo), Vec.lerp(lo, hi, 0.5)}
+        # Points in a box 1.5 times as large as the bounds.
+        spot = fn -> 1.5 * (:rand.uniform() - 0.5) end
+
+        inside =
+          for _ <- 1..3_000,
+              p = Vec.add(mid, {spot.() * wx, spot.() * wy, spot.() * wz}),
+              SDF.value(edits, p) < 0,
+              do: p
+
+        assert inside != []
+        for p <- inside, do: assert(inside?(bounds, p), inspect({shape, size, hard, p, bounds}))
+        # With no blend, the box of the shape.
+        assert SDF.bounds([%{one | blend: 0.0}]) == one.box
+
+        # The points of the inside that are past the boxes of the two shapes, grown by the reach of the blends.
+        reach = if hard, do: 0.08, else: 0.04
+        {a, b} = Vec.bounds(for e <- edits, corner <- Tuple.to_list(e.box), do: corner)
+        plain = {Vec.sub(a, {reach, reach, reach}), Vec.add(b, {reach, reach, reach})}
+        Enum.count(inside, &(not inside?(plain, &1)))
+      end
+
+    # (So the boxes with the reach only do not hold the inside.)
+    assert Enum.sum(past) > 0
+  end
+
   defp inside?({{a, b, c}, {d, e, f}}, {x, y, z}), do: x >= a and x <= d and y >= b and y <= e and z >= c and z <= f
 
   test "the modes: a cut takes away, paint changes the material only; the material of the nearer edit" do

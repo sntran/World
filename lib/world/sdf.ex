@@ -709,18 +709,50 @@ defmodule World.SDF do
   field by at most a quarter of its blend, so the field is less than 0
   only that near a shape that adds), and by the relief of the paints
   (`relief/1`).
+
+  The field of a wedge, a prism, a pyramid or a superellipsoid is less
+  than the distance at an edge, so a blend reaches farther there: the
+  box of such a shape grows by more (the box of the points where its
+  field is less than the reach).
   """
   def bounds(edits) do
-    case for(%Edit{mode: :add, box: box} <- edits, do: box) do
+    case for(%Edit{mode: :add} = e <- edits, do: e) do
       [] ->
         nil
 
-      boxes ->
+      adds ->
         # A smooth minimum lowers the field by a quarter of its blend at the most, a hard one by a half.
-        reach = Enum.sum(for e <- edits, do: if(e.hard, do: e.blend / 2, else: e.blend / 4))
-        boxes |> Enum.reduce(&join/2) |> grow(reach + relief(edits))
+        reach = Enum.sum(for e <- edits, do: if(e.hard, do: e.blend / 2, else: e.blend / 4)) + relief(edits)
+        adds |> Enum.map(&reach(&1, reach)) |> Enum.reduce(&join/2)
     end
   end
+
+  # The box of the points where the field of an edit is less than `c`
+  # (0 or more). For a field that is the distance outside, the box of
+  # the edit grown by `c`. For the most of the distances to some planes
+  # (`local/3`), the box of the planes moved out by `c`: a sharp edge
+  # goes out by more than `c`.
+  defp reach(%Edit{shape: :wedge, size: {hx, hy, hz}, frame: frame}, c) do
+    l = :math.sqrt(hz * hz + hy * hy)
+    placed({{-hx - c, -hy - c, -hz - c}, {hx + c, hy + c * (l + hy) / hz, hz + c * (l + hz) / hy}}, frame)
+  end
+
+  defp reach(%Edit{shape: :pyramid, size: {hx, hy, h}, frame: frame}, c) do
+    {lx, ly} = {:math.sqrt(4 * h * h + hx * hx), :math.sqrt(4 * h * h + hy * hy)}
+    {x, y} = {hx + c * (lx + hx) / (2 * h), hy + c * (ly + hy) / (2 * h)}
+    placed({{-x, -y, -h - c}, {x, y, h + c * min(lx / hx, ly / hy)}}, frame)
+  end
+
+  defp reach(%Edit{shape: :prism, size: {r, h, n}, frame: frame}, c),
+    do: placed(local_bounds(:prism, {r + c, h + c, n}), frame)
+
+  # (The norm of the shape less 1, times its least radius: the shape with each radius longer by the same part.)
+  defp reach(%Edit{shape: :superellipsoid, size: {x, y, z, e}, frame: frame}, c) do
+    k = 1 + c / Enum.min([x, y, z])
+    placed(local_bounds(:superellipsoid, {x * k, y * k, z * k, e}), frame)
+  end
+
+  defp reach(%Edit{box: box}, c), do: grow(box, c)
 
   @doc """
   The edits that can change the field in a cell: the ball of the radius
