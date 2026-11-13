@@ -1,0 +1,263 @@
+{
+  "name": "thung_chai_edits",
+  "kind": "item",
+  "sources": [
+    "A basket boat of the coast of Việt Nam (thúng chai): 1.8 m across (insideasiatours.com, Vietnam's basket boats: 1.8 m or 2.2 m) and about 0.6 m deep (from photos). Strips of bamboo, woven flat and pressed to the shape; a rim of bamboo hoops; a coat of resin. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "thung_chai",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "revolve",
+              "size": {
+                "profile": [
+                  [
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.378,
+                    0.0
+                  ],
+                  [
+                    0.612,
+                    0.096
+                  ],
+                  [
+                    0.792,
+                    0.27
+                  ],
+                  [
+                    0.873,
+                    0.45
+                  ],
+                  [
+                    0.9,
+                    0.6
+                  ],
+                  [
+                    0.865,
+                    0.6
+                  ],
+                  [
+                    0.838,
+                    0.45
+                  ],
+                  [
+                    0.757,
+                    0.2805
+                  ],
+                  [
+                    0.584,
+                    0.124
+                  ],
+                  [
+                    0.378,
+                    0.035
+                  ],
+                  [
+                    0.0,
+                    0.035
+                  ]
+                ],
+                "smooth": 1
+              },
+              "at": [
+                0,
+                0,
+                0
+              ],
+              "material": "paint",
+              "color": "#4a3a2a",
+              "roughness": 0.75,
+              "surface": {
+                "kind": "weave",
+                "scale": 0.03
+              }
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.885,
+                0.028
+              ],
+              "at": [
+                0,
+                0,
+                0.6
+              ],
+              "material": "paint",
+              "color": "#b89858",
+              "roughness": 0.6,
+              "surface": {
+                "kind": "wood",
+                "scale": 0.006
+              }
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.9,
+                0.02
+              ],
+              "at": [
+                0,
+                0,
+                0.565
+              ],
+              "material": "paint",
+              "color": "#8a7448",
+              "roughness": 0.65,
+              "surface": {
+                "kind": "wood",
+                "scale": 0.006
+              }
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.03,
+                0.012,
+                0.06
+              ],
+              "at": [
+                0.89,
+                0,
+                0.59
+              ],
+              "material": "paint",
+              "color": "#2a2420",
+              "mode": "paint",
+              "blend": 0.004,
+              "roughness": 0.9,
+              "repeat": {
+                "count": 28
+              },
+              "raise": 0.003
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.09,
+                0.74,
+                0.014,
+                0.004
+              ],
+              "at": [
+                0.18,
+                0,
+                0.36
+              ],
+              "material": "paint",
+              "color": "#9a7648",
+              "roughness": 0.7,
+              "surface": {
+                "kind": "wood",
+                "scale": 0.008
+              }
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.07,
+                0.03,
+                0.03
+              ],
+              "at": [
+                0.18,
+                0.7,
+                0.33
+              ],
+              "material": "paint",
+              "color": "#8a6a40",
+              "mirror": "y",
+              "roughness": 0.7,
+              "surface": {
+                "kind": "wood",
+                "scale": 0.008
+              }
+            },
+            {
+              "shape": "capsule",
+              "size": [
+                0.55,
+                0.017
+              ],
+              "at": [
+                -0.3,
+                0.05,
+                0.32
+              ],
+              "material": "paint",
+              "color": "#a88454",
+              "axis": [
+                0,
+                1,
+                0.42
+              ],
+              "roughness": 0.6,
+              "surface": {
+                "kind": "wood",
+                "scale": 0.005
+              }
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.075,
+                0.17,
+                0.009,
+                0.006
+              ],
+              "at": [
+                -0.3,
+                -0.52,
+                0.085
+              ],
+              "material": "paint",
+              "color": "#a88454",
+              "axis": [
+                0,
+                -0.42,
+                1
+              ],
+              "blend": 0.01,
+              "roughness": 0.6,
+              "surface": {
+                "kind": "wood",
+                "scale": 0.005
+              }
+            }
+          ],
+          "dirt": 0.6,
+          "wear": 0.35,
+          "cells": {
+            "near": 0.012,
+            "mid": 0.03,
+            "far": 0.06
+          },
+          "budget": {
+            "near": 16000,
+            "mid": 4000,
+            "far": 600
+          },
+          "bake": {
+            "near": 1024,
+            "mid": 512,
+            "far": 256
+          }
+        }
+      }
+    }
+  ]
+}

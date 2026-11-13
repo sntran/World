@@ -710,10 +710,11 @@ two surfaces, one in the other, as two sculptures of Dreams are.
 
 ### The sculptures of the catalog
 
-Ten models of the catalog are a sculpture each, from edits only: no
-code of World makes their kind (`priv/drawings/NAME.json`; plan 0011).
-They are the examples of the format, and none is a copy of a real
-thing.
+Some models of the catalog are a sculpture each, from edits only: no
+code of World makes their kind (`priv/drawings/NAME.json`; plans 0011
+and 0012). They are the examples of the format. The first ten are not
+copies of real things; the last four have the sizes of real things,
+each with its source.
 
 | Model | What | It shows |
 |---|---|---|
@@ -726,7 +727,11 @@ thing.
 | `tree_edits` | A tree of 5 m | Tubes for the trunk and the branches, a soft crown. |
 | `chair_edits` | A chair of 0.9 m | Thin parts (the slats of the back), a paint for the cushion. |
 | `teapot_edits` | A teapot of 0.19 m | A ring, a tube, a band of gold, flowers by a repeat. |
-| `hammer_edits` | A hammer of 0.3 m | A handle of wood and a head with the finish of metal, in one mesh. |
+| `hammer_edits` | A hammer of 0.3 m | A handle of wood and a head with the finish of metal, in one mesh; the surfaces `wood`, `cast` and `brushed`. |
+| `thung_chai_edits` | A basket boat of Việt Nam (thúng chai), 1.8 m across | A `revolve` of a profile, the surface `weave`, a rim with lashings by a repeat, dirt and wear. |
+| `thung_chai_flat_edits` | The same boat | The look `flat`: flat faces, one color each, no image. |
+| `ghe_nhua_thap_edits` | A low plastic stool, 26 cm high | An `extrude` of its side view, cut to the same view from the other side (`crop`), with arches taken away. |
+| `cuc_nong_may_lanh_edits` | The outdoor unit of an air conditioner, 550 by 658 by 275 mm | Paints with a raise for a grille, louvers and seams; a paint with the surface `rust`. |
 
 ### A sculpture with bones
 
