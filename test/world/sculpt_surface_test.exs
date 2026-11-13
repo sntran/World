@@ -112,6 +112,13 @@ defmodule World.Sculpt.SurfaceTest do
     assert Surface.meshes(pieces([hd(two)], 0.01), budget: 1_000_000) == Surface.meshes(pieces([hd(two)], 0.01))
   end
 
+  test "a surface through a point of the grid is closed: the bricks give one place to the point" do
+    # The base of the cone is at -1 cell, and its middle is at a corner of bricks.
+    edits = [SDF.edit(:ball, {0.04}), SDF.edit(:cone, {0.04, 0.0, 0.154}, frame: Frame.move({0.0, 0.0, 0.111}))]
+    ps = pieces(edits, 0.043)
+    assert length(ps) == 8 and closed?(ps)
+  end
+
   test "the collapse keeps the points where the colors change, when the budget keeps many of the faces" do
     # A ball with a dark spot (a paint: the shape is the same with no color).
     spot = SDF.edit(:ball, {0.15}, frame: Frame.move({0.0, 0.0, 0.5}), mode: :paint, blend: 0.01, color: {10, 10, 10})

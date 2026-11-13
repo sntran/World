@@ -441,15 +441,18 @@ defmodule World.Sculpt do
 
   # The field of a brick at each of its points, with its border, from the
   # lists of its eighths; and the evaluations that it takes.
-  defp field(lists, at, step, limit) do
-    {ox, oy, oz} = corner(at, step)
+  defp field(lists, {bi, bj, bk}, step, limit) do
+    # The place of a point from its number in the whole grid, so two
+    # bricks give the same place (to the last bit) to a point that they
+    # share: a surface through a point of the grid has one side there.
+    {oi, oj, ok} = {bi * @cells, bj * @cells, bk * @cells}
     # The list of each eighth for the hot loop of the value (`World.SDF.fast/1`).
     fast = lists |> Tuple.to_list() |> Enum.map(&SDF.fast/1) |> List.to_tuple()
 
     field =
       for k <- -1..(@points - 2), j <- -1..(@points - 2), i <- -1..(@points - 2), into: <<>> do
         list = elem(fast, eighth({i, j, k}))
-        <<SDF.value(list, {ox + i * step, oy + j * step, oz + k * step}, limit)::float-32-little>>
+        <<SDF.value(list, {(oi + i) * step, (oj + j) * step, (ok + k) * step}, limit)::float-32-little>>
       end
 
     counts = for c <- 0..1, b <- 0..1, a <- 0..1, do: (6 - a) * (6 - b) * (6 - c)
