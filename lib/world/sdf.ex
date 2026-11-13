@@ -604,6 +604,110 @@ defmodule World.SDF do
     end
   end
 
+  @doc """
+  The edits as a list for the hot loop of `seen/4`: a tuple for each
+  edit with its mode, its shape as numbers (as in `fast/1`), its blend,
+  its color and the finish that it gives (with the finish of its
+  material from `defaults`). The result of `seen/4` with this list is
+  the result with the edits, to the bit.
+  """
+  def looks(edits, defaults), do: {:looks, Enum.map(edits, &glance(&1, defaults))}
+
+  defp glance(%Edit{mode: :add, blend: r, hard: hard, color: c} = e, defaults) do
+    {rough, metal} = Map.get(defaults, e.material, {0.6, 0.0})
+    {:add, form(e), r, hard, c || {1.0, 1.0, 1.0}, {e.roughness || rough, e.metal || metal, e.glow || 0.0}, e}
+  end
+
+  defp glance(%Edit{mode: :paint, blend: r, color: c, raise: h, opacity: o} = e, _defaults),
+    do: {:paint, form(e), r, c, {e.roughness, e.metal, e.glow}, e.surface && e, h, o}
+
+  defp glance(%Edit{mode: mode, blend: r, hard: hard, color: c} = e, _defaults),
+    do: {mode, form(e), r, hard, c, {e.roughness, e.metal, e.glow}, e.surface && e}
+
+  # The shape of an edit as numbers: its frame and its size, with its shape and its frame in its tag.
+  defp form(%Edit{shape: shape, size: size, local: local} = e) do
+    if @inline[shape] do
+      [kind | frame] = Tuple.to_list(local)
+      List.to_tuple([:"#{shape}_#{kind}" | numbers(frame ++ Tuple.to_list(size))])
+    else
+      {:any, e}
+    end
+  end
+
+  # The distance to a shape of `form/1`: the steps of `local/3`, as in `run/6`.
+  for {shape, distance} <- distances, {frame, {names, place}} <- frames do
+    names = names ++ Enum.map(1..@inline[shape], &:"s#{&1}")
+    vars = Enum.map(names, &Macro.var(&1, nil))
+    floats = Enum.reduce(names ++ ~w(x y z)a, true, &quote(do: unquote(&2) and is_float(unquote(Macro.var(&1, nil)))))
+
+    defp far({unquote(:"#{shape}_#{frame}"), unquote_splicing(vars)}, x, y, z) when unquote(floats) do
+      unquote(plain.(place))
+      unquote(plain.(distance))
+    end
+  end
+
+  defp far({:any, edit}, x, y, z), do: distance(edit, {x, y, z})
+
+  # The fold of `look/8` over the list of `looks/2`.
+  defp glances([], _x, _y, _z, d, _u, col, fin, _limit, top), do: {d, col, fin, top}
+
+  defp glances([{:add, form, r, hard, c, own, e} | rest], x, y, z, d, u, col, fin, limit, top) do
+    de = far(form, x, y, z)
+    w = weight(u - de, r)
+
+    glances(
+      rest,
+      x,
+      y,
+      z,
+      clamp(lower(d, de, r, hard), limit),
+      lower(u, de, r, hard),
+      mix(col, c, w),
+      part(fin, own, w),
+      limit,
+      if(w > 0.5, do: e, else: top)
+    )
+  end
+
+  defp glances([{:paint, form, r, c, own, e, h, o} | rest], x, y, z, d, u, col, fin, limit, top) do
+    w = smooth(weight(-2 * far(form, x, y, z), r))
+
+    glances(
+      rest,
+      x,
+      y,
+      z,
+      clamp(d - h * w, limit),
+      u - h * w,
+      mix(col, c, w * o),
+      part(fin, own, w * o),
+      limit,
+      if(e != nil and w * o > 0.5, do: e, else: top)
+    )
+  end
+
+  # An edit that takes away (its shape counts from its inside), or a crop.
+  defp glances([{mode, form, r, hard, c, own, e} | rest], x, y, z, d, u, col, fin, limit, top) do
+    de = if mode == :subtract, do: -far(form, x, y, z), else: far(form, x, y, z)
+    w = weight(de - u, r)
+
+    glances(
+      rest,
+      x,
+      y,
+      z,
+      clamp(-lower(-d, -de, r, hard), limit),
+      -lower(-u, -de, r, hard),
+      mix(col, c, w),
+      part(fin, own, w),
+      limit,
+      if(e != nil and w > 0.5, do: e, else: top)
+    )
+  end
+
+  defp lower(a, b, r, false), do: smin(a, b, r)
+  defp lower(a, b, r, _hard), do: chamfer(a, b, r)
+
   defp fold([], _p, d, _limit), do: d
 
   defp fold([%Edit{mode: :add} = e | rest], p, d, limit),
@@ -686,6 +790,13 @@ defmodule World.SDF do
   surface that takes away or paints (`World.Sculpt.Texture`). Nil with
   no edit there.
   """
+  def seen({:looks, list}, {x, y, z}, limit, _defaults) do
+    {d, {r, g, b}, finish, top} =
+      glances(list, x * 1.0, y * 1.0, z * 1.0, limit, @far, {1.0, 1.0, 1.0}, {0.6, 0.0, 0.0}, limit, nil)
+
+    {d, {srgb(r), srgb(g), srgb(b)}, finish, top}
+  end
+
   def seen(edits, p, limit, defaults) do
     {d, {r, g, b}, finish, top} =
       look(edits, p, {limit, @far}, {1.0, 1.0, 1.0}, {0.6, 0.0, 0.0}, limit, defaults, nil)
@@ -994,8 +1105,11 @@ defmodule World.SDF do
   of the field over the cell (each value at the center, less and more
   `half`, folded edit by edit, in the limit). An edit that adds goes when
   its least value is at least the most value of the field so far and its
-  blend; an edit that takes away, when its least value is at least its
-  blend less the least value of the field so far; an edit that paints,
+  blend; each edit before an edit that adds, when the most value of that
+  edit and its blend are less than the least value of the field so far
+  (it hides them); an edit that takes away, when its least value is at
+  least its blend less the least value of the field so far; an edit that
+  paints,
   when its shape, grown by half of its blend (the border of its color,
   `color/3`), does not reach the cell.
   """
@@ -1015,6 +1129,11 @@ defmodule World.SDF do
 
         case e.mode do
           :add when dlo >= hi + e.blend -> {kept, range}
+          # An edit that adds, nearer than the field so far by more than its blend at each point of
+          # the cell: the field there is its distance, and its color is the color. The edits before
+          # it change nothing. (Not when the field so far is at its limit from below: the weight of
+          # the color is from the field with no limit.)
+          :add when lo > dhi + e.blend and lo > -limit -> {[e], {clamp(dlo, limit), clamp(dhi, limit)}}
           :add -> {[e | kept], {clamp(less(lo, dlo, e), limit), clamp(less(hi, dhi, e), limit)}}
           :subtract when dlo >= e.blend - lo -> {kept, range}
           :subtract -> {[e | kept], {clamp(more(lo, -dhi, e), limit), clamp(more(hi, -dlo, e), limit)}}

@@ -303,7 +303,7 @@ defmodule World.SDFTest do
            ]
   end
 
-  test "the hot loop of the value gives the same values as the fold, to the bit, for each shape, frame and mode (plan 0010, R13)" do
+  test "the hot loops of the value and of the color give the same results as the folds, to the bit, for each shape, frame and mode (plan 0010, R13; plan 0015)" do
     :rand.seed(:exsss, {5, 6, 7})
     u = fn lo, hi -> lo + (hi - lo) * :rand.uniform() end
 
@@ -363,6 +363,29 @@ defmodule World.SDFTest do
     # A point with whole numbers, and no edit.
     assert SDF.value(SDF.fast([ball]), {1, 0, 0}, 5) == SDF.value([ball], {1, 0, 0}, 5)
     assert SDF.value(SDF.fast([]), {0.0, 0.0, 0.0}, 0.3) == 0.3
+
+    # The hot loop of the color and the finish (`looks/2`): the same edits, each with a color, and
+    # some with a finish, a surface, a material or a paint that is not all there. The same result to the bit.
+    defaults = %{skin: {0.3, 0.9}}
+
+    seen =
+      for {e, i} <- Enum.with_index(edits) do
+        e = %{e | color: if(rem(i, 5) == 0 and e.mode != :add, do: nil, else: {u.(0, 1), u.(0, 1), u.(0, 1)})}
+        e = if rem(i, 3) == 0, do: %{e | roughness: u.(0.1, 0.9), metal: u.(0, 1), glow: u.(0, 1)}, else: e
+        e = if rem(i, 4) == 0, do: %{e | surface: {:stone, 0.05}}, else: e
+        e = if rem(i, 7) == 0, do: %{e | material: :skin}, else: e
+        if e.mode == :paint, do: %{e | opacity: u.(0.2, 1.0)}, else: e
+      end
+
+    for list <- [seen | for(e <- seen, do: [ball, e])],
+        looks = SDF.looks(list, defaults),
+        limit <- [1.0e30, 0.2],
+        p <- Enum.take(points, if(length(list) > 2, do: 2_000, else: 60)) do
+      assert SDF.seen(looks, p, limit, defaults) == SDF.seen(list, p, limit, defaults)
+      assert SDF.sample(looks, p, limit, defaults) == SDF.sample(list, p, limit, defaults)
+    end
+
+    assert SDF.seen(SDF.looks([ball], %{}), {1, 0, 0}, 5, %{}) == SDF.seen([ball], {1, 0, 0}, 5, %{})
   end
 
   test "the parts of the hot loop are the steps of the functions of the field" do
