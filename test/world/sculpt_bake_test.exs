@@ -273,6 +273,87 @@ defmodule World.Sculpt.BakeTest do
     assert_in_delta top.(high), 0.32, 0.002
   end
 
+  test "a sculpture with details: each detail has its own cells and its levels; the maps of all are one image (plan 0010, D5)" do
+    data = %{
+      "edits" => [%{"shape" => "ball", "size" => [0.3], "color" => "#c82020"}],
+      "cells" => %{"mid" => 0.05, "far" => 0.05},
+      "budget" => %{"mid" => 400, "far" => 400},
+      "details" => [
+        %{
+          # A small blue horn, with cells of a tenth of the cells of the ball.
+          "edits" => [%{"shape" => "cone", "size" => [0.02, 0.0, 0.04], "at" => [0, 0, 0.33], "color" => "#2020c8"}],
+          "cells" => %{"mid" => 0.005},
+          "budget" => %{"mid" => 200},
+          "levels" => ["mid"]
+        }
+      ]
+    }
+
+    assert paths(data) == []
+    shapes = fn data, level -> elem(hd(Detail.with(level, fn -> Drawing.build(drawing(data)) end).nodes), 1).shapes end
+    [ball, horn] = shapes.(data, :mid)
+    {{_, _, _}, {_, _, top}} = Vec.bounds(horn.points)
+    # The horn is 8 cm high and 4 cm wide: less than one cell of the ball, and it has its shape.
+    assert_in_delta top, 0.37, 0.003
+    assert length(horn.faces) in 50..200 and length(ball.faces) <= 400
+    assert {32, 32, 200} in horn.colors and {200, 32, 32} in ball.colors
+    # At far the sculpture has no detail.
+    assert [_ball] = shapes.(data, :far)
+
+    # With maps: one image for the ball and the horn, each with the colors of its own edits.
+    baked = Map.put(data, "bake", %{"mid" => 256})
+    assert paths(baked) == []
+    [ball, horn] = shapes.(baked, :mid)
+    assert ball.uvs != nil and horn.uvs != nil and horn.colors == nil
+    g = gltf_at(baked, :mid)
+    assert length(g["images"]) == 2
+
+    # The maps of the parts, each with its own edits and cells.
+    edits = fn list -> World.Skills.Sculpt.edits(list) end
+    {main, detail} = {edits.(data["edits"]), edits.(hd(data["details"])["edits"])}
+
+    parts = [
+      {Sculpt.model(main, step: 0.05, budget: 400), main, 0.05},
+      {Sculpt.model(detail, step: 0.005, budget: 200), detail, 0.005}
+    ]
+
+    {[b, h], maps} = Bake.maps(parts, 256)
+    [red] = for c <- charts([b], 256) |> Enum.take(1), {x, y} <- Enum.take(c.texels, 1), do: texel(maps.color, x, y)
+    blues = for c <- charts([h], 256), {x, y} <- c.texels, uniq: true, do: texel(maps.color, x, y)
+    # (A triangle with no area has a gray chart.)
+    assert {red, blues -- [{128, 128, 128}]} == {{200, 32, 32}, [{32, 32, 200}]}
+
+    # With bones, the points of a detail follow the bones too.
+    bones = [%{"name" => "a", "head" => [0, 0, -0.3], "tail" => [0, 0, 0.4]}]
+    g = gltf_at(Map.put(baked, "bones", bones), :mid)
+    assert Enum.all?(hd(g["meshes"])["primitives"], &Map.has_key?(&1["attributes"], "JOINTS_0"))
+
+    # The errors of the details, each with its path.
+    at = "options.drawing.nodes.0.skill.sculpt"
+    bad = fn value -> paths(Map.put(data, "details", value)) end
+    detail = hd(data["details"])
+    assert bad.(7) == ["#{at}.details"]
+    assert bad.([7]) == ["#{at}.details.0"]
+    assert bad.([%{"cells" => %{"mid" => 0.005}}]) == ["#{at}.details.0.edits"]
+    assert bad.([Map.put(detail, "levels", ["high"])]) == ["#{at}.details.0.levels"]
+    assert bad.([Map.put(detail, "levels", [])]) == ["#{at}.details.0.levels"]
+    assert bad.([Map.put(detail, "bake", %{})]) == ["#{at}.details.0.bake"]
+    assert bad.([Map.put(detail, "budget", %{"mid" => 1})]) == ["#{at}.details.0.budget.mid"]
+    assert bad.([Map.put(detail, "cells", %{"mid" => 9})]) == ["#{at}.details.0.cells.mid"]
+    assert bad.([put_in(detail, ["edits", Access.at(0), "shape"], "horn")]) == ["#{at}.details.0.edits.0.shape"]
+    # A baked level needs the budget of each detail at that level, and a place for all the triangles.
+    assert paths(Map.put(baked, "details", [Map.delete(detail, "budget")])) == ["#{at}.bake.mid"]
+    assert paths(Map.put(baked, "details", [Map.delete(detail, "budget") |> Map.put("levels", ["far"])])) == []
+    assert paths(Map.put(baked, "bake", %{"mid" => 64})) == ["#{at}.bake.mid"]
+  end
+
+  defp gltf_at(data, level) do
+    <<"glTF", 2::little-32, _::little-32, size::little-32, "JSON", json::binary-size(size), _::binary>> =
+      Detail.with(level, fn -> Build.glb(Drawing.build(drawing(data)), level: level) end)
+
+    JSON.decode!(json)
+  end
+
   test "a part of a baked mesh and a mesh with no maps of one material: each point has a UV" do
     edits = [SDF.edit(:ball, {0.3}, color: {200, 100, 50})]
     {[baked], _} = Bake.maps(Sculpt.model(edits, step: 0.1, cache: false), edits, 0.1, 128)

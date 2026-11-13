@@ -31,7 +31,7 @@ defmodule World.Skills.Sculpt do
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
   alias World.Sculpt.Bones
 
-  @keys ~w(edits groups ports sources budget cells bake bones bone_blend plan gait clips)
+  @keys ~w(edits groups details ports sources budget cells bake bones bone_blend plan gait clips)
   @edit ~w(shape size at axis up mode blend material color raise mirror repeat)
   @use ~w(shape group at axis up scale mirror repeat)
   @most 10_000
@@ -69,7 +69,8 @@ defmodule World.Skills.Sculpt do
       optional(data, "sources", path, &sources/2) ++
       optional(data, "budget", path, &budget/2) ++
       optional(data, "cells", path, &cells/2) ++
-      optional(data, "bake", path, &bake(&1, &2, data["budget"])) ++
+      optional(data, "details", path, &details(&1, &2, groups)) ++
+      optional(data, "bake", path, &bake(&1, &2, data)) ++
       optional(data, "bones", path, &bones/2) ++
       optional(data, "bone_blend", path, &number(&1, &2, 0.001, 10)) ++
       optional(data, "plan", path, &plan(&1, &2, data["bones"])) ++
@@ -84,19 +85,30 @@ defmodule World.Skills.Sculpt do
 
   @impl true
   def make(data, _inputs, %{level: level, name: name}) do
-    edits = all(data)
-    budget = get_in(data, ["budget", Atom.to_string(level)])
-    step = step(data, level)
     side = get_in(data, ["bake", Atom.to_string(level)])
-    # With maps, the mesh has no relief smaller than its cells: the maps have it.
-    meshes = World.Sculpt.model(if(side, do: SDF.coarse(edits, step), else: edits), step: step, budget: budget)
-    {meshes, materials} = maps(meshes, edits, step, side)
+
+    # The sculpture, then each of its details at this level: each one is
+    # a sculpture of its own, with its edits, its cells and its budget.
+    built =
+      for d <- [data | details(data, level)] do
+        {edits, step} = {all(d), step(d, level)}
+        # With maps, the mesh has no relief smaller than its cells: the maps have it.
+        from = if side, do: SDF.coarse(edits, step), else: edits
+        {World.Sculpt.model(from, step: step, budget: get_in(d, ["budget", Atom.to_string(level)])), edits, step}
+      end
+
+    {meshes, materials} = maps(built, side)
     ports = Drawing.ports(Map.get(data, "ports", %{}))
     sources = Map.get(data, "sources", [])
 
     case data["bones"] do
-      nil -> {Part.new(name, :part, meshes, ports, sources: sources), materials, %{}}
-      bones -> {figure(name, meshes, bones, ports, sources, data), materials, %{}}
+      nil ->
+        {Part.new(name, :part, meshes, ports, sources: sources), materials, %{}}
+
+      bones ->
+        # The edits of each mesh: the bones of a point come from the edit of its surface.
+        edits = for {ms, edits, _} <- built, _ <- ms, do: edits
+        {figure(name, meshes, bones, [ports: ports, sources: sources, edits: edits], data), materials, %{}}
     end
   end
 
@@ -105,10 +117,10 @@ defmodule World.Skills.Sculpt do
   # for the materials of the model (`World.Drawing.assemble/3`). The
   # check makes sure that the image has a place for the triangles of the
   # budget.
-  defp maps(meshes, _edits, _step, nil), do: {meshes, %{}}
+  defp maps(built, nil), do: {Enum.flat_map(built, &elem(&1, 0)), %{}}
 
-  defp maps(meshes, edits, step, side) do
-    {meshes, maps} = World.Sculpt.Bake.maps(meshes, edits, step, side)
+  defp maps(built, side) do
+    {meshes, maps} = World.Sculpt.Bake.maps(built, side)
     png = fn rows -> rows && {"image/png", World.PNG.encode(rows, 3)} end
 
     spec =
@@ -118,23 +130,32 @@ defmodule World.Skills.Sculpt do
     {meshes, %{"materials" => Map.new(meshes, &{Atom.to_string(&1.material), spec})}}
   end
 
+  # The details of a sculpture at a level, each as the data of a
+  # sculpture (with the groups of the sculpture).
+  defp details(data, level) do
+    for d <- Map.get(data, "details", []), Atom.to_string(level) in Map.get(d, "levels", ~w(near mid far)) do
+      Map.put(d, "groups", Map.get(data, "groups", %{}))
+    end
+  end
+
   # The figure of a sculpture with bones.
-  defp figure(name, meshes, bones, ports, sources, data) do
+  defp figure(name, meshes, bones, opts, data) do
     point = fn [x, y, z] -> {x, y, z} end
 
     Bones.figure(
       name,
       meshes,
       for(b <- bones, do: %{name: b["name"], parent: b["parent"], head: point.(b["head"]), tail: point.(b["tail"])}),
-      plan: data["plan"],
-      gait: Map.get(data, "gait", %{}),
-      blend: data["bone_blend"],
-      ports: ports,
-      sources: sources,
-      clips:
-        for c <- Map.get(data, "clips", []) do
-          %{name: c["name"], length: c["length"], keys: for(k <- c["keys"], do: {k["at"], k["pose"]})}
-        end
+      opts ++
+        [
+          plan: data["plan"],
+          gait: Map.get(data, "gait", %{}),
+          blend: data["bone_blend"],
+          clips:
+            for c <- Map.get(data, "clips", []) do
+              %{name: c["name"], length: c["length"], keys: for(k <- c["keys"], do: {k["at"], k["pose"]})}
+            end
+        ]
     )
   end
 
@@ -461,15 +482,46 @@ defmodule World.Skills.Sculpt do
 
   # The side of the image of the maps at each level: a power of 2, with
   # a place for the triangles of the budget of the level.
-  defp bake(v, path, budget) when is_map(v) do
+  defp bake(v, path, data) when is_map(v) do
     World.Skill.keys(v, path, ~w(near mid far)) ++
-      for {k, n} <- Enum.sort(v),
-          k in ~w(near mid far),
-          e <- side(n, "#{path}.#{k}", is_map(budget) && budget[k]),
-          do: e
+      for {k, n} <- Enum.sort(v), k in ~w(near mid far), e <- side(n, "#{path}.#{k}", triangles(data, k)), do: e
   end
 
-  defp bake(_v, path, _budget), do: [{path, "must be an object of near, mid and far"}]
+  defp bake(_v, path, _data), do: [{path, "must be an object of near, mid and far"}]
+
+  # The budget of a level with its details: a count, or nil when the
+  # sculpture or one of its details at the level has none.
+  defp triangles(data, level) do
+    details = if is_list(data["details"]), do: Enum.filter(data["details"], &is_map/1), else: []
+    here = for d <- details, level in if(is_list(d["levels"]), do: d["levels"], else: ~w(near mid far)), do: d
+    budgets = for d <- [data | here], do: is_map(d["budget"]) && d["budget"][level]
+    if Enum.all?(budgets, &is_integer/1), do: Enum.sum(budgets)
+  end
+
+  # The details: each one a sculpture of its own.
+  defp details(v, path, groups) when is_list(v) and length(v) <= 16 do
+    v
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {d, i} ->
+      p = "#{path}.#{i}"
+
+      if is_map(d) do
+        World.Skill.keys(d, p, ~w(edits cells budget levels), ~w(edits)) ++
+          optional(d, "edits", p, &edits(&1, &2, groups)) ++
+          optional(d, "cells", p, &cells/2) ++
+          optional(d, "budget", p, &budget/2) ++
+          optional(d, "levels", p, fn l, lp ->
+            if is_list(l) and l != [] and l -- ~w(near mid far) == [] and l == Enum.uniq(l),
+              do: [],
+              else: [{lp, "must be a list of near, mid and far"}]
+          end)
+      else
+        [{p, "must be an object"}]
+      end
+    end)
+  end
+
+  defp details(_v, path, _groups), do: [{path, "must be a list of at most 16 details"}]
 
   defp side(n, path, budget) do
     cond do
@@ -477,7 +529,7 @@ defmodule World.Skills.Sculpt do
         [{path, "must be a side of an image: 64, 128, 256, 512, 1024, 2048 or 4096"}]
 
       not is_integer(budget) ->
-        [{path, "needs a budget at this level"}]
+        [{path, "needs a budget at this level, for the sculpture and for each of its details"}]
 
       n < World.Sculpt.Bake.least(budget) ->
         [{path, "is too small for the budget: #{World.Sculpt.Bake.least(budget)} texels or more"}]

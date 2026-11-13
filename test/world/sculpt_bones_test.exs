@@ -185,7 +185,82 @@ defmodule World.Sculpt.BonesTest do
     [q] = List.last(wide.nodes).primitives
     two = fn prim -> Enum.count(prim.weights, fn {_, w, _, _} -> w > 0 end) end
     assert two.(q) > two.(p)
-    assert Bones.plans() == ["fish"] and Bones.turns() == ~w(flex spread twist)
+    assert Bones.plans() == ~w(bird fish) and Bones.turns() == ~w(flex spread twist)
+  end
+
+  # The bones of one side of a small bird: its wing, folded to the back, and its leg.
+  defp bird_side(s, sign) do
+    {x, l} = {sign * 0.05, sign * 0.03}
+
+    for {name, parent, head, tail} <- [
+          {"upperarm", "spine_01", [x, 0.03, 0.2], [x * 1.2, -0.02, 0.19]},
+          {"lowerarm", "upperarm_#{s}", [x * 1.2, -0.02, 0.19], [x * 1.2, -0.06, 0.18]},
+          {"hand", "lowerarm_#{s}", [x * 1.2, -0.06, 0.18], [x * 1.1, -0.1, 0.17]},
+          {"thigh", "pelvis", [l, -0.01, 0.15], [l, 0.0, 0.11]},
+          {"calf", "thigh_#{s}", [l, 0.0, 0.11], [l, -0.015, 0.06]},
+          {"foot", "calf_#{s}", [l, -0.015, 0.06], [l, -0.005, 0.01]},
+          {"ball", "foot_#{s}", [l, -0.005, 0.01], [l, 0.03, 0.005]}
+        ] do
+      %{"name" => "#{name}_#{s}", "parent" => parent, "head" => head, "tail" => tail}
+    end
+  end
+
+  test "a sculpture with the bones of a bird has its clips: the flap opens the two wings, the walk moves the feet (plan 0010, R8)" do
+    bones =
+      [
+        %{"name" => "pelvis", "head" => [0, -0.06, 0.16], "tail" => [0, 0.0, 0.17]},
+        %{"name" => "spine_01", "parent" => "pelvis", "head" => [0, 0.0, 0.17], "tail" => [0, 0.06, 0.19]},
+        %{"name" => "neck_01", "parent" => "spine_01", "head" => [0, 0.06, 0.19], "tail" => [0, 0.08, 0.26]},
+        %{"name" => "head", "parent" => "neck_01", "head" => [0, 0.08, 0.26], "tail" => [0, 0.1, 0.29]},
+        %{"name" => "beak", "parent" => "head", "head" => [0, 0.1, 0.28], "tail" => [0, 0.14, 0.275]},
+        %{"name" => "tail_01", "parent" => "pelvis", "head" => [0, -0.06, 0.16], "tail" => [0, -0.13, 0.19]}
+        # The left side is at -x (x is to the right side).
+      ] ++ bird_side("l", -1) ++ bird_side("r", 1)
+
+    data = %{
+      "edits" => [
+        %{"shape" => "ellipsoid", "size" => [0.06, 0.09, 0.06], "at" => [0, 0, 0.17]},
+        %{"shape" => "ball", "size" => [0.035], "at" => [0, 0.09, 0.275], "blend" => 0.03},
+        %{"shape" => "cone", "size" => [0.012, 0.0, 0.02], "at" => [0, 0.135, 0.275], "axis" => [0, 1, 0]},
+        %{"shape" => "ellipsoid", "size" => [0.012, 0.06, 0.035], "at" => [0.062, -0.03, 0.185], "mirror" => "x"},
+        %{"shape" => "capsule", "size" => [0.05, 0.008], "at" => [0.03, -0.008, 0.06], "mirror" => "x"},
+        %{"shape" => "box", "size" => [0.012, 0.03, 0.005], "at" => [0.03, 0.01, 0.005], "mirror" => "x"},
+        %{"shape" => "ellipsoid", "size" => [0.03, 0.05, 0.012], "at" => [0, -0.1, 0.18], "blend" => 0.02}
+      ],
+      "cells" => %{"mid" => 0.008},
+      "bones" => bones,
+      "plan" => "bird",
+      "gait" => %{"period" => 0.5, "stride" => 0.3}
+    }
+
+    assert paths(data) == []
+    assert Bones.plans() == ~w(bird fish)
+    {"fish", figure, _} = hd(Detail.with(:mid, fn -> Drawing.build(drawing(data)) end).nodes)
+    assert Enum.map(figure.animations, & &1.name) == ~w(walk idle peck flap)
+    assert figure.kind == :animal and Map.has_key?(figure.params, "walk_speed")
+    assert Map.keys(figure.ports) |> Enum.sort() == ~w(back beak ground)
+    rest = Contact.points(figure)
+
+    # In the middle of the flap the wings are open: the tips of the two wings are far out, each on its side.
+    flap = Enum.find(figure.animations, &(&1.name == "flap"))
+    open = Contact.points(at_frame(figure, flap, 12))
+    tips = for {{x, y, _}, {qx, _, _}} <- Enum.zip(rest, open), y < -0.08, abs(x) > 0.05, do: {x, qx}
+    assert Enum.any?(tips, fn {x, _} -> x < 0 end) and Enum.any?(tips, fn {x, _} -> x > 0 end)
+    for {x, qx} <- tips, do: assert(abs(qx) > abs(x) + 0.05 and qx * x > 0)
+    # The body stays.
+    assert most(rest, open, fn {x, y, z} -> abs(x) < 0.02 and abs(y) < 0.03 and z > 0.14 end) < 0.01
+
+    # The walk: the feet go to the front and to the back in turn; the peck takes the beak down.
+    walk = Enum.find(figure.animations, &(&1.name == "walk"))
+    foot = fn {_, _, z} -> z < 0.02 end
+    assert Enum.max(for k <- 0..16, do: most(rest, Contact.points(at_frame(figure, walk, k)), foot)) > 0.03
+    peck = Enum.find(figure.animations, &(&1.name == "peck"))
+    assert most(rest, Contact.points(at_frame(figure, peck, 2)), fn {_, y, _} -> y > 0.13 end) > 0.05
+
+    # A bird with no beak: the plan needs each of its bones.
+    assert paths(Map.put(data, "bones", Enum.reject(bones, &(&1["name"] == "beak")))) == [
+             "options.drawing.nodes.0.skill.sculpt.plan"
+           ]
   end
 
   test "the errors of the bones, the plan, the gait and the clips, each with its path" do

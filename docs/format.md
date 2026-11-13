@@ -417,6 +417,8 @@ The data of the skill:
 - `edits`: a list of 1 to 10,000 edits, in their order;
 - `groups`: lists of edits with a name, for the edits of the shape
   `group` (below);
+- `details`: at most 16 sculptures of their own in the same part ("The
+  details of a sculpture" below);
 - `ports`: the ports of the part (as in "A drawing");
 - `sources`: at most 16 texts;
 - `budget`: the most triangles at `near`, `mid` and `far` (12 to
@@ -588,6 +590,40 @@ its maps: another node of the same model must use other roles.
 }}}
 ```
 
+### The details of a sculpture
+
+A sculpture has cells of one size. A part that is much smaller than the
+rest (a whisker, a tooth, a ring on a hand) needs much smaller cells,
+and small cells for the whole sculpture cost much time. A detail is a
+sculpture of its own in the same part: `details` is a list of at most 16
+objects, each with:
+
+- `edits`: its own list of edits (it can use the `groups` of the
+  sculpture);
+- `cells` and `budget`: as for the sculpture; with a budget and no
+  cells, the cells fit the budget and its thinnest edit;
+- `levels`: the levels that have the detail (`near`, `mid`, `far`; all
+  by default). A whisker is not in the far level.
+
+The meshes of a detail are in the part of the sculpture, on the same
+bones and in the same maps (a level with a bake needs the budget of
+each of its details). A detail and the sculpture do not blend: they are
+two surfaces, one in the other, as two sculptures of Dreams are.
+
+```json
+{"name": "cat_head", "skill": {"sculpt": {
+  "edits": [{"shape": "ellipsoid", "size": [0.06, 0.07, 0.055], "color": "#8a7a68"}],
+  "budget": {"near": 3000, "mid": 800},
+  "details": [{
+    "edits": [{"shape": "tube", "mirror": "x", "color": "#f0ece0",
+               "size": {"points": [[0.03, 0.05, -0.01], [0.07, 0.06, -0.012], [0.11, 0.055, -0.02]],
+                        "radii": [0.0008, 0.0006, 0.0004]}}],
+    "budget": {"near": 300},
+    "levels": ["near"]
+  }]
+}}}
+```
+
 ### A sculpture with bones
 
 With `bones`, the sculptor makes a figure in place of a part
@@ -602,14 +638,21 @@ skin of an animal does. The data:
   default): each point follows the bone nearest to it (the distance to
   the line from its head to its tail), and each other bone less as it is
   farther, down to nothing at `bone_blend` more than the nearest. A
-  wider blend gives a softer bend at a joint;
-- `plan`: the name of a body plan (`fish`). The bones must have the
-  names of the bones of the plan ("Species and body plans"), and can
-  have more. The plan gives its limbs, its joints, its ports (a port of
+  wider blend gives a softer bend at a joint. The bones of a point are
+  the bones of the edit that makes its surface: the bones with a part of
+  their line inside the shape of that edit. So the wing of a bird
+  follows the bones of the wing, and the body next to it does not. An
+  edit with no bone inside it has all the bones (a long fin on a body
+  bends with the body);
+- `plan`: the name of a body plan (`fish` or `bird`). The bones must
+  have the names of the bones of the plan ("Species and body plans"),
+  and can have more. The left side of a body (`_l`) is at -x: x is to
+  the right side. The plan gives its limbs, its joints, its ports (a port of
   the data with the same name replaces it), its animations (`swim`
   and `idle` of a fish, the y of the sculpture to the front) and its
   speeds (`swim_speed` in the list of the parts); `gait` gives its
-  numbers (`period`, `stride`);
+  numbers (`period`, `stride`). A bird has `walk`, `idle`, `peck` and
+  `flap`, and `walk_speed`;
 - `clips`: at most 16 clips from keys. A clip has a `name`, a `length`
   (s, 0.1 to 60) and 1 to 64 `keys`; a key has its time `at` (s) and a
   `pose`: a bone to its turns from its rest in degrees (`flex` round the

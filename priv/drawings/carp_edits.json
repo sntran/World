@@ -3,7 +3,7 @@
   "kind": "item",
   "sources": [
     "A common carp (cá chép, Cyprinus carpio) from edits: the sizes of the carp of the catalog (priv/animals/species/carp.json: 50 cm long, a robust body, a long dorsal fin, a forked tail fin), and its colors: a dark gold coat with a darker back and a pale belly, bronze fins, rows of scales.",
-    "A model of plans 0008, 0009 and 0010: its eyes are a group with a mirror, its scales a repeat, it swims with the bones of a fish, and its scales, the rays of its fins and its lateral line are paints with a raise, in its color map and its normal map."
+    "A model of plans 0008, 0009 and 0010: its eyes are a group with a mirror, its scales a repeat, it swims with the bones of a fish, its scales, the rays of its fins and its lateral line are paints with a raise, in its color map and its normal map, and its barbels are a detail with cells of their own."
   ],
   "materials": {
     "skin": {
@@ -831,6 +831,80 @@
             "mid": 512,
             "far": 256
           },
+          "details": [
+            {
+              "edits": [
+                {
+                  "shape": "tube",
+                  "size": {
+                    "points": [
+                      [
+                        0.0095,
+                        0.244,
+                        0.068
+                      ],
+                      [
+                        0.014,
+                        0.239,
+                        0.059
+                      ],
+                      [
+                        0.0165,
+                        0.231,
+                        0.051
+                      ]
+                    ],
+                    "radii": [
+                      0.0016,
+                      0.0012,
+                      0.0007
+                    ]
+                  },
+                  "color": "#b08c62",
+                  "material": "skin",
+                  "mirror": "x"
+                },
+                {
+                  "shape": "tube",
+                  "size": {
+                    "points": [
+                      [
+                        0.0092,
+                        0.2475,
+                        0.072
+                      ],
+                      [
+                        0.0112,
+                        0.247,
+                        0.0655
+                      ],
+                      [
+                        0.0122,
+                        0.244,
+                        0.0605
+                      ]
+                    ],
+                    "radii": [
+                      0.0012,
+                      0.0009,
+                      0.0006
+                    ]
+                  },
+                  "color": "#b08c62",
+                  "material": "skin",
+                  "mirror": "x"
+                }
+              ],
+              "budget": {
+                "near": 800,
+                "mid": 240
+              },
+              "levels": [
+                "near",
+                "mid"
+              ]
+            }
+          ],
           "bones": [
             {
               "name": "pelvis",

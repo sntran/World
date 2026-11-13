@@ -221,6 +221,22 @@ defmodule World.SDFTest do
            ]
   end
 
+  test "the shares of the edits in the surface at a point: one edit away from a joint, two across a smooth joint" do
+    a = SDF.edit(:ball, {0.5})
+    b = SDF.edit(:ball, {0.3}, frame: Frame.move({0.6, 0.0, 0.0}), blend: 0.1)
+    cut = SDF.edit(:cylinder, {0.1, 1.0}, mode: :subtract)
+    paint = SDF.edit(:ball, {0.2}, frame: Frame.move({-0.5, 0.0, 0.0}), mode: :paint, color: {1, 2, 3})
+    edits = [a, b, cut, paint]
+    # On the first ball, far from the second one (a paint and a cut have no share).
+    assert SDF.shares(edits, {-0.5, 0.0, 0.0}) == [{a, 1.0}]
+    assert SDF.shares(edits, {0.9, 0.0, 0.0}) == [{b, 1.0}]
+    # In the joint of the two balls: a share of each, and the shares add to 1.
+    assert [{^b, sb}, {^a, sa}] = SDF.shares(edits, {0.42, 0.0, 0.27})
+    assert sa > 0.05 and sb > 0.05
+    assert_in_delta sa + sb, 1.0, 1.0e-12
+    assert SDF.shares([cut, paint], {0.0, 0.0, 0.0}) == []
+  end
+
   test "a paint with a raise moves the surface in its shape, out or in, with a slope across its border" do
     ball = SDF.edit(:ball, {0.5})
     bump = SDF.edit(:ball, {0.1}, frame: Frame.move({0.0, 0.0, 0.5}), mode: :paint, blend: 0.04, raise: 0.02)

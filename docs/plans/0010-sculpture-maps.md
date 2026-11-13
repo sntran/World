@@ -260,3 +260,43 @@ What the work found:
   the edits now, and a process gets the edits of its squares one time:
   the bake adds 75 MB at near, not 310 MB, and is 15% faster.
 
+### Step 3: details, the body plan of a bird, and the bones of an edit (2026-11-13)
+
+**Details** (D5). The data `details` of the skill `sculpt`: each detail
+is a sculpture of its own (its edits, its cells, its budget, its
+levels), in the same part, on the same bones and in the same maps
+(`World.Sculpt.Bake.maps/2` takes the meshes of some sculptures, each
+with its own edits). The carp has its two pairs of barbels as a detail
+at near and at mid: tubes of 1.2 mm to 3.2 mm, with cells of 0.6 mm (the
+carp has cells of 3.5 mm), 800 triangles at near. R6 is met: the
+sculpture of the barbels alone (4 edits, 44 bricks) takes 0.14 s to
+0.17 s.
+
+**The body plan of a bird** (D7). A sculpture with the 20 bones of a
+bird has `walk`, `idle`, `peck` and `flap` (R8, by test: the tips of the
+two wings go out by more than 5 cm, each on its side, and the feet move
+in the walk).
+
+**The bones of an edit** (D9). The first bird showed the limit of
+weights from the distance only: the back of its body followed its wings
+by 6 cm. Now a point follows the bones that have a part of their line
+inside the edit of its surface (`World.SDF.shares/2` gives the part of
+each edit in the surface at a point, as the fold of the colors does).
+In the test the body moves less than 1 cm in the flap.
+
+What the work found:
+
+- **The flap of the birds of the catalog opened one wing.** The skeleton
+  turns the right side the other way for a turn to the side, and the
+  flap turned the sign a second time. And the template of the birds has
+  its left wing at +x (the left side of World is at -x). The flap takes
+  the direction from the place of the left wing at rest now; the chicken
+  and the duck have new files, and a test checks the two wings.
+- **The color past the edge of a long thin triangle was white:** a
+  texel there can be farther from each shape than the limit of the
+  field. The weights of the colors come from the value with no limit
+  now.
+- **A message is a copy, a fourth time.** The first bench with the new
+  weights showed a peak of 1,360 MB at near: each point went to its
+  process with the edits of its mesh. A process gets the edits one time
+  for its group of points now: 226 MB.

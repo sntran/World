@@ -234,27 +234,56 @@ defmodule World.SDF do
   edits: `{value, {r, g, b}}` (`value/3`, `color/3`).
   """
   def sample(edits, p, limit \\ @far) do
-    {d, {r, g, b}} = tint(edits, p, limit, {1.0, 1.0, 1.0}, limit)
+    {d, {r, g, b}} = tint(edits, p, limit, @far, {1.0, 1.0, 1.0}, limit)
     {d, {srgb(r), srgb(g), srgb(b)}}
   end
 
+  @doc """
+  The part of each edit that adds in the surface at a point, as the
+  fold of the colors has it (`color/3`): `[{edit, share}]`, the shares
+  add to 1 (an empty list with no edit that adds). The edit of the
+  surface there has the share 1; across a smooth joint of two edits, the
+  two have a share each.
+  """
+  def shares(edits, p) do
+    {_, shares} =
+      Enum.reduce(edits, {@far, []}, fn
+        %Edit{mode: :add, blend: r} = e, {u, shares} ->
+          de = distance(e, p)
+          w = weight(u - de, r)
+          {smin(u, de, r), [{e, w} | for({o, s} <- shares, do: {o, s * (1 - w)})]}
+
+        %Edit{mode: :subtract, blend: r} = e, {u, shares} ->
+          {smax(u, -distance(e, p), r), shares}
+
+        _, acc ->
+          acc
+      end)
+
+    for {e, s} <- shares, s > 0.0, do: {e, s}
+  end
+
   # The fold of the value and the color: its own loop (as `fold/4`), and
-  # the color changes only where an edit has a weight.
-  defp tint([], _p, d, col, _limit), do: {d, col}
+  # the color changes only where an edit has a weight. The weights come
+  # from the value with no limit (`u`): at a place farther from each
+  # shape than the limit, the color is still the color of the nearest
+  # one (a texel of a map past the edge of a long triangle).
+  defp tint([], _p, d, _u, col, _limit), do: {d, col}
 
-  defp tint([%Edit{mode: :add, blend: r, color: c} = e | rest], p, d, col, limit) do
+  defp tint([%Edit{mode: :add, blend: r, color: c} = e | rest], p, d, u, col, limit) do
     de = distance(e, p)
-    tint(rest, p, clamp(smin(d, de, r), limit), mix(col, c || {1.0, 1.0, 1.0}, weight(d - de, r)), limit)
+    col = mix(col, c || {1.0, 1.0, 1.0}, weight(u - de, r))
+    tint(rest, p, clamp(smin(d, de, r), limit), smin(u, de, r), col, limit)
   end
 
-  defp tint([%Edit{mode: :subtract, blend: r, color: c} = e | rest], p, d, col, limit) do
+  defp tint([%Edit{mode: :subtract, blend: r, color: c} = e | rest], p, d, u, col, limit) do
     de = distance(e, p)
-    tint(rest, p, clamp(smax(d, -de, r), limit), mix(col, c, weight(-de - d, r)), limit)
+    tint(rest, p, clamp(smax(d, -de, r), limit), smax(u, -de, r), mix(col, c, weight(-de - u, r)), limit)
   end
 
-  defp tint([%Edit{mode: :paint, blend: r, color: c, raise: h} = e | rest], p, d, col, limit) do
+  defp tint([%Edit{mode: :paint, blend: r, color: c, raise: h} = e | rest], p, d, u, col, limit) do
     w = smooth(weight(-2 * distance(e, p), r))
-    tint(rest, p, clamp(d - h * w, limit), mix(col, c, w), limit)
+    tint(rest, p, clamp(d - h * w, limit), u - h * w, mix(col, c, w), limit)
   end
 
   # The weight of the second of two values in their smooth minimum: 1

@@ -149,9 +149,12 @@ defmodule World.Skills.SculptTest do
 
   test "the examples of docs/format.md pass the check, and a sculptor makes them" do
     [_, section] = Regex.run(~r/## A sculpture(.*?)\n## /s, File.read!("docs/format.md"))
-    [data, node, baked, worm] = for [_, json] <- Regex.scan(~r/```json\n(.*?)```/s, section), do: JSON.decode!(json)
 
-    # The first one is the data of a sculpture with a group and copies; the second one a node; then a node with maps, and a node with bones.
+    [data, node, baked, cat, worm] =
+      for [_, json] <- Regex.scan(~r/```json\n(.*?)```/s, section), do: JSON.decode!(json)
+
+    # The first one is the data of a sculpture with a group and copies; the second one a node; then a node with maps,
+    # a node with a detail, and a node with bones.
     for n <- [%{"name" => "stone", "skill" => %{"sculpt" => Map.put(data, "cells", %{"mid" => 0.004})}}, node] do
       d = %{"name" => "stone", "kind" => "item", "nodes" => [n]}
       assert {:ok, _} = Orders.check(order(d))
@@ -167,6 +170,18 @@ defmodule World.Skills.SculptTest do
     # The maps of the node are on its material in the model.
     assert %{"image" => {"image/png", _}, "normal_image" => {"image/png", _}, "atlas" => true} =
              far.materials[:stone_wash]
+
+    # The whiskers of the head of the cat: a detail at near only, with its own small cells.
+    d = %{"name" => "cat_head", "kind" => "item", "nodes" => [cat]}
+    assert {:ok, _} = Orders.check(order(d))
+
+    assert [{"cat_head", %World.Part{shapes: [_head, whiskers]}, _}] =
+             Detail.with(:near, fn -> Drawing.build(d) end).nodes
+
+    {{left, _, _}, {right, _, _}} = World.Vec.bounds(whiskers.points)
+    assert_in_delta left, -0.11, 0.001
+    assert_in_delta right, 0.11, 0.001
+    assert [{"cat_head", %World.Part{shapes: [_head]}, _}] = Detail.with(:mid, fn -> Drawing.build(d) end).nodes
 
     d = %{"name" => "worm", "kind" => "item", "nodes" => [worm]}
     assert {:ok, _} = Orders.check(order(d))

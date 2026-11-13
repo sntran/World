@@ -641,6 +641,24 @@ defmodule World.AnimalsTest do
              end)
 
       # The peck: the beak goes down near the ground, the feet stay; the
+      # In the middle of the flap the two wings are open: the outline of the bird is much wider, on each side.
+      posed = fn clip, k ->
+        nodes =
+          Enum.reduce(clip.channels, a.nodes, fn c, nodes ->
+            List.update_at(nodes, c.node, fn n ->
+              case c.path do
+                :rotation -> %{n | frame: %{Enum.at(c.values, k) | at: n.frame.at}}
+                :translation -> %{n | frame: %{n.frame | at: Enum.at(c.values, k)}}
+              end
+            end)
+          end)
+
+        World.Contact.points(%{a | nodes: nodes}) |> Enum.map(&elem(&1, 0)) |> Enum.min_max()
+      end
+
+      {{left, right}, {open_left, open_right}} = {posed.(flap, 0), posed.(flap, 12)}
+      assert open_left < 1.5 * left and open_right > 1.5 * right
+
       # idle and the flap keep the feet too.
       pecks = frames(a, peck)
       assert Enum.min(Enum.map(pecks, &elem(&1["beak"].at, 2))) < 0.3 * height

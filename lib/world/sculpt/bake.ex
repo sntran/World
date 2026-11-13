@@ -59,9 +59,26 @@ defmodule World.Sculpt.Bake do
   edit has a color). `:small` when the image has no place for the charts
   (`least/1`).
   """
-  def maps(meshes, edits, step, side) do
-    limit = Sculpt.limit(edits, step)
-    colors? = Enum.any?(edits, & &1.color)
+  def maps(meshes, edits, step, side), do: maps([{meshes, edits, step}], side)
+
+  @doc """
+  The maps of the meshes of some sculptures in one image (a sculpture
+  and its details, each with its own edits and cells): `parts` is a list
+  of `{meshes, edits, step}`. The meshes come back in one list, in the
+  order of the parts.
+  """
+  def maps(parts, side) do
+    colors? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.color) end)
+    meshes = Enum.flat_map(parts, &elem(&1, 0))
+    # The edits of all the parts in one list: the list of a triangle is
+    # places in it. Each part has its first place, its limit and its cells.
+    {fields, edits, _} =
+      Enum.reduce(parts, {[], [], 0}, fn {ms, edits, step}, {fields, all, first} ->
+        field = %{first: first, edits: edits, limit: Sculpt.limit(edits, step), step: step}
+        {fields ++ List.duplicate(field, length(ms)), all ++ edits, first + length(edits)}
+      end)
+
+    fields = List.to_tuple(fields)
 
     triangles =
       for {%Mesh{} = m, mi} <- Enum.with_index(meshes),
@@ -75,7 +92,9 @@ defmodule World.Sculpt.Bake do
           id: {mi, fi},
           points: {p0, p1, p2},
           normals: {elem(normals, a), elem(normals, b), elem(normals, c)},
-          area: area
+          area: area,
+          limit: elem(fields, mi).limit,
+          step: elem(fields, mi).step
         }
       end
 
@@ -86,8 +105,13 @@ defmodule World.Sculpt.Bake do
       squares ->
         # The legs of the chart of each triangle: its texels go 1.5 texels past its corners.
         legs = for s <- squares, t <- [s.lower, s.upper], t != nil, into: %{}, do: {t.id, s.n - 4}
-        lists = lists(triangles, legs, edits, limit)
-        how = %{limit: limit, step: step}
+
+        lists =
+          triangles
+          |> Enum.group_by(fn %{id: {mi, _}} -> mi end)
+          |> Enum.map(fn {mi, group} -> lists(group, legs, elem(fields, mi)) end)
+          |> Enum.reduce(&Map.merge/2)
+
         all = List.to_tuple(edits)
 
         # A message is a copy: a process gets the edits of its squares one
@@ -107,7 +131,7 @@ defmodule World.Sculpt.Bake do
             fn {some, group} ->
               some = List.to_tuple(some)
               edits = fn t -> t && %{t | list: Enum.map(t.list, &elem(some, &1))} end
-              for s <- group, do: {s.at, s.n, texels(%{s | lower: edits.(s.lower), upper: edits.(s.upper)}, how)}
+              for s <- group, do: {s.at, s.n, texels(%{s | lower: edits.(s.lower), upper: edits.(s.upper)})}
             end,
             max_concurrency: System.schedulers_online(),
             timeout: :infinity
@@ -200,13 +224,13 @@ defmodule World.Sculpt.Bake do
   # the edits of each cube of a grid of the triangles (a cube of 8 times
   # the mean size of a triangle), then the edits of each triangle from
   # the list of its cube.
-  defp lists(triangles, legs, edits, limit) do
+  defp lists(triangles, legs, %{edits: edits, limit: limit, first: first}) do
     balls = for t <- triangles, do: {t.id, ball(t, legs[t.id])}
     mean = Enum.sum(for {_, {_, r}} <- balls, do: r) / max(length(balls), 1)
     size = max(8 * mean, 1.0e-6)
     # The place of each edit in the list, by its id: a list of a triangle
     # is places, not edits (the lists come back in messages).
-    place = edits |> Enum.with_index() |> Map.new(fn {e, i} -> {e.id, i} end)
+    place = edits |> Enum.with_index(first) |> Map.new(fn {e, i} -> {e.id, i} end)
 
     balls
     |> Enum.group_by(fn {_, {{x, y, z}, _}} -> {floor(x / size), floor(y / size), floor(z / size)} end)
@@ -239,8 +263,8 @@ defmodule World.Sculpt.Bake do
 
   # The rows of a square: `{colors, normals}`, each a list of `n`
   # binaries from the top.
-  defp texels(%{n: n, lower: lower, upper: upper}, how) do
-    charts = {chart(lower, :lower, n, how), upper && chart(upper, :upper, n, how)}
+  defp texels(%{n: n, lower: lower, upper: upper}) do
+    charts = {chart(lower, :lower, n), upper && chart(upper, :upper, n)}
     owner = fn i, j -> if i + j <= n - 2, do: elem(charts, 0), else: elem(charts, 1) end
     # The texels (i, j) and (k, l) are of one chart.
     same = fn i, j, k, l -> i + j <= n - 2 == k + l <= n - 2 end
@@ -249,7 +273,7 @@ defmodule World.Sculpt.Bake do
     values =
       for j <- 0..(n - 1), i <- 0..(n - 1), c = owner.(i, j), c != nil, c.flat == false, into: %{} do
         p = at(c, i, j)
-        {{i, j}, SDF.sample(c.list, p, how.limit)}
+        {{i, j}, SDF.sample(c.list, p, c.limit)}
       end
 
     rows =
@@ -258,7 +282,7 @@ defmodule World.Sculpt.Bake do
           {colors, normals} ->
             case {owner.(i, j), values[{i, j}]} do
               {c, {f, {r, g, b}}} ->
-                {<<colors::binary, r, g, b>>, <<normals::binary, normal(c, i, j, f, values, same, how)::binary>>}
+                {<<colors::binary, r, g, b>>, <<normals::binary, normal(c, i, j, f, values, same)::binary>>}
 
               _ ->
                 {<<colors::binary, @gray::binary>>, <<normals::binary, @flat::binary>>}
@@ -271,7 +295,7 @@ defmodule World.Sculpt.Bake do
 
   # The chart of a triangle in a square of n texels: the place of a
   # texel is `base + i u + j v`; and the frames of its corners.
-  defp chart(%{points: {p0, p1, p2}, normals: {n0, n1, n2}, list: list}, half, n, how) do
+  defp chart(%{points: {p0, p1, p2}, normals: {n0, n1, n2}, list: list, limit: limit, step: step}, half, n) do
     legs = n - 4
     {e1, e2} = {Vec.sub(p1, p0), Vec.sub(p2, p0)}
     cross = Vec.cross(e1, e2)
@@ -287,7 +311,7 @@ defmodule World.Sculpt.Bake do
       base = Vec.add(p0, Vec.scale(Vec.add(e1, e2), first / legs))
       {uu, uv, vv} = {Vec.dot(u, u), Vec.dot(u, v), Vec.dot(v, v)}
       det = uu * vv - uv * uv
-      off = min(:math.sqrt(:math.sqrt(uu * vv)) / 2, how.step / 2)
+      off = min(:math.sqrt(:math.sqrt(uu * vv)) / 2, step / 2)
 
       %{
         flat: false,
@@ -295,6 +319,7 @@ defmodule World.Sculpt.Bake do
         legs: legs,
         n: n,
         list: list,
+        limit: limit,
         base: base,
         u: u,
         v: v,
@@ -329,7 +354,7 @@ defmodule World.Sculpt.Bake do
 
   # The three bytes of the normal of a texel: the gradient of the field
   # there, in the frame of the texel.
-  defp normal(c, i, j, f, values, same, how) do
+  defp normal(c, i, j, f, values, same) do
     # The change of the value for one texel along a side of the square:
     # from the texels on the two sides. At the edge of the chart, the
     # next texel is of the other chart: the value at that place then.
@@ -337,14 +362,14 @@ defmodule World.Sculpt.Bake do
       with true <- same.(i, j, k, l), {g, _} <- values[{k, l}] do
         g
       else
-        _ -> SDF.value(c.list, at(c, k, l), how.limit)
+        _ -> SDF.value(c.list, at(c, k, l), c.limit)
       end
     end
 
     slope = fn di, dj -> (value.(i + di, j + dj) - value.(i - di, j - dj)) / 2 end
 
     p = at(c, i, j)
-    up = (SDF.value(c.list, Vec.add(p, Vec.scale(c.face, c.off)), how.limit) - f) / c.off
+    up = (SDF.value(c.list, Vec.add(p, Vec.scale(c.face, c.off)), c.limit) - f) / c.off
 
     gradient =
       Vec.add(Vec.add(Vec.scale(c.du, slope.(1, 0)), Vec.scale(c.dv, slope.(0, 1))), Vec.scale(c.face, up))

@@ -18,16 +18,16 @@ defmodule World.Sculpt.CrewTest do
     assert crew() == []
 
     # A sculpture of many edits at near: its crew grows, then the stop.
-    Person.work(p, "big", fn -> Sculpt.model(Stone.edits(300), level: :near, cache: false) end)
+    # (Small cells, so the work is much longer than the wait for its crew
+    # on a machine with other work.)
+    Person.work(p, "big", fn -> Sculpt.model(Stone.edits(600), step: 0.01, cache: false) end)
 
     wait = fn wait ->
-      if length(crew()) < 8,
-        do:
-          (
-            Process.sleep(5)
-            wait.(wait)
-          ),
-        else: :ok
+      receive do
+        {:done, ^p, "big", _} -> flunk("the work was done before its crew had 8 processes")
+      after
+        2 -> if length(crew()) < 8, do: wait.(wait), else: :ok
+      end
     end
 
     :ok = wait.(wait)

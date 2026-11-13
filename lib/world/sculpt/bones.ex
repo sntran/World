@@ -11,6 +11,14 @@ defmodule World.Sculpt.Bones do
   its tail), and each other bone less as it is farther, down to nothing
   at `blend` more than the nearest (at most four bones, `World.Rig`).
 
+  With the edits of the meshes (`edits`), a point follows the bones of
+  the edit that makes its surface: the bones with a part of their line
+  inside the shape of that edit (a wing has the bones of the wing, and
+  the body next to it does not follow them). An edit with no bone
+  inside it has all the bones (a long fin on a body bends with the
+  body). Across a smooth joint of two edits, a point has a part of
+  each (`World.SDF.shares/2`).
+
   The clips come from two places:
 
   - a body plan (`plans/0`), when the bones have its names: its limbs,
@@ -20,10 +28,10 @@ defmodule World.Sculpt.Bones do
     a time and a pose (a bone to its turns in degrees: `flex`, `spread`,
     `twist`). The pose between two keys is the mean by the time.
   """
-  alias World.{Mesh, Rig, Vec}
+  alias World.{Mesh, Rig, SDF, Vec}
 
   # The body plans whose animations need no clips of a template.
-  @plans %{"fish" => World.Animals.Fish}
+  @plans %{"bird" => World.Animals.Bird, "fish" => World.Animals.Fish}
   @turns %{"flex" => :flex, "spread" => :spread, "twist" => :twist}
   # The frames of a clip from keys in one second.
   @rate 12
@@ -45,7 +53,9 @@ defmodule World.Sculpt.Bones do
   `bones`. The options: `plan` (the name of a body plan), `gait` (its
   numbers), `clips` (`[%{name, length, keys: [{time, pose}]}]`), `blend`
   (m; half the mean length of the bones by default), `ports` (a list of
-  `World.Port`, each on the nearest bone), `sources`.
+  `World.Port`, each on the nearest bone), `sources`, `edits` (the edits
+  of each mesh, a list for each mesh in their order: the bones of a
+  point come from the edit of its surface).
   """
   def figure(name, meshes, bones, opts \\ []) do
     plan = @plans[Keyword.get(opts, :plan)]
@@ -53,7 +63,9 @@ defmodule World.Sculpt.Bones do
     by = Map.new(bones, &{&1.name, &1})
     blend = Keyword.get(opts, :blend) || mean_length(bones) / 2
     mesh = join(meshes)
-    weights = weights(mesh.points, bones, blend)
+    # The points of each mesh with the edits of the mesh.
+    lists = Keyword.get(opts, :edits) || Enum.map(meshes, fn _ -> [] end)
+    weights = weights(Enum.zip(Enum.map(meshes, & &1.points), lists), bones, blend)
     gait = Keyword.get(opts, :gait, %{})
 
     # With a plan: its animations, and its speeds for the size of the sculpture.
@@ -118,18 +130,63 @@ defmodule World.Sculpt.Bones do
     }
   end
 
-  # The weights of the points: a bone to its `{point, weight}`.
-  defp weights(points, bones, blend) do
-    for {p, i} <- Enum.with_index(points), reduce: Map.new(bones, &{&1.name, []}) do
-      acc ->
-        near = for b <- bones, do: {b.name, distance(p, b)}
-        {_, best} = Enum.min_by(near, &elem(&1, 1))
+  # The weights of the points of the meshes (each mesh with its edits): a
+  # bone to its `{point, weight}`, the points counted through the meshes
+  # in their order. The points go to processes in groups; a process gets
+  # the edits of a mesh one time for its group, not one time for each
+  # point (a message is a copy).
+  defp weights(meshes, bones, blend) do
+    # The bones of each edit that adds: the bones with a part inside it.
+    inside = for {_, list} <- meshes, e <- list, e.mode == :add, into: %{}, do: {e.id, Enum.filter(bones, &in?(&1, e))}
 
-        for {name, d} <- near, w = max(0.0, 1 - (d - best) / blend) ** 2, w > 0, reduce: acc do
-          acc -> Map.update!(acc, name, &[{i, w} | &1])
+    {groups, _} =
+      Enum.flat_map_reduce(meshes, 0, fn {points, list}, first ->
+        {for(group <- Enum.chunk_every(Enum.with_index(points, first), 512), do: {list, group}), first + length(points)}
+      end)
+
+    groups
+    |> Task.async_stream(
+      fn {edits, group} ->
+        for {p, i} <- group, {name, w} <- follow(p, edits, bones, inside, blend), do: {name, {i, w}}
+      end,
+      max_concurrency: System.schedulers_online(),
+      timeout: :infinity
+    )
+    |> Enum.flat_map(fn {:ok, group} -> group end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> then(&Map.merge(Map.new(bones, fn b -> {b.name, []} end), &1))
+  end
+
+  # A bone is of an edit when a point of its line is inside the shape of the edit.
+  defp in?(%{head: head, tail: tail}, edit),
+    do: Enum.any?(0..8, &(SDF.distance(edit, Vec.lerp(head, tail, &1 / 8)) < 0.0))
+
+  # The bones that a point follows, each with its weight: for each edit
+  # in the surface at the point (with its share), the bones of that edit
+  # by their distance; with no edits, all the bones.
+  defp follow(p, edits, bones, inside, blend) do
+    case SDF.shares(edits, p) do
+      [] ->
+        by_distance(p, bones, blend)
+
+      shares ->
+        for {e, share} <- shares,
+            {name, w} <- by_distance(p, if(inside[e.id] == [], do: bones, else: inside[e.id]), blend),
+            reduce: %{} do
+          acc -> Map.update(acc, name, share * w, &(&1 + share * w))
         end
+        |> Enum.sort()
     end
-    |> Map.new(fn {name, list} -> {name, Enum.reverse(list)} end)
+  end
+
+  # The nearest bone, and each other bone less as it is farther (the
+  # weights add to 1).
+  defp by_distance(p, bones, blend) do
+    near = for b <- bones, do: {b.name, distance(p, b)}
+    {_, best} = Enum.min_by(near, &elem(&1, 1))
+    ws = for {name, d} <- near, w = max(0.0, 1 - (d - best) / blend) ** 2, w > 0, do: {name, w}
+    sum = ws |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+    for {name, w} <- ws, do: {name, w / sum}
   end
 
   # The distance from a point to the line of a bone, from its head to its tail.
