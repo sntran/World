@@ -300,3 +300,54 @@ What the work found:
   weights showed a peak of 1,360 MB at near: each point went to its
   process with the edits of its mesh. A process gets the edits one time
   for its group of points now: 226 MB.
+
+### Step 7: the hot loop of the field, and the coarse piece (2026-11-13)
+
+**The hot loop** (D13). `World.SDF.fast/1` makes a list of tuples of
+numbers from a list of edits, and `World.SDF.value/3` has a loop for
+it: one clause for each shape, frame (a move, or a turn) and mode, made
+at compile time from the steps of each distance (`World.SDF.Inline`),
+with guards that say that each number is a float. A test compares the
+two paths at 20,000 points with each shape, frame and mode: the values
+are the same to the bit. For each edit, in nanoseconds (one scheduler):
+
+| Shape | The fold of before | The hot loop | Times faster |
+|---|---|---|---|
+| ball | 260 | 60 | 4.3 |
+| box, round box | 378 | 140 | 2.7 |
+| capsule, cylinder | 320 | 93 | 3.5 |
+| ellipsoid | 831 | 414 | 2.0 |
+| cone, ring | 388 | 120 | 3.2 |
+
+The bricks, the cuts, the finish pass and the bake use it. On 4
+schedulers with no other work:
+
+| | Before | With the hot loop |
+|---|---|---|
+| The stone of 1,000 edits at near, as a live sculpture | 4.4 s | 2.1 s |
+| A change of one edit of it | 0.41 s to 0.53 s | 0.25 s to 0.29 s |
+| The first new piece of a change | 0.10 s to 0.18 s | 0.07 s to 0.12 s |
+| The carp on the bench: near, mid, far | 6.8 s, 3.9 s, 2.8 s | 5.9 s, 3.3 s, 2.1 s (with its barbels) |
+
+R13 is met (less than 3 s, and less than 0.35 s). The field makes about
+0.4 million points in a second now (it made 0.2 million): the factor to
+the evaluator of Dreams on a GPU is 25 to 250.
+
+**The coarse piece first** (D6) does not go on: the measure does not
+allow R7. A change of one edit of the stone, with the hot loop, at
+three sizes of the cells:
+
+| Cells | The whole stone | A change of one edit | Bricks made again |
+|---|---|---|---|
+| 2 cm (near) | 1.9 s, 636 bricks | 0.23 s to 0.27 s | 33 to 51 |
+| 4 cm | 0.75 s, 135 bricks | 0.18 s to 0.22 s | 17 to 22 |
+| 8 cm | 0.47 s, 32 bricks | 0.30 s to 0.36 s | 13 to 15 |
+
+A coarse brick is not cheaper than a fine one: it has the same count of
+points, and more edits reach it, so its lists are longer; and a change
+reaches almost as many coarse bricks as fine ones. A coarse piece would
+come at the same time as the fine pieces. The first fine piece of a
+change comes after 0.07 s to 0.12 s already. R7 (60 ms for a first
+coarse piece) is not met and is no more a goal; what would help is the
+field of a part of a brick in the cache (plan 0009, R5).
+

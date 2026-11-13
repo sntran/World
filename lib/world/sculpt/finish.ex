@@ -53,7 +53,7 @@ defmodule World.Sculpt.Finish do
     at = List.to_tuple(points)
     corners = for [a, b, c] <- faces, do: {elem(at, a), elem(at, b), elem(at, c)}
     centers = for {p, q, r} <- corners, do: Vec.scale(Vec.add(Vec.add(p, q), r), 1 / 3)
-    seen = each(centers, lists, edits, step, fn p, list -> SDF.color(list, p, limit) end)
+    seen = each(centers, lists, edits, step, fn p, list, _fast -> SDF.color(list, p, limit) end)
 
     sums =
       for {[a, b, c], {p, q, r}, {cr, cg, cb}} <- Enum.zip([faces, corners, seen]),
@@ -82,10 +82,10 @@ defmodule World.Sculpt.Finish do
   `colors?`): `[{point, normal, color}]`, in the order of the points.
   """
   def points(points, lists, edits, step, limit, colors?),
-    do: each(points, lists, edits, step, &point(&1, &2, step, limit, colors?))
+    do: each(points, lists, edits, step, &point(&1, &2, &3, step, limit, colors?))
 
   # The value of `f` for each point, with the short list of edits of its
-  # brick, in the order of the points: the points of some bricks in one
+  # brick (as edits, and for the hot loop), in the order of the points: the points of some bricks in one
   # process.
   defp each(points, lists, edits, step, f) do
     size = Sculpt.cells() * step
@@ -96,7 +96,8 @@ defmodule World.Sculpt.Finish do
     |> Enum.map(fn {at, ps} -> {Map.get(lists, at, edits), ps} end)
     |> Enum.chunk_every(@group)
     |> Task.async_stream(
-      fn group -> for {list, ps} <- group, {p, i} <- ps, do: {i, f.(p, list)} end,
+      # The list of a brick for the hot loop of the value too (`World.SDF.fast/1`).
+      fn group -> for {list, ps} <- group, fast = SDF.fast(list), {p, i} <- ps, do: {i, f.(p, list, fast)} end,
       max_concurrency: System.schedulers_online(),
       ordered: false,
       timeout: :infinity
@@ -106,8 +107,8 @@ defmodule World.Sculpt.Finish do
     |> Enum.map(&elem(&1, 1))
   end
 
-  defp point(p, list, step, limit, colors?) do
-    field = &SDF.value(list, &1, limit)
+  defp point(p, list, fast, step, limit, colors?) do
+    field = &SDF.value(fast, &1, limit)
     {p, gradient} = settle(p, field, step, 5)
     {p, Vec.norm(gradient), if(colors?, do: SDF.color(list, p, limit))}
   end

@@ -442,10 +442,12 @@ defmodule World.Sculpt do
   # lists of its eighths; and the evaluations that it takes.
   defp field(lists, at, step, limit) do
     {ox, oy, oz} = corner(at, step)
+    # The list of each eighth for the hot loop of the value (`World.SDF.fast/1`).
+    fast = lists |> Tuple.to_list() |> Enum.map(&SDF.fast/1) |> List.to_tuple()
 
     field =
       for k <- -1..(@points - 2), j <- -1..(@points - 2), i <- -1..(@points - 2), into: <<>> do
-        list = elem(lists, eighth({i, j, k}))
+        list = elem(fast, eighth({i, j, k}))
         <<SDF.value(list, {ox + i * step, oy + j * step, oz + k * step}, limit)::float-32-little>>
       end
 

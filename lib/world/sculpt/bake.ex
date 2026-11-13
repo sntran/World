@@ -319,6 +319,8 @@ defmodule World.Sculpt.Bake do
         legs: legs,
         n: n,
         list: list,
+        # The list for the hot loop of the value (`World.SDF.fast/1`).
+        fast: SDF.fast(list),
         limit: limit,
         base: base,
         u: u,
@@ -362,14 +364,14 @@ defmodule World.Sculpt.Bake do
       with true <- same.(i, j, k, l), {g, _} <- values[{k, l}] do
         g
       else
-        _ -> SDF.value(c.list, at(c, k, l), c.limit)
+        _ -> SDF.value(c.fast, at(c, k, l), c.limit)
       end
     end
 
     slope = fn di, dj -> (value.(i + di, j + dj) - value.(i - di, j - dj)) / 2 end
 
     p = at(c, i, j)
-    up = (SDF.value(c.list, Vec.add(p, Vec.scale(c.face, c.off)), c.limit) - f) / c.off
+    up = (SDF.value(c.fast, Vec.add(p, Vec.scale(c.face, c.off)), c.limit) - f) / c.off
 
     gradient =
       Vec.add(Vec.add(Vec.scale(c.du, slope.(1, 0)), Vec.scale(c.dv, slope.(0, 1))), Vec.scale(c.face, up))

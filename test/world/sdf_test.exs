@@ -221,6 +221,91 @@ defmodule World.SDFTest do
            ]
   end
 
+  test "the hot loop of the value gives the same values as the fold, to the bit, for each shape, frame and mode (plan 0010, R13)" do
+    :rand.seed(:exsss, {5, 6, 7})
+    u = fn lo, hi -> lo + (hi - lo) * :rand.uniform() end
+
+    frame = fn turn? ->
+      at = {u.(-0.6, 0.6), u.(-0.6, 0.6), u.(-0.6, 0.6)}
+
+      if turn?,
+        do: Frame.new(at, Vec.norm({u.(-1, 1), u.(-1, 1), u.(0.2, 1)}), Vec.norm({u.(-1, 1), u.(0.2, 1), 0.0})),
+        else: Frame.move(at)
+    end
+
+    size = fn
+      :ball -> {u.(0.05, 0.3)}
+      :box -> {u.(0.05, 0.3), u.(0.05, 0.3), u.(0.05, 0.3)}
+      :round_box -> {u.(0.1, 0.3), u.(0.1, 0.3), u.(0.1, 0.3), u.(0.01, 0.08)}
+      :capsule -> {u.(0.05, 0.3), u.(0.03, 0.15)}
+      :cylinder -> {u.(0.05, 0.2), u.(0.05, 0.3)}
+      :ellipsoid -> {u.(0.05, 0.3), u.(0.05, 0.3), u.(0.05, 0.3)}
+      :cone -> {u.(0.05, 0.2), u.(0.0, 0.1), u.(0.05, 0.3)}
+      :ring -> {u.(0.1, 0.3), u.(0.02, 0.08)}
+      :superellipsoid -> {u.(0.05, 0.3), u.(0.05, 0.3), u.(0.05, 0.3), 4.0}
+      :tube -> {[{0.0, 0.0, 0.0}, {0.2, 0.1, 0.0}, {0.3, 0.3, 0.1}], [0.05, 0.03, 0.02]}
+    end
+
+    edits =
+      for shape <- SDF.shapes(), turn? <- [false, true], mode <- SDF.modes(), blend <- [0.0, u.(0.02, 0.1)] do
+        raise = if mode == :paint, do: [raise: u.(-0.03, 0.03)], else: []
+        SDF.edit(shape, size.(shape), [frame: frame.(turn?), mode: mode, blend: blend] ++ raise)
+      end
+
+    # A paint with no raise is not in the list of the value.
+    plain = SDF.edit(:ball, {0.2}, mode: :paint, color: {1, 2, 3})
+    assert {:fast, list} = SDF.fast(edits ++ [plain])
+    assert length(list) == length(edits) and length(edits) == 10 * 2 * 3 * 2
+    points = for _ <- 1..2_000, do: {u.(-1, 1), u.(-1, 1), u.(-1, 1)}
+
+    # All the edits in their order, and each edit after one ball (each clause of the loop, on the two sides of 0).
+    ball = SDF.edit(:ball, {0.4})
+    lists = [edits ++ [plain] | for(e <- edits, do: [ball, e])]
+
+    for list <- lists,
+        fast = SDF.fast(list),
+        limit <- [1.0e30, 0.2],
+        p <- Enum.take(points, if(length(list) > 2, do: 2_000, else: 60)) do
+      assert SDF.value(fast, p, limit) == SDF.value(list, p, limit)
+    end
+
+    # A point with whole numbers, and no edit.
+    assert SDF.value(SDF.fast([ball]), {1, 0, 0}, 5) == SDF.value([ball], {1, 0, 0}, 5)
+    assert SDF.value(SDF.fast([]), {0.0, 0.0, 0.0}, 0.3) == 0.3
+  end
+
+  test "the parts of the hot loop are the steps of the functions of the field" do
+    require World.SDF.Inline, as: Inline
+    :rand.seed(:exsss, {8, 8, 8})
+
+    for _ <- 1..500 do
+      [d, de, k, limit, h] = for _ <- 1..5, do: :rand.uniform() - 0.3
+      k = if k < 0.1, do: 0.0, else: k
+      limit = abs(limit) + 0.05
+      clamp = fn v -> min(max(v, -limit), limit) end
+      assert Inline.blend(:add, d, de, k, limit) == clamp.(SDF.smin(d, de, k))
+      assert Inline.blend(:subtract, d, de, k, limit) == clamp.(SDF.smax(d, -de, k))
+      assert Inline.clamp(d * 3, limit) == clamp.(d * 3)
+      assert Inline.positive(d) == max(d, 0.0)
+      least = min(d, de)
+      assert Inline.soft(least, d, de, k) == SDF.smin(d, de, k)
+      # A paint with a raise: the field of a ball with the paint of a box at a point.
+      paint = SDF.edit(:box, {0.2, 0.2, 0.2}, mode: :paint, blend: k, raise: h)
+      p = {de, d, 0.1}
+      value = SDF.value([SDF.edit(:ball, {0.3}), paint], p, limit)
+      assert Inline.lift(SDF.value([SDF.edit(:ball, {0.3})], p, limit), SDF.distance(paint, p), k, h, limit) == value
+    end
+
+    # The root of the nearest point of an ellipsoid: no step, and the steps of the distance.
+    assert Inline.root(0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0) == 0.25
+    {rx, ry, rz} = {0.3, 0.1, 0.2}
+    {x, y, z} = {0.5, 0.4, -0.3}
+    {ux, uy, uz, sx, sy, sz} = {rx * x, ry * y, rz * abs(z), rx * rx, ry * ry, rz * rz}
+    t = Inline.root(Enum.max([ux - sx, uy - sy, uz - sz, 0.0]), ux, uy, uz, sx, sy, sz, 8)
+    {dx, dy, dz} = {x * t / (sx + t), y * t / (sy + t), z * t / (sz + t)}
+    assert :math.sqrt(dx * dx + dy * dy + dz * dz) == SDF.distance(SDF.edit(:ellipsoid, {rx, ry, rz}), {x, y, z})
+  end
+
   test "the shares of the edits in the surface at a point: one edit away from a joint, two across a smooth joint" do
     a = SDF.edit(:ball, {0.5})
     b = SDF.edit(:ball, {0.3}, frame: Frame.move({0.6, 0.0, 0.0}), blend: 0.1)

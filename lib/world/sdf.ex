@@ -184,8 +184,178 @@ defmodule World.SDF do
     end)
   end
 
-  @doc "The value of the field only (the hot path of a sculpture: a loop of its own, with no material)."
-  def value(edits, p, limit \\ @far), do: fold(edits, p, limit, limit)
+  @doc """
+  The value of the field only (the hot path of a sculpture: a loop of its
+  own, with no material). The edits can be a list of `fast/1`: the same
+  value, in a third of the time.
+  """
+  def value(edits, p, limit \\ @far)
+  def value({:fast, list}, {x, y, z}, limit), do: run(list, x * 1.0, y * 1.0, z * 1.0, limit * 1.0, limit * 1.0)
+  def value(edits, p, limit), do: fold(edits, p, limit, limit)
+
+  @doc """
+  The edits as a list for the hot loop of `value/3`
+  (`docs/plans/0010-sculpture-maps.md`, D13): a tuple of numbers for
+  each edit, with its shape, its frame and its mode in its tag. A paint
+  with no raise is not in the list (it does not change the value). A
+  tube and a superellipsoid have a call of `distance/2`; each other
+  shape has its distance in the loop.
+  """
+  def fast(edits), do: {:fast, for(e <- edits, not (e.mode == :paint and e.raise == 0.0), do: pack(e))}
+
+  @inline %{ball: 1, box: 3, round_box: 4, capsule: 2, cylinder: 2, ellipsoid: 3, ring: 2, cone: 3}
+
+  defp pack(%Edit{shape: shape, size: size, local: local, mode: mode, blend: k, raise: up} = e) do
+    if @inline[shape] do
+      # The numbers of the frame (a move, or a turn), of the size, the blend and the raise.
+      [kind | frame] = Tuple.to_list(local)
+      List.to_tuple([:"#{shape}_#{kind}_#{mode}" | numbers(frame ++ Tuple.to_list(size) ++ [k, up])])
+    else
+      {:"any_#{mode}", e, k, up}
+    end
+  end
+
+  defp numbers(list), do: Enum.map(list, &(&1 * 1.0))
+
+  require World.SDF.Inline, as: Inline
+
+  defp run([], _x, _y, _z, d, _limit), do: d
+
+  # A clause for each shape with its distance in the loop, each frame (a
+  # move only, or a turn) and each mode. The steps of each distance are
+  # the steps of `local/3`.
+  distances = [
+    ball: quote(do: :math.sqrt(lx * lx + ly * ly + lz * lz) - s1),
+    box:
+      quote do
+        {qx, qy, qz} = {abs(lx) - s1, abs(ly) - s2, abs(lz) - s3}
+        {px, py, pz} = {Inline.positive(qx), Inline.positive(qy), Inline.positive(qz)}
+        most = if qy > qz, do: qy, else: qz
+        most = if qx > most, do: qx, else: most
+        :math.sqrt(px * px + py * py + pz * pz) + if(most < 0.0, do: most, else: 0.0)
+      end,
+    round_box:
+      quote do
+        {qx, qy, qz} = {abs(lx) - s1 + s4, abs(ly) - s2 + s4, abs(lz) - s3 + s4}
+        {px, py, pz} = {Inline.positive(qx), Inline.positive(qy), Inline.positive(qz)}
+        most = if qy > qz, do: qy, else: qz
+        most = if qx > most, do: qx, else: most
+        :math.sqrt(px * px + py * py + pz * pz) + if(most < 0.0, do: most, else: 0.0) - s4
+      end,
+    capsule:
+      quote do
+        on =
+          cond do
+            lz < -s1 -> -s1
+            lz > s1 -> s1
+            true -> lz
+          end
+
+        w = lz - on
+        :math.sqrt(lx * lx + ly * ly + w * w) - s2
+      end,
+    cylinder:
+      quote do
+        {dx, dz} = {:math.sqrt(lx * lx + ly * ly) - s1, abs(lz) - s2}
+        most = if dx > dz, do: dx, else: dz
+        {px, pz} = {Inline.positive(dx), Inline.positive(dz)}
+        if(most < 0.0, do: most, else: 0.0) + :math.sqrt(px * px + pz * pz)
+      end,
+    ring:
+      quote(do: :math.sqrt((:math.sqrt(lx * lx + ly * ly) - s1) * (:math.sqrt(lx * lx + ly * ly) - s1) + lz * lz) - s2),
+    ellipsoid:
+      quote do
+        {ax, ay, az} = {lx / s1, ly / s2, lz / s3}
+        k0 = :math.sqrt(ax * ax + ay * ay + az * az)
+
+        if k0 <= 1.0 do
+          least = if s2 <= s3, do: s2, else: s3
+          (k0 - 1.0) * if(s1 <= least, do: s1, else: least)
+        else
+          {ux, uy, uz} = {s1 * abs(lx), s2 * abs(ly), s3 * abs(lz)}
+          {sx, sy, sz} = {s1 * s1, s2 * s2, s3 * s3}
+          {from_x, from_y, from_z} = {ux - sx, uy - sy, Inline.positive(uz - sz)}
+          from = if from_x >= from_y, do: from_x, else: from_y
+          from = if from >= from_z, do: from, else: from_z
+          t = Inline.root(from, ux, uy, uz, sx, sy, sz, 8)
+          {dx, dy, dz} = {lx * t / (sx + t), ly * t / (sy + t), lz * t / (sz + t)}
+          :math.sqrt(dx * dx + dy * dy + dz * dz)
+        end
+      end,
+    cone:
+      quote do
+        # s1 and s2 are the radius at z = -s3 and at z = s3.
+        qx = :math.sqrt(lx * lx + ly * ly)
+        {k2x, k2y} = {s2 - s1, 2 * s3}
+        end_r = if lz < 0.0, do: s1, else: s2
+        {cax, cay} = {qx - if(qx <= end_r, do: qx, else: end_r), abs(lz) - s3}
+        raw = ((s2 - qx) * k2x + (s3 - lz) * k2y) / (k2x * k2x + k2y * k2y)
+
+        t =
+          cond do
+            raw < 0.0 -> 0.0
+            raw > 1.0 -> 1.0
+            true -> raw
+          end
+
+        {cbx, cby} = {qx - s2 + k2x * t, lz - s3 + k2y * t}
+        {da, db} = {cax * cax + cay * cay, cbx * cbx + cby * cby}
+        sign = if cbx < 0.0 and cay < 0.0, do: -1.0, else: 1.0
+        sign * :math.sqrt(if(da <= db, do: da, else: db))
+      end
+  ]
+
+  frames = [
+    move:
+      {~w(tx ty tz)a,
+       quote do
+         {lx, ly, lz} = {x + tx, y + ty, z + tz}
+       end},
+    turn:
+      {~w(m1 m2 m3 m4 m5 m6 m7 m8 m9 tx ty tz)a,
+       quote do
+         {lx, ly, lz} = {tx + m1 * x + m4 * y + m7 * z, ty + m2 * x + m5 * y + m8 * z, tz + m3 * x + m6 * y + m9 * z}
+       end}
+  ]
+
+  # The variables of the quoted steps get the context of the body of a
+  # function, so the steps and the body share them.
+  plain = fn ast ->
+    Macro.prewalk(ast, fn
+      {name, meta, context} when is_atom(name) and is_atom(context) -> {name, meta, nil}
+      other -> other
+    end)
+  end
+
+  steps = fn
+    :paint -> plain.(quote(do: Inline.lift(d, de, k, up, limit)))
+    mode -> plain.(quote(do: Inline.blend(unquote(mode), d, de, k, limit)))
+  end
+
+  for {shape, distance} <- distances, {frame, {names, place}} <- frames, mode <- @modes do
+    tag = :"#{shape}_#{frame}_#{mode}"
+    names = names ++ Enum.map(1..@inline[shape], &:"s#{&1}") ++ [:k, :up]
+    vars = Enum.map(names, &Macro.var(&1, nil))
+
+    floats =
+      Enum.reduce(names ++ ~w(x y z d limit)a, true, &quote(do: unquote(&2) and is_float(unquote(Macro.var(&1, nil)))))
+
+    defp run([{unquote(tag), unquote_splicing(vars)} | rest], x, y, z, d, limit) when unquote(floats) do
+      unquote(plain.(place))
+      de = unquote(plain.(distance))
+      _ = up
+      run(rest, x, y, z, unquote(steps.(mode)), limit)
+    end
+  end
+
+  # Each other shape: its distance from `distance/2`.
+  for mode <- @modes do
+    defp run([{unquote(:"any_#{mode}"), edit, k, up} | rest], x, y, z, d, limit) do
+      de = distance(edit, {x, y, z})
+      _ = up
+      run(rest, x, y, z, unquote(steps.(mode)), limit)
+    end
+  end
 
   defp fold([], _p, d, _limit), do: d
 

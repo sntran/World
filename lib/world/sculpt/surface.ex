@@ -347,15 +347,23 @@ defmodule World.Sculpt.Surface do
     {{i * n, j * n, k * n}, {(i + 1) * n - 1, (j + 1) * n - 1, (k + 1) * n - 1}}
   end
 
-  # The field of the edits of a brick at a point: with the short list of
-  # the eighth of the brick that the point is in (the same values).
+  # The field of the edits of a brick at a point, as two functions: its
+  # value (the hot loop, `World.SDF.fast/1`) and its material. With the
+  # short list of the eighth of the brick that the point is in (the same
+  # values).
   defp field(%{eighths: eighths, at: at}, _edits, limit, step) do
     corner = Sculpt.corner(at, step)
+    fast = eighths |> Tuple.to_list() |> Enum.map(&SDF.fast/1) |> List.to_tuple()
+    part = fn p -> Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step)) end
 
-    fn p -> SDF.field(elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))), p, limit) end
+    {fn p -> SDF.value(elem(fast, part.(p)), p, limit) end,
+     fn p -> elem(SDF.field(elem(eighths, part.(p)), p, limit), 1) end}
   end
 
-  defp field(_brick, edits, limit, _step), do: &SDF.field(edits, &1, limit)
+  defp field(_brick, edits, limit, _step) do
+    fast = SDF.fast(edits)
+    {&SDF.value(fast, &1, limit), &elem(SDF.field(edits, &1, limit), 1)}
+  end
 
   # The color of the edits of a brick at a point, in the same way.
   defp color(%{eighths: eighths, at: at}, _edits, limit, step) do
@@ -472,13 +480,13 @@ defmodule World.Sculpt.Surface do
 
   # The cut, the value of the field there (near 0) and its material: the
   # last point of the search.
-  defp falsi(p0, p1, field, {a, fa}, {b, fb}, n, side, tol) do
+  defp falsi(p0, p1, {value, material} = field, {a, fa}, {b, fb}, n, side, tol) do
     t = a - fa * (b - a) / (fb - fa)
     p = Vec.lerp(p0, p1, t)
-    {ft, material} = field.(p)
+    ft = value.(p)
 
     cond do
-      abs(ft) <= tol or n == 1 -> {p, ft, material}
+      abs(ft) <= tol or n == 1 -> {p, ft, material.(p)}
       ft < 0 == fa < 0 -> falsi(p0, p1, field, {t, ft}, {b, if(side == :a, do: fb / 2, else: fb)}, n - 1, :a, tol)
       true -> falsi(p0, p1, field, {a, if(side == :b, do: fa / 2, else: fa)}, {t, ft}, n - 1, :b, tol)
     end
@@ -514,9 +522,8 @@ defmodule World.Sculpt.Surface do
   # The normal of the field at a cut, from the value of the field there
   # and at three points next to it (the finish pass gives the normals of
   # the mesh: this one places the point of a cell).
-  defp gradient(field, {x, y, z}, value, step) do
+  defp gradient({f, _material}, {x, y, z}, value, step) do
     h = step * 1.0e-3
-    f = &elem(field.(&1), 0)
     Vec.norm({f.({x + h, y, z}) - value, f.({x, y + h, z}) - value, f.({x, y, z + h}) - value})
   end
 
