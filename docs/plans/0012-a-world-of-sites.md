@@ -173,6 +173,9 @@ light of a room: the light is not the cause. The models are:
   edits again from a real thing, as the three models of step 6.
 - **The fishing boat** needs the lines of a real hull.
 
+Plan 0013 takes the fishing boat, a real car and a real tree, and a
+part of the speed.
+
 ## 10. The measure
 
 One machine with 4 schedulers. It is slower than the machine of plan
