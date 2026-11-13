@@ -142,8 +142,11 @@ defmodule World.Sculpt do
 
       {lo, hi} ->
         size = @cells * step
-        {a, b, c} = from = index(lo, size)
-        {d, e, f} = index(hi, size)
+        # (One cell more on each side: a flat face at a border of bricks
+        # has the brick on its outer side too, which has the edges of
+        # the grid that go through the face.)
+        {a, b, c} = from = index(Vec.sub(lo, {step, step, step}), size)
+        {d, e, f} = index(Vec.add(hi, {step, step, step}), size)
         span = cube(max(max(d - a, e - b), f - c) + 1, 1)
 
         how = %{

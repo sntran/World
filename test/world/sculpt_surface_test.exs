@@ -151,6 +151,10 @@ defmodule World.Sculpt.SurfaceTest do
     edits = [SDF.edit(:ball, {0.04}), SDF.edit(:cone, {0.04, 0.0, 0.154}, frame: Frame.move({0.0, 0.0, 0.111}))]
     ps = pieces(edits, 0.043)
     assert length(ps) == 8 and closed?(ps)
+    # A face of a box at a border of bricks: the bricks on its outer side have its edges.
+    box = [SDF.edit(:box, {0.04, 0.109, 0.04}, frame: Frame.move({0.0, -0.195, 0.0}))]
+    ps = pieces(box, 0.038)
+    assert length(ps) == 8 and closed?(ps) and manifold?(ps)
   end
 
   test "the collapse keeps the points where the colors change, when the budget keeps many of the faces" do
