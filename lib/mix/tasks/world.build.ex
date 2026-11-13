@@ -31,15 +31,17 @@ defmodule Mix.Tasks.World.Build do
 
     files =
       Enum.flat_map(chosen, fn {name, fun} ->
-        # The model is made again at each level (World.Detail).
-        glbs =
+        # The model is made again at each level (World.Detail). The list
+        # of the parts is from the near level (the level by default).
+        built =
           for {level, ext} <- @levels do
             item = World.Detail.with(level, fun)
-            {Path.join(dir, name <> ext <> ".glb"), World.Build.glb(item, level: level)}
+            {level, item, {Path.join(dir, name <> ext <> ".glb"), World.Build.glb(item, level: level)}}
           end
 
-        parts = World.Build.parts_file(name, fun.())
-        [{Path.join(dir, name <> ".parts.json"), JSON.encode!(parts)} | glbs]
+        [{:near, near, _} | _] = built
+        parts = World.Build.parts_file(name, near)
+        [{Path.join(dir, name <> ".parts.json"), JSON.encode!(parts)} | Enum.map(built, &elem(&1, 2))]
       end)
 
     files =
