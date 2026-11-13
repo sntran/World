@@ -626,6 +626,7 @@ defmodule World.Build do
     Enum.map(corners, fn
       {p, n} -> {Frame.point(f, p), Frame.dir(f, n)}
       {p, n, c} -> {Frame.point(f, p), Frame.dir(f, n), c}
+      {p, n, c, uv} -> {Frame.point(f, p), Frame.dir(f, n), c, uv}
     end)
   end
 

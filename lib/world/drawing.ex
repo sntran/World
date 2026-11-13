@@ -997,6 +997,17 @@ defmodule World.Drawing do
         {GLB.role(role), Map.merge(GLB.palette()[role], spec)}
       end)
 
+    # The maps of a node (the data `materials` of its skill: the images
+    # of a sculpture, `World.Sculpt.Bake`) go to the material of each of
+    # its roles.
+    materials =
+      for n <- raw["nodes"],
+          {_, %{"materials" => more}, _} <- [made[n["name"]]],
+          {role, spec} <- more,
+          reduce: materials do
+        acc -> Map.update(acc, GLB.role(role), Map.merge(GLB.palette()[role], spec), &Map.merge(&1, spec))
+      end
+
     a =
       Assembly.new(Map.get(raw, "name", "drawing"), thing.(root),
         root: root["name"],

@@ -111,4 +111,46 @@ here; the owner can change each one.
 
 ## 10. The measure
 
-(Each step adds its measure here.)
+### Step 1: the maps (2026-11-13)
+
+`World.Sculpt.Bake` makes the two maps; the data `bake` of the skill
+`sculpt` gives the side of the image at each level
+(`docs/format.md`, "The maps of a sculpture"). The carp of plan 0009
+with maps, on 4 schedulers:
+
+| Level | Triangles | Image | Texels with a chart | The bake | The whole level |
+|---|---|---|---|---|---|
+| near | 10,000 | 1,024 | | 3.9 s | 6.0 s |
+| mid | 3,000 | 512 | 247,000 (94%) | 1.2 s | 3.3 s |
+| far | 600 | 256 | | | 2.4 s |
+
+R4 is met (1.2 s at 512, 3.9 s at 1,024). The mid level and the far
+level now show the scales and the pupil of the carp, which only the
+near level of 30,000 triangles showed before; the shots are in step 2.
+
+The tests of R1, R2, R3 and R5 are in
+`test/world/sculpt_bake_test.exs`: the color of each texel is the color
+of the edits at its place (within 1 of 255), a sharp border has no
+mixed texel, the normal of a ball of 200 triangles from its map and
+its tangents is within 2 degrees of the true normal at each texel
+(0.3 degrees inside the triangles), a bump of a fifth of a cell is in
+the map, no texel is in two charts, and the GLB has the maps with the
+sampler and the tangents.
+
+What the work found:
+
+- **A message is a copy, again.** The first bake of 512 texels took
+  5.8 s: each process got the lists of the edits of all the triangles.
+  With the lists of its own squares only: 1.7 s.
+- **The ball of a chart must be its true ball.** A wide ball for each
+  triangle gave long lists to the large triangles, which have the most
+  texels. With the ball of the texels of the chart: 1.1 s.
+- **The texels at the edge of a chart need the value past the edge.**
+  A change from one side only gave normals with an error of 4 degrees
+  at the edges of the triangles, where two charts meet. Now the bake
+  takes the value at the place past the edge: 1.2 s, and 2 degrees at
+  the most at each texel.
+- **A mesh has UVs now** (`World.Mesh.map/2`): the UV of each corner of
+  each face, through `World.Build` and `World.Scene` to the GLB. The
+  maps of a node go to the materials of the model as the data
+  `materials` of its skill (`World.Drawing.assemble/3`).

@@ -126,19 +126,32 @@ defmodule World.Scene do
   not each corner. The same primitive as `primitive/2` of all the corners
   in their order. A corner can be `{point, normal, color}` (the color of
   a point of a mesh, `World.Mesh.finish/3`): the primitive then has the
-  color of each point.
+  color of each point. A corner can be `{point, normal, color, uv}` (a
+  mesh with maps, `World.Mesh.map/2`): the primitive then has the UV of
+  each point, and corners with the same point and normal and two UVs are
+  two points.
   """
   def primitive(material, items, place) do
-    {indices, verts, _seen, _count, colors?} =
-      Enum.reduce(items, {[], [], %{}, 0, false}, fn item, acc ->
-        Enum.reduce(place.(item), acc, fn corner, {indices, verts, seen, count, colors?} ->
-          {p, n, c} = with {p, n} <- corner, do: {p, n, nil}
+    {indices, verts, _seen, _count, colors?, uvs?} =
+      Enum.reduce(items, {[], [], %{}, 0, false, false}, fn item, acc ->
+        Enum.reduce(place.(item), acc, fn corner, {indices, verts, seen, count, colors?, uvs?} ->
+          {p, n, c, uv} =
+            case corner do
+              {p, n} -> {p, n, nil, nil}
+              {p, n, c} -> {p, n, c, nil}
+              four -> four
+            end
+
           {rp, rn} = {round6(p), round6(n)}
-          key = key(rp, rn)
+          key = if uv, do: {key(rp, rn), uv}, else: key(rp, rn)
 
           case seen do
-            %{^key => i} -> {[i | indices], verts, seen, count, colors?}
-            _ -> {[count | indices], [{rp, rn, c} | verts], Map.put(seen, key, count), count + 1, colors? or c != nil}
+            %{^key => i} ->
+              {[i | indices], verts, seen, count, colors?, uvs?}
+
+            _ ->
+              {[count | indices], [{rp, rn, c, uv} | verts], Map.put(seen, key, count), count + 1, colors? or c != nil,
+               uvs? or uv != nil}
           end
         end)
       end)
@@ -151,7 +164,9 @@ defmodule World.Scene do
       normals: Enum.map(verts, &elem(&1, 1)),
       indices: Enum.reverse(indices),
       # A corner with no color in a primitive with colors is white.
-      colors: if(colors?, do: Enum.map(verts, &(elem(&1, 2) || {255, 255, 255})))
+      colors: if(colors?, do: Enum.map(verts, &(elem(&1, 2) || {255, 255, 255}))),
+      # A corner with no UV in a primitive with UVs is at the first texel.
+      uvs: if(uvs?, do: Enum.map(verts, &(elem(&1, 3) || {0.0, 0.0})))
     }
   end
 

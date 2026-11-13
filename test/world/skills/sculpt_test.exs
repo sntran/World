@@ -149,9 +149,9 @@ defmodule World.Skills.SculptTest do
 
   test "the examples of docs/format.md pass the check, and a sculptor makes them" do
     [_, section] = Regex.run(~r/## A sculpture(.*?)\n## /s, File.read!("docs/format.md"))
-    [data, node, worm] = for [_, json] <- Regex.scan(~r/```json\n(.*?)```/s, section), do: JSON.decode!(json)
+    [data, node, baked, worm] = for [_, json] <- Regex.scan(~r/```json\n(.*?)```/s, section), do: JSON.decode!(json)
 
-    # The first one is the data of a sculpture with a group and copies; the second one a node; the third one a node with bones.
+    # The first one is the data of a sculpture with a group and copies; the second one a node; then a node with maps, and a node with bones.
     for n <- [%{"name" => "stone", "skill" => %{"sculpt" => Map.put(data, "cells", %{"mid" => 0.004})}}, node] do
       d = %{"name" => "stone", "kind" => "item", "nodes" => [n]}
       assert {:ok, _} = Orders.check(order(d))
@@ -159,6 +159,14 @@ defmodule World.Skills.SculptTest do
     end
 
     assert length(Skill.edits(data["edits"], data["groups"])) == 1 + 4 + 6
+
+    d = %{"name" => "stone", "kind" => "item", "nodes" => [baked]}
+    assert {:ok, _} = Orders.check(order(d))
+    far = Detail.with(:far, fn -> Drawing.build(d) end)
+    assert [{"stone", %World.Part{shapes: [%{uvs: [[_, _, _] | _], colors: nil} | _]}, _}] = far.nodes
+    # The maps of the node are on its material in the model.
+    assert %{"image" => {"image/png", _}, "normal_image" => {"image/png", _}, "atlas" => true} =
+             far.materials[:stone_wash]
 
     d = %{"name" => "worm", "kind" => "item", "nodes" => [worm]}
     assert {:ok, _} = Orders.check(order(d))

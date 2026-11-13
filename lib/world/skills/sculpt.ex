@@ -31,7 +31,7 @@ defmodule World.Skills.Sculpt do
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
   alias World.Sculpt.Bones
 
-  @keys ~w(edits groups ports sources budget cells bones bone_blend plan gait clips)
+  @keys ~w(edits groups ports sources budget cells bake bones bone_blend plan gait clips)
   @edit ~w(shape size at axis up mode blend material color mirror repeat)
   @use ~w(shape group at axis up scale mirror repeat)
   @most 10_000
@@ -69,6 +69,7 @@ defmodule World.Skills.Sculpt do
       optional(data, "sources", path, &sources/2) ++
       optional(data, "budget", path, &budget/2) ++
       optional(data, "cells", path, &cells/2) ++
+      optional(data, "bake", path, &bake(&1, &2, data["budget"])) ++
       optional(data, "bones", path, &bones/2) ++
       optional(data, "bone_blend", path, &number(&1, &2, 0.001, 10)) ++
       optional(data, "plan", path, &plan(&1, &2, data["bones"])) ++
@@ -85,14 +86,34 @@ defmodule World.Skills.Sculpt do
   def make(data, _inputs, %{level: level, name: name}) do
     edits = all(data)
     budget = get_in(data, ["budget", Atom.to_string(level)])
-    meshes = World.Sculpt.model(edits, step: step(data, level), budget: budget)
+    step = step(data, level)
+    meshes = World.Sculpt.model(edits, step: step, budget: budget)
+    {meshes, materials} = maps(meshes, edits, step, get_in(data, ["bake", Atom.to_string(level)]))
     ports = Drawing.ports(Map.get(data, "ports", %{}))
     sources = Map.get(data, "sources", [])
 
     case data["bones"] do
-      nil -> {Part.new(name, :part, meshes, ports, sources: sources), %{}, %{}}
-      bones -> {figure(name, meshes, bones, ports, sources, data), %{}, %{}}
+      nil -> {Part.new(name, :part, meshes, ports, sources: sources), materials, %{}}
+      bones -> {figure(name, meshes, bones, ports, sources, data), materials, %{}}
     end
+  end
+
+  # With `bake` for the level: the meshes with their UVs, and the maps of
+  # each of their materials (`World.Sculpt.Bake`) as the data of the node,
+  # for the materials of the model (`World.Drawing.assemble/3`). The
+  # check makes sure that the image has a place for the triangles of the
+  # budget.
+  defp maps(meshes, _edits, _step, nil), do: {meshes, %{}}
+
+  defp maps(meshes, edits, step, side) do
+    {meshes, maps} = World.Sculpt.Bake.maps(meshes, edits, step, side)
+    png = fn rows -> rows && {"image/png", World.PNG.encode(rows, 3)} end
+
+    spec =
+      %{"normal_image" => png.(maps.normal), "atlas" => true}
+      |> Map.merge(if maps.color, do: %{"image" => png.(maps.color)}, else: %{})
+
+    {meshes, %{"materials" => Map.new(meshes, &{Atom.to_string(&1.material), spec})}}
   end
 
   # The figure of a sculpture with bones.
@@ -420,6 +441,34 @@ defmodule World.Skills.Sculpt do
   end
 
   defp cells(_v, path), do: [{path, "must be an object of near, mid and far"}]
+
+  # The side of the image of the maps at each level: a power of 2, with
+  # a place for the triangles of the budget of the level.
+  defp bake(v, path, budget) when is_map(v) do
+    World.Skill.keys(v, path, ~w(near mid far)) ++
+      for {k, n} <- Enum.sort(v),
+          k in ~w(near mid far),
+          e <- side(n, "#{path}.#{k}", is_map(budget) && budget[k]),
+          do: e
+  end
+
+  defp bake(_v, path, _budget), do: [{path, "must be an object of near, mid and far"}]
+
+  defp side(n, path, budget) do
+    cond do
+      n not in [64, 128, 256, 512, 1024, 2048, 4096] ->
+        [{path, "must be a side of an image: 64, 128, 256, 512, 1024, 2048 or 4096"}]
+
+      not is_integer(budget) ->
+        [{path, "needs a budget at this level"}]
+
+      n < World.Sculpt.Bake.least(budget) ->
+        [{path, "is too small for the budget: #{World.Sculpt.Bake.least(budget)} texels or more"}]
+
+      true ->
+        []
+    end
+  end
 
   # The bones: parents first, the first is the root.
   defp bones(v, path) when is_list(v) and v != [] and length(v) <= 64 do

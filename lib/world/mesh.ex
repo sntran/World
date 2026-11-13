@@ -17,7 +17,8 @@ defmodule World.Mesh do
             skin: nil,
             matter: nil,
             normals: nil,
-            colors: nil
+            colors: nil,
+            uvs: nil
 
   @type t :: %__MODULE__{
           points: [Vec.t()],
@@ -78,6 +79,15 @@ defmodule World.Mesh do
   """
   def finish(%__MODULE__{} = mesh, normals, colors), do: %{mesh | normals: normals, colors: colors}
 
+  @doc """
+  A mesh of triangles with the UV of each corner of each face (a list of
+  three `{u, v}` for each face, in the order of the faces): the place of
+  the corner in the maps of the mesh (`World.Sculpt.Bake`). `triangles/2`
+  gives corners `{point, normal, color, uv}` then (the color is nil for a
+  mesh with no colors).
+  """
+  def map(%__MODULE__{} = mesh, uvs), do: %{mesh | uvs: uvs}
+
   @doc "The mesh, moved by a frame."
   def transform(%__MODULE__{points: ps, normals: ns} = m, %Frame{} = f),
     do: %{m | points: Enum.map(ps, &Frame.point(f, &1)), normals: ns && Enum.map(ns, &Frame.dir(f, &1))}
@@ -114,23 +124,28 @@ defmodule World.Mesh do
     level = if level == nil, do: m.smooth, else: level
     {tris, pos} = wings_triangles(m, level)
     corners = normals(tris, pos, if(level > 0, do: 180.0, else: m.angle))
-    if m.normals || m.colors, do: own(m, corners), else: corners
+    if m.normals || m.colors || m.uvs, do: own(m, corners), else: corners
   end
 
   # The corners with the normals and the colors of the points of the mesh
   # (a mesh of triangles: its faces are its triangles, in their order).
-  defp own(%__MODULE__{faces: faces, normals: normals, colors: colors, angle: angle}, corners) do
+  defp own(%__MODULE__{faces: faces, normals: normals, colors: colors, angle: angle, uvs: uvs}, corners) do
     limit = :math.cos(angle * :math.pi() / 180) - 1.0e-6
     {nt, ct} = {normals && List.to_tuple(normals), colors && List.to_tuple(colors)}
 
-    faces
-    |> Enum.zip(Enum.chunk_every(corners, 3))
-    |> Enum.flat_map(fn {vs, [{a, _}, {b, _}, {c, _}] = cs} ->
+    [faces, Enum.chunk_every(corners, 3), uvs || Enum.map(faces, fn _ -> [nil, nil, nil] end)]
+    |> Enum.zip()
+    |> Enum.flat_map(fn {vs, [{a, _}, {b, _}, {c, _}] = cs, us} ->
       face = Vec.norm(Vec.cross(Vec.sub(b, a), Vec.sub(c, a)))
 
-      for {v, {p, n}} <- Enum.zip(vs, cs) do
+      for {v, {p, n}, uv} <- Enum.zip([vs, cs, us]) do
         n = if nt && Vec.dot(elem(nt, v), face) >= limit, do: elem(nt, v), else: n
-        if ct, do: {p, n, elem(ct, v)}, else: {p, n}
+
+        cond do
+          uv -> {p, n, ct && elem(ct, v), uv}
+          ct -> {p, n, elem(ct, v)}
+          true -> {p, n}
+        end
       end
     end)
   end

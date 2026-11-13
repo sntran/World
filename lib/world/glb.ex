@@ -52,7 +52,7 @@ defmodule World.GLB do
   defp gltf(%Scene{nodes: nodes} = scene) do
     roles = nodes |> Enum.flat_map(& &1.primitives) |> Enum.map(& &1.material) |> Enum.uniq() |> Enum.sort()
     mat_index = roles |> Enum.with_index() |> Map.new()
-    buf = %{bin: <<>>, views: [], accessors: [], images: [], image_of: %{}}
+    buf = %{bin: <<>>, views: [], accessors: [], images: [], image_of: %{}, plain: MapSet.new()}
 
     # The roles with a normal texture: their primitives have tangents.
     bumpy =
@@ -144,8 +144,14 @@ defmodule World.GLB do
       |> put_some("animations", nonempty(animations))
       |> put_some("extensionsUsed", extensions(materials, node_instances != %{}))
       |> put_some("images", nonempty(Enum.reverse(buf.images)))
-      |> put_some("textures", nonempty(for {_, i} <- Enum.with_index(buf.images), do: %{"source" => i, "sampler" => 0}))
-      |> put_some("samplers", if(buf.images == [], do: nil, else: [%{"magFilter" => 9729, "minFilter" => 9987}]))
+      |> put_some(
+        "textures",
+        nonempty(
+          for {_, i} <- Enum.with_index(buf.images),
+              do: %{"source" => i, "sampler" => if(MapSet.member?(buf.plain, i), do: 1, else: 0)}
+        )
+      )
+      |> put_some("samplers", samplers(buf))
       |> put_some("accessors", nonempty(Enum.reverse(buf.accessors)))
       |> put_some("bufferViews", nonempty(Enum.reverse(buf.views)))
       |> put_some("buffers", if(buf.bin == <<>>, do: nil, else: [%{"byteLength" => byte_size(pad(buf.bin, <<0>>))}]))
@@ -387,6 +393,22 @@ defmodule World.GLB do
   defp scale(s), do: [s, s, s]
 
   # The extensions that the materials and the nodes use.
+  # The samplers: the first one with the smaller copies of an image
+  # (mipmaps) and a repeat; the second one for the maps of a sculpture
+  # (`"atlas"` in the spec of a material): no smaller copies and no
+  # repeat, so a texel of one chart is never in the next one.
+  defp samplers(%{images: []}), do: nil
+
+  defp samplers(buf) do
+    [%{"magFilter" => 9729, "minFilter" => 9987}] ++
+      if MapSet.size(buf.plain) > 0,
+        do: [%{"magFilter" => 9729, "minFilter" => 9729, "wrapS" => 33071, "wrapT" => 33071}],
+        else: []
+  end
+
+  defp plain(buf, %{"index" => image}, spec),
+    do: if(spec["atlas"], do: %{buf | plain: MapSet.put(buf.plain, image)}, else: buf)
+
   defp extensions(materials, instances?) do
     transform? =
       Enum.any?(materials, fn m ->
@@ -460,7 +482,7 @@ defmodule World.GLB do
 
         file ->
           {texture, buf} = texture(buf, file, spec["image_transform"] || spec["image_scale"])
-          {Map.put(pbr, "baseColorTexture", texture), buf}
+          {Map.put(pbr, "baseColorTexture", texture), plain(buf, texture, spec)}
       end
 
     material =
@@ -481,7 +503,9 @@ defmodule World.GLB do
 
         file ->
           {texture, buf} = texture(buf, file, spec["image_transform"] || spec["normal_image_scale"])
-          {Map.put(material, "normalTexture", Map.put(texture, "scale", Map.get(spec, "normal_scale", 1.0) / 1)), buf}
+
+          {Map.put(material, "normalTexture", Map.put(texture, "scale", Map.get(spec, "normal_scale", 1.0) / 1)),
+           plain(buf, texture, spec)}
       end
 
     # Skin is not plastic: light goes in and comes out red at the edges

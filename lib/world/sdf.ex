@@ -190,20 +190,33 @@ defmodule World.SDF do
   border over its blend. An edit that adds with no color is white: the
   color of its material shows as it is.
   """
-  def color(edits, p, limit \\ @far) do
-    {_, {r, g, b}} =
-      Enum.reduce(edits, {limit, {1.0, 1.0, 1.0}}, fn e, {d, col} ->
-        de = distance(e, p)
+  def color(edits, p, limit \\ @far), do: elem(sample(edits, p, limit), 1)
 
-        case e.mode do
-          :add -> {clamp(smin(d, de, e.blend), limit), mix(col, e.color || {1.0, 1.0, 1.0}, weight(d - de, e.blend))}
-          :subtract -> {clamp(smax(d, -de, e.blend), limit), mix(col, e.color, weight(-de - d, e.blend))}
-          :paint -> {d, mix(col, e.color, smooth(weight(-2 * de, e.blend)))}
-        end
-      end)
-
-    {srgb(r), srgb(g), srgb(b)}
+  @doc """
+  The value of the field and the color at a point, in one pass over the
+  edits: `{value, {r, g, b}}` (`value/3`, `color/3`).
+  """
+  def sample(edits, p, limit \\ @far) do
+    {d, {r, g, b}} = tint(edits, p, limit, {1.0, 1.0, 1.0}, limit)
+    {d, {srgb(r), srgb(g), srgb(b)}}
   end
+
+  # The fold of the value and the color: its own loop (as `fold/4`), and
+  # the color changes only where an edit has a weight.
+  defp tint([], _p, d, col, _limit), do: {d, col}
+
+  defp tint([%Edit{mode: :add, blend: r, color: c} = e | rest], p, d, col, limit) do
+    de = distance(e, p)
+    tint(rest, p, clamp(smin(d, de, r), limit), mix(col, c || {1.0, 1.0, 1.0}, weight(d - de, r)), limit)
+  end
+
+  defp tint([%Edit{mode: :subtract, blend: r, color: c} = e | rest], p, d, col, limit) do
+    de = distance(e, p)
+    tint(rest, p, clamp(smax(d, -de, r), limit), mix(col, c, weight(-de - d, r)), limit)
+  end
+
+  defp tint([%Edit{mode: :paint, blend: r, color: c} = e | rest], p, d, col, limit),
+    do: tint(rest, p, d, mix(col, c, smooth(weight(-2 * distance(e, p), r))), limit)
 
   # The weight of the second of two values in their smooth minimum: 1
   # when it is less by the blend or more, 0 when it is more by the blend,

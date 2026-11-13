@@ -428,7 +428,10 @@ The data of the skill:
   level that has a budget, World chooses them: the largest cells that
   give about 1.5 times the budget before the collapse, but at most half
   the thinnest edit that adds or takes away. With neither, the cells of
-  the level (below).
+  the level (below);
+- `bake`: the side of the image of the maps at `near`, `mid` and `far`
+  (64, 128, 256, 512, 1024, 2048 or 4096 texels; "The maps of a
+  sculpture" below). A level with a bake needs a budget.
 
 An edit has its `shape` and its `size`, and these keys:
 
@@ -533,6 +536,46 @@ A stone with a hole and a handle:
     {"shape": "tube", "size": {"points": [[-0.2, 0, 0.2], [0, 0, 0.4], [0.2, 0, 0.2]], "radii": [0.03, 0.03, 0.03]}, "blend": 0.03}
   ],
   "budget": {"near": 20000, "mid": 2000}
+}}}
+```
+
+### The maps of a sculpture
+
+With `bake` for a level, the sculpture has a color map and a normal map
+at that level (`World.Sculpt.Bake`), and its mesh has no color for each
+point. The maps come from the field of the edits, not from the mesh:
+
+- each triangle of the mesh has its own chart in the image (a right
+  triangle of texels, two in a square), as large as its area allows;
+- the color of a texel is the color of the edits at its place on the
+  triangle;
+- the normal of a texel is the gradient of the field there, in the
+  tangent space of glTF (the mesh has a tangent for each point).
+
+So the detail of the model is the detail of the edits at the size of a
+texel. A mesh of 600 triangles shows a pattern of colors and a round
+shape, and an edit that is smaller than the cells (a bump, a groove)
+shows in the light, but not in the outline of the model. The image must
+have a place for the triangles of the budget: about 20 texels for each
+triangle or more (the check gives the least side). With an edit that is
+thinner than the cells must be, give `cells`: with no `cells`, World
+takes them from the thinnest edit (the ring of 8 mm below would make
+cells of 4 mm). The two images are
+PNG files in the GLB, on each material of the sculpture, with a sampler
+that makes no smaller copies of the image (each level has its own
+image). In a model, the roles of the materials of a baked sculpture have
+its maps: another node of the same model must use other roles.
+
+```json
+{"name": "stone", "skill": {"sculpt": {
+  "edits": [
+    {"shape": "ellipsoid", "size": [0.4, 0.3, 0.25], "material": "stone_wash", "color": "#b8b0a0"},
+    {"shape": "ball", "size": [0.06], "at": [0.3, 0.1, 0.12], "mode": "subtract", "blend": 0.01, "color": "#6a6458"},
+    {"shape": "ring", "size": [0.2, 0.004], "at": [0, 0, 0.2], "blend": 0.004}
+  ],
+  "cells": {"near": 0.01, "mid": 0.02, "far": 0.04},
+  "budget": {"near": 4000, "mid": 1000, "far": 200},
+  "bake": {"near": 1024, "mid": 512, "far": 256}
 }}}
 ```
 

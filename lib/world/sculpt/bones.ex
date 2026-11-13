@@ -95,24 +95,26 @@ defmodule World.Sculpt.Bones do
   # One mesh from the meshes of the sculpture (one for each material):
   # the points in one list, with the role of each face.
   defp join(meshes) do
-    {points, faces, roles, normals, colors, _} =
-      Enum.reduce(meshes, {[], [], [], [], [], 0}, fn %Mesh{} = m, {ps, fs, rs, ns, cs, offset} ->
+    {points, faces, roles, normals, colors, uvs, _} =
+      Enum.reduce(meshes, {[], [], [], [], [], [], 0}, fn %Mesh{} = m, {ps, fs, rs, ns, cs, us, offset} ->
         count = length(m.points)
 
         {[m.points | ps], [Enum.map(m.faces, fn f -> Enum.map(f, &(&1 + offset)) end) | fs],
          [List.duplicate(m.material, length(m.faces)) | rs], [m.normals || [] | ns],
-         [m.colors || List.duplicate({255, 255, 255}, count) | cs], offset + count}
+         [m.colors || List.duplicate({255, 255, 255}, count) | cs], [m.uvs || [] | us], offset + count}
       end)
 
     all = fn lists -> lists |> Enum.reverse() |> Enum.concat() end
-    {points, normals} = {all.(points), all.(normals)}
+    {points, normals, faces, uvs} = {all.(points), all.(normals), all.(faces), all.(uvs)}
 
     %{
       points: points,
-      faces: all.(faces),
+      faces: faces,
       roles: all.(roles),
       normals: if(length(normals) == length(points), do: normals),
-      colors: if(Enum.any?(meshes, & &1.colors), do: all.(colors))
+      colors: if(Enum.any?(meshes, & &1.colors), do: all.(colors)),
+      # The UVs of the corners of the faces, when the meshes have maps (`World.Sculpt.Bake`).
+      uvs: if(uvs != [] and length(uvs) == length(faces), do: uvs)
     }
   end
 
