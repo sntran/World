@@ -254,6 +254,21 @@ defmodule World.Sculpt.BakeTest do
 
     assert Enum.count(along, &(&1 > 0.999)) > 0.85 * length(along)
 
+    # A mesh of more than 4,000 triangles: its patches are made in groups
+    # of triangles, each group in its own process, and each triangle has
+    # its chart.
+    fine = Sculpt.model(ball = [SDF.edit(:ball, {0.5}, color: {200, 60, 60})], step: 0.03, budget: 4_400, cache: false)
+    many = fine |> Enum.map(&length(&1.faces)) |> Enum.sum()
+    assert many > 4_000
+    {many_baked, many_maps} = Bake.maps(fine, ball, 0.03, 512)
+    many_charts = charts(many_baked, 512)
+    assert length(many_charts) == many
+    assert Enum.count(many_charts, &(&1.texels != [])) > 0.99 * many
+
+    for chart <- Enum.take_every(many_charts, 50),
+        {x, y} <- chart.texels,
+        do: assert(texel(many_maps.color, x, y) == {200, 60, 60})
+
     # A ball has no hard edge: no new point.
     ball = [SDF.edit(:ball, {0.5})]
     [round] = Sculpt.model(ball, step: 0.1, budget: 200, cache: false)
@@ -549,6 +564,18 @@ defmodule World.Sculpt.BakeTest do
     hole = SDF.edit(:ball, {0.1}, frame: Frame.move({0.0, -0.5, 0.0}), mode: :subtract, metal: 1.0)
     assert SDF.finish([ball, knob, hole], {0.0, 0.6, 0.0}) == {0.9, 0.5, 0.1}
     assert SDF.finish([ball, knob, hole], {0.0, -0.4, 0.0}) == {0.6, 1.0, 0.0}
+
+    # One fold gives the value, the color and the finish: the same as the
+    # two folds, to the bit, for each mode of an edit.
+    crop = SDF.edit(:box, {0.45, 1.0, 1.0}, mode: :crop, blend: 0.05, roughness: 0.1, color: {9, 9, 9})
+    all = edits ++ [knob, hole, crop]
+    :rand.seed(:exsss, {4, 4, 4})
+
+    for _ <- 1..300 do
+      p = {:rand.uniform() * 1.4 - 0.7, :rand.uniform() * 1.4 - 0.7, :rand.uniform() * 1.4 - 0.7}
+      {value, color} = SDF.sample(all, p, 0.3)
+      assert SDF.sample(all, p, 0.3, %{gold: {0.3, 1.0}}) == {value, color, SDF.finish(all, p, %{gold: {0.3, 1.0}})}
+    end
 
     # The maps: the roughness in the green and the metal in the blue of the finish, the color times the glow.
     meshes = Sculpt.model(edits, step: 0.1, budget: 200, cache: false)

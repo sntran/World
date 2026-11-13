@@ -75,7 +75,7 @@ defmodule World.Sculpt do
       meshes =
         bricks
         |> Enum.map(& &1.piece)
-        |> Surface.meshes(budget: opts[:budget], small: 2 * step)
+        |> Surface.meshes(budget: opts[:budget], small: 2 * step, step: step)
         |> World.Sculpt.Finish.meshes(Map.new(bricks, &{&1.at, &1.edits}), edits, step)
 
       if key, do: Cache.put(key, meshes)

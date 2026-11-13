@@ -162,8 +162,10 @@ defmodule World.Sculpt.Surface do
   than the cells leaves such pieces); with the option `budget` (faces),
   fewer faces for all the materials together, with their shape
   (`World.Simplify.collapse/4`): first each region of 4 × 4 × 4 bricks
-  in a process of its own, then the band of faces at the borders of the
-  regions.
+  in a process of its own; then, with the option `step` (the cells, m),
+  each region of a second set, moved by half a region, in a process of
+  its own (the borders of the first regions are in the middle of these);
+  then the band of faces at the borders that are left.
   """
   def meshes(pieces, opts \\ []) do
     budget = opts[:budget]
@@ -181,13 +183,19 @@ defmodule World.Sculpt.Surface do
         |> Enum.sort()
         |> Task.async_stream(
           fn {r, ps} ->
-            region_collapse(r, ps, max(round(1.1 * budget * faces.(ps) / total), div(faces.(ps), 4)), pin)
+            {r, region_collapse(r, ps, max(round(1.1 * budget * faces.(ps) / total), div(faces.(ps), 4)), pin)}
           end,
-          max_concurrency: System.schedulers_online(),
+          # (Two tasks for each scheduler: a task waits at times, for memory or for the collector.)
+          max_concurrency: 2 * System.schedulers_online(),
+          # (In any order: a region with much work does not keep the others back.)
+          ordered: false,
           timeout: :infinity
         )
         |> Enum.map(fn {:ok, part} -> part end)
+        |> Enum.sort_by(&elem(&1, 0))
+        |> Enum.map(&elem(&1, 1))
         |> join()
+        |> between(budget, opts[:step])
         |> last_pass(budget)
       else
         {_keys, pts, tris, pins} = triangles(pieces, pin)
@@ -289,10 +297,90 @@ defmodule World.Sculpt.Surface do
     {Enum.reverse(points), faces, order, MapSet.new(shared)}
   end
 
+  # The second round: the regions between the regions of the first round
+  # (moved by half a region), each in a process of its own. A point of
+  # the faces of two of these regions stays; each region goes to its part
+  # of the budget. So the faces at the borders of the first regions (most
+  # of the faces that are left) do not wait for one process. A process
+  # gets the points and the faces of its region only (a message is a
+  # copy).
+  defp between(mesh, _budget, nil), do: mesh
+
+  defp between({pts, tris, quadrics, _shared}, budget, step) do
+    size = Sculpt.cells() * @region * step
+    {all, qs} = {List.to_tuple(pts), List.to_tuple(quadrics)}
+
+    region = fn [a, b, c] ->
+      {x, y, z} = Vec.add(Vec.add(elem(all, a), elem(all, b)), elem(all, c))
+      {floor(x / 3 / size + 0.5), floor(y / 3 / size + 0.5), floor(z / 3 / size + 0.5)}
+    end
+
+    groups = Enum.group_by(tris, fn {f, _} -> region.(f) end)
+
+    # The region of each point, or `:many` for a point of two regions.
+    of =
+      for {g, faces} <- groups, {f, _} <- faces, v <- f, reduce: %{} do
+        acc ->
+          Map.update(acc, v, g, fn
+            ^g -> g
+            _ -> :many
+          end)
+      end
+
+    total = length(tris)
+
+    done =
+      groups
+      |> Enum.sort()
+      |> Enum.map(fn {g, faces} ->
+        used = faces |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
+        local = used |> Enum.with_index() |> Map.new()
+
+        {{g, used}, Enum.map(used, &elem(all, &1)), Enum.map(used, &elem(qs, &1)),
+         Enum.map(faces, fn {f, m} -> {Enum.map(f, &local[&1]), m} end), for(v <- used, of[v] == :many, do: local[v]),
+         max(round(budget * length(faces) / total), 1)}
+      end)
+      |> Task.async_stream(
+        fn {{g, used}, points, quadrics, faces, fixed, target} ->
+          {g, used, World.Simplify.collapse(points, faces, target, fixed: fixed, quadrics: quadrics)}
+        end,
+        # (Two tasks for each scheduler: a task waits at times, for memory or for the collector.)
+        max_concurrency: 2 * System.schedulers_online(),
+        ordered: false,
+        timeout: :infinity
+      )
+      |> Enum.map(fn {:ok, part} -> part end)
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.map(fn {_, used, r} -> {used, r} end)
+
+    # The points of a region that stay keep their index; a point that
+    # moved has its new place and its new quadric. (A point of two
+    # regions did not move; it keeps its quadric of before.)
+    {moved, faces} =
+      Enum.reduce(done, {%{}, []}, fn {used, r}, {moved, faces} ->
+        used = List.to_tuple(used)
+        global = Enum.map(r.ids, &elem(used, &1))
+        g = List.to_tuple(global)
+
+        {for({v, p, q} <- Enum.zip([global, r.points, r.quadrics]), of[v] != :many, into: moved, do: {v, {p, q}}),
+         [Enum.map(r.faces, fn {f, m} -> {Enum.map(f, &elem(g, &1)), m} end) | faces]}
+      end)
+
+    {pts, quadrics} =
+      Enum.zip(pts, quadrics)
+      |> Enum.with_index()
+      |> Enum.map(fn {old, i} -> Map.get(moved, i, old) end)
+      |> Enum.unzip()
+
+    {pts, faces |> Enum.reverse() |> Enum.concat(), quadrics, for({v, :many} <- of, into: MapSet.new(), do: v)}
+  end
+
   # The last pass: only the faces near the borders of the regions (two
   # rings of faces round the shared points), with the points that they
   # share with the other faces where they are; the other faces are done.
   # When the band cannot reach the budget, the whole mesh.
+  defp last_pass({pts, tris, _quadrics, _shared}, budget) when length(tris) <= budget, do: {pts, tris}
+
   defp last_pass({pts, tris, quadrics, shared}, budget) do
     ring = fn set -> for {f, _} <- tris, Enum.any?(f, &MapSet.member?(set, &1)), v <- f, into: MapSet.new(), do: v end
     near = ring.(shared)

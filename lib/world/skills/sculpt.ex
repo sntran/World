@@ -109,19 +109,24 @@ defmodule World.Skills.Sculpt do
         {World.Sculpt.model(from, step: step, budget: get_in(d, ["budget", Atom.to_string(level)])), edits, step}
       end
 
+    # (The images of the maps become PNG files in their own processes,
+    # while this one makes the part or the figure.)
     {meshes, materials} = maps(built, side)
     ports = Drawing.ports(Map.get(data, "ports", %{}))
     sources = Map.get(data, "sources", [])
 
-    case data["bones"] do
-      nil ->
-        {Part.new(name, :part, meshes, ports, sources: sources), materials, %{}}
+    made =
+      case data["bones"] do
+        nil ->
+          Part.new(name, :part, meshes, ports, sources: sources)
 
-      bones ->
-        # The edits of each mesh: the bones of a point come from the edit of its surface.
-        edits = for {ms, edits, _} <- built, _ <- ms, do: edits
-        {figure(name, meshes, bones, [ports: ports, sources: sources, edits: edits], data), materials, %{}}
-    end
+        bones ->
+          # The edits of each mesh: the bones of a point come from the edit of its surface.
+          edits = for {ms, edits, _} <- built, _ <- ms, do: edits
+          figure(name, meshes, bones, [ports: ports, sources: sources, edits: edits], data)
+      end
+
+    {made, materials.(), %{}}
   end
 
   # With `bake` for the level: the meshes with their UVs, and the maps of
@@ -129,7 +134,7 @@ defmodule World.Skills.Sculpt do
   # for the materials of the model (`World.Drawing.assemble/3`). The
   # check makes sure that the image has a place for the triangles of the
   # budget.
-  defp maps(built, nil), do: {Enum.flat_map(built, &elem(&1, 0)), %{}}
+  defp maps(built, nil), do: {Enum.flat_map(built, &elem(&1, 0)), fn -> %{} end}
 
   defp maps(built, side) do
     # The finish of each role of the palette, for an edit with no finish of its own.
@@ -139,13 +144,23 @@ defmodule World.Skills.Sculpt do
     {meshes, maps} = World.Sculpt.Bake.maps(built, side, defaults)
     png = fn rows -> {"image/png", World.PNG.encode(rows, 3)} end
 
-    spec =
-      for {key, rows} <- [{"image", maps.color}, {"finish_image", maps.finish}, {"glow_image", maps.glow}],
+    # Each image becomes a PNG file in a process of its own; the function
+    # waits for them.
+    files =
+      for {key, rows} <- [
+            {"normal_image", maps.normal},
+            {"image", maps.color},
+            {"finish_image", maps.finish},
+            {"glow_image", maps.glow}
+          ],
           rows != nil,
-          into: %{"normal_image" => png.(maps.normal), "atlas" => true},
-          do: {key, png.(rows)}
+          do: Task.async(fn -> {key, png.(rows)} end)
 
-    {meshes, %{"materials" => Map.new(meshes, &{Atom.to_string(&1.material), spec})}}
+    {meshes,
+     fn ->
+       spec = files |> Task.await_many(:infinity) |> Map.new() |> Map.put("atlas", true)
+       %{"materials" => Map.new(meshes, &{Atom.to_string(&1.material), spec})}
+     end}
   end
 
   # The details of a sculpture at a level, each as the data of a

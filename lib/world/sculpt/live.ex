@@ -66,7 +66,7 @@ defmodule World.Sculpt.Live do
   def meshes(name, opts \\ []) do
     with {pieces, lists, edits, step} <- call(name, :surface) do
       pieces
-      |> Surface.meshes(Keyword.put_new(opts, :small, 2 * step))
+      |> Surface.meshes(opts |> Keyword.put_new(:small, 2 * step) |> Keyword.put_new(:step, step))
       |> World.Sculpt.Finish.meshes(lists, edits, step)
     end
   end

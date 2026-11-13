@@ -462,6 +462,89 @@ defmodule World.SDF do
   end
 
   @doc """
+  `sample/3` with the finish of the surface at the point too (`finish/3`,
+  with the same `defaults`): `{value, color, finish}`. One fold of the
+  edits gives the three: the weights of the color are the weights of the
+  finish.
+  """
+  def sample(edits, p, limit, defaults) do
+    {d, {r, g, b}, finish} = look(edits, p, {limit, @far}, {1.0, 1.0, 1.0}, {0.6, 0.0, 0.0}, limit, defaults)
+    {d, {srgb(r), srgb(g), srgb(b)}, finish}
+  end
+
+  # The fold of `tint/6` with the finish of `finish/3`.
+  defp look([], _p, {d, _u}, col, fin, _limit, _defaults), do: {d, col, fin}
+
+  defp look([%Edit{mode: :add, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults) do
+    de = distance(e, p)
+    w = weight(u - de, r)
+    {rough, metal} = Map.get(defaults, e.material, {0.6, 0.0})
+    own = {e.roughness || rough, e.metal || metal, e.glow || 0.0}
+
+    look(
+      rest,
+      p,
+      {clamp(less(d, de, e), limit), less(u, de, e)},
+      mix(col, c || {1.0, 1.0, 1.0}, w),
+      part(fin, own, w),
+      limit,
+      defaults
+    )
+  end
+
+  defp look([%Edit{mode: :subtract, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults) do
+    de = distance(e, p)
+    w = weight(-de - u, r)
+
+    look(
+      rest,
+      p,
+      {clamp(more(d, -de, e), limit), more(u, -de, e)},
+      mix(col, c, w),
+      part(fin, {e.roughness, e.metal, e.glow}, w),
+      limit,
+      defaults
+    )
+  end
+
+  defp look([%Edit{mode: :crop, blend: r, color: c} = e | rest], p, {d, u}, col, fin, limit, defaults) do
+    de = distance(e, p)
+    w = weight(de - u, r)
+
+    look(
+      rest,
+      p,
+      {clamp(more(d, de, e), limit), more(u, de, e)},
+      mix(col, c, w),
+      part(fin, {e.roughness, e.metal, e.glow}, w),
+      limit,
+      defaults
+    )
+  end
+
+  defp look(
+         [%Edit{mode: :paint, blend: r, color: c, raise: h, opacity: o} = e | rest],
+         p,
+         {d, u},
+         col,
+         fin,
+         limit,
+         defaults
+       ) do
+    w = smooth(weight(-2 * distance(e, p), r))
+
+    look(
+      rest,
+      p,
+      {clamp(d - h * w, limit), u - h * w},
+      mix(col, c, w * o),
+      part(fin, {e.roughness, e.metal, e.glow}, w * o),
+      limit,
+      defaults
+    )
+  end
+
+  @doc """
   The finish of the surface of the edits at a point: `{roughness, metal,
   glow}`, each from 0 to 1 (`docs/plans/0010-sculpture-maps.md`, D10).
   It is the fold of the edits, with the weights of the fold of the

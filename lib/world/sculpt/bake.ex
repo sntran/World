@@ -48,6 +48,8 @@ defmodule World.Sculpt.Bake do
   # The most triangles of a patch, and the cosine of the most angle from
   # the face of its first triangle to the face of another one (25 degrees).
   @patch 256
+  # The most triangles of a group: the patches of a group are made in one process.
+  @group 4_000
   @tilt 0.866
   # The texels round the triangles of a chart that have values.
   @reach 3
@@ -162,7 +164,7 @@ defmodule World.Sculpt.Bake do
               {group, _} -> {:cont, Enum.reverse(group), nil}
             end
           )
-          |> Stream.map(fn group ->
+          |> Enum.map(fn group ->
             used = for(s <- group, {t, _} <- s.tris, i <- Map.fetch!(lists, t.id), uniq: true, do: i)
             place = used |> Enum.with_index() |> Map.new()
 
@@ -178,7 +180,9 @@ defmodule World.Sculpt.Bake do
               edits = fn {t, at} -> {%{t | list: Enum.map(t.list, &elem(some, &1))}, at} end
               for s <- group, do: {s.at, {s.w, s.h}, texels(%{s | tris: Enum.map(s.tris, edits)}, defaults, side)}
             end,
-            max_concurrency: System.schedulers_online(),
+            # (Two tasks for each scheduler: a task waits at times, for memory or for the collector.)
+            max_concurrency: 2 * System.schedulers_online(),
+            ordered: false,
             timeout: :infinity
           )
           |> Enum.flat_map(fn {:ok, group} -> group end)
@@ -198,14 +202,14 @@ defmodule World.Sculpt.Bake do
             )
           end
 
-        {meshes,
-         %{
-           side: side,
-           color: if(colors?, do: image(done, side, 0, @gray)),
-           normal: image(done, side, 1, @flat),
-           finish: if(finish?, do: image(done, side, 2, @plain)),
-           glow: if(glow?, do: image(done, side, 3, <<0, 0, 0>>))
-         }}
+        [color, normal, finish, glow] =
+          [{colors?, 0, @gray}, {true, 1, @flat}, {finish?, 2, @plain}, {glow?, 3, <<0, 0, 0>>}]
+          |> Task.async_stream(fn {wanted?, which, blank} -> if wanted?, do: image(done, side, which, blank) end,
+            timeout: :infinity
+          )
+          |> Enum.map(fn {:ok, rows} -> rows end)
+
+        {meshes, %{side: side, color: color, normal: normal, finish: finish, glow: glow}}
     end
   end
 
@@ -260,7 +264,13 @@ defmodule World.Sculpt.Bake do
   # [{triangle, the texels of its corners in the rectangle}]}], scale}`,
   # at the largest scale that fits (a search by halves), or `:small`.
   defp pack(triangles, side) do
-    strips = patches(triangles)
+    # The patches of each group of triangles in a process of its own
+    # (and with a heap of its own: the caller can hold a large model).
+    strips =
+      triangles
+      |> groups()
+      |> Task.async_stream(&patches/1, max_concurrency: System.schedulers_online(), ordered: false, timeout: :infinity)
+      |> Enum.flat_map(fn {:ok, patches} -> patches end)
 
     if place(strips, 0.0, side) == :small do
       :small
@@ -270,13 +280,33 @@ defmodule World.Sculpt.Bake do
       high = 2 * side / max(mean, 1.0e-9)
 
       {scale, _} =
-        Enum.reduce(1..24, {0.0, high}, fn _, {lo, hi} ->
+        Enum.reduce(1..16, {0.0, high}, fn _, {lo, hi} ->
           mid = (lo + hi) / 2
           if place(strips, mid, side) == :small, do: {lo, mid}, else: {mid, hi}
         end)
 
       {place(strips, scale, side), scale}
     end
+  end
+
+  # The triangles in groups by their places, of `@group` triangles at
+  # the most: a group is cut in two halves across the longest side of
+  # its box, at its middle triangle, again and again. A patch is of one
+  # group.
+  defp groups(triangles) when length(triangles) <= @group, do: [triangles]
+
+  defp groups(triangles) do
+    centers = for %{points: {p0, p1, p2}} = t <- triangles, do: {Vec.add(Vec.add(p0, p1), p2), t}
+    {{x0, y0, z0}, {x1, y1, z1}} = Vec.bounds(Enum.map(centers, &elem(&1, 0)))
+    {_, axis} = Enum.max([{x1 - x0, 0}, {y1 - y0, 1}, {z1 - z0, 2}])
+
+    {low, high} =
+      centers
+      |> Enum.sort_by(fn {c, t} -> {elem(c, axis), t.id} end)
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.split(div(length(triangles), 2))
+
+    groups(low) ++ groups(high)
   end
 
   # The patches of the triangles, each seen flat: `[%{tris: [{triangle,
@@ -511,6 +541,7 @@ defmodule World.Sculpt.Bake do
         for {id, {c, r}} <- group, do: {id, for(e <- SDF.prune(near, c, r, limit), do: Map.fetch!(place, e.id))}
       end,
       max_concurrency: System.schedulers_online(),
+      ordered: false,
       timeout: :infinity
     )
     |> Enum.flat_map(fn {:ok, group} -> group end)
@@ -540,16 +571,21 @@ defmodule World.Sculpt.Bake do
     # The chart, the place, the value and the color of the field at each
     # texel of a triangle, and the weights of the corners of the
     # triangle at that place.
+    # (The finish only when an edit has one: `defaults` then. One fold of
+    # the edits gives it with the color.)
     values =
       for {{i, j}, {k, weights}} <- owners(charts, w, h), c = elem(charts, k), p = mix(c.points, weights), into: %{} do
-        {f, color} = SDF.sample(c.list, p, c.limit)
-        {{i, j}, {c, p, f, color, weights}}
+        {f, color, finish} =
+          if defaults,
+            do: SDF.sample(c.list, p, c.limit, defaults),
+            else: Tuple.insert_at(SDF.sample(c.list, p, c.limit), 2, nil)
+
+        {{i, j}, {c, p, f, color, {weights, finish}}}
       end
 
     done =
-      for {{i, j} = at, {c, p, f, {r, g, b}, weights}} <- values, into: %{} do
-        # The finish of the texel, with the finish of an edit only.
-        {finish, glow} = if defaults, do: finish(c, p, {r, g, b}, defaults), else: {<<>>, <<>>}
+      for {{i, j} = at, {c, p, f, {r, g, b}, {weights, finish}}} <- values, into: %{} do
+        {finish, glow} = if finish, do: finish({r, g, b}, finish), else: {<<>>, <<>>}
         {at, {<<r, g, b>>, normal(c, i, j, {p, f, weights}, values), finish, glow}}
       end
 
@@ -630,8 +666,7 @@ defmodule World.Sculpt.Bake do
 
   # The bytes of the finish of a texel (the roughness in the green, the
   # metal in the blue), and of its glow (its color times its glow).
-  defp finish(c, p, {r, g, b}, defaults) do
-    {rough, metal, glow} = SDF.finish(c.list, p, defaults)
+  defp finish({r, g, b}, {rough, metal, glow}) do
     {<<255, round(rough * 255), round(metal * 255)>>, <<round(r * glow), round(g * glow), round(b * glow)>>}
   end
 
