@@ -42,6 +42,8 @@ defmodule World.Sculpt.Bake do
   # The texel of a place with no chart: a mean gray, and the normal of the face.
   @gray <<128, 128, 128>>
   @flat <<128, 128, 255>>
+  # The finish of a place with no chart: rough, no metal (the red is not in use).
+  @plain <<255, 153, 0>>
 
   @doc """
   The least side of an image (texels) for `faces` triangles: each pair
@@ -66,9 +68,20 @@ defmodule World.Sculpt.Bake do
   and its details, each with its own edits and cells): `parts` is a list
   of `{meshes, edits, step}`. The meshes come back in one list, in the
   order of the parts.
+
+  When an edit has a finish of its own (`World.SDF.finish/3`), the maps
+  have `finish` too: the rows of an image with the roughness in its
+  green and the metal in its blue, as glTF reads them; and `glow`, the
+  color of each texel times its glow, when an edit glows. `defaults` is
+  the finish of the material of an edit with none of its own (a role to
+  `{roughness, metal}`).
   """
-  def maps(parts, side) do
+  def maps(parts, side, defaults \\ %{}) do
     colors? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.color) end)
+    finish? = Enum.any?(parts, fn {_, edits, _} -> SDF.finished?(edits) end)
+    glow? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, &((&1.glow || 0.0) > 0.0)) end)
+    # The finish of the materials, when a texel needs it (nil with no finish of an edit).
+    defaults = if finish?, do: defaults
     meshes = Enum.flat_map(parts, &elem(&1, 0))
     # The edits of all the parts in one list: the list of a triangle is
     # places in it. Each part has its first place, its limit and its cells.
@@ -131,7 +144,7 @@ defmodule World.Sculpt.Bake do
             fn {some, group} ->
               some = List.to_tuple(some)
               edits = fn t -> t && %{t | list: Enum.map(t.list, &elem(some, &1))} end
-              for s <- group, do: {s.at, s.n, texels(%{s | lower: edits.(s.lower), upper: edits.(s.upper)})}
+              for s <- group, do: {s.at, s.n, texels(%{s | lower: edits.(s.lower), upper: edits.(s.upper)}, defaults)}
             end,
             max_concurrency: System.schedulers_online(),
             timeout: :infinity
@@ -158,7 +171,9 @@ defmodule World.Sculpt.Bake do
          %{
            side: side,
            color: if(colors?, do: image(done, side, 0, @gray)),
-           normal: image(done, side, 1, @flat)
+           normal: image(done, side, 1, @flat),
+           finish: if(finish?, do: image(done, side, 2, @plain)),
+           glow: if(glow?, do: image(done, side, 3, <<0, 0, 0>>))
          }}
     end
   end
@@ -263,7 +278,7 @@ defmodule World.Sculpt.Bake do
 
   # The rows of a square: `{colors, normals}`, each a list of `n`
   # binaries from the top.
-  defp texels(%{n: n, lower: lower, upper: upper}) do
+  defp texels(%{n: n, lower: lower, upper: upper}, defaults) do
     charts = {chart(lower, :lower, n), upper && chart(upper, :upper, n)}
     owner = fn i, j -> if i + j <= n - 2, do: elem(charts, 0), else: elem(charts, 1) end
     # The texels (i, j) and (k, l) are of one chart.
@@ -278,19 +293,32 @@ defmodule World.Sculpt.Bake do
 
     rows =
       for j <- 0..(n - 1) do
-        for i <- 0..(n - 1), reduce: {<<>>, <<>>} do
-          {colors, normals} ->
+        for i <- 0..(n - 1), reduce: {<<>>, <<>>, <<>>, <<>>} do
+          {colors, normals, finishes, glows} ->
             case {owner.(i, j), values[{i, j}]} do
               {c, {f, {r, g, b}}} ->
-                {<<colors::binary, r, g, b>>, <<normals::binary, normal(c, i, j, f, values, same)::binary>>}
+                # The finish of the texel, with the finish of an edit only.
+                {finish, glow} = if defaults, do: finish(c, i, j, {r, g, b}, defaults), else: {<<>>, <<>>}
+
+                {<<colors::binary, r, g, b>>, <<normals::binary, normal(c, i, j, f, values, same)::binary>>,
+                 <<finishes::binary, finish::binary>>, <<glows::binary, glow::binary>>}
 
               _ ->
-                {<<colors::binary, @gray::binary>>, <<normals::binary, @flat::binary>>}
+                {<<colors::binary, @gray::binary>>, <<normals::binary, @flat::binary>>,
+                 <<finishes::binary, @plain::binary>>, <<glows::binary, 0, 0, 0>>}
             end
         end
       end
 
-    {Enum.map(rows, &elem(&1, 0)), Enum.map(rows, &elem(&1, 1))}
+    {Enum.map(rows, &elem(&1, 0)), Enum.map(rows, &elem(&1, 1)), Enum.map(rows, &elem(&1, 2)),
+     Enum.map(rows, &elem(&1, 3))}
+  end
+
+  # The bytes of the finish of a texel (the roughness in the green, the
+  # metal in the blue), and of its glow (its color times its glow).
+  defp finish(c, i, j, {r, g, b}, defaults) do
+    {rough, metal, glow} = SDF.finish(c.list, at(c, i, j), defaults)
+    {<<255, round(rough * 255), round(metal * 255)>>, <<round(r * glow), round(g * glow), round(b * glow)>>}
   end
 
   # The chart of a triangle in a square of n texels: the place of a

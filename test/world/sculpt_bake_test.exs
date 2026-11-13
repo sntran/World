@@ -354,6 +354,106 @@ defmodule World.Sculpt.BakeTest do
     JSON.decode!(json)
   end
 
+  test "the finish of the edits at a point: a roughness, a metal and a glow, with the weights of the colors (plan 0010, D10)" do
+    ball = SDF.edit(:ball, {0.5}, material: :gold)
+    # A half of metal with a soft border, a wet spot, and a spot that glows.
+    metal =
+      SDF.edit(:box, {1.0, 1.0, 0.5},
+        frame: Frame.move({0.0, 0.0, 0.6}),
+        mode: :paint,
+        blend: 0.1,
+        metal: 1.0,
+        roughness: 0.2
+      )
+
+    wet = SDF.edit(:ball, {0.1}, frame: Frame.move({0.5, 0.0, -0.2}), mode: :paint, roughness: 0.05)
+    lamp = SDF.edit(:ball, {0.1}, frame: Frame.move({-0.5, 0.0, -0.2}), mode: :paint, glow: 0.8, color: {255, 200, 100})
+    edits = [ball, metal, wet, lamp]
+    assert SDF.finished?(edits) and not SDF.finished?([ball])
+    # With no finish of its own, an edit that adds has the finish of its material, or rough and no metal.
+    assert SDF.finish(edits, {0.0, 0.0, -0.5}) == {0.6, 0.0, 0.0}
+    assert SDF.finish(edits, {0.0, 0.0, -0.5}, %{gold: {0.3, 1.0}}) == {0.3, 1.0, 0.0}
+    assert SDF.finish(edits, {0.0, 0.0, 0.5}) == {0.2, 1.0, 0.0}
+    # A paint gives the parts that it has: the roughness only, or the glow only.
+    assert SDF.finish(edits, {0.5, 0.0, -0.2}) == {0.05, 0.0, 0.0}
+    assert SDF.finish(edits, {-0.5, 0.0, -0.2}) == {0.6, 0.0, 0.8}
+    # Across the soft border of the metal: between the two.
+    {rough, metal_part, _} = SDF.finish(edits, Vec.scale(Vec.norm({1.0, 0.0, 0.22}), 0.5))
+    assert rough > 0.2 and rough < 0.6 and metal_part > 0.0 and metal_part < 1.0
+    # An edit that adds with its own finish, and a cut with a finish on the surface that it cuts.
+    knob = SDF.edit(:ball, {0.1}, frame: Frame.move({0.0, 0.5, 0.0}), roughness: 0.9, metal: 0.5, glow: 0.1)
+    hole = SDF.edit(:ball, {0.1}, frame: Frame.move({0.0, -0.5, 0.0}), mode: :subtract, metal: 1.0)
+    assert SDF.finish([ball, knob, hole], {0.0, 0.6, 0.0}) == {0.9, 0.5, 0.1}
+    assert SDF.finish([ball, knob, hole], {0.0, -0.4, 0.0}) == {0.6, 1.0, 0.0}
+
+    # The maps: the roughness in the green and the metal in the blue of the finish, the color times the glow.
+    meshes = Sculpt.model(edits, step: 0.1, budget: 200, cache: false)
+    {baked, maps} = Bake.maps(meshes, edits, 0.1, 128)
+    assert length(maps.finish) == 128 and length(maps.glow) == 128
+
+    for chart <- charts(baked, 128), {x, y} = at <- chart.texels do
+      place = mix(Enum.map(chart.points, &elem(&1, 0)), weights(chart, at))
+      {rough, metal, glow} = SDF.finish(edits, place)
+      assert texel(maps.finish, x, y) == {255, round(rough * 255), round(metal * 255)}
+      {r, g, b} = SDF.color(edits, place)
+      assert texel(maps.glow, x, y) == {round(r * glow), round(g * glow), round(b * glow)}
+    end
+
+    # No chart: rough, no metal, no glow. With no finish of an edit, no such images.
+    assert texel(maps.finish, 127, 127) == {255, 153, 0} and texel(maps.glow, 127, 127) == {0, 0, 0}
+
+    assert {_, %{finish: nil, glow: nil}} =
+             Bake.maps(Sculpt.model([ball], step: 0.1, budget: 200, cache: false), [ball], 0.1, 128)
+
+    # A finish and no glow: the image of the finish only.
+    assert {_, %{finish: [_ | _], glow: nil}} = Bake.maps(meshes, [ball, metal], 0.1, 128)
+  end
+
+  test "the GLB of a sculpture with finishes: the image of the metal and the roughness, and the image of the glow (R10)" do
+    data =
+      put_in(@data, ["edits"], [
+        %{"shape" => "ball", "size" => [0.3], "material" => "paint", "color" => "#c08020"},
+        %{
+          "shape" => "box",
+          "size" => [0.4, 0.4, 0.2],
+          "at" => [0, 0, 0.25],
+          "mode" => "paint",
+          "blend" => 0.05,
+          "finish" => "shiny_metal"
+        },
+        %{
+          "shape" => "ball",
+          "size" => [0.08],
+          "at" => [0.3, 0, 0],
+          "mode" => "paint",
+          "glow" => 0.9,
+          "roughness" => 0.3
+        }
+      ])
+
+    assert paths(data) == []
+    g = gltf(data)
+    assert length(g["images"]) == 4
+    [m] = g["materials"]
+
+    assert %{"metallicRoughnessTexture" => %{"index" => _}, "roughnessFactor" => 1.0, "metallicFactor" => 1.0} =
+             m["pbrMetallicRoughness"]
+
+    assert %{"emissiveTexture" => %{"index" => glow}, "emissiveFactor" => [1.0, 1.0, 1.0]} = m
+    assert Enum.at(g["textures"], glow)["sampler"] == 1
+
+    # The finish of an edit from its name, or from its own numbers; the errors with their paths.
+    [_, metal, lamp] = World.Skills.Sculpt.edits(data["edits"])
+    assert {metal.roughness, metal.metal, metal.glow} == {0.15, 1.0, nil}
+    assert {lamp.roughness, lamp.metal, lamp.glow} == {0.3, nil, 0.9}
+    at = "options.drawing.nodes.0.skill.sculpt.edits.1"
+    bad = fn key, value -> paths(put_in(data, ["edits", Access.at(1), key], value)) end
+    assert bad.("finish", "wax") == ["#{at}.finish"]
+    assert bad.("roughness", 2) == ["#{at}.roughness"]
+    assert bad.("metal", -1) == ["#{at}.metal"]
+    assert bad.("glow", "bright") == ["#{at}.glow"]
+  end
+
   test "a part of a baked mesh and a mesh with no maps of one material: each point has a UV" do
     edits = [SDF.edit(:ball, {0.3}, color: {200, 100, 50})]
     {[baked], _} = Bake.maps(Sculpt.model(edits, step: 0.1, cache: false), edits, 0.1, 128)

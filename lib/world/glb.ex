@@ -473,6 +473,21 @@ defmodule World.GLB do
       "metallicFactor" => spec["metalness"] / 1
     }
 
+    # The finish of a sculpture as an image (`World.Sculpt.Bake`): its
+    # green is the roughness and its blue the metal, so the two factors
+    # are 1.
+    {pbr, buf} =
+      case spec["finish_image"] do
+        nil ->
+          {pbr, buf}
+
+        file ->
+          {texture, buf} = texture(buf, file, nil)
+
+          {Map.merge(pbr, %{"metallicRoughnessTexture" => texture, "roughnessFactor" => 1.0, "metallicFactor" => 1.0}),
+           plain(buf, texture, spec)}
+      end
+
     # The color of the spec is a factor of the texture: white by
     # default, the color of a hair, or a tint of clothes.
     {pbr, buf} =
@@ -505,6 +520,19 @@ defmodule World.GLB do
           {texture, buf} = texture(buf, file, spec["image_transform"] || spec["normal_image_scale"])
 
           {Map.put(material, "normalTexture", Map.put(texture, "scale", Map.get(spec, "normal_scale", 1.0) / 1)),
+           plain(buf, texture, spec)}
+      end
+
+    # The glow of a sculpture as an image: the light that the surface gives.
+    {material, buf} =
+      case spec["glow_image"] do
+        nil ->
+          {material, buf}
+
+        file ->
+          {texture, buf} = texture(buf, file, nil)
+
+          {Map.merge(material, %{"emissiveTexture" => texture, "emissiveFactor" => [1.0, 1.0, 1.0]}),
            plain(buf, texture, spec)}
       end
 

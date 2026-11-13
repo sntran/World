@@ -113,6 +113,7 @@ defmodule World.Sculpt do
   defp thickness(:ring, {_big, r}), do: 2 * r
   defp thickness(:cylinder, {r, h}), do: 2 * min(r, h)
   defp thickness(:cone, {r1, r2, h}), do: 2 * min(max(r1, r2), h)
+  defp thickness(:prism, {r, h, _sides}), do: 2 * min(r, h)
   defp thickness(shape, {x, y, z, _}) when shape in [:round_box, :superellipsoid], do: 2 * Enum.min([x, y, z])
   defp thickness(_shape, size), do: 2 * (size |> Tuple.to_list() |> Enum.min())
 

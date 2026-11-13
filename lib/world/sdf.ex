@@ -43,7 +43,13 @@ defmodule World.SDF do
   - `:superellipsoid` `{rx, ry, rz, e}` (`|x/rx|^e + |y/ry|^e + |z/rz|^e
     = 1`, `e` from 2 (the ellipsoid) up, toward a box; a bound);
   - `:tube` `{points, radii}` (round cones through the points of a
-    curve, with the radius at each point).
+    curve, with the radius at each point);
+  - `:wedge` `{hx, hy, hz}` (a box with a slope from its top edge at the
+    back to its bottom edge at the front; a bound);
+  - `:prism` `{r, h, n}` (`n` sides round z, each `r` from the axis, from
+    z = -h to z = h; a bound);
+  - `:pyramid` `{hx, hy, h}` (a base of `2 hx` by `2 hy` at z = -h, and
+    its point at z = h; a bound).
 
   The distances follow the formulas of Inigo Quilez
   (https://iquilezles.org/articles/distfunctions/).
@@ -53,8 +59,22 @@ defmodule World.SDF do
 
   # The field of no edit: far outside.
   @far 1.0e30
-  @shapes [:ball, :box, :round_box, :capsule, :cylinder, :cone, :ring, :ellipsoid, :superellipsoid, :tube]
-  @modes [:add, :subtract, :paint]
+  @shapes [
+    :ball,
+    :box,
+    :round_box,
+    :capsule,
+    :cylinder,
+    :cone,
+    :ring,
+    :ellipsoid,
+    :superellipsoid,
+    :tube,
+    :wedge,
+    :prism,
+    :pyramid
+  ]
+  @modes [:add, :subtract, :paint, :crop]
 
   defmodule Edit do
     @moduledoc "An edit of a sculpture (`World.SDF.edit/3`)."
@@ -68,6 +88,11 @@ defmodule World.SDF do
               material: nil,
               color: nil,
               raise: 0.0,
+              hard: false,
+              opacity: 1.0,
+              roughness: nil,
+              metal: nil,
+              glow: nil,
               box: nil,
               id: nil
   end
@@ -86,13 +111,18 @@ defmodule World.SDF do
   the color of the surface of the edit, `color/3`) and `raise` (m, for
   an edit that paints: the surface moves out by that much in its shape,
   or in with less than 0, with a smooth step across its border over its
-  blend: a relief that follows the surface, as a scale or a groove).
+  blend: a relief that follows the surface, as a scale or a groove),
+  and the finish of its surface: `roughness`, `metal` and `glow` (each
+  from 0 to 1, or nil; `finish/3`). `hard: true` makes the blend a flat
+  slope between the two surfaces (`chamfer/3`), and `opacity` (0 to 1,
+  for an edit that paints) is the part of its color and of its finish
+  that the surface takes.
   """
   def edit(shape, size, opts \\ []) when shape in @shapes do
     frame = Keyword.get(opts, :frame, Frame.identity())
     mode = Keyword.get(opts, :mode, :add)
     blend = Keyword.get(opts, :blend, 0.0) / 1
-    unless mode in @modes, do: raise(ArgumentError, "the mode of an edit is add, subtract or paint")
+    unless mode in @modes, do: raise(ArgumentError, "the mode of an edit is add, subtract, paint or crop")
     lift = Keyword.get(opts, :raise, 0.0) / 1
     if lift != 0.0 and mode != :paint, do: raise(ArgumentError, "only an edit that paints has a raise")
     size = floats(size)
@@ -108,6 +138,11 @@ defmodule World.SDF do
       material: Keyword.get(opts, :material),
       color: linear(Keyword.get(opts, :color)),
       raise: lift,
+      hard: Keyword.get(opts, :hard, false),
+      opacity: Keyword.get(opts, :opacity, 1.0) * 1.0,
+      roughness: number(opts[:roughness]),
+      metal: number(opts[:metal]),
+      glow: number(opts[:glow]),
       box: placed(local_bounds(shape, size), frame)
     }
 
@@ -117,12 +152,15 @@ defmodule World.SDF do
   end
 
   defp identify(%Edit{} = e) do
-    %{
-      e
-      | id:
-          :erlang.md5(:erlang.term_to_binary({e.shape, e.size, e.frame, e.mode, e.blend, e.material, e.color, e.raise}))
-    }
+    what =
+      {e.shape, e.size, e.frame, e.mode, e.blend, e.material, e.color, e.raise, e.roughness, e.metal, e.glow, e.hard,
+       e.opacity}
+
+    %{e | id: :erlang.md5(:erlang.term_to_binary(what))}
   end
+
+  defp number(nil), do: nil
+  defp number(v), do: v * 1.0
 
   @doc """
   The edits for a mesh with cells of `step` m, when maps have the fine
@@ -209,13 +247,15 @@ defmodule World.SDF do
     if @inline[shape] do
       # The numbers of the frame (a move, or a turn), of the size, the blend and the raise.
       [kind | frame] = Tuple.to_list(local)
-      List.to_tuple([:"#{shape}_#{kind}_#{mode}" | numbers(frame ++ Tuple.to_list(size) ++ [k, up])])
+      List.to_tuple([:"#{shape}_#{kind}_#{mode}" | numbers(frame ++ Tuple.to_list(size) ++ [k, up, hard(e)])])
     else
-      {:"any_#{mode}", e, k, up}
+      {:"any_#{mode}", e, k, up, hard(e)}
     end
   end
 
   defp numbers(list), do: Enum.map(list, &(&1 * 1.0))
+  # A hard blend, as a number of the hot loop.
+  defp hard(%Edit{hard: hard}), do: if(hard, do: 1.0, else: 0.0)
 
   require World.SDF.Inline, as: Inline
 
@@ -329,12 +369,12 @@ defmodule World.SDF do
 
   steps = fn
     :paint -> plain.(quote(do: Inline.lift(d, de, k, up, limit)))
-    mode -> plain.(quote(do: Inline.blend(unquote(mode), d, de, k, limit)))
+    mode -> plain.(quote(do: Inline.blend(unquote(mode), d, de, k, hd, limit)))
   end
 
   for {shape, distance} <- distances, {frame, {names, place}} <- frames, mode <- @modes do
     tag = :"#{shape}_#{frame}_#{mode}"
-    names = names ++ Enum.map(1..@inline[shape], &:"s#{&1}") ++ [:k, :up]
+    names = names ++ Enum.map(1..@inline[shape], &:"s#{&1}") ++ [:k, :up, :hd]
     vars = Enum.map(names, &Macro.var(&1, nil))
 
     floats =
@@ -343,27 +383,31 @@ defmodule World.SDF do
     defp run([{unquote(tag), unquote_splicing(vars)} | rest], x, y, z, d, limit) when unquote(floats) do
       unquote(plain.(place))
       de = unquote(plain.(distance))
-      _ = up
+      _ = {up, hd}
       run(rest, x, y, z, unquote(steps.(mode)), limit)
     end
   end
 
   # Each other shape: its distance from `distance/2`.
   for mode <- @modes do
-    defp run([{unquote(:"any_#{mode}"), edit, k, up} | rest], x, y, z, d, limit) do
+    defp run([{unquote(:"any_#{mode}"), edit, k, up, hd} | rest], x, y, z, d, limit) do
       de = distance(edit, {x, y, z})
-      _ = up
+      _ = {up, hd}
       run(rest, x, y, z, unquote(steps.(mode)), limit)
     end
   end
 
   defp fold([], _p, d, _limit), do: d
 
-  defp fold([%Edit{mode: :add, blend: r} = e | rest], p, d, limit),
-    do: fold(rest, p, clamp(smin(d, distance(e, p), r), limit), limit)
+  defp fold([%Edit{mode: :add} = e | rest], p, d, limit),
+    do: fold(rest, p, clamp(less(d, distance(e, p), e), limit), limit)
 
-  defp fold([%Edit{mode: :subtract, blend: r} = e | rest], p, d, limit),
-    do: fold(rest, p, clamp(smax(d, -distance(e, p), r), limit), limit)
+  defp fold([%Edit{mode: :subtract} = e | rest], p, d, limit),
+    do: fold(rest, p, clamp(more(d, -distance(e, p), e), limit), limit)
+
+  # A crop keeps what is inside its shape.
+  defp fold([%Edit{mode: :crop} = e | rest], p, d, limit),
+    do: fold(rest, p, clamp(more(d, distance(e, p), e), limit), limit)
 
   # A paint with a raise moves the surface in its shape; a paint with
   # none does not change the value.
@@ -376,14 +420,23 @@ defmodule World.SDF do
 
   # An edit on the field so far: the smooth union, the smooth cut, or the
   # paint of the surface in its shape.
-  defp step(%Edit{mode: :add, blend: r, material: m}, {d, mat}, de), do: {smin(d, de, r), if(de < d, do: m, else: mat)}
+  defp step(%Edit{mode: :add, material: m} = e, {d, mat}, de), do: {less(d, de, e), if(de < d, do: m, else: mat)}
 
-  defp step(%Edit{mode: :subtract, blend: r, material: m}, {d, mat}, de),
-    do: {smax(d, -de, r), if(m != nil and -de > d, do: m, else: mat)}
+  defp step(%Edit{mode: :subtract, material: m} = e, {d, mat}, de),
+    do: {more(d, -de, e), if(m != nil and -de > d, do: m, else: mat)}
+
+  defp step(%Edit{mode: :crop, material: m} = e, {d, mat}, de),
+    do: {more(d, de, e), if(m != nil and de > d, do: m, else: mat)}
 
   # A paint with no material (a color only) keeps the material under it.
   defp step(%Edit{mode: :paint, material: m, raise: h, blend: r}, {d, mat}, de),
     do: {d - h * smooth(weight(-2 * de, r)), if(m != nil and de <= 0.0, do: m, else: mat)}
+
+  # The least and the most of two values in the blend of an edit: smooth,
+  # or with a flat slope for a hard blend.
+  defp less(a, b, %Edit{blend: r, hard: false}), do: smin(a, b, r)
+  defp less(a, b, %Edit{blend: r}), do: chamfer(a, b, r)
+  defp more(a, b, e), do: -less(-a, -b, e)
 
   @doc """
   The color of the surface of the edits at a point: `{r, g, b}`, 0 to
@@ -409,6 +462,52 @@ defmodule World.SDF do
   end
 
   @doc """
+  The finish of the surface of the edits at a point: `{roughness, metal,
+  glow}`, each from 0 to 1 (`docs/plans/0010-sculpture-maps.md`, D10).
+  It is the fold of the edits, with the weights of the fold of the
+  colors (`color/3`): an edit that adds gives its finish to its surface
+  (with none of its own, the finish of its material in `defaults`: a
+  role to `{roughness, metal}`; with no role there, rough and no metal),
+  and no glow with none of its own; an edit that takes away or paints
+  gives the parts of the finish that it has, and keeps the others.
+  """
+  def finish(edits, p, defaults \\ %{}) do
+    {_, finish} =
+      Enum.reduce(edits, {@far, {0.6, 0.0, 0.0}}, fn e, {u, finish} ->
+        de = distance(e, p)
+
+        case e.mode do
+          :add ->
+            {rough, metal} = Map.get(defaults, e.material, {0.6, 0.0})
+            own = {e.roughness || rough, e.metal || metal, e.glow || 0.0}
+            {less(u, de, e), part(finish, own, weight(u - de, e.blend))}
+
+          :subtract ->
+            {more(u, -de, e), part(finish, {e.roughness, e.metal, e.glow}, weight(-de - u, e.blend))}
+
+          :crop ->
+            {more(u, de, e), part(finish, {e.roughness, e.metal, e.glow}, weight(de - u, e.blend))}
+
+          :paint ->
+            w = smooth(weight(-2 * de, e.blend))
+            {u - e.raise * w, part(finish, {e.roughness, e.metal, e.glow}, w * e.opacity)}
+        end
+      end)
+
+    finish
+  end
+
+  @doc "An edit of these has a finish of its own (`finish/3`)."
+  def finished?(edits), do: Enum.any?(edits, &(&1.roughness || &1.metal || &1.glow))
+
+  # Each part of a finish to the part of another one by a weight (a part
+  # that the other one does not have stays). With a weight of 1, the part
+  # is the part of the other one to the bit.
+  defp part({a, b, c}, {d, e, f}, w), do: {part(a, d, w), part(b, e, w), part(c, f, w)}
+  defp part(a, nil, _w), do: a
+  defp part(a, b, w), do: a * (1 - w) + b * w
+
+  @doc """
   The part of each edit that adds in the surface at a point, as the
   fold of the colors has it (`color/3`): `[{edit, share}]`, the shares
   add to 1 (an empty list with no edit that adds). The edit of the
@@ -421,10 +520,13 @@ defmodule World.SDF do
         %Edit{mode: :add, blend: r} = e, {u, shares} ->
           de = distance(e, p)
           w = weight(u - de, r)
-          {smin(u, de, r), [{e, w} | for({o, s} <- shares, do: {o, s * (1 - w)})]}
+          {less(u, de, e), [{e, w} | for({o, s} <- shares, do: {o, s * (1 - w)})]}
 
-        %Edit{mode: :subtract, blend: r} = e, {u, shares} ->
-          {smax(u, -distance(e, p), r), shares}
+        %Edit{mode: :subtract} = e, {u, shares} ->
+          {more(u, -distance(e, p), e), shares}
+
+        %Edit{mode: :crop} = e, {u, shares} ->
+          {more(u, distance(e, p), e), shares}
 
         _, acc ->
           acc
@@ -443,17 +545,23 @@ defmodule World.SDF do
   defp tint([%Edit{mode: :add, blend: r, color: c} = e | rest], p, d, u, col, limit) do
     de = distance(e, p)
     col = mix(col, c || {1.0, 1.0, 1.0}, weight(u - de, r))
-    tint(rest, p, clamp(smin(d, de, r), limit), smin(u, de, r), col, limit)
+    tint(rest, p, clamp(less(d, de, e), limit), less(u, de, e), col, limit)
   end
 
   defp tint([%Edit{mode: :subtract, blend: r, color: c} = e | rest], p, d, u, col, limit) do
     de = distance(e, p)
-    tint(rest, p, clamp(smax(d, -de, r), limit), smax(u, -de, r), mix(col, c, weight(-de - u, r)), limit)
+    tint(rest, p, clamp(more(d, -de, e), limit), more(u, -de, e), mix(col, c, weight(-de - u, r)), limit)
   end
 
-  defp tint([%Edit{mode: :paint, blend: r, color: c, raise: h} = e | rest], p, d, u, col, limit) do
+  # A crop gives its color to the surface that it makes.
+  defp tint([%Edit{mode: :crop, blend: r, color: c} = e | rest], p, d, u, col, limit) do
+    de = distance(e, p)
+    tint(rest, p, clamp(more(d, de, e), limit), more(u, de, e), mix(col, c, weight(de - u, r)), limit)
+  end
+
+  defp tint([%Edit{mode: :paint, blend: r, color: c, raise: h, opacity: o} = e | rest], p, d, u, col, limit) do
     w = smooth(weight(-2 * distance(e, p), r))
-    tint(rest, p, clamp(d - h * w, limit), u - h * w, mix(col, c, w), limit)
+    tint(rest, p, clamp(d - h * w, limit), u - h * w, mix(col, c, w * o), limit)
   end
 
   # The weight of the second of two values in their smooth minimum: 1
@@ -500,6 +608,18 @@ defmodule World.SDF do
   def smax(a, b, r), do: -smin(-a, -b, r)
 
   @doc """
+  The minimum of two values with a flat slope across the blend `r` (the
+  hard blend of Dreams): the minimum when the two values are `r` or more
+  apart, and half of what is missing to `r` less than the minimum else.
+  Between two flat faces at a right angle it makes a flat face at 45
+  degrees, `r` from their edge on each. As `smin/3`, an edit reaches
+  only `r` past its shape, and the field stays a bound (it lowers the
+  minimum by at most `r / 2`).
+  """
+  def chamfer(a, b, r) when r <= 0.0, do: min(a, b)
+  def chamfer(a, b, r), do: min(a, b) - max(r - abs(a - b), 0.0) / 2
+
+  @doc """
   The bounds of the inside of a sculpture (`{lo, hi}`, in its axes), or
   `nil` with no edit that adds: the boxes of the shapes that add, grown
   by a quarter of the sum of the blends (each smooth minimum lowers the
@@ -509,8 +629,13 @@ defmodule World.SDF do
   """
   def bounds(edits) do
     case for(%Edit{mode: :add, box: box} <- edits, do: box) do
-      [] -> nil
-      boxes -> boxes |> Enum.reduce(&join/2) |> grow(Enum.sum(Enum.map(edits, & &1.blend)) / 4 + relief(edits))
+      [] ->
+        nil
+
+      boxes ->
+        # A smooth minimum lowers the field by a quarter of its blend at the most, a hard one by a half.
+        reach = Enum.sum(for e <- edits, do: if(e.hard, do: e.blend / 2, else: e.blend / 4))
+        boxes |> Enum.reduce(&join/2) |> grow(reach + relief(edits))
     end
   end
 
@@ -543,9 +668,12 @@ defmodule World.SDF do
 
         case e.mode do
           :add when dlo >= hi + e.blend -> {kept, range}
-          :add -> {[e | kept], {clamp(smin(lo, dlo, e.blend), limit), clamp(smin(hi, dhi, e.blend), limit)}}
+          :add -> {[e | kept], {clamp(less(lo, dlo, e), limit), clamp(less(hi, dhi, e), limit)}}
           :subtract when dlo >= e.blend - lo -> {kept, range}
-          :subtract -> {[e | kept], {clamp(smax(lo, -dhi, e.blend), limit), clamp(smax(hi, -dlo, e.blend), limit)}}
+          :subtract -> {[e | kept], {clamp(more(lo, -dhi, e), limit), clamp(more(hi, -dlo, e), limit)}}
+          # A crop whose shape holds the cell, deeper than the field so far and its blend, changes nothing.
+          :crop when dhi <= lo - e.blend -> {kept, range}
+          :crop -> {[e | kept], {clamp(more(lo, dlo, e), limit), clamp(more(hi, dhi, e), limit)}}
           :paint when dlo > e.blend / 2 -> {kept, range}
           # A raise lowers the field by its height at the most (or lifts it, with less than 0).
           :paint -> {[e | kept], {clamp(lo - max(e.raise, 0.0), limit), clamp(hi - min(e.raise, 0.0), limit)}}
@@ -576,6 +704,12 @@ defmodule World.SDF do
   defp local_bounds(:ring, {big, r}), do: {{-big - r, -big - r, -r}, {big + r, big + r, r}}
   defp local_bounds(:ellipsoid, {x, y, z}), do: {{-x, -y, -z}, {x, y, z}}
   defp local_bounds(:superellipsoid, {x, y, z, _}), do: {{-x, -y, -z}, {x, y, z}}
+
+  defp local_bounds(:wedge, {x, y, z}), do: {{-x, -y, -z}, {x, y, z}}
+  defp local_bounds(:pyramid, {x, y, h}), do: {{-x, -y, -h}, {x, y, h}}
+  # The corners of a prism are farther from its axis than its sides.
+  defp local_bounds(:prism, {r, h, n}),
+    do: (fn far -> {{-far, -far, -h}, {far, far, h}} end).(r / :math.cos(:math.pi() / n))
 
   defp local_bounds(:tube, {points, radii}) do
     boxes = Enum.zip_with(points, radii, fn p, r -> {Vec.sub(p, {r, r, r}), Vec.add(p, {r, r, r})} end)
@@ -645,6 +779,29 @@ defmodule World.SDF do
   defp local(:superellipsoid, {rx, ry, rz, e}, {x, y, z}) do
     n = :math.pow(:math.pow(abs(x / rx), e) + :math.pow(abs(y / ry), e) + :math.pow(abs(z / rz), e), 1.0 / e)
     (n - 1.0) * Enum.min([rx, ry, rz])
+  end
+
+  # The wedge, the prism and the pyramid: the most of the distances to
+  # the planes of their faces. Inside and at a face it is the distance; at
+  # an edge or a corner it is less (a bound, with a slope of at most 1).
+
+  # The wedge: a box with a slope from its top edge at the back (y = -hy)
+  # to its bottom edge at the front (y = hy).
+  defp local(:wedge, {hx, hy, hz}, {x, y, z}) do
+    slope = (hz * y + hy * z) / :math.sqrt(hz * hz + hy * hy)
+    Enum.max([abs(x) - hx, -y - hy, -z - hz, slope])
+  end
+
+  # The prism: `n` sides round z, each `r` from the axis, from z = -h to z = h.
+  defp local(:prism, {r, h, n}, {x, y, z}) do
+    sides = for i <- 0..(round(n) - 1), a = 2 * :math.pi() * i / n, do: x * :math.cos(a) + y * :math.sin(a) - r
+    Enum.max([abs(z) - h | sides])
+  end
+
+  # The pyramid: a base of 2 hx by 2 hy at z = -h, and its point at z = h.
+  defp local(:pyramid, {hx, hy, h}, {x, y, z}) do
+    side = fn across, half -> (2 * h * abs(across) + half * (z - h)) / :math.sqrt(4 * h * h + half * half) end
+    Enum.max([-z - h, side.(x, hx), side.(y, hy)])
   end
 
   defp local(:tube, {[a | rest], [ra | radii]}, p) do

@@ -32,7 +32,16 @@ defmodule World.Skills.Sculpt do
   alias World.Sculpt.Bones
 
   @keys ~w(edits groups details ports sources budget cells bake bones bone_blend plan gait clips)
-  @edit ~w(shape size at axis up mode blend material color raise mirror repeat)
+  @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow mirror repeat)
+  # The finishes with a name: a roughness and a metal.
+  @finishes %{
+    "plastic" => {0.4, 0.0},
+    "shiny" => {0.15, 0.0},
+    "rough" => {0.9, 0.0},
+    "metal" => {0.4, 1.0},
+    "shiny_metal" => {0.15, 1.0},
+    "rough_metal" => {0.8, 1.0}
+  }
   @use ~w(shape group at axis up scale mirror repeat)
   @most 10_000
   @size 1_000
@@ -49,7 +58,10 @@ defmodule World.Skills.Sculpt do
     "cone" => 3,
     "ring" => 2,
     "ellipsoid" => 3,
-    "superellipsoid" => 4
+    "superellipsoid" => 4,
+    "wedge" => 3,
+    "prism" => 3,
+    "pyramid" => 3
   }
 
   @impl true
@@ -120,12 +132,18 @@ defmodule World.Skills.Sculpt do
   defp maps(built, nil), do: {Enum.flat_map(built, &elem(&1, 0)), %{}}
 
   defp maps(built, side) do
-    {meshes, maps} = World.Sculpt.Bake.maps(built, side)
-    png = fn rows -> rows && {"image/png", World.PNG.encode(rows, 3)} end
+    # The finish of each role of the palette, for an edit with no finish of its own.
+    defaults =
+      Map.new(GLB.palette(), fn {role, spec} -> {GLB.role(role), {spec["roughness"] / 1, spec["metalness"] / 1}} end)
+
+    {meshes, maps} = World.Sculpt.Bake.maps(built, side, defaults)
+    png = fn rows -> {"image/png", World.PNG.encode(rows, 3)} end
 
     spec =
-      %{"normal_image" => png.(maps.normal), "atlas" => true}
-      |> Map.merge(if maps.color, do: %{"image" => png.(maps.color)}, else: %{})
+      for {key, rows} <- [{"image", maps.color}, {"finish_image", maps.finish}, {"glow_image", maps.glow}],
+          rows != nil,
+          into: %{"normal_image" => png.(maps.normal), "atlas" => true},
+          do: {key, png.(rows)}
 
     {meshes, %{"materials" => Map.new(meshes, &{Atom.to_string(&1.material), spec})}}
   end
@@ -218,9 +236,15 @@ defmodule World.Skills.Sculpt do
       frame: frame(e),
       mode: @atoms[Map.get(e, "mode", "add")],
       blend: Map.get(e, "blend", 0) / 1,
+      hard: e["blend_type"] == "hard",
+      opacity: Map.get(e, "opacity", 1) / 1,
       material: e["material"] && GLB.role(e["material"]),
       color: e["color"] && rgb(e["color"]),
-      raise: Map.get(e, "raise", 0) / 1
+      raise: Map.get(e, "raise", 0) / 1,
+      # The finish of the edit: its own numbers, or the numbers of its finish with a name.
+      roughness: e["roughness"] || elem(Map.get(@finishes, e["finish"], {nil, nil}), 0),
+      metal: e["metal"] || elem(Map.get(@finishes, e["finish"], {nil, nil}), 1),
+      glow: e["glow"]
     }
 
     for copy <- copies(e), do: copy.(spec)
@@ -247,6 +271,7 @@ defmodule World.Skills.Sculpt do
   # The sizes of a shape at a scale (the power of a superellipsoid stays).
   defp scaled(:tube, {points, radii}, k), do: {Enum.map(points, &Vec.scale(&1, k)), Enum.map(radii, &(&1 * k))}
   defp scaled(:superellipsoid, {x, y, z, e}, k), do: {x * k, y * k, z * k, e}
+  defp scaled(:prism, {r, h, n}, k), do: {r * k, h * k, n}
   defp scaled(_shape, size, k), do: size |> Tuple.to_list() |> Enum.map(&(&1 * k)) |> List.to_tuple()
 
   # The copies of an edit of the data, each as a function of a plain edit:
@@ -336,10 +361,22 @@ defmodule World.Skills.Sculpt do
     World.Skill.keys(e, path, @edit, ~w(shape size)) ++
       shape(e, path) ++
       placed(e, path) ++
-      optional(e, "mode", path, &choice(&1, &2, ~w(add subtract paint))) ++
+      optional(e, "mode", path, &choice(&1, &2, ~w(add subtract paint crop))) ++
       optional(e, "blend", path, &number(&1, &2, 0, 10)) ++
+      optional(e, "blend_type", path, &choice(&1, &2, ~w(soft hard))) ++
+      optional(e, "opacity", path, fn v, p ->
+        cond do
+          number(v, p, 0, 1) != [] -> number(v, p, 0, 1)
+          e["mode"] != "paint" -> [{p, "is for an edit of the mode paint"}]
+          true -> []
+        end
+      end) ++
       optional(e, "material", path, &choice(&1, &2, GLB.palette() |> Map.keys() |> Enum.sort())) ++
       optional(e, "color", path, &color/2) ++
+      optional(e, "finish", path, &choice(&1, &2, @finishes |> Map.keys() |> Enum.sort())) ++
+      optional(e, "roughness", path, &number(&1, &2, 0, 1)) ++
+      optional(e, "metal", path, &number(&1, &2, 0, 1)) ++
+      optional(e, "glow", path, &number(&1, &2, 0, 1)) ++
       optional(e, "raise", path, &lift(&1, &2, e))
   end
 
@@ -422,6 +459,10 @@ defmodule World.Skills.Sculpt do
 
   defp extra("superellipsoid", [_, _, _, e], path) do
     if e >= 2 and e <= 64, do: [], else: [{path, "the power must be from 2 to 64"}]
+  end
+
+  defp extra("prism", [_, _, n], path) do
+    if n == round(n) and n >= 3 and n <= 12, do: [], else: [{"#{path}.2", "must be a count of sides from 3 to 12"}]
   end
 
   defp extra("cone", [r1, r2, h], path) do

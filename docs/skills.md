@@ -117,7 +117,7 @@ plan, and each other node takes it in `from`.
 
 | Skill | Trade | Data | What it makes |
 |---|---|---|---|
-| `sculpt` | sculptor | `edits`, `groups`, `details`, `ports`, `sources`, `budget`, `cells`, `bake`, `bones`, `bone_blend`, `plan`, `gait`, `clips` | A part from a list of edits: simple shapes that add, take away or paint, each with a blend, a color and copies (`docs/format.md`, "A sculpture"). The tree of its bricks is the crew of the hand of the sculptor. With `bake`, a color map and a normal map from the field of the edits. With `bones`, a figure: one skinned mesh that follows the bones, with the clips of its body plan and of its keys. |
+| `sculpt` | sculptor | `edits`, `groups`, `details`, `ports`, `sources`, `budget`, `cells`, `bake`, `bones`, `bone_blend`, `plan`, `gait`, `clips` | A part from a list of edits: simple shapes that add, take away, crop or paint, each with a blend (soft or hard), a color, a finish and copies (`docs/format.md`, "A sculpture"). The tree of its bricks is the crew of the hand of the sculptor. With `bake`, the maps from the field of the edits: the color, the normal, and the finish and the glow when an edit has them. With `bones`, a figure: one skinned mesh that follows the bones, with the clips of its body plan and of its keys. |
 
 ## A tower (`World.Skills.Towers`)
 

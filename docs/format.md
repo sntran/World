@@ -440,12 +440,21 @@ An edit has its `shape` and its `size`, and these keys:
 - `at`, `axis`, `up`: the place of the shape and its turn (its z on
   `axis`, its y on `up`), as a port; with no `axis`, z up, and with no
   `up`, y to the front (z, when the axis is along y);
-- `mode`: `add` (by default), `subtract` or `paint` (the shape gives its
-  material to the surface in it, and does not change the shape);
+- `mode`: `add` (by default), `subtract`, `crop` (only the part of the
+  sculpture in the shape stays, and the cut face has the material and
+  the color of the edit) or `paint` (the shape gives its material to the
+  surface in it, and does not change the shape);
 - `blend` (m, 0 by default, at most 10): with 0 the edge between the edit
-  and the sculpture is hard; with more, the joint is smooth (the
+  and the sculpture is sharp; with more, the joint is smooth (the
   quadratic smooth minimum), and the edit reaches `blend` past its shape
   and no more;
+- `blend_type`: `soft` (by default: a round joint) or `hard`: a flat
+  slope across the joint, as wide as the `blend` (a chamfer: the weld of
+  two plates, the bevel of a cut);
+- `opacity` (0 to 1, 1 by default; for an edit of the mode `paint`): the
+  part of its color, its finish and its glow that the paint gives. With
+  a half, the surface has the mean of its color and the color of the
+  paint (a glaze, a stain, dirt);
 - `material`: a role of the palette (`priv/palette.json`);
 - `color` (`#rrggbb`): the color of the surface of the edit. The color at
   a point of the surface is the fold of the edits in their order, as its
@@ -467,6 +476,17 @@ An edit has its `shape` and its `size`, and these keys:
   smaller than the faces of mid or far is its mean color there, with no
   noise.
 
+- `finish`, `roughness`, `metal`, `glow`: the finish of the surface of
+  the edit, for a level with maps (`bake`, below). `roughness` and
+  `metal` are from 0 to 1, as in the palette; `finish` is a name for the
+  two: `plastic`, `shiny`, `rough`, `metal`, `shiny_metal` or
+  `rough_metal` (the numbers of the edit come first). `glow` (0 to 1) is
+  the light that the surface gives: its color times the glow. The finish
+  at a point is the fold of the edits, as the color is: an edit that
+  adds gives its finish to its surface (with none of its own, the finish
+  of its material in the palette); an edit that paints or takes away
+  gives the parts that it has, with a soft border as wide as its
+  `blend`. So a part of one surface is metal, or wet, or a lamp;
 - `raise` (m, from -0.1 to 0.1; for an edit of the mode `paint`, and at
   most its `blend`): the surface moves out by that much in the shape of
   the edit, or in with less than 0, with a slope across its border as
@@ -524,6 +544,9 @@ has its smooth light, and a hard edge of hard edits stays hard.
 | `ellipsoid` | `[rx, ry, rz]` |
 | `superellipsoid` | `[rx, ry, rz, e]`: `|x/rx|^e + |y/ry|^e + |z/rz|^e = 1`, the power `e` from 2 (the ellipsoid) to 64 (near a box) |
 | `tube` | `{"points": [[x, y, z], ...], "radii": [r, ...]}`: round cones through 2 to 256 points, with the radius at each point |
+| `wedge` | `[hx, hy, hz]`: a box of these half sizes with a slope from its top edge at the back (y = -hy) to its bottom edge at the front (y = hy): a ramp, a roof, a blade |
+| `prism` | `[r, h, n]`: `n` flat sides (3 to 12) round z, each `r` from the axis, from z = -h to z = h: with 6, a nut or a pencil |
+| `pyramid` | `[hx, hy, h]`: a base of `2 hx` by `2 hy` at z = -h, and its point at z = h |
 
 The levels: cells of 2 cm at near, 8 cm at mid and 32 cm at far. The
 grid of each level is the same for each sculpture, so a brick (8 × 8 × 8
@@ -574,7 +597,9 @@ takes them from the thinnest edit (the ring of 8 mm below would make
 cells of 4 mm). The two images are
 PNG files in the GLB, on each material of the sculpture, with a sampler
 that makes no smaller copies of the image (each level has its own
-image). In a model, the roles of the materials of a baked sculpture have
+image). When an edit has a finish of its own, the GLB has a third image
+(the roughness and the metal of each texel); when an edit glows, a
+fourth one (the light of each texel). In a model, the roles of the materials of a baked sculpture have
 its maps: another node of the same model must use other roles.
 
 ```json

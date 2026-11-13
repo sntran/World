@@ -354,6 +354,62 @@ defmodule World.Skills.SculptTest do
     assert_in_delta scaled.raise, 0.03, 1.0e-12
   end
 
+  test "a crop, a hard blend, an opacity and the wedge, the prism and the pyramid in the data: the edits, and the errors with their paths (plan 0010, R11)" do
+    body = %{"shape" => "prism", "size" => [0.2, 0.3, 6], "color" => "#808080"}
+
+    edits = [
+      body,
+      %{"shape" => "wedge", "size" => [0.1, 0.2, 0.1], "at" => [0, 0, 0.35], "blend" => 0.04, "blend_type" => "hard"},
+      %{
+        "shape" => "pyramid",
+        "size" => [0.1, 0.1, 0.1],
+        "at" => [0, 0, -0.35],
+        "blend" => 0.02,
+        "blend_type" => "soft"
+      },
+      %{"shape" => "ball", "size" => [0.32], "mode" => "crop", "blend" => 0.02, "blend_type" => "hard"},
+      %{
+        "shape" => "ball",
+        "size" => [0.1],
+        "at" => [0.2, 0, 0],
+        "mode" => "paint",
+        "color" => "#000000",
+        "opacity" => 0.5
+      }
+    ]
+
+    data = %{"edits" => edits, "budget" => %{"mid" => 1_500}}
+    assert paths(drawing(data)) == []
+    [prism, wedge, pyramid, crop, paint] = Skill.edits(edits)
+    assert {prism.shape, wedge.shape, pyramid.shape} == {:prism, :wedge, :pyramid}
+    assert prism.size == {0.2, 0.3, 6}
+    assert wedge.hard and crop.hard and not pyramid.hard and not prism.hard
+    assert crop.mode == :crop and paint.opacity == 0.5 and prism.opacity == 1.0
+    # The paint of a half: the mean of the light of the gray and of the black.
+    assert World.SDF.color([prism, paint], {0.2, 0.0, 0.0}) == {92, 92, 92}
+
+    # A prism of a group keeps its count of sides at a scale.
+    [scaled] = Skill.edits([%{"shape" => "group", "group" => "g", "scale" => 2}], %{"g" => [body]})
+    assert scaled.size == {0.4, 0.6, 6}
+
+    # A sculptor makes it. The cells come from the budget and from the thinnest edit.
+    mid = Detail.with(:mid, fn -> Drawing.build(drawing(data)) end)
+    assert [{"stone", %World.Part{shapes: [%Mesh{} = mesh | _]}, _}] = mid.nodes
+    # The crop took away the corners of the prism and the tips of the wedge and of the pyramid.
+    assert Enum.all?(mesh.points, fn p -> World.Vec.len(p) < 0.33 end)
+    assert Enum.any?(mesh.points, fn {_, _, z} -> z > 0.3 end) and Enum.any?(mesh.points, fn {_, _, z} -> z < -0.3 end)
+
+    at = "options.drawing.nodes.0.skill.sculpt.edits"
+    bad = fn i, change -> paths(drawing(%{"edits" => List.update_at(edits, i, change)})) end
+    assert bad.(0, &Map.put(&1, "size", [0.2, 0.3, 2])) == ["#{at}.0.size.2"]
+    assert bad.(0, &Map.put(&1, "size", [0.2, 0.3, 4.5])) == ["#{at}.0.size.2"]
+    assert bad.(1, &Map.put(&1, "blend_type", "round")) == ["#{at}.1.blend_type"]
+    assert bad.(4, &Map.put(&1, "opacity", 2)) == ["#{at}.4.opacity"]
+    # An opacity is for a paint.
+    assert bad.(3, &Map.put(&1, "opacity", 0.5)) == ["#{at}.3.opacity"]
+    assert bad.(3, &Map.put(&1, "mode", "keep")) == ["#{at}.3.mode"]
+  end
+
   test "the errors of a mirror, a repeat and a group, each with its path; the count of the copies" do
     p = "options.drawing.nodes.0.skill.sculpt"
     ball = %{"shape" => "ball", "size" => [0.1]}

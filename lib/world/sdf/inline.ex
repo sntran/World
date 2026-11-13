@@ -8,32 +8,57 @@ defmodule World.SDF.Inline do
   it stands for: the values are the same to the bit.
   """
 
-  @doc "The value of the field after an edit with the distance `de`: `clamp(smin(d, de, k))` and the others."
-  defmacro blend(:add, d, de, k, limit) do
+  @doc """
+  The value of the field after an edit with the distance `de`:
+  `clamp(smin(d, de, k))` and the others. `hard` is more than 0 for a
+  hard blend (a flat slope).
+  """
+  defmacro blend(:add, d, de, k, hard, limit) do
     quote do
       least = if unquote(d) < unquote(de), do: unquote(d), else: unquote(de)
-      unquote(__MODULE__).clamp(unquote(__MODULE__).soft(least, unquote(d), unquote(de), unquote(k)), unquote(limit))
+
+      unquote(__MODULE__).clamp(
+        unquote(__MODULE__).soft(least, unquote(d), unquote(de), unquote(k), unquote(hard)),
+        unquote(limit)
+      )
     end
   end
 
   # smax(d, -de, k) = -smin(-d, de, k).
-  defmacro blend(:subtract, d, de, k, limit) do
+  defmacro blend(:subtract, d, de, k, hard, limit) do
     quote do
       back = -unquote(d)
       least = if back < unquote(de), do: back, else: unquote(de)
-      unquote(__MODULE__).clamp(-unquote(__MODULE__).soft(least, back, unquote(de), unquote(k)), unquote(limit))
+
+      unquote(__MODULE__).clamp(
+        -unquote(__MODULE__).soft(least, back, unquote(de), unquote(k), unquote(hard)),
+        unquote(limit)
+      )
     end
   end
 
-  @doc "The least of two values `a` and `b` (`least`), lower in their blend `k`: the smooth minimum."
-  defmacro soft(least, a, b, k) do
+  # smax(d, de, k) = -smin(-d, -de, k).
+  defmacro blend(:crop, d, de, k, hard, limit) do
+    quote do
+      {back, out} = {-unquote(d), -unquote(de)}
+      least = if back < out, do: back, else: out
+      unquote(__MODULE__).clamp(-unquote(__MODULE__).soft(least, back, out, unquote(k), unquote(hard)), unquote(limit))
+    end
+  end
+
+  @doc """
+  The least of two values `a` and `b` (`least`), lower in their blend
+  `k`: the smooth minimum, or the minimum with a flat slope for a hard
+  blend.
+  """
+  defmacro soft(least, a, b, k, hard) do
     quote do
       if unquote(k) <= 0.0 do
         unquote(least)
       else
         gap = unquote(k) - abs(unquote(a) - unquote(b))
         gap = if gap > 0.0, do: gap, else: 0.0
-        unquote(least) - gap * gap / (4 * unquote(k))
+        if unquote(hard) > 0.0, do: unquote(least) - gap / 2, else: unquote(least) - gap * gap / (4 * unquote(k))
       end
     end
   end

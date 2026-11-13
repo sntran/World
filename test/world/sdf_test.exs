@@ -244,18 +244,25 @@ defmodule World.SDFTest do
       :ring -> {u.(0.1, 0.3), u.(0.02, 0.08)}
       :superellipsoid -> {u.(0.05, 0.3), u.(0.05, 0.3), u.(0.05, 0.3), 4.0}
       :tube -> {[{0.0, 0.0, 0.0}, {0.2, 0.1, 0.0}, {0.3, 0.3, 0.1}], [0.05, 0.03, 0.02]}
+      :wedge -> {u.(0.05, 0.3), u.(0.05, 0.3), u.(0.05, 0.3)}
+      :prism -> {u.(0.05, 0.3), u.(0.05, 0.3), 6}
+      :pyramid -> {u.(0.05, 0.3), u.(0.05, 0.3), u.(0.05, 0.3)}
     end
 
     edits =
-      for shape <- SDF.shapes(), turn? <- [false, true], mode <- SDF.modes(), blend <- [0.0, u.(0.02, 0.1)] do
+      for shape <- SDF.shapes(),
+          turn? <- [false, true],
+          mode <- SDF.modes(),
+          blend <- [0.0, u.(0.02, 0.1)],
+          hard <- [false, true] do
         raise = if mode == :paint, do: [raise: u.(-0.03, 0.03)], else: []
-        SDF.edit(shape, size.(shape), [frame: frame.(turn?), mode: mode, blend: blend] ++ raise)
+        SDF.edit(shape, size.(shape), [frame: frame.(turn?), mode: mode, blend: blend, hard: hard] ++ raise)
       end
 
     # A paint with no raise is not in the list of the value.
     plain = SDF.edit(:ball, {0.2}, mode: :paint, color: {1, 2, 3})
     assert {:fast, list} = SDF.fast(edits ++ [plain])
-    assert length(list) == length(edits) and length(edits) == 10 * 2 * 3 * 2
+    assert length(list) == length(edits) and length(edits) == 13 * 2 * 4 * 2 * 2
     points = for _ <- 1..2_000, do: {u.(-1, 1), u.(-1, 1), u.(-1, 1)}
 
     # All the edits in their order, and each edit after one ball (each clause of the loop, on the two sides of 0).
@@ -283,12 +290,16 @@ defmodule World.SDFTest do
       k = if k < 0.1, do: 0.0, else: k
       limit = abs(limit) + 0.05
       clamp = fn v -> min(max(v, -limit), limit) end
-      assert Inline.blend(:add, d, de, k, limit) == clamp.(SDF.smin(d, de, k))
-      assert Inline.blend(:subtract, d, de, k, limit) == clamp.(SDF.smax(d, -de, k))
+      assert Inline.blend(:add, d, de, k, 0.0, limit) == clamp.(SDF.smin(d, de, k))
+      assert Inline.blend(:subtract, d, de, k, 0.0, limit) == clamp.(SDF.smax(d, -de, k))
+      assert Inline.blend(:crop, d, de, k, 0.0, limit) == clamp.(SDF.smax(d, de, k))
+      # A hard blend: the flat slope.
+      assert Inline.blend(:add, d, de, k, 1.0, limit) == clamp.(SDF.chamfer(d, de, k))
+      assert Inline.blend(:crop, d, de, k, 1.0, limit) == clamp.(-SDF.chamfer(-d, -de, k))
       assert Inline.clamp(d * 3, limit) == clamp.(d * 3)
       assert Inline.positive(d) == max(d, 0.0)
       least = min(d, de)
-      assert Inline.soft(least, d, de, k) == SDF.smin(d, de, k)
+      assert Inline.soft(least, d, de, k, 0.0) == SDF.smin(d, de, k)
       # A paint with a raise: the field of a ball with the paint of a box at a point.
       paint = SDF.edit(:box, {0.2, 0.2, 0.2}, mode: :paint, blend: k, raise: h)
       p = {de, d, 0.1}
@@ -304,6 +315,106 @@ defmodule World.SDFTest do
     t = Inline.root(Enum.max([ux - sx, uy - sy, uz - sz, 0.0]), ux, uy, uz, sx, sy, sz, 8)
     {dx, dy, dz} = {x * t / (sx + t), y * t / (sy + t), z * t / (sz + t)}
     assert :math.sqrt(dx * dx + dy * dy + dz * dz) == SDF.distance(SDF.edit(:ellipsoid, {rx, ry, rz}), {x, y, z})
+  end
+
+  test "a crop keeps what is inside its shape; a hard blend makes a flat slope; a paint has an opacity (plan 0010, R11)" do
+    ball = SDF.edit(:ball, {0.5}, material: :stone, color: {200, 200, 200})
+    crop = SDF.edit(:box, {0.3, 1.0, 1.0}, mode: :crop, material: :rust, color: {10, 20, 30})
+    edits = [ball, crop]
+
+    # In the box the ball stays; out of it nothing; the cut face is at x = 0.3, with the material and the color of the crop.
+    assert SDF.value(edits, {0.2, 0.0, 0.0}) < 0 and SDF.value(edits, {0.4, 0.0, 0.0}) > 0
+    assert_in_delta SDF.value(edits, {0.3, 0.1, 0.1}), 0.0, 1.0e-12
+    assert {_, :rust} = SDF.field(edits, {0.3, 0.1, 0.1})
+    assert {_, :stone} = SDF.field(edits, {0.0, 0.0, 0.5})
+    assert SDF.color(edits, {0.3, 0.1, 0.1}) == {10, 20, 30}
+    assert SDF.color(edits, {0.0, 0.0, 0.5}) == {200, 200, 200}
+    # A crop has no share of the surface for the bones, and gives its finish to its face.
+    assert SDF.shares(edits, {0.3, 0.1, 0.1}) == [{ball, 1.0}]
+    assert SDF.finish([ball, %{crop | metal: 1.0}], {0.3, 0.1, 0.1}) == {0.6, 1.0, 0.0}
+    # A crop that holds the whole cell, deep in it, goes from the list of the cell.
+    assert SDF.prune([ball, SDF.edit(:ball, {5.0}, mode: :crop)], {0.0, 0.0, 0.5}, 0.1) == [ball]
+    assert SDF.prune(edits, {0.3, 0.0, 0.0}, 0.1) == edits
+    assert_raise ArgumentError, fn -> SDF.edit(:ball, {1}, mode: :keep) end
+
+    # The hard blend: the minimum with a flat slope. Two flat faces at a right angle (a floor and a wall)
+    # get a flat face from 0.1 m on the floor to 0.1 m on the wall; a smooth blend gives a round one.
+    assert SDF.chamfer(0.3, 0.7, 0.0) == 0.3 and SDF.chamfer(0.3, 0.8, 0.4) == 0.3
+    assert_in_delta SDF.chamfer(0.2, 0.2, 0.4), 0.0, 1.0e-12
+    floor = SDF.edit(:box, {5.0, 5.0, 5.0}, frame: Frame.move({0.0, 0.0, -5.0}))
+    wall = fn opts -> SDF.edit(:box, {5.0, 5.0, 5.0}, [frame: Frame.move({-5.0, 0.0, 0.0}), blend: 0.1] ++ opts) end
+    hard = [floor, wall.(hard: true)]
+    for t <- [0.02, 0.05, 0.08], do: assert_in_delta(SDF.value(hard, {t, 0.0, 0.1 - t}), 0.0, 1.0e-12)
+    assert SDF.value([floor, wall.([])], {0.05, 0.0, 0.05}) > 0.02
+    # It reaches only its blend past its shape, and the field keeps a slope of at most 1.
+    assert_in_delta SDF.value(hard, {0.2, 0.0, 0.05}), 0.05, 1.0e-12
+    :rand.seed(:exsss, {3, 3, 3})
+    mixed = [ball, SDF.edit(:box, {0.3, 0.3, 0.3}, frame: Frame.move({0.5, 0.0, 0.0}), blend: 0.2, hard: true), crop]
+
+    for _ <- 1..500 do
+      [p, q] = for _ <- 1..2, do: {:rand.uniform() - 0.3, :rand.uniform() - 0.5, :rand.uniform() - 0.5}
+      assert abs(SDF.value(mixed, p) - SDF.value(mixed, q)) <= Vec.len(Vec.sub(p, q)) * (1 + 1.0e-9)
+      # A cell keeps the edits that can change the field in it, with a crop and a hard blend too.
+      half = 0.02 + :rand.uniform() * 0.2
+      {kept, {lo, hi}} = SDF.cell(mixed, p, half)
+      near = Vec.add(p, Vec.scale(Vec.norm(Vec.sub(q, p)), half * :rand.uniform()))
+      assert SDF.field(kept, near) == SDF.field(mixed, near)
+      assert SDF.value(mixed, near) >= lo - 1.0e-12 and SDF.value(mixed, near) <= hi + 1.0e-12
+    end
+
+    # The bounds hold the inside, which a hard blend moves out by half of its blend at the most.
+    assert SDF.bounds([SDF.edit(:ball, {1}, blend: 0.4, hard: true)]) == {{-1.2, -1.2, -1.2}, {1.2, 1.2, 1.2}}
+
+    # A paint with an opacity of a half: the mean of the light of the two colors.
+    white = SDF.edit(:ball, {0.5}, color: {255, 255, 255})
+
+    black = fn opacity ->
+      SDF.edit(:ball, {0.2}, frame: Frame.move({0.5, 0.0, 0.0}), mode: :paint, color: {0, 0, 0}, opacity: opacity)
+    end
+
+    assert SDF.color([white, black.(1.0)], {0.5, 0.0, 0.0}) == {0, 0, 0}
+    assert SDF.color([white, black.(0.5)], {0.5, 0.0, 0.0}) == {188, 188, 188}
+    assert SDF.color([white, black.(0.0)], {0.5, 0.0, 0.0}) == {255, 255, 255}
+    assert SDF.finish([white, %{black.(0.5) | metal: 1.0}], {0.5, 0.0, 0.0}) == {0.6, 0.5, 0.0}
+  end
+
+  test "the wedge, the prism and the pyramid: their faces, their inside, a slope of at most 1, and their bounds" do
+    wedge = SDF.edit(:wedge, {0.3, 0.4, 0.2})
+    # The slope goes from the top edge at the back to the bottom edge at the front, through the center.
+    assert_in_delta SDF.distance(wedge, {0.0, 0.0, 0.0}), 0.0, 1.0e-12
+    assert_in_delta SDF.distance(wedge, {0.0, -0.4, 0.2}), 0.0, 1.0e-12
+    assert_in_delta SDF.distance(wedge, {0.0, 0.4, -0.2}), 0.0, 1.0e-12
+    assert SDF.distance(wedge, {0.0, -0.2, -0.1}) < 0 and SDF.distance(wedge, {0.0, 0.2, 0.1}) > 0
+    assert_in_delta SDF.distance(wedge, {0.5, -0.2, -0.1}), 0.2, 1.0e-12
+
+    prism = SDF.edit(:prism, {0.3, 0.2, 6})
+    assert_in_delta SDF.distance(prism, {0.0, 0.0, 0.0}), -0.2, 1.0e-12
+    # Each of its six sides is 0.3 from its axis; its corners are farther.
+    for i <- 0..5,
+        a = i * :math.pi() / 3,
+        do: assert_in_delta(SDF.distance(prism, {0.3 * :math.cos(a), 0.3 * :math.sin(a), 0.0}), 0.0, 1.0e-12)
+
+    assert SDF.distance(prism, {0.32 * :math.cos(:math.pi() / 6), 0.32 * :math.sin(:math.pi() / 6), 0.0}) < 0
+    assert_in_delta SDF.distance(prism, {0.0, 0.0, 0.5}), 0.3, 1.0e-12
+
+    pyramid = SDF.edit(:pyramid, {0.3, 0.2, 0.4})
+    assert_in_delta SDF.distance(pyramid, {0.0, 0.0, 0.4}), 0.0, 1.0e-12
+    assert_in_delta SDF.distance(pyramid, {0.3, 0.0, -0.4}), 0.0, 1.0e-12
+    assert_in_delta SDF.distance(pyramid, {0.0, 0.2, -0.4}), 0.0, 1.0e-12
+    assert_in_delta SDF.distance(pyramid, {0.0, 0.0, -0.6}), 0.2, 1.0e-12
+    assert SDF.distance(pyramid, {0.0, 0.0, 0.0}) < 0 and SDF.distance(pyramid, {0.2, 0.0, 0.2}) > 0
+
+    :rand.seed(:exsss, {2, 2, 2})
+
+    for e <- [wedge, prism, pyramid] do
+      {lo, hi} = SDF.bounds([e])
+
+      for _ <- 1..500 do
+        [p, q] = for _ <- 1..2, do: {:rand.uniform() - 0.5, :rand.uniform() - 0.5, :rand.uniform() - 0.5}
+        assert abs(SDF.distance(e, p) - SDF.distance(e, q)) <= Vec.len(Vec.sub(p, q)) * (1 + 1.0e-9)
+        if SDF.distance(e, p) < 0, do: assert(inside?({lo, hi}, p))
+      end
+    end
   end
 
   test "the shares of the edits in the surface at a point: one edit away from a joint, two across a smooth joint" do
@@ -409,7 +520,7 @@ defmodule World.SDFTest do
     # No edit: far outside; a cut of nothing is nothing.
     assert SDF.field([], {0, 0, 0}) == {1.0e30, nil}
     assert SDF.value([hole], {0, 0, 0}) >= 1.0e30
-    assert SDF.shapes() |> length() == 10 and SDF.modes() == [:add, :subtract, :paint]
+    assert SDF.shapes() |> length() == 13 and SDF.modes() == [:add, :subtract, :paint, :crop]
     assert_raise ArgumentError, ~r/the mode of an edit/, fn -> SDF.edit(:ball, {1}, mode: :melt) end
   end
 end
