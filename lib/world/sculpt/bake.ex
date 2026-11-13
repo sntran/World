@@ -60,7 +60,7 @@ defmodule World.Sculpt.Bake do
   # The texel of a place with no chart: a mean gray, and the normal of the face.
   @gray <<128, 128, 128>>
   @flat <<128, 128, 255>>
-  # The finish of a place with no chart: rough, no metal (the red is not in use).
+  # The finish of a place with no chart: open, rough, no metal.
   @plain <<255, 153, 0>>
 
   @doc """
@@ -69,18 +69,6 @@ defmodule World.Sculpt.Bake do
   lose some.
   """
   def least(faces), do: ceil(:math.sqrt(faces * 18 * 1.1)) + 6
-
-  @doc """
-  The maps of the meshes of a sculpture (`World.Sculpt.model/2`: each
-  with the normals of its points), in an image of `side` texels on each
-  side: `{meshes, maps}`. Each mesh has the UVs of the corners of its
-  faces (`World.Mesh.map/2`) and no colors of its points; `maps` is
-  `%{side: side, color: rows, normal: rows}`, the rows from the top,
-  each a binary of three bytes for each texel (`color` is nil when no
-  edit has a color). `:small` when the image has no place for the charts
-  (`least/1`).
-  """
-  def maps(meshes, edits, step, side), do: maps([{meshes, edits, step}], side)
 
   @doc """
   The maps of the meshes of some sculptures in one image (a sculpture
@@ -94,10 +82,48 @@ defmodule World.Sculpt.Bake do
   color of each texel times its glow, when an edit glows. `defaults` is
   the finish of the material of an edit with none of its own (a role to
   `{roughness, metal}`).
+
+  `look` is the look of the surface from its shape
+  (`docs/plans/0012-a-world-of-sites.md`, D1 and D2):
+
+  - `occlusion: true`: the red of `finish` is how open each place is
+    (255 on an open face, less in a crease, where less light of the sky
+    comes), as glTF reads the occlusion. The maps have `finish` then,
+    also when no edit has a finish.
+  - `dirt` (0 to 1): the creases are darker and more rough.
+  - `wear` (0 to 1): the sharp edges are lighter and less rough.
+
+  How open a place is comes from the field along the normal of the
+  place: with nothing there, the field at a distance is that distance.
+  The bake reads it at a grid of texels (each fourth texel for the near
+  distances, each sixteenth for the far ones), and the texels between
+  take it from the texels of the grid round them.
+
+  With no `look`, the surface has no look from its shape.
   """
-  def maps(parts, side, defaults \\ %{}) do
-    colors? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.color) end)
-    finish? = Enum.any?(parts, fn {_, edits, _} -> SDF.finished?(edits) end)
+  def maps(parts, side, defaults \\ %{}), do: maps(parts, side, defaults, %{})
+
+  @doc """
+  The maps of the meshes of a sculpture (`World.Sculpt.model/2`: each
+  with the normals of its points), in an image of `side` texels on each
+  side: `{meshes, maps}`. Each mesh has the UVs of the corners of its
+  faces (`World.Mesh.map/2`) and no colors of its points; `maps` is
+  `%{side: side, color: rows, normal: rows}`, the rows from the top,
+  each a binary of three bytes for each texel (`color` is nil when no
+  edit has a color). `:small` when the image has no place for the charts
+  (`least/1`).
+  """
+  def maps(meshes, edits, step, side) when is_number(step), do: maps([{meshes, edits, step}], side, %{}, %{})
+
+  def maps(parts, side, defaults, look) when is_map(look) do
+    look = Map.merge(%{occlusion: false, dirt: 0.0, wear: 0.0}, look)
+    shade? = look.occlusion or look.dirt > 0.0 or look.wear > 0.0
+    look = Map.put(look, :shade, shade?)
+
+    colors? =
+      look.dirt > 0.0 or look.wear > 0.0 or Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.color) end)
+
+    finish? = shade? or Enum.any?(parts, fn {_, edits, _} -> SDF.finished?(edits) end)
     glow? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, &((&1.glow || 0.0) > 0.0)) end)
     # The finish of the materials, when a texel needs it (nil with no finish of an edit).
     defaults = if finish?, do: defaults
@@ -172,13 +198,24 @@ defmodule World.Sculpt.Bake do
               {Map.put(t, :list, Enum.map(Map.fetch!(lists, t.id), &Map.fetch!(place, &1))), at}
             end
 
-            {Enum.map(used, &elem(all, &1)), Enum.map(group, &%{&1 | tris: Enum.map(&1.tris, listed)})}
+            # (For the occlusion, a process has all the edits of the parts of its rectangles.)
+            whole =
+              if shade?,
+                do: for(s <- group, {%{id: {mi, _}}, _} <- s.tris, uniq: true, into: %{}, do: {mi, elem(fields, mi)})
+
+            {Enum.map(used, &elem(all, &1)), Enum.map(group, &%{&1 | tris: Enum.map(&1.tris, listed)}), whole}
           end)
           |> Task.async_stream(
-            fn {some, group} ->
+            fn {some, group, whole} ->
               some = List.to_tuple(some)
               edits = fn {t, at} -> {%{t | list: Enum.map(t.list, &elem(some, &1))}, at} end
-              for s <- group, do: {s.at, {s.w, s.h}, texels(%{s | tris: Enum.map(s.tris, edits)}, defaults, side)}
+
+              for s <- group do
+                # The field of the part of the rectangle (of its first triangle).
+                field = whole && whole[s.tris |> hd() |> elem(0) |> Map.fetch!(:id) |> elem(0)]
+                look = Map.put(look, :field, field)
+                {s.at, {s.w, s.h}, texels(%{s | tris: Enum.map(s.tris, edits)}, defaults, side, look)}
+              end
             end,
             # (Two tasks for each scheduler: a task waits at times, for memory or for the collector.)
             max_concurrency: 2 * System.schedulers_online(),
@@ -562,7 +599,7 @@ defmodule World.Sculpt.Bake do
 
   # The rows of a rectangle: `{colors, normals, finishes, glows}`, each a
   # list of `h` binaries from the top.
-  defp texels(%{w: w, h: h, tris: tris}, defaults, side) do
+  defp texels(%{w: w, h: h, tris: tris}, defaults, side, look) do
     # (An app makes no tangent from a triangle with almost no area of
     # UVs: `World.GLB`. The UVs are the texels over the side of the image.)
     least = 1.0e-12 * side * side
@@ -583,8 +620,11 @@ defmodule World.Sculpt.Bake do
         {{i, j}, {c, p, f, color, {weights, finish}}}
       end
 
+    shade = if look.shade and map_size(values) > 0, do: shade(values, look)
+
     done =
-      for {{i, j} = at, {c, p, f, {r, g, b}, {weights, finish}}} <- values, into: %{} do
+      for {{i, j} = at, {c, p, f, color, {weights, finish}}} <- values, into: %{} do
+        {{r, g, b}, finish} = if shade, do: shaded(color, finish, shade.(i, j), look), else: {color, finish}
         {finish, glow} = if finish, do: finish({r, g, b}, finish), else: {<<>>, <<>>}
         {at, {<<r, g, b>>, normal(c, i, j, {p, f, weights}, values), finish, glow}}
       end
@@ -666,8 +706,120 @@ defmodule World.Sculpt.Bake do
 
   # The bytes of the finish of a texel (the roughness in the green, the
   # metal in the blue), and of its glow (its color times its glow).
-  defp finish({r, g, b}, {rough, metal, glow}) do
-    {<<255, round(rough * 255), round(metal * 255)>>, <<round(r * glow), round(g * glow), round(b * glow)>>}
+  defp finish({r, g, b}, {rough, metal, glow}), do: finish({r, g, b}, {rough, metal, glow, 1.0})
+
+  # (With how open the place is, in the red: the occlusion of glTF.)
+  defp finish({r, g, b}, {rough, metal, glow, open}) do
+    {<<round(open * 255), round(rough * 255), round(metal * 255)>>,
+     <<round(r * glow), round(g * glow), round(b * glow)>>}
+  end
+
+  # --- How open a place is ----------------------------------------------------
+
+  # The distances of the values along the normal, in cells: two near
+  # ones (a crease of the surface) and two far ones (a part over the
+  # place, as the body of a car over its wheel).
+  @near {1.5, 4.0}
+  @far {10.0, 25.0}
+  # The grid of the texels that read the field, for the near distances and for the far ones.
+  @fine 4
+  @wide 16
+  # The part of each distance in how open a place is.
+  @parts {0.3, 0.3, 0.25, 0.15}
+  # The distance of the value under the surface for the wear of an edge, in cells.
+  @under 2.0
+
+  # A function from a texel to `{open, crease, edge}`: how open the
+  # place is (1 on an open face), how deep it is in a crease (0 to 1),
+  # and how near it is to a sharp edge (0 to 1).
+  defp shade(values, %{field: %{edits: edits, step: step}} = look) do
+    {lo, hi} = Vec.bounds(for {_, {_, p, _, _, _}} <- values, do: p)
+    {center, half} = {Vec.lerp(lo, hi, 0.5), Vec.len(Vec.sub(hi, lo)) / 2}
+    {{n1, n2}, {f1, f2}} = {@near, @far}
+    # (The values are right as far as the farthest distance: a limit past it.)
+    limit = (f2 + 2) * step
+    near = SDF.fast(SDF.prune(edits, center, half + (n2 + 0.5) * step, limit))
+    far = SDF.fast(SDF.prune(edits, center, half + (f2 + 0.5) * step, limit))
+
+    # How much of the way along the normal is taken: 0 with nothing
+    # there, 1 with a surface at the place.
+    taken = fn list, p, n, cells ->
+      d = cells * step
+      min(max((d - SDF.value(list, Vec.add(p, Vec.scale(n, d)), limit)) / d, 0.0), 1.0)
+    end
+
+    # How thin the solid is under the place: 0 under a flat face (the
+    # field at a depth is that depth), more near a sharp edge.
+    thin = fn p, n ->
+      d = @under * step
+      min(max((d + SDF.value(near, Vec.sub(p, Vec.scale(n, d)), limit)) / d, 0.0), 1.0)
+    end
+
+    fine = fn {c, p, _, _, {weights, _}} ->
+      n = Vec.norm(mix(c.normals, weights))
+      edge = if look.wear > 0.0, do: thin.(p, n), else: 0.0
+      [taken.(near, p, n, n1), taken.(near, p, n, n2), edge]
+    end
+
+    wide = fn {c, p, _, _, {weights, _}} ->
+      n = Vec.norm(mix(c.normals, weights))
+      # (The square: a part that is far takes a small part of the sky.)
+      [taken.(far, p, n, f1) ** 2, taken.(far, p, n, f2) ** 2]
+    end
+
+    grid = fn every, read ->
+      for {{i, j}, v} <- values, rem(i, every) == 0 and rem(j, every) == 0, into: %{}, do: {{i, j}, read.(v)}
+    end
+
+    {fines, wides} = {grid.(@fine, fine), grid.(@wide, wide)}
+    # A small rectangle can have no texel of the wide grid: one value for all of it.
+    one = values |> Enum.min() |> elem(1) |> wide.()
+    {a, b, c, d} = @parts
+
+    fn i, j ->
+      [o1, o2, edge] = between(fines, @fine, i, j) || fine.(Map.fetch!(values, {i, j}))
+      [o3, o4] = between(wides, @wide, i, j) || one
+      {1.0 - (a * o1 + b * o2 + c * o3 + d * o4), (o1 + o2) / 2, edge}
+    end
+  end
+
+  # The values at a texel from the texels of a grid round it (by their
+  # distances, as in an image), or nil when none of the four has values.
+  defp between(grid, every, i, j) do
+    {i0, j0} = {i - rem(i, every), j - rem(j, every)}
+    {x, y} = {(i - i0) / every, (j - j0) / every}
+
+    near =
+      for {a, b, w} <- [
+            {i0, j0, (1 - x) * (1 - y)},
+            {i0 + every, j0, x * (1 - y)},
+            {i0, j0 + every, (1 - x) * y},
+            {i0 + every, j0 + every, x * y}
+          ],
+          v = grid[{a, b}],
+          do: {v, w + 1.0e-6}
+
+    case near do
+      [] ->
+        nil
+
+      [{v, _}] ->
+        v
+
+      _ ->
+        total = Enum.sum(for {_, w} <- near, do: w)
+        near |> Enum.map(fn {v, w} -> Enum.map(v, &(&1 * w / total)) end) |> Enum.zip_with(&Enum.sum/1)
+    end
+  end
+
+  # The color and the finish of a texel with its dirt and its wear, and
+  # how open it is as the fourth part of the finish.
+  defp shaded({r, g, b}, {rough, metal, glow}, {open, crease, edge}, %{dirt: dirt, wear: wear} = look) do
+    dark = 1.0 - 0.6 * dirt * crease
+    light = 0.35 * wear * edge
+    tone = fn v -> round(min(v * dark + (255 - v * dark) * light, 255.0)) end
+    rough = min(max(rough + 0.3 * dirt * crease - 0.25 * wear * edge, 0.05), 1.0)
+    {{tone.(r), tone.(g), tone.(b)}, {rough, metal, glow, if(look.occlusion, do: open, else: 1.0)}}
   end
 
   # The chart of a triangle with the texels of its corners (the centers

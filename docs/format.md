@@ -437,7 +437,10 @@ The data of the skill:
   the level (below);
 - `bake`: the side of the image of the maps at `near`, `mid` and `far`
   (64, 128, 256, 512, 1024, 2048 or 4096 texels; "The maps of a
-  sculpture" below). A level with a bake needs a budget.
+  sculpture" below). A level with a bake needs a budget;
+- `occlusion` (true by default), `dirt` and `wear` (0 to 1, 0 by
+  default): the look of the surface from its shape, in the maps of a
+  level with a bake ("The maps of a sculpture" below).
 
 An edit has its `shape` and its `size`, and these keys:
 
@@ -611,9 +614,19 @@ takes them from the thinnest edit (the ring of 8 mm below would make
 cells of 4 mm). The two images are
 PNG files in the GLB, on each material of the sculpture, with a sampler
 that makes no smaller copies of the image (each level has its own
-image). When an edit has a finish of its own, the GLB has a third image
-(the roughness and the metal of each texel); when an edit glows, a
-fourth one (the light of each texel). In a model, the roles of the materials of a baked sculpture have
+image). The GLB has a third image, the finish: the roughness of each
+texel in its green and the metal in its blue (the finish of each edit,
+or of its material), and the occlusion in its red. When an edit glows,
+it has a fourth one (the light of each texel).
+
+The occlusion is how open each place is: on an open face the light of
+the sky comes from each side, and in a crease (the foot of a post, the
+arch over a wheel) less of it comes. It comes from the field along the
+normal of the place, so it is in the model for each app, with no light
+of the app (`"occlusion": false` for none: then the GLB has the finish
+only when an edit has one). `dirt` makes the creases darker and more
+rough, as on a thing that is not clean. `wear` makes the sharp edges
+lighter and less rough, as on a thing that is not new. In a model, the roles of the materials of a baked sculpture have
 its maps: another node of the same model must use other roles.
 
 ```json

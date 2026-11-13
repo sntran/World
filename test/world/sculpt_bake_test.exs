@@ -391,9 +391,22 @@ defmodule World.Sculpt.BakeTest do
 
   test "the GLB of a baked sculpture: the two maps on each material, a sampler with no smaller copies, tangents (R5)" do
     assert paths(@data) == []
-    g = gltf(@data)
+    # With no occlusion: the color and the normals.
+    g = gltf(Map.put(@data, "occlusion", false))
     assert length(g["images"]) == 2 and length(g["materials"]) == 2
-    # The two materials share the two images.
+    assert Enum.all?(g["materials"], &(not is_map_key(&1, "occlusionTexture")))
+
+    # The occlusion is in the red of a third image: the finish, with the roughness and the metal (plan 0012, D1).
+    g = gltf(@data)
+    assert length(g["images"]) == 3 and length(g["materials"]) == 2
+
+    for m <- g["materials"] do
+      assert %{"index" => finish} = m["pbrMetallicRoughness"]["metallicRoughnessTexture"]
+      assert m["occlusionTexture"] == %{"index" => finish}
+      assert %{"roughnessFactor" => 1.0, "metallicFactor" => 1.0} = m["pbrMetallicRoughness"]
+    end
+
+    # The two materials share the images.
     for m <- g["materials"] do
       assert %{"index" => color} = m["pbrMetallicRoughness"]["baseColorTexture"]
       assert %{"index" => normal} = m["normalTexture"]
@@ -419,7 +432,7 @@ defmodule World.Sculpt.BakeTest do
 
     g = gltf(Map.put(@data, "bones", bones))
     assert [%{"joints" => [_, _]}] = g["skins"]
-    assert length(g["images"]) == 2
+    assert length(g["images"]) == 3
 
     for p <- hd(g["meshes"])["primitives"] do
       assert ~w(JOINTS_0 NORMAL POSITION TANGENT TEXCOORD_0 WEIGHTS_0) -- Map.keys(p["attributes"]) == []
@@ -485,7 +498,7 @@ defmodule World.Sculpt.BakeTest do
     [ball, horn] = shapes.(baked, :mid)
     assert ball.uvs != nil and horn.uvs != nil and horn.colors == nil
     g = gltf_at(baked, :mid)
-    assert length(g["images"]) == 2
+    assert length(g["images"]) == 3
 
     # The maps of the parts, each with its own edits and cells.
     edits = fn list -> World.Skills.Sculpt.edits(list) end
@@ -645,6 +658,68 @@ defmodule World.Sculpt.BakeTest do
     assert bad.("glow", "bright") == ["#{at}.glow"]
   end
 
+  # The texels of the baked meshes with their places: `{place, {column, row}}`.
+  defp places(meshes, side) do
+    for c <- charts(meshes, side), at <- c.texels, do: {mix(Enum.map(c.points, &elem(&1, 0)), weights(c, at)), at}
+  end
+
+  test "the look from the shape: a crease is less open, dirt is in the creases, wear is at the sharp edges (plan 0012, R1)" do
+    # A slab with a post on it, of one gray.
+    gray = {128, 128, 128}
+    slab = SDF.edit(:box, {0.5, 0.5, 0.05}, color: gray)
+    post = SDF.edit(:box, {0.1, 0.1, 0.2}, frame: Frame.move({0.0, 0.0, 0.25}), color: gray)
+    edits = [slab, post]
+    meshes = Sculpt.model(edits, step: 0.02, budget: 1_500, cache: false)
+    mean = fn list -> Enum.sum(list) / length(list) end
+
+    # With no look, the maps are as before: no finish for edits with none.
+    {_, plain} = Bake.maps([{meshes, edits, 0.02}], 256, %{})
+    assert plain.finish == nil
+
+    {baked, maps} = Bake.maps([{meshes, edits, 0.02}], 256, %{}, %{occlusion: true})
+    assert maps.color == plain.color and maps.normal == plain.normal
+    at = places(baked, 256)
+    red = fn {i, j} -> elem(texel(maps.finish, i, j), 0) end
+    # The top of the slab, far from the post and from its edges: open.
+    open = for {{x, y, z}, t} <- at, z > 0.045, x < -0.3, x > -0.45, abs(y) < 0.3, do: red.(t)
+    # The top of the slab at the foot of the post: a crease.
+    foot = for {{x, y, z}, t} <- at, z > 0.045, z < 0.055, x < -0.1, x > -0.125, abs(y) < 0.08, do: red.(t)
+    # A side of the post near its top: less open than the slab (the slab is under it), more than the foot.
+    side = for {{x, y, z}, t} <- at, x < -0.095, x > -0.105, z > 0.3, z < 0.4, abs(y) < 0.06, do: red.(t)
+    assert length(open) > 100 and length(foot) > 10 and length(side) > 10
+    assert mean.(open) > 240
+    assert mean.(foot) < 0.6 * mean.(open)
+    assert mean.(side) > mean.(foot) + 40
+    # The green and the blue are the finish of the material by default: rough, no metal.
+    assert {_, 153, 0} = texel(maps.finish, elem(hd(at), 1) |> elem(0), elem(hd(at), 1) |> elem(1))
+
+    # Dirt: the foot of the post is darker and more rough; the open top is as it was.
+    {dirty, soil} = Bake.maps([{meshes, edits, 0.02}], 256, %{}, %{dirt: 1.0})
+    at = places(dirty, 256)
+    tone = fn maps, {i, j} -> elem(texel(maps.color, i, j), 0) end
+    rough = fn maps, {i, j} -> elem(texel(maps.finish, i, j), 1) end
+
+    {open, foot} =
+      {for({{x, y, z}, t} <- at, z > 0.045, x < -0.3, x > -0.45, abs(y) < 0.3, do: t),
+       for({{x, y, z}, t} <- at, z > 0.045, z < 0.055, x < -0.1, x > -0.125, abs(y) < 0.08, do: t)}
+
+    assert mean.(Enum.map(foot, &tone.(soil, &1))) < 0.75 * mean.(Enum.map(open, &tone.(soil, &1)))
+    assert mean.(Enum.map(foot, &rough.(soil, &1))) > mean.(Enum.map(open, &rough.(soil, &1))) + 20
+    assert_in_delta mean.(Enum.map(open, &tone.(soil, &1))), 128, 3
+    # (With no occlusion, the red is 255 at each place.)
+    assert Enum.all?(open ++ foot, fn {i, j} -> elem(texel(soil.finish, i, j), 0) == 255 end)
+
+    # Wear: the top of the post near its edges is lighter and less rough than its middle.
+    {worn, used} = Bake.maps([{meshes, edits, 0.02}], 256, %{}, %{wear: 1.0})
+    at = places(worn, 256)
+    top = for {{x, y, z}, t} <- at, z > 0.445, do: {max(abs(x), abs(y)), t}
+    edge = for {far, t} <- top, far > 0.085, do: t
+    middle = for {far, t} <- top, far < 0.04, do: t
+    assert length(edge) > 10 and length(middle) > 10
+    assert mean.(Enum.map(edge, &tone.(used, &1))) > mean.(Enum.map(middle, &tone.(used, &1))) + 10
+    assert mean.(Enum.map(edge, &rough.(used, &1))) < mean.(Enum.map(middle, &rough.(used, &1))) - 10
+  end
+
   test "a part of a baked mesh and a mesh with no maps of one material: each point has a UV" do
     edits = [SDF.edit(:ball, {0.3}, color: {200, 100, 50})]
     {[baked], _} = Bake.maps(Sculpt.model(edits, step: 0.1, cache: false), edits, 0.1, 128)
@@ -663,5 +738,10 @@ defmodule World.Sculpt.BakeTest do
     assert bad.(%{"mid" => 256}) == ["#{at}.bake.mid"]
     assert bad.(%{"far" => 64}) == ["#{at}.bake.far"]
     assert paths(Map.delete(@data, "budget")) == ["#{at}.bake.far"]
+    # The look from the shape: true or false, and two numbers from 0 to 1.
+    assert paths(Map.merge(@data, %{"occlusion" => false, "dirt" => 0.5, "wear" => 1})) == []
+    assert paths(Map.put(@data, "occlusion", "no")) == ["#{at}.occlusion"]
+    assert paths(Map.put(@data, "dirt", 2)) == ["#{at}.dirt"]
+    assert paths(Map.put(@data, "wear", -0.1)) == ["#{at}.wear"]
   end
 end

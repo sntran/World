@@ -31,7 +31,7 @@ defmodule World.Skills.Sculpt do
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
   alias World.Sculpt.Bones
 
-  @keys ~w(edits groups details ports sources budget cells bake bones bone_blend plan gait clips)
+  @keys ~w(edits groups details ports sources budget cells bake occlusion dirt wear bones bone_blend plan gait clips)
   @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow mirror repeat)
   # The finishes with a name: a roughness and a metal.
   @finishes %{
@@ -83,6 +83,9 @@ defmodule World.Skills.Sculpt do
       optional(data, "cells", path, &cells/2) ++
       optional(data, "details", path, &details(&1, &2, groups)) ++
       optional(data, "bake", path, &bake(&1, &2, data)) ++
+      optional(data, "occlusion", path, &flag/2) ++
+      optional(data, "dirt", path, &number(&1, &2, 0, 1)) ++
+      optional(data, "wear", path, &number(&1, &2, 0, 1)) ++
       optional(data, "bones", path, &bones/2) ++
       optional(data, "bone_blend", path, &number(&1, &2, 0.001, 10)) ++
       optional(data, "plan", path, &plan(&1, &2, data["bones"])) ++
@@ -116,7 +119,14 @@ defmodule World.Skills.Sculpt do
     # (The images of the maps become PNG files in their own processes,
     # while this one makes the part or the figure.)
     # (A sculpture with no surface has no maps: a crop or a cut can take all of it away.)
-    {meshes, materials} = maps(built, if(Enum.any?(built, fn {ms, _, _} -> ms != [] end), do: side))
+    # (The look from the shape: the occlusion unless the data says no, the dirt and the wear.)
+    look = %{
+      occlusion: Map.get(data, "occlusion", true),
+      dirt: Map.get(data, "dirt", 0.0) / 1,
+      wear: Map.get(data, "wear", 0.0) / 1
+    }
+
+    {meshes, materials} = maps(built, if(Enum.any?(built, fn {ms, _, _} -> ms != [] end), do: side), look)
     ports = Drawing.ports(Map.get(data, "ports", %{}))
     sources = Map.get(data, "sources", [])
 
@@ -139,14 +149,14 @@ defmodule World.Skills.Sculpt do
   # for the materials of the model (`World.Drawing.assemble/3`). The
   # check makes sure that the image has a place for the triangles of the
   # budget.
-  defp maps(built, nil), do: {Enum.flat_map(built, &elem(&1, 0)), fn -> %{} end}
+  defp maps(built, nil, _look), do: {Enum.flat_map(built, &elem(&1, 0)), fn -> %{} end}
 
-  defp maps(built, side) do
+  defp maps(built, side, look) do
     # The finish of each role of the palette, for an edit with no finish of its own.
     defaults =
       Map.new(GLB.palette(), fn {role, spec} -> {GLB.role(role), {spec["roughness"] / 1, spec["metalness"] / 1}} end)
 
-    {meshes, maps} = World.Sculpt.Bake.maps(built, side, defaults)
+    {meshes, maps} = World.Sculpt.Bake.maps(built, side, defaults, look)
     png = fn rows -> {"image/png", World.PNG.encode(rows, 3)} end
 
     # Each image becomes a PNG file in a process of its own; the function
@@ -163,7 +173,12 @@ defmodule World.Skills.Sculpt do
 
     {meshes,
      fn ->
-       spec = files |> Task.await_many(:infinity) |> Map.new() |> Map.put("atlas", true)
+       spec =
+         files
+         |> Task.await_many(:infinity)
+         |> Map.new()
+         |> Map.merge(%{"atlas" => true, "occlusion" => look.occlusion})
+
        %{"materials" => Map.new(meshes, &{Atom.to_string(&1.material), spec})}
      end}
   end
@@ -510,6 +525,9 @@ defmodule World.Skills.Sculpt do
       errors -> errors
     end
   end
+
+  defp flag(v, _path) when is_boolean(v), do: []
+  defp flag(_v, path), do: [{path, "must be true or false"}]
 
   defp number(v, path, lo, hi),
     do: if(is_number(v) and v >= lo and v <= hi, do: [], else: [{path, "must be a number from #{lo} to #{hi}"}])

@@ -511,6 +511,14 @@ defmodule World.GLB do
       # can show another color at once, as factor = color * 255 / base.
       |> put_some("extras", if(base = spec["tint_base"], do: %{"tintBase" => base}))
 
+    # The red of the finish of a sculpture is how open each place is: the occlusion.
+    material =
+      put_some(
+        material,
+        "occlusionTexture",
+        if(spec["occlusion"] && spec["finish_image"], do: Map.take(pbr["metallicRoughnessTexture"], ["index"]))
+      )
+
     # Small bumps (the pores of the skin) are a normal texture.
     {material, buf} =
       case spec["normal_image"] do
