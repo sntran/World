@@ -78,13 +78,32 @@ defmodule World.QuangTrungTest do
     assert osm =~ "OpenStreetMap" and photos =~ "Wikimedia Commons" and guess =~ "A guess"
   end
 
+  test "the blocks of the Grand Hotel are requests of a building, and their drawings are the models of the catalog" do
+    assert Enum.map(QuangTrung.buildings(), &elem(&1, 0)) == ~w(khach_san_grand khach_san_grand_canh_nam)
+
+    for {name, request} <- QuangTrung.buildings() do
+      drawing = QuangTrung.building(name)
+      assert drawing == World.Town.Building.drawing(Map.put(request, "name", name))
+      assert file(name) == drawing and name in World.Drawing.names()
+      assert {:ok, _} = World.Drawing.check(drawing, "d")
+      # Each source says what it is: the footprint, the photos, and what is a guess.
+      assert [osm, photo, guess] = drawing["sources"]
+      assert osm =~ "OpenStreetMap" and photo =~ "Wikimedia Commons" and guess =~ "A guess"
+    end
+  end
+
   test "the south wing of the Grand Hotel: a block of 39.7 m with 26 loggias between pilasters" do
-    d = file("khach_san_grand_canh_nam")
-    assert {:ok, _} = World.Drawing.check(d, "d")
-    assert Enum.map(d["nodes"], & &1["name"]) == for(part <- ~w(than mai vuon), do: "khach_san_grand_canh_nam_#{part}")
-    [body, roof, garden] = Enum.map(d["nodes"], & &1["skill"]["sculpt"])
-    # The mass is the footprint of OpenStreetMap up to the cornice: 39.7 m on Quang Trung, 20.3 m deep.
-    assert %{"shape" => "box", "size" => [19.85, 10.15, 5.4], "at" => [19.85, -10.15, 5.4]} = hd(body["edits"])
+    d = QuangTrung.building("khach_san_grand_canh_nam")
+    assert Enum.map(d["nodes"], & &1["name"]) == for(part <- ~w(than mai nen), do: "khach_san_grand_canh_nam_#{part}")
+    [body, roof, ground] = Enum.map(d["nodes"], & &1["skill"]["sculpt"])
+    # The mass is the footprint of OpenStreetMap up to the eaves: 39.7 m on Quang Trung, 20.3 m deep.
+    assert %{"shape" => "extrude", "size" => %{"outline" => plan, "depth" => 10.8}, "at" => [0, 0, 5.4]} =
+             hd(body["edits"])
+
+    assert plan == [[39.7, 0.0], [0.0, 0.0], [0.0, -20.3], [39.7, -20.3]]
+
+    assert %{"floors" => [4.1, 7.6], "eaves" => 10.8, "top" => 12.0} =
+             World.Town.Building.heights(d["extras"]["building"])
 
     # Nine bays on Quang Trung and four on Nguyễn Trãi, each with a loggia at two storeys and an opening at the ground.
     hollows = Enum.filter(body["edits"], &(&1["mode"] == "subtract"))
@@ -93,12 +112,53 @@ defmodule World.QuangTrungTest do
     # The rails of iron are thin: a detail of the near level, 15 tubes for each loggia.
     assert [%{"levels" => ["near"], "edits" => rails}] = body["details"]
     assert length(rails) == 26 * 15 and Enum.all?(rails, &(&1["shape"] == "tube" and &1["color"] == "#2f4a3c"))
-    # The roof is a low form with four slopes (a second outline crops the first), behind the cornice of 12 m.
-    assert [%{"shape" => "extrude"}, %{"shape" => "extrude", "mode" => "crop"} | _] = roof["edits"]
+    # The roof of yellow tiles has four slopes (a second outline crops the first), 3 m high, on the cornice of 12 m.
+    assert [
+             %{"shape" => "extrude", "size" => %{"outline" => [_, _, [0, 3.0]]}},
+             %{"shape" => "extrude", "mode" => "crop"} | _
+           ] = roof["edits"]
+
     assert Enum.all?(roof["edits"], &(List.last(&1["at"]) >= 11.9))
     # The garden: the bed behind its low wall, 4 m from the front, and the stone with the name.
-    assert Enum.any?(garden["edits"], &(&1["shape"] == "ellipsoid"))
-    assert [osm, photo, guess] = d["sources"]
-    assert osm =~ "OpenStreetMap" and photo =~ "Wikimedia Commons" and guess =~ "A guess"
+    assert Enum.any?(ground["edits"], &(&1["shape"] == "ellipsoid"))
+  end
+
+  test "the main block of the Grand Hotel: 8 bays over a long terrace, the name on the cornice, a gable to Nguyễn Du" do
+    d = QuangTrung.building("khach_san_grand")
+    assert Enum.map(d["nodes"], & &1["name"]) == for(part <- ~w(than mai chu nen), do: "khach_san_grand_#{part}")
+    [body, roof, letters, _ground] = Enum.map(d["nodes"], & &1["skill"]["sculpt"])
+    # The mass is the footprint of OpenStreetMap: 37.2 m to the court, 24 m deep; three storeys, 12.3 m to the cornice.
+    assert hd(body["edits"])["size"]["outline"] == [[37.2, 0.0], [0.0, 0.0], [0.0, -24.0], [37.2, -24.0]]
+
+    assert %{"floors" => [4.5, 8.0], "eaves" => 11.2, "top" => 12.3} =
+             World.Town.Building.heights(d["extras"]["building"])
+
+    # Eight bays of balconies at two storeys; the ground storey is a wall with windows behind the terrace.
+    hollows = Enum.filter(body["edits"], &(&1["mode"] == "subtract"))
+    assert length(hollows) == 16 and Enum.all?(hollows, &(&1["size"] == [1.9, 1.375, 1.5]))
+    # The terrace on 9 columns, with the 9 thin columns of its pergola; the tower of the stair is 16.8 m high.
+    assert Enum.count(body["edits"], &(&1["shape"] == "cylinder")) == 18
+    assert Enum.any?(body["edits"], &(&1["size"] == [2.6, 3.0, 8.4] and &1["at"] == [2.6, -6.0, 8.4]))
+    # The rails (a detail of the near level): upright bars at each balcony, and the rail round the terrace.
+    assert [%{"levels" => ["near"], "edits" => rails}] = body["details"]
+    assert Enum.frequencies_by(rails, &hd(&1["size"]["radii"])) == %{0.012 => 528, 0.016 => 59, 0.022 => 34}
+    # The name stands on the top of the cornice: 16 strokes of red tubes for GRAND HOTEL.
+    assert length(letters["edits"]) == 16
+
+    assert Enum.all?(
+             letters["edits"],
+             &(&1["color"] == "#b3261e" and
+                 Enum.all?(&1["size"]["points"], fn [_, y, z] -> y == 0.33 and z >= 12.35 end))
+           )
+
+    # The roof of tiles is behind a terrace: a slope at the south end, and a gable at the end on Nguyễn Du (x = 37.2).
+    assert [
+             %{"size" => %{"outline" => [_, _, [0, 4.4]], "depth" => 32.9}},
+             %{"mode" => "crop"},
+             %{"size" => %{"depth" => 0.12}} | rest
+           ] = roof["edits"]
+
+    assert %{"shape" => "extrude", "at" => [34.95, -12.0, 12.25], "color" => "#f1dc86"} = List.last(rest)
+    assert d["extras"]["building"]["roof"]["gables"] == [4]
   end
 end

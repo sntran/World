@@ -35,8 +35,11 @@ into the steps of `AGENTS.md`.
   the body in the field), long hair that bends, the tools that measure
   a person, and the blind test.
 - **The street Quang Trung of Vũng Tàu as it is (plan 0018, in
-  progress).** Made: the survey, the row of the numbers 4 to 26, and
-  the office of the port at number 2. Open: the Grand Hotel, the House
+  progress).** Made: the survey, the row of the numbers 4 to 26, the
+  office of the port at number 2, the two blocks of the Grand Hotel,
+  and the rules of a building (`World.Town.Building`). Open: the fore
+  court of the Grand Hotel and the round building between its blocks,
+  the House
   of Children, the villas, the Rex and the Royal hotels, the ground
   (the roads with the median, the parks, the sea wall, the trees), and
   the place with each model on it. Photos of each front of the row 4

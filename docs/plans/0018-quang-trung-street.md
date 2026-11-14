@@ -97,7 +97,9 @@ one empty lot of 98 m. Only one block is a row of narrow houses.
 2. The office of the port at number 2 (`cang_vu_vung_tau`), from its
    footprint and two photos. Done: section 8.
 3. The Grand Hotel: its south wing (`khach_san_grand_canh_nam`, done:
-   section 9), then its fore court and its main block.
+   section 9) and its main block (`khach_san_grand`, done: section 11,
+   with the rules of a building), then its fore court and the round
+   building between the two blocks.
 4. The House of Children, the low block, the office, the villa of OSC.
 5. The villa in its park, the Rex Hotel, the Royal Hotel.
 6. The ground: the roads with the median, the sidewalks, the park Bãi
@@ -291,7 +293,7 @@ So:
    full check runs: one check for a group of commits.
 5. The tools of a building as a module of World (a wall, a window, a
    front of bays, a roof, a rail, letters), so that a building is a
-   short list of words, as a house of plan 0016 is.
+   short list of words, as a house of plan 0016 is. Done: section 11.
 
 | Level | Triangles | File |
 |---|---|---|
@@ -304,3 +306,85 @@ the stair). The house of the keeper (a long white house of two storeys
 with a red roof), the wall of the terrace with its balusters and the
 trees are not made. The heights of its rings and of its gallery are
 from photos that look up.
+
+## 11. The rules of a building: a building is a short list of words
+
+The owner (2026-11-14): "make the tools of a building a module of World
+first".
+
+The office of the port and the south wing each had a generator of
+about 200 lines outside the repository. Their tools were the same: a
+wall with its own axes, a window, a front of equal bays, a cornice, a
+roof, a rail, letters. These tools are now two modules of World:
+
+- **`World.Town.Wall`**: a wall of a plan, with the way along it (from
+  the left to the right for a person in front of it) and the height.
+  On it: a box, a paint, a window. A tube and an outline as edits.
+- **`World.Town.Building`**: `spec/1` makes each choice of a request
+  (`docs/format.md`, "A house and a street from rules"), and
+  `drawing/1` gives a model in parts: the body with the rails in a
+  detail, the roof, the letters, the ground. A value that is not
+  possible is an error with its message. The MCP tool `draw_building`
+  gives the drawing to a project.
+
+| The word | What it makes |
+|---|---|
+| `plan` or `size` | The walls up to the eaves, the cornice round them, the ground |
+| `fronts`, style `loggias` | Equal bays between pilasters: a loggia at each storey with a door of glass and a rail, the bands, piers or windows at the ground storey |
+| `fronts`, style `windows` | A window in a hollow at each bay and each storey; ledges with air conditioners; pilasters |
+| `fronts`, style `glass` | A grid of glass |
+| `roof` | Flat behind a parapet, or tiles with slopes and gables |
+| `porches` | A slab on columns, steps, a door, a board or a terrace with a rail |
+| `letters` | A name from tubes: a part of its own with small cells |
+| `more` | Edits for a thing that the rules do not have |
+
+### The proof: the two blocks of the Grand Hotel
+
+The requests are in `World.Town.QuangTrung` (`buildings/0`). A test
+makes sure that each drawing of the catalog is the drawing of its
+request.
+
+- **The south wing** is a request of 15 lines, with the garden as
+  `more` edits. Its model is the model of section 9, with one
+  correction from a photo from the air: the roof is 3 m high.
+- **The main block** (`khach_san_grand`) is new. From the photo from
+  the air and a photo at night: 8 bays of balconies at two storeys, a
+  long terrace over the ground storey with a pergola, the name in red
+  letters on the top of the cornice, a roof of tiles behind a terrace
+  with a gable to Nguyễn Du, a tower at the south end. The request has
+  40 lines; the pergola and the tower are `more` edits.
+
+| What | Time |
+|---|---|
+| The request of the main block, from the photos in hand | 10 min |
+| The mid level for a look (7,500 triangles) | 1.5 min |
+| A correction and a second look | 3 min |
+
+| The three levels of the two blocks, one time | 13 min |
+
+| Model | near | mid | far |
+|---|---|---|---|
+| `khach_san_grand` | 87,000 triangles, 9.6 MB | 9,650, 1.1 MB | 1,100, 0.22 MB |
+| `khach_san_grand_canh_nam` | 68,600 triangles, 8.4 MB | 8,700, 1.1 MB | 1,050, 0.22 MB |
+
+The rails are the largest part of the near level of the main block:
+621 tubes, 37,000 triangles.
+
+What the main block is not: its terrace is straight (the real one has
+a curve), the ground storey behind the terrace is a guess, and the two
+ends and the back have no photo.
+
+### A fault that was not a fault
+
+A first look at the pictures said that the roof of the main block
+lost its gable wall (a fault of the collapse). That was wrong. The
+measure of the file shows the wall whole at each level: 42
+m2 of triangles that point out, also with cells of 5 cm. The first
+gable wall had the color of the cornice with the dark rows of the
+tiles across it, in the shade, and looked as a hole. The gable wall
+now has the color of the walls, and it comes after the rows of the
+tiles in the list of the edits, so that their paint is not on it.
+
+The rule: before a fault of the surface goes into a document, measure
+the triangles of the file (their area and their direction), not only
+a picture.
