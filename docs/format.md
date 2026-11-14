@@ -402,8 +402,59 @@ houses.
   mark for each value (where it comes from, or `GUESS`) and its
   sources; `lots/1` gives the lots of its rows. The street Quang Trung
   of Vũng Tàu is the first (`World.Town.QuangTrung`).
+- **A building that is not a house of a row** (`World.Town.Building`;
+  `docs/plans/0018-quang-trung-street.md`, section 11): a hotel, an
+  office, a villa. The request is a short list of words, and `drawing/1`
+  gives a model in parts from edits, as a house. The words:
+  - `plan`: the corners `[x, y]` (m), counterclockwise seen from above.
+    Or `size`: `[long, deep]`, a rectangle with its front (side 1) on
+    y = 0 and the street at +y. Side `k` goes from corner `k` to the
+    next one. The way along a side goes from the left to the right for
+    a person in front of it.
+  - `storeys`, `ground` (the height of the ground storey to its
+    lintel), `band` (between the ground storey and the first floor) and
+    `storey` (from a floor to the next one). `heights/1` gives the
+    floors, the eaves and the top.
+  - `colors`: `wall`, `trim`, `band`, `cornice`, `glass`, `frame`,
+    `rail`, `roof`, `deck`, `ground`, `letters`.
+  - `fronts`: a list. A front is a part of one side (`side`, `from`,
+    `to`, `inset`) with a `style` and a count of equal `bays`:
+    `windows` (a window in a hollow at each bay and each storey, or at
+    `places`; `ledges` with the boxes of the air conditioners;
+    `pilasters`), `loggias` (a loggia taken away at each storey over
+    the ground storey, a door of glass at its back, a rail of iron
+    (`cross`, `bars` or `none`) in a detail of the near level,
+    pilasters, the bands, and at the ground storey openings between
+    `piers`, `windows` or a `blank` wall), `glass` (a grid of glass) or
+    `plain`. A front can stand `out`, and have a `paint` and a `band`.
+  - `cornice` (`high`, `out`), and `roof`: `flat` behind a `parapet`, or
+    `tiles` on a plan of four square corners (`high`, `inset`, and
+    `gables`: the short sides with a gable; each other end has a
+    slope).
+  - `porches`: a slab on columns with steps and a door of glass; a
+    `board` on its front, or a rail round a `terrace` on it.
+  - `letters`: a line of text (A to Z) from tubes, in front of a wall or
+    of the cornice, or on the top of the cornice. The letters are a part
+    of their own, with small cells.
+  - `more`: edits for a part (`than`: the body, `mai`: the roof, `chu`:
+    the letters, `nen`: the ground), for a thing that the rules do not
+    have.
+
+  A value that is not possible is an error with its message.
+  `World.Town.Wall` has the tools: a wall with its own axes (the way
+  along it and the height), and on it a box, a paint and a window.
+
+  ```text
+  {"name": "khach_san", "size": [39.7, 20.3],
+   "fronts": [{"style": "loggias", "inset": 0.4, "bays": 9},
+              {"side": 2, "style": "loggias", "inset": 0.4, "bays": 4},
+              {"side": 3, "style": "windows", "bays": 8, "band": true}],
+   "roof": {"kind": "tiles", "high": 3.0},
+   "letters": [{"text": "GRAND HOTEL", "z": 12.1}]}
+  ```
 - **The tools of the MCP server:** `draw_house` (the argument `house`:
-  a request) and `plan_street` (the argument `street`: `seed`, `road`,
+  a request), `draw_building` (the argument `building`: a request) and
+  `plan_street` (the argument `street`: `seed`, `road`,
   `count` or `length`, `depth`, `sidewalk`, `lots`, and `types`,
   `families`, `widths` as lists of `[value, weight]`).
 

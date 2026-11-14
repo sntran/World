@@ -248,6 +248,23 @@ defmodule World.MCP do
       "annotations" => @read
     },
     %{
+      "name" => "draw_building",
+      "title" => "Draw a building of a town",
+      "description" =>
+        "Gives the drawing of a building (a hotel, an office, a villa) from a request of a few words: its plan, its storeys, and a list of fronts with a style and a count of equal bays. The rules of World.Town.Building make the walls, the windows, the loggias with their rails, the cornice, the roof, the porches and the letters. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "building" => %{
+            "type" => "object",
+            "description" =>
+              "The request: name; sources; plan (corners [x, y] in m, counterclockwise) or size ([long, deep]: side 1 is the front); storeys, ground, band and storey (heights, m); colors (wall, trim, band, cornice, glass, frame, rail, roof, deck, ground, letters); fronts (each: side, style (plain, windows, loggias or glass), from, to, inset, bays, ground (piers, windows or blank), out, paint, band, window, sill, bars, places, ledges, pilasters, deep, rail (cross, bars or none), pitch); cornice (high, out); roof (kind: flat with parapet, or tiles with high, inset and gables); porches (each: side, at, wide, deep, high, columns, steps, door, board, terrace); letters (each: side, at, z, high, text); apron; age; more (edits for the parts than, mai, chu and nen). Each key has a default."
+          }
+        }
+      },
+      "annotations" => @read
+    },
+    %{
       "name" => "plan_street",
       "title" => "Plan one side of a street of Vũng Tàu",
       "description" =>
@@ -431,6 +448,12 @@ defmodule World.MCP do
 
   defp call("draw_house", args, _origin) do
     result(%{"drawing" => World.Town.House.drawing(Map.get(args, "house", %{}))})
+  rescue
+    e in ArgumentError -> wrong(e.message)
+  end
+
+  defp call("draw_building", args, _origin) do
+    result(%{"drawing" => World.Town.Building.drawing(Map.get(args, "building", %{}))})
   rescue
     e in ArgumentError -> wrong(e.message)
   end
