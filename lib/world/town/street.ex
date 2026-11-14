@@ -101,8 +101,8 @@ defmodule World.Town.Street do
   @doc """
   The drawing of a plan: each house at its place (its parts are parts of
   the drawing), and the ground in front of the row (the sidewalk with
-  its tiles, the curb, one lane of the road, and a pole at a wall
-  between two houses). A drawing has 16 parts with an image at the
+  its tiles, the curb, one lane of the road, a pole at a wall between
+  two houses, and the ground of the lots under the houses). A drawing has 16 parts with an image at the
   most: 5 houses and the ground.
   """
   def drawing(%{"lots" => lots} = plan, opts \\ []) when length(lots) <= 5 do
@@ -171,9 +171,16 @@ defmodule World.Town.Street do
     half = long / 2 + 0.5
     tile = %{"mode" => "paint", "blend" => 0.006, "raise" => -0.004}
     pole = (lots |> hd() |> then(&(&1["at"] + &1["width"] / 2))) - long / 2
+    deep = lots |> Enum.map(& &1["depth"]) |> Enum.max()
+    # (Each part of the ground goes down to the same level: the row stands on all of it.)
+    low = -(@curb + 0.2)
+    slab = fn top -> {(top - low) / 2, (top + low) / 2} end
+    {walk_h, walk_z} = slab.(0.0)
+    {lots_h, lots_z} = slab.(-0.02)
+    {road_h, road_z} = slab.(-@curb)
 
     [
-      e("box", [half, @sidewalk / 2, 0.1], [0, @sidewalk / 2, -0.1], "#b9a78e", %{
+      e("box", [half, @sidewalk / 2, walk_h], [0, @sidewalk / 2, walk_z], "#b9a78e", %{
         "roughness" => 0.8,
         "surface" => %{"kind" => "concrete", "scale" => 0.03}
       }),
@@ -192,11 +199,11 @@ defmodule World.Town.Street do
         "#8d7f6c",
         Map.put(tile, "repeat", %{"count" => floor(2 * half / 0.4) - 1, "move" => [0.4, 0, 0]})
       ),
-      e("box", [half, 0.09, (0.1 + @curb) / 2], [0, @sidewalk + 0.09, -(0.1 + @curb) / 2], "#a9a59c", %{
+      e("box", [half, 0.09, walk_h], [0, @sidewalk + 0.09, walk_z], "#a9a59c", %{
         "roughness" => 0.85,
         "surface" => %{"kind" => "concrete", "scale" => 0.05}
       }),
-      e("box", [half, @lane / 2, 0.1], [0, @sidewalk + 0.18 + @lane / 2, -@curb - 0.1], "#414347", %{
+      e("box", [half, @lane / 2, road_h], [0, @sidewalk + 0.18 + @lane / 2, road_z], "#414347", %{
         "roughness" => 0.95,
         "surface" => %{"kind" => "concrete", "scale" => 0.02}
       }),
@@ -205,7 +212,12 @@ defmodule World.Town.Street do
         "roughness" => 0.9,
         "surface" => %{"kind" => "concrete", "scale" => 0.05}
       }),
-      e("box", [0.7, 0.04, 0.04], [pole, @sidewalk - 0.45, 8.0], "#8f8d86", %{"roughness" => 0.9})
+      e("box", [0.7, 0.04, 0.04], [pole, @sidewalk - 0.45, 8.0], "#8f8d86", %{"roughness" => 0.9}),
+      # The ground of the lots, under the houses.
+      e("box", [half, (deep + 0.5) / 2, lots_h], [0, -(deep + 0.5) / 2, lots_z], "#8f8a7e", %{
+        "roughness" => 0.95,
+        "surface" => %{"kind" => "concrete", "scale" => 0.08}
+      })
     ]
   end
 

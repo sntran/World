@@ -272,9 +272,12 @@ defmodule World.TownTest do
 
     # The ground: a sidewalk of 3 m as long as the row, a lane, a pole at the wall between the first two houses.
     [walk, _, _, _, lane, pole | _] = List.last(d["nodes"])["skill"]["sculpt"]["edits"]
-    assert %{"size" => [half, 1.5, 0.1], "at" => [_, 1.5, -0.1]} = walk
+    assert %{"size" => [half, 1.5, 0.19], "at" => [_, 1.5, -0.19]} = walk
     assert_in_delta half, long / 2 + 0.5, 1.0e-3
-    assert %{"at" => [_, _, -0.28]} = lane
+    # Each part of the ground goes down to the same level (0.38 m under the sidewalk): the row stands on all of it.
+    assert %{"size" => [_, _, 0.1], "at" => [_, _, -0.28]} = lane
+    ground = List.last(List.last(d["nodes"])["skill"]["sculpt"]["edits"])
+    assert %{"size" => [_, 8.25, 0.18], "at" => [_, -8.25, -0.2]} = ground
     assert_in_delta hd(pole["at"]), hd(plan["lots"])["width"] - long / 2, 1.0e-3
     # The front of a house in a row has an image of 1024 (a house alone: 2048).
     fronts = for n <- d["nodes"], String.ends_with?(n["name"], "_mat_tien"), do: n["skill"]["sculpt"]["bake"]
