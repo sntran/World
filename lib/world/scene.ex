@@ -163,11 +163,25 @@ defmodule World.Scene do
       positions: Enum.map(verts, &elem(&1, 0)),
       normals: Enum.map(verts, &elem(&1, 1)),
       indices: Enum.reverse(indices),
-      # A corner with no color in a primitive with colors is white.
-      colors: if(colors?, do: Enum.map(verts, &(elem(&1, 2) || {255, 255, 255}))),
+      colors: if(colors?, do: colors(Enum.map(verts, &elem(&1, 2)))),
       # A corner with no UV in a primitive with UVs is at the first texel.
       uvs: if(uvs?, do: Enum.map(verts, &(elem(&1, 3) || {0.0, 0.0})))
     }
+  end
+
+  # The colors of the points of a primitive. A corner with no color is
+  # white. When one color has an alpha, each color has one: a color with
+  # none is whole.
+  defp colors(list) do
+    if Enum.any?(list, &match?({_, _, _, _}, &1)) do
+      Enum.map(list, fn
+        nil -> {255, 255, 255, 1.0}
+        {r, g, b} -> {r, g, b, 1.0}
+        color -> color
+      end)
+    else
+      Enum.map(list, &(&1 || {255, 255, 255}))
+    end
   end
 
   # The key of a corner in the map of the points seen: a binary of its six

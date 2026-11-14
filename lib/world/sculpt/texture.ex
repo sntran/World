@@ -31,6 +31,13 @@ defmodule World.Sculpt.Texture do
   | `leaves` | Clumps, light at their tops and dark between them. | A clump: 120 mm. |
   | `stone` | Bumps of three sizes and spots. | A bump: 50 mm. |
   | `rust` | Patches of rust on a metal: brown, rough, no metal there. | A patch: 30 mm. |
+  | `hair` | Strands that go out and down from the z of the edit (the top of a head), in locks: each strand has its height and its tone, and some are light. | A strand: 1.5 mm, at 9 cm from the z. |
+
+  | `palm` | Leaves of palm that go out and down from the z of the edit (a nón lá): 40 blades, each with its tone and its fibers, and a dark line between two blades. | A fiber: 1 mm, at 6 cm from the z. |
+
+  The height of a strand of `hair` (`strand/1`) is also how far it
+  stands out of a mass of hair: the alpha of the image of a sculpture
+  with strands is from it (`World.Sculpt.Bake`).
   """
 
   @kinds %{
@@ -46,7 +53,9 @@ defmodule World.Sculpt.Texture do
     "rubber" => {:rubber, 0.003},
     "leaves" => {:leaves, 0.12},
     "stone" => {:stone, 0.05},
-    "rust" => {:rust, 0.03}
+    "rust" => {:rust, 0.03},
+    "hair" => {:hair, 0.0015},
+    "palm" => {:palm, 0.003}
   }
 
   # The color of rust (linear light is not needed: a mix of two colors of the image).
@@ -164,6 +173,50 @@ defmodule World.Sculpt.Texture do
     patch = step(0.48, 0.62, v)
     pit = noise(x * 6.0, y * 6.0, z * 6.0) - 0.5
     {0.1 * patch * pit, 1.0 + 0.3 * patch * pit, 0.35 * patch, 1.0 - patch, {@rust, patch}}
+  end
+
+  def at(:hair, q, _n) do
+    h = strand(q)
+    {cx, cy, along} = flow(q)
+    # Some strands catch the light.
+    light = step(0.8, 0.95, noise(cx * 1.3 + 5.2, cy * 1.3, along * 0.015))
+    {0.5 * (h - 0.5), 0.62 + 0.62 * h + 0.35 * light, 0.12 * (0.5 - h), 1.0, nil}
+  end
+
+  def at(:palm, {x, y, _z} = q, _n) do
+    {cx, cy, along} = flow(q)
+    fiber = noise(cx, cy, along * 0.01) - 0.5
+    # The blade of a place: 40 round the z, each with its own tone; a dark line at its two edges.
+    turn = (:math.atan2(y, x) / (2 * :math.pi()) + 0.5) * 40
+    blade = floor(turn)
+    edge = abs(turn - blade - 0.5) * 2
+    seam = step(0.86, 0.98, edge)
+    tone = 0.93 + 0.12 * (:erlang.phash2(blade, 256) / 255) + 0.1 * fiber - 0.22 * seam
+    {0.25 * fiber - 0.35 * seam, tone, 0.06 * seam - 0.05 * fiber, 1.0, nil}
+  end
+
+  @doc """
+  The height of the strand of hair at a place (in the axes of the edit,
+  in units of the scale): 0 to 1. The strands go out from the z of the
+  edit and down, as hair from the top of a head: a strand is a
+  direction round the z, one unit wide at 60 units from it. Three
+  strands or so make a lock.
+  """
+  def strand(q) do
+    {cx, cy, along} = flow(q)
+    one = noise(cx, cy, along * 0.02)
+    lock = noise(cx * 0.3 + 7.1, cy * 0.3, along * 0.008)
+    fine = noise(cx * 2.7, cy * 2.7 + 3.3, along * 0.05)
+    # (The mean of the three is near the middle: the heights go over all of 0 to 1.)
+    min(max((0.5 * one + 0.32 * lock + 0.18 * fine - 0.5) * 2.6 + 0.5, 0.0), 1.0)
+  end
+
+  # The place of a strand: its direction round the z (two numbers, with
+  # no seam) and how far it is along the strand (out and down).
+  defp flow({x, y, z}) do
+    r = :math.sqrt(x * x + y * y)
+    out = max(r, 1.0e-9)
+    {60.0 * x / out, 60.0 * y / out, r - z}
   end
 
   # A plain weave of two sets of strips, one mark wide: the height of the

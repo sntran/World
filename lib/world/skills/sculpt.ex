@@ -32,7 +32,7 @@ defmodule World.Skills.Sculpt do
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
   alias World.Sculpt.{Bones, Texture}
 
-  @keys ~w(edits groups details ports sources budget cells bake look occlusion dirt wear bones bone_blend plan gait clips)
+  @keys ~w(edits groups details ports sources budget cells bake look occlusion dirt wear strands bones bone_blend plan gait clips)
   @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow surface mirror repeat levels)
   # The finishes with a name: a roughness and a metal.
   @finishes %{
@@ -88,6 +88,7 @@ defmodule World.Skills.Sculpt do
       optional(data, "occlusion", path, &flag/2) ++
       optional(data, "dirt", path, &number(&1, &2, 0, 1)) ++
       optional(data, "wear", path, &number(&1, &2, 0, 1)) ++
+      optional(data, "strands", path, &strands(&1, &2, groups)) ++
       optional(data, "bones", path, &bones/2) ++
       optional(data, "bone_blend", path, &number(&1, &2, 0.001, 10)) ++
       optional(data, "plan", path, &plan(&1, &2, data["bones"])) ++
@@ -128,10 +129,14 @@ defmodule World.Skills.Sculpt do
     look = %{
       occlusion: Map.get(data, "occlusion", true),
       dirt: Map.get(data, "dirt", 0.0) / 1,
-      wear: Map.get(data, "wear", 0.0) / 1
+      wear: Map.get(data, "wear", 0.0) / 1,
+      # (Strands: the shapes where the hair is thin, as edits.)
+      strands:
+        side && data["strands"] && %{thin: edits(Map.get(data["strands"], "thin", []), Map.get(data, "groups", %{}))}
     }
 
     {meshes, materials} = maps(built, if(Enum.any?(built, fn {ms, _, _} -> ms != [] end), do: side), look)
+    meshes = if look.strands, do: shells(meshes, data["strands"], level), else: meshes
     ports = Drawing.ports(Map.get(data, "ports", %{}))
     sources = Map.get(data, "sources", [])
 
@@ -189,7 +194,7 @@ defmodule World.Skills.Sculpt do
       Map.new(GLB.palette(), fn {role, spec} -> {GLB.role(role), {spec["roughness"] / 1, spec["metalness"] / 1}} end)
 
     {meshes, maps} = World.Sculpt.Bake.maps(built, side, defaults, look)
-    png = fn rows -> {"image/png", World.PNG.encode(rows, 3)} end
+    png = fn rows, channels -> {"image/png", World.PNG.encode(rows, channels)} end
 
     # Each image becomes a PNG file in a process of its own; the function
     # waits for them.
@@ -201,7 +206,9 @@ defmodule World.Skills.Sculpt do
             {"glow_image", maps.glow}
           ],
           rows != nil,
-          do: Task.async(fn -> {key, png.(rows)} end)
+          # (With strands, the image of the colors has the cover of each place as its alpha.)
+          channels = if(key == "image" and maps.alpha, do: 4, else: 3),
+          do: Task.async(fn -> {key, png.(rows, channels)} end)
 
     {meshes,
      fn ->
@@ -210,9 +217,34 @@ defmodule World.Skills.Sculpt do
          |> Task.await_many(:infinity)
          |> Map.new()
          |> Map.merge(%{"atlas" => true, "occlusion" => look.occlusion})
+         |> Map.merge(if(maps.alpha, do: %{"alpha_mode" => "MASK", "double_sided" => true}, else: %{}))
 
        %{"materials" => Map.new(meshes, &{Atom.to_string(&1.material), spec})}
      end}
+  end
+
+  # The shells of a sculpture with strands: copies of each mesh, out
+  # along its normals, each with less alpha at its points. The alpha of
+  # the image is the height of the strand of a place, so a shell shows
+  # only the strands that are higher than its part of the way out: single
+  # strands at the outline and at the line of the hair. All the shells at
+  # near, one at mid, none at far.
+  defp shells(meshes, strands, level) do
+    count = %{near: Map.get(strands, "shells", 3), mid: 1, far: 0}[level]
+    long = Map.get(strands, "length", 0.006) / 1
+
+    meshes ++
+      for k <- 1..count//1, m <- meshes do
+        out = long * k / count
+        # The shell shows a strand that is higher than this part.
+        alpha = 0.5 / (0.5 + 0.5 * (k / (count + 1) + 0.05))
+
+        %{
+          m
+          | points: for({p, n} <- Enum.zip(m.points, m.normals), do: Vec.add(p, Vec.scale(n, out))),
+            colors: List.duplicate({255, 255, 255, alpha}, length(m.points))
+        }
+      end
   end
 
   # The details of a sculpture at a level, each as the data of a
@@ -440,6 +472,19 @@ defmodule World.Skills.Sculpt do
 
   defp optional(data, key, path, check),
     do: if(Map.has_key?(data, key), do: check.(data[key], "#{path}.#{key}"), else: [])
+
+  # The strands of a sculpture of hair: the count of its shells, how far
+  # the last one is out, and the shapes where the hair is thin.
+  defp strands(v, path, groups) when is_map(v) do
+    World.Skill.keys(v, path, ~w(shells length thin), []) ++
+      optional(v, "shells", path, fn n, p ->
+        if is_integer(n) and n in 1..8, do: [], else: [{p, "must be a count of shells from 1 to 8"}]
+      end) ++
+      optional(v, "length", path, &number(&1, &2, 0.0005, 0.05)) ++
+      optional(v, "thin", path, &edits(&1, &2, groups))
+  end
+
+  defp strands(_v, path, _groups), do: [{path, "must be {\"shells\": n, \"length\": m, \"thin\": [edits]}"}]
 
   defp edits(v, path, groups) when is_list(v) and v != [] and length(v) <= @most do
     errors = v |> Enum.with_index() |> Enum.flat_map(fn {e, i} -> edit(e, "#{path}.#{i}", groups) end)

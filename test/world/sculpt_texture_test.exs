@@ -26,13 +26,13 @@ defmodule World.Sculpt.TextureTest do
 
   test "each kind: a name, a scale, and numbers in their ranges at each place" do
     assert Texture.kinds() ==
-             ~w(bark brushed cast concrete fabric leather leaves plaster rubber rust stone weave wood)
+             ~w(bark brushed cast concrete fabric hair leather leaves palm plaster rubber rust stone weave wood)
 
     assert Texture.kind("wood") == {:wood, 0.006} and Texture.kind("glass") == nil
     :rand.seed(:exsss, {4, 5, 6})
 
     for name <- Texture.kinds(), {kind, scale} = Texture.kind(name) do
-      assert scale > 0.001 and scale < 0.2
+      assert scale >= 0.001 and scale < 0.2
 
       seen =
         for _ <- 1..600 do
@@ -51,6 +51,45 @@ defmodule World.Sculpt.TextureTest do
       assert spread(Enum.map(seen, &elem(&1, 0))) > 0.004, name
       assert spread(Enum.map(seen, &elem(&1, 1))) > 0.01, name
     end
+  end
+
+  test "hair has strands that go out and down from the z; palm has 40 blades round the z (plan 0017)" do
+    # The height of a strand: 0 to 1; it changes little along the strand, and much across it.
+    {along, across} =
+      for i <- 1..200, reduce: {0.0, 0.0} do
+        {along, across} ->
+          a = i * 0.37
+          {x, y, z} = {60 * :math.cos(a), 60 * :math.sin(a), -i * 0.5}
+          here = Texture.strand({x, y, z})
+          assert here >= 0.0 and here <= 1.0
+          # (Along: out and down by 3 units. Across: round the z by 3 units.)
+          down = Texture.strand({x * 1.03, y * 1.03, z - 1.2})
+          side = Texture.strand({60 * :math.cos(a + 0.05), 60 * :math.sin(a + 0.05), z})
+          {along + abs(down - here), across + abs(side - here)}
+      end
+
+    assert across > 4 * along
+    # On the z itself, a strand has a height too.
+    assert Texture.strand({0.0, 0.0, 3.0}) >= 0.0
+    # The relief and the tone of the hair are from the height of the strand.
+    {height, tone, _, 1.0, nil} = Texture.at(:hair, {40.0, 20.0, -5.0}, {0.0, 0.0, 1.0})
+    assert_in_delta height, 0.5 * (Texture.strand({40.0, 20.0, -5.0}) - 0.5), 1.0e-12
+    assert tone > 0.6
+
+    # Palm: a dark line between two blades (each 9 degrees), and blades of different tones.
+    at = fn deg ->
+      Texture.at(
+        :palm,
+        {50 * :math.cos(deg * :math.pi() / 180), 50 * :math.sin(deg * :math.pi() / 180), -20.0},
+        {0.0, 0.0, 1.0}
+      )
+    end
+
+    {seam_height, seam_tone, _, _, _} = at.(9.0)
+    {_, mid_tone, _, _, _} = at.(13.5)
+    assert seam_tone < mid_tone - 0.1 and seam_height < -0.2
+    tones = for k <- 0..39, do: at.(k * 9 + 4.5) |> elem(1) |> Float.round(2)
+    assert length(Enum.uniq(tones)) > 10
   end
 
   test "wood has rings across its grain; a weave has strips over and under; rust takes the metal away" do

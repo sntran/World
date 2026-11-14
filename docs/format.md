@@ -483,6 +483,8 @@ The data of the skill:
 - `occlusion` (true by default), `dirt` and `wear` (0 to 1, 0 by
   default): the look of the surface from its shape, in the maps of a
   level with a bake ("The maps of a sculpture" below);
+- `strands`: the strands of a sculpture of hair, at a level with a
+  bake ("The strands of a sculpture" below);
 - `look`: `real` (by default) or `flat`. With `flat`, the model has flat
   faces, each with one color (the color of the edits at its middle),
   and no image at any level (a `bake` is not used): the look of a game
@@ -566,6 +568,8 @@ An edit has its `shape` and its `size`, and these keys:
   | `leaves` | Clumps, light at their tops and dark between them. | A clump: 120 mm. |
   | `stone` | Bumps of three sizes and spots. | A bump: 50 mm. |
   | `rust` | Patches of rust on a metal: brown, rough, no metal there. | A patch: 30 mm. |
+  | `hair` | Strands that go out and down from the z of the edit, as hair from the top of a head: locks, single strands, some that catch the light. | 1.5 mm (along a strand; 377 strands go round the z). |
+  | `palm` | 40 blades of a leaf of palm round the z of the edit, each with its tone and its fibers, with a dark line between two blades: a nón lá. | 3 mm (along a fiber). |
 - `raise` (m, from -0.1 to 0.1; for an edit of the mode `paint`, and at
   most its `blend`): the surface moves out by that much in the shape of
   the edit, or in with less than 0, with a slope across its border as
@@ -734,6 +738,40 @@ its maps: another node of the same model must use other roles.
 }}}
 ```
 
+### The strands of a sculpture
+
+A mass with the surface `hair` looks as clay with lines: its outline is
+smooth. The key `strands` of a sculpture makes the outline and the
+borders of the mass from single strands
+(`docs/plans/0017-people-with-parts-from-edits.md`, section 9):
+
+```text
+"strands": {"shells": 3, "length": 0.005,
+            "thin": [{"shape": "ball", "size": [0.04], "at": [0.09, 0, -0.13], "mode": "paint", "blend": 0.02}]}
+```
+
+- **The cover.** The color image of each level has an alpha: the cover
+  of each place. A place with the surface `hair` has half of the alpha
+  with the lowest strand and all of it with the highest one. A place
+  of another surface is whole. The material has the alpha mode `MASK`
+  (a cut at 0.5) and two sides.
+- **`thin`** (a list of edits of the mode `paint`): the shapes where
+  the hair is thin. In a shape, the low strands have
+  less than half of the alpha and are cut: the line of the hair on the
+  brow, the tips of long hair. The `blend` of a shape is the width of
+  the change, and its `opacity` is how thin the hair is there (1 by
+  default: at its middle no strand stays). A shape of `thin` is not
+  part of the field: it makes no surface.
+- **`shells`** (1 to 8, 3 by default) and **`length`** (m, 0.0005 to
+  0.05, 0.006 by default): copies of the mesh, out along its normals,
+  the last one out by `length`. The points of a shell have less alpha
+  in their color (`COLOR_0` with four numbers; the points of the mass
+  have 1), so a shell shows only the strands that are higher than its
+  part of the way out. All the shells are there at `near`, one at
+  `mid`, and none at `far`. The shells are over the budget of the
+  level: with 3 shells, a level has four times its budget.
+- A level with no bake has no strands.
+
 ### The details of a sculpture
 
 A sculpture has cells of one size. A part that is much smaller than the
@@ -826,7 +864,7 @@ landmark in parts (plan 0014).
 | `ghe_danh_ca_vung_tau` | A motor fishing boat of Vũng Tàu with a beak (ghe mỏ nhọn), 11 m long: the class C5-T2-A of the Blue Book of Coastal Vessels (1967) | A hollow hull: a `tube` along the sheer, the same tube smaller taken away, a `crop` by the side view (the sheer) and a `crop` by the tube again, so the decks and the cabin end at the hull. The same cells at each level (a thin wall needs two cells), and a detail that the far level does not have. The port `waterline`. |
 | `toyota_vios` | A Toyota Vios (XP150), 4425 by 1730 by 1475 mm | The side view as an `extrude`, with a `crop` by the plan and a `crop` by the section (each with a blend: round edges); the glass and the pillars by paints of side views; wheels as a `revolve` with a `repeat` for the spokes. |
 | `cay_bang` | A cây bàng (Terminalia catappa) of a street, 9 m high | Tiers of level branches by a `repeat`, leaves as rings of small flat clumps with the surface `leaves`, old leaves by paints with an `opacity`. |
-| `non_la_edits`, `mu_bao_hiem_edits`, `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | The parts of a person: a nón lá, a half helmet, three masses of hair | The kind `prop` and the port `crown` (above, "The ports and the props of a person"): rings by paints with a raise, a thin shell with the same cells at each level, a strap as a tube through a smooth line, lines of strands by a paint with a repeat. |
+| `non_la_edits`, `mu_bao_hiem_edits`, `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | The parts of a person: a nón lá, a half helmet, three masses of hair | The kind `prop` and the port `crown` (above, "The ports and the props of a person"): rings by paints with a raise, a thin shell with the same cells at each level, a strap as a tube through a smooth line, the surfaces `hair` and `palm`, and `strands` for the hair. |
 | `nha_pho_2_tang_vung_tau` | The most common town house of Vũng Tàu: two storeys, 5 m by 16 m, a terrace | From the rules of `World.Town.House` (above, "A house and a street from rules"): a roll-up door between piers of granite, a sign with no words at the balcony, a rail of stainless tubes in a detail, the head of the stair and a tank. |
 | `day_pho_vung_tau` | A row of five houses of Vũng Tàu on their sidewalk, 26 m long | From `World.Town.Street`: each type and each family, wall to wall; 16 parts, each with its image. |
 | `tuong_chua_kito_vua` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key by paints with a raise; groups with a scale for the head and the hands. Its inside is at near only (`levels`): a room in the base, the dome, six open windows, and a stair of 133 steps round an open well of eight sides: the steps as one edit with a `repeat` (a turn and a move), the handrail as one tube through 67 corners, and the balusters in a detail with cells of 12 mm. Each balcony has a rail of bars. |
@@ -1348,9 +1386,9 @@ body, the face and the skeleton stay those of MakeHuman.
 
 | Part | The thing | Its size |
 |---|---|---|
-| `non_la_edits` | A nón lá: a cone of leaves on 15 rings of bamboo, 41 cm across, with the ring for the head and a strap. | One size |
-| `mu_bao_hiem_edits` | The half helmet of a rider: a shell with a peak, a liner of foam, a band of rubber, straps. | The size of the head |
-| `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | Hair as one mass: short, in a bun, long to the shoulders. | The size of the head |
+| `non_la_edits` | A nón lá: a cone of 40 blades of palm (the surface `palm`) on 15 rings of bamboo, 41 cm across, with the ring for the head and a strap. | One size |
+| `mu_bao_hiem_edits` | The half helmet of a rider: a shell with a peak, a liner of foam with a pad of cloth, a band of rubber, straps with a buckle. Its shell is 3.8 cm over the top of the head: hair is under it. | The size of the head |
+| `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | Hair: short, in a bun, long to the shoulders. A mass with the surface `hair` and with `strands` ("The strands of a sculpture"): single strands at its outline, a thin line of hair on the brow, at the ears and at the neck. | The size of the head |
 
 - Each part is a drawing of the kind `prop` with one sculpture, and its
   port `crown` is at the top of the head (0 of its axes; z up, y to

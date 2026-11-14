@@ -120,10 +120,11 @@ defmodule World.Sculpt.Bake do
   def maps(meshes, edits, step, side) when is_number(step), do: maps([{meshes, edits, step}], side, %{}, %{})
 
   def maps(parts, side, defaults, look) when is_map(look) do
-    look = Map.merge(%{occlusion: false, dirt: 0.0, wear: 0.0}, look)
+    look = Map.merge(%{occlusion: false, dirt: 0.0, wear: 0.0, strands: nil}, look)
     shade? = look.occlusion or look.dirt > 0.0 or look.wear > 0.0
     # (An edit with a surface: the relief, the color and the finish of each texel change.)
-    grain? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.surface) end)
+    # (A sculpture with strands: each texel has its cover, with the surface of its edit.)
+    grain? = look.strands != nil or Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.surface) end)
     look = Map.merge(look, %{shade: shade?, grain: grain?})
 
     colors? =
@@ -250,12 +251,16 @@ defmodule World.Sculpt.Bake do
           end
 
         [color, normal, finish, glow] =
-          [{colors?, 0, @gray}, {true, 1, @flat}, {finish?, 2, @plain}, {glow?, 3, <<0, 0, 0>>}]
+          [{colors?, 0, blank(look)}, {true, 1, @flat}, {finish?, 2, @plain}, {glow?, 3, <<0, 0, 0>>}]
           |> World.Crew.map(fn {wanted?, which, blank} -> if wanted?, do: image(done, side, which, blank) end)
 
-        {meshes, %{side: side, color: color, normal: normal, finish: finish, glow: glow}}
+        {meshes, %{side: side, color: color, normal: normal, finish: finish, glow: glow, alpha: look.strands != nil}}
     end
   end
+
+  # The color of a place with no chart: with strands, it has no cover.
+  defp blank(%{strands: nil}), do: @gray
+  defp blank(_look), do: <<@gray::binary, 0>>
 
   # A corner at a hard edge gets a point of its own, with the normal of
   # its face: a corner whose face is more than `@hard` from the normal of
@@ -627,8 +632,11 @@ defmodule World.Sculpt.Bake do
         {f, color, finish, plain} =
           cond do
             look.grain ->
-              seen = SDF.seen(c.looks, p, c.limit, defaults)
-              Tuple.insert_at(grain(seen, c, p), 3, elem(seen, 0))
+              {plain, _, _, top} = seen = SDF.seen(c.looks, p, c.limit, defaults)
+              {f, color, finish} = grain(seen, c, p)
+              # (With strands: the cover of the place is the fourth part of its color.)
+              color = if look.strands, do: Tuple.insert_at(color, 3, cover(top, c, p, look.strands)), else: color
+              {f, color, finish, plain}
 
             defaults ->
               {f, color, finish} = SDF.sample(c.looks, p, c.limit, defaults)
@@ -648,9 +656,10 @@ defmodule World.Sculpt.Bake do
 
     done =
       for {{i, j} = at, {c, p, f, color, {weights, finish}}} <- values, into: %{} do
+        {color, cover} = with {r, g, b, a} <- color, do: {{r, g, b}, <<a>>}, else: (rgb -> {rgb, <<>>})
         {{r, g, b}, finish} = if shade, do: shaded(color, finish, shade.(i, j), look), else: {color, finish}
         {finish, glow} = if finish, do: finish({r, g, b}, finish), else: {<<>>, <<>>}
-        {at, {<<r, g, b>>, normal(c, i, j, {p, f, weights}, values, grade), finish, glow}}
+        {at, {<<r, g, b, cover::binary>>, normal(c, i, j, {p, f, weights}, values, grade), finish, glow}}
       end
 
     # (With the relief of a surface, the normals of two texels next to
@@ -669,7 +678,7 @@ defmodule World.Sculpt.Bake do
                  <<finishes::binary, finish::binary>>, <<glows::binary, glow::binary>>}
 
               nil ->
-                {<<colors::binary, @gray::binary>>, <<normals::binary, @flat::binary>>,
+                {<<colors::binary, blank(look)::binary>>, <<normals::binary, @flat::binary>>,
                  <<finishes::binary, @plain::binary>>, <<glows::binary, 0, 0, 0>>}
             end
         end
@@ -774,6 +783,34 @@ defmodule World.Sculpt.Bake do
   end
 
   defp grain({f, color, finish, _edit}, _chart, _p), do: {f, color, finish}
+
+  # The cover of a place of a sculpture with strands, as a byte: the
+  # alpha of its image. A strand of the surface `hair` covers by its
+  # height: with all the density of the hair, each place has half of the
+  # alpha or more (the mass is whole), and the high strands have more (a
+  # shell over the mass, with less alpha at its points, shows only
+  # them). In a shape of `thin`, the density goes down by the weight of
+  # the shape there: the low strands go first (the line of the hair on
+  # the brow, the tips). A place of another surface is whole.
+  defp cover(top, %{u: u}, p, %{thin: thin}) do
+    high =
+      case top do
+        %{surface: {:hair, scale}} = e ->
+          fade = min(max((scale / Vec.len(u) - 1.5) / 2, 0.0), 1.0)
+          0.5 + (Texture.strand(along(e, Vec.scale(World.Frame.point(e.back, p), 1 / scale))) - 0.5) * fade
+
+        _ ->
+          1.0
+      end
+
+    dense =
+      Enum.reduce(thin, 1.0, fn e, dense ->
+        inside = min(max(0.5 - SDF.distance(e, p) / max(e.blend, 1.0e-9), 0.0), 1.0)
+        dense * (1.0 - e.opacity * inside * inside * (3.0 - 2.0 * inside))
+      end)
+
+    byte8(round(255 * (0.5 + 0.5 * (high - ((1.0 - dense) * 1.05 - 0.05)))))
+  end
 
   # A place in the axes of the surface of an edit: its z is the long
   # axis of a box (the grain of a plank goes along the plank); for each
