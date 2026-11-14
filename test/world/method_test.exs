@@ -124,7 +124,14 @@ defmodule World.MethodTest do
     last = List.last(aged)
     assert_in_delta last["dirt"], 1 - :math.exp(-last["days"] / 365 / 8), 0.001
     assert_in_delta last["weeds"], min(last["days"] / 365 / 5, 1.0), 0.001
-    assert [["the copper cable of the lightning rod"]] = for(a <- aged, a["lost"] != [], do: a["lost"])
+    # The cable goes in the year of the middle of the pause. A pause that starts after that year (a slow
+    # computer) does not have it: the cable stays.
+    half = (pause.data["to"] - pause.data["from"]) / 2
+    lost = for(a <- aged, a["lost"] != [], do: a["lost"])
+
+    if left > half + 365,
+      do: assert(lost == [["the copper cable of the lightning rod"]]),
+      else: assert(lost in [[], [["the copper cable of the lightning rod"]]])
 
     assert %{data: %{"parts" => ["the copper cable of the lightning rod"]}} =
              Enum.find(events, &(&1.kind == "repaired"))
