@@ -2,7 +2,8 @@
 
 Status: In progress. The survey is made, and the south block is in the
 catalog: the office of the port at number 2, and the row of the
-numbers 4 to 26. (The owner, 2026-11-14: "Let's
+numbers 4 to 26. The south wing of the Grand Hotel is the first part
+of step 3. (The owner, 2026-11-14: "Let's
 build Quang Trung street".)
 
 Depends on: plan 0016 (a house and a street from rules), plan 0014 (a
@@ -95,7 +96,8 @@ one empty lot of 98 m. Only one block is a row of narrow houses.
    `quang_trung_12_18`, `quang_trung_20_26`). Done: section 7.
 2. The office of the port at number 2 (`cang_vu_vung_tau`), from its
    footprint and two photos. Done: section 8.
-3. The Grand Hotel (`hotel_gallery`, `colonial_villa`).
+3. The Grand Hotel: its south wing (`khach_san_grand_canh_nam`, done:
+   section 9), then its fore court and its main block.
 4. The House of Children, the low block, the office, the villa of OSC.
 5. The villa in its park, the Rex Hotel, the Royal Hotel.
 6. The ground: the roads with the median, the sidewalks, the park Bãi
@@ -170,3 +172,36 @@ What it is not:
 - **The boards have no words**, but for the four letters on the roof.
 - **The Araucaria trees in front of it** come with the ground (step 6).
 - **The paint is that of 2014.** In 2021 the blue parts were bands.
+
+## 9. The measure of step 3, first part: the south wing of the Grand Hotel
+
+`khach_san_grand_canh_nam` is a drawing from edits. One function makes
+a front of equal bays on a wall, so the same function can make the
+Royal Hotel (step 5).
+
+| What | From |
+|---|---|
+| The plan: 39.7 m on Quang Trung, 20.3 m deep | The footprint of OpenStreetMap (way 118946705) |
+| 3 storeys: a low ground storey between piers, a brown band, two storeys of loggias between orange pilasters, rails of iron, pale yellow walls, a cornice | A photo of 2015 (Wikimedia Commons, CC BY 3.0) |
+| A low roof of yellow tiles behind the cornice | Two photos from far |
+| The bed behind a low wall of stone, and the stone with the name | The same photo |
+| The heights (12 m to the top of the cornice), 9 bays on Quang Trung | The scale of the photo: a guess |
+| The front on Nguyễn Trãi (4 bays), the north end, the back, the pattern of the rails | A guess |
+
+| Level | Triangles | File |
+|---|---|---|
+| near | 68,500 | 8.4 MB |
+| mid | 8,300 | 1.1 MB |
+| far | 1,100 | 0.21 MB |
+
+- 372 edits in the body, and 390 tubes for the rails of the 26
+  loggias (a detail of the near level: 24,000 triangles). The three
+  levels build in 10 min while the full check runs on the same
+  machine; the rails are the largest part.
+
+What it is not:
+
+- **No plants.** The cycads of the bed and the trees of the sidewalk
+  come with the ground (step 6).
+- **The stone has no name on it.**
+- **At mid and far the loggias have no rails.**

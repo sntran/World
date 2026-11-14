@@ -77,4 +77,28 @@ defmodule World.QuangTrungTest do
     assert [osm, photos, guess] = d["sources"]
     assert osm =~ "OpenStreetMap" and photos =~ "Wikimedia Commons" and guess =~ "A guess"
   end
+
+  test "the south wing of the Grand Hotel: a block of 39.7 m with 26 loggias between pilasters" do
+    d = file("khach_san_grand_canh_nam")
+    assert {:ok, _} = World.Drawing.check(d, "d")
+    assert Enum.map(d["nodes"], & &1["name"]) == for(part <- ~w(than mai vuon), do: "khach_san_grand_canh_nam_#{part}")
+    [body, roof, garden] = Enum.map(d["nodes"], & &1["skill"]["sculpt"])
+    # The mass is the footprint of OpenStreetMap up to the cornice: 39.7 m on Quang Trung, 20.3 m deep.
+    assert %{"shape" => "box", "size" => [19.85, 10.15, 5.4], "at" => [19.85, -10.15, 5.4]} = hd(body["edits"])
+
+    # Nine bays on Quang Trung and four on Nguyễn Trãi, each with a loggia at two storeys and an opening at the ground.
+    hollows = Enum.filter(body["edits"], &(&1["mode"] == "subtract"))
+    assert length(hollows) == (9 + 4) * 3
+    assert Enum.count(hollows, &(Enum.at(&1["size"], 1) == 1.375)) == 26
+    # The rails of iron are thin: a detail of the near level, 15 tubes for each loggia.
+    assert [%{"levels" => ["near"], "edits" => rails}] = body["details"]
+    assert length(rails) == 26 * 15 and Enum.all?(rails, &(&1["shape"] == "tube" and &1["color"] == "#2f4a3c"))
+    # The roof is a low form with four slopes (a second outline crops the first), behind the cornice of 12 m.
+    assert [%{"shape" => "extrude"}, %{"shape" => "extrude", "mode" => "crop"} | _] = roof["edits"]
+    assert Enum.all?(roof["edits"], &(List.last(&1["at"]) >= 11.9))
+    # The garden: the bed behind its low wall, 4 m from the front, and the stone with the name.
+    assert Enum.any?(garden["edits"], &(&1["shape"] == "ellipsoid"))
+    assert [osm, photo, guess] = d["sources"]
+    assert osm =~ "OpenStreetMap" and photo =~ "Wikimedia Commons" and guess =~ "A guess"
+  end
 end
