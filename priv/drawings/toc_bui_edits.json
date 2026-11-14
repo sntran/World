@@ -1,0 +1,224 @@
+{
+ "name": "toc_bui_edits",
+ "kind": "prop",
+ "sources": [
+  "Hair in a bun as one mass from edits, for a person of World (plan 0017): the hair is 1.3 cm thick on the skull and goes back to a bun of 9 cm with a band. Its port crown is the top of the head. Its image is light: the color of its role is the color of the hair."
+ ],
+ "materials": {
+  "part_11": {
+   "color": "#ffffff",
+   "roughness": 0.6,
+   "metalness": 0.0
+  }
+ },
+ "nodes": [
+  {
+   "name": "toc_bui",
+   "skill": {
+    "sculpt": {
+     "edits": [
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.088,
+        0.106,
+        0.108
+       ],
+       "at": [
+        0,
+        -0.004,
+        -0.092
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.07,
+        0.08,
+        0.13
+       ],
+       "at": [
+        0,
+        0.085,
+        -0.19
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "mode": "subtract",
+       "blend": 0.012,
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        0.2,
+        0.1
+       ],
+       "at": [
+        0,
+        0.05,
+        -0.285
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "axis": [
+        0,
+        0.34,
+        0.94
+       ],
+       "up": [
+        0,
+        0.94,
+        -0.34
+       ],
+       "mode": "subtract",
+       "blend": 0.01,
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "ball",
+       "size": [
+        0.026
+       ],
+       "at": [
+        0.086,
+        0.012,
+        -0.135
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "mirror": "x",
+       "mode": "subtract",
+       "blend": 0.012,
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.001,
+        0.16,
+        0.16
+       ],
+       "at": [
+        -0.07,
+        0,
+        -0.09
+       ],
+       "material": "part_11",
+       "color": "#8c8880",
+       "mode": "paint",
+       "blend": 0.002,
+       "opacity": 0.5,
+       "repeat": {
+        "count": 11,
+        "move": [
+         0.014,
+         0,
+         0
+        ]
+       },
+       "raise": -0.0012
+      },
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.045,
+        0.04,
+        0.042
+       ],
+       "at": [
+        0,
+        -0.118,
+        -0.105
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "blend": 0.012,
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.03,
+        0.004
+       ],
+       "at": [
+        0,
+        -0.1,
+        -0.105
+       ],
+       "material": "part_11",
+       "color": "#5a2a2a",
+       "mode": "paint",
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "blend": 0.002,
+       "raise": 0.002
+      }
+     ],
+     "cells": {
+      "near": 0.003,
+      "mid": 0.006,
+      "far": 0.006
+     },
+     "budget": {
+      "near": 3500,
+      "mid": 900,
+      "far": 150
+     },
+     "bake": {
+      "near": 512,
+      "mid": 256,
+      "far": 128
+     },
+     "ports": {
+      "crown": {
+       "at": [
+        0,
+        0,
+        0
+       ],
+       "axis": [
+        0,
+        0,
+        1
+       ],
+       "up": [
+        0,
+        1,
+        0
+       ]
+      }
+     }
+    }
+   }
+  }
+ ]
+}

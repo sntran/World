@@ -1,0 +1,213 @@
+{
+ "name": "toc_ngan_edits",
+ "kind": "prop",
+ "sources": [
+  "Short hair as one mass from edits, for a person of World (plan 0017): 1.3 cm thick on the skull, with the face, the ears and the neck free, and lines of its strands. Its port crown is the top of the head. Its image is light: the color of its role is the color of the hair. A guess: the line of the hair on the brow."
+ ],
+ "materials": {
+  "part_11": {
+   "color": "#ffffff",
+   "roughness": 0.6,
+   "metalness": 0.0
+  }
+ },
+ "nodes": [
+  {
+   "name": "toc_ngan",
+   "skill": {
+    "sculpt": {
+     "edits": [
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.088,
+        0.106,
+        0.108
+       ],
+       "at": [
+        0,
+        -0.004,
+        -0.092
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.07,
+        0.08,
+        0.13
+       ],
+       "at": [
+        0,
+        0.085,
+        -0.19
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "mode": "subtract",
+       "blend": 0.012,
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        0.2,
+        0.1
+       ],
+       "at": [
+        0,
+        0.05,
+        -0.285
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "axis": [
+        0,
+        0.34,
+        0.94
+       ],
+       "up": [
+        0,
+        0.94,
+        -0.34
+       ],
+       "mode": "subtract",
+       "blend": 0.01,
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "ball",
+       "size": [
+        0.026
+       ],
+       "at": [
+        0.086,
+        0.012,
+        -0.135
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "mirror": "x",
+       "mode": "subtract",
+       "blend": 0.012,
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.001,
+        0.16,
+        0.16
+       ],
+       "at": [
+        -0.07,
+        0,
+        -0.09
+       ],
+       "material": "part_11",
+       "color": "#8c8880",
+       "mode": "paint",
+       "blend": 0.002,
+       "opacity": 0.5,
+       "repeat": {
+        "count": 11,
+        "move": [
+         0.014,
+         0,
+         0
+        ]
+       },
+       "raise": -0.0012
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        0.2,
+        0.1
+       ],
+       "at": [
+        0,
+        -0.06,
+        -0.262
+       ],
+       "material": "part_11",
+       "color": "#d8d4cc",
+       "axis": [
+        0,
+        -0.26,
+        0.966
+       ],
+       "up": [
+        0,
+        0.966,
+        0.26
+       ],
+       "mode": "subtract",
+       "blend": 0.012,
+       "roughness": 0.5,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.0025
+       }
+      }
+     ],
+     "cells": {
+      "near": 0.003,
+      "mid": 0.006,
+      "far": 0.006
+     },
+     "budget": {
+      "near": 3000,
+      "mid": 800,
+      "far": 150
+     },
+     "bake": {
+      "near": 512,
+      "mid": 256,
+      "far": 128
+     },
+     "ports": {
+      "crown": {
+       "at": [
+        0,
+        0,
+        0
+       ],
+       "axis": [
+        0,
+        0,
+        1
+       ],
+       "up": [
+        0,
+        1,
+        0
+       ]
+      }
+     }
+    }
+   }
+  }
+ ]
+}

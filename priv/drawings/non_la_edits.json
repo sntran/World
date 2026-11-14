@@ -1,0 +1,494 @@
+{
+ "name": "non_la_edits",
+ "kind": "prop",
+ "sources": [
+  "A nón lá of Việt Nam from edits: a cone of palm leaves on 15 rings of bamboo, about 41 cm across and 19 cm high (a common size of the nón lá of Huế), with a ring inside for the head and a strap of cloth. Its port crown is the top of the head. It is for a person of World (plan 0017). A guess: the place of the strap under the chin."
+ ],
+ "materials": {
+  "part_09": {
+   "color": "#ffffff",
+   "roughness": 0.6,
+   "metalness": 0.0
+  }
+ },
+ "nodes": [
+  {
+   "name": "non_la",
+   "skill": {
+    "sculpt": {
+     "edits": [
+      {
+       "shape": "cone",
+       "size": [
+        0.205,
+        0.004,
+        0.095
+       ],
+       "at": [
+        0,
+        0,
+        -0.015
+       ],
+       "material": "part_09",
+       "color": "#e6d9a8",
+       "roughness": 0.75,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.004
+       }
+      },
+      {
+       "shape": "cone",
+       "size": [
+        0.20099999999999998,
+        0.0,
+        0.095
+       ],
+       "at": [
+        0,
+        0,
+        -0.022
+       ],
+       "material": "part_09",
+       "color": "#d8c990",
+       "mode": "subtract",
+       "roughness": 0.8,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.004
+       }
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.0132,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        0.0677
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.0265,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        0.0555
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.0397,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        0.0432
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.0529,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        0.031
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.0661,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        0.0187
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.0794,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        0.0065
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.0926,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.0058
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.1058,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.0181
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.119,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.0303
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.1323,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.0426
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.1455,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.0548
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.1587,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.0671
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.1719,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.0794
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.1852,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.0916
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.1984,
+        0.0035
+       ],
+       "at": [
+        0,
+        0,
+        -0.1039
+       ],
+       "material": "part_09",
+       "color": "#cdbb84",
+       "mode": "paint",
+       "blend": 0.002,
+       "roughness": 0.7,
+       "raise": 0.0012
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.20199999999999999,
+        0.005
+       ],
+       "at": [
+        0,
+        0,
+        -0.106
+       ],
+       "material": "part_09",
+       "color": "#b9a56c",
+       "blend": 0.002,
+       "roughness": 0.7
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.085,
+        0.006
+       ],
+       "at": [
+        0,
+        0,
+        -0.035
+       ],
+       "material": "part_09",
+       "color": "#b9a56c",
+       "roughness": 0.7
+      },
+      {
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          0.086,
+          0.0,
+          -0.04
+         ],
+         [
+          0.0847,
+          0.0027,
+          -0.0613
+         ],
+         [
+          0.0827,
+          0.0067,
+          -0.0915
+         ],
+         [
+          0.08,
+          0.012,
+          -0.12
+         ],
+         [
+          0.077,
+          0.0187,
+          -0.1438
+         ],
+         [
+          0.0734,
+          0.0266,
+          -0.166
+         ],
+         [
+          0.068,
+          0.035,
+          -0.185
+         ],
+         [
+          0.0603,
+          0.0443,
+          -0.2004
+         ],
+         [
+          0.0507,
+          0.0541,
+          -0.2127
+         ],
+         [
+          0.04,
+          0.062,
+          -0.222
+         ],
+         [
+          0.0264,
+          0.067,
+          -0.2277
+         ],
+         [
+          0.0115,
+          0.07,
+          -0.2304
+         ],
+         [
+          0.001,
+          0.072,
+          -0.232
+         ]
+        ],
+        "radii": [
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004
+        ]
+       },
+       "color": "#d8d2e6",
+       "material": "part_09",
+       "mirror": "x",
+       "roughness": 0.8
+      }
+     ],
+     "cells": {
+      "near": 0.0025,
+      "mid": 0.0025,
+      "far": 0.0025
+     },
+     "budget": {
+      "near": 4000,
+      "mid": 1200,
+      "far": 200
+     },
+     "bake": {
+      "near": 512,
+      "mid": 256,
+      "far": 128
+     },
+     "ports": {
+      "crown": {
+       "at": [
+        0,
+        0,
+        0
+       ],
+       "axis": [
+        0,
+        0,
+        1
+       ],
+       "up": [
+        0,
+        1,
+        0
+       ]
+      }
+     },
+     "dirt": 0.3,
+     "wear": 0.2
+    }
+   }
+  }
+ ]
+}

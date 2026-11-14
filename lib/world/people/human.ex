@@ -13,7 +13,7 @@ defmodule World.People.Human do
   - `:far`: a body of 730 faces, with the colors of the clothes on it.
   """
   alias World.{Detail, Figure, Frame, Part, Port, Scene, Vec}
-  alias World.People.{Data, Face, Joints, Pose, Skeleton, Skin}
+  alias World.People.{Data, Face, Joints, Parts, Pose, Skeleton, Skin}
   require Data
 
   @blink ~w(eyeBlinkLeft eyeBlinkRight)
@@ -48,6 +48,7 @@ defmodule World.People.Human do
     helmet: nil,
     pose: %{},
     hold: [],
+    wear: [],
     speech: false,
     expressions: false,
     face: "relaxed",
@@ -77,7 +78,10 @@ defmodule World.People.Human do
   list of `{port, item}`: a prop on a port of a bone, as
   `World.Figure.hold/4`, by the port of the prop with the name of the
   port of the person with no side (`grip` for `grip_r`); a hand that
-  holds a prop closes on it, in the pose and in each animation), and
+  holds a prop closes on it, in the pose and in each animation), `wear`
+  (a list of the parts from edits of `World.People.Parts`, each a name
+  or `{name, opts}`: hair as a mass, a nón lá, a helmet, with the size
+  of the head of the person; give `hair: nil` with a mass of hair), and
   `speech` (true: the 15 visemes of `World.People.Face` as morph targets
   of the skin, and at near of the teeth and the tongue, for an app that
   moves the mouth with the voice), and `expressions` (true: the face
@@ -172,6 +176,28 @@ defmodule World.People.Human do
     |> then(fn f ->
       Enum.reduce(o.hold, f, fn {port, item}, f -> Figure.hold(f, port, item, String.replace(port, ~r/_[lr]$/, "")) end)
     end)
+    |> then(fn f ->
+      # A part from edits on its port, with the size of the head of this person.
+      head = head_size(bones, weights, points)
+
+      Enum.reduce(o.wear, f, fn part, f ->
+        {part, more} = if is_tuple(part), do: part, else: {part, []}
+        item = Parts.part(part, [scale: o.head * Parts.scale(part, head)] ++ more)
+        Figure.hold(f, Parts.on(part), item, Parts.on(part))
+      end)
+    end)
+  end
+
+  # The width and the length of the head: the box of the points of the skin that follow the bone of the head.
+  defp head_size(bones, weights, points) do
+    head = Enum.find_index(bones, &(&1.name == "head"))
+
+    {{x0, y0, _}, {x1, y1, _}} =
+      Vec.bounds(
+        for {v, ws} <- weights, Enum.any?(ws, fn {b, w} -> b == head and w >= 0.5 end), do: to_world(elem(points, v))
+      )
+
+    {x1 - x0, y1 - y0}
   end
 
   @doc """

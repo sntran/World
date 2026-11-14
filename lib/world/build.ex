@@ -372,6 +372,8 @@ defmodule World.Build do
   defp props(acc, %Figure{props: props} = f, offset, level, pose) do
     Enum.reduce(props, acc, fn {port, item, item_port}, acc ->
       {node, frame} = on_figure(f, offset, port)
+      # (A prop from edits has its image in its own materials.)
+      acc = %{acc | materials: Map.merge(Map.get(item, :materials, %{}), acc.materials)}
       walk(item, Frame.compose(frame, Frame.invert(Assembly.item_port_frame(item, item_port))), node, acc, level, pose)
     end)
   end

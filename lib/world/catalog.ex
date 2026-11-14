@@ -61,6 +61,8 @@ defmodule World.Catalog do
       {"traveler", &World.People.traveler/0},
       {"man", &World.People.man/0},
       {"woman", &World.People.woman/0},
+      {"woman_non_la", &World.People.woman_non_la/0},
+      {"man_helmet", &World.People.man_helmet/0},
       {"honda_vision_110_rider", &World.People.rider/0},
       {"fridge_lg_lrfxs2503s", &World.Appliances.fridge/0},
       {"washer_lg_wm4000hwa", &World.Appliances.washer/0},

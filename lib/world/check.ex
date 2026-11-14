@@ -66,8 +66,8 @@ defmodule World.Check do
   # roof, an enclosure on its wall: they do not stand on their own. A boat
   # floats (its check is its stability: TODO.md). A helmet is worn, and
   # its strap hangs under its rim. A plant grows in the ground: its roots
-  # hold it.
-  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat, :helmet, :plant], do: :ok
+  # hold it. A prop is held or worn by a person (a hat, a mass of hair).
+  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat, :helmet, :plant, :prop], do: :ok
   # A thing on its site (a hammock between two trees, a swing on a
   # branch or under a ceiling: `"site"` in its extras) is held by its site.
   defp stand(%Assembly{extras: %{"site" => true}}), do: :ok
