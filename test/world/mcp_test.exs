@@ -62,6 +62,18 @@ defmodule World.MCPTest do
     assert length(long["plan"]["lots"]) == 12 and long["drawing"] == nil
     assert length(tool("plan_street", %{})["structuredContent"]["plan"]["lots"]) == 5
     assert tool("plan_street", %{"street" => %{"count" => 0}})["isError"]
+
+    # A part of a long row, and the lots of a real street (plan 0018).
+    street = %{"count" => 12, "sidewalk" => 5.5, "lots" => [%{"use" => "bar", "number" => "4"}, %{"same" => true}, %{}]}
+    part = tool("plan_street", %{"street" => street, "only" => [2, 3]})["structuredContent"]
+    assert [%{"use" => "bar", "number" => "4"}, %{"use" => "bar"}, %{"use" => "home"}] = part["plan"]["lots"]
+    assert part["drawing"] == World.Town.Street.drawing(World.Town.Street.plan(street), only: 2..3)
+    assert length(part["drawing"]["nodes"]) == 7
+
+    for only <- [[3, 2], [0, 1], "all", [7, 9]] do
+      wrong = tool("plan_street", %{"street" => street, "only" => only})
+      assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ ~r/only is|from 1 to 5 lots/
+    end
   end
 
   test "list_blueprints gives the name and the description of each blueprint" do

@@ -1,0 +1,1619 @@
+{
+ "note": "Survey of the street Quang Trung, Vũng Tàu (the street of the Front Beach), 2026-11-14. The rows go from the SOUTH end (Trương Công Định / Hạ Long, number 2) to the NORTH end (Trần Phú, number 40): first the side of the town (east, the only side with buildings and numbers, all even), then the side of the sea (west: the park, the walks, the beach). from_north_m and from_south_m: the part of the street that the lot takes, in m along the street (the way of OpenStreetMap, 1136 m); at: [lat, lon] of the middle of its front. width_m: the frontage on Quang Trung; depth_m: the depth of the building; setback_m: from the back of the sidewalk to the front wall. marks: where each value comes from: OSM (OpenStreetMap, © OpenStreetMap contributors, ODbL), ML (Microsoft building footprints, ODbL), PHOTO n (a photo of `sources.photos`), WEB (a page of `sources.pages`), GUESS. A value with no mark is a description from the photos named in sources. The names of businesses are facts of the survey only. type: the type of building proposed for the rules (docs/plans/0018-quang-trung-street.md). house: what the rules of World.Town.House take from the row (a row with no `house` is not a house of those rules). The photos are not in the repository: 6 of them have all rights reserved (w01 to w03, f01 to f03) and were only read.",
+ "street": {
+  "name": "Quang Trung",
+  "city": "Vũng Tàu",
+  "length_m": 1136.3,
+  "rows_from": "south",
+  "sides": [
+   "town (east)",
+   "sea (west)"
+  ]
+ },
+ "sources": {
+  "photos": {
+   "c01": {
+    "url": "https://commons.wikimedia.org/wiki/File:Quang_Trung_street,_Vung_Tau_030324_1.jpg",
+    "shows": "Quang Trung to the north, from about the park Tam Giác (March 2024): the road, cars parked on the side of the sea, lamp poles, the frame of the hotel in construction with its cranes, the hill Núi Lớn.",
+    "licence": "CC0",
+    "author": "Xuanphuocle",
+    "date": "2024-03-06 01:55:08"
+   },
+   "c03": {
+    "url": "https://commons.wikimedia.org/wiki/File:Building_is_under_contruction_on_Quang_Trung_street_in_Vung_Tau_030324.jpg",
+    "shows": "The building in construction of 40 Quang Trung under green nets with a tower crane of DICcons, from the garden of the museum (March 2024). Geotag 10.35019, 107.06944: 1136 m from the south end, 49 m from the axis.",
+    "licence": "CC0",
+    "author": "Xuanphuocle",
+    "date": "2024-03-03 15:37:57"
+   },
+   "c04": {
+    "url": "https://commons.wikimedia.org/wiki/File:Tran_Phu_street,_Vung_Tau_030324_1.jpg",
+    "shows": "The north end, where Quang Trung turns into Trần Phú (March 2024): the walk of checker tiles, the sea wall, a lamp of five globes, a zebra, casuarina trees and the building in construction. Geotag 10.34981, 107.06934: 1136 m from the south end, 31 m from the axis.",
+    "licence": "CC0",
+    "author": "Xuanphuocle",
+    "date": "2024-03-03 15:42:47"
+   },
+   "c05": {
+    "url": "https://commons.wikimedia.org/wiki/File:Duong_Quang_trung_-_le_loi,_tp_Vung_tau_vietnam_-_panoramio.jpg",
+    "shows": "The corner of Quang Trung and Lê Lợi (2014): the yard of OSC Việt Nam (a villa with a red tile roof, a fence, coconut palms), the Mường Thanh hotel behind. Geotag 10.34579, 107.07403: 476 m from the south end, 7 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c06": {
+    "url": "https://commons.wikimedia.org/wiki/File:Duong_Quang_trung-ph%C6%B0%E1%BB%9Dng_1,_V%C5%A9ng_T%C3%A0u,_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u,_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "From the place where the street splits, to the north-west (2014): one road of two directions with a double line, blue lamp poles, Araucaria trees on the side of the sea, the lawns of the park Tam Giác on the right and the Rex hotel over the trees. Geotag 10.34615, 107.07374: 528 m from the south end, 1 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c07": {
+    "url": "https://commons.wikimedia.org/wiki/File:Duong_Quang_trung,_phuong_1,_Ba_ria_Vung_tau_,_Vietnam_-_panoramio.jpg",
+    "shows": "The place where the street splits, by Lê Lợi (2014): the median with Araucaria trees and a red and white curb, the paved square of the park Tam Giác. Geotag 10.34537, 107.07430: 418 m from the south end, 7 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c09": {
+    "url": "https://commons.wikimedia.org/wiki/File:Quang_trung_street-Ph%C6%B0%E1%BB%9Dng_1,_tp._V%C5%A9ng_T%C3%A0u,_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u,_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The road of the side of the sea to the south, by the park (2014): big Terminalia trees, a kiosk, sculptures, the median with Araucaria. Geotag 10.34378, 107.07492: 228 m from the south end, 5 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c10": {
+    "url": "https://commons.wikimedia.org/wiki/File:Duong_quang_trung-_bai_truoc-Ph%C6%B0%E1%BB%9Dng_1,_tp._V%C5%A9ng_T%C3%A0u,_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u,_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The road of the side of the sea to the north (2014): the sidewalk of the park, the median with hedges and a lamp of globes, the arch of the gate of the House of Children behind. Geotag 10.34378, 107.07492: 228 m from the south end, 5 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c11": {
+    "url": "https://commons.wikimedia.org/wiki/File:Grand_hotel,_quang_trung_street-Ph%C6%B0%E1%BB%9Dng_1,_tp._V%C5%A9ng_T%C3%A0u,_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u,_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The Grand Hotel from Quang Trung (2014): the main block of 3 storeys with a tile roof, the fence with lanterns. Geotag 10.34368, 107.07499: 217 m from the south end, 1 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c12": {
+    "url": "https://commons.wikimedia.org/wiki/File:Khach_san_Grand_-_duong_quang_trung-Ph%C6%B0%E1%BB%9Dng_1,_tp._V%C5%A9ng_T%C3%A0u,_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u,_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The Grand Hotel at the corner of Nguyễn Du (2014): the main block, the wing on Quang Trung, big trees. Geotag 10.34378, 107.07492: 228 m from the south end, 5 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c13": {
+    "url": "https://commons.wikimedia.org/wiki/File:Nha_thieu_nhi_tin_ba_ria_vung_tau-_duong_Quang_trung-Ph%C6%B0%E1%BB%9Dng_1,_tp._V%C5%A9ng_T%C3%A0u,_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u,_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The House of Children of the province (2014): the yard, the stairs, the tower, the hall. Geotag 10.34430, 107.07484: 286 m from the south end, 5 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c14": {
+    "url": "https://commons.wikimedia.org/wiki/File:Nha_truyen_thong_Cach_mang,_duong_Quang_Trung-Ph%C6%B0%E1%BB%9Dng_1,_tp._V%C5%A9ng_T%C3%A0u,_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u,_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "Nhà truyền thống cách mạng (1 Ba Cu) from the park (2014). Geotag 10.34763, 107.07267: 727 m from the south end, 11 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "c15": {
+    "url": "https://commons.wikimedia.org/wiki/File:Nha_Truyen_Thong_Tp_Vung_tau,phuong_1,_Ba_ria_Vung_Tau_Vietnam_-_panoramio.jpg",
+    "shows": "Nhà truyền thống cách mạng, a second view (2014). Geotag 10.34765, 107.07269: 727 m from the south end, 15 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "7 April 2014 (original upload date)"
+   },
+   "d01": {
+    "url": "https://commons.wikimedia.org/wiki/File:Ph%C6%B0%E1%BB%9Dng_1,_V%C5%A9ng_T%C3%A0u,_Ba_Ria_-_Vung_Tau,_Vietnam_-_panoramio_(9).jpg",
+    "shows": "The south wing of the Grand Hotel at the corner of Nguyễn Trãi (2015): 3 storeys, pilasters, recessed balconies. Geotag 10.34260, 107.07502: 94 m from the south end, 6 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 8 November 2015"
+   },
+   "d02": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AV%C5%A9ng_T%C3%A0u%2C_Ba_Ria_-_Vung_Tau%2C_Vietnam_-_panoramio_%2811%29.jpg",
+    "shows": "Nguyễn Trãi from the median of Quang Trung (2014): a rainbow arch, the Palace Hotel, the corner of the Grand wing (left), the corner bar of number 26 (right). Geotag 10.34304, 107.07475: 147 m from the south end, 39 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d03": {
+    "url": "https://commons.wikimedia.org/wiki/File%3ACong_vien_bai_truoc-Ph%C6%B0%E1%BB%9Dng_1%2C_tp._V%C5%A9ng_T%C3%A0u%2C_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u%2C_Vi%E1%BB%87t_Nam_-_panoramio_%281%29.jpg",
+    "shows": "The park Bãi Trước: lawns, coconut palms, frangipani, sculptures. Geotag 10.34240, 107.07489: 70 m from the south end, 17 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d04": {
+    "url": "https://commons.wikimedia.org/wiki/File%3ACong_vien_bai_truoc-Ph%C6%B0%E1%BB%9Dng_1%2C_tp._V%C5%A9ng_T%C3%A0u%2C_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u%2C_Vi%E1%BB%87t_Nam_-_panoramio_%282%29.jpg",
+    "shows": "The park Bãi Trước: paths, low lamps, palms. Geotag 10.34240, 107.07489: 70 m from the south end, 17 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d05": {
+    "url": "https://commons.wikimedia.org/wiki/File%3ACong_vien_bai_truoc-Ph%C6%B0%E1%BB%9Dng_1%2C_tp._V%C5%A9ng_T%C3%A0u%2C_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u%2C_Vi%E1%BB%87t_Nam_-_panoramio_%283%29.jpg",
+    "shows": "The park Bãi Trước to the south: palms, a pavilion with an orange tile roof, a hotel past the south end. Geotag 10.34252, 107.07478: 80 m from the south end, 30 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d06": {
+    "url": "https://commons.wikimedia.org/wiki/File%3ABai_truoc-duong_Ha_long-Ph%C6%B0%E1%BB%9Dng_2%2C_tp._V%C5%A9ng_T%C3%A0u%2C_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u%2C_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The Cảng vụ (2 Quang Trung) from the junction of Hạ Long and Trương Công Định (2014), the low fronts of the row and the Grand Hotel behind.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d07": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AVung_Tau%2C_Viet_Nam_2021.jpg",
+    "shows": "Aerial view of the south end from the south (2021): the junction, the Cảng vụ, the roofs of the row, the two one-way roads with the median, the park and the bay.",
+    "licence": "CC BY-SA 4.0",
+    "author": "Tuong Lam Photos",
+    "date": "2021-01-30 14:43:31"
+   },
+   "d08": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AV%C5%A9ng_T%C3%A0u%2C_Ba_Ria_-_Vung_Tau%2C_Vietnam_-_panoramio_%282%29.jpg",
+    "shows": "The beach and the sea wall to the south (hotels of Hạ Long behind). Geotag 10.34569, 107.07378: 481 m from the south end, 36 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 5 April 2014"
+   },
+   "d09": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AV%C5%A9ng_T%C3%A0u%2C_Ba_Ria_-_Vung_Tau%2C_Vietnam_-_panoramio_%283%29.jpg",
+    "shows": "The walk and the low wall of stone along the beach. Geotag 10.34518, 107.07373: 437 m from the south end, 72 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 5 April 2014"
+   },
+   "d10": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AV%C5%A9ng_T%C3%A0u%2C_Ba_Ria_-_Vung_Tau%2C_Vietnam_-_panoramio_%2812%29.jpg",
+    "shows": "The park Bãi Trước: leaning coconut palms on a lawn.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d11": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AVoyage_au_Vi%C3%AAt_Nam_-_panoramio_%2812%29.jpg",
+    "shows": "The walk of the sea at dusk: strips of lawn in granite borders, lamp poles.",
+    "licence": "CC BY 3.0",
+    "author": "Jean Van Jean",
+    "date": "20 March 2015 (original upload date)"
+   },
+   "d13": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AVoyage_au_Vi%C3%AAt_Nam_-_panoramio_%2814%29.jpg",
+    "shows": "The beach to the north (2014): the hill Núi Lớn, a big wheel on the land of Lam Sơn.",
+    "licence": "CC BY 3.0",
+    "author": "Jean Van Jean",
+    "date": "20 March 2015 (original upload date)"
+   },
+   "d16": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AV%C5%A9ng_T%C3%A0u%2C_Ba_Ria_-_Vung_Tau%2C_Vietnam_-_panoramio_%286%29.jpg",
+    "shows": "The sea wall of stone blocks and the walk (2014). Geotag 10.34612, 107.07339: 548 m from the south end, 33 m from the axis.",
+    "licence": "CC BY-SA 3.0",
+    "author": "Lam Tr Th",
+    "date": "6 September 2014 (original upload date)"
+   },
+   "d17": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AV%C5%A9ng_T%C3%A0u%2C_Ba_Ria_-_Vung_Tau%2C_Vietnam_-_panoramio_%285%29.jpg",
+    "shows": "The park Bãi Trước: palms, a sculpture, a blue lamp pole (2014). Geotag 10.34613, 107.07341: 548 m from the south end, 30 m from the axis.",
+    "licence": "CC BY-SA 3.0",
+    "author": "Lam Tr Th",
+    "date": "6 September 2014 (original upload date)"
+   },
+   "d20": {
+    "url": "https://commons.wikimedia.org/wiki/File%3ANguyen_du_street-Ph%C6%B0%E1%BB%9Dng_1%2C_tp._V%C5%A9ng_T%C3%A0u%2C_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u%2C_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The street Nguyễn Du, a side street (2014). Geotag 10.34391, 107.07498: 241 m from the south end, 6 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d21": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AKs_Grand_Vung_tau_Vietnam_-_panoramio.jpg",
+    "shows": "The south wing of the Grand Hotel, the boulder with its name. Geotag 10.34300, 107.07522: 139 m from the south end, 12 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "9 April 2014 (original upload date)"
+   },
+   "d22": {
+    "url": "https://commons.wikimedia.org/wiki/File%3ACong_vien_bai_truoc-Ph%C6%B0%E1%BB%9Dng_1%2C_tp._V%C5%A9ng_T%C3%A0u%2C_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u%2C_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The park Bãi Trước: a stone sculpture, palms. Geotag 10.34324, 107.07466: 177 m from the south end, 45 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d23": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AC%C3%B4ng_Vi%C3%AAn_B%C3%A3i_Tr%C6%B0%E1%BB%9Bc%2C_Quang_Trung%2C_Ph%C6%B0%E1%BB%9Dng_1%2C_tp._V%C5%A9ng_T%C3%A0u%2C_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u%2C_Vi%E1%BB%87t_Nam_-_panoramio.jpg",
+    "shows": "The Cảng vụ from the south-west (2014): 5 storeys, antennas. Geotag 10.34176, 107.07433: 0 m from the south end, 58 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "d24": {
+    "url": "https://commons.wikimedia.org/wiki/File%3AC%C3%B4ng_Vi%C3%AAn_B%C3%A3i_Tr%C6%B0%E1%BB%9Bc%2C_Quang_Trung%2C_Ph%C6%B0%E1%BB%9Dng_1%2C_tp._V%C5%A9ng_T%C3%A0u%2C_B%C3%A0_R%E1%BB%8Ba_-_V%C5%A9ng_T%C3%A0u%2C_Vi%E1%BB%87t_Nam_-_panoramio_%281%29.jpg",
+    "shows": "The park Bãi Trước: leaning palms. Geotag 10.34556, 107.07392: 460 m from the south end, 31 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 6 April 2014"
+   },
+   "f01": {
+    "url": "https://www.flickr.com/photo.gne?id=33923994444",
+    "shows": "Aerial view straight down on 40 Quang Trung (May 2017): the road (double yellow line, 4 lanes), the sidewalk, two villas with tile roofs.",
+    "licence": "© oscvietnam (Flickr, \"40 Quang Trung - Vung Tau\"): all rights reserved, kept for study only"
+   },
+   "f02": {
+    "url": "https://www.flickr.com/photo.gne?id=34380993650",
+    "shows": "Aerial view of 40 Quang Trung from the sea (May 2017): the sea wall, the walk, the road with a zebra, the land, the museum.",
+    "licence": "© oscvietnam (Flickr): all rights reserved, kept for study only"
+   },
+   "f03": {
+    "url": "https://www.flickr.com/photo.gne?id=34765803345",
+    "shows": "Aerial view of the road at 40 Quang Trung (May 2017): lanes, lamp poles, casuarina trees, the walk and the rocks.",
+    "licence": "© oscvietnam (Flickr): all rights reserved, kept for study only"
+   },
+   "g01": {
+    "url": "https://commons.wikimedia.org/wiki/File%3APh%C6%B0%E1%BB%9Dng_1%2C_V%C5%A9ng_T%C3%A0u%2C_Ba_Ria_-_Vung_Tau%2C_Vietnam_-_panoramio_%287%29.jpg",
+    "shows": "The street Ba Cu near its end on Quang Trung: trees, a zebra. Geotag 10.34750, 107.07316: 685 m from the south end, 42 m from the axis.",
+    "licence": "CC BY 3.0",
+    "author": "trungydang",
+    "date": "Taken on 8 November 2015"
+   },
+   "w01": {
+    "url": "https://royalhotelvungtau.vn/public_/files/full/image5371c7207957c60027.jpg",
+    "shows": "The front of the Royal Hotel (36 Quang Trung), about 2012: 3 storeys, balconies, the porch, the sign, the 360° cafe.",
+    "licence": "© Royal Hotel Vũng Tàu (site of the hotel): all rights reserved, kept for study only"
+   },
+   "w02": {
+    "url": "https://cdn2.vietnambooking.com/wp-content/uploads/hotel_pro/hotel_353113/ecd1c3f16fa3dae63a5d1305c68299da.jpg",
+    "shows": "The Rex Hotel from its pool: the main block of 9 storeys, the low wing, the pavilion.",
+    "licence": "© vietnambooking.com / the hotel: all rights reserved, kept for study only"
+   },
+   "w03": {
+    "url": "https://cdn2.vietnambooking.com/wp-content/uploads/hotel_pro/hotel_353113/80588d5d6501a8ecc4550ffa65e4008c.jpg",
+    "shows": "The Rex Hotel from its pool, a second view.",
+    "licence": "© vietnambooking.com / the hotel: all rights reserved, kept for study only"
+   }
+  },
+  "data": [
+   "OpenStreetMap, by the Overpass API (https://maps.mail.ru/osm/tools/overpass/api/interpreter; overpass-api.de and overpass.kumi.systems did not answer), 2 queries on 2026-11-14, data up to 2026-11-14T00:04:56Z: osm_raw.json. © OpenStreetMap contributors, ODbL 1.0.",
+   "Microsoft Global ML Building Footprints (https://github.com/microsoft/GlobalMLBuildingFootprints), the file of Vietnam for the quadkey 132231002 (release 2026-02-03): 377 footprints in the area kept in raw/ms_buildings.json. ODbL 1.0. Used for the row with no footprints in OpenStreetMap (marks \"ML\"); these footprints lie about 8 m to the west of those of OpenStreetMap here.",
+   "KartaView (api.kartaview.org/2.0/photo, no token): no photo within 500 m. Mapillary: the API asks for a token, not read."
+  ],
+  "pages": [
+   "https://royalhotelvungtau.vn/ - the Royal Hotel: 36 Quang Trung, before the Canadian Hotel; its restaurant at 02A Hoàng Diệu. (T21)",
+   "https://www.vietnambooking.com/hotel/vietnam/rex-vung-tau.html - the Rex Hotel: 01 Lê Quý Đôn, 77 rooms. (T20)",
+   "https://mytour.vn/en/blog/bai-viet/best-10-hotels-in-bai-truoc-vung-tau-on-mytour.html - Royal 36 Quang Trung; Grand 2 Nguyễn Du; Rex 01 Lê Quý Đôn; Palace 1 Nguyễn Trãi. (T12, T13, T20, T21)",
+   "https://vinwonders.com/vi/wonderpedia/news/bai-truoc-vung-tau/ - Ốc Vũng Tàu at 8-10 Quang Trung; the Front Beach from Trần Phú along Quang Trung to Hạ Long. (T04)",
+   "https://infodoanhnghiep.com/thong-tin/Chi-Nhanh-Cong-Ty-Co-Phan-Dai-Ly-Hang-Hai-Viet-Nam-Dai-Ly-Hang-Hai-Vung-Tau-Vosa-Vung-Tau-37898-012.html - Vosa Vũng Tàu at 04 Quang Trung (a directory: not sure). (T02)",
+   "https://fodors.fodors.com/world/asia/vietnam/side-trips-from-ho-chi-minh-city/things-to-do/nightlife/reviews/cask-296551700 and https://mytour.vn/en/blog/bai-viet/top-9-famous-bars-in-vung-tau.html - bars listed at 12 Quang Trung. (T05)",
+   "https://lisas-newsletter-99cb17.beehiiv.com/p/paddy-s-tavern - an Irish pub at 22 Quang Trung (as a search result, the page was not opened). (T10)",
+   "https://www.foody.vn/vung-tau/bar-pub-phuc-vu-trai-cay - Summer Wine Corner Bar, 26 Quang Trung (as a search result). (T11)",
+   "https://alonhadat.com.vn/nha-dat/cho-thue/mat-bang/duong-quang-trung-thanh-pho-vung-tau-dp4337.html - a lot for rent on Quang Trung: 5 x 20 m, one storey (\"cấp 4\"), a corner with a view of the sea (the page of the lot asks for a captcha: not opened). (T02-T10)",
+   "https://cafef.vn/loat-du-an-tren-dat-vang-vung-tau-noi-bo-hoang-cho-thi-cong-cam-chung-188260804090735321.chn (2026-08-04) - as a search result: a project at 40 Quang Trung, Bãi Trước; the page as fetched did not show it. (T23)",
+   "https://futuresoutheastasia.com/future-vung-tau/ and https://futuresoutheastasia.com/vung-tau-construction-update-2021/ - DoubleTree by Hilton Vũng Tàu at the Front Beach (signed in 2017 with the BRG group, built by DICcons); a plan of BRG for about 11 ha of Lam Sơn with six towers and three hotels (Hilton, Rex, Royal). (T20-T23)",
+   "https://www.flickr.com/photo.gne?id=34765863805 - the series of aerial photos \"40 Quang Trung - Vung Tau\" (May 2017, oscvietnam). (T23)",
+   "https://tuoitre.vn/plo/vung-tau-bien-bai-truoc-bai-sau-sang-ruc-nho-dan-den-cao-ap-post589076.html (2020-08-17) - 9 masts of 17 m with 6 LED lamps of 500 W at the Front Beach; the parks of Bãi Trước and of the street Lê Quý Đôn. (the street; T19)",
+   "https://tuoitre.vn/tp-hcm-chi-hang-chuc-ti-dong-chinh-trang-lam-dep-bai-bien-vung-tau-20260423183342301.htm (2026-04-23) - about 14.5 billion đồng in 2026 for the park Bãi Trước: lights, a playground, trees. (S01)",
+   "https://thanhtra.com.vn/moi-truong-9DBF44B9E/can-chung-tay-chinh-trang-do-thi-khu-vuc-bai-truoc-bien-vung-tau-F5954717.html (2022-12) - the public land 01A Trần Phú (1,355 m²) next to the Front Beach. (context, north of the street)",
+   "https://mia.vn/cam-nang-du-lich/kham-pha-ve-dep-ho-may-vung-tau-chi-goi-gon-trong-vong-1-ngay-1553 - the station of the cable car of Hồ Mây: 1A Trần Phú (not on Quang Trung). (the street)",
+   "https://commons.wikimedia.org/wiki/Category:Streets_in_Vung_Tau - the category read for photos; the series \"Vũng Tàu 2022 (...)\" shows the Back Beach (Thùy Vân), not this street: not kept."
+  ]
+ },
+ "rows": [
+  {
+   "id": "QT-T01",
+   "order": 1,
+   "side": "town",
+   "name": "Cảng vụ Hàng hải Vũng Tàu (Maritime Administration of Vũng Tàu)",
+   "number": "2",
+   "osm_ids": [
+    259732719
+   ],
+   "from_north_m": [
+    1096.7,
+    1124.7
+   ],
+   "from_south_m": [
+    11.6,
+    39.6
+   ],
+   "at": [
+    10.3419615,
+    107.0750399
+   ],
+   "width_m": 28.0,
+   "depth_m": 27.5,
+   "storeys": 5,
+   "use": "public office",
+   "family": "old (1985-2000), office block",
+   "type": "office_block",
+   "colour": "white with light blue bands and blue-tinted glass (2014); white with blue bands (2021)",
+   "ground": "a porch at the corner (two round columns, a flat canopy with the name board), a few steps, glass doors; windows on the rest",
+   "balcony": "none; bands of windows, air conditioners on ledges",
+   "roof": "flat with a parapet, a stair block and antenna masts",
+   "setback_m": 0,
+   "building": true,
+   "notes": "At the corner of Trương Công Định; a round glazed bay at the corner; Araucaria trees on the sidewalk in front. The Microsoft footprint gives a frontage of 34.5 m (it merges the next lot).",
+   "sources": [
+    "OSM way 259732719 (footprint, name, addr:housenumber 2)",
+    "PHOTO d06, d23 (2014: 5 storeys, colours, porch)",
+    "PHOTO d07 (2021 aerial)"
+   ],
+   "marks": {
+    "width_m": "OSM",
+    "depth_m": "OSM",
+    "storeys": "PHOTO d06 d23",
+    "number": "OSM",
+    "colour": "PHOTO d06 d07",
+    "setback_m": "OSM+PHOTO"
+   }
+  },
+  {
+   "id": "QT-T02",
+   "order": 2,
+   "side": "town",
+   "name": "Vosa Vũng Tàu (shipping agency, registered at number 4); a cafe (OSM node \"Cafe Bảy\") about here",
+   "number": "4",
+   "osm_ids": [],
+   "from_north_m": [
+    1090.8,
+    1096.7
+   ],
+   "from_south_m": [
+    39.6,
+    45.5
+   ],
+   "at": [
+    10.3421103,
+    107.0750778
+   ],
+   "width_m": 5.8,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "office over a cafe",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_flat",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "WEB infodoanhnghiep.com (number 4)",
+    "OSM node 5595939517 (cafe, 5 m to the north of the Cảng vụ)",
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "WEB",
+    "name": "OSM/WEB",
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_flat",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T03",
+   "order": 3,
+   "side": "town",
+   "name": "convenience store (OSM node \"Circle K\")",
+   "number": "6",
+   "osm_ids": [],
+   "from_north_m": [
+    1085.0,
+    1090.8
+   ],
+   "from_south_m": [
+    45.5,
+    51.3
+   ],
+   "at": [
+    10.3421615,
+    107.0750911
+   ],
+   "width_m": 5.8,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "shop",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_flat",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "OSM node 5595939507 (shop=convenience)",
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "GUESS (sequence)",
+    "name": "OSM/WEB",
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_flat",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T04",
+   "order": 4,
+   "side": "town",
+   "name": "Ốc Vũng Tàu (seafood restaurant, numbers 8-10)",
+   "number": "8-10",
+   "osm_ids": [],
+   "from_north_m": [
+    1073.3,
+    1085.0
+   ],
+   "from_south_m": [
+    51.3,
+    63.0
+   ],
+   "at": [
+    10.3422382,
+    107.0751111
+   ],
+   "width_m": 11.7,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "restaurant",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_tile",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "WEB vinwonders.com (\"số 8-10 Quang Trung\")",
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "WEB",
+    "name": "OSM/WEB",
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_tile",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T05",
+   "order": 5,
+   "side": "town",
+   "name": "Cask bar; also listed: 88 Beer Garden (number 12)",
+   "number": "12",
+   "osm_ids": [],
+   "from_north_m": [
+    1067.4,
+    1073.3
+   ],
+   "from_south_m": [
+    63.0,
+    68.8
+   ],
+   "at": [
+    10.342315,
+    107.0751311
+   ],
+   "width_m": 5.8,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "bar",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_flat",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "WEB fodors.com, mytour.vn (number 12)",
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "WEB",
+    "name": "OSM/WEB",
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_flat",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T06",
+   "order": 6,
+   "side": "town",
+   "name": null,
+   "number": "14",
+   "osm_ids": [],
+   "from_north_m": [
+    1061.6,
+    1067.4
+   ],
+   "from_south_m": [
+    68.8,
+    74.7
+   ],
+   "at": [
+    10.3423751,
+    107.0751425
+   ],
+   "width_m": 5.8,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "bar or restaurant",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_tile",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "GUESS (sequence)",
+    "name": null,
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_tile",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T07",
+   "order": 7,
+   "side": "town",
+   "name": null,
+   "number": "16",
+   "osm_ids": [],
+   "from_north_m": [
+    1055.7,
+    1061.6
+   ],
+   "from_south_m": [
+    74.7,
+    80.5
+   ],
+   "at": [
+    10.3424272,
+    107.0751516
+   ],
+   "width_m": 5.8,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "bar or restaurant",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_tile",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "GUESS (sequence)",
+    "name": null,
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_tile",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T08",
+   "order": 8,
+   "side": "town",
+   "name": "pub (OSM node \"R&R\")",
+   "number": "18",
+   "osm_ids": [],
+   "from_north_m": [
+    1049.9,
+    1055.7
+   ],
+   "from_south_m": [
+    80.5,
+    86.4
+   ],
+   "at": [
+    10.3424793,
+    107.0751607
+   ],
+   "width_m": 5.8,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "bar",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_flat",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "OSM node 5595939514 (amenity=pub)",
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "GUESS (sequence)",
+    "name": "OSM/WEB",
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_flat",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T09",
+   "order": 9,
+   "side": "town",
+   "name": "bar (OSM node \"Wonderful Bar\")",
+   "number": "20",
+   "osm_ids": [],
+   "from_north_m": [
+    1044.0,
+    1049.9
+   ],
+   "from_south_m": [
+    86.4,
+    92.2
+   ],
+   "at": [
+    10.3425313,
+    107.0751698
+   ],
+   "width_m": 5.8,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "bar",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_flat",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "OSM node 5595940121 (amenity=pub)",
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "GUESS (sequence)",
+    "name": "OSM/WEB",
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_flat",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T10",
+   "order": 10,
+   "side": "town",
+   "name": "Paddy's (Irish pub, number 22)",
+   "number": "22",
+   "osm_ids": [],
+   "from_north_m": [
+    1038.2,
+    1044.0
+   ],
+   "from_south_m": [
+    92.2,
+    98.1
+   ],
+   "at": [
+    10.3425858,
+    107.0751786
+   ],
+   "width_m": 5.8,
+   "depth_m": 20,
+   "storeys": 2,
+   "use": "bar",
+   "family": "old (1985-2000) or steel (2000-2015): not seen lot by lot",
+   "type": "pho2_flat",
+   "colour": null,
+   "ground": "open front of a bar or a restaurant, tables and parasols on the sidewalk, awning, sign board over the whole width",
+   "balcony": "not seen",
+   "roof": "low pitched roof of tiles or of metal sheets, the ridge along the depth of the lot (2021 aerial); a sign wall hides it from the street",
+   "setback_m": 0,
+   "building": true,
+   "notes": "One lot of the row of numbers 4 to 26. The row is 70 m long between the Cảng vụ and the corner of Nguyễn Trãi (Microsoft footprints: three blocks of 24.5, 23.5 and 19.1 m, 16 to 26 m deep) and holds 12 numbers: the limits of each lot, its width (5.8 m = the mean) and its 2 storeys are estimates. A lot of this street was offered for rent as \"5 x 20 m, cấp 4\" (one storey).",
+   "sources": [
+    "WEB beehiiv newsletter \"Paddy's Tavern\" (22 Quang Trung)",
+    "OSM node 5595939511 (amenity=pub \"Paddy\")",
+    "ML Microsoft footprints (the block)",
+    "PHOTO d07 (2021 aerial: low roofs)",
+    "PHOTO d06 (2014: low fronts with signs and awnings)",
+    "WEB alonhadat.com.vn (a lot of 5 x 20 m, one storey)"
+   ],
+   "marks": {
+    "width_m": "GUESS (mean of the row)",
+    "depth_m": "ML+WEB",
+    "storeys": "GUESS (1 or 2: PHOTO d07 shows low roofs)",
+    "number": "WEB",
+    "name": "OSM/WEB",
+    "colour": null,
+    "setback_m": "ML+PHOTO"
+   },
+   "house": {
+    "type": "pho2_flat",
+    "use": "bar"
+   }
+  },
+  {
+   "id": "QT-T11",
+   "order": 11,
+   "side": "town",
+   "name": "Summer Wine Corner Bar (number 26); bar (OSM node \"Ga Lang\")",
+   "number": "24-26",
+   "osm_ids": [],
+   "from_north_m": [
+    1026.5,
+    1038.2
+   ],
+   "from_south_m": [
+    98.1,
+    109.8
+   ],
+   "at": [
+    10.3426642,
+    107.0751905
+   ],
+   "width_m": 11.7,
+   "depth_m": 20,
+   "storeys": 3,
+   "use": "bar, rooms above",
+   "family": "steel (2000-2015)",
+   "type": "pho3",
+   "colour": "terracotta orange with big red letters (2014); white (2021)",
+   "ground": "open front of a bar on both streets, awnings, big parasols on the sidewalk",
+   "balcony": "a balcony or a terrace on the upper floors (not clear)",
+   "roof": "flat with a shaped parapet that carries the sign; a roof terrace (2021)",
+   "setback_m": 0,
+   "building": true,
+   "notes": "The corner building of Nguyễn Trãi: one building on about two lots.",
+   "sources": [
+    "WEB foody.vn (Summer Wine Corner Bar, 26 Quang Trung)",
+    "OSM node 2308870045 (amenity=bar)",
+    "PHOTO d02 (2014: 3 storeys, terracotta, sign)",
+    "PHOTO d07 (2021 aerial: white, roof terrace)",
+    "ML Microsoft footprint 122"
+   ],
+   "marks": {
+    "width_m": "GUESS (ML block and PHOTO)",
+    "depth_m": "ML",
+    "storeys": "PHOTO d02",
+    "number": "WEB",
+    "colour": "PHOTO d02 d07",
+    "setback_m": "PHOTO"
+   },
+   "house": {
+    "type": "pho3",
+    "family": "steel",
+    "use": "bar",
+    "wall": "#f2f0ea"
+   }
+  },
+  {
+   "id": "QT-T12",
+   "order": 12,
+   "side": "town",
+   "name": "Grand Hotel Vũng Tàu, the south wing (the hotel is at 2 Nguyễn Du)",
+   "number": null,
+   "osm_ids": [
+    118946705
+   ],
+   "from_north_m": [
+    962.5,
+    999.3
+   ],
+   "from_south_m": [
+    137.0,
+    173.8
+   ],
+   "at": [
+    10.343163,
+    107.0752302
+   ],
+   "width_m": 36.8,
+   "depth_m": 22.4,
+   "storeys": 3,
+   "use": "hotel",
+   "family": "colonial style (the Grand Hôtel of the French time, rebuilt)",
+   "type": "hotel_gallery",
+   "colour": "pale yellow walls, orange-ochre pilasters and cornice, a brown band at the first floor, dark green iron rails",
+   "ground": "a low ground floor of rooms with small windows between piers; no shop; a bed of cycads behind a low stone wall, the name of the hotel on a boulder at the corner",
+   "balcony": "a recessed balcony in each bay on the two upper floors, iron rails; about 9 bays of 4 m on Quang Trung",
+   "roof": "a cornice and a parapet; behind it a low hipped roof of yellow tiles",
+   "setback_m": 4,
+   "building": true,
+   "notes": "From Nguyễn Trãi to the fore court of the hotel. The street signs of the corner read Quang Trung and Nguyễn Trãi.",
+   "sources": [
+    "OSM way 118946705 (footprint)",
+    "PHOTO d01 (2015)",
+    "PHOTO d21, d06 (roof)",
+    "ML Microsoft footprint 262 (38.7 m)"
+   ],
+   "marks": {
+    "width_m": "OSM",
+    "depth_m": "OSM",
+    "storeys": "PHOTO d01",
+    "colour": "PHOTO d01",
+    "setback_m": "OSM+PHOTO"
+   }
+  },
+  {
+   "id": "QT-T13",
+   "order": 13,
+   "side": "town",
+   "name": "Grand Hotel Vũng Tàu, the fore court and the main block",
+   "number": null,
+   "osm_ids": [
+    791795133,
+    118950627,
+    791795131
+   ],
+   "from_north_m": [
+    910.7,
+    962.5
+   ],
+   "from_south_m": [
+    173.8,
+    225.6
+   ],
+   "at": [
+    10.3435591,
+    107.0751401
+   ],
+   "width_m": 51.8,
+   "depth_m": 25.2,
+   "storeys": 3,
+   "use": "hotel",
+   "family": "colonial style (rebuilt)",
+   "type": "colonial_villa",
+   "colour": "pale yellow, ochre pilasters, red letters GRAND HOTEL at the eaves",
+   "ground": "a fore court for cars round a circle, behind a fence of iron between piers with lanterns; a porch for cars at the door; a small gate house with a red tile roof",
+   "balcony": "balconies with iron rails between pilasters on the two upper floors",
+   "roof": "hipped roof of yellow tiles with a pediment",
+   "setback_m": 41.0,
+   "building": true,
+   "notes": "At the corner of Nguyễn Du. The main block (OSM way 118950627, addr 2 Nguyễn Du, 36 x 25 m) stands 51 m from the axis of the road behind the court; big Terminalia trees on the sidewalk. OSM way 791795133 is the outline of the whole hotel (88.6 m on Quang Trung).",
+   "sources": [
+    "OSM ways 791795133, 118950627, 791795131",
+    "PHOTO c11, c12 (2014)"
+   ],
+   "marks": {
+    "width_m": "OSM",
+    "depth_m": "OSM",
+    "storeys": "PHOTO c11",
+    "colour": "PHOTO c11",
+    "setback_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T14",
+   "order": 14,
+   "side": "town",
+   "name": "Nhà thiếu nhi tỉnh Bà Rịa - Vũng Tàu (the House of Children of the province)",
+   "number": null,
+   "osm_ids": [
+    791795151,
+    220753344
+   ],
+   "from_north_m": [
+    811.2,
+    894.4
+   ],
+   "from_south_m": [
+    241.9,
+    325.0
+   ],
+   "at": [
+    10.3442967,
+    107.074909
+   ],
+   "width_m": 83.2,
+   "depth_m": 44.1,
+   "storeys": 3,
+   "use": "public building (culture, classes for children)",
+   "family": "old (1985-2000), public",
+   "type": "civic_hall",
+   "colour": "cream with teal green bands and window frames",
+   "ground": "a yard behind a fence and a gate with an arch; a wide flight of stairs up to the first floor; a hall on the right",
+   "balcony": "open galleries with rails on each floor",
+   "roof": "flat; a small round tower with a cone; the name in red letters on the roof edge",
+   "setback_m": 21.0,
+   "building": true,
+   "notes": "The building (OSM way 791795151, 64 m wide) is 31 m back from the axis of the road, behind its yard; a swimming pool (OSM way 220753344) is on the north side.",
+   "sources": [
+    "OSM way 791795151, land 220753349",
+    "PHOTO c13 (2014)",
+    "PHOTO c10 (the gate with an arch seen over the median)"
+   ],
+   "marks": {
+    "width_m": "OSM (the yard on the street)",
+    "depth_m": "OSM",
+    "storeys": "PHOTO c13 (3, a 4th on a part)",
+    "colour": "PHOTO c13",
+    "setback_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T15",
+   "order": 15,
+   "side": "town",
+   "name": null,
+   "number": null,
+   "osm_ids": [
+    791795150
+   ],
+   "from_north_m": [
+    770.3,
+    811.2
+   ],
+   "from_south_m": [
+    325.0,
+    366.0
+   ],
+   "at": [
+    10.3448305,
+    107.0747186
+   ],
+   "width_m": 40.9,
+   "depth_m": 15.9,
+   "storeys": 2,
+   "use": "not known (OSM: a fast food that is no more; next to the pool of the House of Children)",
+   "family": "not known",
+   "type": "pavilion",
+   "colour": null,
+   "ground": "not known; the 2021 aerial shows a blue roof or awning along the street",
+   "balcony": "not known",
+   "roof": "not known (a blue metal roof or awning in 2021)",
+   "setback_m": 2.0,
+   "building": true,
+   "notes": "A long narrow block at the corner of Thống Nhất, round at its north-west corner. Not seen in a photo at street level: its storeys, its use and its colour are not known.",
+   "sources": [
+    "OSM way 791795150 (footprint)",
+    "OSM node 2262455097 (disused:amenity=fast_food)",
+    "PHOTO d07 (2021 aerial, far)"
+   ],
+   "marks": {
+    "width_m": "OSM",
+    "depth_m": "OSM",
+    "storeys": "GUESS",
+    "setback_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T16",
+   "order": 16,
+   "side": "town",
+   "name": "Vung Tau Ship (company office)",
+   "number": null,
+   "osm_ids": [
+    792193913
+   ],
+   "from_north_m": [
+    715.5,
+    749.3
+   ],
+   "from_south_m": [
+    387.0,
+    420.7
+   ],
+   "at": [
+    10.3453375,
+    107.0745643
+   ],
+   "width_m": 33.8,
+   "depth_m": 31.5,
+   "storeys": 3,
+   "use": "office",
+   "family": "not known",
+   "type": "office_block",
+   "colour": null,
+   "ground": "not known",
+   "balcony": "not known",
+   "roof": "not known",
+   "setback_m": 8.0,
+   "building": true,
+   "notes": "Between the end of Lê Lợi and Thống Nhất; the State Treasury (Kho bạc Nhà nước Vũng Tàu, OSM way 118946689) is behind it on Thống Nhất. Not seen in a photo: its storeys are a guess.",
+   "sources": [
+    "OSM way 792193913 (footprint, name, office=company)",
+    "ML Microsoft footprints 115, 315"
+   ],
+   "marks": {
+    "width_m": "OSM",
+    "depth_m": "OSM",
+    "storeys": "GUESS",
+    "setback_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T17",
+   "order": 17,
+   "side": "town",
+   "name": "OSC Việt Nam (the tourism company of the oil industry, 2 Lê Lợi): a villa in a yard",
+   "number": null,
+   "osm_ids": [
+    237097610,
+    237097609
+   ],
+   "from_north_m": [
+    672.2,
+    715.5
+   ],
+   "from_south_m": [
+    420.8,
+    464.1
+   ],
+   "at": [
+    10.3456808,
+    107.0743972
+   ],
+   "width_m": 43.3,
+   "depth_m": 12.0,
+   "storeys": 2,
+   "use": "office (travel company)",
+   "family": "colonial or older",
+   "type": "colonial_villa",
+   "colour": "yellow walls, white frames, red tile roof",
+   "ground": "a yard behind a fence of iron between piers, a gate with a flat canopy that carries the name; coconut palms in the yard",
+   "balcony": "arched windows and a loggia on the first floor",
+   "roof": "hipped roof of red tiles",
+   "setback_m": 17.0,
+   "building": true,
+   "notes": "The yard is on Lê Lợi, across its junction with Quang Trung, at the south tip of the park Tam Giác: it is seen from Quang Trung, but its address is on Lê Lợi and it has no front on Quang Trung (width_m is the width of the junction). The villa: OSM way 237097609, a rectangle of 21 x 12 m. The Mường Thanh hotel (9 Thống Nhất, about 9 storeys, white) stands behind.",
+   "sources": [
+    "OSM land 237097610 (name), ways 237097609, 237097608, 792193914",
+    "PHOTO c05 (2014)"
+   ],
+   "marks": {
+    "width_m": "OSM (the junction of Lê Lợi)",
+    "depth_m": "OSM (the villa)",
+    "storeys": "PHOTO c05",
+    "colour": "PHOTO c05",
+    "setback_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T18",
+   "order": 18,
+   "side": "town",
+   "name": "Công viên Tam Giác (the Triangle park)",
+   "number": null,
+   "osm_ids": [
+    220617816
+   ],
+   "from_north_m": [
+    446.8,
+    672.2
+   ],
+   "from_south_m": [
+    464.1,
+    689.5
+   ],
+   "at": [
+    10.346568,
+    107.0735544
+   ],
+   "width_m": 225.4,
+   "depth_m": null,
+   "storeys": 0,
+   "use": "park",
+   "family": "open space",
+   "type": "park",
+   "colour": null,
+   "ground": "a paved square with sculptures along the street, lawns, paths, big trees",
+   "balcony": null,
+   "roof": null,
+   "setback_m": null,
+   "building": false,
+   "notes": "Between Ba Cu and Lê Lợi: no building on the street for 225 m. The Pacific Hotel (4 Lê Lợi) is behind the park, 65 m from the street.",
+   "sources": [
+    "OSM way 220617816 (leisure=park, name), 229188575 (square)",
+    "PHOTO c07 (2014)"
+   ],
+   "marks": {
+    "width_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T19",
+   "order": 19,
+   "side": "town",
+   "name": "Nhà truyền thống cách mạng (the house of the traditions of the revolution, 1 Ba Cu), in its park",
+   "number": null,
+   "osm_ids": [
+    220753335,
+    119008640
+   ],
+   "from_north_m": [
+    359.7,
+    446.8
+   ],
+   "from_south_m": [
+    689.5,
+    776.6
+   ],
+   "at": [
+    10.3476705,
+    107.0726349
+   ],
+   "width_m": 87.1,
+   "depth_m": 18.7,
+   "storeys": 2,
+   "use": "museum (public)",
+   "family": "colonial or older",
+   "type": "colonial_villa",
+   "colour": "cream walls, grey-blue shutters and frames, orange-red tile roof",
+   "ground": "a villa in a park: a lawn of grass pavers with old Terminalia trees and clipped bushes; no fence on the street in 2014",
+   "balcony": "tall windows with shutters, a band between the floors; no balcony",
+   "roof": "hipped roof of tiles",
+   "setback_m": 47.0,
+   "building": true,
+   "notes": "The villa (OSM way 119008640, 25.5 x 18.7 m) is 61 m from the axis of the road. The park (OSM way 220753335) takes the whole block from Lê Quý Đôn to Ba Cu (the press calls it the park of the street Lê Quý Đôn).",
+   "sources": [
+    "OSM ways 220753335 (park), 119008640 (name, addr 1 Bacu)",
+    "PHOTO c14, c15 (2014)",
+    "WEB plo.vn 2020 (the park of Lê Quý Đôn)"
+   ],
+   "marks": {
+    "width_m": "OSM (the park on the street)",
+    "depth_m": "OSM (the villa)",
+    "storeys": "PHOTO c14",
+    "colour": "PHOTO c14",
+    "setback_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T20",
+   "order": 20,
+   "side": "town",
+   "name": "Rex Hotel (1 Lê Quý Đôn), behind its garden",
+   "number": null,
+   "osm_ids": [
+    119008631
+   ],
+   "from_north_m": [
+    313.8,
+    359.7
+   ],
+   "from_south_m": [
+    776.6,
+    822.5
+   ],
+   "at": [
+    10.3481196,
+    107.0722123
+   ],
+   "width_m": 45.9,
+   "depth_m": 24.0,
+   "storeys": 9,
+   "use": "hotel (77 rooms)",
+   "family": "large hotel (a slab of the 1970s-1990s, renewed)",
+   "type": "hotel_slab",
+   "colour": "white and cream; long bands of balconies; a red REX sign on the roof",
+   "ground": "a garden of old trees on the street (OSM: wood), a pool and a low pavilion with a tile roof of Chinese style in the garden; the lobby is on the side of Lê Quý Đôn",
+   "balcony": "a balcony for each room, in long bands on every floor",
+   "roof": "flat, with the sign and a tall block for the lifts",
+   "setback_m": 73.0,
+   "building": true,
+   "notes": "The main block in OpenStreetMap (way 119008631) is a rectangle of 32 x 24 m, 87 m from the axis of the road; the Microsoft footprint 300, with the wings, is 57 x 55 m and starts 65 m from the axis. A low wing of 3 storeys (yellow and brown) is by the pool. A low building (Microsoft footprint 41: 33 x 10 m) stands on the street between the Royal Hotel and the garden: not identified.",
+   "sources": [
+    "OSM way 119008631 (name Rex, tourism=hotel), 259749734 (wood), 119008635 (pool)",
+    "PHOTO w02, w03 (the hotel from its pool)",
+    "PHOTO c06 (2014: the hotel over the trees)",
+    "WEB vietnambooking.com (address, 77 rooms)"
+   ],
+   "marks": {
+    "width_m": "OSM (the garden on the street)",
+    "depth_m": "OSM",
+    "storeys": "PHOTO w02 (9 on the main block)",
+    "colour": "PHOTO w02",
+    "setback_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T21",
+   "order": 21,
+   "side": "town",
+   "name": "Royal Hotel (before: Canadian Hotel)",
+   "number": "36",
+   "osm_ids": [
+    119008637
+   ],
+   "from_north_m": [
+    275.7,
+    313.8
+   ],
+   "from_south_m": [
+    822.5,
+    860.6
+   ],
+   "at": [
+    10.3483682,
+    107.0719216
+   ],
+   "width_m": 38.1,
+   "depth_m": 13,
+   "storeys": 3,
+   "use": "hotel (50 rooms), restaurant, cafe",
+   "family": "old (1985-2000), long low hotel",
+   "type": "hotel_gallery",
+   "colour": "cream yellow, darker bands; green letters of the sign",
+   "ground": "a lobby behind a porch of four square columns with a flat canopy; a cafe with a terrace under parasols at the south end (the \"360°\" cafe) and a restaurant at the north end; a fore court of about 8 m with frangipani trees",
+   "balcony": "a balcony along the whole front on the two upper floors, dark iron rails; 9 bays of about 4 m and a plain end block",
+   "roof": "flat; the name in big letters on a frame on the roof, flag poles",
+   "setback_m": 8,
+   "building": true,
+   "notes": "At the corner of Hoàng Diệu. The plan is an L round a pool (OSM: 51 m deep in all); the block on the street is about 13 m deep. The Microsoft footprint gives 41 m of frontage.",
+   "sources": [
+    "OSM way 119008637 (footprint, name, addr:street)",
+    "WEB royalhotelvungtau.vn (36 Quang Trung)",
+    "PHOTO w01 (the front, about 2012)",
+    "OSM node 4547532456 (cafe 360°, level 0)"
+   ],
+   "marks": {
+    "width_m": "OSM",
+    "depth_m": "PHOTO+OSM (the front block)",
+    "storeys": "PHOTO w01",
+    "number": "WEB",
+    "colour": "PHOTO w01",
+    "setback_m": "OSM+PHOTO"
+   }
+  },
+  {
+   "id": "QT-T22",
+   "order": 22,
+   "side": "town",
+   "name": "empty land (grass), a part of the land of Lam Sơn",
+   "number": null,
+   "osm_ids": [
+    237097607
+   ],
+   "from_north_m": [
+    168.6,
+    266.8
+   ],
+   "from_south_m": [
+    869.5,
+    967.7
+   ],
+   "at": [
+    10.3487357,
+    107.0713118
+   ],
+   "width_m": 98.2,
+   "depth_m": 148.0,
+   "storeys": 0,
+   "use": "empty land",
+   "family": "open space",
+   "type": "vacant_lot",
+   "colour": null,
+   "ground": "a wall or a fence of metal sheets on the street (not seen)",
+   "balcony": null,
+   "roof": null,
+   "setback_m": null,
+   "building": false,
+   "notes": "From Lê Ngọc Hân to Hoàng Diệu: 13,600 m² of grass in OpenStreetMap. In 2014 a big wheel (a fair) stood about here (PHOTO d13). The press writes of a project of towers and hotels of the BRG group on about 11 ha of Lam Sơn (not started here).",
+   "sources": [
+    "OSM way 237097607 (landuse=grass)",
+    "PHOTO d13 (2014, from the beach)",
+    "WEB futuresoutheastasia.com (the project of BRG)"
+   ],
+   "marks": {
+    "width_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-T23",
+   "order": 23,
+   "side": "town",
+   "name": "DoubleTree by Hilton Vũng Tàu (in construction, the builder is DICcons); before: villas of OSC Việt Nam",
+   "number": "40",
+   "osm_ids": [
+    895795383
+   ],
+   "from_north_m": [
+    14.5,
+    156.1
+   ],
+   "from_south_m": [
+    980.1,
+    1121.7
+   ],
+   "at": [
+    10.3495052,
+    107.0703907
+   ],
+   "width_m": 141.6,
+   "depth_m": 76.0,
+   "storeys": 14,
+   "use": "hotel (in construction)",
+   "family": "modern (2015+), large hotel",
+   "type": "hotel_slab",
+   "colour": "concrete under green nets in March 2024; the finished colour is not known",
+   "ground": "a site fence with printed boards; casuarina trees between the fence and the sidewalk",
+   "balcony": "not known",
+   "roof": "not known (a tower crane on the roof in 2024)",
+   "setback_m": null,
+   "building": true,
+   "notes": "The last lot at the north end, where the street turns into Trần Phú, between Thành Thái and Lê Ngọc Hân: 8,500 m² (OSM: landuse=construction \"DIC Holdings\"). No footprint of the building in OpenStreetMap. In 2017 the land held two villas with tile roofs, a tennis court and an empty field (PHOTO f01-f03). In March 2024 the frame was up to about 14 floors on a base of about 5 floors (PHOTO c03, c04): the final number of floors is not known.",
+   "sources": [
+    "OSM way 895795383 (landuse=construction, name)",
+    "PHOTO c03, c04, c01 (March 2024)",
+    "PHOTO f01, f02, f03 (2017 aerials titled \"40 Quang Trung - Vung Tau\")",
+    "WEB cafef.vn 2026-08 (number 40 Quang Trung)",
+    "WEB futuresoutheastasia.com (DoubleTree by Hilton, built by DICcons)"
+   ],
+   "marks": {
+    "width_m": "OSM (the land)",
+    "depth_m": "OSM (the land)",
+    "storeys": "PHOTO c03 (floors of the frame in 2024)",
+    "number": "WEB",
+    "setback_m": null
+   }
+  },
+  {
+   "id": "QT-S01",
+   "order": 24,
+   "side": "sea",
+   "name": "Công viên Bãi Trước (the park of the Front Beach)",
+   "number": null,
+   "osm_ids": [
+    220617822,
+    220821647
+   ],
+   "from_north_m": [
+    609.3,
+    1136.3
+   ],
+   "from_south_m": [
+    0.0,
+    527.0
+   ],
+   "at": [
+    10.3440563,
+    107.0747609
+   ],
+   "width_m": 527.0,
+   "depth_m": null,
+   "storeys": 0,
+   "use": "park, beach",
+   "family": "open space",
+   "type": "park",
+   "colour": null,
+   "ground": "a sidewalk of 6 to 8 m under old Terminalia trees, then lawns with coconut palms, frangipani, clipped bushes and sculptures; paths; a walk and a low wall of stone along the beach",
+   "balcony": null,
+   "roof": null,
+   "setback_m": null,
+   "building": false,
+   "notes": "The whole side of the sea by the two one-way roads: no building on the street. In the park: a fountain (OSM way 221424404), sculptures (OSM: \"Modern Art Sculpture Park\"), a playground, two public toilets, small kiosks (a teal kiosk on the sidewalk in 2014), a pavilion with an orange tile roof near the south end, a paved square (OSM way 220617813) and, past the south end, a car park (OSM way 220821617). OpenStreetMap gives the park the address 38 Quang Trung.",
+   "sources": [
+    "OSM way 220617822 (leisure=park, name, addr)",
+    "OSM relation 3510347, ways 458829436, 220821647 (beach Bãi Trước)",
+    "PHOTO c09, c10, d03, d04, d05, d17, d22, d24 (2014)",
+    "PHOTO d07 (2021 aerial)"
+   ],
+   "marks": {
+    "width_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-S02",
+   "order": 25,
+   "side": "sea",
+   "name": "walk of the sea with strips of lawn",
+   "number": null,
+   "osm_ids": [
+    234797331
+   ],
+   "from_north_m": [
+    491.0,
+    609.3
+   ],
+   "from_south_m": [
+    527.0,
+    645.3
+   ],
+   "at": [
+    10.3465024,
+    107.0733292
+   ],
+   "width_m": 118.3,
+   "depth_m": null,
+   "storeys": 0,
+   "use": "promenade",
+   "family": "open space",
+   "type": "promenade",
+   "colour": null,
+   "ground": "a wide walk of stone slabs, four strips of lawn in low granite borders between the walk and the road, lamps, the low wall and the beach",
+   "balcony": null,
+   "roof": null,
+   "setback_m": null,
+   "building": false,
+   "notes": "Across the park Tam Giác, where the street is still one road.",
+   "sources": [
+    "OSM ways 234797327-234797331 (grass, paved area)",
+    "PHOTO d11 (2014, at dusk)",
+    "PHOTO c06 (2014: Araucaria trees along the road)",
+    "PHOTO d09, d16 (the wall of stone)"
+   ],
+   "marks": {
+    "width_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-S03",
+   "order": 26,
+   "side": "sea",
+   "name": "small beach and paved square at the end of Ba Cu",
+   "number": null,
+   "osm_ids": [
+    220821630,
+    220617809
+   ],
+   "from_north_m": [
+    356.0,
+    497.0
+   ],
+   "from_south_m": [
+    639.3,
+    780.3
+   ],
+   "at": [
+    10.3473686,
+    107.0726466
+   ],
+   "width_m": 141.0,
+   "depth_m": null,
+   "storeys": 0,
+   "use": "beach, square",
+   "family": "open space",
+   "type": "promenade",
+   "colour": null,
+   "ground": "a paved square that opens on a small beach",
+   "balcony": null,
+   "roof": null,
+   "setback_m": null,
+   "building": false,
+   "notes": "OpenStreetMap: natural=beach 220821630 and the square 220617809.",
+   "sources": [
+    "OSM ways 220821630, 220617809",
+    "PHOTO d13 (2014, the beach)"
+   ],
+   "marks": {
+    "width_m": "OSM"
+   }
+  },
+  {
+   "id": "QT-S04",
+   "order": 27,
+   "side": "sea",
+   "name": "walk on the sea wall",
+   "number": null,
+   "osm_ids": [
+    269739594
+   ],
+   "from_north_m": [
+    0.0,
+    356.0
+   ],
+   "from_south_m": [
+    780.3,
+    1136.3
+   ],
+   "at": [
+    10.3487572,
+    107.0708791
+   ],
+   "width_m": 356.0,
+   "depth_m": null,
+   "storeys": 0,
+   "use": "promenade",
+   "family": "open space",
+   "type": "promenade",
+   "colour": null,
+   "ground": "a sidewalk of 4 to 5 m of grey and white tiles in a checker pattern, a low wall of concrete, rocks and the sea below (no beach); lamps with five globes; benches",
+   "balcony": null,
+   "roof": null,
+   "setback_m": null,
+   "building": false,
+   "notes": "Opposite the lots of Lam Sơn, to the turn into Trần Phú.",
+   "sources": [
+    "PHOTO c04 (2024)",
+    "PHOTO f02, f03 (2017 aerials)",
+    "OSM way 269739594 (coastline, 18 m from the axis of the road)"
+   ],
+   "marks": {
+    "width_m": "OSM"
+   }
+  }
+ ]
+}

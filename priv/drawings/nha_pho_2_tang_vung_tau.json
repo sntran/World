@@ -15,6 +15,7 @@
    "seed": 3,
    "sign": "#1f4f9c",
    "type": "pho2_flat",
+   "use": "home",
    "vents": false,
    "wall": "#bcd4e2",
    "width": 5.0

@@ -44,6 +44,7 @@ defmodule World.Town.House do
 
   @types ~w(cap4 pho2_flat pho2_tile pho3)
   @families ~w(old steel modern)
+  @uses ~w(home bar)
 
   # The floor over the sidewalk, the ground storey, an upper storey, the parapet (m).
   @floor 0.3
@@ -67,12 +68,16 @@ defmodule World.Town.House do
   @doc "The families of a house."
   def families, do: @families
 
+  @doc "The uses of the ground storey of a house."
+  def uses, do: @uses
+
   @doc """
   The request with each choice made: a map with the keys `type`,
-  `family`, `width`, `depth`, `road`, `seed`, `left` and `right` (each
-  `shared` with a neighbor, or `free`), and the choices of the rules:
-  `wall` (a color), `ground` (`folding_gate`, `roller_door` or
-  `glass_gate`), `rail` (`bars`, `wall`, `tubes` or `glass`), `sign`
+  `family`, `use` (`home`, or `bar`: a bar, a restaurant or a shop with
+  an open front, a sign and an awning), `width`, `depth`, `road`, `seed`,
+  `left` and `right` (each `shared` with a neighbor, or `free`), and the
+  choices of the rules: `wall` (a color), `ground` (`folding_gate`,
+  `roller_door`, `glass_gate` or `open`), `rail` (`bars`, `wall`, `tubes` or `glass`), `sign`
   (a color, or nil), `awning` (true or false), `vents` (true or false),
   `roof` (`terrace`, `tiles` or `steel`), `age` (0 to 1) and `flip`
   (true: the door of the balcony is at the other side). A key of the
@@ -88,9 +93,14 @@ defmodule World.Town.House do
     unless family in @families,
       do: raise(ArgumentError, "the family of a house is one of #{Enum.join(@families, ", ")}")
 
+    use = Map.get(opts, "use", "home")
+    unless use in @uses, do: raise(ArgumentError, "the use of a house is one of #{Enum.join(@uses, ", ")}")
+    bar? = use == "bar"
+
     choices = %{
       "type" => type,
       "family" => family,
+      "use" => use,
       "seed" => seed,
       "width" => 5.0,
       "depth" => 16.0,
@@ -98,7 +108,11 @@ defmodule World.Town.House do
       "left" => "shared",
       "right" => "shared",
       "wall" => pick(seed, :wall, @walls[family]),
-      "ground" => %{"old" => "folding_gate", "steel" => "roller_door", "modern" => "glass_gate"}[family],
+      "ground" =>
+        if(bar?,
+          do: "open",
+          else: %{"old" => "folding_gate", "steel" => "roller_door", "modern" => "glass_gate"}[family]
+        ),
       "rail" =>
         case family do
           "old" -> pick(seed, :rail, [{"bars", 3}, {"wall", 2}])
@@ -106,8 +120,10 @@ defmodule World.Town.House do
           "modern" -> "glass"
         end,
       "sign" =>
-        if(family != "modern" and unit(seed, :sign) < 0.5, do: pick(seed, :sign_color, for(c <- @signs, do: {c, 1}))),
-      "awning" => family == "old" and unit(seed, :awning) < 0.5,
+        if(bar? or (family != "modern" and unit(seed, :sign) < 0.5),
+          do: pick(seed, :sign_color, for(c <- @signs, do: {c, 1}))
+        ),
+      "awning" => bar? or (family == "old" and unit(seed, :awning) < 0.5),
       "vents" => family == "old" and unit(seed, :vents) < 0.6,
       "roof" => %{"cap4" => "steel", "pho2_tile" => "tiles"}[type] || "terrace",
       "age" => %{"old" => 0.8, "steel" => 0.5, "modern" => 0.15}[family],
@@ -307,6 +323,30 @@ defmodule World.Town.House do
         "blend" => 0.01,
         "raise" => -0.01,
         "repeat" => %{"count" => max(floor(half / 0.2) - 1, 1), "move" => [0.2, 0, 0]}
+      })
+    ]
+  end
+
+  # The open front of a bar, a restaurant or a shop: a dark room with
+  # the counter of wood at one side, and on the wall behind it a shelf of
+  # bottles with its light.
+  defp door("open", half, mid) do
+    wood = %{"roughness" => 0.5, "surface" => %{"kind" => "wood", "scale" => 0.01}}
+
+    [
+      # (The wall behind the room is thick: it stays at the levels with large cells.)
+      e("box", [half, 0.09, @opening / 2], [0, -0.36, mid], "#2a2622", %{"roughness" => 0.9}),
+      e("box", [half * 0.45, 0.09, 0.55], [-half * 0.5, -0.15, @floor + 0.55], "#6b4a2c", wood),
+      e("box", [half * 0.47, 0.12, 0.025], [-half * 0.5, -0.14, @floor + 1.12], "#3a2a1c", wood),
+      e("box", [half * 0.8, 0.05, 0.28], [0, -0.27, mid + 0.55], "#ffd9a0", %{
+        "mode" => "paint",
+        "blend" => 0.02,
+        "glow" => 0.6
+      }),
+      e("box", [0.03, 0.05, 0.11], [-half * 0.8 + 0.08, -0.27, mid + 0.5], "#2c4a34", %{
+        "mode" => "paint",
+        "blend" => 0.01,
+        "repeat" => %{"count" => floor(1.6 * half / 0.14), "move" => [0.14, 0, 0]}
       })
     ]
   end

@@ -241,7 +241,7 @@ defmodule World.MCP do
           "house" => %{
             "type" => "object",
             "description" =>
-              "The request: type (cap4, pho2_flat, pho2_tile or pho3), family (old, steel or modern), width (3 to 8 m), depth (6 to 30 m), road (the width of the road, m), seed (a whole number), left and right (shared or free), and a value for a choice of the rules (wall, ground, rail, sign, awning, vents, flip). Each key has a default."
+              "The request: type (cap4, pho2_flat, pho2_tile or pho3), family (old, steel or modern), use (home, or bar: a bar, a restaurant or a shop with an open front, a sign and an awning), width (3 to 8 m), depth (6 to 30 m), road (the width of the road, m), seed (a whole number), left and right (shared or free), and a value for a choice of the rules (wall, ground, rail, sign, awning, vents, flip). Each key has a default."
           }
         }
       },
@@ -251,14 +251,19 @@ defmodule World.MCP do
       "name" => "plan_street",
       "title" => "Plan one side of a street of Vũng Tàu",
       "description" =>
-        "Gives the plan of a row of houses wall to wall (each lot is the request of its house, with its place along the street), and, for a row of 5 houses at the most, the drawing of the row on its sidewalk. Each lot of a longer row goes to draw_house.",
+        "Gives the plan of a row of houses wall to wall (each lot is the request of its house, with its place along the street), and, for a row of 5 houses at the most, the drawing of the row on its sidewalk. For a longer row, the argument only gives the drawing of a part of it, or each lot goes to draw_house. A real street gives its lots: what is known of each lot stays, and the seed makes each other choice.",
       "inputSchema" => %{
         "type" => "object",
         "properties" => %{
           "street" => %{
             "type" => "object",
             "description" =>
-              "The request: seed, road (the width of the road, m), count (the lots, 1 to 200) or length (m), depth (of each house), and types, families and widths (each a list of [value, weight]) in the place of the shares of a common street."
+              "The request: seed, road (the width of the road, m), count (the lots, 1 to 200) or length (m), depth (of each house), sidewalk (its width, 2 to 10 m), and types, families and widths (each a list of [value, weight]) in the place of the shares of a common street. Or lots: a list with what is known of each lot of a real street (keys of the request of a house; number and name; same: true for a lot that is one building with the lot before it)."
+          },
+          "only" => %{
+            "type" => "array",
+            "items" => %{"type" => "integer"},
+            "description" => "[first, last]: the numbers (from 1) of the lots of the drawing, 5 lots at the most."
           }
         }
       },
@@ -432,7 +437,15 @@ defmodule World.MCP do
 
   defp call("plan_street", args, _origin) do
     plan = World.Town.Street.plan(Map.get(args, "street", %{}))
-    result(%{"plan" => plan, "drawing" => if(length(plan["lots"]) <= 5, do: World.Town.Street.drawing(plan))})
+
+    drawing =
+      case args["only"] do
+        nil -> if(length(plan["lots"]) <= 5, do: World.Town.Street.drawing(plan))
+        [a, b] when is_integer(a) and is_integer(b) and a >= 1 and b >= a -> World.Town.Street.drawing(plan, only: a..b)
+        _ -> raise(ArgumentError, "the argument only is [first, last]: the numbers of two lots, from 1")
+      end
+
+    result(%{"plan" => plan, "drawing" => drawing})
   rescue
     e in ArgumentError -> wrong(e.message)
   end

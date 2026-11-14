@@ -367,6 +367,7 @@ houses.
   |---|---|---|
   | `type` | `cap4` (one storey, a roof of steel), `pho2_flat` (two storeys, a terrace), `pho2_tile` (two storeys, red tiles), `pho3` (three storeys, a terrace) | `pho2_flat` |
   | `family` | `old` (1985 to 2000), `steel` (2000 to 2015), `modern` (2015 to now) | by the seed |
+  | `use` | `home`, or `bar` (a bar, a restaurant or a shop: an open front with a counter and a shelf of light, a sign, an awning) | `home` |
   | `width`, `depth` | 3 to 8 m, 6 to 30 m | 5 and 16 |
   | `road` | The width of the road (m): it gives the reach of each balcony (TCVN 9411:2012) | 13 |
   | `seed` | A whole number | 1 |
@@ -388,11 +389,22 @@ houses.
   the request of its house, with `at`, its place along the street), and
   `drawing/2` the drawing of a row of 5 houses at the most on its
   sidewalk, with `street` (the plan) in its extras. A project makes a
-  longer street lot by lot.
+  longer street lot by lot, or part by part (the option `only`, a range
+  of lots). The sidewalk is 3 m wide, or `sidewalk` (2 m to 10 m): on a
+  sidewalk of 4.5 m or more, a parasol with a table stands in front of
+  each house with the use `bar`.
+- **A real street** (`docs/plans/0018-quang-trung-street.md`): the plan
+  takes `lots`, a list with what is known of each lot (keys of the
+  request of a house; `number` and `name`, which the plan keeps; and
+  `same`, for a lot that is one building with the lot before it). The
+  seed makes each other choice. A survey (`World.Town.Survey`,
+  `priv/surveys/NAME.json`) has a row for each lot of a street, with a
+  mark for each value (where it comes from, or `GUESS`) and its
+  sources; `lots/1` gives the lots of its rows.
 - **The tools of the MCP server:** `draw_house` (the argument `house`:
   a request) and `plan_street` (the argument `street`: `seed`, `road`,
-  `count` or `length`, `depth`, and `types`, `families`, `widths` as
-  lists of `[value, weight]`).
+  `count` or `length`, `depth`, `sidewalk`, `lots`, and `types`,
+  `families`, `widths` as lists of `[value, weight]`).
 
 ### The words of IFC
 

@@ -1,8 +1,8 @@
 defmodule World.TownTest do
-  # A house and a street of Vũng Tàu from rules (plan 0016).
+  # A house and a street of Vũng Tàu from rules (plan 0016), and a real street from a survey (plan 0018).
   use ExUnit.Case, async: true
 
-  alias World.Town.{House, Street}
+  alias World.Town.{House, Street, Survey}
 
   # (A house at the far level, when the other tests work too.)
   @moduletag timeout: 1_800_000
@@ -285,6 +285,133 @@ defmodule World.TownTest do
     assert sculpt(House.drawing(%{}), "mat_tien")["bake"] == %{"near" => 2048, "mid" => 512, "far" => 128}
     assert Street.drawing(plan)["name"] == "pho_4"
     # More than 5 houses are not one drawing: a drawing has 16 parts with an image.
-    assert_raise FunctionClauseError, fn -> Street.drawing(Street.plan(%{"count" => 6})) end
+    assert_raise ArgumentError, ~r/from 1 to 5 lots/, fn -> Street.drawing(Street.plan(%{"count" => 6})) end
+  end
+
+  test "a house with the use bar: an open front with a counter and a shelf of light, a sign, an awning" do
+    assert House.uses() == ~w(home bar) and House.request()["use"] == "home"
+
+    for family <- House.families(), seed <- 1..20 do
+      r = House.request(%{"use" => "bar", "family" => family, "seed" => seed})
+      assert %{"use" => "bar", "ground" => "open", "awning" => true} = r
+      assert is_binary(r["sign"])
+    end
+
+    # A value of the request stays.
+    assert %{"sign" => nil, "awning" => false} = House.request(%{"use" => "bar", "sign" => nil, "awning" => false})
+    assert_raise ArgumentError, ~r/the use of a house/, fn -> House.request(%{"use" => "bank"}) end
+
+    d = House.drawing(%{"use" => "bar", "family" => "steel", "seed" => 5})
+    assert {:ok, _} = World.Drawing.check(d, "d")
+    front = sculpt(d, "mat_tien")["edits"]
+    # The counter of wood, the dark wall behind the room, and the shelf with its light.
+    assert Enum.any?(front, &(&1["color"] == "#6b4a2c" and &1["surface"]["kind"] == "wood"))
+    assert Enum.any?(front, &(&1["color"] == "#2a2622" and Enum.at(&1["size"], 1) == 0.09))
+    assert Enum.any?(front, &(&1["glow"] == 0.6 and &1["mode"] == "paint"))
+    # No door of a home is there.
+    refute Enum.any?(front, &(&1["color"] in ["#b9bdc0", "#6f8078"]))
+  end
+
+  test "the survey of a real street gives the lots of a block" do
+    assert Survey.names() == ["quang_trung"]
+    survey = Survey.survey("quang_trung")
+    assert %{"name" => "Quang Trung", "city" => "Vũng Tàu", "length_m" => 1136.3} = survey["street"]
+    assert length(survey["rows"]) == 27 and map_size(survey["sources"]["photos"]) == 39
+    # Each row says where its values come from, and each photo has its address and its license.
+    for row <- survey["rows"], do: assert(is_map(row["marks"]) and is_list(row["sources"]) and is_binary(row["id"]))
+    for {_, photo} <- survey["sources"]["photos"], do: assert(is_binary(photo["url"]) and is_binary(photo["licence"]))
+    assert_raise ArgumentError, ~r/no survey/, fn -> Survey.survey("nowhere") end
+
+    # The block of the numbers 4 to 26: 10 rows.
+    rows = Survey.rows("quang_trung", "QT-T02", "QT-T11")
+    assert Enum.map(rows, & &1["number"]) == ~w(4 6 8-10 12 14 16 18 20 22 24-26)
+    assert_raise ArgumentError, ~r/no row/, fn -> Survey.rows("quang_trung", "QT-T02", "QT-X") end
+
+    # A row wider than 8 m is one building on two lots of the same width.
+    lots = Survey.lots(rows)
+    assert length(lots) == 12
+
+    assert [%{"number" => "8-10", "width" => 5.85} = a, %{"number" => "8-10", "same" => true} = b] =
+             Enum.slice(lots, 2, 2)
+
+    assert Map.delete(b, "same") == a and not Map.has_key?(a, "same")
+
+    assert %{"type" => "pho2_flat", "use" => "bar", "width" => 5.8, "depth" => 20.0, "number" => "4", "name" => name} =
+             hd(lots)
+
+    assert name =~ "Vosa"
+    assert %{"type" => "pho3", "family" => "steel", "wall" => "#f2f0ea", "same" => true} = List.last(lots)
+    assert_in_delta Enum.sum(for lot <- lots, do: lot["width"]), 69.8, 1.0e-6
+    # A row that is no house of the rules (the office at number 2).
+    assert_raise ArgumentError, ~r/QT-T01 is not a house/, fn ->
+      Survey.lots(Survey.rows("quang_trung", "QT-T01", "QT-T02"))
+    end
+  end
+
+  test "the plan of a real street: the lots of a survey stay, and the seed makes the other choices" do
+    lots = Survey.lots(Survey.rows("quang_trung", "QT-T02", "QT-T11"))
+
+    request = %{
+      "seed" => 26,
+      "road" => 23.0,
+      "sidewalk" => 5.5,
+      "depth" => 12.0,
+      "families" => [["old", 1], ["steel", 1]],
+      "lots" => lots
+    }
+
+    plan = Street.plan(request)
+    assert %{"sidewalk" => 5.5, "road" => 23.0} = plan
+    assert Street.plan(request) == plan
+    assert length(plan["lots"]) == 12
+
+    # What the survey knows stays: the widths, the depth of each row (not of the request), the types, the use, the address.
+    for {lot, known} <- Enum.zip(plan["lots"], lots) do
+      assert Map.take(lot, ~w(type width depth use number name)) ==
+               Map.take(known, ~w(type width depth use number name))
+
+      assert lot["road"] == 23.0 and lot["family"] in ~w(old steel) and lot["ground"] == "open"
+      refute Map.has_key?(lot, "same")
+    end
+
+    assert_in_delta List.last(plan["lots"])["at"], 69.8 - 5.85 / 2, 1.0e-3
+    # One building on two lots: the same choices on the two.
+    same = ~w(type family wall sign rail roof awning vents age)
+    [a, b] = Enum.slice(plan["lots"], 2, 2)
+    assert Map.take(a, same) == Map.take(b, same) and a["seed"] != b["seed"]
+    [c, d] = Enum.take(plan["lots"], -2)
+    assert Map.take(c, same) == Map.take(d, same) and c["wall"] == "#f2f0ea" and c["family"] == "steel"
+    # A lot with the color of the lot before it keeps it; the first lot can have `same` (it has no lot before it).
+    two = Street.plan(%{"lots" => [%{"wall" => "#101010", "same" => true}, %{"wall" => "#101010"}, %{}]})
+    assert [%{"wall" => "#101010"}, %{"wall" => "#101010"}, %{"width" => _}] = two["lots"]
+    assert Street.plan()["sidewalk"] == 3.0
+
+    assert_raise ArgumentError, ~r/a list of maps/, fn -> Street.plan(%{"lots" => "many"}) end
+    assert_raise ArgumentError, ~r/a list of maps/, fn -> Street.plan(%{"lots" => [1]}) end
+    assert_raise ArgumentError, ~r/from 2 m to 10 m/, fn -> Street.plan(%{"sidewalk" => 30}) end
+    assert_raise ArgumentError, ~r/from 2 m to 10 m/, fn -> Street.plan(%{"sidewalk" => "wide"}) end
+
+    # A part of the row is a drawing about its own middle, with its sources.
+    d = Street.drawing(plan, only: 5..8, name: "block", sources: ["A source of the block."])
+    assert {:ok, _} = World.Drawing.check(d, "d")
+    assert length(d["nodes"]) == 13 and List.last(d["sources"]) == "A source of the block."
+    part = d["extras"]["street"]["lots"]
+    assert Enum.map(part, & &1["number"]) == ~w(12 14 16 18)
+    assert_in_delta hd(part)["at"], 2.9, 1.0e-9
+    walls = for n <- d["nodes"], String.ends_with?(n["name"], "_mat_tien"), do: hd(n["skill"]["sculpt"]["edits"])
+    assert_in_delta hd(hd(walls)["at"]), 2.9 - 4 * 5.8 / 2, 1.0e-3
+
+    # The sidewalk of 5.5 m, and on it a parasol with a table in front of each bar (thin: in the details, at near and mid).
+    ground = List.last(d["nodes"])["skill"]["sculpt"]
+    assert %{"size" => [_, 2.75, _], "at" => [_, 2.75, _]} = hd(ground["edits"])
+    assert [%{"levels" => ["near", "mid"], "edits" => things, "budget" => %{"near" => 6000}}] = ground["details"]
+    assert length(things) == 16 and Enum.count(things, &(&1["shape"] == "cone")) == 4
+    for cone <- Enum.filter(things, &(&1["shape"] == "cone")), do: assert(Enum.at(cone["at"], 1) + 1.3 < 5.5)
+    # No parasol on a sidewalk of 3 m, and none in front of a home.
+    narrow = Street.drawing(Street.plan(Map.put(request, "sidewalk", 3.0)), only: 1..2)
+    refute Map.has_key?(List.last(narrow["nodes"])["skill"]["sculpt"], "details")
+    homes = Street.drawing(Street.plan(%{"sidewalk" => 6.0, "count" => 2}))
+    refute Map.has_key?(List.last(homes["nodes"])["skill"]["sculpt"], "details")
+    assert_raise ArgumentError, ~r/from 1 to 5 lots/, fn -> Street.drawing(plan) end
   end
 end
