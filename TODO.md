@@ -34,6 +34,13 @@ into the steps of `AGENTS.md`.
   (short, a bun, long). Open: flip-flops, clothes and a mask (they need
   the body in the field), long hair that bends, the tools that measure
   a person, and the blind test.
+- **The street Quang Trung of Vũng Tàu as it is (plan 0018, in
+  progress).** Made: the survey, the row of the numbers 4 to 26, and
+  the office of the port at number 2. Open: the Grand Hotel, the House
+  of Children, the villas, the Rex and the Royal hotels, the ground
+  (the roads with the median, the parks, the sea wall, the trees), and
+  the place with each model on it. Photos of each front of the row 4
+  to 26 make its lots true.
 - **A hẻm of tube houses (nhà ống).** A blueprint for the narrow houses
   of a town of Việt Nam: a front of 3 to 5 m, 2 to 4 floors on a frame
   of concrete, walls of `brick_vn`, a roof of clay tiles or a flat
