@@ -1,7 +1,8 @@
 # Plan 0017: people: the body of MakeHuman with parts from edits
 
 Status: In progress. The first parts are made (2026-11-14, section 8;
-the owner: "Let's build the parts first."). The plan is the answer to
+the owner: "Let's build the parts first."), and the hair has strands
+(section 9). The plan is the answer to
 a question of the owner, from research, and the steps that it
 proposes. (The owner, 2026-11-13: "What's about people? Can we use the
 Dream's way to build realistic people, better than MakeHuman?")
@@ -144,18 +145,20 @@ The owner chose the parts before the proof. What is made:
 | D10 | `World.Build` takes the materials of a prop into the model. | Before, the image of a prop from edits was not in the file of the person. |
 | D11 | A prop does not need to stand (`World.Check`). | A hat is worn. |
 
-The measure (one machine with 4 schedulers):
+The measure (one machine with 4 schedulers), with the strands of
+section 9:
 
 | Part | Edits | Triangles (near, mid, far) | Image | File at near |
 |---|---|---|---|---|
-| `non_la_edits` | 20 | 4,000 / 1,200 / 200 | 512 | 0.55 MB |
-| `mu_bao_hiem_edits` | 9 | 5,000 / 1,200 / 250 | 512 | 0.52 MB |
-| `toc_ngan_edits` | 6 | 3,000 / 800 / 150 | 512 | 0.54 MB |
-| `toc_bui_edits` | 7 | 3,500 / 900 / 150 | 512 | 0.57 MB |
-| `toc_dai_edits` | 8 | 4,000 / 1,000 / 180 | 512 | 0.45 MB |
+| `non_la_edits` | 20 | 4,000 / 1,200 / 200 | 1024 | 1.5 MB |
+| `mu_bao_hiem_edits` | 11 | 5,000 / 1,200 / 250 | 512 | 0.5 MB |
+| `toc_ngan_edits` | 6 | 12,000 / 1,600 / 150 | 1024 | 3.2 MB |
+| `toc_bui_edits` | 6 | 14,000 / 1,800 / 150 | 1024 | 3.4 MB |
+| `toc_dai_edits` | 13 | 20,000 / 2,400 / 220 | 1024 | 2.9 MB |
 
 - The five parts and the two people who wear them (`woman_non_la`,
-  `man_helmet`) build in 51 s, three levels each.
+  `man_helmet`) build in 63 s, three levels each (51 s before the
+  strands).
 - A person with two parts builds in about 5 s more than a person with
   none at near (the first time: the sculptures are made; the nón lá
   has small cells for its thin shell and is the slowest, 8 s).
@@ -164,10 +167,40 @@ The measure (one machine with 4 schedulers):
 
 What these parts are not:
 
-- **The hair is a mass with lines, not hair.** It reads right at mid
-  and far, and as a model of clay at near. The hair of MakeHuman
-  (cards) is finer at near. The blind test of section 5 is not done.
 - **Long hair does not bend**, and the straps grow with the head.
 - **No flip-flops, no clothes, no mask yet.** They need the foot and
   the body in the field (D3).
 - **The tools that measure a person (D6) are not made.**
+
+## 9. Hair that looks as hair (2026-11-14)
+
+The owner, after the first parts: "Make the hair look like real hair,
+not clay. The nón lá and helmet should match too." The first hair was a
+smooth mass with painted lines: its outline was the outline of a ball
+of clay.
+
+| # | Decision | Why |
+|---|---|---|
+| D12 | A surface `hair` (`World.Sculpt.Texture`): strands that go out and down from the z of the edit, in locks, with single strands that catch the light. | Strands along the z of the edit made a top and a back as rough leather. Hair goes out from the top of a head. |
+| D13 | The key `strands` of a sculpture. The color image has an alpha, the cover of each place: half with the lowest strand, all with the highest. The material is cut at half of the alpha. Shapes of `thin` take the low strands away first. | The line of the hair on the brow and the tips are single strands, not the edge of a mass. No new mesh: the image has them. |
+| D14 | Shells: copies of the mesh out along its normals, with less alpha at their points. A shell shows only the strands that are higher than its part of the way out. Three at near, one at mid, none at far. | The outline of the head has single strands. It is the way of the fur of the animals of World, with the heights of the strands in the image and not in a shader. |
+| D15 | A primitive with an alpha in one color has an alpha in each color (`World.Scene`). | The mass and its shells are one primitive: the points of the mass are whole. |
+| D16 | A surface `palm`: 40 blades round the z of the edit, each with its tone and its fibers. The rings of the nón lá are thin lines over the blades. | The first nón lá had wide rings and no leaf. A mark of 1 mm was smaller than a texel and did not show: the scale of the fibers is 3 mm. |
+| D17 | The shell of the helmet is 3.8 cm over the top of the head. It has a pad of cloth and a buckle. | Hair of 3 cm with its strands came through a shell of 3 cm. |
+
+What it costs:
+
+- The files of the hair at near are 2.9 MB to 3.4 MB (0.5 MB before):
+  an image of 1024 with an alpha, and four times the triangles.
+- A person with hair and a hat: 6.7 MB to 6.9 MB at near, 0.9 MB at
+  mid, 0.33 MB at far.
+
+What it is not:
+
+- **Not single hairs.** A strand of the image is 1 mm to 2 mm wide: a
+  lock of some hairs. From nearer than about 0.5 m the shells show as
+  layers.
+- **The cut is hard** (the alpha mode `MASK`): the borders of the
+  strands have steps at mid, where the image is 512.
+- **The blind test of section 5 is not done.** The hair of MakeHuman
+  (cards) is still there for a person with no part.

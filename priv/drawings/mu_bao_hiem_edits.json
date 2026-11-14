@@ -2,7 +2,7 @@
  "name": "mu_bao_hiem_edits",
  "kind": "prop",
  "sources": [
-  "A half helmet of a rider of a motorbike of Việt Nam from edits: a shell 22 cm wide and 26 cm long with a short peak, a liner of foam of 2 cm, a band of rubber round its rim and straps under the chin. Its port crown is the top of the head: the shell is 3 cm over it. It is for a person of World (plan 0017). The sizes are from the head of a person of World and common helmets; it is no model of a maker."
+  "A half helmet of a rider of a motorbike of Việt Nam from edits: a shell 22 cm wide and 26 cm long with a short peak, a liner of foam of 2 cm to 3 cm, a band of rubber round its rim and straps under the chin. Its port crown is the top of the head: the shell is 3.8 cm over it, so that hair of 3 cm is under it. It is for a person of World (plan 0017). The sizes are from the head of a person of World and common helmets; it is no model of a maker."
  ],
  "materials": {
   "part_10": {
@@ -22,7 +22,7 @@
        "size": [
         0.108,
         0.128,
-        0.115
+        0.123
        ],
        "at": [
         0,
@@ -80,34 +80,34 @@
       {
        "shape": "ellipsoid",
        "size": [
-        0.08,
-        0.045,
-        0.007
+        0.074,
+        0.04,
+        0.006
        ],
        "at": [
         0,
-        0.135,
-        -0.066
+        0.128,
+        -0.069
        ],
        "material": "part_10",
        "color": "#c4222b",
        "axis": [
         0,
-        0.17,
-        0.985
+        0.2,
+        0.98
        ],
        "up": [
         0,
-        0.985,
-        -0.17
+        0.98,
+        -0.2
        ],
-       "blend": 0.006,
+       "blend": 0.008,
        "roughness": 0.22
       },
       {
        "shape": "box",
        "size": [
-        0.014,
+        0.009,
         0.2,
         0.2
        ],
@@ -119,8 +119,47 @@
        "material": "part_10",
        "color": "#f2f2f0",
        "mode": "paint",
-       "blend": 0.002,
+       "blend": 0.0015,
        "roughness": 0.22
+      },
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.09,
+        0.108,
+        0.1
+       ],
+       "at": [
+        0,
+        0,
+        -0.09
+       ],
+       "material": "part_10",
+       "color": "#26262a",
+       "mode": "paint",
+       "blend": 0.004,
+       "roughness": 0.95,
+       "surface": {
+        "kind": "fabric",
+        "scale": 0.001
+       }
+      },
+      {
+       "shape": "round_box",
+       "size": [
+        0.012,
+        0.006,
+        0.008,
+        0.003
+       ],
+       "at": [
+        0.03,
+        0.068,
+        -0.229
+       ],
+       "material": "part_10",
+       "color": "#1b1b1d",
+       "roughness": 0.4
       },
       {
        "shape": "box",
@@ -171,15 +210,19 @@
          ]
         ],
         "radii": [
-         0.005,
-         0.005,
-         0.005
+         0.004,
+         0.004,
+         0.004
         ]
        },
        "color": "#1b1b1d",
        "material": "part_10",
        "mirror": "x",
-       "roughness": 0.8
+       "roughness": 0.8,
+       "surface": {
+        "kind": "fabric",
+        "scale": 0.0008
+       }
       },
       {
        "shape": "tube",
@@ -202,15 +245,19 @@
          ]
         ],
         "radii": [
-         0.005,
-         0.005,
-         0.005
+         0.004,
+         0.004,
+         0.004
         ]
        },
        "color": "#1b1b1d",
        "material": "part_10",
        "mirror": "x",
-       "roughness": 0.8
+       "roughness": 0.8,
+       "surface": {
+        "kind": "fabric",
+        "scale": 0.0008
+       }
       },
       {
        "shape": "tube",
@@ -268,22 +315,26 @@
          ]
         ],
         "radii": [
-         0.005,
-         0.005,
-         0.005,
-         0.005,
-         0.005,
-         0.005,
-         0.005,
-         0.005,
-         0.005,
-         0.005
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004,
+         0.004
         ]
        },
        "color": "#1b1b1d",
        "material": "part_10",
        "mirror": "x",
-       "roughness": 0.8
+       "roughness": 0.8,
+       "surface": {
+        "kind": "fabric",
+        "scale": 0.0008
+       }
       }
      ],
      "cells": {

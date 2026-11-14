@@ -2,7 +2,7 @@
  "name": "toc_ngan_edits",
  "kind": "prop",
  "sources": [
-  "Short hair as one mass from edits, for a person of World (plan 0017): 1.3 cm thick on the skull, with the face, the ears and the neck free, and lines of its strands. Its port crown is the top of the head. Its image is light: the color of its role is the color of the hair. A guess: the line of the hair on the brow."
+  "Short hair from edits, for a person of World (plan 0017): a mass on the skull, the surface `hair` for its strands (out and down from the top of the head), and three shells that show single strands at its outline. The hair is thin at the line of the brow, at the ears and from the back of the head to the neck, as hair that is cut short there. Its port crown is the top of the head. Its image is light: the color of its role is the color of the hair. A guess: the line of the hair."
  ],
  "materials": {
   "part_11": {
@@ -22,19 +22,19 @@
        "size": [
         0.088,
         0.106,
-        0.108
+        0.11599999999999999
        ],
        "at": [
         0,
         -0.004,
-        -0.092
+        -0.088
        ],
        "material": "part_11",
-       "color": "#d8d4cc",
-       "roughness": 0.5,
+       "color": "#b6b2aa",
+       "roughness": 0.42,
        "surface": {
-        "kind": "brushed",
-        "scale": 0.0025
+        "kind": "hair",
+        "scale": 0.0015
        }
       },
       {
@@ -50,13 +50,13 @@
         -0.19
        ],
        "material": "part_11",
-       "color": "#d8d4cc",
+       "color": "#b6b2aa",
        "mode": "subtract",
        "blend": 0.012,
-       "roughness": 0.5,
+       "roughness": 0.42,
        "surface": {
-        "kind": "brushed",
-        "scale": 0.0025
+        "kind": "hair",
+        "scale": 0.0015
        }
       },
       {
@@ -72,7 +72,7 @@
         -0.285
        ],
        "material": "part_11",
-       "color": "#d8d4cc",
+       "color": "#b6b2aa",
        "axis": [
         0,
         0.34,
@@ -85,10 +85,10 @@
        ],
        "mode": "subtract",
        "blend": 0.01,
-       "roughness": 0.5,
+       "roughness": 0.42,
        "surface": {
-        "kind": "brushed",
-        "scale": 0.0025
+        "kind": "hair",
+        "scale": 0.0015
        }
       },
       {
@@ -102,42 +102,15 @@
         -0.135
        ],
        "material": "part_11",
-       "color": "#d8d4cc",
+       "color": "#b6b2aa",
        "mirror": "x",
        "mode": "subtract",
        "blend": 0.012,
-       "roughness": 0.5,
+       "roughness": 0.42,
        "surface": {
-        "kind": "brushed",
-        "scale": 0.0025
+        "kind": "hair",
+        "scale": 0.0015
        }
-      },
-      {
-       "shape": "box",
-       "size": [
-        0.001,
-        0.16,
-        0.16
-       ],
-       "at": [
-        -0.07,
-        0,
-        -0.09
-       ],
-       "material": "part_11",
-       "color": "#8c8880",
-       "mode": "paint",
-       "blend": 0.002,
-       "opacity": 0.5,
-       "repeat": {
-        "count": 11,
-        "move": [
-         0.014,
-         0,
-         0
-        ]
-       },
-       "raise": -0.0012
       },
       {
        "shape": "box",
@@ -152,7 +125,7 @@
         -0.262
        ],
        "material": "part_11",
-       "color": "#d8d4cc",
+       "color": "#b6b2aa",
        "axis": [
         0,
         -0.26,
@@ -165,10 +138,36 @@
        ],
        "mode": "subtract",
        "blend": 0.012,
-       "roughness": 0.5,
+       "roughness": 0.42,
        "surface": {
-        "kind": "brushed",
-        "scale": 0.0025
+        "kind": "hair",
+        "scale": 0.0015
+       }
+      },
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.055,
+        0.04,
+        0.016
+       ],
+       "at": [
+        0.012,
+        0.052,
+        -0.036
+       ],
+       "material": "part_11",
+       "color": "#b6b2aa",
+       "axis": [
+        0.12,
+        0.3,
+        0.95
+       ],
+       "blend": 0.025,
+       "roughness": 0.42,
+       "surface": {
+        "kind": "hair",
+        "scale": 0.0015
        }
       }
      ],
@@ -183,8 +182,8 @@
       "far": 150
      },
      "bake": {
-      "near": 512,
-      "mid": 256,
+      "near": 1024,
+      "mid": 512,
       "far": 128
      },
      "ports": {
@@ -205,6 +204,96 @@
         0
        ]
       }
+     },
+     "strands": {
+      "shells": 3,
+      "length": 0.005,
+      "thin": [
+       {
+        "shape": "ellipsoid",
+        "size": [
+         0.082,
+         0.092,
+         0.142
+        ],
+        "at": [
+         0,
+         0.085,
+         -0.19
+        ],
+        "material": "part_11",
+        "blend": 0.03,
+        "mode": "paint"
+       },
+       {
+        "shape": "box",
+        "size": [
+         0.2,
+         0.2,
+         0.1
+        ],
+        "at": [
+         0,
+         0.05,
+         -0.27
+        ],
+        "material": "part_11",
+        "axis": [
+         0,
+         0.34,
+         0.94
+        ],
+        "up": [
+         0,
+         0.94,
+         -0.34
+        ],
+        "blend": 0.03,
+        "mode": "paint"
+       },
+       {
+        "shape": "ball",
+        "size": [
+         0.036
+        ],
+        "at": [
+         0.086,
+         0.012,
+         -0.135
+        ],
+        "material": "part_11",
+        "mirror": "x",
+        "blend": 0.02,
+        "mode": "paint"
+       },
+       {
+        "shape": "box",
+        "size": [
+         0.2,
+         0.2,
+         0.1
+        ],
+        "at": [
+         0,
+         -0.06,
+         -0.225
+        ],
+        "material": "part_11",
+        "axis": [
+         0,
+         -0.26,
+         0.966
+        ],
+        "up": [
+         0,
+         0.966,
+         0.26
+        ],
+        "blend": 0.07,
+        "opacity": 0.8,
+        "mode": "paint"
+       }
+      ]
      }
     }
    }
