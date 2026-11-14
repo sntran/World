@@ -1,0 +1,5621 @@
+{
+ "extras": {
+  "street": {
+   "lots": [
+    {
+     "age": 0.5,
+     "at": 2.8999999999999986,
+     "awning": true,
+     "depth": 20.0,
+     "family": "steel",
+     "flip": true,
+     "ground": "open",
+     "left": "shared",
+     "name": "Cask bar; also listed: 88 Beer Garden (number 12)",
+     "number": "12",
+     "rail": "tubes",
+     "right": "shared",
+     "road": 23.0,
+     "roof": "terrace",
+     "seed": 928589,
+     "sign": "#1d7a46",
+     "type": "pho2_flat",
+     "use": "bar",
+     "vents": false,
+     "wall": "#bcd4e2",
+     "width": 5.8
+    },
+    {
+     "age": 0.8,
+     "at": 8.7,
+     "awning": true,
+     "depth": 20.0,
+     "family": "old",
+     "flip": false,
+     "ground": "open",
+     "left": "shared",
+     "name": null,
+     "number": "14",
+     "rail": "wall",
+     "right": "shared",
+     "road": 23.0,
+     "roof": "tiles",
+     "seed": 721851,
+     "sign": "#e0b400",
+     "type": "pho2_tile",
+     "use": "bar",
+     "vents": true,
+     "wall": "#e6dab4",
+     "width": 5.8
+    },
+    {
+     "age": 0.5,
+     "at": 14.499999999999996,
+     "awning": true,
+     "depth": 20.0,
+     "family": "steel",
+     "flip": false,
+     "ground": "open",
+     "left": "shared",
+     "name": null,
+     "number": "16",
+     "rail": "tubes",
+     "right": "shared",
+     "road": 23.0,
+     "roof": "tiles",
+     "seed": 163167,
+     "sign": "#e2e2de",
+     "type": "pho2_tile",
+     "use": "bar",
+     "vents": false,
+     "wall": "#bcd4e2",
+     "width": 5.8
+    },
+    {
+     "age": 0.5,
+     "at": 20.3,
+     "awning": true,
+     "depth": 20.0,
+     "family": "steel",
+     "flip": false,
+     "ground": "open",
+     "left": "shared",
+     "name": "pub (OSM node \"R&R\")",
+     "number": "18",
+     "rail": "tubes",
+     "right": "shared",
+     "road": 23.0,
+     "roof": "terrace",
+     "seed": 14552,
+     "sign": "#1f4f9c",
+     "type": "pho2_flat",
+     "use": "bar",
+     "vents": false,
+     "wall": "#c8dcc4",
+     "width": 5.8
+    }
+   ],
+   "road": 23.0,
+   "seed": 26,
+   "sidewalk": 5.5
+  }
+ },
+ "kind": "house",
+ "materials": {
+  "part_01": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_02": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_03": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_04": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_05": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_06": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_07": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_08": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_09": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_10": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_11": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_12": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  },
+  "part_13": {
+   "color": "#ffffff",
+   "metalness": 0.0,
+   "roughness": 0.85
+  }
+ },
+ "name": "quang_trung_12_18",
+ "nodes": [
+  {
+   "name": "quang_trung_12_18_nha_1_mat_tien",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 512,
+      "near": 1024
+     },
+     "budget": {
+      "far": 300,
+      "mid": 2500,
+      "near": 14000
+     },
+     "cells": {
+      "far": 0.05,
+      "mid": 0.05,
+      "near": 0.025
+     },
+     "details": [
+      {
+       "budget": {
+        "near": 6000
+       },
+       "cells": {
+        "near": 0.012
+       },
+       "edits": [
+        {
+         "at": [
+          -11.54,
+          1.35,
+          4.36
+         ],
+         "color": "#c9ccce",
+         "material": "part_01",
+         "metal": 1.0,
+         "repeat": {
+          "count": 4,
+          "move": [
+           1.8933333333333333,
+           0,
+           0
+          ]
+         },
+         "roughness": 0.25,
+         "shape": "cylinder",
+         "size": [
+          0.022,
+          0.46
+         ]
+        },
+        {
+         "at": [
+          -8.7,
+          1.35,
+          4.82
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_01",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.025
+         ]
+        },
+        {
+         "at": [
+          -8.7,
+          1.35,
+          4.52
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_01",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.014
+         ]
+        },
+        {
+         "at": [
+          -8.7,
+          1.35,
+          4.22
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_01",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.014
+         ]
+        },
+        {
+         "at": [
+          -5.86,
+          0.7,
+          4.82
+         ],
+         "axis": [
+          0,
+          1,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_01",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          0.65,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          -11.54,
+          0.7,
+          4.82
+         ],
+         "axis": [
+          0,
+          1,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_01",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          0.65,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          -8.7,
+          0.85,
+          3.2
+         ],
+         "axis": [
+          0,
+          0.2588,
+          0.9659
+         ],
+         "color": "#f0eee6",
+         "material": "part_01",
+         "roughness": 0.9,
+         "shape": "box",
+         "size": [
+          2.8,
+          0.85,
+          0.012
+         ],
+         "surface": {
+          "kind": "fabric",
+          "scale": 0.004
+         },
+         "up": [
+          0,
+          0.9659,
+          -0.2588
+         ]
+        },
+        {
+         "at": [
+          -11.3,
+          0.85,
+          3.2
+         ],
+         "axis": [
+          0,
+          0.2588,
+          0.9659
+         ],
+         "blend": 0.004,
+         "color": "#2f8a57",
+         "material": "part_01",
+         "mode": "paint",
+         "repeat": {
+          "count": 14,
+          "move": [
+           0.4,
+           0,
+           0
+          ]
+         },
+         "shape": "box",
+         "size": [
+          0.1,
+          0.9,
+          0.05
+         ],
+         "up": [
+          0,
+          0.9659,
+          -0.2588
+         ]
+        }
+       ],
+       "levels": [
+        "near"
+       ]
+      }
+     ],
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        -8.7,
+        -0.15,
+        4.15
+       ],
+       "color": "#bcd4e2",
+       "material": "part_01",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.15,
+        4.15
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -8.7,
+        -0.15,
+        1.725
+       ],
+       "color": "#33302c",
+       "material": "part_01",
+       "mode": "subtract",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.1,
+        0.3,
+        1.425
+       ]
+      },
+      {
+       "at": [
+        -8.7,
+        -0.15,
+        0.15
+       ],
+       "color": "#a8a49a",
+       "material": "part_01",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.15,
+        0.15
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -8.7,
+        0.3,
+        0.15
+       ],
+       "color": "#a8a49a",
+       "material": "part_01",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.2,
+        0.3,
+        0.15
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -8.7,
+        0.75,
+        0.075
+       ],
+       "color": "#a8a49a",
+       "material": "part_01",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.2,
+        0.15,
+        0.075
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -6.2,
+        0,
+        1.725
+       ],
+       "blend": 0.008,
+       "color": "#6a3a34",
+       "material": "part_01",
+       "mode": "paint",
+       "raise": 0.008,
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.4,
+        0.2,
+        1.425
+       ],
+       "surface": {
+        "kind": "stone",
+        "scale": 0.04
+       }
+      },
+      {
+       "at": [
+        -11.2,
+        0,
+        1.725
+       ],
+       "blend": 0.008,
+       "color": "#6a3a34",
+       "material": "part_01",
+       "mode": "paint",
+       "raise": 0.008,
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.4,
+        0.2,
+        1.425
+       ],
+       "surface": {
+        "kind": "stone",
+        "scale": 0.04
+       }
+      },
+      {
+       "at": [
+        -8.7,
+        -0.36,
+        1.725
+       ],
+       "color": "#2a2622",
+       "material": "part_01",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.1,
+        0.09,
+        1.425
+       ]
+      },
+      {
+       "at": [
+        -9.75,
+        -0.15,
+        0.85
+       ],
+       "color": "#6b4a2c",
+       "material": "part_01",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.945,
+        0.09,
+        0.55
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        -9.75,
+        -0.14,
+        1.42
+       ],
+       "color": "#3a2a1c",
+       "material": "part_01",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.987,
+        0.12,
+        0.025
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        -8.7,
+        -0.27,
+        2.275
+       ],
+       "blend": 0.02,
+       "color": "#ffd9a0",
+       "glow": 0.6,
+       "material": "part_01",
+       "mode": "paint",
+       "shape": "box",
+       "size": [
+        1.68,
+        0.05,
+        0.28
+       ]
+      },
+      {
+       "at": [
+        -10.3,
+        -0.27,
+        2.225
+       ],
+       "blend": 0.01,
+       "color": "#2c4a34",
+       "material": "part_01",
+       "mode": "paint",
+       "repeat": {
+        "count": 23,
+        "move": [
+         0.14,
+         0,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        0.03,
+        0.05,
+        0.11
+       ]
+      },
+      {
+       "at": [
+        -8.7,
+        1.42,
+        4.3
+       ],
+       "color": "#1d7a46",
+       "material": "part_01",
+       "roughness": 0.4,
+       "shape": "box",
+       "size": [
+        2.85,
+        0.04,
+        0.5
+       ]
+      },
+      {
+       "at": [
+        -8.7,
+        1.44,
+        4.4
+       ],
+       "blend": 0.01,
+       "color": "#f4f1e6",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.9,
+       "shape": "box",
+       "size": [
+        2.5,
+        0.06,
+        0.16
+       ]
+      },
+      {
+       "at": [
+        -8.7,
+        1.44,
+        4.05
+       ],
+       "blend": 0.01,
+       "color": "#f4f1e6",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.7,
+       "shape": "box",
+       "size": [
+        1.45,
+        0.06,
+        0.05
+       ]
+      },
+      {
+       "at": [
+        -8.7,
+        0.65,
+        3.84
+       ],
+       "color": "#b3c9d7",
+       "material": "part_01",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.75,
+        0.06
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -7.482,
+        0,
+        5.05
+       ],
+       "color": "#5c6064",
+       "material": "part_01",
+       "mode": "subtract",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.6,
+        0.06,
+        1.15
+       ]
+      },
+      {
+       "at": [
+        -7.482,
+        -0.07,
+        5.05
+       ],
+       "color": "#24323c",
+       "material": "part_01",
+       "roughness": 0.08,
+       "shape": "box",
+       "size": [
+        0.55,
+        0.02,
+        1.1
+       ]
+      },
+      {
+       "at": [
+        -7.482,
+        -0.05,
+        5.05
+       ],
+       "color": "#5c6064",
+       "material": "part_01",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.025,
+        0.03,
+        1.15
+       ]
+      },
+      {
+       "at": [
+        -10.005,
+        0,
+        5.5
+       ],
+       "color": "#5c6064",
+       "material": "part_01",
+       "mode": "subtract",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.6,
+        0.06,
+        0.7
+       ]
+      },
+      {
+       "at": [
+        -10.005,
+        -0.07,
+        5.5
+       ],
+       "color": "#24323c",
+       "material": "part_01",
+       "roughness": 0.08,
+       "shape": "box",
+       "size": [
+        0.55,
+        0.02,
+        0.65
+       ]
+      },
+      {
+       "at": [
+        -10.005,
+        -0.05,
+        5.5
+       ],
+       "color": "#5c6064",
+       "material": "part_01",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.025,
+        0.03,
+        0.7
+       ]
+      },
+      {
+       "at": [
+        -8.7,
+        0.25,
+        6.45
+       ],
+       "color": "#b3c9d7",
+       "material": "part_01",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.85,
+        0.3,
+        0.04
+       ]
+      },
+      {
+       "at": [
+        -8.7,
+        -0.15,
+        8.3
+       ],
+       "color": "#a9bfcb",
+       "material": "part_01",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.93,
+        0.19,
+        0.04
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -11.0,
+        0.16,
+        6.7
+       ],
+       "color": "#e4e2da",
+       "material": "part_01",
+       "roughness": 0.5,
+       "shape": "round_box",
+       "size": [
+        0.34,
+        0.145,
+        0.215,
+        0.02
+       ]
+      },
+      {
+       "at": [
+        -10.92,
+        0.3,
+        6.7
+       ],
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "blend": 0.01,
+       "color": "#6a6c6e",
+       "material": "part_01",
+       "mode": "paint",
+       "raise": -0.005,
+       "shape": "cylinder",
+       "size": [
+        0.15,
+        0.03
+       ]
+      },
+      {
+       "at": [
+        -6.1,
+        0.06,
+        2.0
+       ],
+       "color": "#8e9294",
+       "material": "part_01",
+       "metal": 0.4,
+       "roughness": 0.6,
+       "shape": "box",
+       "size": [
+        0.125,
+        0.06,
+        0.175
+       ]
+      },
+      {
+       "color": "#9aa7ac",
+       "material": "part_01",
+       "roughness": 0.5,
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          -11.5,
+          0.07,
+          8.2
+         ],
+         [
+          -11.5,
+          0.07,
+          0.1
+         ]
+        ],
+        "radii": [
+         0.045,
+         0.045
+        ]
+       }
+      },
+      {
+       "at": [
+        -7.402,
+        0.3,
+        7.8135
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0223,
+        0.6,
+        0.4865
+       ]
+      },
+      {
+       "at": [
+        -10.8753,
+        0.3,
+        7.8695
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0342,
+        0.6,
+        0.4305
+       ]
+      },
+      {
+       "at": [
+        -6.6624,
+        0.3,
+        7.81
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0531,
+        0.6,
+        0.49
+       ]
+      },
+      {
+       "at": [
+        -7.1181,
+        0.3,
+        7.7238
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0585,
+        0.6,
+        0.5762
+       ]
+      },
+      {
+       "at": [
+        -9.6887,
+        0.3,
+        3.3865
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0358,
+        0.6,
+        0.3935
+       ]
+      },
+      {
+       "at": [
+        -6.5233,
+        0.3,
+        3.523
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0546,
+        0.6,
+        0.257
+       ]
+      },
+      {
+       "at": [
+        -6.7758,
+        0.3,
+        3.2348
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0288,
+        0.6,
+        0.5452
+       ]
+      },
+      {
+       "at": [
+        -10.7428,
+        0.3,
+        3.287
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_01",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0283,
+        0.6,
+        0.493
+       ]
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_1_than",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 256,
+      "near": 512
+     },
+     "budget": {
+      "far": 100,
+      "mid": 500,
+      "near": 2000
+     },
+     "cells": {
+      "far": 0.25,
+      "mid": 0.12,
+      "near": 0.08
+     },
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        -8.7,
+        -10.15,
+        3.65
+       ],
+       "color": "#b6cedb",
+       "material": "part_02",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -10.005,
+        -20.0,
+        1.35
+       ],
+       "blend": 0.02,
+       "color": "#6a6f72",
+       "material": "part_02",
+       "metal": 0.5,
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.45,
+        0.05,
+        1.05
+       ]
+      },
+      {
+       "at": [
+        -11.6,
+        -10.15,
+        3.65
+       ],
+       "blend": 0.01,
+       "color": "#aaa69c",
+       "material": "part_02",
+       "mode": "paint",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        0.02,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.06
+       }
+      },
+      {
+       "at": [
+        -5.8,
+        -10.15,
+        3.65
+       ],
+       "blend": 0.01,
+       "color": "#aaa69c",
+       "material": "part_02",
+       "mode": "paint",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        0.02,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.06
+       }
+      },
+      {
+       "at": [
+        -7.54,
+        -20.0,
+        1.9
+       ],
+       "blend": 0.02,
+       "color": "#24323c",
+       "material": "part_02",
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.1,
+       "shape": "box",
+       "size": [
+        0.5,
+        0.05,
+        0.6
+       ]
+      },
+      {
+       "at": [
+        -7.54,
+        -20.0,
+        5.5
+       ],
+       "blend": 0.02,
+       "color": "#24323c",
+       "material": "part_02",
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.1,
+       "shape": "box",
+       "size": [
+        0.5,
+        0.05,
+        0.6
+       ]
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_1_mai",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 256,
+      "near": 1024
+     },
+     "budget": {
+      "far": 150,
+      "mid": 1000,
+      "near": 5000
+     },
+     "cells": {
+      "far": 0.04,
+      "mid": 0.04,
+      "near": 0.04
+     },
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        -8.7,
+        -10.15,
+        7.3
+       ],
+       "color": "#9c9a92",
+       "material": "part_03",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        9.85,
+        0.06
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -5.86,
+        -10.15,
+        7.8
+       ],
+       "color": "#b6cedb",
+       "material": "part_03",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        0.06,
+        9.85,
+        0.5
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -11.54,
+        -10.15,
+        7.8
+       ],
+       "color": "#b6cedb",
+       "material": "part_03",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        0.06,
+        9.85,
+        0.5
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -8.7,
+        -19.94,
+        7.8
+       ],
+       "color": "#b6cedb",
+       "material": "part_03",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.06,
+        0.5
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -7.1,
+        -11.0,
+        8.65
+       ],
+       "color": "#b6cedb",
+       "material": "part_03",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        1.2,
+        1.5,
+        1.35
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -7.1,
+        -11.0,
+        10.0
+       ],
+       "color": "#9c9a92",
+       "material": "part_03",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        1.3,
+        1.6,
+        0.05
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -8.3,
+        -11.0,
+        8.3
+       ],
+       "blend": 0.02,
+       "color": "#6a6f72",
+       "material": "part_03",
+       "metal": 0.5,
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.05,
+        0.4,
+        1.0
+       ]
+      },
+      {
+       "at": [
+        -7.1,
+        -11.0,
+        11.05
+       ],
+       "color": "#cfd2d4",
+       "material": "part_03",
+       "metal": 1.0,
+       "roughness": 0.25,
+       "shape": "cylinder",
+       "size": [
+        0.48,
+        0.6
+       ]
+      },
+      {
+       "at": [
+        -7.1,
+        -11.0,
+        11.73
+       ],
+       "color": "#cfd2d4",
+       "material": "part_03",
+       "metal": 1.0,
+       "roughness": 0.25,
+       "shape": "cone",
+       "size": [
+        0.48,
+        0.15,
+        0.08
+       ]
+      },
+      {
+       "at": [
+        -6.8,
+        -10.7,
+        10.25
+       ],
+       "color": "#b8bbbd",
+       "material": "part_03",
+       "metal": 1.0,
+       "repeat": {
+        "angle": 90,
+        "center": [
+         -7.1,
+         -11.0,
+         0
+        ],
+        "count": 4
+       },
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.03,
+        0.03,
+        0.2
+       ]
+      },
+      {
+       "at": [
+        -7.1,
+        -11.0,
+        10.75
+       ],
+       "blend": 0.01,
+       "color": "#a9acae",
+       "material": "part_03",
+       "mode": "paint",
+       "raise": 0.004,
+       "repeat": {
+        "count": 3,
+        "move": [
+         0,
+         0,
+         0.3
+        ]
+       },
+       "shape": "cylinder",
+       "size": [
+        0.485,
+        0.01
+       ]
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_2_mat_tien",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 512,
+      "near": 1024
+     },
+     "budget": {
+      "far": 300,
+      "mid": 2500,
+      "near": 14000
+     },
+     "cells": {
+      "far": 0.05,
+      "mid": 0.05,
+      "near": 0.025
+     },
+     "details": [
+      {
+       "budget": {
+        "near": 6000
+       },
+       "cells": {
+        "near": 0.012
+       },
+       "edits": [
+        {
+         "at": [
+          -2.9,
+          0.85,
+          3.2
+         ],
+         "axis": [
+          0,
+          0.2588,
+          0.9659
+         ],
+         "color": "#f0eee6",
+         "material": "part_04",
+         "roughness": 0.9,
+         "shape": "box",
+         "size": [
+          2.8,
+          0.85,
+          0.012
+         ],
+         "surface": {
+          "kind": "fabric",
+          "scale": 0.004
+         },
+         "up": [
+          0,
+          0.9659,
+          -0.2588
+         ]
+        },
+        {
+         "at": [
+          -5.5,
+          0.85,
+          3.2
+         ],
+         "axis": [
+          0,
+          0.2588,
+          0.9659
+         ],
+         "blend": 0.004,
+         "color": "#2f8a57",
+         "material": "part_04",
+         "mode": "paint",
+         "repeat": {
+          "count": 14,
+          "move": [
+           0.4,
+           0,
+           0
+          ]
+         },
+         "shape": "box",
+         "size": [
+          0.1,
+          0.9,
+          0.05
+         ],
+         "up": [
+          0,
+          0.9659,
+          -0.2588
+         ]
+        }
+       ],
+       "levels": [
+        "near"
+       ]
+      }
+     ],
+     "dirt": 0.63,
+     "edits": [
+      {
+       "at": [
+        -2.9,
+        -0.15,
+        3.65
+       ],
+       "color": "#e6dab4",
+       "material": "part_04",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.15,
+        3.65
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -2.9,
+        -0.15,
+        1.725
+       ],
+       "color": "#33302c",
+       "material": "part_04",
+       "mode": "subtract",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.1,
+        0.3,
+        1.425
+       ]
+      },
+      {
+       "at": [
+        -2.9,
+        -0.15,
+        0.15
+       ],
+       "color": "#a8a49a",
+       "material": "part_04",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.15,
+        0.15
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -2.9,
+        0.3,
+        0.15
+       ],
+       "color": "#a8a49a",
+       "material": "part_04",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.2,
+        0.3,
+        0.15
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -2.9,
+        0.75,
+        0.075
+       ],
+       "color": "#a8a49a",
+       "material": "part_04",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.2,
+        0.15,
+        0.075
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -0.4,
+        0,
+        1.725
+       ],
+       "blend": 0.008,
+       "color": "#d6cdb4",
+       "material": "part_04",
+       "mode": "paint",
+       "raise": 0.008,
+       "roughness": 0.6,
+       "shape": "box",
+       "size": [
+        0.4,
+        0.2,
+        1.425
+       ],
+       "surface": {
+        "kind": "stone",
+        "scale": 0.04
+       }
+      },
+      {
+       "at": [
+        -5.4,
+        0,
+        1.725
+       ],
+       "blend": 0.008,
+       "color": "#d6cdb4",
+       "material": "part_04",
+       "mode": "paint",
+       "raise": 0.008,
+       "roughness": 0.6,
+       "shape": "box",
+       "size": [
+        0.4,
+        0.2,
+        1.425
+       ],
+       "surface": {
+        "kind": "stone",
+        "scale": 0.04
+       }
+      },
+      {
+       "at": [
+        -2.9,
+        -0.36,
+        1.725
+       ],
+       "color": "#2a2622",
+       "material": "part_04",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.1,
+        0.09,
+        1.425
+       ]
+      },
+      {
+       "at": [
+        -3.95,
+        -0.15,
+        0.85
+       ],
+       "color": "#6b4a2c",
+       "material": "part_04",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.945,
+        0.09,
+        0.55
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        -3.95,
+        -0.14,
+        1.42
+       ],
+       "color": "#3a2a1c",
+       "material": "part_04",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.987,
+        0.12,
+        0.025
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        -2.9,
+        -0.27,
+        2.275
+       ],
+       "blend": 0.02,
+       "color": "#ffd9a0",
+       "glow": 0.6,
+       "material": "part_04",
+       "mode": "paint",
+       "shape": "box",
+       "size": [
+        1.68,
+        0.05,
+        0.28
+       ]
+      },
+      {
+       "at": [
+        -4.5,
+        -0.27,
+        2.225
+       ],
+       "blend": 0.01,
+       "color": "#2c4a34",
+       "material": "part_04",
+       "mode": "paint",
+       "repeat": {
+        "count": 23,
+        "move": [
+         0.14,
+         0,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        0.03,
+        0.05,
+        0.11
+       ]
+      },
+      {
+       "at": [
+        -2.9,
+        1.42,
+        4.3
+       ],
+       "color": "#e0b400",
+       "material": "part_04",
+       "roughness": 0.4,
+       "shape": "box",
+       "size": [
+        2.85,
+        0.04,
+        0.5
+       ]
+      },
+      {
+       "at": [
+        -2.9,
+        1.44,
+        4.4
+       ],
+       "blend": 0.01,
+       "color": "#f4f1e6",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.9,
+       "shape": "box",
+       "size": [
+        2.5,
+        0.06,
+        0.16
+       ]
+      },
+      {
+       "at": [
+        -2.9,
+        1.44,
+        4.05
+       ],
+       "blend": 0.01,
+       "color": "#f4f1e6",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.7,
+       "shape": "box",
+       "size": [
+        1.45,
+        0.06,
+        0.05
+       ]
+      },
+      {
+       "at": [
+        -2.9,
+        0.65,
+        3.84
+       ],
+       "color": "#dbcfab",
+       "material": "part_04",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.75,
+        0.06
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -4.118,
+        0,
+        5.05
+       ],
+       "color": "#5e4428",
+       "material": "part_04",
+       "mode": "subtract",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.6,
+        0.06,
+        1.15
+       ]
+      },
+      {
+       "at": [
+        -4.118,
+        -0.07,
+        5.05
+       ],
+       "color": "#7a5a38",
+       "material": "part_04",
+       "roughness": 0.6,
+       "shape": "box",
+       "size": [
+        0.55,
+        0.02,
+        1.1
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        -4.118,
+        -0.05,
+        5.05
+       ],
+       "color": "#5e4428",
+       "material": "part_04",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.025,
+        0.03,
+        1.15
+       ]
+      },
+      {
+       "at": [
+        -1.595,
+        0,
+        5.5
+       ],
+       "color": "#5e4428",
+       "material": "part_04",
+       "mode": "subtract",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.6,
+        0.06,
+        0.7
+       ]
+      },
+      {
+       "at": [
+        -1.595,
+        -0.07,
+        5.5
+       ],
+       "color": "#7a5a38",
+       "material": "part_04",
+       "roughness": 0.6,
+       "shape": "box",
+       "size": [
+        0.55,
+        0.02,
+        0.65
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        -1.595,
+        -0.05,
+        5.5
+       ],
+       "color": "#5e4428",
+       "material": "part_04",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.025,
+        0.03,
+        0.7
+       ]
+      },
+      {
+       "at": [
+        -2.9,
+        0.25,
+        6.45
+       ],
+       "color": "#dbcfab",
+       "material": "part_04",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.85,
+        0.3,
+        0.04
+       ]
+      },
+      {
+       "at": [
+        -5.3,
+        0,
+        6.85
+       ],
+       "blend": 0.03,
+       "color": "#4a443a",
+       "material": "part_04",
+       "mode": "paint",
+       "raise": -0.03,
+       "repeat": {
+        "count": 17,
+        "move": [
+         0.3,
+         0,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        0.1,
+        0.1,
+        0.1
+       ]
+      },
+      {
+       "at": [
+        -2.9,
+        1.35,
+        4.35
+       ],
+       "color": "#e6dab4",
+       "material": "part_04",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.05,
+        0.45
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -0.05,
+        0.7,
+        4.35
+       ],
+       "color": "#e6dab4",
+       "material": "part_04",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        0.05,
+        0.7,
+        0.45
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -5.75,
+        0.7,
+        4.35
+       ],
+       "color": "#e6dab4",
+       "material": "part_04",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        0.05,
+        0.7,
+        0.45
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -2.9,
+        1.35,
+        4.83
+       ],
+       "color": "#cfc4a2",
+       "material": "part_04",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.92,
+        0.08,
+        0.03
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        -0.6,
+        0.16,
+        6.1
+       ],
+       "color": "#e4e2da",
+       "material": "part_04",
+       "roughness": 0.5,
+       "shape": "round_box",
+       "size": [
+        0.34,
+        0.145,
+        0.215,
+        0.02
+       ]
+      },
+      {
+       "at": [
+        -0.68,
+        0.3,
+        6.1
+       ],
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "blend": 0.01,
+       "color": "#6a6c6e",
+       "material": "part_04",
+       "mode": "paint",
+       "raise": -0.005,
+       "shape": "cylinder",
+       "size": [
+        0.15,
+        0.03
+       ]
+      },
+      {
+       "at": [
+        -5.5,
+        0.06,
+        2.0
+       ],
+       "color": "#8e9294",
+       "material": "part_04",
+       "metal": 0.4,
+       "roughness": 0.6,
+       "shape": "box",
+       "size": [
+        0.125,
+        0.06,
+        0.175
+       ]
+      },
+      {
+       "color": "#9aa7ac",
+       "material": "part_04",
+       "roughness": 0.5,
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          -0.1,
+          0.07,
+          7.2
+         ],
+         [
+          -0.1,
+          0.07,
+          0.1
+         ]
+        ],
+        "radii": [
+         0.045,
+         0.045
+        ]
+       }
+      },
+      {
+       "at": [
+        -1.0891,
+        0.3,
+        6.9204
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0563,
+        0.6,
+        0.3796
+       ]
+      },
+      {
+       "at": [
+        -2.0819,
+        0.3,
+        7.0077
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0407,
+        0.6,
+        0.2923
+       ]
+      },
+      {
+       "at": [
+        -3.6834,
+        0.3,
+        7.031
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0386,
+        0.6,
+        0.269
+       ]
+      },
+      {
+       "at": [
+        -5.1773,
+        0.3,
+        6.9471
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0277,
+        0.6,
+        0.3529
+       ]
+      },
+      {
+       "at": [
+        -1.522,
+        0.3,
+        7.0792
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0241,
+        0.6,
+        0.2208
+       ]
+      },
+      {
+       "at": [
+        -0.3304,
+        0.3,
+        7.1341
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0413,
+        0.6,
+        0.1659
+       ]
+      },
+      {
+       "at": [
+        -2.4756,
+        0.3,
+        3.3511
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.048,
+        0.6,
+        0.4289
+       ]
+      },
+      {
+       "at": [
+        -0.6512,
+        0.3,
+        3.5494
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0346,
+        0.6,
+        0.2306
+       ]
+      },
+      {
+       "at": [
+        -0.4165,
+        0.3,
+        3.4648
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0291,
+        0.6,
+        0.3152
+       ]
+      },
+      {
+       "at": [
+        -5.3935,
+        0.3,
+        3.3352
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0288,
+        0.6,
+        0.4448
+       ]
+      },
+      {
+       "at": [
+        -3.6022,
+        0.3,
+        3.5562
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0425,
+        0.6,
+        0.2238
+       ]
+      },
+      {
+       "at": [
+        -4.3242,
+        0.3,
+        3.3226
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_04",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0509,
+        0.6,
+        0.4574
+       ]
+      }
+     ],
+     "wear": 0.24
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_2_than",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 256,
+      "near": 512
+     },
+     "budget": {
+      "far": 100,
+      "mid": 500,
+      "near": 2000
+     },
+     "cells": {
+      "far": 0.25,
+      "mid": 0.12,
+      "near": 0.08
+     },
+     "dirt": 0.63,
+     "edits": [
+      {
+       "at": [
+        -2.9,
+        -10.15,
+        3.65
+       ],
+       "color": "#dfd3af",
+       "material": "part_05",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -4.205,
+        -20.0,
+        1.35
+       ],
+       "blend": 0.02,
+       "color": "#6a6f72",
+       "material": "part_05",
+       "metal": 0.5,
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.45,
+        0.05,
+        1.05
+       ]
+      },
+      {
+       "at": [
+        -5.8,
+        -10.15,
+        3.65
+       ],
+       "blend": 0.01,
+       "color": "#aaa69c",
+       "material": "part_05",
+       "mode": "paint",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        0.02,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.06
+       }
+      },
+      {
+       "at": [
+        -0.0,
+        -10.15,
+        3.65
+       ],
+       "blend": 0.01,
+       "color": "#aaa69c",
+       "material": "part_05",
+       "mode": "paint",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        0.02,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.06
+       }
+      },
+      {
+       "at": [
+        -1.74,
+        -20.0,
+        1.9
+       ],
+       "blend": 0.02,
+       "color": "#24323c",
+       "material": "part_05",
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.1,
+       "shape": "box",
+       "size": [
+        0.5,
+        0.05,
+        0.6
+       ]
+      },
+      {
+       "at": [
+        -1.74,
+        -20.0,
+        5.5
+       ],
+       "blend": 0.02,
+       "color": "#24323c",
+       "material": "part_05",
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.1,
+       "shape": "box",
+       "size": [
+        0.5,
+        0.05,
+        0.6
+       ]
+      }
+     ],
+     "wear": 0.24
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_2_mai",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 256,
+      "near": 1024
+     },
+     "budget": {
+      "far": 150,
+      "mid": 1000,
+      "near": 5000
+     },
+     "cells": {
+      "far": 0.04,
+      "mid": 0.04,
+      "near": 0.04
+     },
+     "dirt": 0.63,
+     "edits": [
+      {
+       "at": [
+        -2.9,
+        -9.85,
+        7.3
+       ],
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "color": "#a8482f",
+       "material": "part_06",
+       "roughness": 0.8,
+       "shape": "extrude",
+       "size": {
+        "depth": 20.6,
+        "outline": [
+         [
+          -3.3,
+          0
+         ],
+         [
+          3.3,
+          0
+         ],
+         [
+          0,
+          1.815
+         ]
+        ]
+       },
+       "up": [
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "at": [
+        -2.9,
+        -19.9,
+        8.2075
+       ],
+       "blend": 0.012,
+       "color": "#8a3a26",
+       "material": "part_06",
+       "mode": "paint",
+       "raise": 0.012,
+       "repeat": {
+        "count": 80,
+        "move": [
+         0,
+         0.25,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        3.4,
+        0.02,
+        1.815
+       ]
+      },
+      {
+       "color": "#93402a",
+       "material": "part_06",
+       "roughness": 0.8,
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          -2.9,
+          -20.1,
+          9.115
+         ],
+         [
+          -2.9,
+          0.4,
+          9.115
+         ]
+        ],
+        "radii": [
+         0.09,
+         0.09
+        ]
+       }
+      }
+     ],
+     "wear": 0.24
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_3_mat_tien",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 512,
+      "near": 1024
+     },
+     "budget": {
+      "far": 300,
+      "mid": 2500,
+      "near": 14000
+     },
+     "cells": {
+      "far": 0.05,
+      "mid": 0.05,
+      "near": 0.025
+     },
+     "details": [
+      {
+       "budget": {
+        "near": 6000
+       },
+       "cells": {
+        "near": 0.012
+       },
+       "edits": [
+        {
+         "at": [
+          0.06,
+          1.35,
+          4.36
+         ],
+         "color": "#c9ccce",
+         "material": "part_07",
+         "metal": 1.0,
+         "repeat": {
+          "count": 4,
+          "move": [
+           1.8933333333333333,
+           0,
+           0
+          ]
+         },
+         "roughness": 0.25,
+         "shape": "cylinder",
+         "size": [
+          0.022,
+          0.46
+         ]
+        },
+        {
+         "at": [
+          2.9,
+          1.35,
+          4.82
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_07",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.025
+         ]
+        },
+        {
+         "at": [
+          2.9,
+          1.35,
+          4.52
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_07",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.014
+         ]
+        },
+        {
+         "at": [
+          2.9,
+          1.35,
+          4.22
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_07",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.014
+         ]
+        },
+        {
+         "at": [
+          5.74,
+          0.7,
+          4.82
+         ],
+         "axis": [
+          0,
+          1,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_07",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          0.65,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          0.06,
+          0.7,
+          4.82
+         ],
+         "axis": [
+          0,
+          1,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_07",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          0.65,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          2.9,
+          0.85,
+          3.2
+         ],
+         "axis": [
+          0,
+          0.2588,
+          0.9659
+         ],
+         "color": "#f0eee6",
+         "material": "part_07",
+         "roughness": 0.9,
+         "shape": "box",
+         "size": [
+          2.8,
+          0.85,
+          0.012
+         ],
+         "surface": {
+          "kind": "fabric",
+          "scale": 0.004
+         },
+         "up": [
+          0,
+          0.9659,
+          -0.2588
+         ]
+        },
+        {
+         "at": [
+          0.3,
+          0.85,
+          3.2
+         ],
+         "axis": [
+          0,
+          0.2588,
+          0.9659
+         ],
+         "blend": 0.004,
+         "color": "#2f8a57",
+         "material": "part_07",
+         "mode": "paint",
+         "repeat": {
+          "count": 14,
+          "move": [
+           0.4,
+           0,
+           0
+          ]
+         },
+         "shape": "box",
+         "size": [
+          0.1,
+          0.9,
+          0.05
+         ],
+         "up": [
+          0,
+          0.9659,
+          -0.2588
+         ]
+        }
+       ],
+       "levels": [
+        "near"
+       ]
+      }
+     ],
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        2.9,
+        -0.15,
+        3.65
+       ],
+       "color": "#bcd4e2",
+       "material": "part_07",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.15,
+        3.65
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        2.9,
+        -0.15,
+        1.725
+       ],
+       "color": "#33302c",
+       "material": "part_07",
+       "mode": "subtract",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.1,
+        0.3,
+        1.425
+       ]
+      },
+      {
+       "at": [
+        2.9,
+        -0.15,
+        0.15
+       ],
+       "color": "#a8a49a",
+       "material": "part_07",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.15,
+        0.15
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        2.9,
+        0.3,
+        0.15
+       ],
+       "color": "#a8a49a",
+       "material": "part_07",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.2,
+        0.3,
+        0.15
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        2.9,
+        0.75,
+        0.075
+       ],
+       "color": "#a8a49a",
+       "material": "part_07",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.2,
+        0.15,
+        0.075
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        5.4,
+        0,
+        1.725
+       ],
+       "blend": 0.008,
+       "color": "#6a3a34",
+       "material": "part_07",
+       "mode": "paint",
+       "raise": 0.008,
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.4,
+        0.2,
+        1.425
+       ],
+       "surface": {
+        "kind": "stone",
+        "scale": 0.04
+       }
+      },
+      {
+       "at": [
+        0.4,
+        0,
+        1.725
+       ],
+       "blend": 0.008,
+       "color": "#6a3a34",
+       "material": "part_07",
+       "mode": "paint",
+       "raise": 0.008,
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.4,
+        0.2,
+        1.425
+       ],
+       "surface": {
+        "kind": "stone",
+        "scale": 0.04
+       }
+      },
+      {
+       "at": [
+        2.9,
+        -0.36,
+        1.725
+       ],
+       "color": "#2a2622",
+       "material": "part_07",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.1,
+        0.09,
+        1.425
+       ]
+      },
+      {
+       "at": [
+        1.85,
+        -0.15,
+        0.85
+       ],
+       "color": "#6b4a2c",
+       "material": "part_07",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.945,
+        0.09,
+        0.55
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        1.85,
+        -0.14,
+        1.42
+       ],
+       "color": "#3a2a1c",
+       "material": "part_07",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.987,
+        0.12,
+        0.025
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        2.9,
+        -0.27,
+        2.275
+       ],
+       "blend": 0.02,
+       "color": "#ffd9a0",
+       "glow": 0.6,
+       "material": "part_07",
+       "mode": "paint",
+       "shape": "box",
+       "size": [
+        1.68,
+        0.05,
+        0.28
+       ]
+      },
+      {
+       "at": [
+        1.3,
+        -0.27,
+        2.225
+       ],
+       "blend": 0.01,
+       "color": "#2c4a34",
+       "material": "part_07",
+       "mode": "paint",
+       "repeat": {
+        "count": 23,
+        "move": [
+         0.14,
+         0,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        0.03,
+        0.05,
+        0.11
+       ]
+      },
+      {
+       "at": [
+        2.9,
+        1.42,
+        4.3
+       ],
+       "color": "#e2e2de",
+       "material": "part_07",
+       "roughness": 0.4,
+       "shape": "box",
+       "size": [
+        2.85,
+        0.04,
+        0.5
+       ]
+      },
+      {
+       "at": [
+        2.9,
+        1.44,
+        4.4
+       ],
+       "blend": 0.01,
+       "color": "#f4f1e6",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.9,
+       "shape": "box",
+       "size": [
+        2.5,
+        0.06,
+        0.16
+       ]
+      },
+      {
+       "at": [
+        2.9,
+        1.44,
+        4.05
+       ],
+       "blend": 0.01,
+       "color": "#f4f1e6",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.7,
+       "shape": "box",
+       "size": [
+        1.45,
+        0.06,
+        0.05
+       ]
+      },
+      {
+       "at": [
+        2.9,
+        0.65,
+        3.84
+       ],
+       "color": "#b3c9d7",
+       "material": "part_07",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.75,
+        0.06
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        1.682,
+        0,
+        5.05
+       ],
+       "color": "#5c6064",
+       "material": "part_07",
+       "mode": "subtract",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.6,
+        0.06,
+        1.15
+       ]
+      },
+      {
+       "at": [
+        1.682,
+        -0.07,
+        5.05
+       ],
+       "color": "#24323c",
+       "material": "part_07",
+       "roughness": 0.08,
+       "shape": "box",
+       "size": [
+        0.55,
+        0.02,
+        1.1
+       ]
+      },
+      {
+       "at": [
+        1.682,
+        -0.05,
+        5.05
+       ],
+       "color": "#5c6064",
+       "material": "part_07",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.025,
+        0.03,
+        1.15
+       ]
+      },
+      {
+       "at": [
+        4.205,
+        0,
+        5.5
+       ],
+       "color": "#5c6064",
+       "material": "part_07",
+       "mode": "subtract",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.6,
+        0.06,
+        0.7
+       ]
+      },
+      {
+       "at": [
+        4.205,
+        -0.07,
+        5.5
+       ],
+       "color": "#24323c",
+       "material": "part_07",
+       "roughness": 0.08,
+       "shape": "box",
+       "size": [
+        0.55,
+        0.02,
+        0.65
+       ]
+      },
+      {
+       "at": [
+        4.205,
+        -0.05,
+        5.5
+       ],
+       "color": "#5c6064",
+       "material": "part_07",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.025,
+        0.03,
+        0.7
+       ]
+      },
+      {
+       "at": [
+        2.9,
+        0.25,
+        6.45
+       ],
+       "color": "#b3c9d7",
+       "material": "part_07",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.85,
+        0.3,
+        0.04
+       ]
+      },
+      {
+       "at": [
+        5.2,
+        0.16,
+        6.1
+       ],
+       "color": "#e4e2da",
+       "material": "part_07",
+       "roughness": 0.5,
+       "shape": "round_box",
+       "size": [
+        0.34,
+        0.145,
+        0.215,
+        0.02
+       ]
+      },
+      {
+       "at": [
+        5.12,
+        0.3,
+        6.1
+       ],
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "blend": 0.01,
+       "color": "#6a6c6e",
+       "material": "part_07",
+       "mode": "paint",
+       "raise": -0.005,
+       "shape": "cylinder",
+       "size": [
+        0.15,
+        0.03
+       ]
+      },
+      {
+       "at": [
+        0.3,
+        0.06,
+        2.0
+       ],
+       "color": "#8e9294",
+       "material": "part_07",
+       "metal": 0.4,
+       "roughness": 0.6,
+       "shape": "box",
+       "size": [
+        0.125,
+        0.06,
+        0.175
+       ]
+      },
+      {
+       "color": "#9aa7ac",
+       "material": "part_07",
+       "roughness": 0.5,
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          5.7,
+          0.07,
+          7.2
+         ],
+         [
+          5.7,
+          0.07,
+          0.1
+         ]
+        ],
+        "radii": [
+         0.045,
+         0.045
+        ]
+       }
+      },
+      {
+       "at": [
+        2.5531,
+        0.3,
+        6.9888
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0592,
+        0.6,
+        0.3112
+       ]
+      },
+      {
+       "at": [
+        4.3041,
+        0.3,
+        6.8821
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0361,
+        0.6,
+        0.4179
+       ]
+      },
+      {
+       "at": [
+        5.1224,
+        0.3,
+        7.1432
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0295,
+        0.6,
+        0.1568
+       ]
+      },
+      {
+       "at": [
+        4.8138,
+        0.3,
+        7.0414
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.053,
+        0.6,
+        0.2586
+       ]
+      },
+      {
+       "at": [
+        3.7752,
+        0.3,
+        3.2362
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0545,
+        0.6,
+        0.5438
+       ]
+      },
+      {
+       "at": [
+        5.4922,
+        0.3,
+        3.5623
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.049,
+        0.6,
+        0.2177
+       ]
+      },
+      {
+       "at": [
+        1.0443,
+        0.3,
+        3.5717
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0418,
+        0.6,
+        0.2083
+       ]
+      },
+      {
+       "at": [
+        3.7452,
+        0.3,
+        3.4543
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_07",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0523,
+        0.6,
+        0.3257
+       ]
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_3_than",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 256,
+      "near": 512
+     },
+     "budget": {
+      "far": 100,
+      "mid": 500,
+      "near": 2000
+     },
+     "cells": {
+      "far": 0.25,
+      "mid": 0.12,
+      "near": 0.08
+     },
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        2.9,
+        -10.15,
+        3.65
+       ],
+       "color": "#b6cedb",
+       "material": "part_08",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        1.595,
+        -20.0,
+        1.35
+       ],
+       "blend": 0.02,
+       "color": "#6a6f72",
+       "material": "part_08",
+       "metal": 0.5,
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.45,
+        0.05,
+        1.05
+       ]
+      },
+      {
+       "at": [
+        -0.0,
+        -10.15,
+        3.65
+       ],
+       "blend": 0.01,
+       "color": "#aaa69c",
+       "material": "part_08",
+       "mode": "paint",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        0.02,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.06
+       }
+      },
+      {
+       "at": [
+        5.8,
+        -10.15,
+        3.65
+       ],
+       "blend": 0.01,
+       "color": "#aaa69c",
+       "material": "part_08",
+       "mode": "paint",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        0.02,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.06
+       }
+      },
+      {
+       "at": [
+        4.06,
+        -20.0,
+        1.9
+       ],
+       "blend": 0.02,
+       "color": "#24323c",
+       "material": "part_08",
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.1,
+       "shape": "box",
+       "size": [
+        0.5,
+        0.05,
+        0.6
+       ]
+      },
+      {
+       "at": [
+        4.06,
+        -20.0,
+        5.5
+       ],
+       "blend": 0.02,
+       "color": "#24323c",
+       "material": "part_08",
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.1,
+       "shape": "box",
+       "size": [
+        0.5,
+        0.05,
+        0.6
+       ]
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_3_mai",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 256,
+      "near": 1024
+     },
+     "budget": {
+      "far": 150,
+      "mid": 1000,
+      "near": 5000
+     },
+     "cells": {
+      "far": 0.04,
+      "mid": 0.04,
+      "near": 0.04
+     },
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        2.9,
+        -9.85,
+        7.3
+       ],
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "color": "#a8482f",
+       "material": "part_09",
+       "roughness": 0.8,
+       "shape": "extrude",
+       "size": {
+        "depth": 20.6,
+        "outline": [
+         [
+          -3.3,
+          0
+         ],
+         [
+          3.3,
+          0
+         ],
+         [
+          0,
+          1.815
+         ]
+        ]
+       },
+       "up": [
+        0,
+        0,
+        1
+       ]
+      },
+      {
+       "at": [
+        2.9,
+        -19.9,
+        8.2075
+       ],
+       "blend": 0.012,
+       "color": "#8a3a26",
+       "material": "part_09",
+       "mode": "paint",
+       "raise": 0.012,
+       "repeat": {
+        "count": 80,
+        "move": [
+         0,
+         0.25,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        3.4,
+        0.02,
+        1.815
+       ]
+      },
+      {
+       "color": "#93402a",
+       "material": "part_09",
+       "roughness": 0.8,
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          2.9,
+          -20.1,
+          9.115
+         ],
+         [
+          2.9,
+          0.4,
+          9.115
+         ]
+        ],
+        "radii": [
+         0.09,
+         0.09
+        ]
+       }
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_4_mat_tien",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 512,
+      "near": 1024
+     },
+     "budget": {
+      "far": 300,
+      "mid": 2500,
+      "near": 14000
+     },
+     "cells": {
+      "far": 0.05,
+      "mid": 0.05,
+      "near": 0.025
+     },
+     "details": [
+      {
+       "budget": {
+        "near": 6000
+       },
+       "cells": {
+        "near": 0.012
+       },
+       "edits": [
+        {
+         "at": [
+          5.86,
+          1.35,
+          4.36
+         ],
+         "color": "#c9ccce",
+         "material": "part_10",
+         "metal": 1.0,
+         "repeat": {
+          "count": 4,
+          "move": [
+           1.8933333333333333,
+           0,
+           0
+          ]
+         },
+         "roughness": 0.25,
+         "shape": "cylinder",
+         "size": [
+          0.022,
+          0.46
+         ]
+        },
+        {
+         "at": [
+          8.7,
+          1.35,
+          4.82
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_10",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.025
+         ]
+        },
+        {
+         "at": [
+          8.7,
+          1.35,
+          4.52
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_10",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.014
+         ]
+        },
+        {
+         "at": [
+          8.7,
+          1.35,
+          4.22
+         ],
+         "axis": [
+          1,
+          0,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_10",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          2.84,
+          0.014
+         ]
+        },
+        {
+         "at": [
+          11.54,
+          0.7,
+          4.82
+         ],
+         "axis": [
+          0,
+          1,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_10",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          0.65,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          5.86,
+          0.7,
+          4.82
+         ],
+         "axis": [
+          0,
+          1,
+          0
+         ],
+         "color": "#c9ccce",
+         "material": "part_10",
+         "metal": 1.0,
+         "roughness": 0.25,
+         "shape": "capsule",
+         "size": [
+          0.65,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          8.7,
+          0.85,
+          3.2
+         ],
+         "axis": [
+          0,
+          0.2588,
+          0.9659
+         ],
+         "color": "#f0eee6",
+         "material": "part_10",
+         "roughness": 0.9,
+         "shape": "box",
+         "size": [
+          2.8,
+          0.85,
+          0.012
+         ],
+         "surface": {
+          "kind": "fabric",
+          "scale": 0.004
+         },
+         "up": [
+          0,
+          0.9659,
+          -0.2588
+         ]
+        },
+        {
+         "at": [
+          6.1,
+          0.85,
+          3.2
+         ],
+         "axis": [
+          0,
+          0.2588,
+          0.9659
+         ],
+         "blend": 0.004,
+         "color": "#2f6fb5",
+         "material": "part_10",
+         "mode": "paint",
+         "repeat": {
+          "count": 14,
+          "move": [
+           0.4,
+           0,
+           0
+          ]
+         },
+         "shape": "box",
+         "size": [
+          0.1,
+          0.9,
+          0.05
+         ],
+         "up": [
+          0,
+          0.9659,
+          -0.2588
+         ]
+        }
+       ],
+       "levels": [
+        "near"
+       ]
+      }
+     ],
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        8.7,
+        -0.15,
+        4.15
+       ],
+       "color": "#c8dcc4",
+       "material": "part_10",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.15,
+        4.15
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        8.7,
+        -0.15,
+        1.725
+       ],
+       "color": "#33302c",
+       "material": "part_10",
+       "mode": "subtract",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.1,
+        0.3,
+        1.425
+       ]
+      },
+      {
+       "at": [
+        8.7,
+        -0.15,
+        0.15
+       ],
+       "color": "#a8a49a",
+       "material": "part_10",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.15,
+        0.15
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        8.7,
+        0.3,
+        0.15
+       ],
+       "color": "#a8a49a",
+       "material": "part_10",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.2,
+        0.3,
+        0.15
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        8.7,
+        0.75,
+        0.075
+       ],
+       "color": "#a8a49a",
+       "material": "part_10",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.2,
+        0.15,
+        0.075
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        11.2,
+        0,
+        1.725
+       ],
+       "blend": 0.008,
+       "color": "#6a3a34",
+       "material": "part_10",
+       "mode": "paint",
+       "raise": 0.008,
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.4,
+        0.2,
+        1.425
+       ],
+       "surface": {
+        "kind": "stone",
+        "scale": 0.04
+       }
+      },
+      {
+       "at": [
+        6.2,
+        0,
+        1.725
+       ],
+       "blend": 0.008,
+       "color": "#6a3a34",
+       "material": "part_10",
+       "mode": "paint",
+       "raise": 0.008,
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.4,
+        0.2,
+        1.425
+       ],
+       "surface": {
+        "kind": "stone",
+        "scale": 0.04
+       }
+      },
+      {
+       "at": [
+        8.7,
+        -0.36,
+        1.725
+       ],
+       "color": "#2a2622",
+       "material": "part_10",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.1,
+        0.09,
+        1.425
+       ]
+      },
+      {
+       "at": [
+        7.65,
+        -0.15,
+        0.85
+       ],
+       "color": "#6b4a2c",
+       "material": "part_10",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.945,
+        0.09,
+        0.55
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        7.65,
+        -0.14,
+        1.42
+       ],
+       "color": "#3a2a1c",
+       "material": "part_10",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.987,
+        0.12,
+        0.025
+       ],
+       "surface": {
+        "kind": "wood",
+        "scale": 0.01
+       }
+      },
+      {
+       "at": [
+        8.7,
+        -0.27,
+        2.275
+       ],
+       "blend": 0.02,
+       "color": "#ffd9a0",
+       "glow": 0.6,
+       "material": "part_10",
+       "mode": "paint",
+       "shape": "box",
+       "size": [
+        1.68,
+        0.05,
+        0.28
+       ]
+      },
+      {
+       "at": [
+        7.1,
+        -0.27,
+        2.225
+       ],
+       "blend": 0.01,
+       "color": "#2c4a34",
+       "material": "part_10",
+       "mode": "paint",
+       "repeat": {
+        "count": 23,
+        "move": [
+         0.14,
+         0,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        0.03,
+        0.05,
+        0.11
+       ]
+      },
+      {
+       "at": [
+        8.7,
+        1.42,
+        4.3
+       ],
+       "color": "#1f4f9c",
+       "material": "part_10",
+       "roughness": 0.4,
+       "shape": "box",
+       "size": [
+        2.85,
+        0.04,
+        0.5
+       ]
+      },
+      {
+       "at": [
+        8.7,
+        1.44,
+        4.4
+       ],
+       "blend": 0.01,
+       "color": "#f4f1e6",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.9,
+       "shape": "box",
+       "size": [
+        2.5,
+        0.06,
+        0.16
+       ]
+      },
+      {
+       "at": [
+        8.7,
+        1.44,
+        4.05
+       ],
+       "blend": 0.01,
+       "color": "#f4f1e6",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.7,
+       "shape": "box",
+       "size": [
+        1.45,
+        0.06,
+        0.05
+       ]
+      },
+      {
+       "at": [
+        8.7,
+        0.65,
+        3.84
+       ],
+       "color": "#bed1ba",
+       "material": "part_10",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.75,
+        0.06
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        7.482,
+        0,
+        5.05
+       ],
+       "color": "#5c6064",
+       "material": "part_10",
+       "mode": "subtract",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.6,
+        0.06,
+        1.15
+       ]
+      },
+      {
+       "at": [
+        7.482,
+        -0.07,
+        5.05
+       ],
+       "color": "#24323c",
+       "material": "part_10",
+       "roughness": 0.08,
+       "shape": "box",
+       "size": [
+        0.55,
+        0.02,
+        1.1
+       ]
+      },
+      {
+       "at": [
+        7.482,
+        -0.05,
+        5.05
+       ],
+       "color": "#5c6064",
+       "material": "part_10",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.025,
+        0.03,
+        1.15
+       ]
+      },
+      {
+       "at": [
+        10.005,
+        0,
+        5.5
+       ],
+       "color": "#5c6064",
+       "material": "part_10",
+       "mode": "subtract",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.6,
+        0.06,
+        0.7
+       ]
+      },
+      {
+       "at": [
+        10.005,
+        -0.07,
+        5.5
+       ],
+       "color": "#24323c",
+       "material": "part_10",
+       "roughness": 0.08,
+       "shape": "box",
+       "size": [
+        0.55,
+        0.02,
+        0.65
+       ]
+      },
+      {
+       "at": [
+        10.005,
+        -0.05,
+        5.5
+       ],
+       "color": "#5c6064",
+       "material": "part_10",
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.025,
+        0.03,
+        0.7
+       ]
+      },
+      {
+       "at": [
+        8.7,
+        0.25,
+        6.45
+       ],
+       "color": "#bed1ba",
+       "material": "part_10",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.85,
+        0.3,
+        0.04
+       ]
+      },
+      {
+       "at": [
+        8.7,
+        -0.15,
+        8.3
+       ],
+       "color": "#b4c6b0",
+       "material": "part_10",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        2.93,
+        0.19,
+        0.04
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        11.0,
+        0.16,
+        6.7
+       ],
+       "color": "#e4e2da",
+       "material": "part_10",
+       "roughness": 0.5,
+       "shape": "round_box",
+       "size": [
+        0.34,
+        0.145,
+        0.215,
+        0.02
+       ]
+      },
+      {
+       "at": [
+        10.92,
+        0.3,
+        6.7
+       ],
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "blend": 0.01,
+       "color": "#6a6c6e",
+       "material": "part_10",
+       "mode": "paint",
+       "raise": -0.005,
+       "shape": "cylinder",
+       "size": [
+        0.15,
+        0.03
+       ]
+      },
+      {
+       "at": [
+        6.1,
+        0.06,
+        2.0
+       ],
+       "color": "#8e9294",
+       "material": "part_10",
+       "metal": 0.4,
+       "roughness": 0.6,
+       "shape": "box",
+       "size": [
+        0.125,
+        0.06,
+        0.175
+       ]
+      },
+      {
+       "color": "#9aa7ac",
+       "material": "part_10",
+       "roughness": 0.5,
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          11.5,
+          0.07,
+          8.2
+         ],
+         [
+          11.5,
+          0.07,
+          0.1
+         ]
+        ],
+        "radii": [
+         0.045,
+         0.045
+        ]
+       }
+      },
+      {
+       "at": [
+        6.0585,
+        0.3,
+        7.8764
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0582,
+        0.6,
+        0.4236
+       ]
+      },
+      {
+       "at": [
+        9.7457,
+        0.3,
+        8.1341
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0208,
+        0.6,
+        0.1659
+       ]
+      },
+      {
+       "at": [
+        10.0893,
+        0.3,
+        7.9414
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0441,
+        0.6,
+        0.3586
+       ]
+      },
+      {
+       "at": [
+        6.6913,
+        0.3,
+        7.8828
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0526,
+        0.6,
+        0.4172
+       ]
+      },
+      {
+       "at": [
+        8.5105,
+        0.3,
+        3.2572
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0445,
+        0.6,
+        0.5228
+       ]
+      },
+      {
+       "at": [
+        7.9564,
+        0.3,
+        3.3577
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0203,
+        0.6,
+        0.4223
+       ]
+      },
+      {
+       "at": [
+        7.4242,
+        0.3,
+        3.5655
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.056,
+        0.6,
+        0.2145
+       ]
+      },
+      {
+       "at": [
+        7.1346,
+        0.3,
+        3.3847
+       ],
+       "blend": 0.03,
+       "color": "#5d5a50",
+       "material": "part_10",
+       "mode": "paint",
+       "opacity": 0.35,
+       "shape": "box",
+       "size": [
+        0.0325,
+        0.6,
+        0.3953
+       ]
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_4_than",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 256,
+      "near": 512
+     },
+     "budget": {
+      "far": 100,
+      "mid": 500,
+      "near": 2000
+     },
+     "cells": {
+      "far": 0.25,
+      "mid": 0.12,
+      "near": 0.08
+     },
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        8.7,
+        -10.15,
+        3.65
+       ],
+       "color": "#c2d5be",
+       "material": "part_11",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        7.395,
+        -20.0,
+        1.35
+       ],
+       "blend": 0.02,
+       "color": "#6a6f72",
+       "material": "part_11",
+       "metal": 0.5,
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.45,
+        0.05,
+        1.05
+       ]
+      },
+      {
+       "at": [
+        5.8,
+        -10.15,
+        3.65
+       ],
+       "blend": 0.01,
+       "color": "#aaa69c",
+       "material": "part_11",
+       "mode": "paint",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        0.02,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.06
+       }
+      },
+      {
+       "at": [
+        11.6,
+        -10.15,
+        3.65
+       ],
+       "blend": 0.01,
+       "color": "#aaa69c",
+       "material": "part_11",
+       "mode": "paint",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        0.02,
+        9.85,
+        3.65
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.06
+       }
+      },
+      {
+       "at": [
+        9.86,
+        -20.0,
+        1.9
+       ],
+       "blend": 0.02,
+       "color": "#24323c",
+       "material": "part_11",
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.1,
+       "shape": "box",
+       "size": [
+        0.5,
+        0.05,
+        0.6
+       ]
+      },
+      {
+       "at": [
+        9.86,
+        -20.0,
+        5.5
+       ],
+       "blend": 0.02,
+       "color": "#24323c",
+       "material": "part_11",
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.1,
+       "shape": "box",
+       "size": [
+        0.5,
+        0.05,
+        0.6
+       ]
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_nha_4_mai",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 128,
+      "mid": 256,
+      "near": 1024
+     },
+     "budget": {
+      "far": 150,
+      "mid": 1000,
+      "near": 5000
+     },
+     "cells": {
+      "far": 0.04,
+      "mid": 0.04,
+      "near": 0.04
+     },
+     "dirt": 0.45,
+     "edits": [
+      {
+       "at": [
+        8.7,
+        -10.15,
+        7.3
+       ],
+       "color": "#9c9a92",
+       "material": "part_12",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        9.85,
+        0.06
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        11.54,
+        -10.15,
+        7.8
+       ],
+       "color": "#c2d5be",
+       "material": "part_12",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        0.06,
+        9.85,
+        0.5
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        5.86,
+        -10.15,
+        7.8
+       ],
+       "color": "#c2d5be",
+       "material": "part_12",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        0.06,
+        9.85,
+        0.5
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        8.7,
+        -19.94,
+        7.8
+       ],
+       "color": "#c2d5be",
+       "material": "part_12",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        2.9,
+        0.06,
+        0.5
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        10.3,
+        -11.0,
+        8.65
+       ],
+       "color": "#c2d5be",
+       "material": "part_12",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        1.2,
+        1.5,
+        1.35
+       ],
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        10.3,
+        -11.0,
+        10.0
+       ],
+       "color": "#9c9a92",
+       "material": "part_12",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        1.3,
+        1.6,
+        0.05
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        9.1,
+        -11.0,
+        8.3
+       ],
+       "blend": 0.02,
+       "color": "#6a6f72",
+       "material": "part_12",
+       "metal": 0.5,
+       "mode": "paint",
+       "raise": -0.02,
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        0.05,
+        0.4,
+        1.0
+       ]
+      },
+      {
+       "at": [
+        10.3,
+        -11.0,
+        11.05
+       ],
+       "color": "#cfd2d4",
+       "material": "part_12",
+       "metal": 1.0,
+       "roughness": 0.25,
+       "shape": "cylinder",
+       "size": [
+        0.48,
+        0.6
+       ]
+      },
+      {
+       "at": [
+        10.3,
+        -11.0,
+        11.73
+       ],
+       "color": "#cfd2d4",
+       "material": "part_12",
+       "metal": 1.0,
+       "roughness": 0.25,
+       "shape": "cone",
+       "size": [
+        0.48,
+        0.15,
+        0.08
+       ]
+      },
+      {
+       "at": [
+        10.6,
+        -10.7,
+        10.25
+       ],
+       "color": "#b8bbbd",
+       "material": "part_12",
+       "metal": 1.0,
+       "repeat": {
+        "angle": 90,
+        "center": [
+         10.3,
+         -11.0,
+         0
+        ],
+        "count": 4
+       },
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.03,
+        0.03,
+        0.2
+       ]
+      },
+      {
+       "at": [
+        10.3,
+        -11.0,
+        10.75
+       ],
+       "blend": 0.01,
+       "color": "#a9acae",
+       "material": "part_12",
+       "mode": "paint",
+       "raise": 0.004,
+       "repeat": {
+        "count": 3,
+        "move": [
+         0,
+         0,
+         0.3
+        ]
+       },
+       "shape": "cylinder",
+       "size": [
+        0.485,
+        0.01
+       ]
+      }
+     ],
+     "wear": 0.15
+    }
+   }
+  },
+  {
+   "name": "quang_trung_12_18_duong",
+   "skill": {
+    "sculpt": {
+     "bake": {
+      "far": 64,
+      "mid": 256,
+      "near": 1024
+     },
+     "budget": {
+      "far": 100,
+      "mid": 600,
+      "near": 3000
+     },
+     "cells": {
+      "far": 0.3,
+      "mid": 0.12,
+      "near": 0.06
+     },
+     "details": [
+      {
+       "budget": {
+        "mid": 2000,
+        "near": 6000
+       },
+       "cells": {
+        "mid": 0.012,
+        "near": 0.012
+       },
+       "edits": [
+        {
+         "at": [
+          -8.4096,
+          2.9,
+          1.2
+         ],
+         "color": "#d8d8d4",
+         "material": "part_13",
+         "metal": 0.8,
+         "roughness": 0.4,
+         "shape": "cylinder",
+         "size": [
+          0.035,
+          1.2
+         ]
+        },
+        {
+         "at": [
+          -8.4096,
+          2.9,
+          0.05
+         ],
+         "color": "#8f8d86",
+         "material": "part_13",
+         "roughness": 0.9,
+         "shape": "cylinder",
+         "size": [
+          0.22,
+          0.05
+         ]
+        },
+        {
+         "at": [
+          -8.4096,
+          2.9,
+          2.3
+         ],
+         "color": "#ece8dc",
+         "material": "part_13",
+         "roughness": 0.9,
+         "shape": "cone",
+         "size": [
+          1.3,
+          0.03,
+          0.22
+         ],
+         "surface": {
+          "kind": "fabric",
+          "scale": 0.004
+         }
+        },
+        {
+         "at": [
+          -8.4096,
+          2.9,
+          0.74
+         ],
+         "color": "#e6e2d6",
+         "material": "part_13",
+         "roughness": 0.5,
+         "shape": "cylinder",
+         "size": [
+          0.45,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          -2.7451,
+          2.9,
+          1.2
+         ],
+         "color": "#d8d8d4",
+         "material": "part_13",
+         "metal": 0.8,
+         "roughness": 0.4,
+         "shape": "cylinder",
+         "size": [
+          0.035,
+          1.2
+         ]
+        },
+        {
+         "at": [
+          -2.7451,
+          2.9,
+          0.05
+         ],
+         "color": "#8f8d86",
+         "material": "part_13",
+         "roughness": 0.9,
+         "shape": "cylinder",
+         "size": [
+          0.22,
+          0.05
+         ]
+        },
+        {
+         "at": [
+          -2.7451,
+          2.9,
+          2.3
+         ],
+         "color": "#ece8dc",
+         "material": "part_13",
+         "roughness": 0.9,
+         "shape": "cone",
+         "size": [
+          1.3,
+          0.03,
+          0.22
+         ],
+         "surface": {
+          "kind": "fabric",
+          "scale": 0.004
+         }
+        },
+        {
+         "at": [
+          -2.7451,
+          2.9,
+          0.74
+         ],
+         "color": "#e6e2d6",
+         "material": "part_13",
+         "roughness": 0.5,
+         "shape": "cylinder",
+         "size": [
+          0.45,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          3.1072,
+          2.9,
+          1.2
+         ],
+         "color": "#d8d8d4",
+         "material": "part_13",
+         "metal": 0.8,
+         "roughness": 0.4,
+         "shape": "cylinder",
+         "size": [
+          0.035,
+          1.2
+         ]
+        },
+        {
+         "at": [
+          3.1072,
+          2.9,
+          0.05
+         ],
+         "color": "#8f8d86",
+         "material": "part_13",
+         "roughness": 0.9,
+         "shape": "cylinder",
+         "size": [
+          0.22,
+          0.05
+         ]
+        },
+        {
+         "at": [
+          3.1072,
+          2.9,
+          2.3
+         ],
+         "color": "#1d7a46",
+         "material": "part_13",
+         "roughness": 0.9,
+         "shape": "cone",
+         "size": [
+          1.3,
+          0.03,
+          0.22
+         ],
+         "surface": {
+          "kind": "fabric",
+          "scale": 0.004
+         }
+        },
+        {
+         "at": [
+          3.1072,
+          2.9,
+          0.74
+         ],
+         "color": "#e6e2d6",
+         "material": "part_13",
+         "roughness": 0.5,
+         "shape": "cylinder",
+         "size": [
+          0.45,
+          0.02
+         ]
+        },
+        {
+         "at": [
+          8.343,
+          2.9,
+          1.2
+         ],
+         "color": "#d8d8d4",
+         "material": "part_13",
+         "metal": 0.8,
+         "roughness": 0.4,
+         "shape": "cylinder",
+         "size": [
+          0.035,
+          1.2
+         ]
+        },
+        {
+         "at": [
+          8.343,
+          2.9,
+          0.05
+         ],
+         "color": "#8f8d86",
+         "material": "part_13",
+         "roughness": 0.9,
+         "shape": "cylinder",
+         "size": [
+          0.22,
+          0.05
+         ]
+        },
+        {
+         "at": [
+          8.343,
+          2.9,
+          2.3
+         ],
+         "color": "#ece8dc",
+         "material": "part_13",
+         "roughness": 0.9,
+         "shape": "cone",
+         "size": [
+          1.3,
+          0.03,
+          0.22
+         ],
+         "surface": {
+          "kind": "fabric",
+          "scale": 0.004
+         }
+        },
+        {
+         "at": [
+          8.343,
+          2.9,
+          0.74
+         ],
+         "color": "#e6e2d6",
+         "material": "part_13",
+         "roughness": 0.5,
+         "shape": "cylinder",
+         "size": [
+          0.45,
+          0.02
+         ]
+        }
+       ],
+       "levels": [
+        "near",
+        "mid"
+       ]
+      }
+     ],
+     "dirt": 0.5,
+     "edits": [
+      {
+       "at": [
+        0,
+        2.75,
+        -0.19
+       ],
+       "color": "#b9a78e",
+       "material": "part_13",
+       "roughness": 0.8,
+       "shape": "box",
+       "size": [
+        12.1,
+        2.75,
+        0.19
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.03
+       }
+      },
+      {
+       "at": [
+        0,
+        0.4,
+        0
+       ],
+       "blend": 0.006,
+       "color": "#8d7f6c",
+       "material": "part_13",
+       "mode": "paint",
+       "raise": -0.004,
+       "repeat": {
+        "count": 12,
+        "move": [
+         0,
+         0.4,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        12.1,
+        0.006,
+        0.02
+       ]
+      },
+      {
+       "at": [
+        -11.7,
+        2.75,
+        0
+       ],
+       "blend": 0.006,
+       "color": "#8d7f6c",
+       "material": "part_13",
+       "mode": "paint",
+       "raise": -0.004,
+       "repeat": {
+        "count": 59,
+        "move": [
+         0.4,
+         0,
+         0
+        ]
+       },
+       "shape": "box",
+       "size": [
+        0.006,
+        2.75,
+        0.02
+       ]
+      },
+      {
+       "at": [
+        0,
+        5.59,
+        -0.19
+       ],
+       "color": "#a9a59c",
+       "material": "part_13",
+       "roughness": 0.85,
+       "shape": "box",
+       "size": [
+        12.1,
+        0.09,
+        0.19
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        0,
+        7.43,
+        -0.28
+       ],
+       "color": "#414347",
+       "material": "part_13",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        12.1,
+        1.75,
+        0.1
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.02
+       }
+      },
+      {
+       "at": [
+        -5.8,
+        5.05,
+        4.25
+       ],
+       "color": "#a7a59d",
+       "material": "part_13",
+       "roughness": 0.9,
+       "shape": "cone",
+       "size": [
+        0.15,
+        0.1,
+        4.25
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "at": [
+        -5.8,
+        5.05,
+        8.0
+       ],
+       "color": "#8f8d86",
+       "material": "part_13",
+       "roughness": 0.9,
+       "shape": "box",
+       "size": [
+        0.7,
+        0.04,
+        0.04
+       ]
+      },
+      {
+       "at": [
+        0,
+        -10.25,
+        -0.2
+       ],
+       "color": "#8f8a7e",
+       "material": "part_13",
+       "roughness": 0.95,
+       "shape": "box",
+       "size": [
+        12.1,
+        10.25,
+        0.18
+       ],
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.08
+       }
+      }
+     ],
+     "wear": 0.2
+    }
+   }
+  }
+ ],
+ "sources": [
+  "One side of a street of Vũng Tàu from rules (plan 0016): 4 houses wall to wall on a road of 23.0 m, the seed 26. It is no real street. The plan of the street makes the choices that neighbors share; each house is then made from its own request (World.Town.House).",
+  "The shares of the types and of the widths of the lots are from adverts of houses in Vũng Tàu and from photos of its streets; no count of a real street is public. The sidewalk of 3 m and its tiles of 0.4 m are from photos; the height of the curb and the pole are a guess.",
+  "The block of the numbers 4 to 26 of the street Quang Trung, Vũng Tàu, from its survey (priv/surveys/quang_trung.json, 2026-11-14). The order, the numbers and the uses of the lots are from addresses and from OpenStreetMap (© OpenStreetMap contributors, ODbL). The length of the block (70 m) and its depth (20 m) are from the Microsoft building footprints (ODbL).",
+  "A guess, from the seed: the width of each lot (the mean, 5.8 m), its storeys, its roof, its family and its colors. No photo shows each lot. The corner house (24-26) has three storeys and is white (photos of 2014 and 2021, Wikimedia Commons). A sign has no words."
+ ]
+}

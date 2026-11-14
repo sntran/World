@@ -400,7 +400,8 @@ houses.
   seed makes each other choice. A survey (`World.Town.Survey`,
   `priv/surveys/NAME.json`) has a row for each lot of a street, with a
   mark for each value (where it comes from, or `GUESS`) and its
-  sources; `lots/1` gives the lots of its rows.
+  sources; `lots/1` gives the lots of its rows. The street Quang Trung
+  of Vũng Tàu is the first (`World.Town.QuangTrung`).
 - **The tools of the MCP server:** `draw_house` (the argument `house`:
   a request) and `plan_street` (the argument `street`: `seed`, `road`,
   `count` or `length`, `depth`, `sidewalk`, `lots`, and `types`,
@@ -878,6 +879,7 @@ landmark in parts (plan 0014).
 | `cay_bang` | A cây bàng (Terminalia catappa) of a street, 9 m high | Tiers of level branches by a `repeat`, leaves as rings of small flat clumps with the surface `leaves`, old leaves by paints with an `opacity`. |
 | `non_la_edits`, `mu_bao_hiem_edits`, `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | The parts of a person: a nón lá, a half helmet, three masses of hair | The kind `prop` and the port `crown` (above, "The ports and the props of a person"): rings by paints with a raise, a thin shell with the same cells at each level, a strap as a tube through a smooth line, the surfaces `hair` and `palm`, and `strands` for the hair. |
 | `nha_pho_2_tang_vung_tau` | The most common town house of Vũng Tàu: two storeys, 5 m by 16 m, a terrace | From the rules of `World.Town.House` (above, "A house and a street from rules"): a roll-up door between piers of granite, a sign with no words at the balcony, a rail of stainless tubes in a detail, the head of the stair and a tank. |
+| `quang_trung_4_10`, `quang_trung_12_18`, `quang_trung_20_26` | The block of the numbers 4 to 26 of the street Quang Trung of Vũng Tàu: 12 lots of bars, restaurants and shops, 70 m | From the survey of the street (`World.Town.QuangTrung`): the order, the numbers and the uses are true, the corner house is white with three storeys, and the seed makes each other choice. Open fronts, signs, awnings, parasols on a sidewalk of 5.5 m. |
 | `day_pho_vung_tau` | A row of five houses of Vũng Tàu on their sidewalk, 26 m long | From `World.Town.Street`: each type and each family, wall to wall; 16 parts, each with its image. |
 | `tuong_chua_kito_vua` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key by paints with a raise; groups with a scale for the head and the hands. Its inside is at near only (`levels`): a room in the base, the dome, six open windows, and a stair of 133 steps round an open well of eight sides: the steps as one edit with a `repeat` (a turn and a move), the handrail as one tube through 67 corners, and the balusters in a detail with cells of 12 mm. Each balcony has a rail of bars. |
 

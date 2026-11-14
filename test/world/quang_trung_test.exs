@@ -1,0 +1,48 @@
+defmodule World.QuangTrungTest do
+  # The street Quang Trung of Vũng Tàu as it is, from its survey (plan 0018).
+  use ExUnit.Case, async: true
+
+  alias World.Town.{QuangTrung, Survey}
+
+  defp file(name), do: JSON.decode!(File.read!("priv/drawings/#{name}.json"))
+
+  test "the plan of the block of the numbers 4 to 26: 12 lots in the order of the street, 70 m" do
+    plan = QuangTrung.plan()
+    assert %{"seed" => 26, "road" => 23.0, "sidewalk" => 5.5, "lots" => lots} = plan
+    assert QuangTrung.plan() == plan
+    assert Enum.map(lots, & &1["number"]) == ~w(4 6 8-10 8-10 12 14 16 18 20 22 24-26 24-26)
+    # Each lot is a bar, a restaurant or a shop, 20 m deep; the reach of a balcony is that of a wide street.
+    assert Enum.all?(
+             lots,
+             &(&1["use"] == "bar" and &1["ground"] == "open" and &1["depth"] == 20.0 and &1["road"] == 23.0)
+           )
+
+    last = List.last(lots)
+    assert_in_delta last["at"] + last["width"] / 2, 69.8, 1.0e-3
+    # The survey gives the types; the corner house has three storeys and is white.
+    rows = Survey.rows("quang_trung", "QT-T02", "QT-T11")
+    assert Enum.map(lots, & &1["type"]) == Enum.map(Survey.lots(rows), & &1["type"])
+    assert %{"type" => "pho3", "wall" => "#f2f0ea", "family" => "steel", "right" => "free"} = last
+    assert hd(lots)["left"] == "free"
+    # The seed makes the family of each other lot: an old house or a house of the years of steel.
+    assert lots |> Enum.map(& &1["family"]) |> Enum.uniq() |> Enum.sort() == ~w(old steel)
+  end
+
+  test "the three drawings of the block are the models of the catalog, four lots each" do
+    drawings = QuangTrung.drawings()
+    assert Enum.map(drawings, &elem(&1, 0)) == ~w(quang_trung_4_10 quang_trung_12_18 quang_trung_20_26)
+
+    for {{name, drawing}, numbers} <- Enum.zip(drawings, [~w(4 6 8-10 8-10), ~w(12 14 16 18), ~w(20 22 24-26 24-26)]) do
+      assert file(name) == drawing and name in World.Drawing.names()
+      assert {:ok, _} = World.Drawing.check(drawing, "d")
+      assert Enum.map(drawing["extras"]["street"]["lots"], & &1["number"]) == numbers
+      # Four houses of three parts, and the ground with a parasol in front of each bar.
+      assert length(drawing["nodes"]) == 13
+      [things] = List.last(drawing["nodes"])["skill"]["sculpt"]["details"]
+      assert Enum.count(things["edits"], &(&1["shape"] == "cone")) == 4
+      # The sources say what is from the survey and what is a guess.
+      assert Enum.any?(drawing["sources"], &(&1 =~ "OpenStreetMap")) and
+               Enum.any?(drawing["sources"], &(&1 =~ "A guess"))
+    end
+  end
+end
