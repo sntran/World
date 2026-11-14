@@ -17,7 +17,7 @@ defmodule World.People.Parts do
   | `mu_bao_hiem_edits` | A half helmet of a rider with its peak and its straps | Yes |
   | `toc_ngan_edits` | Short hair | Yes |
   | `toc_bui_edits` | Hair in a bun | Yes |
-  | `toc_dai_edits` | Long hair to the shoulders (one piece: it turns with the head) | Yes |
+  | `toc_dai_edits` | Long hair on the back, to the shoulder blades (one piece: it turns with the head) | Yes |
 
   A part that fits the head has the size of the head of its person: it
   is drawn on the head of the woman of the catalog (16.4 cm wide with

@@ -154,7 +154,7 @@ section 9:
 | `mu_bao_hiem_edits` | 11 | 5,000 / 1,200 / 250 | 512 | 0.5 MB |
 | `toc_ngan_edits` | 6 | 12,000 / 1,600 / 150 | 1024 | 3.2 MB |
 | `toc_bui_edits` | 6 | 14,000 / 1,800 / 150 | 1024 | 3.4 MB |
-| `toc_dai_edits` | 13 | 20,000 / 2,400 / 220 | 1024 | 2.9 MB |
+| `toc_dai_edits` | 13 | 20,000 / 2,400 / 220 | 1024 | 2.3 MB |
 
 - The five parts and the two people who wear them (`woman_non_la`,
   `man_helmet`) build in 63 s, three levels each (51 s before the
@@ -167,7 +167,7 @@ section 9:
 
 What these parts are not:
 
-- **Long hair does not bend**, and the straps grow with the head.
+- **Long hair does not bend**: it is drawn on the back of one person at rest, and it turns with the head as one piece. On a person with a wider back, or with the head turned, it goes into the body or stands off it. The straps grow with the head.
 - **No flip-flops, no clothes, no mask yet.** They need the foot and
   the body in the field (D3).
 - **The tools that measure a person (D6) are not made.**
@@ -187,10 +187,11 @@ of clay.
 | D15 | A primitive with an alpha in one color has an alpha in each color (`World.Scene`). | The mass and its shells are one primitive: the points of the mass are whole. |
 | D16 | A surface `palm`: 40 blades round the z of the edit, each with its tone and its fibers. The rings of the nón lá are thin lines over the blades. | The first nón lá had wide rings and no leaf. A mark of 1 mm was smaller than a texel and did not show: the scale of the fibers is 3 mm. |
 | D17 | The shell of the helmet is 3.8 cm over the top of the head. It has a pad of cloth and a buckle. | Hair of 3 cm with its strands came through a shell of 3 cm. |
+| D18 | The long hair goes behind the neck and lies on the back, to the shoulder blades: the middle line of each lock is its radius and 4 mm behind the surface of the back, from the mesh of the woman of the catalog. | The upper back of a person is behind the back of the head. The first long hair fell straight down: on a person it went into the body, and it looked short. It was not seen on a person before. |
 
 What it costs:
 
-- The files of the hair at near are 2.9 MB to 3.4 MB (0.5 MB before):
+- The files of the hair at near are 2.3 MB to 3.4 MB (0.5 MB before):
   an image of 1024 with an alpha, and four times the triangles.
 - A person with hair and a hat: 6.7 MB to 6.9 MB at near, 0.9 MB at
   mid, 0.33 MB at far.

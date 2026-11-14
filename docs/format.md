@@ -1388,7 +1388,7 @@ body, the face and the skeleton stay those of MakeHuman.
 |---|---|---|
 | `non_la_edits` | A nón lá: a cone of 40 blades of palm (the surface `palm`) on 15 rings of bamboo, 41 cm across, with the ring for the head and a strap. | One size |
 | `mu_bao_hiem_edits` | The half helmet of a rider: a shell with a peak, a liner of foam with a pad of cloth, a band of rubber, straps with a buckle. Its shell is 3.8 cm over the top of the head: hair is under it. | The size of the head |
-| `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | Hair: short, in a bun, long to the shoulders. A mass with the surface `hair` and with `strands` ("The strands of a sculpture"): single strands at its outline, a thin line of hair on the brow, at the ears and at the neck. | The size of the head |
+| `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | Hair: short, in a bun, long (behind the neck and on the back, to the shoulder blades). A mass with the surface `hair` and with `strands` ("The strands of a sculpture"): single strands at its outline, a thin line of hair on the brow, at the ears and at the neck. | The size of the head |
 
 - Each part is a drawing of the kind `prop` with one sculpture, and its
   port `crown` is at the top of the head (0 of its axes; z up, y to
