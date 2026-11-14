@@ -205,3 +205,102 @@ What it is not:
   come with the ground (step 6).
 - **The stone has no name on it.**
 - **At mid and far the loggias have no rails.**
+
+## 10. How long a building takes: the lighthouse of Vũng Tàu
+
+The owner, after the first buildings (2026-11-14): "It still took you a
+lot of time to make those buildings. Is the Dreams concept not workable
+for us? Can you build the next building faster? Like the Hải Đăng Vũng
+Tàu?"
+
+`hai_dang_vung_tau_edits` (it is on Núi Nhỏ, not on the street) was the
+measure. It took three builds, and the first two were wrong.
+
+### The first build: 6 minutes, from one photo
+
+| Step | Time |
+|---|---|
+| The facts (its article) and one photo | 2 min |
+| The drawing: 50 edits for the tower, 49 thin parts, 49 for the step and the floor | 1.5 min |
+| The check of the drawing, the mid level, two shots | 35 s (the build: 16 s) |
+| Three corrections from the shots | 30 s |
+| The three levels with `mix world.build` | 1 min 57 s |
+
+So the concept works, and a build is fast on a machine with no other
+work. The time of the first buildings of this plan went to other
+things:
+
+- **Builds on a machine that also ran the full check.** The near level
+  of a building took 10 min to 15 min there, and 2 min to 3 min alone.
+- **The full check of a tip takes more than 3 hours** (the first test
+  partition alone: 79 min), and each new commit starts it again. A job
+  with no terminal also stops when the session has no work, so the
+  check runs only while a turn is active.
+- **A look at the near level for each change.** The mid level shows the
+  form and the colors in 16 s to 100 s.
+- **Tools made for the first time:** a wall with its own axes, a front
+  of equal bays, letters from tubes, a roof with four slopes.
+- **Dreams shows each edit in a few milliseconds, on a graphics card.**
+  World makes a mesh and its maps on the processor: seconds at mid,
+  minutes at near. That is the cost of files that each application can
+  read.
+
+### The second build: from ten photos
+
+The owner: "That may not look like the real thing. Please find more
+photos of it to build it correctly." About ten photos from travel pages
+and two more of Wikimedia Commons (48 files read, for study only)
+showed the faults of the first build:
+
+| The first build | The photos |
+|---|---|
+| A thin tower (3 m, its article) with a wide gallery | A wide tower on a wider foot; the gallery is a little wider than the tower |
+| A roof as a cone | A dome of metal with a ladder and a ball |
+| A low wall under the glass | A round wall of 2 m with a door |
+| A white rail of 40 bars | A rail of dark iron with close bars |
+| A box at the foot of each face | A plinth with a slope; a plate of brass on one face |
+| A step of red stone | Steps of grey polished stone; a floor of red tiles |
+
+### The third build: the catalog had this tower already
+
+The full check then failed: the name `hai_dang_vung_tau` was the name
+of a tower of the catalog (the tower that the people build from its
+blueprint, with a stair of 55 steps inside), and the new drawing was
+over it. That tower has measured sizes with their sources: a round body
+of 3.2 m between four pilasters, 5.1 m across the pilasters, a platform
+of 7.8 m (OpenStreetMap). A close photo agrees with it: the ribs stand
+out by almost 1 m. The second build had a body of 4.4 m with ribs of
+0.35 m: wrong.
+
+So:
+
+- The tower of the catalog is back, with no change.
+- The model from edits has its own name, the sizes of that tower, and
+  the forms of the photos: deep ribs, two deep rings between them, the
+  corbel, the lantern.
+
+### What this says for the next real things
+
+1. **Search the catalog and the documents for the thing first.** A
+   measure that is there costs no time.
+2. **About ten photos before the first drawing.** One photo is not
+   enough, and a size from an article must agree with the photos. The
+   ten photos cost 10 minutes.
+3. **A generator must not write over a file that is there.**
+4. The mid level first; the near level one time. No build while the
+   full check runs: one check for a group of commits.
+5. The tools of a building as a module of World (a wall, a window, a
+   front of bays, a roof, a rail, letters), so that a building is a
+   short list of words, as a house of plan 0016 is.
+
+| Level | Triangles | File |
+|---|---|---|
+| near | 33,500 | 8.3 MB |
+| mid | 7,500 | 1.3 MB |
+| far | 620 | 0.12 MB |
+
+What the model is not: it has no inside (the tower of the catalog has
+the stair). The house of the keeper (a long white house of two storeys
+with a red roof), the wall of the terrace with its balusters and the
+trees are not made. The heights of its rings and of its gallery are
+from photos that look up.
