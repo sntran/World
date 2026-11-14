@@ -1,6 +1,7 @@
 # Plan 0017: people: the body of MakeHuman with parts from edits
 
-Status: Proposed (2026-11-13). No code yet: this plan is the answer to
+Status: In progress. The first parts are made (2026-11-14, section 8;
+the owner: "Let's build the parts first."). The plan is the answer to
 a question of the owner, from research, and the steps that it
 proposes. (The owner, 2026-11-13: "What's about people? Can we use the
 Dream's way to build realistic people, better than MakeHuman?")
@@ -130,3 +131,43 @@ the body is not public.
   are of use at once in a street: helmets, nón lá, hair)?
 - Which persons count the most: a rider on a motorbike, a seller on
   the sidewalk, a pilgrim on the stair of the statue?
+
+## 8. The first parts (2026-11-14)
+
+The owner chose the parts before the proof. What is made:
+
+| # | Decision | Why |
+|---|---|---|
+| D7 | A part is a drawing of the kind `prop` with one sculpture and the port `crown` at the top of the head. A person wears it by the option `wear`: it is a prop on the bone of the head. | The props of a person and the drawings from edits were there: no new kind of model. |
+| D8 | A part that fits the head is drawn on one head (the woman of the catalog), and it grows from its port by the mean of the two ratios of the head of its person (the width and the length of the skin on the bone of the head). | The head of the man is 7% wider and 17% longer. A hat of one size (the nón lá) does not grow. This is in the place of D3 for now: the body is not an edit of the field yet. |
+| D9 | Each part has its own role, and the color of the role of a mass of hair is the color of the hair (its image is light). | A person wears a hat on hair, each with its image; one drawing of hair is the hair of each color. |
+| D10 | `World.Build` takes the materials of a prop into the model. | Before, the image of a prop from edits was not in the file of the person. |
+| D11 | A prop does not need to stand (`World.Check`). | A hat is worn. |
+
+The measure (one machine with 4 schedulers):
+
+| Part | Edits | Triangles (near, mid, far) | Image | File at near |
+|---|---|---|---|---|
+| `non_la_edits` | 20 | 4,000 / 1,200 / 200 | 512 | 0.55 MB |
+| `mu_bao_hiem_edits` | 9 | 5,000 / 1,200 / 250 | 512 | 0.52 MB |
+| `toc_ngan_edits` | 6 | 3,000 / 800 / 150 | 512 | 0.54 MB |
+| `toc_bui_edits` | 7 | 3,500 / 900 / 150 | 512 | 0.57 MB |
+| `toc_dai_edits` | 8 | 4,000 / 1,000 / 180 | 512 | 0.45 MB |
+
+- The five parts and the two people who wear them (`woman_non_la`,
+  `man_helmet`) build in 51 s, three levels each.
+- A person with two parts builds in about 5 s more than a person with
+  none at near (the first time: the sculptures are made; the nón lá
+  has small cells for its thin shell and is the slowest, 8 s).
+- At far, the hat and the helmet are in the outline of the person:
+  before, a person at far had the colors of its clothes only.
+
+What these parts are not:
+
+- **The hair is a mass with lines, not hair.** It reads right at mid
+  and far, and as a model of clay at near. The hair of MakeHuman
+  (cards) is finer at near. The blind test of section 5 is not done.
+- **Long hair does not bend**, and the straps grow with the head.
+- **No flip-flops, no clothes, no mask yet.** They need the foot and
+  the body in the field (D3).
+- **The tools that measure a person (D6) are not made.**

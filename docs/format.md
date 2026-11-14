@@ -826,6 +826,7 @@ landmark in parts (plan 0014).
 | `ghe_danh_ca_vung_tau` | A motor fishing boat of Vũng Tàu with a beak (ghe mỏ nhọn), 11 m long: the class C5-T2-A of the Blue Book of Coastal Vessels (1967) | A hollow hull: a `tube` along the sheer, the same tube smaller taken away, a `crop` by the side view (the sheer) and a `crop` by the tube again, so the decks and the cabin end at the hull. The same cells at each level (a thin wall needs two cells), and a detail that the far level does not have. The port `waterline`. |
 | `toyota_vios` | A Toyota Vios (XP150), 4425 by 1730 by 1475 mm | The side view as an `extrude`, with a `crop` by the plan and a `crop` by the section (each with a blend: round edges); the glass and the pillars by paints of side views; wheels as a `revolve` with a `repeat` for the spokes. |
 | `cay_bang` | A cây bàng (Terminalia catappa) of a street, 9 m high | Tiers of level branches by a `repeat`, leaves as rings of small flat clumps with the surface `leaves`, old leaves by paints with an `opacity`. |
+| `non_la_edits`, `mu_bao_hiem_edits`, `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | The parts of a person: a nón lá, a half helmet, three masses of hair | The kind `prop` and the port `crown` (above, "The ports and the props of a person"): rings by paints with a raise, a thin shell with the same cells at each level, a strap as a tube through a smooth line, lines of strands by a paint with a repeat. |
 | `nha_pho_2_tang_vung_tau` | The most common town house of Vũng Tàu: two storeys, 5 m by 16 m, a terrace | From the rules of `World.Town.House` (above, "A house and a street from rules"): a roll-up door between piers of granite, a sign with no words at the balcony, a rail of stainless tubes in a detail, the head of the stair and a tank. |
 | `day_pho_vung_tau` | A row of five houses of Vũng Tàu on their sidewalk, 26 m long | From `World.Town.Street`: each type and each family, wall to wall; 16 parts, each with its image. |
 | `tuong_chua_kito_vua` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key by paints with a raise; groups with a scale for the head and the hands. Its inside is at near only (`levels`): a room in the base, the dome, six open windows, and a stair of 133 steps round an open well of eight sides: the steps as one edit with a `repeat` (a turn and a move), the handrail as one tube through 67 corners, and the balusters in a detail with cells of 12 mm. Each balcony has a rail of bars. |
@@ -1338,6 +1339,33 @@ in the pose and in each animation. The props now:
 
 A node of an assembly can also connect to a port on a bone (`at:
 "grip_r"`): it goes in the node of the bone too.
+
+**The parts from edits** (`World.People.Parts`;
+`docs/plans/0017-people-with-parts-from-edits.md`) are sculptures of
+the catalog that a person wears on its port `crown`: the option `wear`
+of `Human.person/2` is a list of their names, or of `{name, opts}`. The
+body, the face and the skeleton stay those of MakeHuman.
+
+| Part | The thing | Its size |
+|---|---|---|
+| `non_la_edits` | A nón lá: a cone of leaves on 15 rings of bamboo, 41 cm across, with the ring for the head and a strap. | One size |
+| `mu_bao_hiem_edits` | The half helmet of a rider: a shell with a peak, a liner of foam, a band of rubber, straps. | The size of the head |
+| `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | Hair as one mass: short, in a bun, long to the shoulders. | The size of the head |
+
+- Each part is a drawing of the kind `prop` with one sculpture, and its
+  port `crown` is at the top of the head (0 of its axes; z up, y to
+  the front).
+- A part of the size of the head is drawn on the head of the woman of
+  the catalog (16.4 cm wide with the ears, 18.8 cm long with the nose).
+  On a person, it grows from its port by the mean of the two ratios of
+  the head of that person, and by the option `head`.
+- Each part has a role of its own (`part_09` to `part_11`), so a
+  person can wear a hat on hair, each with its image. The image of the
+  hair is light: the option `color` of a part (`[r, g, b]`) is the
+  color of its role, and so the color of the hair.
+- With a mass of hair, give `hair: nil` (no hair of MakeHuman).
+- Long hair is one piece on the bone of the head: it does not bend on
+  the shoulders.
 
 ### The joints of a person in an order
 
