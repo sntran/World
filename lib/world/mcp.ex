@@ -299,6 +299,23 @@ defmodule World.MCP do
       "annotations" => @read
     },
     %{
+      "name" => "draw_mini",
+      "title" => "Draw a very small model for a view from far",
+      "description" =>
+        "Gives the drawing of a very small model from its kind: a building, an aircraft, a ship, a vehicle, a wind turbine or a tree as a few thick solid shapes, with flat faces and a color at each point, in some hundreds of triangles. The rules of World.Mini make it. Send the drawing to check_drawing or build (as the drawing of an order); the file flat of the order is one mesh with no image.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "mini" => %{
+            "type" => "object",
+            "description" =>
+              "The request: kind (house, block, tower, office, factory, data_center, barn, stilt_house, lighthouse, jet, airliner, helicopter, carrier, destroyer, container_ship, tanker, patrol_boat, police_car, ambulance, fire_truck, tank, missile_battery, turbine, tree_broad, tree_pine or tree_palm); name; sources; scale (0.1 to 10); color (the main color). Each key has a default."
+          }
+        }
+      },
+      "annotations" => @read
+    },
+    %{
       "name" => "plan_street",
       "title" => "Plan one side of a street of Vũng Tàu",
       "description" =>
@@ -500,6 +517,12 @@ defmodule World.MCP do
 
   defp call("draw_appliance", args, _origin) do
     result(%{"drawing" => World.Home.Appliance.drawing(Map.get(args, "appliance", %{}))})
+  rescue
+    e in ArgumentError -> wrong(e.message)
+  end
+
+  defp call("draw_mini", args, _origin) do
+    result(%{"drawing" => World.Mini.drawing(Map.get(args, "mini", %{}))})
   rescue
     e in ArgumentError -> wrong(e.message)
   end

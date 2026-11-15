@@ -531,7 +531,7 @@ defmodule World.Sculpt.BakeTest do
     assert bad.([Map.put(detail, "levels", [])]) == ["#{at}.details.0.levels"]
     assert bad.([Map.put(detail, "bake", %{})]) == ["#{at}.details.0.bake"]
     assert bad.([Map.put(detail, "budget", %{"mid" => 1})]) == ["#{at}.details.0.budget.mid"]
-    assert bad.([Map.put(detail, "cells", %{"mid" => 9})]) == ["#{at}.details.0.cells.mid"]
+    assert bad.([Map.put(detail, "cells", %{"mid" => 11})]) == ["#{at}.details.0.cells.mid"]
     assert bad.([put_in(detail, ["edits", Access.at(0), "shape"], "horn")]) == ["#{at}.details.0.edits.0.shape"]
     # A baked level needs the budget of each detail at that level, and a place for all the triangles.
     assert paths(Map.put(baked, "details", [Map.delete(detail, "budget")])) == ["#{at}.bake.mid"]

@@ -272,8 +272,16 @@ as a reference; no test builds them (the commit `b6905ce`).
    (`World.Earth`, `POST /earth/heights`): ETOPO1 of NOAA at a quarter
    of a degree (1.7 MB in `priv/earth`), 40,962 points in 21 ms, and
    one byte for each cell is 41 KB. Open: the kind of land (ice,
-   desert, forest) from a real source, and the flat models.
+   desert, forest) from a real source.
 9. **The trial of Tre** (section 7.1).
+10. **The small models of Humans Must Die. Done** (`World.Mini`, the
+    MCP tool `draw_mini`): 26 kinds (9 buildings, 3 aircraft, 5 ships,
+    5 vehicles, a wind turbine, 3 trees), each at most 12 thick shapes
+    with the look `flat`. The file `flat` at the far level is about
+    220 triangles and 6 KB in gzip (the 26 files: 157 KB), each built
+    in less than 1 s. The cells of a sculpture can be 10 m (they were
+    1 m at the most), for a ship of 300 m. Open: a light at each point
+    for the windows, and more kinds when the game asks for them.
 
 ## 7. The answers of the owner (2026-11-15)
 

@@ -37,7 +37,7 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture draw_house draw_building draw_village_house draw_appliance plan_street)
+             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture draw_house draw_building draw_village_house draw_appliance draw_mini plan_street)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()
@@ -78,6 +78,13 @@ defmodule World.MCPTest do
     assert tool("draw_appliance", %{})["structuredContent"]["drawing"]["name"] == "box"
     wrong = tool("draw_appliance", %{"appliance" => %{"kind" => "toaster"}})
     assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "the kind of an appliance"
+
+    # A very small model for a view from far (plan 0019).
+    drawing = tool("draw_mini", %{"mini" => %{"kind" => "jet"}})["structuredContent"]["drawing"]
+    assert drawing == World.Mini.drawing(%{"kind" => "jet"})
+    assert tool("draw_mini", %{})["structuredContent"]["drawing"]["name"] == "house"
+    wrong = tool("draw_mini", %{"mini" => %{"kind" => "dragon"}})
+    assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "the kind of a small model"
 
     # A street: the plan, and the drawing of a row of 5 houses at the most.
     r = tool("plan_street", %{"street" => %{"seed" => 4}})

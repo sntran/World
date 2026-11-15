@@ -753,7 +753,7 @@ defmodule World.Skills.Sculpt do
 
   defp cells(v, path) when is_map(v) do
     World.Skill.keys(v, path, ~w(near mid far)) ++
-      Enum.flat_map(Enum.sort(v), fn {k, n} -> number(n, "#{path}.#{k}", 0.001, 1) end)
+      Enum.flat_map(Enum.sort(v), fn {k, n} -> number(n, "#{path}.#{k}", 0.001, 10) end)
   end
 
   defp cells(_v, path), do: [{path, "must be an object of near, mid and far"}]

@@ -32,7 +32,7 @@ The blueprints by name: `person`, `traveler`, `exercise`, `animal`,
 `GET /blueprints` (or the MCP tool `get_blueprint`) gives the options
 of each, with the type, the default and the range.
 
-Two rules give a drawing from a few words, for the kind 3:
+Some rules give a drawing from a few words, for the kind 3:
 
 - a house of a street: the MCP tool `draw_house`, and `plan_street` for
   a row (`docs/format.md`, "A house and a street from rules");
@@ -42,7 +42,10 @@ Two rules give a drawing from a few words, for the kind 3:
   of thatch or tiles that curves): the MCP tool `draw_village_house`;
 - an appliance of a home from its kind and its size (a fridge, a
   range, a battery, a busbar and 12 more): the MCP tool
-  `draw_appliance`.
+  `draw_appliance`;
+- a very small model for a view from far (a building, an aircraft, a
+  ship, a vehicle, a wind turbine or a tree in about 220 triangles):
+  the MCP tool `draw_mini`. Ask for the file `flat` of its order.
 
 A person (`person`) has an age from 1 to 90 years: a child has its own
 size and proportions.
@@ -168,4 +171,5 @@ the answer in the credits of the project.
   faces, or as few as World can make: a scooter at the far level is
   4,088 triangles, and 500 with `triangles=500` (58 KB, 14 KB in gzip).
   A model of many small parts does not go under some hundreds of
-  triangles: a very small thing needs a request with few shapes.
+  triangles: a very small thing needs a request with few shapes (the
+  MCP tool `draw_mini` gives such a request for 26 kinds of things).

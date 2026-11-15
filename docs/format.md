@@ -480,10 +480,28 @@ houses.
   is to +y, and the thing stands on z = 0. The extras have `tags`: the
   place of the label of the real thing. A kind builds in about 1 s at
   the mid level.
+- **A very small model for a view from far** (`World.Mini`; plan 0019,
+  step 10; for Humans Must Die): a thing as a few thick solid shapes
+  (12 at the most), as one part from edits with the look `flat`: no
+  image, flat faces, a color at each point. The request has `kind`,
+  `name`, `sources`, `scale` (0.1 to 10; 1 is the real size) and
+  `color` (the main color). The 26 kinds: `house`, `block`, `tower`,
+  `office`, `factory`, `data_center`, `barn`, `stilt_house`,
+  `lighthouse`; `jet`, `airliner`, `helicopter`; `carrier`,
+  `destroyer`, `container_ship`, `tanker`, `patrol_boat`;
+  `police_car`, `ambulance`, `fire_truck`, `tank`, `missile_battery`;
+  `turbine`; `tree_broad`, `tree_pine`, `tree_palm`. The front is to
+  +y, and the thing stands on z = 0 (a ship floats at z = 0). The
+  cells are large (the longest size of the thing is 56 cells at the
+  near level, 40 at mid and 28 at far; 10 m at the most), and the
+  budgets are 900, 450 and 220 triangles. The file `flat` of the order
+  is one mesh: about 220 triangles and 6 KB in gzip at the far level,
+  in less than 1 s.
 - **The tools of the MCP server:** `draw_house` (the argument `house`:
   a request), `draw_building` (the argument `building`: a request),
   `draw_village_house` (the argument `house`: a request),
-  `draw_appliance` (the argument `appliance`: a request) and
+  `draw_appliance` (the argument `appliance`: a request), `draw_mini`
+  (the argument `mini`: a request) and
   `plan_street` (the argument `street`: `seed`, `road`,
   `count` or `length`, `depth`, `sidewalk`, `lots`, and `types`,
   `families`, `widths` as lists of `[value, weight]`).
@@ -566,7 +584,7 @@ The data of the skill:
   parts of the sculpture by the cost of their collapses, so a small
   part with hard edges (a chimney on a roof) keeps its corners;
 - `cells`: the size of the cells at `near`, `mid` and `far` (m, 0.001 to
-  1). A part thinner than about two cells can go. With no `cells` for a
+  10). A part thinner than about two cells can go. With no `cells` for a
   level that has a budget, World chooses them: the largest cells that
   give about 1.5 times the budget before the collapse, but at most half
   the thinnest edit that adds or takes away. With neither, the cells of
