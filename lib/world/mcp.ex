@@ -282,6 +282,23 @@ defmodule World.MCP do
       "annotations" => @read
     },
     %{
+      "name" => "draw_appliance",
+      "title" => "Draw an appliance of a home",
+      "description" =>
+        "Gives the drawing of an appliance or of a part of the power system of a home from its kind and its size: a body of that size with the details of the real thing (doors, handles, knobs, a window, terminals). The rules of World.Home.Appliance make it. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "appliance" => %{
+            "type" => "object",
+            "description" =>
+              "The request: kind (battery, box, busbar, dishwasher, dryer, freezer, fridge, inverter, microwave, power_station, range, solar_panel, tv, washer, water_heater or water_tank); name; sources; size ([wide, deep, high] in m; the common size of the kind by default); color; doors of a fridge (french, top or single); ports of a busbar (1 to 24). Each key has a default."
+          }
+        }
+      },
+      "annotations" => @read
+    },
+    %{
       "name" => "plan_street",
       "title" => "Plan one side of a street of Vũng Tàu",
       "description" =>
@@ -477,6 +494,12 @@ defmodule World.MCP do
 
   defp call("draw_village_house", args, _origin) do
     result(%{"drawing" => World.Village.House.drawing(Map.get(args, "house", %{}))})
+  rescue
+    e in ArgumentError -> wrong(e.message)
+  end
+
+  defp call("draw_appliance", args, _origin) do
+    result(%{"drawing" => World.Home.Appliance.drawing(Map.get(args, "appliance", %{}))})
   rescue
     e in ArgumentError -> wrong(e.message)
   end

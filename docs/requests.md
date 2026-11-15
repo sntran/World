@@ -39,7 +39,10 @@ Two rules give a drawing from a few words, for the kind 3:
 - a building (a hotel, an office, a villa): the MCP tool
   `draw_building`;
 - a house of a village of old Việt Nam (posts, a porch, stilts, a roof
-  of thatch or tiles that curves): the MCP tool `draw_village_house`.
+  of thatch or tiles that curves): the MCP tool `draw_village_house`;
+- an appliance of a home from its kind and its size (a fridge, a
+  range, a battery, a busbar and 12 more): the MCP tool
+  `draw_appliance`.
 
 A person (`person`) has an age from 1 to 90 years: a child has its own
 size and proportions.

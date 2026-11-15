@@ -465,9 +465,25 @@ houses.
   the eaves and the ridge. The drawing has four parts: the frame
   (`_khung`), the two long slopes with the ridge and the hips (`_mai`),
   the two end slopes (`_dau_hoi`) and the ground (`_nen`).
+- **An appliance of a home** (`World.Home.Appliance`; plan 0019, step
+  5; for DIY): a body of the `size` of the request (`[wide, deep,
+  high]` in m; the common size of the `kind` by default) with the
+  details of the real thing, as one part from edits. The kinds:
+  `fridge` (`doors`: `french`, `top` or `single`, each with its seams
+  and its handles), `freezer` (a chest with a lid), `range` (four
+  burners, knobs, an oven door with a window), `microwave` (a window
+  and keys), `dishwasher`, `washer` and `dryer` (a round door),
+  `water_heater` (a tank with its pipes), `tv`, `battery` (a label and
+  two terminals), `power_station` (handles, a screen, outlets),
+  `inverter` (fins), `solar_panel` (the lines of its cells), `busbar`
+  (a stud for each of its `ports`), `water_tank` and `box`. The front
+  is to +y, and the thing stands on z = 0. The extras have `tags`: the
+  place of the label of the real thing. A kind builds in about 1 s at
+  the mid level.
 - **The tools of the MCP server:** `draw_house` (the argument `house`:
   a request), `draw_building` (the argument `building`: a request),
-  `draw_village_house` (the argument `house`: a request) and
+  `draw_village_house` (the argument `house`: a request),
+  `draw_appliance` (the argument `appliance`: a request) and
   `plan_street` (the argument `street`: `seed`, `road`,
   `count` or `length`, `depth`, `sidewalk`, `lots`, and `types`,
   `families`, `widths` as lists of `[value, weight]`).

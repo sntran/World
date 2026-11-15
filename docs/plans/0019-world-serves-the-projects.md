@@ -255,8 +255,11 @@ as a reference; no test builds them (the commit `b6905ce`).
    it; a file of an older version goes out at once and is built again
    one time; each file has a copy in gzip; the line has two classes. A
    van at the mid level: 6.2 s the first time, 0.18 s after it.
-5. **The rule of an appliance** (`World.Home.Appliance`), as the rule
-   of a building: a kind, a size, and details from a few words.
+5. **The rule of an appliance. Done** (`World.Home.Appliance`, the MCP
+   tool `draw_appliance`): 16 kinds, each a body of the size of the
+   request with the details of the real thing, in about 1 s at the mid
+   level. Open: the other kinds of DIY (its catalog has 70), a model of
+   one maker (the front of each power station), and doors that open.
 6. **The faults of Vũng Tàu** (section 3.2), and the far levels in
    their budgets.
 7. **The server on the mini PC. Done in World** (`docs/factory.md`,
