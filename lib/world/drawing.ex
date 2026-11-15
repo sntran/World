@@ -55,6 +55,9 @@ defmodule World.Drawing do
   # The atom of each name of a list of the checks: a drawing names only
   # these, and the atoms exist when the drawing builds.
   @atoms Map.new(@kinds ++ @roles ++ @standards ++ ~w(hinge slide), &{&1, String.to_atom(&1)})
+
+  @doc "The kinds of a drawing."
+  def kinds, do: @kinds
   @keys ~w(name kind materials parts nodes clips sources extras)
   @name ~r/^[a-z0-9_]{1,40}$/
   @size 50.0

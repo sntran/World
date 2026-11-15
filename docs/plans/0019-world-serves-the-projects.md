@@ -377,9 +377,20 @@ of thing that a project can want. It gets these abilities:
    The MCP server has 13 tools: find a blueprint, check, place and edit
    an order, watch a build, a live sculpture, and the review of a new
    drawing or blueprint.
-6. **Open:** a picture of a model from the server, so that a project
-   with no viewer can look; and a rule that takes each of its numbers
-   from the request.
+6. **The edit `free`. Done.** The owner (2026-11-15): "Can we take the
+   fixed in the code to be something that can be edited? Or the plant,
+   a person or an animal into free edits?" Yes. `{"free": true}` makes
+   an order an order of its drawing. For a rule that draws its thing as
+   data, each number that the code of the rule fixes is then a number
+   of the order (the round of the edges of a fridge, 12 mm in the code,
+   is `...edits.0.size.3`). A plant, a person or an animal is a mesh
+   from code: it becomes the node `model` of the drawing, a project
+   adds parts to it (a child gets a hat from edits on its head and an
+   age of 12 years in one call), and its options stay. Open: an edit
+   that carves the body of such a model (the model as a field of a
+   sculpture, with its bones and its skin again): a large step.
+7. **Open:** a picture of a model from the server, so that a project
+   with no viewer can look.
 
 The rules that exist stay as a fast first answer. A new rule is made
 only when many requests of the same kind show that it saves time.

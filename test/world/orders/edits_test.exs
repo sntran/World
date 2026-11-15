@@ -136,12 +136,109 @@ defmodule World.Orders.EditsTest do
     assert Enum.at(rows.(changed), 2) == [0.5, 0.72, 0.82, 0.15, 4] and changed["parent"] == mine["hash"]
     assert List.delete_at(rows.(changed), 2) == List.delete_at(rows.(mine), 2)
 
-    # A model that the code of a rule makes has no drawing: no URL of it, and an error with the reason.
-    {:ok, plant} = Orders.place(%{"blueprint" => "plant"}, "o")
-    refute Map.has_key?(plant["files"], "drawing.json")
+    # A model that the code of a rule makes as a mesh is one node of its drawing: an item of its blueprint.
+    {:ok, plant} = Orders.place(%{"blueprint" => "plant", "options" => %{"height" => 9}}, "o")
+    assert Map.has_key?(plant["files"], "drawing.json")
+    {:ok, json} = Orders.build(plant["order"], "near", "drawing")
 
-    assert {:error, [%{"path" => "file", "message" => "the model of this order has no drawing" <> _}]} =
-             Orders.build(plant["order"], "near", "drawing")
+    assert %{"name" => "coconut_palm", "kind" => "plant", "nodes" => [%{"name" => "model", "item" => item}]} =
+             JSON.decode!(json)
+
+    assert item["blueprint"] == "plant" and item["options"]["height"] == 9.0
+    assert item["options"]["species"] == "coconut" and item["options"]["seed"] == 1
+    # (A kind that a drawing does not have is the kind item.)
+    {:ok, strut} = Orders.check(%{"blueprint" => "strut", "options" => %{"length" => 0.3}})
+    assert %{"kind" => "item", "nodes" => [%{"item" => %{"blueprint" => "strut"}}]} = Orders.Blueprints.free(strut)
+  end
+
+  test "the edit free: an order of a rule becomes an order of its drawing, and each number of the rule is a number of the order" do
+    {:ok, fridge} =
+      Orders.place(
+        %{"blueprint" => "appliance", "options" => %{"kind" => "fridge"}, "colors" => %{"part_01" => "#f0f0f0"}},
+        "o"
+      )
+
+    at = "options.drawing.nodes.fridge_than.skill.sculpt.edits"
+
+    # Free, and in the same call a change of a number that the rule fixes: the round of the edges of the body.
+    assert {:ok, free} =
+             Edits.place(fridge["hash"], [%{"free" => true}, %{"set" => "#{at}.0.size.3", "to" => 0.04}], "o")
+
+    assert free["order"]["blueprint"] == "drawing" and free["order"]["colors"] == %{"part_01" => "#f0f0f0"}
+    [node] = free["order"]["options"]["drawing"]["nodes"]
+    assert [0.455, 0.42, _, 0.04] = hd(node["skill"]["sculpt"]["edits"])["size"]
+    assert free["history"] |> List.last() |> Map.fetch!("edits") |> hd() == %{"free" => true}
+    # The options of the rule are not options of the free order; an order that is free stays as it is.
+    assert {:error, [%{"path" => "options.doors", "message" => "is not an option"}]} =
+             Edits.place(free["hash"], [%{"set" => "options.doors", "to" => "top"}], "o")
+
+    assert Edits.change(free["order"], [%{"free" => true}]) == {:ok, free["order"]}
+
+    # An order that does not pass its check is not made free.
+    assert {:error,
+            [
+              %{
+                "path" => "edits.0",
+                "message" => "the order must pass its check before it is free (options: the kind of a small model" <> _
+              }
+            ]} =
+             Edits.change(%{"blueprint" => "mini", "options" => %{"kind" => 7}}, [%{"free" => true}])
+
+    assert {:error, [%{"path" => "edits.0", "message" => "must be {\"set\"" <> _}]} =
+             Edits.change(fridge["order"], [%{"free" => false}])
+  end
+
+  test "the edit free of a person: the model is a node of the drawing, a hat from edits goes on its head, its options stay" do
+    request = %{
+      "blueprint" => "person",
+      "options" => %{"age" => 9, "hair" => "none", "clothes" => []},
+      "joints" => %{"elbow_r" => 40},
+      "targets" => %{"arm_l" => [0.3, 0.2, 1.0]}
+    }
+
+    {:ok, person} = Orders.place(request, "o")
+
+    hat = %{
+      "name" => "mu",
+      "to" => "model",
+      "at" => "crown",
+      "skill" => %{
+        "sculpt" => %{
+          "edits" => [%{"shape" => "cone", "size" => [0.2, 0.012, 0.07], "at" => [0, 0, 0.05], "color" => "#d8c48a"}],
+          "cells" => %{"near" => 0.02, "mid" => 0.03, "far" => 0.05},
+          "budget" => %{"near" => 300, "mid" => 200, "far" => 100},
+          "bake" => %{"near" => 128, "mid" => 128, "far" => 64}
+        }
+      }
+    }
+
+    edits = [
+      %{"free" => true},
+      %{"insert" => "options.drawing.nodes.1", "value" => hat},
+      %{"set" => "options.drawing.nodes.model.item.options.age", "to" => 12}
+    ]
+
+    assert {:ok, free} = Edits.place(person["hash"], edits, "o")
+    assert [%{"name" => "model", "item" => item}, %{"name" => "mu"}] = free["order"]["options"]["drawing"]["nodes"]
+    assert item["blueprint"] == "person" and item["options"]["age"] == 12
+    # The joint and the target have the names of the new model: the name of the node is before them.
+    assert free["order"]["joints"] == %{"model/elbow_r" => 40.0}
+    assert Map.keys(free["order"]["targets"]) == ["model/arm_l"]
+
+    # The model builds: the person of 12 years with the hat is higher than the person of 9 years.
+    high = fn order ->
+      {:ok, job} = Orders.job(order, "far")
+      job.scene.(job.item.(:far), []).extras["size"] |> List.last()
+    end
+
+    assert high.(free["order"]) > high.(person["order"]) + 0.15
+    # A joint with a name that the new model has stays; one with no such name stays too (its build tells it).
+    again = Map.put(free["order"], "joints", %{"model/elbow_r" => 10, "wing" => 1})
+    {:ok, wrapped} = Edits.change(Map.put(person["order"], "joints", %{"wing" => 1}), [%{"free" => true}])
+    assert wrapped["joints"] == %{"wing" => 1} and Edits.change(again, [%{"free" => true}]) == {:ok, again}
+    # (An order with joints and no targets.)
+    {:ok, only} = Edits.change(Map.delete(person["order"], "targets"), [%{"free" => true}])
+    assert only["joints"] == %{"model/elbow_r" => 40.0} and not is_map_key(only, "targets")
   end
 
   test "edits of a model with no rule of its own: a drawing of edits gets a new size, new shapes and a paint" do

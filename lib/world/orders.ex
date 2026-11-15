@@ -174,7 +174,7 @@ defmodule World.Orders do
 
   # The URL of each file of a placed order: the suffix of /o/HASH (the
   # names that the Worker serves, handler.js), the level and the file.
-  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json flat.glb mid.flat.glb far.flat.glb light.glb mid.light.glb far.light.glb)
+  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json drawing.json flat.glb mid.flat.glb far.flat.glb light.glb mid.light.glb far.light.glb)
 
   @doc """
   Place an order (`POST /orders`, and the tool `place_order` of
@@ -198,9 +198,7 @@ defmodule World.Orders do
 
       case World.Orders.Store.put(hash, encode(full)) do
         :ok ->
-          # (The file of the drawing only for a model that has one.)
-          urls = if Blueprints.drawing(full), do: @urls ++ ["drawing.json"], else: @urls
-          files = Map.new(urls, &{&1, "#{origin}/o/#{hash}.#{&1}"})
+          files = Map.new(@urls, &{&1, "#{origin}/o/#{hash}.#{&1}"})
           {:ok, %{"hash" => hash, "order" => full, "files" => files, "replay" => "#{origin}/replay.html?order=#{hash}"}}
 
         :error ->
@@ -232,14 +230,14 @@ defmodule World.Orders do
     (`World.Flat`, `roles: true`): one mesh with a primitive for each
     role, no image and no skin, for a project that gives each role its
     own material. It takes `triangles` and `wrap` too.
-  - `"drawing"`: the drawing of the model in JSON, with the options of
-    the order in it: each part with its shapes or its skill, the nodes,
-    the joints. A project that cannot correct a model with the options of
-    its rule orders this drawing (the blueprint `drawing`), and then
-    changes any shape of it (`World.Orders.Edits`). Only a model of a
-    blueprint in data, of the blueprint `drawing`, or of the catalog
-    with a drawing has it: a model that the code of a rule makes (a
-    plant, a person) gives an error at the path `file`.
+  - `"drawing"`: the drawing of the model in JSON
+    (`World.Orders.Blueprints.free/1`), with the options of the order in
+    it: each part with its shapes or its skill, the nodes, the joints. A
+    project that cannot correct a model with the options of its rule
+    orders this drawing (the blueprint `drawing`, or the edit `free`),
+    and then changes any shape of it (`World.Orders.Edits`). A model that
+    the code of a rule makes (a plant, a person, an animal) is one node
+    of its drawing: a project adds parts to it.
   - `"solids"`: the simple solids of the model in JSON (`World.Solids`):
     the shapes of a drawing from edits with no build, or one box for
     each node and material of another model.
@@ -251,8 +249,7 @@ defmodule World.Orders do
          {:ok, lvl} <- level(level),
          :ok <- file(file),
          :ok <- triangles(opts[:triangles]),
-         :ok <- wrap(opts[:wrap]),
-         :ok <- drawn(file, order) do
+         :ok <- wrap(opts[:wrap]) do
       job = Map.merge(new_job(order, lvl), %{triangles: opts[:triangles], wrap: opts[:wrap] == true})
       # The item is a function: a construction makes it, so the memory
       # holds one item only (the edge has 128 MB).
@@ -427,7 +424,7 @@ defmodule World.Orders do
   defp make("light", _order, _lvl, item, job),
     do: GLB.encode(World.Flat.scene(job.scene.(item.(), []), budget: job.triangles, wrap: job.wrap, roles: true))
 
-  defp make("drawing", order, _lvl, _item, _job), do: encode(Blueprints.drawing(order))
+  defp make("drawing", order, _lvl, _item, _job), do: encode(Blueprints.free(order))
 
   defp make("solids", _order, _lvl, item, job) do
     solids =
@@ -498,23 +495,6 @@ defmodule World.Orders do
   defp triangles(nil), do: :ok
   defp triangles(n) when is_integer(n) and n >= 12 and n <= 200_000, do: :ok
   defp triangles(_n), do: {:error, [%{"path" => "triangles", "message" => "must be a whole number from 12 to 200000"}]}
-
-  # The file drawing is for an order with a drawing.
-  defp drawn("drawing", order) do
-    if Blueprints.drawing(order),
-      do: :ok,
-      else:
-        {:error,
-         [
-           %{
-             "path" => "file",
-             "message" =>
-               "the model of this order has no drawing: the code of a rule makes it from its options (change its options, or ask for the thing as a drawing of edits)"
-           }
-         ]}
-  end
-
-  defp drawn(_file, _order), do: :ok
 
   defp wrap(wrap) when wrap in [nil, true, false], do: :ok
   defp wrap(_wrap), do: {:error, [%{"path" => "wrap", "message" => "must be true or false"}]}

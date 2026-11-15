@@ -140,8 +140,11 @@ defmodule World.ServiceTest do
     assert history == [%{"hash" => hash}, %{"hash" => new, "edits" => [%{"set" => "options.length", "to" => 0.45}]}]
     assert files["glb"] == "https://world.mkfifo.com/o/#{new}.glb"
     assert call(:get, "/o/#{new}.far.glb").status == 200
-    # (A strut comes from the code of a rule: it has no drawing. A model of the catalog with a drawing has one.)
-    assert call(:get, "/o/#{new}.drawing.json").status == 422
+    # (A strut comes from the code of a rule: it is the one node of its drawing. A model of the catalog with
+    # a drawing gives that drawing.)
+    assert %{"nodes" => [%{"name" => "model", "item" => %{"blueprint" => "strut"}}]} =
+             json(call(:get, "/o/#{new}.drawing.json"))
+
     drawing = call(:get, "/m/catalog.drawing.json?name=cay_bang")
     assert drawing.status == 200 and header(drawing, "content-type") == "application/json"
     assert %{"name" => "cay_bang", "nodes" => [_ | _]} = json(drawing)

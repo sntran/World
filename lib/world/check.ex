@@ -78,6 +78,7 @@ defmodule World.Check do
   defp stand(%Assembly{extras: %{"site" => true}}, _), do: :ok
   # A person keeps its balance, with a thing in a hand too.
   defp stand(%World.Figure{}, _), do: :ok
+  defp stand(%Assembly{nodes: [{_, %World.Figure{}, _} | _]}, _), do: :ok
   defp stand(item, base), do: stands(item, base)
 
   # A house, a wall or a street is built on its site, a boat on the

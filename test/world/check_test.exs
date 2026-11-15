@@ -206,6 +206,9 @@ defmodule World.CheckTest do
       assert [_ | _] = person.props
       assert Check.model(person) == :ok
 
+      # (The person as the first node of a model, with a thing in a hand: a free order of a person.)
+      assert Check.model(Assembly.new("model", person, root: "model")) == :ok
+
       unit = World.Detail.with(:far, &World.Appliances.Systems.mini_split/0)
       assert unit.extras == %{"site" => true} and Check.model(unit) == :ok
     end

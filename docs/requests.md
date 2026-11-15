@@ -131,13 +131,19 @@ look at the result, and say what to change:
 4. **Again**, until the model is right. Then keep the last order and
    its lock.
 
-When no option of a rule can make the change, take the model into
-your own hands: get the drawing of the order (`/o/HASH.drawing.json`,
-for a model that has one: a scooter, a car, a tube house, a statue),
-place it as an order of the blueprint `drawing`, and edit any shape of
-it. Or ask for the thing as a drawing of edits (the kind 3): each shape
-of each part is then in your order, and an edit can change, add or
-remove a shape. Tell the owner of
+When no option of a rule can make the change, make the order free:
+the edit `{"free": true}`. The order becomes an order of its drawing,
+and the edits after it (in the same call, or later) change any shape
+that the rule drew: the width of a post of a house, the round of the
+edges of a fridge, one row of the seat of a scooter. A plant, a person
+or an animal is a mesh from the code of its rule: it becomes the node
+`model` of the drawing. You then add parts to it (a hat from edits at
+the port `crown` of a person, a saddle on a buffalo), and you still
+change its options (`options.drawing.nodes.model.item.options.age`).
+You cannot carve its body with an edit: change its body with its
+options (the shapes of a person, the numbers of an animal or a plant).
+The options of the rule are not options of a free order, so make the
+changes that the rule can make first. Tell the owner of
 World about a number that a rule does not let you change: the fix is to
 put that number in the request, not to make a new rule for your model.
 

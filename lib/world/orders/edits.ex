@@ -18,6 +18,16 @@ defmodule World.Orders.Edits do
   - `{"insert": PATH, "value": VALUE}`: a new item of a list before the
     item at the path.
 
+  - `{"free": true}`: the order becomes an order of its drawing (the
+    blueprint `drawing`, `World.Orders.Blueprints.free/1`), with its
+    colors and its joints. Each shape of each part that the rule drew is
+    then in the order, and the edits after this one can change it: a
+    number that is fixed in the code of a rule. A model that the code of
+    a rule makes as a mesh (a plant, a person, an animal) becomes the
+    node `model` of the drawing: edits add parts to it, and change the
+    options of its item. The options of the rule are not options of the
+    new order.
+
   A path is the path of an error of a check: the keys from the order
   down, with a point between them (`options.height`, `colors.paint`,
   `options.drawing.nodes.0.skill.sculpt.edits.3.size`). An item of a
@@ -57,8 +67,41 @@ defmodule World.Orders.Edits do
   defp one(order, %{"insert" => path, "value" => value} = edit) when is_binary(path) and map_size(edit) == 2,
     do: walk(order, String.split(path, "."), {:insert, value}, path)
 
+  defp one(%{"blueprint" => "drawing"} = order, %{"free" => true} = edit) when map_size(edit) == 1, do: {:ok, order}
+
+  defp one(order, %{"free" => true} = edit) when map_size(edit) == 1 do
+    case Orders.check(order) do
+      {:ok, full} ->
+        drawing = %{"blueprint" => "drawing", "options" => %{"drawing" => World.Orders.Blueprints.free(full)}}
+        {:ok, full |> Map.take(~w(colors joints targets)) |> Map.merge(drawing) |> named()}
+
+      {:error, [%{"path" => path, "message" => message} | _]} ->
+        {:error, "the order must pass its check before it is free (#{path}: #{message})"}
+    end
+  end
+
   defp one(_order, _edit),
-    do: {:error, ~s(must be {"set": PATH, "to": VALUE}, {"remove": PATH} or {"insert": PATH, "value": VALUE})}
+    do:
+      {:error,
+       ~s(must be {"set": PATH, "to": VALUE}, {"remove": PATH}, {"insert": PATH, "value": VALUE} or {"free": true})}
+
+  # The joints and the targets of a free order with the names of the new model: a model that is the node
+  # `model` of its drawing has the name of the node before each name (`model/elbow_r`).
+  defp named(%{"joints" => joints} = order) when joints == %{} and not is_map_key(order, "targets"), do: order
+
+  defp named(order) do
+    {:ok, job} = Orders.job(Map.drop(order, ~w(joints targets)), "far")
+    extras = job.scene.(job.item.(:far), []).extras
+
+    Enum.reduce([{"joints", "joints"}, {"targets", "limbs"}], order, fn {key, names}, order ->
+      known = extras[names]
+      rename = fn name -> if name not in known and ("model/" <> name) in known, do: "model/" <> name, else: name end
+
+      if is_map_key(order, key),
+        do: Map.update!(order, key, &Map.new(&1, fn {k, v} -> {rename.(k), v} end)),
+        else: order
+    end)
+  end
 
   # The change at the end of a path, and each value on the way with its new part.
   defp walk(map, [key], {:set, value}, _path) when is_map(map), do: {:ok, Map.put(map, key, value)}

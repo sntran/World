@@ -96,6 +96,35 @@ defmodule World.Orders.Blueprints do
     end
   end
 
+  @doc """
+  The drawing of a full order for free edits (the file `drawing` of an
+  order, and the edit `free` of `World.Orders.Edits`): its drawing, or,
+  for a model that the code of a rule makes (a plant, a person, an
+  animal), a drawing with the model as its one node `model`: an item of
+  the blueprint, with the options of the order. A project adds nodes to
+  it (a part from edits at a port of the model: a hat on a head), and
+  changes the options of the item as before.
+  """
+  def free(order) do
+    case drawing(order) do
+      nil -> wrapped(order)
+      drawing -> drawing
+    end
+  end
+
+  defp wrapped(%{"blueprint" => name, "options" => options}) do
+    {:ok, blueprint} = fetch(name)
+    item = World.Detail.with(:far, fn -> blueprint.build.(options) end)
+    kind = Atom.to_string(Map.get(item, :kind) || :item)
+
+    %{
+      "name" => item.name,
+      "kind" => if(kind in World.Drawing.kinds(), do: kind, else: "item"),
+      "sources" => ["The model of an order of the blueprint #{name}, as an item of this drawing."],
+      "nodes" => [%{"name" => "model", "item" => %{"blueprint" => name, "options" => options}}]
+    }
+  end
+
   @doc "The blueprints, in the order of their names."
   def all,
     do:
@@ -303,7 +332,7 @@ defmodule World.Orders.Blueprints do
         options:
           for(
             key <- Enum.sort(Map.keys(apply(module, full, [%{}])) ++ if(name == "building", do: ["size"], else: [])),
-            do: free(key)
+            do: word(key)
           ),
         resolve: fn o -> resolved(fn -> apply(module, full, [given(o)]) end) end,
         build: fn o -> World.Drawing.build(module.drawing(o)) end,
@@ -313,7 +342,7 @@ defmodule World.Orders.Blueprints do
   end
 
   # An option of a rule: any value, that the rule checks in its request.
-  defp free(key), do: option(key, :data, default: nil, check: fn value, _path -> {:ok, value} end)
+  defp word(key), do: option(key, :data, default: nil, check: fn value, _path -> {:ok, value} end)
   defp given(o), do: Map.reject(o, fn {_, v} -> v == nil end)
 
   # The full request of a rule, or its error (a rule raises an `ArgumentError` with the reason).
@@ -330,7 +359,7 @@ defmodule World.Orders.Blueprints do
       name: "street",
       doc:
         "One side of a street of houses of Vũng Tàu from a seed (World.Town.Street): seed, road (its width, m), count (the lots) or length (m), depth, sidewalk, types, families and widths (lists of [value, weight]), or lots (a list of what is known of each lot: type, family, width, use, number, name, same). The full order has the plan: each lot with the full request of its house and its place along the street. The model is the houses of the lots only: [first, last] (from 1; the first five lots by default, and five lots at the most).",
-      options: Enum.map(~w(count depth families length lots only road seed sidewalk types widths), &free/1),
+      options: Enum.map(~w(count depth families length lots only road seed sidewalk types widths), &word/1),
       resolve: fn o ->
         with {:ok, plan} <- resolved(fn -> World.Town.Street.plan(given(Map.delete(o, "only"))) end) do
           lots = length(plan["lots"])
