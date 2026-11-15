@@ -235,8 +235,13 @@ as a reference; no test builds them (the commit `b6905ce`).
 
 1. **The guide for a project** (`docs/requests.md`): how to write a
    request, check it and build it. Done with this plan.
-2. **The output `solids`** for a drawing and for an order, with the
-   units and the axes of the project, and the tags of a part.
+2. **The output `solids`** for a drawing and for an order. Done
+   (`World.Solids`, the file `solids` of an order, `HASH.solids.json`):
+   the shapes of a drawing from edits with no build (a building of 80
+   shapes: 16 KB in 4 ms), and one box for each part and material of a
+   model of a rule (a scooter: 1.6 s, with its build at the far level).
+   Open: the units and the axes of the project, and the tags of a part
+   (a point on a face, for DIY).
 3. **The output `flat`** for any order: a budget of triangles, a color
    at each point, as a GLB and as plain arrays. (A model from edits has
    the look `flat` today; a model of a rule does not.)

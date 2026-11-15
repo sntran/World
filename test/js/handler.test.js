@@ -11,6 +11,7 @@ test('the name and the file of a path', () => {
   assert.equal(split('van.mid.glb')[1][1], 'mid');
   assert.equal(split('van.glb')[1][1], 'near');
   assert.equal(split('van.receipt.json')[1][2], 'receipt');
+  assert.equal(split('van.solids.json')[1][2], 'solids');
   assert.equal(split('van.log.json')[1][2], 'log');
   assert.deepEqual(split('van.replay.glb').map((x, i) => (i ? x[2] : x)), ['van', 'replay']);
   assert.equal(split('.glb'), null);

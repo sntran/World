@@ -52,7 +52,7 @@ defmodule World.ServiceTest do
     assert Plug.Conn.get_resp_header(replay, "content-type") == ["model/gltf-binary"]
     assert <<"glTF", _::binary>> = replay.resp_body
 
-    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt"}] =
+    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt, solids"}] =
              json(call(:post, "/build?file=zip", @strut))["errors"]
 
     assert [%{"path" => "level"}] = json(call(:post, "/build?level=huge", @strut))["errors"]

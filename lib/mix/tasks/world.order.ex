@@ -11,7 +11,8 @@ defmodule Mix.Tasks.World.Order do
   `HASH.mid.glb`, `HASH.far.glb`, and at the near level
   `HASH.log.json` (the log of the run of the world that built it),
   `HASH.replay.glb` (each part in a node of its own, for the replay),
-  `HASH.parts.json` and `HASH.receipt.json`. A wrong order stops the task
+  `HASH.parts.json`, `HASH.receipt.json` and `HASH.solids.json` (the
+  simple solids of the model, `World.Solids`). A wrong order stops the task
   with each error.
   """
   use Mix.Task

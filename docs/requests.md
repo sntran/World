@@ -118,10 +118,16 @@ Do not order one file for each house or each tree. Order a set of
 variants (`POST /sets`: one order with `count`, `seed` and `vary`), and
 put each variant many times in your world.
 
-## The outputs that come next
+## A project that cannot draw a GLB
 
-Plan 0019 adds two outputs for a project that cannot draw a GLB with
-images: `solids` (the simple shapes of the model as a list, for a
-project that draws boxes or SVG) and `flat` (a small mesh with a color
-at each point and no image). Until then, a model from edits has the
-look `flat` (`docs/format.md`, the key `look` of a sculpture).
+- **`solids`** (`HASH.solids.json`, the file `solids` of an order): the
+  simple shapes of the model as a list, for a project that draws boxes
+  or SVG itself. For a drawing from edits it needs no build: a building
+  of 80 shapes is 16 KB in 4 ms. Each solid has its `shape` and `size`
+  (as in the data of an edit), its place `at`, its axes `x`, `y` and
+  `z`, its `mode` (`add`, `subtract`, `paint`), its `color` and its
+  `role`. A model of a rule gives one box for each part and each
+  material. The lengths are in meters, z is up, the front is to +y.
+- **`flat`** comes next (plan 0019): a small mesh with a color at each
+  point and no image. Until then, a model from edits has the look
+  `flat` (`docs/format.md`, the key `look` of a sculpture).

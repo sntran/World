@@ -64,7 +64,8 @@ defmodule World.Service do
     "replay" => "model/gltf-binary",
     "log" => "application/json",
     "parts" => "application/json",
-    "receipt" => "application/json"
+    "receipt" => "application/json",
+    "solids" => "application/json"
   }
 
   get "/blueprints" do

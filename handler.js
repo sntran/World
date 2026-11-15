@@ -28,7 +28,7 @@
 //   files and its lot); 422 with the errors.
 // - /mcp: the MCP server (the VM, World.MCP).
 // - GET /o/HASH.glb, .mid.glb, .far.glb, .parts.json, .receipt.json,
-//   .log.json, .replay.glb: the files of an order of POST /orders. The
+//   .solids.json, .log.json, .replay.glb: the files of an order of POST /orders. The
 //   people of the node build the model (World.Construction): the log
 //   tells what each one did, and the replay GLB has a node for each part.
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
@@ -48,6 +48,7 @@ const FILES = [
   ['.far.glb', 'far', 'glb', 'model/gltf-binary'],
   ['.parts.json', 'near', 'parts', 'application/json'],
   ['.receipt.json', 'near', 'receipt', 'application/json'],
+  ['.solids.json', 'near', 'solids', 'application/json'],
   ['.log.json', 'near', 'log', 'application/json'],
   ['.replay.glb', 'near', 'replay', 'model/gltf-binary'],
   ['.glb', 'near', 'glb', 'model/gltf-binary'],

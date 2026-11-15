@@ -27,7 +27,7 @@ defmodule World.Orders do
   alias World.Orders.{Blueprint, Blueprints, Store}
   @keys ~w(blueprint options colors joints targets)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
-  @files ~w(glb log replay parts receipt)
+  @files ~w(glb log replay parts receipt solids)
 
   @doc "The names of the levels of detail."
   def levels, do: Map.keys(@levels) |> Enum.sort()
@@ -173,7 +173,7 @@ defmodule World.Orders do
 
   # The URL of each file of a placed order: the suffix of /o/HASH (the
   # names that the Worker serves, handler.js), the level and the file.
-  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb)
+  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json)
 
   @doc """
   Place an order (`POST /orders`, and the tool `place_order` of
@@ -217,6 +217,9 @@ defmodule World.Orders do
   - `"replay"`: the model with each part in a node of its own, with the id
     of its task, for the replay of the log.
   - `"parts"`: the list of the parts. `"receipt"`: the receipt.
+  - `"solids"`: the simple solids of the model in JSON (`World.Solids`):
+    the shapes of a drawing from edits with no build, or one box for
+    each node and material of another model.
 
   Gives `{:ok, binary}`, or `{:error, errors}` as `check/1`.
   """
@@ -382,6 +385,15 @@ defmodule World.Orders do
   defp make("replay", _order, _lvl, item, job), do: GLB.encode(job.scene.(item.(), split: true))
   defp make("parts", _order, _lvl, item, _job), do: parts(item.())
   defp make("receipt", order, lvl, item, job), do: receipt(order, lvl, job.scene.(item.(), []))
+
+  defp make("solids", _order, _lvl, item, job) do
+    solids =
+      if World.Solids.edits?(job.drawing),
+        do: World.Solids.of(job.drawing),
+        else: World.Solids.boxes(job.scene.(item.(), []))
+
+    encode(solids)
+  end
 
   defp from_to(task, nil), do: %{"from" => task}
   defp from_to(task, down), do: %{"from" => task, "to" => down}
