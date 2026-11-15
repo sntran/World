@@ -9,7 +9,8 @@
     "fronds": [30, "30 to 35 fronds in the crown (Chan and Elevitch, 2006; 20 to 40, Palms of New Guinea)."],
     "frond": [5.0, "A frond is 4.5 to 5.5 m long, the petiole about a quarter of it (Chan and Elevitch, 2006)."],
     "leaflet": [1.0, "The leaflets are 50 to 150 cm long, about 100 cm at the middle of the frond, 1.5 to 5 cm wide; 200 to 250 on a frond (Chan and Elevitch, 2006)."],
-    "nuts": [12, "A bunch of about 12 nuts of about 30 by 25 cm under the crown, all the year in the South of Việt Nam (Trần Văn Hâu and Nguyễn Chí Linh, Tạp chí Khoa học ĐH Cần Thơ 17a, 2011: 59 to 72 nuts on a tree each year)."]
+    "nuts": [12, "A bunch of about 12 nuts of about 30 by 25 cm under the crown, all the year in the South of Việt Nam (Trần Văn Hâu and Nguyễn Chí Linh, Tạp chí Khoa học ĐH Cần Thơ 17a, 2011: 59 to 72 nuts on a tree each year)."],
+    "nut": [0.13, "A nut with its husk is about 30 by 25 cm (Trần Văn Hâu and Nguyễn Chí Linh, 2011): a ball of 26 cm in the model."]
   },
   "banana": {
     "name": "Musa ABB 'Pisang Awak' (chuối sứ, chuối xiêm)",
@@ -40,5 +41,18 @@
     "flower": [0.065, "The flowers are 5 to 7.5 cm across, 5 petals, white with a yellow center (Criley, 1998; the Flora of China 16)."],
     "flowering": [[5, 6, 7, 8], "It flowers from May to August in Việt Nam (Cây thuốc và động vật làm thuốc ở Việt Nam, tập 1)."],
     "leafless": [[1, 2, 3], "Plumeria rubra drops its leaves in the dry season (December to April in the South of Việt Nam); the months with no leaves are an estimate."]
+  },
+  "areca": {
+    "name": "Areca catechu (cau)",
+    "height": [12.0, "10 to 20 m at maturity, at the most 30 m (Staples and Bevacqua, Areca catechu, Species Profiles for Pacific Island Agroforestry, 2006): a palm of 12 m (an estimate)."],
+    "trunk": [0.15, "A single slender trunk, green and then gray, with white leaf scars; the crown shaft is about 15 cm across (Staples and Bevacqua, 2006). The width of the trunk is an estimate from the crown shaft."],
+    "base": [0.2, "The base is a little wider than the trunk (an estimate)."],
+    "lean": [1.0, "The trunk is straight (an estimate)."],
+    "fronds": [9, "A small crown of about 8 to 12 fronds (an estimate)."],
+    "frond": [1.8, "A frond is 1 to 2 m long (an estimate)."],
+    "leaflet": [0.5, "The leaflets are 30 to 70 cm long and 3 to 7 cm wide, the longest near the middle of the frond (Staples and Bevacqua, 2006)."],
+    "crownshaft": [0.55, "A bright green crown shaft of about 55 by 15 cm (Staples and Bevacqua, 2006)."],
+    "nuts": [24, "A bunch of many red-orange fruits under the crown shaft (Staples and Bevacqua, 2006); the count in the model is an estimate."],
+    "nut": [0.025, "A fruit is about 5 cm long (an estimate)."]
   }
 }

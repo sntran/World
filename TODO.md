@@ -40,9 +40,13 @@ into the steps of `AGENTS.md`.
   and `flat`, the store that stays after a deploy, the server on a
   computer, the heights of the Earth, children, a house of a village,
   the rule of an appliance, and the small models of Humans Must Die.
-  Open: the faults that Vũng Tàu found (the far levels in the budgets
-  of the game), the kind of land of the Earth, the clothes, the other
-  buildings and the animals of Tre, and the start of the server on the
+  The faults that Vũng Tàu found are corrected (a person on the ground
+  at each level, hair at far, a side stand, the light look with a
+  budget and a wrap, the blueprint `plant`), and Tre has the clothes of
+  old Việt Nam, the things of a yard, the buffalo calf and the areca
+  palm. Open: the near level of the trees in the budgets of Vũng Tàu,
+  the kind of land of the Earth, a softer face and cloth that hangs
+  better, tools for the hands, and the start of the server on the
   mini PC.
 - **The street Quang Trung of Vũng Tàu as it is (plan 0018, in
   progress).** Made: the survey, the row of the numbers 4 to 26, the

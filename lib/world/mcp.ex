@@ -282,6 +282,23 @@ defmodule World.MCP do
       "annotations" => @read
     },
     %{
+      "name" => "draw_village_thing",
+      "title" => "Draw a thing of the yard of a village of old Việt Nam",
+      "description" =>
+        "Gives the drawing of a thing of the yard or of the lanes of a village of old Việt Nam from its kind: a round well of brick, a fence of bamboo, the gate of the village, a haystack round its pole, a bridge of bamboo poles, a large jar for water. The rules of World.Village.Yard make it. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "thing" => %{
+            "type" => "object",
+            "description" =>
+              "The request: kind (well, fence, gate, haystack, bridge or jar); name; sources; length (of a fence or of a bridge, 1 to 20 m); color (the main color). Each key has a default."
+          }
+        }
+      },
+      "annotations" => @read
+    },
+    %{
       "name" => "draw_appliance",
       "title" => "Draw an appliance of a home",
       "description" =>
@@ -511,6 +528,12 @@ defmodule World.MCP do
 
   defp call("draw_village_house", args, _origin) do
     result(%{"drawing" => World.Village.House.drawing(Map.get(args, "house", %{}))})
+  rescue
+    e in ArgumentError -> wrong(e.message)
+  end
+
+  defp call("draw_village_thing", args, _origin) do
+    result(%{"drawing" => World.Village.Yard.drawing(Map.get(args, "thing", %{}))})
   rescue
     e in ArgumentError -> wrong(e.message)
   end

@@ -6,6 +6,8 @@ defmodule World.Plants do
 
   - `coconut/1`: the coconut palm (dừa): a trunk that leans and curves, a
     crown of fronds with their leaflets in a V, a bunch of nuts.
+  - `areca/1`: the areca palm (cau): the same rules with the numbers of
+    its species, and a green crown shaft at the top of its thin trunk.
   - `banana/1`: the banana (chuối sứ): a pseudostem, leaves on their
     petioles that arch and droop, a bunch on its stalk.
   - `bamboo/1`: a clump of thorny bamboo (tre gai): culms that lean out
@@ -34,6 +36,7 @@ defmodule World.Plants do
   def models do
     [
       {"coconut_palm", fn -> coconut() end},
+      {"areca_palm", fn -> areca() end},
       {"banana_chuoi_su", fn -> banana() end},
       {"bamboo_tre_gai", fn -> bamboo() end},
       {"frangipani_hoa_su", fn -> frangipani() end}
@@ -65,57 +68,80 @@ defmodule World.Plants do
   A coconut palm. The options: `height`, `seed`, `nuts` (true: a bunch of
   nuts under the crown, at the near level).
   """
-  def coconut(opts \\ []) do
-    h = Keyword.get(opts, :height, number("coconut", "height"))
+  def coconut(opts \\ []), do: palm("coconut", "A coconut palm of the tall type", opts)
+
+  @doc """
+  An areca palm (cau): a thin straight trunk, a green crown shaft under a
+  small crown of fronds, a bunch of small nuts. The options: as
+  `coconut/1`.
+  """
+  def areca(opts \\ []), do: palm("areca", "An areca palm", opts)
+
+  # A palm of a species: the numbers of the species give its trunk, its
+  # crown and its nuts. A species with a `crownshaft` has that length of
+  # green sheath at the top of its trunk.
+  defp palm(sp, about, opts) do
+    h = Keyword.get(opts, :height, number(sp, "height"))
     seed = Keyword.get(opts, :seed, 1)
-    lean = number("coconut", "lean") * :math.pi() / 180
-    {r, rb} = {number("coconut", "trunk") / 2, number("coconut", "base") / 2}
+    lean = number(sp, "lean") * :math.pi() / 180
+    {r, rb} = {number(sp, "trunk") / 2, number(sp, "base") / 2}
 
     # The spine leans at its base and curves up toward the crown.
     n = steps(12)
     spine = for i <- 0..n, t = i / n, do: {h * :math.tan(lean) * t * (1 - 0.35 * t), 0.0, h * t}
     radii = for i <- 0..n, t = i / n, do: r + (rb - r) * :math.exp(-t * h / 1.2)
-    trunk = Part.new("trunk_coconut", :trunk, [tube(spine, radii, :bark)], [@o], sources: sources("coconut"))
+
+    trunk =
+      Part.new("trunk_#{sp}", :trunk, [tube(spine, radii, :bark) | shaft(sp, spine, r)], [@o], sources: sources(sp))
 
     top = List.last(spine)
-    count = if Detail.level() == :far, do: 10, else: number("coconut", "fronds")
+    count = if Detail.level() == :far, do: 10, else: number(sp, "fronds")
 
     fronds =
       for i <- 0..(count - 1) do
         age = i / max(count - 1, 1)
         az = i * @golden + 360 * jitter(seed, {:az, i})
         e0 = 55 - 95 * age
-        frond(top, az, e0, number("coconut", "frond") * (0.9 + 0.1 * jitter(seed, {:l, i})))
+        frond(sp, top, az, e0, number(sp, "frond") * (0.9 + 0.1 * jitter(seed, {:l, i})))
       end
       |> List.flatten()
 
-    crown = Part.new("crown_coconut", :leaves, fronds, [@o])
+    crown = Part.new("crown_#{sp}", :leaves, fronds, [@o])
 
     asm =
-      Assembly.new("coconut_palm", trunk,
-        root: "trunk_coconut",
+      Assembly.new("#{sp}_palm", trunk,
+        root: "trunk_#{sp}",
         kind: :plant,
-        sources: ["A coconut palm of the tall type (#{Map.fetch!(@species, "coconut")["name"]})."],
-        extras: %{"species" => "coconut", "height" => h}
+        sources: ["#{about} (#{Map.fetch!(@species, sp)["name"]})."],
+        extras: %{"species" => sp, "height" => h}
       )
-      |> Assembly.add("crown_coconut", crown, at: "o", port: "o")
+      |> Assembly.add("crown_#{sp}", crown, at: "o", port: "o")
 
     if Keyword.get(opts, :nuts, true) and Detail.level() == :near do
       {tx, ty, tz} = top
+      nut = number(sp, "nut")
+      # (The bunch hangs under the crown shaft.)
+      drop = if is_map_key(@species[sp], "crownshaft"), do: number(sp, "crownshaft"), else: 0.0
 
       nuts =
-        for k <- 0..(number("coconut", "nuts") - 1) do
-          a = 2 * :math.pi() * k / 6 + if(k >= 6, do: 0.5, else: 0.0)
-          rr = if k >= 6, do: 0.22, else: 0.32
+        for k <- 0..(number(sp, "nuts") - 1) do
+          # (The sizes of a bunch are those of the coconut, times the size of the nut of the species.)
+          k1 = nut / 0.13
+          a = 2 * :math.pi() * k / 6 + 0.5 * div(k, 6)
+          rr = k1 * if(rem(div(k, 6), 2) == 1, do: 0.22, else: 0.32) + r - 0.165 * k1
 
-          Shape.sphere(0.13, :leaf,
+          # (The nuts of a coconut palm are green; the fruits of an areca palm are orange.)
+          Shape.sphere(nut, if(sp == "coconut", do: :leaf, else: :fruit),
             sides: 8,
             rings: 5,
-            frame: World.Frame.move({tx + rr * :math.cos(a), ty + rr * :math.sin(a), tz - 0.35 - 0.12 * div(k, 6)})
+            frame:
+              World.Frame.move(
+                {tx + rr * :math.cos(a), ty + rr * :math.sin(a), tz - drop - k1 * (0.35 + 0.12 * div(k, 6))}
+              )
           )
         end
 
-      Assembly.add(asm, "nuts_coconut", %{Part.new("nuts_coconut", :fruit, nuts, [@o]) | detail: :near},
+      Assembly.add(asm, "nuts_#{sp}", %{Part.new("nuts_#{sp}", :fruit, nuts, [@o]) | detail: :near},
         at: "o",
         port: "o"
       )
@@ -124,12 +150,24 @@ defmodule World.Plants do
     end
   end
 
+  # The crown shaft of a palm that has one: a smooth green sheath round the top of the trunk.
+  defp shaft(sp, spine, r) do
+    case @species[sp] do
+      %{"crownshaft" => [long, _]} ->
+        {x, y, z} = List.last(spine)
+        [tube([{x, y, z - long}, {x, y, z - long * 0.5}, {x, y, z}], [r * 1.08, r * 1.25, r * 0.9], :leaf)]
+
+      _ ->
+        []
+    end
+  end
+
   # A frond from the crown: a rachis that arches down, the petiole (a
   # quarter of it) bare, and the leaflets in a V on each side. At the near
   # level each leaflet is a strip of its own (24 on each side); at mid and
   # far the leaflets of a side are one card.
-  defp frond(base, az, e0, len) do
-    leaflet = number("coconut", "leaflet")
+  defp frond(sp, base, az, e0, len) do
+    leaflet = number(sp, "leaflet")
 
     width = fn s ->
       if s <= 0.25, do: 0.03, else: leaflet * (0.35 + 0.65 * :math.sin(:math.pi() * (s - 0.25) / 0.75))

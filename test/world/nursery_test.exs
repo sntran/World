@@ -43,6 +43,25 @@ defmodule World.NurseryTest do
              Orders.check(%{"blueprint" => "plant", "options" => %{"species" => "oak"}})
   end
 
+  test "the areca palm: a thin straight trunk with a green crown shaft, a small crown, a bunch of orange fruits" do
+    palm = Detail.with(:near, &Plants.areca/0)
+    assert palm.name == "areca_palm" and palm.extras == %{"species" => "areca", "height" => 12.0}
+    assert Enum.map(palm.nodes, &elem(&1, 0)) == ~w(trunk_areca crown_areca nuts_areca)
+    [{_, trunk, _}, _, {_, nuts, _}] = palm.nodes
+    # The trunk and the crown shaft: the shaft has the role of a leaf. The fruits have their own role.
+    assert Enum.map(trunk.shapes, & &1.material) == [:bark, :leaf]
+    assert length(nuts.shapes) == 24 and Enum.all?(nuts.shapes, &(&1.material == :fruit))
+    assert World.GLB.palette()["fruit"]["color"] == [216, 112, 42]
+    {{x0, _, _}, {x1, _, z1}} = Scene.bounds(Build.scene(palm, level: :near))
+    assert z1 > 12 and z1 < 14 and x1 - x0 < 3.5
+
+    # The coconut palm has no crown shaft, and its nuts are green.
+    coconut = Detail.with(:near, &Plants.coconut/0)
+    [{_, trunk, _}, _, {_, nuts, _}] = coconut.nodes
+    assert Enum.map(trunk.shapes, & &1.material) == [:bark]
+    assert length(nuts.shapes) == 12 and Enum.all?(nuts.shapes, &(&1.material == :leaf))
+  end
+
   test "the far level of a palm has less than 500 faces; a taller palm is taller" do
     far = Build.scene(Detail.with(:far, &Plants.coconut/0), level: :far)
     assert Scene.triangles(far) < 500
@@ -59,7 +78,7 @@ defmodule World.NurseryTest do
   end
 
   test "the species and their numbers come with their sources" do
-    assert Plants.species() == ~w(bamboo banana coconut frangipani)
+    assert Plants.species() == ~w(areca bamboo banana coconut frangipani)
     assert Plants.number("coconut", "fronds") == 30
     assert Plants.bamboo(culms: 5).extras["culms"] == 5
     assert Plants.coconut(nuts: false).nodes |> Enum.map(&elem(&1, 0)) |> Enum.member?("nuts_coconut") == false

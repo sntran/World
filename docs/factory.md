@@ -144,13 +144,13 @@ with its joints and clips, the list of the parts, the log. Each error
 has its path.
 
 A `plant` is a plant of the nursery, from the rules of its species:
-`species` (`coconut`, `banana`, `bamboo`, `frangipani`), `height` (m;
+`species` (`coconut`, `areca`, `banana`, `bamboo`, `frangipani`), `height` (m;
 the common height of the species by default), `seed` (the small changes
 from plant to plant) and `month` (the flowers of a frangipani).
 
 An `animal` is an animal of a species, from its bones: `species`
 (`street_dog`, `cat`, `wolf`, `fox`, `deer`, `goat`, `pig`, `horse`,
-`donkey`, `cow`, `water_buffalo`, `sheep`, `alpaca`, `husky`,
+`donkey`, `cow`, `water_buffalo`, `buffalo_calf`, `sheep`, `alpaca`, `husky`,
 `red_deer`, `hyena`, `macaque`, `rhesus_macaque`,
 `pig_tailed_macaque`, `douc`, `gibbon`, `carp`, `tilapia`, `chicken`,
 `duck`), `coat` (a

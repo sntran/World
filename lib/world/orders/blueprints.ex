@@ -270,7 +270,7 @@ defmodule World.Orders.Blueprints do
     %Blueprint{
       name: "plant",
       doc:
-        "A plant of the nursery (World.Plants), from the rules of its species: coconut (the coconut palm), banana, bamboo (a clump of thorny bamboo) or frangipani. The levels come from the rules: far away a frond or a spray of leaves is one card. For a count of triangles of a project, ask for the file light with triangles.",
+        "A plant of the nursery (World.Plants), from the rules of its species: coconut (the coconut palm), areca (the areca palm, cau), banana, bamboo (a clump of thorny bamboo) or frangipani. The levels come from the rules: far away a frond or a spray of leaves is one card. For a count of triangles of a project, ask for the file light with triangles.",
       options: [
         option("species", :choice, default: "coconut", values: World.Plants.species()),
         option("height", :number,
@@ -288,6 +288,7 @@ defmodule World.Orders.Blueprints do
 
         case o["species"] do
           "coconut" -> World.Plants.coconut(opts)
+          "areca" -> World.Plants.areca(opts)
           "banana" -> World.Plants.banana(opts)
           "bamboo" -> World.Plants.bamboo(opts)
           "frangipani" -> World.Plants.frangipani(opts ++ [month: o["month"]])

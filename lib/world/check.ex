@@ -80,7 +80,9 @@ defmodule World.Check do
   # door. A
   # thing put together on its site (an overhead door: `"site"` in its
   # extras) goes through the door in its parts.
-  defp door(%Assembly{kind: kind}) when kind in [:wall, :house, :boat, :street, :plant, :statue, :tower], do: :ok
+  defp door(%Assembly{kind: kind}) when kind in [:wall, :house, :building, :boat, :street, :plant, :statue, :tower],
+    do: :ok
+
   defp door(%Assembly{kind: :vehicle} = item), do: fits(item, @drive_in)
 
   defp door(%Assembly{extras: %{"site" => true}} = item),

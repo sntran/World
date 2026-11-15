@@ -172,7 +172,7 @@ defmodule World.CheckTest do
       assert {:error, _} = Check.fits(van, Check.door())
       assert {_, _} = Check.drive_in()
 
-      for kind <- [:house, :wall] do
+      for kind <- [:house, :building, :wall] do
         assert Check.model(
                  model([{"slab", part("slab", Shape.box({-4.0, -4.0, 0.0}, {4.0, 4.0, 0.1}, :concrete))}], kind: kind)
                ) == :ok

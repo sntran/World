@@ -465,6 +465,18 @@ houses.
   the eaves and the ridge. The drawing has four parts: the frame
   (`_khung`), the two long slopes with the ridge and the hips (`_mai`),
   the two end slopes (`_dau_hoi`) and the ground (`_nen`).
+- **A thing of the yard of a village** (`World.Village.Yard`; plan
+  0019, 7.1; for Tre): one part from edits, from its `kind`: `well` (a
+  round wall of brick on a platform of stone, with water), `fence`
+  (bamboo: a post each meter, two rails, a slat each 11 cm; one panel
+  at the mid and far levels), `gate` (two pillars of brick, a beam with
+  a red board for the name, a small roof of tiles), `haystack` (straw
+  round a pole), `bridge` (bamboo: a pole to walk on, a rail, two
+  trestles of crossed poles; its site holds it) and `jar` (a large jar
+  of glazed clay with water). The request has `name`, `sources`,
+  `length` (a fence or a bridge, along x, 1 to 20 m) and `color` (the
+  main color). The thing stands on z = 0, with its middle at x = 0 and
+  y = 0.
 - **An appliance of a home** (`World.Home.Appliance`; plan 0019, step
   5; for DIY): a body of the `size` of the request (`[wide, deep,
   high]` in m; the common size of the `kind` by default) with the
@@ -503,6 +515,7 @@ houses.
 - **The tools of the MCP server:** `draw_house` (the argument `house`:
   a request), `draw_building` (the argument `building`: a request),
   `draw_village_house` (the argument `house`: a request),
+  `draw_village_thing` (the argument `thing`: a request),
   `draw_appliance` (the argument `appliance`: a request), `draw_mini`
   (the argument `mini`: a request) and
   `plan_street` (the argument `street`: `seed`, `road`,
@@ -1988,6 +2001,7 @@ The species now:
 | `horse` | quadruped | A horse of Việt Nam (ngựa): about 1.35 m at the withers. | The template `horse`. |
 | `donkey` | quadruped | A donkey (lừa): about 1.1 m at the withers. | The template `donkey`. |
 | `cow` | quadruped | A cow of Việt Nam (bò vàng): about 1.1 m at the withers, yellow-brown. | The template `cow`, with a yellow-brown coat. |
+| `buffalo_calf` | quadruped | A calf of the water buffalo of Việt Nam (nghé): about 0.8 m at the withers, long legs, a large head, gray brown, horns that only start. | Numbers on the template `bull`: a guess, not a measurement. |
 | `water_buffalo` | quadruped | A water buffalo of Việt Nam (trâu): about 1.3 m at the withers, dark gray, wide horns. | Numbers on the template `bull`, with wide horns of World in place of the horns of the file. |
 | `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | The template `pig`, with shorter legs and a deeper body. |
 | `hyena` | quadruped | A spotted hyena: about 80 cm at the shoulder, a wide head with a blunt muzzle, round ears, a strong neck and forequarters, a short tail, a pale grey-brown coat. | Numbers and the shape space on the template `wolf` (0.4 of the coefficients of the bull). No spots: the coat has no region for spots. |

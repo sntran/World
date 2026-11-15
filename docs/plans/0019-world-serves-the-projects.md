@@ -346,16 +346,36 @@ Step T2 (in progress):
 - **Children. Done:** a person has an age from 1 to 90 years, from the
   shapes of a baby and of a child of MakeHuman (48 targets, CC0, 1.7
   MB). A girl of 7 is about 1.2 m high, with the proportions of a
-  child. Open: the clothes of old Việt Nam (a child wears the clothes
-  of an adult of today), and a softer face.
+  child.
+- **The clothes of old Việt Nam. Done** (`World.Sewing`): a loose tunic
+  of homespun cotton with a round neck that hangs from the waist, with
+  long sleeves (`world_ao_canh`) or short sleeves (`world_ao_coc`),
+  wide pants to the middle of the calf (`world_quan_ong_rong`) and
+  short pants (`world_quan_dui`). An order gives the brown of the dye
+  (`clothes_colors`), and a person with no shoes has bare feet. Open:
+  the cloth follows the chest of the body too much, the hem of a
+  garment is not a straight line, a scarf for the head, and a softer
+  face.
 - **The buildings of old Việt Nam. Done for a house:**
   `World.Village.House` makes a house of a village from a few words: a
   house on stilts with a roof of thatch, or a house of three or five
   bays on a low base with a roof of tiles that curves, with its corners
-  lifted. The mid level of a house builds in 9 to 13 s. Open: the
-  communal house (đình), a gate, a well, a fence of bamboo, a school.
-- **Open:** the buffalo calf Nghé, an areca palm, the props, and each
-  thing with its moves.
+  lifted. The mid level of a house builds in 9 to 13 s. A communal
+  house (đình) and a school are requests of the same rule (more bays,
+  tiles, a larger curve); a rule of their own is open.
+- **The things of a yard. Done** (`World.Village.Yard`, the MCP tool
+  `draw_village_thing`): a round well of brick, a fence of bamboo of a
+  length, the gate of the village, a haystack, a bridge of bamboo
+  poles, a jar for water. Each builds in 6 to 12 s at the near level.
+- **The buffalo calf (nghé). Done:** the species `buffalo_calf` of the
+  blueprint `animal` (0.8 m at the withers, long legs, a large head,
+  horns that only start), with each move of the water buffalo.
+- **The areca palm (cau). Done:** the species `areca` of the blueprint
+  `plant`: the rule of the coconut palm with the numbers of its species
+  and a green crown shaft (10,542 triangles at near, 508 at mid).
+- **Open:** tools and toys for the hands (a hoe, a basket, a kite, a
+  flute), a rule of its own for the đình, and the moves of each
+  thing in the game.
 
 ### 7.2 Humans Must Die: the Earth
 

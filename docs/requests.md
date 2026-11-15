@@ -41,6 +41,9 @@ Some rules give a drawing from a few words, for the kind 3:
   `draw_building`;
 - a house of a village of old Việt Nam (posts, a porch, stilts, a roof
   of thatch or tiles that curves): the MCP tool `draw_village_house`;
+- a thing of the yard of such a village (a well, a fence of bamboo, a
+  gate, a haystack, a bridge of bamboo, a jar): the MCP tool
+  `draw_village_thing`;
 - an appliance of a home from its kind and its size (a fridge, a
   range, a battery, a busbar, the two units of an air conditioner and
   12 more): the MCP tool
@@ -50,7 +53,13 @@ Some rules give a drawing from a few words, for the kind 3:
   the MCP tool `draw_mini`. Ask for the file `flat` of its order.
 
 A person (`person`) has an age from 1 to 90 years: a child has its own
-size and proportions.
+size and proportions. The clothes of a village of old Việt Nam are
+items of `clothes`: `world_ao_canh` (a loose tunic with long sleeves),
+`world_ao_coc` (short sleeves), `world_quan_ong_rong` (wide pants) and
+`world_quan_dui` (short pants), each with its color in
+`clothes_colors`. With no shoes in `clothes`, the person has bare feet.
+The animal `buffalo_calf` is the calf of a water buffalo, and the plant
+`areca` is the areca palm.
 
 ## An order
 
