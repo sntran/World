@@ -41,7 +41,8 @@ Some rules give a drawing from a few words, for the kind 3:
 - a house of a village of old Việt Nam (posts, a porch, stilts, a roof
   of thatch or tiles that curves): the MCP tool `draw_village_house`;
 - an appliance of a home from its kind and its size (a fridge, a
-  range, a battery, a busbar and 12 more): the MCP tool
+  range, a battery, a busbar, the two units of an air conditioner and
+  12 more): the MCP tool
   `draw_appliance`;
 - a very small model for a view from far (a building, an aircraft, a
   ship, a vehicle, a wind turbine or a tree in about 220 triangles):

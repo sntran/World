@@ -292,7 +292,7 @@ defmodule World.MCP do
           "appliance" => %{
             "type" => "object",
             "description" =>
-              "The request: kind (battery, box, busbar, dishwasher, dryer, freezer, fridge, inverter, microwave, power_station, range, solar_panel, tv, washer, water_heater or water_tank); name; sources; size ([wide, deep, high] in m; the common size of the kind by default); color; doors of a fridge (french, top or single); ports of a busbar (1 to 24). Each key has a default."
+              "The request: kind (ac_indoor, ac_outdoor, battery, box, busbar, dishwasher, dryer, freezer, fridge, inverter, microwave, power_station, range, solar_panel, tv, washer, water_heater or water_tank); name; sources; size ([wide, deep, high] in m; the common size of the kind by default); color; doors of a fridge (french, top or single); ports of a busbar (1 to 24). Each key has a default."
           }
         }
       },

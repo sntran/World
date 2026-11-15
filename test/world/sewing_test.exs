@@ -142,7 +142,8 @@ defmodule World.SewingTest do
 
   test "the bust of a woman at mid is round: its faces are cut in sixteen; at far they stay" do
     triangles = fn level ->
-      fig = Detail.with(level, fn -> Human.person("t", gender: 0.0, bust: 0.75, clothes: ["world_t_shirt"]) end)
+      fig =
+        Detail.with(level, fn -> Human.person("t", gender: 0.0, bust: 0.75, hair: nil, clothes: ["world_t_shirt"]) end)
 
       fig.nodes
       |> List.last()
@@ -153,7 +154,8 @@ defmodule World.SewingTest do
     end
 
     # The low-poly bodies of MakeHuman: 1,584 and 730 quads (two triangles
-    # each). At mid, 22 quads on the breasts become 352.
+    # each). At mid, 22 quads on the breasts become 352. (The person has no
+    # hair: the hair at far has faces of its own in the color of the hair.)
     assert triangles.(:mid) >= 2 * (1584 - 22 + 352)
     assert triangles.(:far) == 2 * 730
   end

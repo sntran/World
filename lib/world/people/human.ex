@@ -651,13 +651,19 @@ defmodule World.People.Human do
     name = if level == :far, do: "proxy741", else: if(o.gender >= 0.5, do: "male1591", else: "female1605")
     p = proxy_asset(name)
     {pts, wts} = fit_points(p, points, weights)
+    pts = soles(pts, ground(Data.base(), points, []), o.ground)
     ring = neighbors(Data.base())
     covers = Enum.map(clothes, &{&1, grow(cover(&1), ring)})
-    # At far there is no hair: the scalp has the color of the hair.
+    # At far the scalp has the color of the hair: the points under the
+    # hair, and the points under a short cut (the mesh of long hair is not
+    # near each point of the scalp).
     covers =
-      if level == :far and o.hair,
-        do: [{Data.asset("hair", o.hair), cover(Data.asset("hair", o.hair))} | covers],
-        else: covers
+      if level == :far and o.hair do
+        cap = cover(Data.asset("hair", Data.name!("hair", "short03")))
+        [{Data.asset("hair", o.hair), MapSet.union(cover(Data.asset("hair", o.hair)), cap)} | covers]
+      else
+        covers
+      end
 
     # Of the clothes that cover the most of the points of the body under
     # a face, the one on the outer layer (a top over a bra); then the one
@@ -689,10 +695,20 @@ defmodule World.People.Human do
     eyebrows =
       if level == :mid, do: [fitted(:eyebrows, Data.asset("eyebrows", o.eyebrows), points, weights, o.ground)], else: []
 
+    low = Data.asset!("eyes", "low-poly")
+
+    eyes =
+      if level == :far do
+        uv = fn i -> elem(low.mesh.uvs, i) end
+        few(:eyes, low, 48, uv, &(not cornea?(low, &1)), points, weights, o.ground)
+      else
+        fitted(:eyes, low, points, weights, o.ground)
+      end
+
     prims =
       prims ++
         [
-          fitted(:eyes, Data.asset!("eyes", "low-poly"), points, weights, o.ground),
+          eyes,
           holes(p, pts, wts, shapes, o.ground)
         ] ++
         eyebrows
@@ -700,9 +716,21 @@ defmodule World.People.Human do
     hair =
       if level == :mid and o.hair, do: [fitted(:hair, Data.asset("hair", o.hair), points, weights, o.ground)], else: []
 
+    # The hair at far: its form in few faces, in the color of the hair.
+    prims =
+      if level == :far and o.hair do
+        a = Data.asset("hair", o.hair)
+        prims ++ [few(role.(a), a, 80, nil, fn _ -> true end, points, weights, o.ground)]
+      else
+        prims
+      end
+
     colors =
-      for {c, _} <- covers,
-          do: {role.(c), %{"color" => Map.get(o.colors, c.name, c.color), "roughness" => 0.9, "metalness" => 0.0}}
+      for {c, _} <- covers do
+        spec = %{"color" => Map.get(o.colors, c.name, c.color), "roughness" => 0.9, "metalness" => 0.0}
+        # (The faces of the hair at far are seen from their two sides.)
+        {role.(c), if(level == :far and c.name == o.hair, do: Map.put(spec, "double_sided", true), else: spec)}
+      end
 
     materials =
       Map.new([
@@ -723,6 +751,61 @@ defmodule World.People.Human do
           )
 
     {Enum.sort_by(prims, & &1.material) ++ hair, materials}
+  end
+
+  # The hair and the eyes at far, in few faces. The scalp has the color of
+  # the hair, and the hair has its form, so a person is as high as at near
+  # and long hair is long. The points of the mesh in one cell of a grid
+  # become the one of them nearest to their middle, and the cells are the
+  # smallest that give `most` triangles at the most.
+  defp few(role, a, most, uv, keep, points, weights, ground) do
+    faces = Data.cached({:few, role, a.name}, fn -> few_faces(a, most, keep) end)
+    {pts, wts} = fit_points(a, points, weights)
+    mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground, [])
+  end
+
+  defp few_faces(a, most, keep) do
+    faces = a.mesh.groups |> Map.values() |> Enum.concat() |> Enum.filter(keep)
+    tris = for [a, b | rest] <- faces, t <- fan(a, [b | rest]), do: t
+    uvs = for t <- tris, {v, uv} <- t, into: %{}, do: {v, uv}
+
+    [0.05, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.5, 2.0]
+    |> Stream.map(&clustered(a.mesh.points, tris, uvs, &1))
+    |> Enum.find(&(length(&1) <= most))
+  end
+
+  # The triangles of a mesh with the points of each cell of `size` as one point.
+  defp clustered(at, tris, uvs, size) do
+    cell = fn {x, y, z} -> {floor(x / size), floor(y / size), floor(z / size)} end
+
+    one =
+      0..(tuple_size(at) - 1)
+      |> Enum.group_by(&cell.(elem(at, &1)))
+      |> Enum.flat_map(fn {_, list} ->
+        middle = list |> Enum.map(&elem(at, &1)) |> Vec.mean()
+        best = Enum.min_by(list, &Vec.len(Vec.sub(elem(at, &1), middle)))
+        for v <- list, do: {v, best}
+      end)
+      |> Map.new()
+
+    tris
+    |> Enum.map(fn t -> Enum.map(t, fn {v, _} -> one[v] end) end)
+    |> Enum.filter(&(length(Enum.uniq(&1)) == 3))
+    |> Enum.uniq_by(&Enum.sort/1)
+    |> Enum.map(fn t -> Enum.map(t, &{&1, uvs[&1]}) end)
+  end
+
+  # The soles of the shoes of a low-poly body: the shoes are only a color
+  # on its feet, so each point of the sole of a foot (at most 1.5 cm above
+  # the lowest point of the body) goes down to the ground of the shoes.
+  # Then the person stands on the ground, as at near.
+  defp soles(pts, bare, ground) when bare - ground < 0.001, do: pts
+
+  defp soles(pts, bare, ground) do
+    pts
+    |> Tuple.to_list()
+    |> Enum.map(fn {x, y, z} -> if y * 0.1 < bare + 0.015, do: {x, ground * 10, z}, else: {x, y, z} end)
+    |> List.to_tuple()
   end
 
   # The hair at near in two passes: with a cut of its alpha at 0.5 (it

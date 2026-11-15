@@ -71,6 +71,8 @@ defmodule World.Check do
   # A thing on its site (a hammock between two trees, a swing on a
   # branch or under a ceiling: `"site"` in its extras) is held by its site.
   defp stand(%Assembly{extras: %{"site" => true}}), do: :ok
+  # A person keeps its balance, with a thing in a hand too.
+  defp stand(%World.Figure{}), do: :ok
   defp stand(item), do: stands(item)
 
   # A house, a wall or a street is built on its site, a boat on the

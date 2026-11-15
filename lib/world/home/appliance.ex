@@ -42,6 +42,8 @@ defmodule World.Home.Appliance do
     "solar_panel" => {[1.13, 1.72, 0.035], "#1c2b4a"},
     "busbar" => {[0.2, 0.05, 0.04], "#b23a2e"},
     "water_tank" => {[0.64, 0.36, 0.39], "#e9e6da"},
+    "ac_indoor" => {[0.8, 0.23, 0.295], @white},
+    "ac_outdoor" => {[0.8, 0.285, 0.55], "#e3e5e1"},
     "box" => {[0.5, 0.4, 0.4], @white}
   }
 
@@ -546,6 +548,63 @@ defmodule World.Home.Appliance do
             Wall.paint(front, w / 2, h * z, {w * 0.9, 0.01}, shade(color, 0.85), %{"raise" => -0.003, "blend" => 0.004})
         )
     ] ++ [body(size, 0.0, 0.01, shade(color, 0.9))]
+  end
+
+  # The indoor unit of a split air conditioner: its back is on a wall (the
+  # project puts it there), its edges are round, and the air comes out
+  # under its front, past a vane.
+  defp kind("ac_indoor", _r, {w, d, h}, color, front) do
+    round = min(d, h) * 0.3
+
+    [
+      Wall.edit("round_box", [r4(w / 2), r4(d / 2), r4(h / 2), r4(round)], [0, 0, r4(h / 2)], color, @paint),
+      panel(front, w / 2, h * 0.13, {w * 0.86, h * 0.13}, "#34383a"),
+      Wall.box(front, w / 2, h * 0.1, {w * 0.82, 0.008, 0.03}, color, Map.put(@paint, "out", 0.004)),
+      panel(front, w * 0.86, h * 0.36, {0.03, 0.012}, "#0d1f14")
+      | seam(front, w * 0.02, w * 0.98, h * 0.3, h * 0.94)
+    ]
+  end
+
+  # The outdoor unit of a split air conditioner: a box on two rails, the
+  # round grille of its fan at the left of its front (a ring, a dark
+  # hollow and level bars, as paint), and the cover of its valves on its
+  # right side.
+  defp kind("ac_outdoor", _r, {w, d, h} = size, color, front) do
+    radius = min(w * 0.56, (h - 0.04) * 0.86) / 2
+    {s, z} = {w * 0.4, 0.04 + (h - 0.04) / 2}
+    out = %{"axis" => Wall.axis(front)}
+
+    round = fn r, color, more ->
+      Wall.edit("cylinder", [r4(r), 0.05], Wall.at(front, s, z, 0.0), color, Map.merge(out, more))
+    end
+
+    rails =
+      for sx <- [-1, 1],
+          do: Wall.edit("box", [0.025, r4(d / 2 + 0.02), 0.02], [r4(sx * w * 0.32), 0, 0.02], "#9fa3a1", @metal)
+
+    bars =
+      for i <- -3..3 do
+        up = i * radius * 0.26
+        chord = 2 * :math.sqrt(radius * radius - up * up)
+        Wall.paint(front, s, z + up, {chord, 0.012}, "#c4c7c4", %{"blend" => 0.003, "roughness" => 0.4})
+      end
+
+    [body(size, 0.04, h, color) | rails] ++
+      [
+        round.(radius + 0.014, "#c4c7c4", %{"mode" => "paint", "blend" => 0.004, "roughness" => 0.4}),
+        round.(radius, "#26292b", %{"mode" => "paint", "raise" => -0.006, "blend" => 0.006, "roughness" => 0.6})
+      ] ++
+      bars ++
+      [
+        round.(radius * 0.24, "#c4c7c4", %{"mode" => "paint", "blend" => 0.004, "roughness" => 0.4}),
+        Wall.edit(
+          "round_box",
+          [0.03, r4(d * 0.3), r4(h * 0.18), 0.01],
+          [r4(-w / 2), 0, r4(h * 0.3)],
+          shade(color, 0.92),
+          @paint
+        )
+      ]
   end
 
   defp kind("box", _r, {_w, _d, h} = size, color, _front), do: [body(size, 0.0, h, color)]

@@ -8,7 +8,7 @@ defmodule World.ApplianceTest do
 
   test "each kind gives a drawing of one part from edits, with the common size of the kind" do
     assert Appliance.kinds() ==
-             ~w(battery box busbar dishwasher dryer freezer fridge inverter microwave power_station range solar_panel tv washer water_heater water_tank)
+             ~w(ac_indoor ac_outdoor battery box busbar dishwasher dryer freezer fridge inverter microwave power_station range solar_panel tv washer water_heater water_tank)
 
     for kind <- Appliance.kinds() do
       d = Appliance.drawing(%{"kind" => kind})
@@ -27,6 +27,26 @@ defmodule World.ApplianceTest do
   end
 
   defp close?(a, b), do: abs(a - b) < 3.0e-4
+
+  test "the two units of a split air conditioner: a round grille on the outdoor unit, an outlet under the indoor unit" do
+    out = edits(%{"kind" => "ac_outdoor"})
+    # The ring, the dark hollow and the hub of the fan are paint on the front, about one point.
+    rounds = for %{"shape" => "cylinder", "mode" => "paint"} = e <- out, do: e
+    assert [%{"at" => at}, %{"at" => at, "raise" => -0.006}, %{"at" => at}] = rounds
+    assert [x, 0.1425, z] = at
+    assert x > 0 and x < 0.15 and z > 0.25 and z < 0.35
+    # Seven level bars across the grille, two rails under the body, and the cover of the valves at the right side.
+    assert length(for %{"shape" => "box", "mode" => "paint"} = e <- out, do: e) == 7
+
+    assert [%{"at" => [-0.256, 0, 0.02]}, %{"at" => [0.256, 0, 0.02]}] =
+             for(%{"shape" => "box", "metal" => 0.8} = e <- out, do: e)
+
+    assert %{"at" => [-0.4, 0, 0.165]} = List.last(out)
+
+    [body | rest] = edits(%{"kind" => "ac_indoor", "size" => [0.9, 0.2, 0.3]})
+    assert %{"shape" => "round_box", "size" => [0.45, 0.1, 0.15, 0.06], "at" => [0, 0, 0.15]} = body
+    assert Enum.count(rest, &(&1["mode"] == "paint")) == 6
+  end
 
   test "a request with no word is a plain box; the size, the color and the name of a request stay" do
     r = Appliance.request()
@@ -90,7 +110,7 @@ defmodule World.ApplianceTest do
     wrong = [
       {[], "the request of an appliance is a map"},
       {%{"watts" => 1200}, ~s(an appliance has no key "watts")},
-      {%{"kind" => "toaster"}, "the kind of an appliance is one of battery, box"},
+      {%{"kind" => "toaster"}, "the kind of an appliance is one of ac_indoor, ac_outdoor, battery, box"},
       {%{"name" => "LG"}, "the name of an appliance"},
       {%{"sources" => "a page"}, "the sources of an appliance are lines of text"},
       {%{"size" => [1, 2]}, "the size of an appliance is [wide, deep, high]"},

@@ -200,6 +200,16 @@ defmodule World.CheckTest do
       assert {:error, [{:tips, _, _}]} = Check.model(%{tip | kind: :part})
     end
 
+    test "a person keeps its balance with a thing in a hand, and a unit on a wall is held by its site" do
+      {:ok, job} = World.Orders.job(%{"blueprint" => "person", "options" => %{"right_hand" => "bucket"}}, "far")
+      person = job.item.(:far)
+      assert [_ | _] = person.props
+      assert Check.model(person) == :ok
+
+      unit = World.Detail.with(:far, &World.Appliances.Systems.mini_split/0)
+      assert unit.extras == %{"site" => true} and Check.model(unit) == :ok
+    end
+
     test "the text of each reason" do
       assert Check.message({:tips, {0.1, -0.02}, {{0.0, 0.0}, {0.05, 0.05}}}) =~ "(100, -20 mm) is not over its base"
       assert Check.message({:overlap, [{"a", "b"}, {"c", "d"}]}) == "parts are in one place: a and b, c and d"

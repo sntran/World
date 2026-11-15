@@ -476,7 +476,10 @@ houses.
   `water_heater` (a tank with its pipes), `tv`, `battery` (a label and
   two terminals), `power_station` (handles, a screen, outlets),
   `inverter` (fins), `solar_panel` (the lines of its cells), `busbar`
-  (a stud for each of its `ports`), `water_tank` and `box`. The front
+  (a stud for each of its `ports`), `water_tank`, `ac_indoor` and
+  `ac_outdoor` (the two units of a split air conditioner: the indoor
+  unit with its outlet and its vane, the outdoor unit with the round
+  grille of its fan, on two rails) and `box`. The front
   is to +y, and the thing stands on z = 0. The extras have `tags`: the
   place of the label of the real thing. A kind builds in about 1 s at
   the mid level.
@@ -1264,7 +1267,7 @@ extras `place` of the drawing move the model to its center. The kind is
 | Blueprint | Its nodes | The model of the catalog with the same triangles, joints and size |
 |---|---|---|
 | `bicycle.json` | the frame and the fork from the geometry sheet, two wheels, the crankset, the rack, the kickstand | `touring_bicycle` |
-| `scooter.json` | the frame, the panels, the lamps, the seat, the fork, the bars, the grips, the levers, the mirrors, two cast wheels, the axle bolt and nuts, the engine with its swing arm, the shock spring, the stand | `honda_vision_110` |
+| `scooter.json` | the frame, the panels, the lamps, the seat, the fork, the bars, the grips, the levers, the mirrors, two cast wheels, the axle bolt and nuts, the engine with its swing arm, the shock spring, the center stand (the joint `stand`), the side stand at the left (the joint `side_stand`, 0 to 80 degrees) | `honda_vision_110` |
 | `car.json` | the body on lofts with the arches of its wheels, the glass, the trim, the lamps, and at each corner a knuckle (it steers at the front) with its wheel | `chevy_bolt_ev` |
 | `motorcycle.json` | the cradle frame, the engine, the tank, the seat, the rear fender, the rack, the lamps, the fork, the cockpit, two wheels with wire spokes, the axle bolt and nut, the swing arm, the monoshock spring, the side stand | `royal_enfield_himalayan` |
 
@@ -1644,9 +1647,14 @@ never nearer to the body than at the fit.
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair (with each face on the
 breasts cut in sixteen, on the surface of the body: about 1,900 faces);
-far is a body of 730 faces.
+far is a body of 730 faces: a person at far is about 1,550 triangles.
 At mid and far, the faces under clothes have the mean color of the
-clothes, and at far the scalp has the color of the hair. A face under
+clothes, and each point of the sole of a foot goes down to the ground
+of the shoes: a person stands on z = 0 at each level. At far the scalp
+has the color of the hair, and the hair has its form in 80 triangles at
+the most (the points of its mesh in one cell of a grid become one
+point), so a person is as high as at near (3 cm less at the most) and
+long hair is long. The eyes at far have 24 triangles. A face under
 two items has the color of the item on the outer layer, then of the
 item that covers the most of its points; with the same count, the item
 first in `clothes`: put a jacket before the shirt under it. An item that fits to a helper of the base mesh (the

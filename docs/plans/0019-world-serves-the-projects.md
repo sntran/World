@@ -256,12 +256,28 @@ as a reference; no test builds them (the commit `b6905ce`).
    one time; each file has a copy in gzip; the line has two classes. A
    van at the mid level: 6.2 s the first time, 0.18 s after it.
 5. **The rule of an appliance. Done** (`World.Home.Appliance`, the MCP
-   tool `draw_appliance`): 16 kinds, each a body of the size of the
+   tool `draw_appliance`): 18 kinds, each a body of the size of the
    request with the details of the real thing, in about 1 s at the mid
    level. Open: the other kinds of DIY (its catalog has 70), a model of
    one maker (the front of each power station), and doors that open.
 6. **The faults of Vũng Tàu** (section 3.2), and the far levels in
-   their budgets.
+   their budgets. Done:
+   - A person stands on z = 0 at each level (with shoes it was 1 to 3
+     cm above the ground at mid and far: the shoes are only a color on
+     the feet there, so the soles of the feet now go down to the
+     ground).
+   - A person at far has the form of its hair (each kind, in 80
+     triangles at the most), so it is as high as at near (it was 1.2%
+     short) and long hair is long; the eyes have 24 triangles (172
+     before). A person at far is about 1,550 triangles.
+   - The scooter has a side stand (the joint `side_stand`).
+   - A person with a thing in a hand, and the indoor unit of the
+     catalog (it hangs on a wall), pass the check of an order.
+   - The outdoor unit of a split air conditioner is a kind of
+     `draw_appliance` (`ac_outdoor`, and `ac_indoor`).
+
+   Open: a scooter at far in 500 triangles, a house in 300, and the
+   trees in the budgets of the game.
 7. **The server on the mini PC. Done in World** (`docs/factory.md`,
    "The server on a computer"): the native server has each route that
    the Worker had, the pages of the site, the store on its disk and the

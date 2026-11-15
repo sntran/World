@@ -71,6 +71,10 @@ defmodule World.VehiclesTest do
 
     assert ~w(mechanic molder smith upholsterer welder wheelwright) -- built("scooter", %{}, Path.join(dir, "s")) == []
 
+    # The scooter has a center stand and a side stand: on each, the order is true.
+    for joints <- [%{"stand" => 92}, %{"side_stand" => 80}],
+        do: assert({:ok, _} = Orders.place(%{"blueprint" => "scooter", "joints" => joints}, "http://x"))
+
     # The Sport version of the scooter: a blueprint of a project in the
     # order, on a front wheel of 16 in.
     sport = "priv/references/blueprints/scooter_sport.json" |> File.read!() |> JSON.decode!()

@@ -19,6 +19,9 @@ defmodule World.Vehicles.HondaVision do
   @steer_axis {0.0, -0.447, 0.894}
   @steer_at {0.0, 1.328, 0.703}
 
+  # The pivot of the side stand: at the left, under the floor.
+  @side_stand {-0.15, 0.86, 0.2}
+
   @sources [
     "Honda Vision 110 (2021, Việt Nam): length 1871 mm, width 686 mm, height 1101 mm, wheelbase 1255 mm, seat 761 mm.",
     "Tires: 80/90-14 at the front, 90/90-14 at the back; a disc brake of 190 mm at the front.",
@@ -38,6 +41,13 @@ defmodule World.Vehicles.HondaVision do
     |> Assembly.add("fork", fork(), at: "steer", port: "steer", kind: :hinge, role: :steer, limits: [-38, 38])
     |> Assembly.add("engine", engine(), at: "pivot", port: "pivot", kind: :hinge, role: :suspension, limits: [-4, 8])
     |> Assembly.add("stand", stand(), at: "stand", port: "pivot", kind: :hinge, role: :stand, limits: [0, 92])
+    |> Assembly.add("side_stand", side_stand(),
+      at: "side_stand",
+      port: "pivot",
+      kind: :hinge,
+      role: :stand,
+      limits: [0, 80]
+    )
   end
 
   # The same port on two parts: the child stays where its shapes are.
@@ -72,7 +82,8 @@ defmodule World.Vehicles.HondaVision do
         same("seat", {0.0, 0.88, 0.73}, {-1, 0, 0}, {0, 0, 1}),
         same("steer", @steer_at, @steer_axis, {0.0, 0.894, 0.447}),
         same("pivot", @pivot, {1, 0, 0}, {0, 0, 1}),
-        same("stand", {0.0, 0.75, 0.173}, {1, 0, 0}, {0, 0, 1})
+        same("stand", {0.0, 0.75, 0.173}, {1, 0, 0}, {0, 0, 1}),
+        same("side_stand", @side_stand, {1, 0, 0}, {0, 0, 1})
       ],
       inside: true,
       sources: ["An underbone frame of steel tube, 48 mm."]
@@ -336,5 +347,14 @@ defmodule World.Vehicles.HondaVision do
 
     foot = Shape.sweep([{-0.12, 0.577, 0.163}, {0.12, 0.577, 0.163}], 0.011, :black, sides: 8)
     Part.new("center_stand_vision", :stand, legs ++ [foot], [same("pivot", {0.0, 0.75, 0.173}, {1, 0, 0}, {0, 0, 1})])
+  end
+
+  # The side stand at the left: at rest along the floor, at 80 degrees down
+  # on the ground. It is shorter than its pivot is high, so the scooter
+  # leans on it to the left.
+  defp side_stand do
+    leg = Shape.sweep([@side_stand, {-0.16, 0.68, 0.2}], 0.01, :black, sides: 8)
+    foot = Shape.box({-0.18, 0.665, 0.193}, {-0.14, 0.705, 0.207}, :black)
+    Part.new("side_stand_vision", :stand, [leg, foot], [same("pivot", @side_stand, {1, 0, 0}, {0, 0, 1})])
   end
 end

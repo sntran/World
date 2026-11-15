@@ -754,4 +754,40 @@ defmodule World.HumanTest do
       assert Data.dir() =~ "priv/makehuman"
     end
   end
+
+  test "each level of a person stands on the ground and is as high: soles under the shoes, and the form of the hair at far" do
+    scene = fn opts, level -> Build.scene(Detail.with(level, fn -> Human.person("p", opts) end), level: level) end
+
+    for opts <- [
+          [clothes: ["mindfront_shoes_biker_boots_male"]],
+          [gender: 0.0, hair: "bob01"],
+          [hair: "afro01"],
+          [hair: nil, clothes: []]
+        ] do
+      [{_, near} | low] = for level <- [:near, :mid, :far], do: Scene.bounds(scene.(opts, level))
+
+      # The feet are on the ground (the shoes are a color on the feet at mid and far: 2.9 cm for these boots),
+      # and the top is at most 3 cm lower (it was 1.2 % with no hair at far).
+      for {lo, hi} <- low do
+        assert_in_delta elem(lo, 2), 0.0, 0.004
+        assert elem(near, 2) - elem(hi, 2) < 0.03 and elem(hi, 2) <= elem(near, 2) + 0.001
+      end
+    end
+
+    # A person at far is about 1 500 triangles: the eyes in 24, the hair in 80 at the most.
+    far = scene.([gender: 0.0, hair: "long01"], :far)
+    assert Scene.triangles(far) < 1_600
+    prims = Enum.flat_map(far.nodes, & &1.primitives)
+    assert [eyes] = Enum.filter(prims, &(&1.material == :eyes))
+    assert length(eyes.indices) == 72 and length(eyes.uvs) == length(eyes.positions)
+    # Long hair is long: a primitive in the color of the hair goes down from the head to the back, and its
+    # material is seen from the two sides.
+    assert [_scalp, hair] = Enum.filter(prims, &(&1.material == :color_long01))
+    assert div(length(hair.indices), 3) in 40..80
+    zs = Enum.map(hair.positions, &elem(&1, 2))
+    {_, {_, _, top}} = Scene.bounds(far)
+    assert Enum.max(zs) > top - 0.04 and Enum.min(zs) < top - 0.4
+    assert far.materials[:color_long01]["double_sided"]
+    refute far.materials[:skin]["double_sided"]
+  end
 end
