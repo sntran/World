@@ -287,9 +287,26 @@ bamboo, a banana plant, a tree, a woman with a nón lá, a basket boat in
 two looks, a house). It shows three looks: real, soft, and flat faces.
 The owner chooses the look.
 
-Step T2: five things of Tre in that look, as GLB files with their
-moves: the child (World has no child: a person is 25 years or more),
-the buffalo calf Nghé, a house on stilts, an areca palm, and a prop.
+The owner (2026-11-15): "Tre is about the old Vietnam. Buildings there
+have different look than what World currently has, so World need to
+support them. ... I want real, soft faces, with kids. There are a lot
+of kids in that game."
+
+Step T2 (in progress):
+
+- **Children. Done:** a person has an age from 1 to 90 years, from the
+  shapes of a baby and of a child of MakeHuman (48 targets, CC0, 1.7
+  MB). A girl of 7 is about 1.2 m high, with the proportions of a
+  child. Open: the clothes of old Việt Nam (a child wears the clothes
+  of an adult of today), and a softer face.
+- **The buildings of old Việt Nam. Done for a house:**
+  `World.Village.House` makes a house of a village from a few words: a
+  house on stilts with a roof of thatch, or a house of three or five
+  bays on a low base with a roof of tiles that curves, with its corners
+  lifted. The mid level of a house builds in 9 to 13 s. Open: the
+  communal house (đình), a gate, a well, a fence of bamboo, a school.
+- **Open:** the buffalo calf Nghé, an areca palm, the props, and each
+  thing with its moves.
 
 ### 7.2 Humans Must Die: the Earth
 

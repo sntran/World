@@ -37,7 +37,12 @@ Two rules give a drawing from a few words, for the kind 3:
 - a house of a street: the MCP tool `draw_house`, and `plan_street` for
   a row (`docs/format.md`, "A house and a street from rules");
 - a building (a hotel, an office, a villa): the MCP tool
-  `draw_building`.
+  `draw_building`;
+- a house of a village of old Việt Nam (posts, a porch, stilts, a roof
+  of thatch or tiles that curves): the MCP tool `draw_village_house`.
+
+A person (`person`) has an age from 1 to 90 years: a child has its own
+size and proportions.
 
 ## An order
 

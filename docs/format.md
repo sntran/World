@@ -452,8 +452,22 @@ houses.
    "roof": {"kind": "tiles", "high": 3.0},
    "letters": [{"text": "GRAND HOTEL", "z": 12.1}]}
   ```
+- **A house of a village of old Việt Nam** (`World.Village.House`;
+  `docs/plans/0019-world-serves-the-projects.md`, 7.1): a frame of
+  round posts of wood, `bays` in a row (1 to 7, each `bay` wide), a
+  `porch` along the front, and a large roof with four slopes that sag,
+  with its corners lifted (`curve`, 0 to 1). The house is on a low base
+  of earth with two steps, or on `stilts` with a stair. The `roof` is
+  `thatch` (steep) or `tiles` (with rows); the `wall` is `wood`
+  (planks), `bamboo` (woven) or `earth`. The front wall has a door in
+  the middle bay (two for an even count of bays) and a window with
+  upright bars in each other bay. `sizes/1` gives the frame, the floor,
+  the eaves and the ridge. The drawing has four parts: the frame
+  (`_khung`), the two long slopes with the ridge and the hips (`_mai`),
+  the two end slopes (`_dau_hoi`) and the ground (`_nen`).
 - **The tools of the MCP server:** `draw_house` (the argument `house`:
-  a request), `draw_building` (the argument `building`: a request) and
+  a request), `draw_building` (the argument `building`: a request),
+  `draw_village_house` (the argument `house`: a request) and
   `plan_street` (the argument `street`: `seed`, `road`,
   `count` or `length`, `depth`, `sidewalk`, `lots`, and `types`,
   `families`, `widths` as lists of `[value, weight]`).

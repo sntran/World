@@ -265,6 +265,23 @@ defmodule World.MCP do
       "annotations" => @read
     },
     %{
+      "name" => "draw_village_house",
+      "title" => "Draw a house of a village of old Việt Nam",
+      "description" =>
+        "Gives the drawing of a house of a village of old Việt Nam from a request of a few words: a frame of round posts, bays in a row, a porch, a low base or stilts with a stair, and a large roof of thatch or tiles with four slopes that curve. The rules of World.Village.House make it. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "house" => %{
+            "type" => "object",
+            "description" =>
+              "The request: name; sources; bays (1 to 7); bay (the width of a bay, m); deep (m); porch (its depth, m; 0: none); stilts (the height of the floor, m; 0: on a low base); wall (wood, bamboo or earth); roof (thatch or tiles); curve (0 to 1: the sag of the slopes and the lift of the corners); eaves (m); age (0 to 1). Each key has a default."
+          }
+        }
+      },
+      "annotations" => @read
+    },
+    %{
       "name" => "plan_street",
       "title" => "Plan one side of a street of Vũng Tàu",
       "description" =>
@@ -454,6 +471,12 @@ defmodule World.MCP do
 
   defp call("draw_building", args, _origin) do
     result(%{"drawing" => World.Town.Building.drawing(Map.get(args, "building", %{}))})
+  rescue
+    e in ArgumentError -> wrong(e.message)
+  end
+
+  defp call("draw_village_house", args, _origin) do
+    result(%{"drawing" => World.Village.House.drawing(Map.get(args, "house", %{}))})
   rescue
     e in ArgumentError -> wrong(e.message)
   end

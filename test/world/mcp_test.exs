@@ -37,7 +37,7 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture draw_house draw_building plan_street)
+             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture draw_house draw_building draw_village_house plan_street)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()
@@ -62,6 +62,14 @@ defmodule World.MCPTest do
     assert tool("draw_building", %{})["structuredContent"]["drawing"]["name"] == "toa_nha"
     wrong = tool("draw_building", %{"building" => %{"storeys" => 0}})
     assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "from 1 to 12 storeys"
+
+    # A house of a village of old Việt Nam (plan 0019).
+    request = %{"stilts" => 1.8, "roof" => "tiles"}
+    drawing = tool("draw_village_house", %{"house" => request})["structuredContent"]["drawing"]
+    assert drawing == World.Village.House.drawing(request)
+    assert tool("draw_village_house", %{})["structuredContent"]["drawing"]["name"] == "nha_xua"
+    wrong = tool("draw_village_house", %{"house" => %{"bays" => 0}})
+    assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "from 1 to 7 bays"
 
     # A street: the plan, and the drawing of a row of 5 houses at the most.
     r = tool("plan_street", %{"street" => %{"seed" => 4}})
