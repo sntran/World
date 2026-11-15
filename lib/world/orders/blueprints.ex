@@ -7,6 +7,7 @@ defmodule World.Orders.Blueprints do
   - `traveler`: a person on a vehicle of Phượt (`World.People.traveler/2`);
   - `exercise`: a group at a morning of exercise (`World.People.exercise/2`);
   - `animal`: an animal of a species (`World.Animals.animal/2`);
+  - `plant`: a plant of a species of the nursery (`World.Plants`);
   - `drawing`: a model in the data of the order (`World.Drawing`);
   - `house`: a house of `World.Buildings`;
   - `lot_house`: a whole house on a lot of Vũng Tàu (`World.Buildings.Lot`);
@@ -80,6 +81,7 @@ defmodule World.Orders.Blueprints do
             traveler(),
             exercise(),
             animal(),
+            plant(),
             house(),
             lot_house(),
             van(),
@@ -260,6 +262,39 @@ defmodule World.Orders.Blueprints do
       for {a, i} <- Enum.with_index(o["animations"]),
           a not in known,
           do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
+  end
+
+  # --- A plant of the nursery -----------------------------------------------------------------
+
+  defp plant do
+    %Blueprint{
+      name: "plant",
+      doc:
+        "A plant of the nursery (World.Plants), from the rules of its species: coconut (the coconut palm), banana, bamboo (a clump of thorny bamboo) or frangipani. The levels come from the rules: far away a frond or a spray of leaves is one card. For a count of triangles of a project, ask for the file light with triangles.",
+      options: [
+        option("species", :choice, default: "coconut", values: World.Plants.species()),
+        option("height", :number,
+          default: nil,
+          min: 0.5,
+          max: 30.0,
+          unit: "m",
+          doc: "The height (the common height of the species by default)."
+        ),
+        option("seed", :integer, default: 1, min: 0, max: 1_000_000, doc: "The small changes from plant to plant."),
+        option("month", :integer, default: 6, min: 1, max: 12, doc: "The month, for the flowers of a frangipani.")
+      ],
+      build: fn o ->
+        opts = [seed: o["seed"]] ++ if(o["height"], do: [height: o["height"]], else: [])
+
+        case o["species"] do
+          "coconut" -> World.Plants.coconut(opts)
+          "banana" -> World.Plants.banana(opts)
+          "bamboo" -> World.Plants.bamboo(opts)
+          "frangipani" -> World.Plants.frangipani(opts ++ [month: o["month"]])
+        end
+      end,
+      sources: ["The numbers of each species are in priv/plants/species.json, each with its source."]
+    }
   end
 
   # --- A group at a morning of exercise ------------------------------------------------------

@@ -276,8 +276,19 @@ as a reference; no test builds them (the commit `b6905ce`).
    - The outdoor unit of a split air conditioner is a kind of
      `draw_appliance` (`ac_outdoor`, and `ac_indoor`).
 
-   Open: a scooter at far in 500 triangles, a house in 300, and the
-   trees in the budgets of the game.
+   - The budgets of the game: the file `light` of an order (a
+     primitive for each role, no image) takes `triangles` and `wrap`.
+     A scooter at far is 500 triangles with a wrap (it was 4,120; a
+     collapse alone breaks it into pieces, so the wrap makes one
+     closed skin first). A person at far is about 1,550. A house of
+     `lot_house` at far is 124, and a house of `tube_house` 276.
+   - The blueprint `plant` (coconut, banana, bamboo, frangipani). A
+     coconut palm at far is 204 triangles with `triangles=204`.
+
+   Open: the look of the 14 kinds of trees of the game (its plan 0020)
+   from World, with the near level in its budget (a coconut palm at
+   near is 30,004 triangles; the game has 12,536), and a bàng tree
+   from a rule (the bàng tree of World is one drawing of edits).
 7. **The server on the mini PC. Done in World** (`docs/factory.md`,
    "The server on a computer"): the native server has each route that
    the Worker had, the pages of the site, the store on its disk and the

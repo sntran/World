@@ -134,4 +134,78 @@ defmodule World.FlatTest do
     assert byte_size(less) < byte_size(track)
     assert {:error, [%{"path" => "triangles"}]} = Orders.build(order, "far", "flat", triangles: 5)
   end
+
+  test "the light look: a primitive for each role with its material, no color at the points; a budget keeps each role" do
+    scene = %Scene{
+      name: "thing",
+      # (A material with an image and no color has the color of the palette for its role.)
+      materials: %{steel: %{"color" => [10, 20, 30], "roughness" => 0.4, "image" => "x"}, skin: %{"image" => "y"}},
+      nodes: [
+        %Scene.Node{name: "a", primitives: [triangle(:steel, 0.0), triangle(:glass, 1.0), triangle(:skin, 2.0)]},
+        %Scene.Node{name: "b", primitives: [triangle(:steel, 3.0)]}
+      ]
+    }
+
+    light = Flat.scene(scene, roles: true)
+    assert [%Scene.Node{name: "thing", primitives: [glass, skin, steel]}] = light.nodes
+    assert [glass.material, skin.material, steel.material] == [:glass, :skin, :steel]
+    assert glass.colors == nil and length(steel.positions) == 6 and Flat.faces(light) == 4
+    [r, g, b] = World.GLB.palette()["skin"]["color"]
+
+    assert light.materials == %{
+             steel: %{"color" => [10, 20, 30], "roughness" => 0.4},
+             skin: %{"color" => [r, g, b]}
+           }
+
+    # The flat look of the same scene has the color of the palette for the skin too.
+    [p] = hd(Flat.scene(scene).nodes).primitives
+    assert Enum.at(p.colors, 6) == {r, g, b}
+
+    person = Build.scene(Detail.with(:far, fn -> World.People.Human.person("p", age: 9) end), level: :far)
+    roles = fn s -> s.nodes |> hd() |> Map.fetch!(:primitives) |> Enum.map(& &1.material) end
+    all = Flat.scene(person, roles: true)
+    small = Flat.scene(person, roles: true, budget: 600)
+    assert Flat.faces(all) == Scene.triangles(person) and Flat.faces(small) <= 600
+    assert roles.(small) == roles.(all) and :skin in roles.(all) and length(roles.(all)) >= 4
+    assert <<"glTF", _::binary>> = World.GLB.encode(small)
+  end
+
+  test "a wrap: one closed skin round a model of many thin parts, in a small budget, with the roles of the model" do
+    order = %{"blueprint" => "scooter"}
+    {:ok, job} = Orders.job(order, "far")
+    scooter = job.scene.(job.item.(:far), [])
+    assert Scene.triangles(scooter) > 3_000
+
+    wrapped = Flat.scene(scooter, roles: true, wrap: true, budget: 500)
+    assert Flat.faces(wrapped) <= 500 and Flat.faces(wrapped) > 300
+    prims = hd(wrapped.nodes).primitives
+    assert :paint in Enum.map(prims, & &1.material) and length(prims) >= 4
+    # The skin is as long and as high as the model (2 cells of the cast at the most), and it is closed: each
+    # edge is in two faces. A part that is thinner than a cell (the ends of the bars, the mirrors) is not in it.
+    {{x0, y0, _}, {x1, y1, z1}} = Scene.bounds(scooter)
+    {{u0, v0, w0}, {u1, v1, w1}} = Scene.bounds(wrapped)
+    for {a, b} <- [{y0, v0}, {y1, v1}, {z1, w1}], do: assert_in_delta(a, b, 0.09)
+    assert u0 >= x0 and u1 <= x1 and u1 - u0 > 0.35 and w0 >= 0.0 and w0 < 0.09
+    key = fn {x, y, z} -> {round(x * 1.0e5), round(y * 1.0e5), round(z * 1.0e5)} end
+
+    edges =
+      for p <- prims, [a, b, c] <- Enum.chunk_every(p.positions, 3), {u, v} <- [{a, b}, {b, c}, {c, a}] do
+        Enum.sort([key.(u), key.(v)])
+      end
+
+    assert edges |> Enum.frequencies() |> Map.values() |> Enum.uniq() == [2]
+
+    # The files of an order: light with a budget and a wrap, flat with a wrap; a wrap that is not true or false.
+    assert "light" in Orders.files()
+    {:ok, light} = Orders.build(order, "far", "light", triangles: 500, wrap: true)
+    json = World.GLBHelper.json(light)
+    assert [%{"primitives" => primitives}] = json["meshes"]
+    assert length(primitives) >= 4 and Enum.all?(primitives, &(Map.keys(&1["attributes"]) == ~w(NORMAL POSITION)))
+    assert length(json["nodes"]) == 1 and not Map.has_key?(json, "images") and not Map.has_key?(json, "skins")
+    {:ok, flat} = Orders.build(order, "far", "flat", triangles: 500, wrap: true)
+    assert [%{"primitives" => [%{"attributes" => %{"COLOR_0" => _}}]}] = World.GLBHelper.json(flat)["meshes"]
+
+    assert {:error, [%{"path" => "wrap", "message" => "must be true or false"}]} =
+             Orders.build(order, "far", "light", wrap: 1)
+  end
 end

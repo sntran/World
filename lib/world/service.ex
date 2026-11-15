@@ -49,7 +49,8 @@ defmodule World.Service do
 
   - `GET /o/HASH.glb` (and `.mid.glb`, `.far.glb`, `.parts.json`,
     `.receipt.json`, `.solids.json`, `.log.json`, `.replay.glb`, and
-    `.flat.glb`, `.mid.flat.glb`, `.far.flat.glb`): a file
+    `.flat.glb`, `.mid.flat.glb`, `.far.flat.glb`, `.light.glb`,
+    `.mid.light.glb`, `.far.light.glb`): a file
     of an order of `POST /orders`. `GET /m/BLUEPRINT.glb?OPTION=VALUE`
     (and the other files): a file of an order in the URL
     (`color.ROLE`, `joint.NAME`, `target.LIMB=X,Y,Z`, `OPTION.FIELD`).
@@ -60,7 +61,8 @@ defmodule World.Service do
     once, with the header `x-world-stale`, and the node builds it again
     one time. The answer has an ETag (304 for the same one), and it is
     in gzip for a client that accepts gzip. A file of the flat look
-    takes `?triangles=N`: the most faces of its mesh.
+    or of the light look takes `?triangles=N` (the most faces of its
+    mesh) and `?wrap=1` (one closed skin round the model).
   - Each other `GET`: a file of the site (the application environment
     `:site`, from `WORLD_SITE`: the folder that `scripts/site.sh`
     makes), with `index.html` for `/`.
@@ -85,6 +87,9 @@ defmodule World.Service do
     {".mid.flat.glb", "mid", "flat"},
     {".far.flat.glb", "far", "flat"},
     {".flat.glb", "near", "flat"},
+    {".mid.light.glb", "mid", "light"},
+    {".far.light.glb", "far", "light"},
+    {".light.glb", "near", "light"},
     {".mid.glb", "mid", "glb"},
     {".far.glb", "far", "glb"},
     {".parts.json", "near", "parts"},
@@ -103,7 +108,8 @@ defmodule World.Service do
     "parts" => "application/json",
     "receipt" => "application/json",
     "solids" => "application/json",
-    "flat" => "model/gltf-binary"
+    "flat" => "model/gltf-binary",
+    "light" => "model/gltf-binary"
   }
 
   get "/blueprints" do
@@ -400,7 +406,7 @@ defmodule World.Service do
       {"target." <> limb, value}, order ->
         put_in(order, [Access.key("targets", %{}), limb], Enum.map(String.split(value, ","), &number/1))
 
-      {key, _}, order when key in ["class", "triangles"] ->
+      {key, _}, order when key in ["class", "triangles", "wrap"] ->
         order
 
       {key, value}, order ->
@@ -434,10 +440,13 @@ defmodule World.Service do
   # it in its line and keeps it. A file of an older version of World goes
   # out at once, and the node builds it again one time.
   defp serve(conn, order, level, kind) do
-    # (The flat look with a budget of triangles is a file of its own in the store.)
+    # (The flat or the light look with a budget of triangles or a wrap is a file of its own in the store.)
     conn = fetch_query_params(conn)
-    count = if kind == "flat", do: conn.query_params["triangles"]
-    {file, opts} = if count, do: {"flat.#{count}", [triangles: whole(count)]}, else: {kind, []}
+    small? = kind in ["flat", "light"]
+    count = if small?, do: conn.query_params["triangles"]
+    wrap? = small? and conn.query_params["wrap"] in ["1", "true"]
+    opts = if(count, do: [triangles: whole(count)], else: []) ++ if(wrap?, do: [wrap: true], else: [])
+    file = Enum.join([kind] ++ if(count, do: [count], else: []) ++ if(wrap?, do: ["wrap"], else: []), ".")
 
     case Orders.check(order) do
       {:error, errors} ->

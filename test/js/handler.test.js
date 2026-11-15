@@ -14,6 +14,8 @@ test('the name and the file of a path', () => {
   assert.equal(split('van.solids.json')[1][2], 'solids');
   assert.deepEqual(split('van.far.flat.glb').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['far', 'flat']]);
   assert.deepEqual(split('van.flat.glb').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['near', 'flat']]);
+  assert.deepEqual(split('van.far.light.glb').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['far', 'light']]);
+  assert.deepEqual(split('van.light.glb').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['near', 'light']]);
   assert.equal(split('van.log.json')[1][2], 'log');
   assert.deepEqual(split('van.replay.glb').map((x, i) => (i ? x[2] : x)), ['van', 'replay']);
   assert.equal(split('.glb'), null);

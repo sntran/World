@@ -15,6 +15,34 @@ defmodule World.NurseryTest do
     end
   end
 
+  test "the blueprint plant: an order of a species with its height, and the light file in the triangles of a project" do
+    alias World.Orders
+    assert "plant" in Orders.Blueprints.names()
+
+    for species <- Plants.species() do
+      {:ok, job} = Orders.job(%{"blueprint" => "plant", "options" => %{"species" => species}}, "far")
+      item = job.item.(:far)
+      assert item.kind == :plant and item.extras["species"] == species
+      assert item.extras["height"] == Plants.number(species, "height")
+    end
+
+    order = %{"blueprint" => "plant", "options" => %{"height" => 9, "seed" => 4}}
+
+    assert {:ok, %{"order" => %{"options" => %{"species" => "coconut", "month" => 6}}}} =
+             Orders.place(order, "http://x")
+
+    {:ok, job} = Orders.job(order, "far")
+    assert job.item.(:far).extras["height"] == 9
+    # A coconut palm at far in the 204 triangles of Vũng Tàu, with its two roles.
+    {:ok, light} = Orders.build(order, "far", "light", triangles: 204)
+    assert [%{"primitives" => [_, _] = primitives}] = World.GLBHelper.json(light)["meshes"]
+    counts = for p <- primitives, do: div(Enum.at(World.GLBHelper.json(light)["accessors"], p["indices"])["count"], 3)
+    assert Enum.sum(counts) <= 204 and Enum.sum(counts) > 120
+
+    assert {:error, [%{"path" => "options.species"}]} =
+             Orders.check(%{"blueprint" => "plant", "options" => %{"species" => "oak"}})
+  end
+
   test "the far level of a palm has less than 500 faces; a taller palm is taller" do
     far = Build.scene(Detail.with(:far, &Plants.coconut/0), level: :far)
     assert Scene.triangles(far) < 500

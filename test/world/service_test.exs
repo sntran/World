@@ -64,7 +64,7 @@ defmodule World.ServiceTest do
     assert Plug.Conn.get_resp_header(replay, "content-type") == ["model/gltf-binary"]
     assert <<"glTF", _::binary>> = replay.resp_body
 
-    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt, solids, flat"}] =
+    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt, solids, flat, light"}] =
              json(call(:post, "/build?file=zip", @strut))["errors"]
 
     assert [%{"path" => "level"}] = json(call(:post, "/build?level=huge", @strut))["errors"]
@@ -223,6 +223,18 @@ defmodule World.ServiceTest do
     assert less.status == 200 and byte_size(less.resp_body) < byte_size(flat.resp_body)
     assert header(less, "x-world-order") == header(flat, "x-world-order")
     assert [%{"path" => "triangles"}] = json(call(:get, "/m/strut.far.flat.glb?length=0.36&triangles=many"))["errors"]
+
+    # The light look (a primitive for each role), and a wrap: each a file of its own in the store, of one order.
+    light = call(:get, "/m/strut.far.light.glb?length=0.36")
+    assert light.status == 200 and header(light, "content-type") == "model/gltf-binary"
+    assert header(light, "x-world-order") == header(flat, "x-world-order")
+    wrap = call(:get, "/m/strut.far.light.glb?length=0.36&triangles=60&wrap=1")
+    assert wrap.status == 200 and wrap.resp_body != light.resp_body
+    assert header(wrap, "x-world-order") == header(flat, "x-world-order")
+    hash = header(flat, "x-world-order")
+    assert {:ok, _} = World.Files.get(hash, "far", "light.60.wrap")
+    assert {:ok, _} = World.Files.get(hash, "far", "light")
+    assert {:ok, _} = World.Files.get(hash, "far", "flat.40")
     assert call(:get, "/m/strut.txt?length=0.3").status == 404
     assert call(:get, "/m/.glb").status == 404
   end

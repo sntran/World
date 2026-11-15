@@ -27,7 +27,7 @@ defmodule World.Orders do
   alias World.Orders.{Blueprint, Blueprints, Store}
   @keys ~w(blueprint options colors joints targets)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
-  @files ~w(glb log replay parts receipt solids flat)
+  @files ~w(glb log replay parts receipt solids flat light)
 
   @doc "The names of the levels of detail."
   def levels, do: Map.keys(@levels) |> Enum.sort()
@@ -173,7 +173,7 @@ defmodule World.Orders do
 
   # The URL of each file of a placed order: the suffix of /o/HASH (the
   # names that the Worker serves, handler.js), the level and the file.
-  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json flat.glb mid.flat.glb far.flat.glb)
+  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json flat.glb mid.flat.glb far.flat.glb light.glb mid.light.glb far.light.glb)
 
   @doc """
   Place an order (`POST /orders`, and the tool `place_order` of
@@ -222,7 +222,13 @@ defmodule World.Orders do
     from edits is built with the look `flat` of each of its sculptures
     (the color of each face is the color of its edits). With the option
     `triangles` (12 to 200,000), the mesh has that count of faces at the
-    most.
+    most. With the option `wrap`, the mesh is one closed skin round the
+    whole model (a cast of the model in a grid): for a model of many
+    thin parts in a small budget (a scooter in 500 triangles).
+  - `"light"`: the model at the level with the light look, as a GLB
+    (`World.Flat`, `roles: true`): one mesh with a primitive for each
+    role, no image and no skin, for a project that gives each role its
+    own material. It takes `triangles` and `wrap` too.
   - `"solids"`: the simple solids of the model in JSON (`World.Solids`):
     the shapes of a drawing from edits with no build, or one box for
     each node and material of another model.
@@ -233,8 +239,9 @@ defmodule World.Orders do
     with {:ok, order} <- check(order),
          {:ok, lvl} <- level(level),
          :ok <- file(file),
-         :ok <- triangles(opts[:triangles]) do
-      job = Map.put(new_job(order, lvl), :triangles, opts[:triangles])
+         :ok <- triangles(opts[:triangles]),
+         :ok <- wrap(opts[:wrap]) do
+      job = Map.merge(new_job(order, lvl), %{triangles: opts[:triangles], wrap: opts[:wrap] == true})
       # The item is a function: a construction makes it, so the memory
       # holds one item only (the edge has 128 MB).
       item = fn -> job.item.(lvl) end
@@ -402,8 +409,11 @@ defmodule World.Orders do
         item.()
       end
 
-    GLB.encode(World.Flat.scene(job.scene.(item, []), budget: job.triangles))
+    GLB.encode(World.Flat.scene(job.scene.(item, []), budget: job.triangles, wrap: job.wrap))
   end
+
+  defp make("light", _order, _lvl, item, job),
+    do: GLB.encode(World.Flat.scene(job.scene.(item.(), []), budget: job.triangles, wrap: job.wrap, roles: true))
 
   defp make("solids", _order, _lvl, item, job) do
     solids =
@@ -462,6 +472,9 @@ defmodule World.Orders do
   defp triangles(nil), do: :ok
   defp triangles(n) when is_integer(n) and n >= 12 and n <= 200_000, do: :ok
   defp triangles(_n), do: {:error, [%{"path" => "triangles", "message" => "must be a whole number from 12 to 200000"}]}
+
+  defp wrap(wrap) when wrap in [nil, true, false], do: :ok
+  defp wrap(_wrap), do: {:error, [%{"path" => "wrap", "message" => "must be true or false"}]}
 
   defp file(file) do
     if file in @files,

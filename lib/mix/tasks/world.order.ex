@@ -14,6 +14,7 @@ defmodule Mix.Tasks.World.Order do
   `HASH.parts.json`, `HASH.receipt.json` and `HASH.solids.json` (the
   simple solids of the model, `World.Solids`), and the flat look of each
   level (`HASH.flat.glb`, `HASH.mid.flat.glb`, `HASH.far.flat.glb`,
+  and the light look: `HASH.light.glb`, `HASH.mid.light.glb`, `HASH.far.light.glb`,
   `World.Flat`). A wrong order stops the task
   with each error.
   """
@@ -38,11 +39,12 @@ defmodule Mix.Tasks.World.Order do
 
     files =
       for {level, ext} <- [{"near", ""}, {"mid", ".mid"}, {"far", ".far"}],
-          file <- if(level == "near", do: World.Orders.files(), else: ["glb", "flat"]) do
+          file <- if(level == "near", do: World.Orders.files(), else: ["glb", "flat", "light"]) do
         name =
           case file do
             "glb" -> "#{hash}#{ext}.glb"
             "flat" -> "#{hash}#{ext}.flat.glb"
+            "light" -> "#{hash}#{ext}.light.glb"
             "replay" -> "#{hash}.replay.glb"
             _ -> "#{hash}.#{file}.json"
           end

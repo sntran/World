@@ -27,6 +27,7 @@ Use the first kind that can make the thing.
 | 3. A drawing of edits | One thing with a free form: a statue, a boat, a hat | Parts, each a list of simple shapes that add, take away or paint (`docs/format.md`, "A sculpture") |
 
 The blueprints by name: `person`, `traveler`, `exercise`, `animal`,
+`plant`,
 `scooter`, `motorcycle`, `car`, `bicycle`, `van`, `house`, `lot_house`,
 `tube_house`, `tower`, `statue`, `extrusion`, `strut`, `l_track`.
 `GET /blueprints` (or the MCP tool `get_blueprint`) gives the options
@@ -155,7 +156,7 @@ grid: `POST /earth/heights` with `{"points": [[latitude, longitude],
 in 21 ms). From a checkout: `World.Earth.heights/1`. Put the source of
 the answer in the credits of the project.
 
-## A project that cannot draw a GLB
+## A small file, for many copies or for a project with no images
 
 - **`solids`** (`HASH.solids.json`, the file `solids` of an order): the
   simple shapes of the model as a list, for a project that draws boxes
@@ -172,5 +173,12 @@ the answer in the credits of the project.
   faces, or as few as World can make: a scooter at the far level is
   4,088 triangles, and 500 with `triangles=500` (58 KB, 14 KB in gzip).
   A model of many small parts does not go under some hundreds of
-  triangles: a very small thing needs a request with few shapes (the
-  MCP tool `draw_mini` gives such a request for 26 kinds of things).
+  triangles: add `?wrap=1` (one closed skin round the whole model), or
+  make a request with few shapes (the MCP tool `draw_mini` gives such
+  a request for 26 kinds of things).
+- **`light`** (`HASH.light.glb`, `HASH.mid.light.glb`,
+  `HASH.far.light.glb`): as `flat`, but with a primitive for each role
+  of the model and no color at the points, for a project that gives
+  each role its own material. A scooter for a row of parked scooters:
+  `/m/scooter.far.light.glb?triangles=500&wrap=1`. A coconut palm far
+  away: `/m/plant.far.light.glb?species=coconut&triangles=204`.
