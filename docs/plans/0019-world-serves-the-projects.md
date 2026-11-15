@@ -412,8 +412,16 @@ Step T2 (in progress):
 
 - **Children. Done:** a person has an age from 1 to 90 years, from the
   shapes of a baby and of a child of MakeHuman (48 targets, CC0, 1.7
-  MB). A girl of 7 is about 1.2 m high, with the proportions of a
-  child.
+  MB). The owner (2026-11-15): "That does not look like a child at
+  all, and the hat is not at the right position." So the shapes of an
+  age give the median height of the CDC charts, the head has the size
+  of the head of a real child of that age (Snyder and others, 1977), a
+  child has a round, soft face and a skin with no beard, a top has a
+  round neck and covers the shoulders, the cloth over the chest has no
+  fold, and a hat sits at the brow with the size of the real head (it
+  was scaled two times: by the head node and by the head of the
+  person). Open: a hair of a child (the hairline of `short04` is of an
+  adult), and the edge of a neck is not smooth.
 - **The clothes of old Việt Nam. Done** (`World.Sewing`): a loose tunic
   of homespun cotton with a round neck that hangs from the waist, with
   long sleeves (`world_ao_canh`) or short sleeves (`world_ao_coc`),

@@ -37,6 +37,9 @@ defmodule World.People.Parts do
   # The width and the length of the head that the parts are drawn on (m).
   @head {0.164, 0.188}
 
+  @doc "If a part has the size of the head of its person (a helmet, hair), or one size (a nón lá)."
+  def fits?(name) when is_map_key(@parts, name), do: @parts[name]
+
   @doc "The names of the parts."
   def names, do: @parts |> Map.keys() |> Enum.sort()
 

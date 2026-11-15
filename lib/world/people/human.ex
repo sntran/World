@@ -99,6 +99,7 @@ defmodule World.People.Human do
   def person(name, opts \\ []) do
     o = Map.new(Keyword.merge(@defaults, opts))
     o = Map.put(o, :colors, chosen_colors(o))
+    o = o |> Map.update!(:skin, &child_skin(&1, o.age)) |> Map.update!(:head, &(&1 * child_head(o.age, o.gender)))
     base = Data.base()
     o = Map.put(o, :rest, Face.rest(o.face))
     clothes = Enum.map(o.clothes, &Data.asset("clothes", &1))
@@ -174,15 +175,25 @@ defmodule World.People.Human do
       joints: Joints.all()
     }
     |> then(fn f ->
-      Enum.reduce(o.hold, f, fn {port, item}, f -> Figure.hold(f, port, item, String.replace(port, ~r/_[lr]$/, "")) end)
+      # (A hat of one size is the size for the head of a child: `child_hat/2`.)
+      hat = child_hat(o.age, o.gender)
+
+      Enum.reduce(o.hold, f, fn {port, item}, f ->
+        item = if port == "crown", do: sized(item, hat), else: item
+        Figure.hold(f, port, item, String.replace(port, ~r/_[lr]$/, ""))
+      end)
     end)
     |> then(fn f ->
-      # A part from edits on its port, with the size of the head of this person.
+      # A part from edits on its port, with the size of the head of this person. The part is in the node of
+      # the bone of the head, so the scale of the head (`head`) is on it already: a part that fits the head
+      # has the size of the head of the mesh, and a part of one size has the size for the head of a child.
       head = head_size(bones, weights, points)
+      hat = child_hat(o.age, o.gender)
 
       Enum.reduce(o.wear, f, fn part, f ->
         {part, more} = if is_tuple(part), do: part, else: {part, []}
-        item = Parts.part(part, [scale: o.head * Parts.scale(part, head)] ++ more)
+        scale = if Parts.fits?(part), do: Parts.scale(part, head), else: hat
+        item = Parts.part(part, [scale: scale] ++ more)
         Figure.hold(f, Parts.on(part), item, Parts.on(part))
       end)
     end)
@@ -339,7 +350,7 @@ defmodule World.People.Human do
   """
   def target_weights(o) do
     g = [{"female", 1 - o.gender}, {"male", o.gender}]
-    age = ages(o.age)
+    age = ages(o.age, o.gender)
     # (A child and a baby have the targets of the mean muscle only.)
     adult = three(o.muscle, "minmuscle", "averagemuscle", "maxmuscle")
     muscle = fn an -> if an in ["young", "old"], do: adult, else: [{"averagemuscle", 1.0}] end
@@ -380,11 +391,174 @@ defmodule World.People.Human do
     Enum.filter(racegenderage ++ universal ++ heights ++ breasts ++ slider_weights(o), fn {_, w} -> w > 1.0e-4 end)
   end
 
-  # The ages of MakeHuman round an age in years: a baby (1 year), a child
-  # (10), a young adult (25) and an old one (90), each with its weight.
-  defp ages(years) when years >= 25, do: between("young", "old", (min(years, 90) - 25) / 65)
-  defp ages(years) when years >= 10, do: between("child", "young", (years - 10) / 15)
-  defp ages(years), do: between("baby", "child", (max(years, 1) - 1) / 9)
+  # The face and the body of a child, over the shapes of a child of MakeHuman (which keep the face of an
+  # adult): the younger head of MakeHuman, a round face, large eyes, a short small nose that points up,
+  # full cheeks with no bones that show, a short small chin, a small mouth, a thin neck and a chest with no
+  # muscle. Each at its full value for a child of 5 years or less (`youth/1`); the option `shape` of a
+  # person comes after them.
+  @child_face %{
+    "head-age-decr-incr" => -1.0,
+    "head-round" => 0.6,
+    "eye-scale-decr-incr" => 0.5,
+    "nose-scale-vert-decr-incr" => -0.5,
+    "nose-scale-horiz-decr-incr" => -0.2,
+    "nose-volume-decr-incr" => -0.4,
+    "nose-point-down-up" => 0.4,
+    "cheek-volume-decr-incr" => 0.6,
+    "cheek-bones-decr-incr" => -0.5,
+    "chin-height-decr-incr" => -0.5,
+    "chin-prominent-decr-incr" => -0.4,
+    "chin-width-decr-incr" => -0.2,
+    "mouth-scale-horiz-decr-incr" => -0.25,
+    "neck-scale-horiz-decr-incr" => -0.3,
+    "torso-muscle-pectoral-decr-incr" => -0.8
+  }
+
+  @doc """
+  How much a person of an age (years) has the face and the body of a
+  child: 1 at 5 years or less, 0 at 15 years or more.
+  """
+  def youth(years), do: min(max((15 - years) / 10, 0.0), 1.0)
+
+  # An item (a part or an assembly of parts) larger or smaller by `k` from its origin.
+  defp sized(item, k) when k == 1.0, do: item
+
+  defp sized(%World.Part{} = p, k),
+    do: %{p | shapes: Enum.map(p.shapes, fn m -> %{m | points: Enum.map(m.points, &Vec.scale(&1, k))} end)}
+
+  defp sized(%World.Assembly{nodes: nodes} = a, k),
+    do: %{a | nodes: for({name, item, c} <- nodes, do: {name, sized(item, k), c})}
+
+  # The skin of a child: the skins of MakeHuman are of adults, and the skin of a man has the shadow of a
+  # beard and strong brows. A child of less than 13 years with the skin of a man has the skin of a woman of
+  # the same age and origin.
+  defp child_skin(skin, age) when age < 13 do
+    woman = String.replace_suffix(skin, "_male", "_female")
+    if Data.known?("skins", woman), do: woman, else: skin
+  end
+
+  defp child_skin(skin, _age), do: skin
+
+  # The median height (cm) at each year of age from 1 to 20, of boys and of girls: the growth charts of the
+  # CDC (2000; the length for the age from birth to 36 months, the stature for the age from 2 to 20 years,
+  # the median M of `lenageinf.csv` and `statage.csv`; public domain).
+  @growth %{
+    boys:
+      [75.5, 86.5, 95.0, 102.2, 108.9, 115.4, 121.8, 127.9, 133.5, 138.6] ++
+        [143.5, 149.1, 156.1, 163.8, 169.9, 173.5, 175.3, 176.2, 176.6, 176.8],
+    girls:
+      [73.8, 85.0, 93.9, 100.8, 107.7, 114.7, 121.5, 127.6, 132.9, 138.0] ++
+        [144.0, 151.2, 157.2, 160.4, 161.9, 162.5, 162.9, 163.1, 163.3, 163.3]
+  }
+  # The height of the shape of a baby and of a child of MakeHuman, as a part of the height of the young
+  # adult (measured on the mesh: 0.60 m and 1.32 m for a man of 1.63 m).
+  @baby 0.37
+  @child 0.81
+
+  @doc """
+  The height of a person of an age (years, 1 to 20 or more) as a part of
+  the height of an adult of the same gender (0 a woman, 1 a man): from
+  the median heights of the growth charts of the CDC.
+  """
+  def growth(years, gender) do
+    part = fn list ->
+      y = min(max(years, 1), 20) * 1.0
+      i = min(trunc(y), 19)
+      {a, b} = {Enum.at(list, i - 1), Enum.at(list, i)}
+      (a + (b - a) * (y - i)) / List.last(list)
+    end
+
+    part.(@growth.girls) * (1 - gender) + part.(@growth.boys) * gender
+  end
+
+  # The height of the head from the chin to the top (menton to vertex), as a part of the height of the
+  # head of an adult: the means of each group of age of the 1977 study of the University of Michigan for
+  # the Consumer Product Safety Commission (R. G. Snyder et al., "Anthropometry of Infants, Children, and
+  # Youths to Age 18 for Product Safety Design", UM-HSRI-77-17, "Head height", males and females: 17.3 cm
+  # at 2.0 to 3.5 years, 18.4 cm at 5.5 to 6.5, 19.5 cm at 9.5 to 10.5, 21.4 cm at 17.5 to 19), each over
+  # 21.4 cm. At 1 year: the 2.75 years of the study times the growth of the circumference of the head of
+  # the CDC from 12 to 33 months (46.3 cm to 49.4 cm, boys), an estimate.
+  @heads [
+    {1.0, 0.757},
+    {2.75, 0.808},
+    {4.0, 0.836},
+    {5.0, 0.836},
+    {6.0, 0.86},
+    {7.0, 0.874},
+    {8.0, 0.879},
+    {9.0, 0.888},
+    {10.0, 0.911},
+    {11.0, 0.93},
+    {12.0, 0.935},
+    {13.0, 0.949},
+    {14.0, 0.963},
+    {15.0, 0.972},
+    {16.0, 0.995},
+    {17.0, 0.991},
+    {18.25, 1.0}
+  ]
+  # The height of the head of the shapes of MakeHuman as a part of the head of the young adult (measured
+  # on the mesh, chin to top): the baby and the child.
+  @head_shapes %{"baby" => 0.55, "child" => 0.86, "young" => 1.0, "old" => 1.0}
+  # The part of the height of the head that is over the joint of the head, as a part of the height of the
+  # body of an adult (about 0.6 of a head of 0.149 of the height).
+  @over_joint 0.09
+
+  # The ages of MakeHuman for an age in years: a baby, a child, a young adult (25) and an old one (90),
+  # each with its weight. Before 20 years the weights come from the height of the age (`growth/2`): a
+  # person grows fast and then stops, so a person of 16 years is almost an adult, and the shape of a child
+  # of MakeHuman is a child of about 10 years.
+  defp ages(years, _gender) when years >= 25, do: between("young", "old", (min(years, 90) - 25) / 65)
+
+  defp ages(years, gender) do
+    # (The head of a child is larger than the head of the shape of its height (`child_head/2`): the part of
+    # the head over its joint makes the person taller by that much, so the body is a little smaller.)
+    part = growth(years, gender) - @over_joint * model_head(years, gender) * (head_factor(years, gender) - 1)
+
+    if part >= @child,
+      do: between("child", "young", (part - @child) / (1 - @child)),
+      else: between("baby", "child", max(part - @baby, 0.0) / (@child - @baby))
+  end
+
+  @doc """
+  The scale of the head of a person of an age (years) over the head of
+  the shapes of MakeHuman of that height: so that the head is as large
+  as the head of a real child of that age (the 1977 study of the
+  University of Michigan). 1.0 from 18 years.
+  """
+  def child_head(years, gender), do: head_factor(years, gender)
+
+  # The size of a hat of one size (a nón lá, a hard hat) on the head of a person of an age: the hat of a
+  # child is made for the head of a child, so it sits on the head as the hat of an adult sits on the head of
+  # an adult (a hat of an adult comes down over the eyes of a child: its ring sits on the head). The hat is
+  # in the node of the bone of the head, which has the scale of `child_head/2`: the size is the head of a
+  # real child of that age over the head of an adult, over that scale. 1.0 for an adult.
+  defp child_hat(years, _gender) when years >= 18.25, do: 1.0
+  defp child_hat(years, gender), do: real_head(years) / head_factor(years, gender)
+
+  defp head_factor(years, _gender) when years >= 18.25, do: 1.0
+
+  defp head_factor(years, gender) do
+    max(real_head(years) / model_head(years, gender), 1.0)
+  end
+
+  defp real_head(years) do
+    y = max(years * 1.0, 1.0)
+    {{a, ra}, {b, rb}} = @heads |> Enum.zip(tl(@heads)) |> Enum.find(fn {{_, _}, {b, _}} -> y <= b end)
+    ra + (rb - ra) * (y - a) / (b - a)
+  end
+
+  # The head of the shape of a height, from the weights of the shapes of MakeHuman for that height.
+  defp model_head(years, gender) do
+    part = growth(years, gender)
+
+    weights =
+      if part >= @child,
+        do: between("child", "young", (part - @child) / (1 - @child)),
+        else: between("baby", "child", max(part - @baby, 0.0) / (@child - @baby))
+
+    weights |> Enum.map(fn {name, w} -> @head_shapes[name] * w end) |> Enum.sum()
+  end
 
   defp between(a, b, t), do: [{a, 1 - t}, {b, t}]
 
@@ -394,8 +568,10 @@ defmodule World.People.Human do
   defp slider_weights(o) do
     sliders = Data.sliders()
     short = for {name, {_, names}} <- @shape, s <- names, into: %{}, do: {s, 2 * Map.get(o, name, 0.5) - 1}
+    young = youth(Map.get(o, :age, 30))
+    child = for {name, v} <- @child_face, young > 0, into: %{}, do: {name, v * young}
 
-    for {name, v} <- Map.merge(short, Map.get(o, :shape, %{})),
+    for {name, v} <- child |> Map.merge(short) |> Map.merge(Map.get(o, :shape, %{})),
         slider = Map.get(sliders, name) || raise(ArgumentError, "no slider #{inspect(name)}"),
         t <- if(v < 0, do: slider.decr, else: slider.incr) do
       {t, abs(v)}
@@ -405,16 +581,69 @@ defmodule World.People.Human do
   defp three(v, low, mid, _high) when v < 0.5, do: [{low, 1 - 2 * v}, {mid, 2 * v}]
   defp three(v, _low, mid, high), do: [{mid, 2 - 2 * v}, {high, 2 * v - 1}]
 
-  # The clothes fit to a body with no nipples: the two targets of
-  # MakeHuman that make the nipples small, at twice the full weight (at
-  # the full weight a point still shows through a top; at three times, a
-  # dip), then a smooth of the breasts (`smooth/1`). The body at near stays
-  # as MakeHuman makes it, under the clothes. The body at mid and far and
-  # the kit have these points: there the clothes are the colors of the
-  # body.
-  @chest ~w(breast/nipple-point-decr breast/nipple-size-decr)
+  # The clothes fit to a body with no nipples: a smooth of the breasts (`smooth/1`), then the points of the
+  # nipples go flat along the normal of the chest (`flat_nipples/1`). (The targets of MakeHuman that make
+  # the nipples small move their points to the side, over each other, and the cloth over them folds into a
+  # small star.) The body at near stays as MakeHuman makes it, under the clothes. The body at mid and far
+  # and the kit have these points: there the clothes are the colors of the body.
+  defp cloth(points), do: points |> smooth() |> flat_nipples()
 
-  defp cloth(points), do: points |> add_targets(Enum.map(@chest, &{&1, 2.0})) |> smooth()
+  # The smooth of the breasts keeps a bump of 1 mm at each nipple, and a cloth over it shows a small
+  # crease. The points of each nipple and of the ring round them go to the height of the mean of their
+  # neighbors, 60 steps, along the normal of the chest there only: so the bump goes, and the many small
+  # faces of a nipple keep their places side by side (a smooth to the mean of the neighbors pulls them to
+  # their middle, where they fold over each other). The normal is the one of the base mesh, so each step is
+  # linear (the kit of a client does the same to each of its targets).
+  @nipple_steps 60
+
+  defp flat_nipples(points) do
+    {area, normal} = nipples()
+
+    Enum.reduce(1..@nipple_steps, points, fn _, acc ->
+      Enum.reduce(area, acc, fn {v, side, ns}, a ->
+        p = elem(acc, v)
+        n = normal[side]
+        put_elem(a, v, Vec.add(p, Vec.scale(n, Vec.dot(Vec.sub(ns |> Enum.map(&elem(acc, &1)) |> Vec.mean(), p), n))))
+      end)
+    end)
+  end
+
+  # The points of the nipples (that the target nipple-point-decr moves) and of the ring round them, each
+  # with its side (1 left, -1 right) and its neighbors; and the normal of the chest of the base mesh at
+  # each nipple (the sum of the normals of the faces of its area).
+  defp nipples do
+    Data.cached(:nipples, fn ->
+      base = Data.base()
+      ring = neighbors(base)
+
+      # (The points of the body are the first 13,380 points of the base mesh.)
+      nipple =
+        for {v, d} <- Data.target("breast/nipple-point-decr"), v < 13_380, Vec.len(d) > 0.01, do: v
+
+      side = fn v -> if elem(elem(base.points, v), 0) > 0, do: 1, else: -1 end
+      area = Enum.uniq(nipple ++ Enum.flat_map(nipple, &Map.fetch!(ring, &1)))
+      set = MapSet.new(area)
+
+      normal =
+        for(
+          f <- Map.fetch!(base.groups, "body"),
+          [a, b, c, d] = vs = Enum.map(f, &elem(&1, 0)),
+          Enum.all?(vs, &MapSet.member?(set, &1)),
+          [pa, pb, pc, pd] = Enum.map([a, b, c, d], &elem(base.points, &1)),
+          do: {side.(a), Vec.cross(Vec.sub(pc, pa), Vec.sub(pd, pb))}
+        )
+        |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+        |> Map.new(fn {s, ns} -> {s, ns |> Enum.reduce(&Vec.add/2) |> Vec.norm()} end)
+
+      {for(v <- area, do: {v, side.(v), Map.fetch!(ring, v)}), normal}
+    end)
+  end
+
+  @doc """
+  The points of a body as its clothes fit to it: no nipples, and smooth
+  breasts (the sewing shop takes the direction of the cloth from them).
+  """
+  def cloth_points(points), do: cloth(points)
 
   # The steps of the smooth of the breasts: each step moves each point of
   # the breasts (`Data.breast_points/0`) half the way to the mean of its
@@ -439,10 +668,14 @@ defmodule World.People.Human do
   end
 
   # The points of the breasts with their neighbors.
+  # (Not the points of the nipples: their many small faces fold in this smooth. `flat_nipples/1` does
+  # them after it.)
   defp chest do
     Data.cached(:chest, fn ->
       ring = neighbors(Data.base())
-      for v <- Data.breast_points(), do: {v, Map.fetch!(ring, v)}
+      {area, _} = nipples()
+      skip = MapSet.new(area, &elem(&1, 0))
+      for v <- Data.breast_points(), not MapSet.member?(skip, v), do: {v, Map.fetch!(ring, v)}
     end)
   end
 

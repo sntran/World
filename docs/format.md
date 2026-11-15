@@ -1342,10 +1342,20 @@ assembly holds a figure as a part, at one of its two ports:
 
 A person has an age from 1 to 90 years (`age`; the blueprint `person`).
 MakeHuman has the shape of a baby (1 year), a child (10), a young adult
-(25) and an old one (90): an age between two of them has a part of
-each. So a child has its own size and its own proportions (a girl of 7
-is about 1.2 m high), with the same skeleton, hair and clothes as an
-adult.
+(25) and an old one (90). A person under 25 has the parts of two of them
+that give the median height of its age and gender in the growth charts
+of the CDC (2000), within 2 cm: a girl of 7 is about 1.22 m high, a boy
+of 12 is about 1.49 m high. The head of a child is larger than the head
+of the shapes of MakeHuman: its scale (the node of the bone `head`)
+gives the head height of a real child of that age (Snyder and others,
+1977), and the height of the body is less by the same part, so the
+person keeps its height. The face of a child under 15 has more of the
+shapes of a young face (round cheeks, large eyes, a small nose and
+chin), most at 5 years and less to 15. A boy under 13 has the skin of a
+girl of the same tone (no shadow of a beard). A hat (the port `crown`,
+or a part of `wear` that does not fit the head) has the size of the real
+head, so it sits at the brow of a child and not over its eyes. The
+skeleton, the hair and the clothes are the same as an adult.
 
 The GLB of a person has:
 
