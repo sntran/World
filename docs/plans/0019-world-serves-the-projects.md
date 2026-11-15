@@ -226,7 +226,7 @@ as a reference; no test builds them (the commit `b6905ce`).
 | Project | It prepares | World must add first |
 |---|---|---|
 | Vũng Tàu | Its orders, as now. For each real building: the request of `World.Town.Building` with photos. For each landmark: the drawing of edits. For houses: a set of variants for each kind of lot | The fixes of section 3.2; far levels in the budgets; trees in the budgets of the game |
-| Phượt | Nothing new: its URLs stay | The store that stays, compression, the sizes of a van in the answer |
+| Phượt | Nothing new: its URLs stay | The store that stays, compression, the sizes of a van in the answer (done: the `size` of the receipt of an order) |
 | DIY | For each of its 70 kinds: the kind, the size, the details, the tags | The rule of an appliance, and the output `solids` |
 | Humans Must Die | The list of its shapes with the size on the screen and a budget of triangles for each | The output `flat` as plain arrays, with a light at each point for the windows |
 | Tre | Five things for a trial: two figures, an animal, a tree, a prop | The output `solids` on a grid, and `flat` |

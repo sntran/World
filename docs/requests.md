@@ -114,6 +114,10 @@ With the server of World (`https://world.mkfifo.com`):
   `/o/HASH.parts.json`, `/o/HASH.receipt.json`, `/o/HASH.solids.json`.
 - An order of a blueprint by name can be a URL:
   `/m/van.mid.glb?model=transit_148`.
+- The size of a model (`[wide, long, high]` in m, with each part that
+  stands out) is the `size` of its receipt:
+  `/m/van.receipt.json?model=transit_148` gives `[2.408, 4.946,
+  2.3308]` for the first van of the list.
 - The first request of a file builds it; each request after it reads
   it from the store (0.2 s). The files stay after a deploy of World.
 - A tool that gets all the files of a project adds `?class=batch`, so
