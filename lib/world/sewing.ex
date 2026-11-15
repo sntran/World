@@ -55,7 +55,9 @@ defmodule World.Sewing do
     "foam_cup" => %{thick: 0.025, span: 0, grain: 8, shade: 240},
     "nylon_shell" => %{thick: 0.02, span: 16, grain: 4, shade: 225},
     "softshell" => %{thick: 0.02, span: 12, grain: 10, shade: 225},
-    "down" => %{thick: 0.1, span: 8, grain: 6, shade: 225}
+    "down" => %{thick: 0.1, span: 8, grain: 6, shade: 225},
+    # (Cotton that a village weaves on a hand loom: a coarse weave.)
+    "homespun" => %{thick: 0.014, span: 90, grain: 3, shade: 216}
   }
 
   # The bones of the parts of the body (the bone with the largest weight
@@ -224,6 +226,76 @@ defmodule World.Sewing do
         },
         %{name: "collar", on: "body", bones: ["neck_01"], y: {nil, {:neck, :head, 0.7}}, ease: 0.05, puff: 0.12}
       ]
+    },
+    # The clothes of a village of old Việt Nam (for Tre), of homespun cotton: an order gives the brown
+    # of the dye (`clothes_colors`).
+    %{
+      name: "world_ao_canh",
+      layer: 2,
+      fabric: "homespun",
+      pieces: [
+        # A loose tunic with a round neck at the base of the neck. Its top is on the body to the waist.
+        %{
+          name: "body",
+          on: "body",
+          bones: @torso ++ ["pelvis"],
+          y: {{:waist, -0.7}, {:neck, 0.05}},
+          ease: 0.3,
+          drape: true
+        },
+        # From the waist it hangs to under the hips, as a tube round the two legs.
+        %{name: "skirt", on: "helper-skirt", y: {{:hip, -1.2}, {:waist, 0.0}}, ease: 0.2},
+        # The long loose sleeves, to above the wrists.
+        %{name: "sleeves", on: "body", bones: @arms, arm: 0.82, ease: 0.3}
+      ]
+    },
+    %{
+      name: "world_ao_coc",
+      layer: 2,
+      fabric: "homespun",
+      pieces: [
+        # The same tunic with short sleeves, for work in the fields and for a child.
+        %{
+          name: "body",
+          on: "body",
+          bones: @torso ++ ["pelvis"],
+          y: {{:waist, -0.7}, {:neck, 0.05}},
+          ease: 0.3,
+          drape: true
+        },
+        %{name: "skirt", on: "helper-skirt", y: {{:hip, -1.0}, {:waist, 0.0}}, ease: 0.2},
+        %{name: "sleeves", on: "body", bones: @arms, arm: 0.3, ease: 0.3}
+      ]
+    },
+    %{
+      name: "world_quan_ong_rong",
+      layer: 1,
+      fabric: "homespun",
+      pieces: [
+        # Wide pants from the waist to the middle of the calf.
+        %{
+          name: "legs",
+          on: "body",
+          bones: ["spine_01", "pelvis"] ++ @legs,
+          y: {{:knee, :ankle, 0.55}, {:waist, 0.1}},
+          ease: {:flare, 0.03, 0.45}
+        }
+      ]
+    },
+    %{
+      name: "world_quan_dui",
+      layer: 1,
+      fabric: "homespun",
+      pieces: [
+        # Short pants to above the knees, for a child.
+        %{
+          name: "legs",
+          on: "body",
+          bones: ["spine_01", "pelvis"] ++ @legs,
+          y: {{:hip, :knee, 0.8}, {:waist, 0.1}},
+          ease: {:flare, 0.04, 0.9}
+        }
+      ]
     }
   ]
 
@@ -238,7 +310,7 @@ defmodule World.Sewing do
   The names of the garments.
 
       iex> World.Sewing.names()
-      ["world_bra", "world_ao_dai", "world_quan", "world_t_shirt", "world_pants", "world_rain_shell", "world_softshell", "world_down_jacket"]
+      ["world_bra", "world_ao_dai", "world_quan", "world_t_shirt", "world_pants", "world_rain_shell", "world_softshell", "world_down_jacket", "world_ao_canh", "world_ao_coc", "world_quan_ong_rong", "world_quan_dui"]
   """
   def names, do: Enum.map(@garments, & &1.name)
 

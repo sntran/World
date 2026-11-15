@@ -197,4 +197,51 @@ defmodule World.SewingTest do
     # The baffles: the thickness of the down jacket changes, of the softshell only at the hem.
     assert Enum.max(down) - Enum.min(down) > 0.1
   end
+
+  test "the clothes of a village of old Việt Nam: a tunic that hangs from the waist, wide pants, short pants" do
+    names = ~w(world_ao_canh world_ao_coc world_quan_ong_rong world_quan_dui)
+    assert names -- Sewing.names() == []
+    garments = Map.new(Sewing.garments(), &{&1.name, &1})
+    for n <- names, do: assert(garments[n].fabric == "homespun" and garments[n].shape == [])
+    assert Sewing.fabrics()["homespun"].span == 90
+
+    # The top of a tunic is on the body, its lower part is a tube on the skirt of the base mesh, and they join.
+    for n <- ~w(world_ao_canh world_ao_coc) do
+      assert Enum.map(garments[n].pieces, &{&1.name, &1.on}) == [
+               {"body", "body"},
+               {"skirt", "helper-skirt"},
+               {"sleeves", "body"}
+             ]
+
+      assert [{"body", "sleeves"}] = for({a, b, _} <- Sewing.seams(n), do: {a, b})
+    end
+
+    high = fn opts, role ->
+      fig = Detail.with(:near, fn -> Human.person("t", opts) end)
+      prim = fig.nodes |> List.last() |> Map.fetch!(:primitives) |> Enum.find(&(&1.material == role))
+      zs = Enum.map(prim.positions, &elem(&1, 2))
+      {Enum.min(zs), Enum.max(zs)}
+    end
+
+    child = [gender: 1.0, age: 9, hair: nil]
+    {_, top} = high.(child ++ [clothes: []], :skin)
+    # The long sleeves go lower on the arm than the short ones; the tunic goes from under the hips to the neck.
+    {low, neck} = high.(child ++ [clothes: ["world_ao_canh"]], :clothes_world_ao_canh)
+    assert neck > 0.78 * top and neck < 0.86 * top and low > 0.4 * top and low < 0.5 * top
+    {long, _} = high.(child ++ [clothes: ["world_quan_ong_rong"]], :clothes_world_quan_ong_rong)
+    {short, _} = high.(child ++ [clothes: ["world_quan_dui"]], :clothes_world_quan_dui)
+    assert long > 0.08 * top and long < 0.2 * top and short > 0.28 * top and short < 0.42 * top
+
+    # A person in these clothes with bare feet is an order.
+    order = %{
+      "blueprint" => "person",
+      "options" => %{
+        "age" => 7,
+        "clothes" => ["world_ao_coc", "world_quan_dui"],
+        "clothes_colors" => ["#7a5237", "#3a2e2a"]
+      }
+    }
+
+    assert {:ok, _} = World.Orders.place(order, "http://x")
+  end
 end
