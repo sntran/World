@@ -25,8 +25,15 @@ defmodule World.People.Data do
   @doc "The weights: a map of each bone to a list of `[point, weight]`."
   def weights, do: cached(:weights, fn -> read_gz("weights.json.gz") |> JSON.decode!() |> Map.fetch!("weights") end)
 
-  @doc "The targets, by name (see `parse_targets/1` and `target/1`)."
-  def targets, do: cached(:targets, fn -> parse_targets(read_gz("targets.bin.gz")) end)
+  @doc """
+  The targets, by name (see `parse_targets/1` and `target/1`): those of
+  an adult, and those of a child and of a baby (`targets_child.bin.gz`).
+  """
+  def targets do
+    cached(:targets, fn ->
+      Map.merge(parse_targets(read_gz("targets.bin.gz")), parse_targets(read_gz("targets_child.bin.gz")))
+    end)
+  end
 
   # The sliders, read when the module compiles (a literal of the module:
   # no read of the file at run time). A new sliders.json compiles the

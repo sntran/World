@@ -1271,6 +1271,13 @@ assembly holds a figure as a part, at one of its two ports:
 - `hips`: at the head of the bone `pelvis`, with z up (the seat of a
   rider).
 
+A person has an age from 1 to 90 years (`age`; the blueprint `person`).
+MakeHuman has the shape of a baby (1 year), a child (10), a young adult
+(25) and an old one (90): an age between two of them has a part of
+each. So a child has its own size and its own proportions (a girl of 7
+is about 1.2 m high), with the same skeleton, hair and clothes as an
+adult.
+
 The GLB of a person has:
 
 - a root node, then a node for each of the 53 bones of the skeleton

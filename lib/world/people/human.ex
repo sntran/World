@@ -58,7 +58,7 @@ defmodule World.People.Human do
 
   @doc """
   A person. The options (with their defaults in `@defaults`): `gender`
-  (0 is a woman, 1 a man), `age` (years, 25 to 90), `muscle`, `weight`
+  (0 is a woman, 1 a man), `age` (years, 1 to 90: a baby, a child, an adult), `muscle`, `weight`
   and `height` (0 to 1, 0.5 is the mean), the options of the shape
   (`shapes/0`: `bust` and `firmness` of a woman, `waist`, `hips`,
   `buttocks`, `stomach`, `torso`, `shoulders`, `arms`, `legs`, `neck`; 0
@@ -339,9 +339,10 @@ defmodule World.People.Human do
   """
   def target_weights(o) do
     g = [{"female", 1 - o.gender}, {"male", o.gender}]
-    a = (min(max(o.age, 25), 90) - 25) / 65
-    age = [{"young", 1 - a}, {"old", a}]
-    muscle = three(o.muscle, "minmuscle", "averagemuscle", "maxmuscle")
+    age = ages(o.age)
+    # (A child and a baby have the targets of the mean muscle only.)
+    adult = three(o.muscle, "minmuscle", "averagemuscle", "maxmuscle")
+    muscle = fn an -> if an in ["young", "old"], do: adult, else: [{"averagemuscle", 1.0}] end
     weight = three(o.weight, "minweight", "averageweight", "maxweight")
     h = o.height
     height = if h < 0.5, do: [{"minheight", 1 - 2 * h}], else: [{"maxheight", 2 * h - 1}]
@@ -351,12 +352,12 @@ defmodule World.People.Human do
     racegenderage = for {r, wr} <- race, {gn, wg} <- g, {an, wa} <- age, do: {"#{r}-#{gn}-#{an}", wr * wg * wa}
 
     universal =
-      for {gn, wg} <- g, {an, wa} <- age, {mn, wm} <- muscle, {wn, ww} <- weight do
+      for {gn, wg} <- g, {an, wa} <- age, {mn, wm} <- muscle.(an), {wn, ww} <- weight do
         {"universal-#{gn}-#{an}-#{mn}-#{wn}", wg * wa * wm * ww}
       end
 
     heights =
-      for {gn, wg} <- g, {an, wa} <- age, {mn, wm} <- muscle, {wn, ww} <- weight, {hn, wh} <- height do
+      for {gn, wg} <- g, {an, wa} <- age, {mn, wm} <- muscle.(an), {wn, ww} <- weight, {hn, wh} <- height do
         {"height/#{gn}-#{an}-#{mn}-#{wn}-#{hn}", wg * wa * wm * ww * wh}
       end
 
@@ -367,7 +368,8 @@ defmodule World.People.Human do
 
     breasts =
       for {an, wa} <- age,
-          {mn, wm} <- muscle,
+          an in ["young", "old"],
+          {mn, wm} <- adult,
           {wn, ww} <- weight,
           {cn, wc} <- cup,
           {fname, wf} <- firm,
@@ -377,6 +379,14 @@ defmodule World.People.Human do
 
     Enum.filter(racegenderage ++ universal ++ heights ++ breasts ++ slider_weights(o), fn {_, w} -> w > 1.0e-4 end)
   end
+
+  # The ages of MakeHuman round an age in years: a baby (1 year), a child
+  # (10), a young adult (25) and an old one (90), each with its weight.
+  defp ages(years) when years >= 25, do: between("young", "old", (min(years, 90) - 25) / 65)
+  defp ages(years) when years >= 10, do: between("child", "young", (years - 10) / 15)
+  defp ages(years), do: between("baby", "child", (max(years, 1) - 1) / 9)
+
+  defp between(a, b, t), do: [{a, 1 - t}, {b, t}]
 
   # The targets of the sliders: the short names, then the map `shape`
   # (it wins). A slider at -1 has its targets "decr" at the full weight, at

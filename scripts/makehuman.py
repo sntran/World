@@ -242,6 +242,23 @@ def target_names():
     return names
 
 
+def child_names():
+    """The targets of a child (10 years) and of a baby (1 year), of the
+    mean muscle only: World.People.Human makes a person of 1 to 25 years
+    from them."""
+    names = []
+    for a in ["child", "baby"]:
+        for r in RACES:
+            for g in GENDERS:
+                names.append(f"{r}-{g}-{a}")
+        for g in GENDERS:
+            for w in LEVELS["weight"]:
+                names.append(f"universal-{g}-{a}-averagemuscle-{w}")
+                for h in ["minheight", "maxheight"]:
+                    names.append(f"height/{g}-{a}-averagemuscle-{w}-{h}")
+    return names
+
+
 def write_targets(dest, folder="macrodetails", names=None, extra=()):
     """The binary format "XTG2", little-endian: the count of targets; for
     each target the name (u16 length, UTF-8), the count of points n, then
@@ -421,6 +438,9 @@ def assets(manifest, chosen):
 
 if PACKS == "--expressions":
     expressions()
+elif PACKS == "--children":
+    # python3 -I scripts/makehuman.py MPFB_DATA --children
+    write_targets(os.path.join(OUT, "targets_child.bin.gz"), names=child_names())
 elif PACKS == "--targets":
     write_targets(os.path.join(OUT, "targets.bin.gz"), extra=CHEST + shape_targets())
     write_sliders()

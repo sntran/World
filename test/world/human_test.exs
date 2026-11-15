@@ -549,6 +549,53 @@ defmodule World.HumanTest do
     assert ups != [] and Enum.all?(ups, &(&1 > -0.005))
   end
 
+  test "a child and a baby: the ages of MakeHuman round an age in years, with the mean muscle" do
+    o = %{gender: 1.0, age: 10, muscle: 0.9, weight: 0.5, height: 0.5, race: %{"asian" => 1.0}}
+    child = Map.new(Human.target_weights(o))
+    assert_in_delta child["asian-male-child"], 1.0, 1.0e-9
+    assert_in_delta child["universal-male-child-averagemuscle-averageweight"], 1.0, 1.0e-9
+    refute Enum.any?(child, fn {name, _} -> String.contains?(name, ["young", "old", "baby", "maxmuscle"]) end)
+
+    # Between a child of 10 and an adult of 25: a part of each, and the muscle of the adult part only.
+    teen = Map.new(Human.target_weights(%{o | age: 17.5}))
+    assert_in_delta teen["asian-male-child"], 0.5, 1.0e-9
+    assert_in_delta teen["asian-male-young"], 0.5, 1.0e-9
+    assert teen["universal-male-young-maxmuscle-averageweight"] > 0.3
+    assert_in_delta teen["universal-male-child-averagemuscle-averageweight"], 0.5, 1.0e-9
+
+    # Between a baby of 1 and a child of 10; an age of less than 1 is a baby.
+    small = Map.new(Human.target_weights(%{o | age: 5.5}))
+    assert_in_delta small["asian-male-baby"], 0.5, 1.0e-9
+    assert_in_delta small["asian-male-child"], 0.5, 1.0e-9
+    assert_in_delta Map.new(Human.target_weights(%{o | age: 0}))["asian-male-baby"], 1.0, 1.0e-9
+
+    # The bust is a shape of the adult part of a girl: a child has none.
+    girl = Human.target_weights(Map.merge(o, %{gender: 0.0, age: 12, bust: 1.0}))
+    assert Enum.any?(girl, fn {name, _} -> String.starts_with?(name, "breast/female-young-") end)
+    refute Enum.any?(girl, fn {name, _} -> String.starts_with?(name, "breast/female-child") end)
+
+    refute Enum.any?(
+             Human.target_weights(Map.merge(o, %{gender: 0.0, age: 8, bust: 1.0})),
+             &String.starts_with?(elem(&1, 0), "breast/")
+           )
+
+    # Each target of these weights is in the data, and a child is shorter than an adult.
+    for age <- [1, 4, 10, 16],
+        {name, _} <- Human.target_weights(%{o | age: age}),
+        do: assert(World.People.Data.target(name))
+
+    high = fn age ->
+      Build.scene(Detail.with(:far, fn -> Human.person("p", age: age) end), level: :far)
+      |> Scene.bounds()
+      |> elem(1)
+      |> elem(2)
+    end
+
+    assert [baby, girl_7, boy_12, adult] = Enum.map([1, 7, 12, 30], high)
+    assert baby < girl_7 and girl_7 < boy_12 and boy_12 < adult
+    assert baby > 0.6 and baby < 0.95 and girl_7 > 1.05 and girl_7 < 1.35
+  end
+
   test "the numbers of a person give the weights of the targets" do
     o = %{gender: 0.25, age: 90, muscle: 0.25, weight: 0.75, height: 0.25, race: %{"asian" => 2.0, "african" => 2.0}}
     weights = Map.new(Human.target_weights(o))
@@ -697,7 +744,8 @@ defmodule World.HumanTest do
     end
 
     test "the targets and the assets" do
-      assert map_size(Data.targets()) == 856
+      # (856 targets of an adult, and 48 of a child and of a baby.)
+      assert map_size(Data.targets()) == 904
       [{i, {dx, _, _}} | _] = Data.target("asian-male-young")
       assert is_integer(i) and is_float(dx)
       assert Data.asset("eye_materials", "brown").mesh == nil

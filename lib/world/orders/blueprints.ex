@@ -344,7 +344,7 @@ defmodule World.Orders.Blueprints do
 
     [
       option("gender", :number, default: 1.0, min: 0.0, max: 1.0, doc: "0 is a woman, 1 is a man."),
-      option("age", :number, default: 30.0, min: 25.0, max: 90.0, unit: "years"),
+      option("age", :number, default: 30.0, min: 1.0, max: 90.0, unit: "years"),
       share.("muscle", 0.5),
       share.("weight", 0.5),
       share.("height", 0.5)
