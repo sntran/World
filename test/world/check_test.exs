@@ -210,6 +210,19 @@ defmodule World.CheckTest do
       assert unit.extras == %{"site" => true} and Check.model(unit) == :ok
     end
 
+    test "the height of the base of a model: more for a model from a field of cells" do
+      # A solid on a bottom that is not flat by 1 cm: with a base of 2 mm it is on one corner.
+      rough = [
+        Shape.box({0.0, 0.0, 0.01}, {1.0, 1.0, 1.0}, :steel),
+        Shape.box({0.0, 0.0, 0.0}, {0.05, 0.05, 0.01}, :steel)
+      ]
+
+      assert {:error, [{:tips, _, _}]} = Check.model(part("rough", rough))
+      assert Check.model(part("rough", rough), %{}, base: 0.02) == :ok
+      assert {:error, {:tips, _, _}} = Check.stands(part("rough", rough))
+      assert Check.stands(part("rough", rough), 0.02) == :ok
+    end
+
     test "the text of each reason" do
       assert Check.message({:tips, {0.1, -0.02}, {{0.0, 0.0}, {0.05, 0.05}}}) =~ "(100, -20 mm) is not over its base"
       assert Check.message({:overlap, [{"a", "b"}, {"c", "d"}]}) == "parts are in one place: a and b, c and d"

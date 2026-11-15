@@ -46,8 +46,52 @@ defmodule World.Plants do
   @doc "The species of the nursery, by their names."
   def species, do: @species |> Map.keys() |> Enum.sort()
 
-  @doc "A number of a species (the first value of its key)."
-  def number(species, key), do: @species |> Map.fetch!(species) |> Map.fetch!(key) |> hd()
+  @doc """
+  A number of a species (the first value of its key), or the number of
+  the request in `with_numbers/2`.
+  """
+  def number(species, key) do
+    case Process.get(:world_plant_numbers, %{}) do
+      %{^key => value} -> value
+      _ -> @species |> Map.fetch!(species) |> Map.fetch!(key) |> hd()
+    end
+  end
+
+  @doc """
+  The numbers that a request can give in the place of the numbers of a
+  species (not its height: that is an option of each plant): a map of
+  each key to `{least, most, whole?}`, a quarter and four times the
+  numbers of the species that have the key.
+  """
+  def numbers do
+    for {_, sp} <- @species, {key, [value, _]} <- sp, is_number(value), key != "height", reduce: %{} do
+      acc ->
+        Map.update(acc, key, {value / 4, value * 4, is_integer(value)}, fn {lo, hi, whole?} ->
+          {min(lo, value / 4), max(hi, value * 4), whole?}
+        end)
+    end
+  end
+
+  @doc "The keys of the numbers of a species that a request can give."
+  def numbers(species),
+    do: for({key, [v, _]} <- Map.fetch!(@species, species), is_number(v), key != "height", do: key) |> Enum.sort()
+
+  @doc """
+  Makes a plant (`fun`) with the numbers of a request over the numbers
+  of its species: a project corrects the trunk, the count of the fronds
+  or the lean of a palm in its request.
+  """
+  def with_numbers(numbers, fun) do
+    whole = numbers()
+    given = Map.new(numbers, fn {key, v} -> {key, if(elem(whole[key], 2), do: round(v), else: v * 1.0)} end)
+    old = Process.put(:world_plant_numbers, given)
+
+    try do
+      fun.()
+    after
+      if old, do: Process.put(:world_plant_numbers, old), else: Process.delete(:world_plant_numbers)
+    end
+  end
 
   defp sources(species) do
     sp = Map.fetch!(@species, species)
@@ -153,7 +197,8 @@ defmodule World.Plants do
   # The crown shaft of a palm that has one: a smooth green sheath round the top of the trunk.
   defp shaft(sp, spine, r) do
     case @species[sp] do
-      %{"crownshaft" => [long, _]} ->
+      %{"crownshaft" => _} ->
+        long = number(sp, "crownshaft")
         {x, y, z} = List.last(spine)
         [tube([{x, y, z - long}, {x, y, z - long * 0.5}, {x, y, z}], [r * 1.08, r * 1.25, r * 0.9], :leaf)]
 

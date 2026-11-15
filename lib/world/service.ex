@@ -167,6 +167,24 @@ defmodule World.Service do
     end)
   end
 
+  post "/orders/:hash/edits" do
+    with_order(conn, fn body ->
+      case Orders.Edits.place(hash, is_map(body) && body["edits"], origin(conn)) do
+        {:ok, placed} ->
+          json(conn, 200, placed)
+
+        {:error, :store} ->
+          json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+        {:error, [%{"path" => "order"} | _] = errors} ->
+          json(conn, 404, %{"errors" => errors})
+
+        {:error, errors} ->
+          json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
   post "/sets" do
     with_order(conn, fn set ->
       case Set.place(set, origin(conn)) do

@@ -23,6 +23,7 @@ defmodule World.MCP do
   3. Call place_order. The answer has the hash of the order and the URLs of its files: the GLB at the near, mid and far levels, the list of the parts, the receipt, and the log of the people of the world that built it.
   The factory builds each file at its first GET (this can take some seconds; 503 means that the order needs more memory than the edge has), and keeps it. The same order always gives the same hash and the same URLs.
   To watch the people build a model: call plan_build for the tasks, the trades and the triangles of an order at a level, then build with a budget. The answer has the URL of the stream of the events of the construction (server-sent events), and each element as it comes.
+  To correct a model after you look at its files: call edit_order with the hash and small changes (set, remove or insert at a path of the full order). The answer is a new order with its own hash and files, its parent and its history. Do not send the full request again, and do not wait for a new rule: say what to change.
   A sculpture from edits (simple shapes that add, take away or paint, with a blend): send it in a node of the skill sculpt of a blueprint, or call open_sculpture for a live sculpture, then edit_sculpture for each change, and follow its stream of pieces.
   A new model for the catalog (an engineer): get_blueprint drawing gives the format of a drawing (its shapes, their materials and matter, standard parts, nodes and joints). Call check_drawing until the drawing has no errors and passes the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop, each part has a mass). Then call propose_drawing with the request: the owner reviews the proposal, and accepts or refuses it.
   """
@@ -116,6 +117,30 @@ defmodule World.MCP do
         "Checks an order and does not keep it. Gives the hash and the full order (with each default), or the errors: each error has the path of the wrong value and the rule.",
       "inputSchema" => %{"type" => "object", "properties" => %{"order" => @order}, "required" => ["order"]},
       "annotations" => @read
+    },
+    %{
+      "name" => "edit_order",
+      "title" => "Change an order that World has",
+      "description" =>
+        ~s(Makes small changes to a placed order and keeps the new order: the way to correct a model after you look at its files, with no new full request. Each edit is {"set": PATH, "to": VALUE}, {"remove": PATH} or {"insert": PATH, "value": VALUE}. A path is as the path of an error of a check: options.height, colors.paint, joints.stand, options.numbers.fronds, options.drawing.nodes.0.skill.sculpt.edits.3.size \(an item of a list is its index from 0, or its name\). The edits are on the full order \(each option with its default: get it from place_order or check_order\). Gives the new hash, the full order, the URLs of its files, the hash of its parent and its history; or the errors, with the path edits.N of an edit that is not possible.),
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "hash" => %{"type" => "string", "description" => "The hash of the order to change."},
+          "edits" => %{
+            "type" => "array",
+            "items" => %{"type" => "object"},
+            "description" => "The edits, in their order."
+          }
+        },
+        "required" => ["hash", "edits"]
+      },
+      "annotations" => %{
+        "readOnlyHint" => false,
+        "destructiveHint" => false,
+        "idempotentHint" => true,
+        "openWorldHint" => false
+      }
     },
     %{
       "name" => "place_order",
@@ -567,6 +592,16 @@ defmodule World.MCP do
 
   defp call(tool, _args, _origin) when tool in ~w(check_drawing propose_drawing),
     do: wrong(~s(the argument "drawing" must be a JSON object))
+
+  defp call("edit_order", %{"hash" => hash, "edits" => edits}, origin) when is_binary(hash) do
+    case World.Orders.Edits.place(hash, edits, origin) do
+      {:ok, data} -> result(data)
+      {:error, :store} -> wrong("the store of the orders failed; try again later")
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("edit_order", _args, _origin), do: wrong(~s(the arguments "hash" and "edits" are necessary))
 
   defp call(tool, %{"order" => order}, origin) when is_map(order) do
     case if(tool == "check_order", do: check(order), else: Orders.place(order, origin)) do

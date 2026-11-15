@@ -23,6 +23,8 @@
 // - POST /orders: an order in JSON (the VM). 200 with the hash, the full
 //   order, the URLs of its files and the URL of its replay page; 422
 //   with the errors.
+// - POST /orders/HASH/edits: small changes to an order (the VM,
+//   World.Orders.Edits). 200 with the new hash and its history.
 // - POST /sets: a set of orders in JSON (the VM, World.Orders.Set). 200
 //   with the hash of the set and each variant (its hash, its order, its
 //   files and its lot); 422 with the errors.
@@ -189,6 +191,9 @@ async function route(request, env, { vm, commit }) {
   }
 
   if (path === '/orders' && request.method === 'POST') return forward(request, vm, url.origin, '/orders');
+
+  // The edits of an order that the VM has.
+  if (/^\/orders\/[0-9a-f]{32}\/edits$/.test(path) && request.method === 'POST') return forward(request, vm, url.origin, path);
 
   if (path === '/blueprints' && request.method === 'POST') return forward(request, vm, url.origin, '/blueprints');
 

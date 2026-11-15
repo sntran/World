@@ -121,6 +121,36 @@ defmodule World.ServiceTest do
     assert call(:post, "/orders", "nope").status == 400
   end
 
+  test "POST /orders/HASH/edits: small changes to an order of the store give a new order with its history" do
+    %{"hash" => hash} = json(call(:post, "/orders", @strut))
+
+    conn =
+      conn(:post, "/orders/#{hash}/edits", ~s({"edits": [{"set": "options.length", "to": 0.45}]}))
+      |> Plug.Conn.put_req_header("x-world-origin", "https://world.mkfifo.com")
+      |> Service.call(Service.init([]))
+
+    assert conn.status == 200
+    %{"hash" => new, "parent" => ^hash, "history" => history, "files" => files, "order" => order} = json(conn)
+    assert new != hash and order["options"]["length"] == 0.45
+    assert history == [%{"hash" => hash}, %{"hash" => new, "edits" => [%{"set" => "options.length", "to" => 0.45}]}]
+    assert files["glb"] == "https://world.mkfifo.com/o/#{new}.glb"
+    assert call(:get, "/o/#{new}.far.glb").status == 200
+
+    # A length that the rule refuses, an edit that is not possible, a body with no edits, an order that is not there.
+    wrong = call(:post, "/orders/#{hash}/edits", ~s({"edits": [{"set": "options.length", "to": -1}]}))
+    assert wrong.status == 422
+    assert [%{"path" => "options.length"}] = json(wrong)["errors"]
+    wrong = call(:post, "/orders/#{hash}/edits", ~s({"edits": [{"remove": "options.width"}]}))
+    assert wrong.status == 422
+    assert [%{"path" => "edits.0"}] = json(wrong)["errors"]
+    assert [%{"path" => "edits"}] = json(call(:post, "/orders/#{hash}/edits", "[1]"))["errors"]
+    assert [%{"path" => "edits"}] = json(call(:post, "/orders/#{hash}/edits", "{}"))["errors"]
+    assert call(:post, "/orders/#{hash}/edits", "nope").status == 400
+    gone = call(:post, "/orders/#{String.duplicate("0", 32)}/edits", ~s({"edits": [{"remove": "options.length"}]}))
+    assert gone.status == 404
+    assert [%{"path" => "order"}] = json(gone)["errors"]
+  end
+
   test "POST /build of a hash: 404 for an order that is not in the store, or for a wrong hash" do
     assert json(call(:post, "/build?hash=ffffffffffffffffffffffffffffffff", ""))["errors"] ==
              [%{"path" => "", "message" => "no such order: send it to POST /orders"}]

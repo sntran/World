@@ -44,10 +44,14 @@ into the steps of `AGENTS.md`.
   at each level, hair at far, a side stand, the light look with a
   budget and a wrap, the blueprint `plant`), and Tre has the clothes of
   old Việt Nam, the things of a yard, the buffalo calf and the areca
-  palm. Open: the near level of the trees in the budgets of Vũng Tàu,
-  the kind of land of the Earth, a softer face and cloth that hangs
-  better, tools for the hands, and the start of the server on the
-  mini PC.
+  palm. The direction after the word of the owner (plan 0019, 7.0):
+  World takes requests and edits for any model, and does not make a
+  rule for each model. Made: the edits of an order (`POST
+  /orders/HASH/edits`, the MCP tool `edit_order`), and the numbers of a
+  plant in the request. Open: the numbers of each other rule in the
+  request, the drawing of a model of a rule as a file of its order, a
+  picture of a model from the server, the kind of land of the Earth,
+  and the start of the server on the mini PC.
 - **The street Quang Trung of Vũng Tàu as it is (plan 0018, in
   progress).** Made: the survey, the row of the numbers 4 to 26, the
   office of the port at number 2, the two blocks of the Grand Hotel,

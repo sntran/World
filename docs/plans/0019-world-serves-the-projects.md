@@ -328,6 +328,44 @@ So each project takes a GLB. The output `solids` stays as a cheap view
 of a drawing, but no project waits for it. The output `flat` is a GLB
 too: a small mesh with a color at each point.
 
+### 7.0 Requests and edits, not rules for each model
+
+The owner (2026-11-15), after the rules of sections 6 and 7.1: "We can
+fix them, but we can't fix everything. What I would like for World to
+have is the ability to be able to take requests and create and edit any
+models. That is, Phuot can request World for a coconut palm with
+specifications. Phuot will check World's output, and if it see issues,
+will issue edit to World to edit. World should be able to handle those,
+instead of trying to predict and pre build those models."
+
+So the work changes direction. World does not get a rule for each kind
+of thing that a project can want. It gets these abilities:
+
+1. **An edit of an order. Done** (`World.Orders.Edits`, `POST
+   /orders/HASH/edits`, the MCP tool `edit_order`): `set`, `remove` and
+   `insert` at a path of the full order, the check of the new order,
+   its parent and its history in the store.
+2. **The numbers of a rule in the request. Done for a plant:** the
+   option `numbers` of the blueprint `plant`. A palm of 9 m with 14
+   fronds and a lean of 20 degrees, then four edits (32 fronds, a lean
+   of 7 degrees, the trunk of the species, lighter leaves): a new order
+   in 0.5 s, and its near level in 2 s. Open: the same for each other
+   rule (the numbers that are fixed in the code of a house, of a
+   vehicle, of a thing of a yard).
+3. **Any model from free edits.** The blueprint `drawing` takes any
+   shape, and an edit of the order changes, adds or removes a shape (a
+   jar gets higher, with two ears and a band, in four edits). The check
+   of a model from edits no longer refuses a thing that stands (its
+   base is as high as a cell of its far level).
+4. **Open:** the drawing of a model of a rule as a file of its order,
+   so that a project can take the model into free edits when the
+   options of the rule are not sufficient; a picture of a model from
+   the server, so that a project with no viewer can look; and edits of
+   one order from two projects at the same time.
+
+The rules that exist stay as a fast first answer. A new rule is made
+only when many requests of the same kind show that it saves time.
+
 ### 7.1 Tre: a trial of the look
 
 Step T1 (done): a sheet of twelve models that World has and that fit

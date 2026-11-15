@@ -62,6 +62,54 @@ defmodule World.NurseryTest do
     assert length(nuts.shapes) == 12 and Enum.all?(nuts.shapes, &(&1.material == :leaf))
   end
 
+  test "the numbers of a plant come from the request: a project gives and corrects the trunk, the fronds, the lean" do
+    alias World.Orders
+    numbers = Plants.numbers()
+    # Each number of a species but its height, with its least and its most (a quarter and four times).
+    assert numbers["fronds"] == {9 / 4, 120, true} and numbers["trunk"] == {0.02, 1.32, false}
+    refute Map.has_key?(numbers, "height") or Map.has_key?(numbers, "flowering")
+    assert Plants.numbers("coconut") == ~w(base frond fronds leaflet lean nut nuts trunk)
+    assert "crownshaft" in Plants.numbers("areca") and "culms" in Plants.numbers("bamboo")
+
+    # In `with_numbers/2` a number of the request comes before the number of the species; a count is whole.
+    assert Plants.with_numbers(%{"fronds" => 11.6, "lean" => 3}, fn ->
+             {Plants.number("coconut", "fronds"), Plants.number("coconut", "lean"), Plants.number("coconut", "trunk")}
+           end) == {12, 3.0, 0.33}
+
+    assert Plants.number("coconut", "fronds") == 30
+    # (A call in a call: the numbers of the outer call come back.)
+    assert Plants.with_numbers(%{"fronds" => 8}, fn ->
+             Plants.with_numbers(%{"fronds" => 9}, fn -> :ok end)
+             Plants.number("coconut", "fronds")
+           end) == 8
+
+    fronds = fn options ->
+      {:ok, job} = Orders.job(%{"blueprint" => "plant", "options" => options}, "near")
+      [_, {_, crown, _} | _] = job.item.(:near).nodes
+      # (A frond at near: its rachis and 36 leaflets.)
+      div(length(crown.shapes), 37)
+    end
+
+    assert fronds.(%{}) == 30 and fronds.(%{"numbers" => %{"fronds" => 12}}) == 12
+
+    {:ok, job} =
+      Orders.job(
+        %{"blueprint" => "plant", "options" => %{"species" => "areca", "numbers" => %{"crownshaft" => 1.0}}},
+        "far"
+      )
+
+    assert [{_, trunk, _} | _] = job.item.(:far).nodes
+    {{_, _, z0}, {_, _, z1}} = World.Part.bounds(%{trunk | shapes: [List.last(trunk.shapes)]})
+    assert_in_delta z1 - z0, 1.0, 0.01
+
+    # A number that the species does not have, and a number out of its limits.
+    assert {:error, [%{"path" => "options.numbers.culms", "message" => "a coconut has no number culms" <> _}]} =
+             Orders.check(%{"blueprint" => "plant", "options" => %{"numbers" => %{"culms" => 20}}})
+
+    assert {:error, [%{"path" => "options.numbers.fronds"}]} =
+             Orders.check(%{"blueprint" => "plant", "options" => %{"numbers" => %{"fronds" => 0}}})
+  end
+
   test "the far level of a palm has less than 500 faces; a taller palm is taller" do
     far = Build.scene(Detail.with(:far, &Plants.coconut/0), level: :far)
     assert Scene.triangles(far) < 500

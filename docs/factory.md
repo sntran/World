@@ -48,6 +48,7 @@ An order is data, never code. World runs no code from an order.
 | `/blueprints` | Each blueprint with its options: the type, the default, the unit, the range or the values. |
 | `POST /blueprints` | A blueprint in data of a project (`docs/skills.md`): 201 with its `hash` (an order gives `{"blueprint": {"hash": HASH}}`), or 422 with the errors, each with its path. |
 | `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. |
+| `POST /orders/HASH/edits` | Small changes to an order of `POST /orders`, in JSON: `{"edits": [...]}` ("An edit of an order"). The answer is as the answer of `POST /orders` for the new order, with `parent` (the hash of the order before) and `history` (each order from the first one to this one, with the edits that made it); 422 with the errors (the path `edits.N` for an edit that is not possible, else the paths of the check of the new order); 404 for a hash that the store does not have. |
 | `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the node build the GLB at each level (`World.Construction`). |
 | `/o/HASH.flat.glb`, `.mid.flat.glb`, `.far.flat.glb` | The model at a level with the flat look (`World.Flat`, plan 0019), for a project that draws many small things with no image: one node with one mesh, each face with its own three points, its normal and one color at each point (`COLOR_0`), a white material, no image, no skin. The points are at their places in the axes of the model. A drawing from edits is built with the look `flat` (the color of a face is the color of its edits); another model has the color of each of its roles. With `?triangles=N` (12 to 200,000), the mesh has at most N faces, or as few as the collapse can make. With `?wrap=1`, the mesh is one closed skin round the whole model (a cast of the model in a grid of 48 cells along its longest side, `World.Cast`), with the color of the nearest face of the model: for a model of many thin parts in a small budget. A part that is thinner than a cell is not in the skin. |
 | `/o/HASH.light.glb`, `.mid.light.glb`, `.far.light.glb` | The model at a level with the light look (`World.Flat`, `roles: true`), for a project that gives each role its own material: one node with one mesh, a primitive for each role of the model, flat faces, the material of each role with its color and no image, no skin. It takes `?triangles=N` and `?wrap=1` as the flat look: a budget keeps the border of two roles. A scooter at the far level: 4,120 triangles, and 500 with `?triangles=500&wrap=1` (50 KB, 15 KB in gzip, in 1.7 s). A coconut palm at the far level: 308 triangles, and 204 with `?triangles=204`. |
@@ -146,7 +147,50 @@ has its path.
 A `plant` is a plant of the nursery, from the rules of its species:
 `species` (`coconut`, `areca`, `banana`, `bamboo`, `frangipani`), `height` (m;
 the common height of the species by default), `seed` (the small changes
-from plant to plant) and `month` (the flowers of a frangipani).
+from plant to plant), `month` (the flowers of a frangipani) and
+`numbers`: the numbers of the plant over the numbers of its species
+(`priv/plants/species.json`), each from a quarter to four times the
+number of the species. A palm has `trunk` (its width, m), `base`,
+`lean` (degrees), `fronds` (their count), `frond` (its length),
+`leaflet`, `nuts`, `nut` and, for an areca palm, `crownshaft`. So a
+project asks for the palm that it wants, and corrects a number after it
+looks at the model.
+
+## An edit of an order
+
+World does not have a rule for each fault that a project can find in a
+model. A project asks for a model, looks at the files, and says what to
+change: `POST /orders/HASH/edits` (or the MCP tool `edit_order`) with a
+list of edits. World makes them on the full order (each option with its
+default), in their order, checks the new order as each order, and keeps
+it with its history. The new order has its own hash and its own files;
+the order before stays.
+
+| Edit | What it does |
+|---|---|
+| `{"set": PATH, "to": VALUE}` | The value at the path. In an object, a new key is possible. In a list, the index of the count of its items adds the value at the end. |
+| `{"remove": PATH}` | No key of an object, or no item of a list, at the path. |
+| `{"insert": PATH, "value": VALUE}` | A new item of a list before the item at the path. |
+
+A path is as the path of an error of a check: the keys from the order
+down, with a point between them. An item of a list is its index (from
+0), or its name when the items have names.
+
+```text
+POST /orders/3c3b21e548bad02796afb318900d876d/edits
+{"edits": [
+  {"set": "options.numbers.fronds", "to": 32},
+  {"set": "options.numbers.lean", "to": 7},
+  {"remove": "options.numbers.trunk"},
+  {"set": "colors.leaf", "to": "#5c9440"}]}
+```
+
+For a model from edits (the blueprint `drawing`), each shape of each
+part is in the order, so an edit can change a size
+(`options.drawing.nodes.chum_than.skill.sculpt.edits.0.size`), add a
+shape (`insert`), take one away (`remove`) or paint a part of the
+model. An edit that the rules refuse gives the errors of the check with
+their paths, and changes nothing.
 
 An `animal` is an animal of a species, from its bones: `species`
 (`street_dog`, `cat`, `wolf`, `fox`, `deer`, `goat`, `pig`, `horse`,
@@ -280,6 +324,7 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 | `list_blueprints` | The name and the description of each blueprint. |
 | `get_blueprint` | The options of one blueprint (`name`), as `GET /blueprints` gives them. |
 | `check_order` | Checks an `order` and does not keep it: the hash and the full order, or the errors. |
+| `edit_order` | Makes the `edits` on the order of a `hash` and keeps the new order, as `POST /orders/HASH/edits`. |
 | `place_order` | Checks an `order` and keeps it, as `POST /orders`: the hash, the full order, the URLs of its files and of its replay page, or the errors. |
 | `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for the owner. |
 | `plan_build` | The plan of the people for an `order` at a `level`, with no build: each task with its trade and its waits, the tasks of each trade, and the estimate of the triangles. |

@@ -37,7 +37,7 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_blueprint check_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture draw_house draw_building draw_village_house draw_village_thing draw_appliance draw_mini plan_street)
+             ~w(list_blueprints get_blueprint check_blueprint check_order edit_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture draw_house draw_building draw_village_house draw_village_thing draw_appliance draw_mini plan_street)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()
@@ -159,6 +159,23 @@ defmodule World.MCPTest do
     assert <<"glTF", _::binary>> = glb.resp_body
 
     assert tool("place_order", %{"order" => %{"blueprint" => "ball"}})["isError"] == true
+
+    # edit_order: small changes to the placed order give a new order, with its parent and its history.
+    edits = [%{"set" => "options.length", "to" => 0.45}, %{"set" => "colors.steel", "to" => "#8090a0"}]
+    e = tool("edit_order", %{"hash" => hash, "edits" => edits})["structuredContent"]
+    assert e["parent"] == hash and e["hash"] != hash and e["order"]["options"]["length"] == 0.45
+    assert e["history"] == [%{"hash" => hash}, %{"hash" => e["hash"], "edits" => edits}]
+    assert e["files"]["glb"] == "#{@origin}/o/#{e["hash"]}.glb"
+    wrong = tool("edit_order", %{"hash" => hash, "edits" => [%{"remove" => "options.width"}]})
+    assert wrong["isError"]
+    assert [%{"path" => "edits.0"}] = wrong["structuredContent"]["errors"]
+
+    for args <- [%{}, %{"hash" => hash}, %{"hash" => 1, "edits" => edits}] do
+      wrong = tool("edit_order", args)
+
+      assert wrong["isError"] and
+               hd(wrong["content"])["text"] =~ ~s(the arguments \\"hash\\" and \\"edits\\" are necessary)
+    end
   end
 
   test "plan_build gives the tasks, the trades and the triangles of an order; build starts a construction to watch" do
@@ -199,7 +216,10 @@ defmodule World.MCPTest do
 
     {200, %{"error" => e}} = rpc("tools/call", %{"name" => "build_house"})
     assert e["code"] == -32602
-    assert e["message"] =~ "the tools are list_blueprints, get_blueprint, check_blueprint, check_order, place_order"
+
+    assert e["message"] =~
+             "the tools are list_blueprints, get_blueprint, check_blueprint, check_order, edit_order, place_order"
+
     assert {200, %{"error" => %{"code" => -32602}}} = rpc("tools/call", "x")
 
     assert {400, %{"error" => %{"code" => -32700}}} = MCP.answer("nope", nil, @origin)

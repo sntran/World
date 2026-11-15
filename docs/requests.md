@@ -105,6 +105,34 @@ files.
    World, the hash of the order, and the SHA-256 of each file. Do not
    keep a model of your project in World.
 
+## Look, then edit
+
+World does not know what your project wants before you say it. Ask,
+look at the result, and say what to change:
+
+1. **Ask** with the numbers that you know (`POST /orders` or
+   `place_order`). A rule takes its numbers from the request: a palm
+   has `numbers` (`fronds`, `frond`, `lean`, `trunk`, ...), a person
+   has its shapes, a van its sizes.
+2. **Look** at the mid level from more than one side, next to your
+   photos.
+3. **Edit.** Send small changes to the order with its hash (`POST
+   /orders/HASH/edits`, or the MCP tool `edit_order`): `{"set": PATH,
+   "to": VALUE}`, `{"remove": PATH}` or `{"insert": PATH, "value":
+   VALUE}`. A path is as the path of an error of a check
+   (`options.numbers.fronds`, `colors.leaf`,
+   `options.drawing.nodes.NAME.skill.sculpt.edits.3.size`). The answer
+   is a new order with its hash, its files and its history; the order
+   before stays, so you can go back.
+4. **Again**, until the model is right. Then keep the last order and
+   its lock.
+
+When no option of a rule can make the change, ask for the thing as a
+drawing of edits (the kind 3): each shape of each part is then in your
+order, and an edit can change, add or remove a shape. Tell the owner of
+World about a number that a rule does not let you change: the fix is to
+put that number in the request, not to make a new rule for your model.
+
 ## From the server
 
 With the server of World (`https://world.mkfifo.com`):

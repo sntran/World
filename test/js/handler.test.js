@@ -47,6 +47,15 @@ test('POST /orders goes to the VM, with the origin of the URLs', async () => {
   assert.ok(v.orders.has(HASH));
 });
 
+test('POST /orders/HASH/edits goes to the VM, with the origin of the URLs', async () => {
+  const v = vm();
+  const hash = '0123456789abcdef0123456789abcdef';
+  const r = await handler(req(`/orders/${hash}/edits`, { method: 'POST', body: JSON.stringify({ edits: [] }) }), { ORDERS: bucket() }, { vm: v, commit: 'c1' });
+  assert.equal(r.status, 422);
+  assert.deepEqual(v.calls, [`/orders/${hash}/edits`]);
+  assert.equal(v.last.headers.get('x-world-origin'), 'https://world.mkfifo.com');
+});
+
 test('POST /sets goes to the VM, with the origin of the URLs', async () => {
   const v = vm();
   const r = await handler(req('/sets', { method: 'POST', body: JSON.stringify({ orders: [] }) }), { ORDERS: bucket() }, { vm: v, commit: 'c1' });

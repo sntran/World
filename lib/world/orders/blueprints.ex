@@ -281,21 +281,45 @@ defmodule World.Orders.Blueprints do
           doc: "The height (the common height of the species by default)."
         ),
         option("seed", :integer, default: 1, min: 0, max: 1_000_000, doc: "The small changes from plant to plant."),
-        option("month", :integer, default: 6, min: 1, max: 12, doc: "The month, for the flowers of a frangipani.")
+        option("month", :integer, default: 6, min: 1, max: 12, doc: "The month, for the flowers of a frangipani."),
+        option("numbers", :object,
+          default: %{},
+          fields:
+            for(
+              {key, {lo, hi, whole?}} <- Enum.sort(World.Plants.numbers()),
+              do: option(key, :number, default: nil, min: if(whole?, do: max(1, lo), else: lo), max: hi)
+            ),
+          doc:
+            "Numbers of the plant over the numbers of its species (priv/plants/species.json), in meters and degrees: a project gives the numbers of the plant that it wants, and corrects them after it looks at the model. A palm: trunk (its width), base, lean, fronds (their count), frond (its length), leaflet, nuts, nut, crownshaft. Each species has its own keys."
+        )
       ],
       build: fn o ->
         opts = [seed: o["seed"]] ++ if(o["height"], do: [height: o["height"]], else: [])
+        numbers = for {k, v} <- o["numbers"], v != nil, into: %{}, do: {k, v}
 
-        case o["species"] do
-          "coconut" -> World.Plants.coconut(opts)
-          "areca" -> World.Plants.areca(opts)
-          "banana" -> World.Plants.banana(opts)
-          "bamboo" -> World.Plants.bamboo(opts)
-          "frangipani" -> World.Plants.frangipani(opts ++ [month: o["month"]])
-        end
+        World.Plants.with_numbers(numbers, fn ->
+          case o["species"] do
+            "coconut" -> World.Plants.coconut(opts)
+            "areca" -> World.Plants.areca(opts)
+            "banana" -> World.Plants.banana(opts)
+            "bamboo" -> World.Plants.bamboo(opts)
+            "frangipani" -> World.Plants.frangipani(opts ++ [month: o["month"]])
+          end
+        end)
       end,
+      check: &plant_check/1,
       sources: ["The numbers of each species are in priv/plants/species.json, each with its source."]
     }
+  end
+
+  # A number of a request must be a number of the species.
+  defp plant_check(o) do
+    known = World.Plants.numbers(o["species"])
+
+    for {key, v} <- Enum.sort(o["numbers"]),
+        v != nil,
+        key not in known,
+        do: {"options.numbers.#{key}", "a #{o["species"]} has no number #{key}: #{Enum.join(known, ", ")}"}
   end
 
   # --- A group at a morning of exercise ------------------------------------------------------

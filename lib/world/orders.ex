@@ -441,11 +441,23 @@ defmodule World.Orders do
     {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
     item = Detail.with(:far, fn -> blueprint.build.(order["options"]) end)
 
-    case World.Check.model(item, order["joints"]) do
+    case World.Check.model(item, order["joints"], base: base(Blueprints.drawing(order))) do
       :ok -> :ok
       {:error, reasons} -> {:error, for(r <- reasons, do: %{"path" => "model", "message" => World.Check.message(r)})}
     end
   end
+
+  # The height of the base of a model for its check: 2 mm, and for a model from edits the largest cell of
+  # its sculptures at the far level (the surface of a sculpture is true to about a cell).
+  defp base(%{"nodes" => nodes}) do
+    cells =
+      for %{"skill" => %{"sculpt" => %{"cells" => cells}}} <- nodes,
+          do: if(is_map(cells), do: cells |> Map.values() |> Enum.max(), else: cells)
+
+    Enum.max([0.002 | cells])
+  end
+
+  defp base(_drawing), do: 0.002
 
   # A joint of the order must be a joint of the model, and a target a
   # limb of the model.
