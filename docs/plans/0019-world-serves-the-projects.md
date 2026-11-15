@@ -168,7 +168,7 @@ that a project does not give is "not found" here, not a guess.
 A request first becomes a **description**: the parts of the model, each
 with its simple shapes (the edits), its material roles, its joints, its
 ports and its tags. A rule makes it in milliseconds, with no mesh. This
-is the drawing that `draw_house` and `draw_building` give today.
+is the drawing that `street_house` and `building` give today.
 
 A project then takes the output that it can use:
 
@@ -255,8 +255,8 @@ as a reference; no test builds them (the commit `b6905ce`).
    it; a file of an older version goes out at once and is built again
    one time; each file has a copy in gzip; the line has two classes. A
    van at the mid level: 6.2 s the first time, 0.18 s after it.
-5. **The rule of an appliance. Done** (`World.Home.Appliance`, the MCP
-   tool `draw_appliance`): 18 kinds, each a body of the size of the
+5. **The rule of an appliance. Done** (`World.Home.Appliance`, the
+   blueprint `appliance`): 18 kinds, each a body of the size of the
    request with the details of the real thing, in about 1 s at the mid
    level. Open: the other kinds of DIY (its catalog has 70), a model of
    one maker (the front of each power station), and doors that open.
@@ -274,7 +274,7 @@ as a reference; no test builds them (the commit `b6905ce`).
    - A person with a thing in a hand, and the indoor unit of the
      catalog (it hangs on a wall), pass the check of an order.
    - The outdoor unit of a split air conditioner is a kind of
-     `draw_appliance` (`ac_outdoor`, and `ac_indoor`).
+     `appliance` (`ac_outdoor`, and `ac_indoor`).
 
    - The budgets of the game: the file `light` of an order (a
      primitive for each role, no image) takes `triangles` and `wrap`.
@@ -302,7 +302,7 @@ as a reference; no test builds them (the commit `b6905ce`).
    desert, forest) from a real source.
 9. **The trial of Tre** (section 7.1).
 10. **The small models of Humans Must Die. Done** (`World.Mini`, the
-    MCP tool `draw_mini`): 26 kinds (9 buildings, 3 aircraft, 5 ships,
+    blueprint `mini`): 26 kinds (9 buildings, 3 aircraft, 5 ships,
     5 vehicles, a wind turbine, 3 trees), each at most 12 thick shapes
     with the look `flat`. The file `flat` at the far level is about
     220 triangles and 6 KB in gzip (the 26 files: 157 KB), each built
@@ -363,7 +363,21 @@ of thing that a project can want. It gets these abilities:
    the options of the rule are not sufficient. Open: the same for a
    model that the code of a rule makes (a plant, a person, an animal, a
    house of a village): its rule must give a drawing.
-5. **Open:** a picture of a model from the server, so that a project
+5. **The tools are for a model of any kind. Done.** The owner
+   (2026-11-15): "the MCP has a lots of tools, but many tools are
+   specific to certain types of models. Should the tools focus on the
+   creating and editing models (of any kind)?" Yes. The seven tools for
+   one kind of model (`draw_house`, `draw_building`,
+   `draw_village_house`, `draw_village_thing`, `draw_appliance`,
+   `draw_mini`, `plan_street`) are gone. Each rule is a blueprint
+   (`street_house`, `building`, `village_house`, `village_thing`,
+   `appliance`, `mini`, `street`): its options are the keys of its
+   request, and the full order has the full request, so `edit_order`
+   changes one word of it (the doors of a fridge, the roof of a house).
+   The MCP server has 13 tools: find a blueprint, check, place and edit
+   an order, watch a build, a live sculpture, and the review of a new
+   drawing or blueprint.
+6. **Open:** a picture of a model from the server, so that a project
    with no viewer can look; and a rule that takes each of its numbers
    from the request.
 
@@ -405,8 +419,8 @@ Step T2 (in progress):
   lifted. The mid level of a house builds in 9 to 13 s. A communal
   house (đình) and a school are requests of the same rule (more bays,
   tiles, a larger curve); a rule of their own is open.
-- **The things of a yard. Done** (`World.Village.Yard`, the MCP tool
-  `draw_village_thing`): a round well of brick, a fence of bamboo of a
+- **The things of a yard. Done** (`World.Village.Yard`, the blueprint
+  `village_thing`): a round well of brick, a fence of bamboo of a
   length, the gate of the village, a haystack, a bridge of bamboo
   poles, a jar for water. Each builds in 6 to 12 s at the near level.
 - **The buffalo calf (nghé). Done:** the species `buffalo_calf` of the

@@ -107,10 +107,12 @@ defmodule World.Mini do
 
     %{
       "name" => r["name"],
-      "kind" => "item",
+      # (A small model is the mark of a large thing where it stands: it goes through no door.)
+      "kind" => "building",
       "sources" => r["sources"],
       "materials" => %{"paint" => %{"color" => "#ffffff", "roughness" => 0.8, "metalness" => 0.0}},
-      "extras" => %{"mini" => r},
+      # (Its site holds it: the base of a wind turbine, the roots of a tree.)
+      "extras" => %{"mini" => r, "site" => true},
       "nodes" => [%{"name" => "#{r["name"]}_than", "skill" => %{"sculpt" => data}}]
     }
   end

@@ -33,24 +33,28 @@ The blueprints by name: `person`, `traveler`, `exercise`, `animal`,
 `GET /blueprints` (or the MCP tool `get_blueprint`) gives the options
 of each, with the type, the default and the range.
 
-Some rules give a drawing from a few words, for the kind 3:
+Some blueprints draw a thing from a few words. Their options are the
+words of the request, and the full order has each choice that the rule
+made, so that you can change one of them later:
 
-- a house of a street: the MCP tool `draw_house`, and `plan_street` for
-  a row (`docs/format.md`, "A house and a street from rules");
-- a building (a hotel, an office, a villa): the MCP tool
-  `draw_building`;
-- a house of a village of old Việt Nam (posts, a porch, stilts, a roof
-  of thatch or tiles that curves): the MCP tool `draw_village_house`;
-- a thing of the yard of such a village (a well, a fence of bamboo, a
-  gate, a haystack, a bridge of bamboo, a jar): the MCP tool
-  `draw_village_thing`;
-- an appliance of a home from its kind and its size (a fridge, a
-  range, a battery, a busbar, the two units of an air conditioner and
-  12 more): the MCP tool
-  `draw_appliance`;
-- a very small model for a view from far (a building, an aircraft, a
-  ship, a vehicle, a wind turbine or a tree in about 220 triangles):
-  the MCP tool `draw_mini`. Ask for the file `flat` of its order.
+- `street_house`: a house of a street, and `street`: one side of a
+  street of houses (`docs/format.md`, "A house and a street from
+  rules");
+- `building`: a hotel, an office, a villa;
+- `village_house`: a house of a village of old Việt Nam (posts, a
+  porch, stilts, a roof of thatch or tiles that curves);
+- `village_thing`: a thing of the yard of such a village (a well, a
+  fence of bamboo, a gate, a haystack, a bridge of bamboo, a jar);
+- `appliance`: an appliance of a home from its kind and its size (a
+  fridge, a range, a battery, a busbar, the two units of an air
+  conditioner and 12 more);
+- `mini`: a very small model for a view from far (a building, an
+  aircraft, a ship, a vehicle, a wind turbine or a tree in about 220
+  triangles). Ask for the file `flat` of its order.
+
+The MCP server has no tool for one kind of model. Its tools are for a
+model of any kind: `list_blueprints` and `get_blueprint` to find a
+rule, `check_order` and `place_order` to ask, `edit_order` to change.
 
 A person (`person`) has an age from 1 to 90 years: a child has its own
 size and proportions. The clothes of a village of old Việt Nam are
@@ -219,7 +223,7 @@ the answer in the credits of the project.
   4,088 triangles, and 500 with `triangles=500` (58 KB, 14 KB in gzip).
   A model of many small parts does not go under some hundreds of
   triangles: add `?wrap=1` (one closed skin round the whole model), or
-  make a request with few shapes (the MCP tool `draw_mini` gives such
+  make a request with few shapes (the blueprint `mini` gives such
   a request for 26 kinds of things).
 - **`light`** (`HASH.light.glb`, `HASH.mid.light.glb`,
   `HASH.far.light.glb`): as `flat`, but with a primitive for each role

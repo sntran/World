@@ -8,6 +8,12 @@ defmodule World.Orders.Blueprints do
   - `exercise`: a group at a morning of exercise (`World.People.exercise/2`);
   - `animal`: an animal of a species (`World.Animals.animal/2`);
   - `plant`: a plant of a species of the nursery (`World.Plants`);
+  - `street_house`, `building`, `village_house`, `village_thing`,
+    `appliance`, `mini`: a thing that a rule draws from a request of a
+    few words (`World.Town.House`, `World.Town.Building`,
+    `World.Village.House`, `World.Village.Yard`, `World.Home.Appliance`,
+    `World.Mini`), and `street`: one side of a street of houses
+    (`World.Town.Street`);
   - `drawing`: a model in the data of the order (`World.Drawing`);
   - `house`: a house of `World.Buildings`;
   - `lot_house`: a whole house on a lot of Vũng Tàu (`World.Buildings.Lot`);
@@ -37,6 +43,24 @@ defmodule World.Orders.Blueprints do
   @doc false
   def __mix_recompile__?, do: :erlang.md5(Enum.join(Path.wildcard(Path.join(@root, "*.json")))) != @hash
 
+  # Each rule is a blueprint, so that an order and the edits of an order work for its things as for each
+  # other model. The options are the keys of the request of the rule, and the full order has the full
+  # request: each choice made (the size of an appliance from its kind).
+  @rules [
+    {"street_house", World.Town.House, :request,
+     "A house of a street of Vũng Tàu that looks real, from a request of a few words: type (cap4, pho2_flat, pho2_tile, pho3), family (old, steel, modern), width, depth, road, use, wall, sign, seed and more. The rules of World.Town.House make each choice that the request does not make, and its drawing: one part from edits for each of its walls, its roof, its doors."},
+    {"building", World.Town.Building, :spec,
+     "A building of a town that is not a house of a row (a hotel, an office, a villa), from a request: size or outline, storeys, floor, fronts (each with a style: plain, windows, loggias, glass; bays, a porch), roof (flat or tiles), colors, letters. The rules of World.Town.Building make its drawing."},
+    {"village_house", World.Village.House, :request,
+     "A house of a village of old Việt Nam: a frame of round posts, bays in a row, a porch, a low base or stilts with a stair, and a large roof of thatch or tiles with four slopes that curve. The request: bays (1 to 7), bay (m), deep (m), porch (m), stilts (m), wall (wood, bamboo, earth), roof (thatch, tiles), curve (0 to 1), eaves (m), age (0 to 1)."},
+    {"village_thing", World.Village.Yard, :request,
+     "A thing of the yard or of the lanes of a village of old Việt Nam: kind (well, fence, gate, haystack, bridge, jar), length (of a fence or of a bridge, 1 to 20 m), color."},
+    {"appliance", World.Home.Appliance, :request,
+     "An appliance or a part of the power system of a home, a body of its size with the details of the real thing: kind (ac_indoor, ac_outdoor, battery, box, busbar, dishwasher, dryer, freezer, fridge, inverter, microwave, power_station, range, solar_panel, tv, washer, water_heater, water_tank), size ([wide, deep, high] in m; the common size of the kind by default), color, doors of a fridge (french, top, single), ports of a busbar (1 to 24)."},
+    {"mini", World.Mini, :request,
+     "A very small model for a view from far, a few thick shapes with flat faces and a color at each point (ask for the file flat): kind (house, block, tower, office, factory, data_center, barn, stilt_house, lighthouse, jet, airliner, helicopter, carrier, destroyer, container_ship, tanker, patrol_boat, police_car, ambulance, fire_truck, tank, missile_battery, turbine, tree_broad, tree_pine, tree_palm), scale (0.1 to 10), color."}
+  ]
+
   @doc "The blueprints in data, as they are in their files."
   def data, do: @data
 
@@ -62,10 +86,13 @@ defmodule World.Orders.Blueprints do
 
   def drawing(%{"blueprint" => %{} = raw, "options" => o}), do: World.Drawing.fill(raw, o)
 
+  def drawing(%{"blueprint" => "street", "options" => o}), do: street_drawing(o)
+
   def drawing(%{"blueprint" => name, "options" => o}) do
-    case Enum.find(@data, &(&1["name"] == name)) do
-      nil -> nil
-      raw -> World.Drawing.fill(raw, o)
+    case {Enum.find(@data, &(&1["name"] == name)), List.keyfind(@rules, name, 0)} do
+      {nil, nil} -> nil
+      {nil, {_, module, _, _}} -> module.drawing(o)
+      {raw, _} -> World.Drawing.fill(raw, o)
     end
   end
 
@@ -82,13 +109,14 @@ defmodule World.Orders.Blueprints do
             exercise(),
             animal(),
             plant(),
+            street(),
             house(),
             lot_house(),
             van(),
             extrusion(),
             strut(),
             l_track()
-          ],
+          ] ++ rules(),
         & &1.name
       )
 
@@ -263,6 +291,69 @@ defmodule World.Orders.Blueprints do
           a not in known,
           do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
   end
+
+  # --- The rules that draw a thing from a request of a few words ---------------------------------
+
+  defp rules do
+    for {name, module, full, doc} <- @rules do
+      %Blueprint{
+        name: name,
+        doc: doc <> " Each option has a default; name and sources are options too.",
+        # (A building takes its `size` too: the full request has its `plan`, the outline.)
+        options:
+          for(
+            key <- Enum.sort(Map.keys(apply(module, full, [%{}])) ++ if(name == "building", do: ["size"], else: [])),
+            do: free(key)
+          ),
+        resolve: fn o -> resolved(fn -> apply(module, full, [given(o)]) end) end,
+        build: fn o -> World.Drawing.build(module.drawing(o)) end,
+        sources: ["The request of the order: its sources are in it. The rule: #{inspect(module)}."]
+      }
+    end
+  end
+
+  # An option of a rule: any value, that the rule checks in its request.
+  defp free(key), do: option(key, :data, default: nil, check: fn value, _path -> {:ok, value} end)
+  defp given(o), do: Map.reject(o, fn {_, v} -> v == nil end)
+
+  # The full request of a rule, or its error (a rule raises an `ArgumentError` with the reason).
+  defp resolved(fun) do
+    {:ok, fun.()}
+  rescue
+    e in ArgumentError -> {:error, [{"options", e.message}]}
+  end
+
+  # One side of a street: the plan of its lots from a seed (`World.Town.Street`), and the houses of some of
+  # its lots (`only`) as one model. The full order has the plan: each lot with the full request of its house.
+  defp street do
+    %Blueprint{
+      name: "street",
+      doc:
+        "One side of a street of houses of Vũng Tàu from a seed (World.Town.Street): seed, road (its width, m), count (the lots) or length (m), depth, sidewalk, types, families and widths (lists of [value, weight]), or lots (a list of what is known of each lot: type, family, width, use, number, name, same). The full order has the plan: each lot with the full request of its house and its place along the street. The model is the houses of the lots only: [first, last] (from 1; the first five lots by default, and five lots at the most).",
+      options: Enum.map(~w(count depth families length lots only road seed sidewalk types widths), &free/1),
+      resolve: fn o ->
+        with {:ok, plan} <- resolved(fn -> World.Town.Street.plan(given(Map.delete(o, "only"))) end) do
+          lots = length(plan["lots"])
+
+          case o["only"] || [1, min(5, lots)] do
+            [a, b] = only when is_integer(a) and is_integer(b) and a >= 1 and b >= a and b <= lots and b - a < 5 ->
+              {:ok, Map.put(plan, "only", only)}
+
+            _ ->
+              {:error,
+               [
+                 {"options.only",
+                  "must be [first, last]: the numbers of two lots of the #{lots}, five lots at the most"}
+               ]}
+          end
+        end
+      end,
+      build: fn o -> World.Drawing.build(street_drawing(o)) end,
+      sources: ["The shares of a common street of Vũng Tàu: World.Town.Street."]
+    }
+  end
+
+  defp street_drawing(%{"only" => [a, b]} = o), do: World.Town.Street.drawing(Map.delete(o, "only"), only: a..b)
 
   # --- A plant of the nursery -----------------------------------------------------------------
 

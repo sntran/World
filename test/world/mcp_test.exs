@@ -37,83 +37,32 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_blueprint check_order edit_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture draw_house draw_building draw_village_house draw_village_thing draw_appliance draw_mini plan_street)
+             ~w(list_blueprints get_blueprint check_blueprint check_order edit_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()
   end
 
-  test "draw_house and plan_street give the drawings of the rules of a town (plan 0016)" do
-    r = tool("draw_house", %{"house" => %{"type" => "pho3", "family" => "modern", "seed" => 7}})
-    drawing = r["structuredContent"]["drawing"]
-    assert drawing == World.Town.House.drawing(%{"type" => "pho3", "family" => "modern", "seed" => 7})
-    assert {:ok, _} = World.Drawing.check(drawing, "d")
-    refute Map.has_key?(r, "isError")
-    # With no request: the most common house. A wrong word is an error with its message.
-    assert tool("draw_house", %{})["structuredContent"]["drawing"]["extras"]["house"]["type"] == "pho2_flat"
-    wrong = tool("draw_house", %{"house" => %{"type" => "castle"}})
-    assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "the type of a house"
+  test "a thing of a rule is an order of the general tools: no tool for one kind of model" do
+    names = Enum.map(tool("list_blueprints", %{})["structuredContent"]["blueprints"], & &1["name"])
+    assert ~w(appliance building mini street street_house village_house village_thing) -- names == []
+    refute Enum.any?(MCP.tools(), &(&1["name"] =~ ~r/^draw_|^plan_street/))
 
-    # A building from a request of a few words (plan 0018).
-    request = %{"size" => [12, 8], "storeys" => 2, "fronts" => [%{"style" => "loggias", "bays" => 3}]}
-    drawing = tool("draw_building", %{"building" => request})["structuredContent"]["drawing"]
-    assert drawing == World.Town.Building.drawing(request)
-    assert {:ok, _} = World.Drawing.check(drawing, "d")
-    assert tool("draw_building", %{})["structuredContent"]["drawing"]["name"] == "toa_nha"
-    wrong = tool("draw_building", %{"building" => %{"storeys" => 0}})
-    assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "from 1 to 12 storeys"
+    # check_order gives the full request of the rule; place_order keeps it; edit_order changes one word of it.
+    full = tool("check_order", %{"order" => %{"blueprint" => "appliance", "options" => %{"kind" => "fridge"}}})
+    assert full["structuredContent"]["order"]["options"] == World.Home.Appliance.request(%{"kind" => "fridge"})
+    placed = tool("place_order", %{"order" => %{"blueprint" => "mini", "options" => %{"kind" => "jet"}}})
+    hash = placed["structuredContent"]["hash"]
+    edits = [%{"set" => "options.scale", "to" => 2}, %{"set" => "options.color", "to" => "#405060"}]
+    edited = tool("edit_order", %{"hash" => hash, "edits" => edits})["structuredContent"]
+    assert edited["order"]["options"] == World.Mini.request(%{"kind" => "jet", "scale" => 2, "color" => "#405060"})
+    assert edited["parent"] == hash
 
-    # A house of a village of old Việt Nam (plan 0019).
-    request = %{"stilts" => 1.8, "roof" => "tiles"}
-    drawing = tool("draw_village_house", %{"house" => request})["structuredContent"]["drawing"]
-    assert drawing == World.Village.House.drawing(request)
-    assert tool("draw_village_house", %{})["structuredContent"]["drawing"]["name"] == "nha_xua"
-    wrong = tool("draw_village_house", %{"house" => %{"bays" => 0}})
-    assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "from 1 to 7 bays"
-
-    # An appliance of a home from its kind and its size (plan 0019).
-    request = %{"kind" => "range", "size" => [0.76, 0.66, 0.92]}
-    drawing = tool("draw_appliance", %{"appliance" => request})["structuredContent"]["drawing"]
-    assert drawing == World.Home.Appliance.drawing(request)
-    assert tool("draw_appliance", %{})["structuredContent"]["drawing"]["name"] == "box"
-    wrong = tool("draw_appliance", %{"appliance" => %{"kind" => "toaster"}})
-    assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "the kind of an appliance"
-
-    # A thing of the yard of a village (plan 0019, for Tre).
-    drawing = tool("draw_village_thing", %{"thing" => %{"kind" => "jar"}})["structuredContent"]["drawing"]
-    assert drawing == World.Village.Yard.drawing(%{"kind" => "jar"})
-    assert tool("draw_village_thing", %{})["structuredContent"]["drawing"]["name"] == "well"
-    wrong = tool("draw_village_thing", %{"thing" => %{"kind" => "pagoda"}})
+    wrong = tool("check_order", %{"order" => %{"blueprint" => "appliance", "options" => %{"kind" => "toaster"}}})
     assert wrong["isError"]
-    assert hd(wrong["structuredContent"]["errors"])["message"] =~ "the kind of a thing of a village"
 
-    # A very small model for a view from far (plan 0019).
-    drawing = tool("draw_mini", %{"mini" => %{"kind" => "jet"}})["structuredContent"]["drawing"]
-    assert drawing == World.Mini.drawing(%{"kind" => "jet"})
-    assert tool("draw_mini", %{})["structuredContent"]["drawing"]["name"] == "house"
-    wrong = tool("draw_mini", %{"mini" => %{"kind" => "dragon"}})
-    assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ "the kind of a small model"
-
-    # A street: the plan, and the drawing of a row of 5 houses at the most.
-    r = tool("plan_street", %{"street" => %{"seed" => 4}})
-    plan = World.Town.Street.plan(%{"seed" => 4})
-    assert r["structuredContent"] == %{"plan" => plan, "drawing" => World.Town.Street.drawing(plan)}
-    long = tool("plan_street", %{"street" => %{"count" => 12}})["structuredContent"]
-    assert length(long["plan"]["lots"]) == 12 and long["drawing"] == nil
-    assert length(tool("plan_street", %{})["structuredContent"]["plan"]["lots"]) == 5
-    assert tool("plan_street", %{"street" => %{"count" => 0}})["isError"]
-
-    # A part of a long row, and the lots of a real street (plan 0018).
-    street = %{"count" => 12, "sidewalk" => 5.5, "lots" => [%{"use" => "bar", "number" => "4"}, %{"same" => true}, %{}]}
-    part = tool("plan_street", %{"street" => street, "only" => [2, 3]})["structuredContent"]
-    assert [%{"use" => "bar", "number" => "4"}, %{"use" => "bar"}, %{"use" => "home"}] = part["plan"]["lots"]
-    assert part["drawing"] == World.Town.Street.drawing(World.Town.Street.plan(street), only: 2..3)
-    assert length(part["drawing"]["nodes"]) == 7
-
-    for only <- [[3, 2], [0, 1], "all", [7, 9]] do
-      wrong = tool("plan_street", %{"street" => street, "only" => only})
-      assert wrong["isError"] and hd(wrong["structuredContent"]["errors"])["message"] =~ ~r/only is|from 1 to 5 lots/
-    end
+    assert [%{"path" => "options", "message" => "the kind of an appliance is one of" <> _}] =
+             wrong["structuredContent"]["errors"]
   end
 
   test "list_blueprints gives the name and the description of each blueprint" do

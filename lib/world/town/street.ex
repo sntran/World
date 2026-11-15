@@ -57,8 +57,8 @@ defmodule World.Town.Street do
 
   With `lots` (a list of maps, 1 to 200), the row has those lots in
   their order. A lot gives what is known of it: keys of the request of
-  a house (`type`, `family`, `width`, `depth`, `use`, `wall`, `sign` and
-  the others), `number` and `name` (the address and the name of the
+  a house (`type`, `family`, `width`, `depth`, `use`, `wall`, `sign`,
+  `seed` and the others), `number` and `name` (the address and the name of the
   real house: the plan keeps them), and `same` (true: the lot and the
   lot before it are one building, with the same choices). The seed
   makes each other choice.
@@ -122,12 +122,17 @@ defmodule World.Town.Street do
             "road" => road
           })
 
-        # (Not the color of the house before it: the next seed gives another one. A lot with its color keeps it.)
+        # (Not the color of the house before it: the next seed gives another one. A lot with its color keeps
+        # it, and a lot with its seed keeps it: the plan of a plan is the same plan.)
         request =
-          :erlang.phash2({seed, i}, 1_000_000)
-          |> Stream.iterate(&(&1 + 1))
-          |> Stream.map(&House.request(Map.put(base, "seed", &1)))
-          |> Enum.find(&(before == nil or known["wall"] != nil or &1["wall"] != before["wall"]))
+          if known["seed"] do
+            House.request(base)
+          else
+            :erlang.phash2({seed, i}, 1_000_000)
+            |> Stream.iterate(&(&1 + 1))
+            |> Stream.map(&House.request(Map.put(base, "seed", &1)))
+            |> Enum.find(&(before == nil or known["wall"] != nil or &1["wall"] != before["wall"]))
+          end
 
         lot = request |> Map.merge(Map.take(known, ~w(number name))) |> Map.put("at", Float.round(x + width / 2, 4))
         {lot, {x + width, lot}}

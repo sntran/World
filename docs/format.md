@@ -512,15 +512,20 @@ houses.
   budgets are 900, 450 and 220 triangles. The file `flat` of the order
   is one mesh: about 220 triangles and 6 KB in gzip at the far level,
   in less than 1 s.
-- **The tools of the MCP server:** `draw_house` (the argument `house`:
-  a request), `draw_building` (the argument `building`: a request),
-  `draw_village_house` (the argument `house`: a request),
-  `draw_village_thing` (the argument `thing`: a request),
-  `draw_appliance` (the argument `appliance`: a request), `draw_mini`
-  (the argument `mini`: a request) and
-  `plan_street` (the argument `street`: `seed`, `road`,
-  `count` or `length`, `depth`, `sidewalk`, `lots`, and `types`,
-  `families`, `widths` as lists of `[value, weight]`).
+- **Each of these rules is a blueprint**, so an order and the edits of
+  an order work for its things as for each other model (there is no
+  MCP tool for one kind of model): `street_house`, `building`,
+  `village_house`, `village_thing`, `appliance` and `mini`. The options
+  of the order are the keys of the request, and the full order has the
+  full request (each choice that the rule made), so an edit can change
+  one of them: `{"blueprint": "appliance", "options": {"kind":
+  "fridge"}}`, then `{"set": "options.doors", "to": "single"}`. The
+  blueprint `street` is one side of a street: its options are `seed`,
+  `road`, `count` or `length`, `depth`, `sidewalk`, `lots`, and
+  `types`, `families`, `widths` as lists of `[value, weight]`; its full
+  order has the plan (each lot with the full request of its house), and
+  its model is the houses of the lots `only`: `[first, last]` (the
+  first five lots by default, five lots at the most).
 
 ### The words of IFC
 

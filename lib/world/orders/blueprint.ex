@@ -12,9 +12,13 @@ defmodule World.Orders.Blueprint do
   - `check`: a function of the options to a list of errors, for the
     checks across options (a window must be in its wall). Each error is
     `{path, message}`.
+  - `resolve`: nil, or a function of the options to `{:ok, options}` or
+    `{:error, errors}`: the options with each choice made, for a rule
+    whose defaults come from its other options (the size of an appliance
+    comes from its kind). The full order has these options.
   - `sources`: where the data of the blueprint comes from.
   """
-  defstruct name: nil, doc: "", options: [], build: nil, check: nil, sources: []
+  defstruct name: nil, doc: "", options: [], build: nil, check: nil, resolve: nil, sources: []
 
   defmodule Option do
     @moduledoc """

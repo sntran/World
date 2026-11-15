@@ -13,7 +13,7 @@ defmodule World.MiniTest do
       d = Mini.drawing(%{"kind" => kind})
       assert {:ok, _} = World.Drawing.check(d, "d"), kind
       assert JSON.decode!(JSON.encode!(d)) == d
-      assert d["name"] == kind and d["kind"] == "item" and d["extras"]["mini"]["kind"] == kind
+      assert d["name"] == kind and d["kind"] == "building" and d["extras"]["mini"]["kind"] == kind
       assert [%{"name" => name, "skill" => %{"sculpt" => s}}] = d["nodes"]
       assert name == kind <> "_than" and s["look"] == "flat" and not Map.has_key?(s, "bake")
       assert length(s["edits"]) <= 12 and Enum.all?(s["edits"], &(&1["material"] == "paint" and is_binary(&1["color"])))

@@ -51,6 +51,7 @@ defmodule World.Orders do
     with [] <- unknown,
          {:ok, blueprint, given} <- blueprint(order["blueprint"]),
          {:ok, options} <- Blueprint.check_options(blueprint.options, Map.get(order, "options", %{}), "options"),
+         {:ok, options} <- if(blueprint.resolve, do: blueprint.resolve.(options), else: {:ok, options}),
          [] <- if(blueprint.check, do: blueprint.check.(options), else: []),
          {:ok, colors} <- colors(Map.get(order, "colors", %{})),
          {:ok, joints} <- joints(Map.get(order, "joints", %{})),

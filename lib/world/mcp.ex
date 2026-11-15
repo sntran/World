@@ -24,6 +24,7 @@ defmodule World.MCP do
   The factory builds each file at its first GET (this can take some seconds; 503 means that the order needs more memory than the edge has), and keeps it. The same order always gives the same hash and the same URLs.
   To watch the people build a model: call plan_build for the tasks, the trades and the triangles of an order at a level, then build with a budget. The answer has the URL of the stream of the events of the construction (server-sent events), and each element as it comes.
   To correct a model after you look at its files: call edit_order with the hash and small changes (set, remove or insert at a path of the full order). The answer is a new order with its own hash and files, its parent and its history. Do not send the full request again, and do not wait for a new rule: say what to change.
+  A thing that a rule draws from a few words is a blueprint as each other one (list_blueprints): street_house, street, building, village_house, village_thing, appliance, mini. Its options are the words of its request, and the full order has each choice that the rule made, so edit_order can change one of them.
   A sculpture from edits (simple shapes that add, take away or paint, with a blend): send it in a node of the skill sculpt of a blueprint, or call open_sculpture for a live sculpture, then edit_sculpture for each change, and follow its stream of pieces.
   A new model for the catalog (an engineer): get_blueprint drawing gives the format of a drawing (its shapes, their materials and matter, standard parts, nodes and joints). Call check_drawing until the drawing has no errors and passes the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop, each part has a mass). Then call propose_drawing with the request: the owner reviews the proposal, and accepts or refuses it.
   """
@@ -254,130 +255,6 @@ defmodule World.MCP do
         "properties" => %{"sculpture" => %{"type" => "string", "description" => "The id of the sculpture."}},
         "required" => ["sculpture"]
       }
-    },
-    %{
-      "name" => "draw_house",
-      "title" => "Draw a house of a street of Vũng Tàu",
-      "description" =>
-        "Gives the drawing of a house from a request of a few words: the rules of World.Town.House make each choice, and the same request gives the same house. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
-      "inputSchema" => %{
-        "type" => "object",
-        "properties" => %{
-          "house" => %{
-            "type" => "object",
-            "description" =>
-              "The request: type (cap4, pho2_flat, pho2_tile or pho3), family (old, steel or modern), use (home, or bar: a bar, a restaurant or a shop with an open front, a sign and an awning), width (3 to 8 m), depth (6 to 30 m), road (the width of the road, m), seed (a whole number), left and right (shared or free), and a value for a choice of the rules (wall, ground, rail, sign, awning, vents, flip). Each key has a default."
-          }
-        }
-      },
-      "annotations" => @read
-    },
-    %{
-      "name" => "draw_building",
-      "title" => "Draw a building of a town",
-      "description" =>
-        "Gives the drawing of a building (a hotel, an office, a villa) from a request of a few words: its plan, its storeys, and a list of fronts with a style and a count of equal bays. The rules of World.Town.Building make the walls, the windows, the loggias with their rails, the cornice, the roof, the porches and the letters. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
-      "inputSchema" => %{
-        "type" => "object",
-        "properties" => %{
-          "building" => %{
-            "type" => "object",
-            "description" =>
-              "The request: name; sources; plan (corners [x, y] in m, counterclockwise) or size ([long, deep]: side 1 is the front); storeys, ground, band and storey (heights, m); colors (wall, trim, band, cornice, glass, frame, rail, roof, deck, ground, letters); fronts (each: side, style (plain, windows, loggias or glass), from, to, inset, bays, ground (piers, windows or blank), out, paint, band, window, sill, bars, places, ledges, pilasters, deep, rail (cross, bars or none), pitch); cornice (high, out); roof (kind: flat with parapet, or tiles with high, inset and gables); porches (each: side, at, wide, deep, high, columns, steps, door, board, terrace); letters (each: side, at, z, high, text); apron; age; more (edits for the parts than, mai, chu and nen). Each key has a default."
-          }
-        }
-      },
-      "annotations" => @read
-    },
-    %{
-      "name" => "draw_village_house",
-      "title" => "Draw a house of a village of old Việt Nam",
-      "description" =>
-        "Gives the drawing of a house of a village of old Việt Nam from a request of a few words: a frame of round posts, bays in a row, a porch, a low base or stilts with a stair, and a large roof of thatch or tiles with four slopes that curve. The rules of World.Village.House make it. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
-      "inputSchema" => %{
-        "type" => "object",
-        "properties" => %{
-          "house" => %{
-            "type" => "object",
-            "description" =>
-              "The request: name; sources; bays (1 to 7); bay (the width of a bay, m); deep (m); porch (its depth, m; 0: none); stilts (the height of the floor, m; 0: on a low base); wall (wood, bamboo or earth); roof (thatch or tiles); curve (0 to 1: the sag of the slopes and the lift of the corners); eaves (m); age (0 to 1). Each key has a default."
-          }
-        }
-      },
-      "annotations" => @read
-    },
-    %{
-      "name" => "draw_village_thing",
-      "title" => "Draw a thing of the yard of a village of old Việt Nam",
-      "description" =>
-        "Gives the drawing of a thing of the yard or of the lanes of a village of old Việt Nam from its kind: a round well of brick, a fence of bamboo, the gate of the village, a haystack round its pole, a bridge of bamboo poles, a large jar for water. The rules of World.Village.Yard make it. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
-      "inputSchema" => %{
-        "type" => "object",
-        "properties" => %{
-          "thing" => %{
-            "type" => "object",
-            "description" =>
-              "The request: kind (well, fence, gate, haystack, bridge or jar); name; sources; length (of a fence or of a bridge, 1 to 20 m); color (the main color). Each key has a default."
-          }
-        }
-      },
-      "annotations" => @read
-    },
-    %{
-      "name" => "draw_appliance",
-      "title" => "Draw an appliance of a home",
-      "description" =>
-        "Gives the drawing of an appliance or of a part of the power system of a home from its kind and its size: a body of that size with the details of the real thing (doors, handles, knobs, a window, terminals). The rules of World.Home.Appliance make it. Send the drawing to check_drawing, propose_drawing or build (as the drawing of an order).",
-      "inputSchema" => %{
-        "type" => "object",
-        "properties" => %{
-          "appliance" => %{
-            "type" => "object",
-            "description" =>
-              "The request: kind (ac_indoor, ac_outdoor, battery, box, busbar, dishwasher, dryer, freezer, fridge, inverter, microwave, power_station, range, solar_panel, tv, washer, water_heater or water_tank); name; sources; size ([wide, deep, high] in m; the common size of the kind by default); color; doors of a fridge (french, top or single); ports of a busbar (1 to 24). Each key has a default."
-          }
-        }
-      },
-      "annotations" => @read
-    },
-    %{
-      "name" => "draw_mini",
-      "title" => "Draw a very small model for a view from far",
-      "description" =>
-        "Gives the drawing of a very small model from its kind: a building, an aircraft, a ship, a vehicle, a wind turbine or a tree as a few thick solid shapes, with flat faces and a color at each point, in some hundreds of triangles. The rules of World.Mini make it. Send the drawing to check_drawing or build (as the drawing of an order); the file flat of the order is one mesh with no image.",
-      "inputSchema" => %{
-        "type" => "object",
-        "properties" => %{
-          "mini" => %{
-            "type" => "object",
-            "description" =>
-              "The request: kind (house, block, tower, office, factory, data_center, barn, stilt_house, lighthouse, jet, airliner, helicopter, carrier, destroyer, container_ship, tanker, patrol_boat, police_car, ambulance, fire_truck, tank, missile_battery, turbine, tree_broad, tree_pine or tree_palm); name; sources; scale (0.1 to 10); color (the main color). Each key has a default."
-          }
-        }
-      },
-      "annotations" => @read
-    },
-    %{
-      "name" => "plan_street",
-      "title" => "Plan one side of a street of Vũng Tàu",
-      "description" =>
-        "Gives the plan of a row of houses wall to wall (each lot is the request of its house, with its place along the street), and, for a row of 5 houses at the most, the drawing of the row on its sidewalk. For a longer row, the argument only gives the drawing of a part of it, or each lot goes to draw_house. A real street gives its lots: what is known of each lot stays, and the seed makes each other choice.",
-      "inputSchema" => %{
-        "type" => "object",
-        "properties" => %{
-          "street" => %{
-            "type" => "object",
-            "description" =>
-              "The request: seed, road (the width of the road, m), count (the lots, 1 to 200) or length (m), depth (of each house), sidewalk (its width, 2 to 10 m), and types, families and widths (each a list of [value, weight]) in the place of the shares of a common street. Or lots: a list with what is known of each lot of a real street (keys of the request of a house; number and name; same: true for a lot that is one building with the lot before it)."
-          },
-          "only" => %{
-            "type" => "array",
-            "items" => %{"type" => "integer"},
-            "description" => "[first, last]: the numbers (from 1) of the lots of the drawing, 5 lots at the most."
-          }
-        }
-      },
-      "annotations" => @read
     }
   ]
 
@@ -537,57 +414,6 @@ defmodule World.MCP do
       :ok -> result(%{"sculpture" => args["sculpture"], "closed" => true})
       {:error, errors} -> result(%{"errors" => errors}, true)
     end
-  end
-
-  defp call("draw_house", args, _origin) do
-    result(%{"drawing" => World.Town.House.drawing(Map.get(args, "house", %{}))})
-  rescue
-    e in ArgumentError -> wrong(e.message)
-  end
-
-  defp call("draw_building", args, _origin) do
-    result(%{"drawing" => World.Town.Building.drawing(Map.get(args, "building", %{}))})
-  rescue
-    e in ArgumentError -> wrong(e.message)
-  end
-
-  defp call("draw_village_house", args, _origin) do
-    result(%{"drawing" => World.Village.House.drawing(Map.get(args, "house", %{}))})
-  rescue
-    e in ArgumentError -> wrong(e.message)
-  end
-
-  defp call("draw_village_thing", args, _origin) do
-    result(%{"drawing" => World.Village.Yard.drawing(Map.get(args, "thing", %{}))})
-  rescue
-    e in ArgumentError -> wrong(e.message)
-  end
-
-  defp call("draw_appliance", args, _origin) do
-    result(%{"drawing" => World.Home.Appliance.drawing(Map.get(args, "appliance", %{}))})
-  rescue
-    e in ArgumentError -> wrong(e.message)
-  end
-
-  defp call("draw_mini", args, _origin) do
-    result(%{"drawing" => World.Mini.drawing(Map.get(args, "mini", %{}))})
-  rescue
-    e in ArgumentError -> wrong(e.message)
-  end
-
-  defp call("plan_street", args, _origin) do
-    plan = World.Town.Street.plan(Map.get(args, "street", %{}))
-
-    drawing =
-      case args["only"] do
-        nil -> if(length(plan["lots"]) <= 5, do: World.Town.Street.drawing(plan))
-        [a, b] when is_integer(a) and is_integer(b) and a >= 1 and b >= a -> World.Town.Street.drawing(plan, only: a..b)
-        _ -> raise(ArgumentError, "the argument only is [first, last]: the numbers of two lots, from 1")
-      end
-
-    result(%{"plan" => plan, "drawing" => drawing})
-  rescue
-    e in ArgumentError -> wrong(e.message)
   end
 
   defp call(tool, _args, _origin) when tool in ~w(check_drawing propose_drawing),
