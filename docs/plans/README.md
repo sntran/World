@@ -51,3 +51,4 @@ builder does not change the requirements: the owner does.
 | 0016 | [A house of Vũng Tàu that looks real, and the rules for a street of houses](0016-a-house-and-a-street.md) | Done for the first four types |
 | 0017 | [People: the body of MakeHuman with parts from edits](0017-people-with-parts-from-edits.md) | In progress: the first parts are made, and the hair has strands |
 | 0018 | [The street Quang Trung of Vũng Tàu as it is](0018-quang-trung-street.md) | In progress: the survey, the block of the numbers 4 to 26, the office of the port, the two blocks of the Grand Hotel, and the rules of a building |
+| 0019 | [World serves the projects](0019-world-serves-the-projects.md) | In progress: the probe of the five projects, the design (one description, many outputs; three speeds), and the guide for a project |

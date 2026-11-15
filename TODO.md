@@ -34,6 +34,12 @@ into the steps of `AGENTS.md`.
   (short, a bun, long). Open: flip-flops, clothes and a mask (they need
   the body in the field), long hair that bends, the tools that measure
   a person, and the blind test.
+- **World serves the projects (plan 0019, in progress).** The probe of
+  Vũng Tàu, Phượt, DIY, Humans Must Die and Tre is made, with the
+  design and the guide (`docs/requests.md`). Open: the outputs `solids`
+  and `flat`, the store that stays after a deploy, the rule of an
+  appliance, the faults that Vũng Tàu found, the server on the mini PC,
+  and the Earth of Humans Must Die.
 - **The street Quang Trung of Vũng Tàu as it is (plan 0018, in
   progress).** Made: the survey, the row of the numbers 4 to 26, the
   office of the port at number 2, the two blocks of the Grand Hotel,

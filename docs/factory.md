@@ -7,6 +7,9 @@ web service: <https://world.mkfifo.com>. A model has a URL. When World
 corrects a part, each model that uses the part changes at the same URL,
 and the projects do not deploy again.
 
+A person or an agent of another project starts with `docs/requests.md`:
+how to write a request, check it and build it.
+
 ## The words
 
 | Word | What it is |

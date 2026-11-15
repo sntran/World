@@ -1,0 +1,127 @@
+# How a project asks World for a model
+
+This guide is for a person or an agent of another project (Vũng Tàu,
+Phượt, DIY, Humans Must Die, Tre). It tells how to write a request,
+check it, and build it. The full rules are in `docs/format.md`,
+`docs/skills.md` and `docs/factory.md`; the reasons are in
+`docs/plans/0019-world-serves-the-projects.md`.
+
+## The idea
+
+World is an engine. It has rules; a project has requests. A project
+does not add its things to World: it keeps its requests in its own
+repository, and asks World to build them.
+
+- **World owns:** the rules, the checks, the builds, the files.
+- **A project owns:** its requests, the list of its orders, the look
+  (materials, light), and the place of each thing in its world.
+
+## The three kinds of request
+
+Use the first kind that can make the thing.
+
+| Kind | When | What you write |
+|---|---|---|
+| 1. The words of a rule | The thing is of a family that World knows | The options of a blueprint by its name |
+| 2. A blueprint in data | A family of things of your project, with options | `name`, `doc`, `sources`, `params`, `drawing` (`docs/skills.md`, "How a project sends a blueprint") |
+| 3. A drawing of edits | One thing with a free form: a statue, a boat, a hat | Parts, each a list of simple shapes that add, take away or paint (`docs/format.md`, "A sculpture") |
+
+The blueprints by name: `person`, `traveler`, `exercise`, `animal`,
+`scooter`, `motorcycle`, `car`, `bicycle`, `van`, `house`, `lot_house`,
+`tube_house`, `tower`, `statue`, `extrusion`, `strut`, `l_track`.
+`GET /blueprints` (or the MCP tool `get_blueprint`) gives the options
+of each, with the type, the default and the range.
+
+Two rules give a drawing from a few words, for the kind 3:
+
+- a house of a street: the MCP tool `draw_house`, and `plan_street` for
+  a row (`docs/format.md`, "A house and a street from rules");
+- a building (a hotel, an office, a villa): the MCP tool
+  `draw_building`.
+
+## An order
+
+An order is JSON. Each key but `blueprint` is optional.
+
+```text
+{"blueprint": "scooter",
+ "options": {"front_tire": "80/90-14"},
+ "colors": {"paint": "#1d3b5a"},
+ "joints": {"stand": 1}}
+```
+
+A drawing is an order of the blueprint `drawing`:
+
+```text
+{"blueprint": "drawing", "options": {"drawing": {...the drawing...}}}
+```
+
+The same order gives the same files. Its hash is the name of its
+files.
+
+## Check, then build
+
+1. **Check.** The MCP tool `check_order` (or `check_drawing`,
+   `check_blueprint`) gives the full order with each default, or each
+   error with its path and its rule. Correct the request and check
+   again. A check takes milliseconds.
+2. **Look at a small level first.** Build the far or the mid level, and
+   look at it. Build the near level one time, when the mid level is
+   right.
+3. **Build.** From a checkout of World:
+
+   ```sh
+   mix.com world.order ORDER.json --dir OUT
+   ```
+
+   It writes `HASH.glb` (near), `HASH.mid.glb`, `HASH.far.glb`,
+   `HASH.parts.json` (the parts, the joints, the ports, the sizes),
+   `HASH.receipt.json` (the order, the sources, the licenses) and the
+   log of the build. With the server of World, `POST /orders` gives the
+   URLs of the same files (`docs/factory.md`).
+4. **Keep the order and a lock** in your repository: the commit of
+   World, the hash of the order, and the SHA-256 of each file. Do not
+   keep a model of your project in World.
+
+## What to prepare for a thing
+
+- **A name and a kind.**
+- **The sizes, each with its source.** A size with no source is a
+  guess: say so.
+- **For a real thing, about ten photos**, from more than one side. One
+  photo is not sufficient. A size from an article must agree with the
+  photos.
+- **The parts that move** (a door, a wheel, a stand): each is a joint
+  with a name.
+- **The points that other things use** (a seat, a hook, a terminal):
+  each is a port.
+- **The material role of each part** (`paint`, `glass`, `brick`, ...):
+  your project gives each role its material.
+- **The levels that you need, and a budget of triangles for each.**
+
+## What a build costs
+
+| Request | Time on four cores |
+|---|---|
+| A check, or a drawing from a rule | Milliseconds |
+| A model of a rule (a vehicle, a person, a house of `lot_house`) | Less than a second to some seconds |
+| A model from edits at the far or mid level | Seconds to 2 minutes |
+| A small building from edits, three levels | 2.5 minutes |
+| A large building from edits (a hotel of 40 m), three levels | 7 minutes |
+
+So build before a release, or keep the files: do not ask for a large
+model from edits while a person waits.
+
+## Many things of one kind
+
+Do not order one file for each house or each tree. Order a set of
+variants (`POST /sets`: one order with `count`, `seed` and `vary`), and
+put each variant many times in your world.
+
+## The outputs that come next
+
+Plan 0019 adds two outputs for a project that cannot draw a GLB with
+images: `solids` (the simple shapes of the model as a list, for a
+project that draws boxes or SVG) and `flat` (a small mesh with a color
+at each point and no image). Until then, a model from edits has the
+look `flat` (`docs/format.md`, the key `look` of a sculpture).
