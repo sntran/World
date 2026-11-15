@@ -18,6 +18,16 @@ of World are under the AGPL-3.0 (`LICENSE`).
 | `priv/animals/spaces/wolf.json` | The shape space of the template wolf: the shape changes of the eleven templates of the four-legged animals on the Ultimate rig that the numbers do not give, and their principal components (by `scripts/shape_space.exs`) | Quaternius, [Ultimate Animated Animal Pack](https://quaternius.com/packs/ultimateanimatedanimals.html), the glTF files from [PixelTriks](https://pixeltriks.com/browse?pack=quaternius-ultimate-animated-animals) | CC0 |
 | `priv/animals/meshes/primate.json`, `priv/animals/meshes/primate_upright.json` | The base mesh, the bones and the weights of the templates of primates (`primate_upright`: the arms up at rest, no tail): the low-poly template mesh of a rhesus macaque, its 115 bones and its weights (by `scripts/primate_template.exs`, in the pose at rest of the body plan; the eyes are of World) | [BigMaQ](https://github.com/martinivis/BigMaQ) (L. Martini and others, "BigMaQ: A Big Macaque Motion and Animation Dataset Bridging Image and 3D Pose Representations", ICLR 2026); the template mesh came from the Max Planck Institute for Intelligent Systems and M. J. Black (see below) | MIT |
 
+## The heights of the Earth
+
+`priv/earth/etopo1_025.i16.gz` is from ETOPO1, the 1 arc-minute global
+relief model of NOAA (the surface of the ice), one value each quarter
+of a degree, from the ERDDAP server of NOAA CoastWatch (the data set
+`etopo180`, 2026-11-15). Amante, C. and B. W. Eakins, 2009: ETOPO1 1
+Arc-Minute Global Relief Model: Procedures, Data Sources and Analysis.
+NOAA Technical Memorandum NESDIS NGDC-24. The data may be used and
+redistributed for free.
+
 ## The clothes of the MakeHuman community
 
 These clothes in `priv/makehuman/clothes/` come from the asset packs of

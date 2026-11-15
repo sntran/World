@@ -118,6 +118,15 @@ Do not order one file for each house or each tree. Order a set of
 variants (`POST /sets`: one order with `count`, `seed` and `vary`), and
 put each variant many times in your world.
 
+## A planet
+
+A project with a planet (Humans Must Die) keeps its own grid and its
+own state. It asks World for the real height at each point of its
+grid: `POST /earth/heights` with `{"points": [[latitude, longitude],
+...]}` gives one whole number of meters for each point (40,962 points
+in 21 ms). From a checkout: `World.Earth.heights/1`. Put the source of
+the answer in the credits of the project.
+
 ## A project that cannot draw a GLB
 
 - **`solids`** (`HASH.solids.json`, the file `solids` of an order): the

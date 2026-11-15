@@ -98,6 +98,16 @@ defmodule World.Service do
     end)
   end
 
+  # The heights of the real Earth at the points of a project (World.Earth).
+  post "/earth/heights" do
+    with_order(conn, fn body ->
+      case World.Earth.heights(is_map(body) && body["points"]) do
+        {:ok, heights} -> json(conn, 200, %{"heights" => heights, "unit" => "m", "source" => World.Earth.source()})
+        {:error, errors} -> json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
   post "/orders" do
     with_order(conn, fn order ->
       case Orders.place(order, origin(conn)) do

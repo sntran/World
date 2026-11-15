@@ -31,6 +31,18 @@ defmodule World.ServiceTest do
     assert call(:post, "/check", String.duplicate(" ", 1_100_000)).status == 413
   end
 
+  test "POST /earth/heights: the heights of the real Earth at the points of a project" do
+    conn = call(:post, "/earth/heights", ~s({"points": [[27.99, 86.93], [11.35, 142.2]]}))
+    assert conn.status == 200
+    assert %{"heights" => [high, deep], "unit" => "m", "source" => "ETOPO1" <> _} = json(conn)
+    assert high > 5000 and deep < -8000
+
+    conn = call(:post, "/earth/heights", ~s({"points": [[100, 0]]}))
+    assert conn.status == 422
+    assert [%{"path" => "points.0"}] = json(conn)["errors"]
+    assert [%{"path" => "points"}] = json(call(:post, "/earth/heights", "[1]"))["errors"]
+  end
+
   test "POST /build: each file, and the errors" do
     glb = call(:post, "/build?level=far", @strut)
     assert glb.status == 200

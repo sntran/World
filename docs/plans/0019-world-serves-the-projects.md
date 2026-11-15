@@ -254,7 +254,11 @@ as a reference; no test builds them (the commit `b6905ce`).
 7. **The server on the mini PC:** the release, the tunnel, the store on
    its disk, the measure of the line.
 8. **The Earth of Humans Must Die:** real heights and kinds of land for
-   the points that the game sends (section 7.2).
+   the points that the game sends (section 7.2). Done for the heights
+   (`World.Earth`, `POST /earth/heights`): ETOPO1 of NOAA at a quarter
+   of a degree (1.7 MB in `priv/earth`), 40,962 points in 21 ms, and
+   one byte for each cell is 41 KB. Open: the kind of land (ice,
+   desert, forest) from a real source, and the flat models.
 9. **The trial of Tre** (section 7.1).
 
 ## 7. The answers of the owner (2026-11-15)
