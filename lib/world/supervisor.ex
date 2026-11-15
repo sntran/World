@@ -18,6 +18,7 @@ defmodule World.Supervisor do
   - `World.Constructions`: the constructions (a dynamic supervisor).
   - `World.Sculpt.Cache`: the pieces of the bricks of the sculptures.
   - `World.Sculpt.Gate`: the builds of sculptures that work at one time.
+  - `World.Line`: the line of the builds of a request, in two classes.
   - `World.Crew`: the crews of the sites (a supervisor of tasks, the list
     of the sites with a stream of tasks now, and the nodes that share
     their workers).
@@ -32,6 +33,7 @@ defmodule World.Supervisor do
   @impl true
   def init(env) do
     scale(env)
+    settings(env)
     Supervisor.init(children(env), strategy: :one_for_one)
   end
 
@@ -47,6 +49,20 @@ defmodule World.Supervisor do
 
   def scale(_env), do: :ok
 
+  @doc """
+  The settings of the service from the environment: `WORLD_FILES` (the
+  folder of the files that the node built, `World.Files`), `WORLD_SITE`
+  (the folder of the site, `World.Service`) and `WORLD_BUILDS` (the
+  builds of a request at one time, `World.Line`).
+  """
+  def settings(env) do
+    for {key, name} <- [{"WORLD_FILES", :files}, {"WORLD_SITE", :site}, {"WORLD_BUILDS", :builds}], text = env[key] do
+      Application.put_env(:world, name, if(name == :builds, do: String.to_integer(text), else: text))
+    end
+
+    :ok
+  end
+
   @doc "The children for the environment `env`: the node, and the server with `WORLD_SERVER`."
   def children(env) do
     [
@@ -58,6 +74,7 @@ defmodule World.Supervisor do
       World.Census,
       World.Sculpt.Cache,
       World.Sculpt.Gate,
+      World.Line,
       {DynamicSupervisor, name: World.Sculptures, strategy: :one_for_one}
     ] ++ World.Crew.children() ++ [{World.Crew, crews(env)}] ++ yard(env) ++ server(env)
   end

@@ -47,17 +47,49 @@ defmodule World.Service do
   - `GET /sculptures/ID.glb`: the GLB of the surface of a live sculpture
     now.
 
+  - `GET /o/HASH.glb` (and `.mid.glb`, `.far.glb`, `.parts.json`,
+    `.receipt.json`, `.solids.json`, `.log.json`, `.replay.glb`): a file
+    of an order of `POST /orders`. `GET /m/BLUEPRINT.glb?OPTION=VALUE`
+    (and the other files): a file of an order in the URL
+    (`color.ROLE`, `joint.NAME`, `target.LIMB=X,Y,Z`, `OPTION.FIELD`).
+    The file comes from the store of the node (`World.Files`), else the
+    node builds it in its line (`World.Line`; `?class=batch` or the
+    header `x-world-class: batch` for a build that no person waits for)
+    and keeps it. A file from an older version of World goes out at
+    once, with the header `x-world-stale`, and the node builds it again
+    one time. The answer has an ETag (304 for the same one), and it is
+    in gzip for a client that accepts gzip.
+  - Each other `GET`: a file of the site (the application environment
+    `:site`, from `WORLD_SITE`: the folder that `scripts/site.sh`
+    makes), with `index.html` for `/`.
+
+  Each answer has the headers of CORS, and `OPTIONS` gives 204.
+
   A body that is not JSON gives 400. A body of more than 1 MB gives 413.
   The header `x-world-origin` (from the Worker) is the start of the URLs
   of an order: `https://world.mkfifo.com`.
   """
   use Plug.Router
 
-  alias World.{Construction, MCP, Orders, Stream}
+  alias World.{Construction, Files, Line, MCP, Orders, Stream}
   alias World.Orders.{Blueprint, Blueprints, Set, Store}
 
+  plug(:cors)
   plug(:match)
   plug(:dispatch)
+
+  # The suffix of each file of an order: its level and its file.
+  @suffixes [
+    {".mid.glb", "mid", "glb"},
+    {".far.glb", "far", "glb"},
+    {".parts.json", "near", "parts"},
+    {".receipt.json", "near", "receipt"},
+    {".solids.json", "near", "solids"},
+    {".log.json", "near", "log"},
+    {".replay.glb", "near", "replay"},
+    {".glb", "near", "glb"}
+  ]
+  @cache "public, max-age=300, stale-while-revalidate=86400"
 
   @types %{
     "glb" => "model/gltf-binary",
@@ -173,7 +205,7 @@ defmodule World.Service do
     level = Map.get(conn.query_params, "level", "near")
 
     with_order(conn, fn order ->
-      case one_at_a_time(fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end) do
+      case Line.run(class(conn), fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end) do
         {ms, {:ok, out}} ->
           {:ok, full} = Orders.check(order)
 
@@ -293,9 +325,182 @@ defmodule World.Service do
     end
   end
 
-  match _ do
-    json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such page"}]})
+  get "/o/:name" do
+    with {hash, level, file} <- split(name),
+         true <- hash =~ ~r/^[0-9a-f]{32}$/,
+         {:ok, order} <- Store.get(hash) do
+      serve(conn, JSON.decode!(order), level, file)
+    else
+      :error -> json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+      _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such file"}]})
+    end
   end
+
+  get "/m/:name" do
+    case split(name) do
+      {blueprint, level, file} -> serve(conn, order_of(blueprint, conn.query_string), level, file)
+      nil -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such file"}]})
+    end
+  end
+
+  match _ do
+    case site_file(conn) do
+      nil ->
+        json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such page"}]})
+
+      path ->
+        conn
+        |> put_resp_content_type(MIME.from_path(path), nil)
+        |> put_resp_header("cache-control", @cache)
+        |> send_file(200, path)
+    end
+  end
+
+  # The headers of CORS on each answer, and 204 for OPTIONS.
+  defp cors(conn, _opts) do
+    conn =
+      conn
+      |> put_resp_header("access-control-allow-origin", "*")
+      |> put_resp_header("access-control-allow-methods", "GET, POST, OPTIONS")
+      |> put_resp_header(
+        "access-control-allow-headers",
+        "content-type, accept, mcp-protocol-version, mcp-session-id, last-event-id"
+      )
+
+    if conn.method == "OPTIONS",
+      do: conn |> put_resp_header("access-control-max-age", "86400") |> send_resp(204, "") |> halt(),
+      else: conn
+  end
+
+  # The name, the level and the file of a path: "ford.mid.glb" is {"ford", "mid", "glb"}.
+  defp split(name) do
+    Enum.find_value(@suffixes, fn {suffix, level, file} ->
+      if String.ends_with?(name, suffix) and byte_size(name) > byte_size(suffix),
+        do: {binary_part(name, 0, byte_size(name) - byte_size(suffix)), level, file}
+    end)
+  end
+
+  # The order of a URL /m/BLUEPRINT.EXT?...: `color.ROLE`, `joint.NAME` and
+  # `target.LIMB` (a point X,Y,Z), and the options. `OPTION.FIELD` is a
+  # field of an option that is an object (`origin.asian=1`).
+  defp order_of(blueprint, query) do
+    Enum.reduce(URI.query_decoder(query), %{"blueprint" => blueprint, "options" => %{}}, fn
+      {"color." <> role, value}, order ->
+        put_in(order, [Access.key("colors", %{}), role], value)
+
+      {"joint." <> name, value}, order ->
+        put_in(order, [Access.key("joints", %{}), name], number(value))
+
+      {"target." <> limb, value}, order ->
+        put_in(order, [Access.key("targets", %{}), limb], Enum.map(String.split(value, ","), &number/1))
+
+      {"class", _}, order ->
+        order
+
+      {key, value}, order ->
+        case String.split(key, ".", parts: 2) do
+          [option, field] ->
+            update_in(order, ["options", option], &Map.put(if(is_map(&1), do: &1, else: %{}), field, value))
+
+          [option] ->
+            put_in(order, ["options", option], value)
+        end
+    end)
+  end
+
+  # A number of a URL, or the text when it is not a number (the check of the order gives the error).
+  defp number(text) do
+    case Float.parse(text) do
+      {n, ""} -> n
+      _ -> text
+    end
+  end
+
+  # A file of an order: from the store of the node, else the node builds
+  # it in its line and keeps it. A file of an older version of World goes
+  # out at once, and the node builds it again one time.
+  defp serve(conn, order, level, file) do
+    case Orders.check(order) do
+      {:error, errors} ->
+        json(conn, 422, %{"errors" => errors})
+
+      {:ok, full} ->
+        hash = Orders.hash(full)
+
+        case Files.get(hash, level, file) do
+          {:ok, entry} ->
+            fresh? = Files.fresh?(entry)
+            unless fresh?, do: refresh(full, hash, level, file)
+            send_entry(conn, entry, hash, file, not fresh?)
+
+          :error ->
+            case Line.run(class(conn), fn -> Orders.build(full, level, file) end) do
+              {:ok, body} -> send_entry(conn, Files.put(hash, level, file, body), hash, file, false)
+              {:error, errors} -> json(conn, 422, %{"errors" => errors})
+            end
+        end
+    end
+  end
+
+  # A new build of a stale file, in a process of its own; one for a file at one time.
+  defp refresh(full, hash, level, file) do
+    spawn(fn ->
+      with {:ok, _} <- Registry.register(World.Names, {:refresh, hash, level, file}, nil),
+           {:ok, body} <- Line.run(:batch, fn -> Orders.build(full, level, file) end) do
+        Files.put(hash, level, file, body)
+      end
+    end)
+  end
+
+  defp send_entry(conn, entry, hash, file, stale?) do
+    conn =
+      conn
+      |> put_resp_header("etag", entry.etag)
+      |> put_resp_header("cache-control", @cache)
+      |> put_resp_header("vary", "accept-encoding")
+      |> put_resp_header("x-world-order", hash)
+      |> put_resp_header("x-world-version", entry.version)
+
+    conn = if stale?, do: put_resp_header(conn, "x-world-stale", "true"), else: conn
+    gzip? = Enum.any?(get_req_header(conn, "accept-encoding"), &String.contains?(&1, "gzip"))
+
+    cond do
+      entry.etag in get_req_header(conn, "if-none-match") ->
+        send_resp(conn, 304, "")
+
+      gzip? ->
+        conn
+        |> put_resp_content_type(Map.fetch!(@types, file), nil)
+        |> put_resp_header("content-encoding", "gzip")
+        |> send_resp(200, entry.gzip)
+
+      true ->
+        conn |> put_resp_content_type(Map.fetch!(@types, file), nil) |> send_resp(200, entry.body)
+    end
+  end
+
+  # The class of the build of a request in the line: `batch` when the request says so.
+  defp class(conn) do
+    conn = fetch_query_params(conn)
+
+    if conn.query_params["class"] == "batch" or get_req_header(conn, "x-world-class") == ["batch"],
+      do: :batch,
+      else: :now
+  end
+
+  # The file of the site for a GET, when the node has a site and the file is in it.
+  defp site_file(%{method: "GET", path_info: info}) do
+    with dir when is_binary(dir) <- Application.get_env(:world, :site),
+         true <- Enum.all?(info, &(&1 =~ ~r/\A[A-Za-z0-9_][A-Za-z0-9_.-]*\z/)),
+         path = Path.join([dir | if(info == [], do: ["index.html"], else: info)]),
+         true <- File.regular?(path) do
+      path
+    else
+      _ -> nil
+    end
+  end
+
+  defp site_file(_conn), do: nil
 
   defp changed(conn, id, :ok, placed),
     do: json(conn, 200, %{"build" => id, "hash" => placed["hash"], "files" => placed["files"]})
@@ -384,11 +589,6 @@ defmodule World.Service do
       _ -> "building"
     end
   end
-
-  # One build at a time in the VM: the edge has 128 MB, and two builds of
-  # a near level at one time need more. A second build waits for the lock
-  # (`:global.trans/4` tries again until it has it).
-  defp one_at_a_time(fun), do: :global.trans({__MODULE__, self()}, fun, [node()], :infinity)
 
   # The start of the URLs of an order: from the Worker, else this server.
   defp origin(conn) do

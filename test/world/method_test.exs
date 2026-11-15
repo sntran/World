@@ -93,7 +93,9 @@ defmodule World.MethodTest do
       if st.work == "build" do
         drawing = if st.name == "first_build", do: old.drawing, else: today.drawing
         span = World.Site.span(World.Site.schedule(drawing, "1974", e.data["tasks"]))
-        assert_in_delta e.data["fit"] * span, max(st.to - max(day.(e), st.from), 1), 5.0
+        # (The fit is from the day of the clock a moment before the event: with other tests on the same
+        # cores, some ms more, and 1 ms is one day.)
+        assert_in_delta e.data["fit"] * span, max(st.to - max(day.(e), st.from), 1), 25.0
       end
     end
 

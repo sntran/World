@@ -88,6 +88,22 @@ files.
    World, the hash of the order, and the SHA-256 of each file. Do not
    keep a model of your project in World.
 
+## From the server
+
+With the server of World (`https://world.mkfifo.com`):
+
+- `POST /orders` keeps an order and gives the URLs of its files:
+  `/o/HASH.glb`, `/o/HASH.mid.glb`, `/o/HASH.far.glb`,
+  `/o/HASH.parts.json`, `/o/HASH.receipt.json`, `/o/HASH.solids.json`.
+- An order of a blueprint by name can be a URL:
+  `/m/van.mid.glb?model=transit_148`.
+- The first request of a file builds it; each request after it reads
+  it from the store (0.2 s). The files stay after a deploy of World.
+- A tool that gets all the files of a project adds `?class=batch`, so
+  that a person who waits for one model goes first.
+- Ask for gzip (`accept-encoding: gzip`): a GLB is about 3 times
+  smaller.
+
 ## What to prepare for a thing
 
 - **A name and a kind.**

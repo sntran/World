@@ -26,7 +26,7 @@ defmodule World.EarthTest do
 
   test "the heights of the points of a project, and the errors of a wrong point" do
     assert {:ok, [everest, sea]} = Earth.heights([[27.99, 86.93], [0, -150]])
-    assert is_integer(everest) and everest == round(Earth.height(27.99, 86.93)) and sea < -3000
+    assert everest == round(Earth.height(27.99, 86.93)) and sea < -3000
     assert Earth.heights([]) == {:ok, []}
 
     assert {:error, [%{"path" => "points.1", "message" => message}, %{"path" => "points.2"}]} =

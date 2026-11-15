@@ -154,6 +154,125 @@ defmodule World.ServiceTest do
     end
   end
 
+  defp header(conn, name), do: conn |> Plug.Conn.get_resp_header(name) |> List.first()
+
+  test "GET /m/: a file of an order in the URL, from the store of the node after its first build" do
+    conn = call(:get, "/m/strut.glb?length=0.31")
+    assert conn.status == 200 and header(conn, "content-type") == "model/gltf-binary"
+    assert <<"glTF", _::binary>> = conn.resp_body
+    {:ok, full} = World.Orders.check(%{"blueprint" => "strut", "options" => %{"length" => 0.31}})
+    hash = World.Orders.hash(full)
+    assert header(conn, "x-world-order") == hash and header(conn, "x-world-version") == World.Files.version()
+
+    assert header(conn, "cache-control") =~ "stale-while-revalidate" and
+             header(conn, "access-control-allow-origin") == "*"
+
+    etag = header(conn, "etag")
+    assert {:ok, %{body: body, etag: ^etag}} = World.Files.get(hash, "near", "glb")
+    assert body == conn.resp_body
+
+    # The second request reads the store; the same ETag gives 304; a client that takes gzip gets gzip.
+    again = call(:get, "/m/strut.glb?length=0.31")
+    assert again.resp_body == body and header(again, "x-world-stale") == nil
+
+    same =
+      conn(:get, "/m/strut.glb?length=0.31")
+      |> Plug.Conn.put_req_header("if-none-match", etag)
+      |> Service.call(Service.init([]))
+
+    assert same.status == 304 and same.resp_body == ""
+
+    small =
+      conn(:get, "/m/strut.glb?length=0.31")
+      |> Plug.Conn.put_req_header("accept-encoding", "gzip, br")
+      |> Service.call(Service.init([]))
+
+    assert header(small, "content-encoding") == "gzip" and :zlib.gunzip(small.resp_body) == body
+
+    # The other files and levels of the order; a build of a batch, by the query or by the header.
+    parts = call(:get, "/m/strut.parts.json?length=0.31&class=batch")
+    assert parts.status == 200 and header(parts, "content-type") == "application/json" and is_map(json(parts))
+
+    far =
+      conn(:get, "/m/strut.far.glb?length=0.31")
+      |> Plug.Conn.put_req_header("x-world-class", "batch")
+      |> Service.call(Service.init([]))
+
+    assert far.status == 200 and header(far, "x-world-order") == hash
+    assert %{"parts" => _} = json(call(:get, "/m/strut.solids.json?length=0.31"))
+  end
+
+  test "GET /m/: the colors, the joints, the targets and the fields of an option in the URL, and the errors" do
+    assert call(:get, "/m/strut.far.glb?length=0.33&color.steel=%23ff0000").status == 200
+    # (A field of an option that is an object: the origin of a person.)
+    person = call(:get, "/m/person.far.glb?age=9&origin.asian=1&origin.african=0")
+    assert person.status == 200
+    assert <<"glTF", _::binary>> = person.resp_body
+
+    assert [%{"path" => "options.length"}] = json(call(:get, "/m/strut.glb"))["errors"]
+    assert [%{"path" => "joints.lid"}] = json(call(:get, "/m/strut.far.glb?length=0.3&joint.lid=10"))["errors"]
+    assert call(:get, "/m/strut.far.glb?length=0.3&joint.lid=open").status == 422
+
+    assert [%{"path" => "targets.arm_l"}] =
+             json(call(:get, "/m/strut.far.glb?length=0.3&target.arm_l=0.1,0.2,0.3"))["errors"]
+
+    assert call(:get, "/m/strut.txt?length=0.3").status == 404
+    assert call(:get, "/m/.glb").status == 404
+  end
+
+  test "GET /o/: a file of an order of POST /orders; a stale file goes out at once and the node builds it again" do
+    placed = json(call(:post, "/orders", ~s({"blueprint": "strut", "options": {"length": 0.34}})))
+    hash = placed["hash"]
+    conn = call(:get, "/o/#{hash}.far.glb")
+    assert conn.status == 200 and header(conn, "x-world-order") == hash
+    assert call(:get, "/o/#{hash}.txt").status == 404
+    assert call(:get, "/o/short.glb").status == 404
+    assert call(:get, "/o/#{String.duplicate("0", 32)}.glb").status == 404
+
+    # A file of an older version of World: the same bytes at once, with a mark, then a new build one time.
+    meta = Path.join(World.Files.dir(), "#{hash}.far.glb.meta")
+    File.write!(meta, JSON.encode!(%{"etag" => header(conn, "etag"), "version" => "000000000000"}))
+    stale = call(:get, "/o/#{hash}.far.glb")
+    assert stale.status == 200 and stale.resp_body == conn.resp_body
+    assert header(stale, "x-world-stale") == "true" and header(stale, "x-world-version") == "000000000000"
+    call(:get, "/o/#{hash}.far.glb")
+
+    wait = fn wait, n ->
+      case World.Files.get(hash, "far", "glb") do
+        {:ok, entry} when n == 0 -> entry
+        {:ok, %{version: "000000000000"}} -> Process.sleep(50) && wait.(wait, n - 1)
+        {:ok, entry} -> entry
+      end
+    end
+
+    assert World.Files.fresh?(wait.(wait, 400))
+    assert header(call(:get, "/o/#{hash}.far.glb"), "x-world-stale") == nil
+  end
+
+  @tag :tmp_dir
+  test "the files of the site, when the node has a site; OPTIONS gives the headers of CORS", %{tmp_dir: dir} do
+    File.write!(Path.join(dir, "index.html"), "<p>World</p>")
+    File.mkdir_p!(Path.join(dir, "kit"))
+    File.write!(Path.join(dir, "kit/kit.json"), "{}")
+    Application.put_env(:world, :site, dir)
+    on_exit(fn -> Application.delete_env(:world, :site) end)
+
+    home = call(:get, "/")
+    assert home.status == 200 and home.resp_body == "<p>World</p>" and header(home, "content-type") == "text/html"
+    kit = call(:get, "/kit/kit.json")
+
+    assert kit.status == 200 and header(kit, "content-type") == "application/json" and
+             header(kit, "cache-control") =~ "max-age"
+
+    assert call(:get, "/kit/none.json").status == 404
+    assert call(:get, "/kit/..%2Findex.html").status == 404
+    assert call(:post, "/kit/kit.json").status == 404
+
+    options = call(:options, "/orders")
+    assert options.status == 204 and header(options, "access-control-allow-methods") == "GET, POST, OPTIONS"
+    assert header(options, "access-control-max-age") == "86400"
+  end
+
   test "a page that is not there" do
     assert call(:get, "/nope").status == 404
   end

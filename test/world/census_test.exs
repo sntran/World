@@ -147,13 +147,19 @@ defmodule World.CensusTest do
              World.Crew.Sites in names
 
     assert World.Supervisor.server(%{}) == []
+    # The settings of the service from the environment: the builds at one time is a number.
+    before = Application.get_env(:world, :builds)
+    files = Application.get_env(:world, :files)
+    assert World.Supervisor.settings(%{"WORLD_BUILDS" => "3", "WORLD_FILES" => files, "OTHER" => "x"}) == :ok
+    assert Application.get_env(:world, :builds) == 3 and Application.get_env(:world, :files) == files
+    if before, do: Application.put_env(:world, :builds, before), else: Application.delete_env(:world, :builds)
     assert World.Supervisor.yard(%{}) == []
     assert World.Supervisor.yard(%{"WORLD_YARD" => "true"}) == [World.Haul, World.Yard]
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true", "PORT" => "4100"})
     assert opts[:plug] == World.Service and opts[:port] == 4100
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true"})
     assert opts[:port] == 4000
-    assert length(World.Supervisor.children(%{})) == 12
+    assert length(World.Supervisor.children(%{})) == 13
   end
 
   property "two constructions never hold one person" do

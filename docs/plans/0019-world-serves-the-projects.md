@@ -245,14 +245,21 @@ as a reference; no test builds them (the commit `b6905ce`).
 3. **The output `flat`** for any order: a budget of triangles, a color
    at each point, as a GLB and as plain arrays. (A model from edits has
    the look `flat` today; a model of a rule does not.)
-4. **The store that stays:** a version for each rule, the old file
-   while the new one builds, compression, the two classes of the line.
+4. **The store that stays. Done** (`World.Files`, `World.Line`, the
+   routes `/o/` and `/m/` of `World.Service`): a file is kept by the
+   hash of its order, with the version of the code of World that built
+   it; a file of an older version goes out at once and is built again
+   one time; each file has a copy in gzip; the line has two classes. A
+   van at the mid level: 6.2 s the first time, 0.18 s after it.
 5. **The rule of an appliance** (`World.Home.Appliance`), as the rule
    of a building: a kind, a size, and details from a few words.
 6. **The faults of Vũng Tàu** (section 3.2), and the far levels in
    their budgets.
-7. **The server on the mini PC:** the release, the tunnel, the store on
-   its disk, the measure of the line.
+7. **The server on the mini PC. Done in World** (`docs/factory.md`,
+   "The server on a computer"): the native server has each route that
+   the Worker had, the pages of the site, the store on its disk and the
+   line. Open: the tunnel and the start of the server on the mini PC
+   (the owner), and a release with no `mix`.
 8. **The Earth of Humans Must Die:** real heights and kinds of land for
    the points that the game sends (section 7.2). Done for the heights
    (`World.Earth`, `POST /earth/heights`): ETOPO1 of NOAA at a quarter

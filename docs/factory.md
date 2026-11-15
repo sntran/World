@@ -377,6 +377,44 @@ version of the blueprint (`van@2`): the old version stays.
 | A model of the catalog | `mix world.build` builds it natively, and the files are in the repository as a reference (no check builds them again). The Worker serves them as static files: no build at a request. |
 | An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
+## The server on a computer
+
+World also runs as one native server, with no Worker: on a computer
+with more memory than the edge (plan 0019). `World.Service` has each
+route of the table above:
+
+```sh
+sh scripts/site.sh                 # the pages, the catalog and the kit, in site/
+WORLD_SERVER=true PORT=4000 \
+WORLD_SITE=site \
+WORLD_FILES=/var/lib/world/files \
+WORLD_ORDER_DIR=/var/lib/world/orders \
+WORLD_BUILDS=4 \
+mix.com run --no-halt
+```
+
+A tunnel (for example `cloudflared`) gives the port to
+`https://world.mkfifo.com`.
+
+- **The files stay** (`World.Files`, the folder `WORLD_FILES`): a file
+  of an order at a level is built one time, with a copy in gzip and an
+  ETag. Its key is the hash of the order, the level and the file, not
+  the commit of World.
+- **After a deploy**, a file from the older code is stale: the server
+  gives it at once (the header `x-world-stale`), and builds it again
+  one time in the back. So a deploy costs no wait, and a correction of
+  a rule is in the file after the next request.
+- **The line** (`World.Line`, `WORLD_BUILDS` builds at one time): a
+  build that a person waits for goes before a build of a batch
+  (`?class=batch`, or the header `x-world-class: batch`: the tool of a
+  project that gets all its files).
+- **Each answer** has the headers of CORS; a client that takes gzip
+  gets gzip.
+
+Measured on four cores (2026-11-15): a van at the mid level, 6.2 s for
+the first request and 0.18 s after it; the file is 232 KB, and 75 KB in
+gzip. A traveler on a motorbike at the far level: 3.7 s, then 0.2 s.
+
 The VM has the orders: their check, their store and the MCP server
 (`World.Service`, `World.Orders.place/2`, `World.MCP`). `POST /orders`
 and the tool `place_order` keep the full order in R2 as

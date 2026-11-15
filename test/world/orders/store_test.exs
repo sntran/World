@@ -56,6 +56,7 @@ defmodule World.Orders.StoreTest do
     assert JSON.decode!(placed.resp_body)["errors"] == [%{"path" => "", "message" => "the store of the orders failed"}]
 
     assert service.(:post, "/build?hash=#{@hash}", "").status == 503
+    assert service.(:get, "/o/#{@hash}.glb", nil).status == 503
 
     call =
       ~s({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"place_order","arguments":{"order":{"blueprint":"strut","options":{"length":0.3}}}}})
