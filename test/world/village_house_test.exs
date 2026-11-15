@@ -72,9 +72,18 @@ defmodule World.VillageHouseTest do
     long = part(d, "mai")["edits"]
 
     assert [
-             %{"shape" => "extrude", "axis" => [1, 0, 0], "size" => %{"depth" => 14.8, "outline" => shell}},
+             %{
+               "shape" => "extrude",
+               "axis" => [1, 0, 0],
+               "levels" => ["near", "mid"],
+               "size" => %{"depth" => 14.8, "outline" => shell}
+             },
+             %{"shape" => "extrude", "levels" => ["far"], "size" => %{"outline" => thick}},
              %{"mode" => "crop", "axis" => [0, 1, 0]} | rest
            ] = long
+
+    # At the far level the shell is 0.4 m thick (the last point of its outline is under the first one).
+    assert List.last(shell) == [-3.46, -0.14] and List.last(thick) == [-3.2, -0.4]
 
     # The slope goes from its eaves up to the ridge under a line that sags: the middle of the slope is low.
     assert hd(shell) == [-3.6, 0.0] and Enum.at(shell, 12) == [0.0, 2.88]
@@ -91,6 +100,7 @@ defmodule World.VillageHouseTest do
 
     assert [
              %{"shape" => "extrude", "axis" => [0, 1, 0], "size" => %{"depth" => 7.2}},
+             %{"levels" => ["far"]},
              %{"mode" => "crop", "axis" => [1, 0, 0]} | rows
            ] = ends
 
@@ -98,11 +108,11 @@ defmodule World.VillageHouseTest do
 
     # A roof of thatch has no rows, and its corners lift only a little. A house of one bay has a short ridge.
     small = checked(%{"bays" => 1, "bay" => 1.8, "deep" => 3, "porch" => 0, "curve" => 0})
-    assert [_, _ | tubes] = part(small, "mai")["edits"]
+    assert [_, _, _ | tubes] = part(small, "mai")["edits"]
     assert length(tubes) == 5 and Enum.all?(tubes, &(&1["shape"] == "tube"))
     [ridge_tube | _] = tubes
     assert ridge_tube["size"]["points"] |> Enum.map(&hd/1) |> Enum.max() == 0.3
-    assert length(part(small, "dau_hoi")["edits"]) == 2
+    assert length(part(small, "dau_hoi")["edits"]) == 3
     # With no porch, the posts are in two rows.
     posts = Enum.filter(part(small, "khung")["edits"], &(&1["shape"] == "cylinder" and hd(&1["size"]) == 0.11))
     assert length(posts) == 4

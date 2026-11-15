@@ -48,7 +48,8 @@ defmodule World.Service do
     now.
 
   - `GET /o/HASH.glb` (and `.mid.glb`, `.far.glb`, `.parts.json`,
-    `.receipt.json`, `.solids.json`, `.log.json`, `.replay.glb`): a file
+    `.receipt.json`, `.solids.json`, `.log.json`, `.replay.glb`, and
+    `.flat.glb`, `.mid.flat.glb`, `.far.flat.glb`): a file
     of an order of `POST /orders`. `GET /m/BLUEPRINT.glb?OPTION=VALUE`
     (and the other files): a file of an order in the URL
     (`color.ROLE`, `joint.NAME`, `target.LIMB=X,Y,Z`, `OPTION.FIELD`).
@@ -58,7 +59,8 @@ defmodule World.Service do
     and keeps it. A file from an older version of World goes out at
     once, with the header `x-world-stale`, and the node builds it again
     one time. The answer has an ETag (304 for the same one), and it is
-    in gzip for a client that accepts gzip.
+    in gzip for a client that accepts gzip. A file of the flat look
+    takes `?triangles=N`: the most faces of its mesh.
   - Each other `GET`: a file of the site (the application environment
     `:site`, from `WORLD_SITE`: the folder that `scripts/site.sh`
     makes), with `index.html` for `/`.
@@ -80,6 +82,9 @@ defmodule World.Service do
 
   # The suffix of each file of an order: its level and its file.
   @suffixes [
+    {".mid.flat.glb", "mid", "flat"},
+    {".far.flat.glb", "far", "flat"},
+    {".flat.glb", "near", "flat"},
     {".mid.glb", "mid", "glb"},
     {".far.glb", "far", "glb"},
     {".parts.json", "near", "parts"},
@@ -97,7 +102,8 @@ defmodule World.Service do
     "log" => "application/json",
     "parts" => "application/json",
     "receipt" => "application/json",
-    "solids" => "application/json"
+    "solids" => "application/json",
+    "flat" => "model/gltf-binary"
   }
 
   get "/blueprints" do
@@ -394,7 +400,7 @@ defmodule World.Service do
       {"target." <> limb, value}, order ->
         put_in(order, [Access.key("targets", %{}), limb], Enum.map(String.split(value, ","), &number/1))
 
-      {"class", _}, order ->
+      {key, _}, order when key in ["class", "triangles"] ->
         order
 
       {key, value}, order ->
@@ -408,6 +414,14 @@ defmodule World.Service do
     end)
   end
 
+  # A whole number of a URL, or the text when it is not one (the build gives the error).
+  defp whole(text) do
+    case Integer.parse(text) do
+      {n, ""} -> n
+      _ -> text
+    end
+  end
+
   # A number of a URL, or the text when it is not a number (the check of the order gives the error).
   defp number(text) do
     case Float.parse(text) do
@@ -419,7 +433,12 @@ defmodule World.Service do
   # A file of an order: from the store of the node, else the node builds
   # it in its line and keeps it. A file of an older version of World goes
   # out at once, and the node builds it again one time.
-  defp serve(conn, order, level, file) do
+  defp serve(conn, order, level, kind) do
+    # (The flat look with a budget of triangles is a file of its own in the store.)
+    conn = fetch_query_params(conn)
+    count = if kind == "flat", do: conn.query_params["triangles"]
+    {file, opts} = if count, do: {"flat.#{count}", [triangles: whole(count)]}, else: {kind, []}
+
     case Orders.check(order) do
       {:error, errors} ->
         json(conn, 422, %{"errors" => errors})
@@ -430,12 +449,12 @@ defmodule World.Service do
         case Files.get(hash, level, file) do
           {:ok, entry} ->
             fresh? = Files.fresh?(entry)
-            unless fresh?, do: refresh(full, hash, level, file)
-            send_entry(conn, entry, hash, file, not fresh?)
+            unless fresh?, do: refresh(full, hash, level, file, kind, opts)
+            send_entry(conn, entry, hash, kind, not fresh?)
 
           :error ->
-            case Line.run(class(conn), fn -> Orders.build(full, level, file) end) do
-              {:ok, body} -> send_entry(conn, Files.put(hash, level, file, body), hash, file, false)
+            case Line.run(class(conn), fn -> Orders.build(full, level, kind, opts) end) do
+              {:ok, body} -> send_entry(conn, Files.put(hash, level, file, body), hash, kind, false)
               {:error, errors} -> json(conn, 422, %{"errors" => errors})
             end
         end
@@ -443,10 +462,10 @@ defmodule World.Service do
   end
 
   # A new build of a stale file, in a process of its own; one for a file at one time.
-  defp refresh(full, hash, level, file) do
+  defp refresh(full, hash, level, file, kind, opts) do
     spawn(fn ->
       with {:ok, _} <- Registry.register(World.Names, {:refresh, hash, level, file}, nil),
-           {:ok, body} <- Line.run(:batch, fn -> Orders.build(full, level, file) end) do
+           {:ok, body} <- Line.run(:batch, fn -> Orders.build(full, level, kind, opts) end) do
         Files.put(hash, level, file, body)
       end
     end)

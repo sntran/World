@@ -158,6 +158,11 @@ the answer in the credits of the project.
   `z`, its `mode` (`add`, `subtract`, `paint`), its `color` and its
   `role`. A model of a rule gives one box for each part and each
   material. The lengths are in meters, z is up, the front is to +y.
-- **`flat`** comes next (plan 0019): a small mesh with a color at each
-  point and no image. Until then, a model from edits has the look
-  `flat` (`docs/format.md`, the key `look` of a sculpture).
+- **`flat`** (`HASH.flat.glb`, `HASH.mid.flat.glb`,
+  `HASH.far.flat.glb`): the model at a level as one mesh with a color at
+  each point, no image and no skin, for a project that draws many small
+  things in one batch. With `?triangles=N` the mesh has at most N
+  faces, or as few as World can make: a scooter at the far level is
+  4,088 triangles, and 500 with `triangles=500` (58 KB, 14 KB in gzip).
+  A model of many small parts does not go under some hundreds of
+  triangles: a very small thing needs a request with few shapes.

@@ -64,7 +64,7 @@ defmodule World.ServiceTest do
     assert Plug.Conn.get_resp_header(replay, "content-type") == ["model/gltf-binary"]
     assert <<"glTF", _::binary>> = replay.resp_body
 
-    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt, solids"}] =
+    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt, solids, flat"}] =
              json(call(:post, "/build?file=zip", @strut))["errors"]
 
     assert [%{"path" => "level"}] = json(call(:post, "/build?level=huge", @strut))["errors"]
@@ -216,6 +216,13 @@ defmodule World.ServiceTest do
     assert [%{"path" => "targets.arm_l"}] =
              json(call(:get, "/m/strut.far.glb?length=0.3&target.arm_l=0.1,0.2,0.3"))["errors"]
 
+    # The flat look of a level, with a budget of triangles: a file of its own in the store.
+    flat = call(:get, "/m/strut.far.flat.glb?length=0.36")
+    assert flat.status == 200 and header(flat, "content-type") == "model/gltf-binary"
+    less = call(:get, "/m/strut.far.flat.glb?length=0.36&triangles=40")
+    assert less.status == 200 and byte_size(less.resp_body) < byte_size(flat.resp_body)
+    assert header(less, "x-world-order") == header(flat, "x-world-order")
+    assert [%{"path" => "triangles"}] = json(call(:get, "/m/strut.far.flat.glb?length=0.36&triangles=many"))["errors"]
     assert call(:get, "/m/strut.txt?length=0.3").status == 404
     assert call(:get, "/m/.glb").status == 404
   end

@@ -27,7 +27,7 @@ defmodule World.Orders do
   alias World.Orders.{Blueprint, Blueprints, Store}
   @keys ~w(blueprint options colors joints targets)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
-  @files ~w(glb log replay parts receipt solids)
+  @files ~w(glb log replay parts receipt solids flat)
 
   @doc "The names of the levels of detail."
   def levels, do: Map.keys(@levels) |> Enum.sort()
@@ -173,7 +173,7 @@ defmodule World.Orders do
 
   # The URL of each file of a placed order: the suffix of /o/HASH (the
   # names that the Worker serves, handler.js), the level and the file.
-  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json)
+  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json flat.glb mid.flat.glb far.flat.glb)
 
   @doc """
   Place an order (`POST /orders`, and the tool `place_order` of
@@ -217,17 +217,24 @@ defmodule World.Orders do
   - `"replay"`: the model with each part in a node of its own, with the id
     of its task, for the replay of the log.
   - `"parts"`: the list of the parts. `"receipt"`: the receipt.
+  - `"flat"`: the model at the level with the flat look, as a GLB
+    (`World.Flat`): one mesh, a color at each point, no image. A drawing
+    from edits is built with the look `flat` of each of its sculptures
+    (the color of each face is the color of its edits). With the option
+    `triangles` (12 to 200,000), the mesh has that count of faces at the
+    most.
   - `"solids"`: the simple solids of the model in JSON (`World.Solids`):
     the shapes of a drawing from edits with no build, or one box for
     each node and material of another model.
 
   Gives `{:ok, binary}`, or `{:error, errors}` as `check/1`.
   """
-  def build(order, level, file) do
+  def build(order, level, file, opts \\ []) do
     with {:ok, order} <- check(order),
          {:ok, lvl} <- level(level),
-         :ok <- file(file) do
-      job = new_job(order, lvl)
+         :ok <- file(file),
+         :ok <- triangles(opts[:triangles]) do
+      job = Map.put(new_job(order, lvl), :triangles, opts[:triangles])
       # The item is a function: a construction makes it, so the memory
       # holds one item only (the edge has 128 MB).
       item = fn -> job.item.(lvl) end
@@ -386,6 +393,18 @@ defmodule World.Orders do
   defp make("parts", _order, _lvl, item, _job), do: parts(item.())
   defp make("receipt", order, lvl, item, job), do: receipt(order, lvl, job.scene.(item.(), []))
 
+  defp make("flat", _order, lvl, item, job) do
+    item =
+      if World.Solids.edits?(job.drawing) do
+        flat = update_in(job.drawing, ["nodes", Access.all(), "skill", "sculpt"], &Map.put(&1, "look", "flat"))
+        Detail.with(lvl, fn -> World.Drawing.build(flat) end)
+      else
+        item.()
+      end
+
+    GLB.encode(World.Flat.scene(job.scene.(item, []), budget: job.triangles))
+  end
+
   defp make("solids", _order, _lvl, item, job) do
     solids =
       if World.Solids.edits?(job.drawing),
@@ -438,6 +457,11 @@ defmodule World.Orders do
       if errors == [], do: :ok, else: {:error, errors}
     end
   end
+
+  # The budget of the flat look: no budget, or a count of triangles.
+  defp triangles(nil), do: :ok
+  defp triangles(n) when is_integer(n) and n >= 12 and n <= 200_000, do: :ok
+  defp triangles(_n), do: {:error, [%{"path" => "triangles", "message" => "must be a whole number from 12 to 200000"}]}
 
   defp file(file) do
     if file in @files,

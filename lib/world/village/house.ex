@@ -141,7 +141,7 @@ defmodule World.Village.House do
 
     parts = [
       {"khung", frame(r, s), [0.04, 0.07, 0.15], [30_000, 6_000, 800], [1024, 512, 128]},
-      {"mai", long, [0.05, 0.08, 0.15], [7_000, 2_000, 300], [1024, 512, 128]},
+      {"mai", long, [0.05, 0.08, 0.15], [7_000, 2_000, 800], [1024, 512, 128]},
       {"dau_hoi", ends, [0.05, 0.08, 0.15], [3_000, 900, 150], [512, 256, 128]},
       {"nen", ground(s), [0.08, 0.15, 0.3], [600, 300, 100], [256, 128, 64]}
     ]
@@ -341,13 +341,32 @@ defmodule World.Village.House do
         Wall.tube(line, [0.1, 0.1, 0.1, 0.09, 0.08, 0.05], dark, %{"roughness" => 0.85})
       end
 
+    # (At the far level the shell is thick: its two sides are more than two cells apart, and the collapse
+    # makes it simple.)
+    near = %{"levels" => ["near", "mid"]}
+    thick_far = max(thick, 0.4)
+
     long = [
-      Wall.outline(shell(side, thick), far, [0, 0, z0], color, Map.merge(look, along)),
+      Wall.outline(shell(side, thick), far, [0, 0, z0], color, look |> Map.merge(along) |> Map.merge(near)),
+      Wall.outline(
+        shell(side, thick_far),
+        far,
+        [0, 0, z0],
+        color,
+        look |> Map.merge(along) |> Map.put("levels", ["far"])
+      ),
       Wall.outline(solid(front), wide + 2.0, [0, 0, z0], color, Map.merge(look, Map.put(across, "mode", "crop")))
     ]
 
     ends = [
-      Wall.outline(shell(front, thick), wide, [0, 0, z0], color, Map.merge(look, across)),
+      Wall.outline(shell(front, thick), wide, [0, 0, z0], color, look |> Map.merge(across) |> Map.merge(near)),
+      Wall.outline(
+        shell(front, thick_far),
+        wide,
+        [0, 0, z0],
+        color,
+        look |> Map.merge(across) |> Map.put("levels", ["far"])
+      ),
       Wall.outline(solid(side), far + 2.0, [0, 0, z0], color, Map.merge(look, Map.put(along, "mode", "crop")))
     ]
 

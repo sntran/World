@@ -44,6 +44,9 @@ const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
 // The suffix of each file: the level and the file of /build.
 const FILES = [
+  ['.mid.flat.glb', 'mid', 'flat', 'model/gltf-binary'],
+  ['.far.flat.glb', 'far', 'flat', 'model/gltf-binary'],
+  ['.flat.glb', 'near', 'flat', 'model/gltf-binary'],
   ['.mid.glb', 'mid', 'glb', 'model/gltf-binary'],
   ['.far.glb', 'far', 'glb', 'model/gltf-binary'],
   ['.parts.json', 'near', 'parts', 'application/json'],

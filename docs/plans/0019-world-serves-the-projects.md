@@ -242,9 +242,13 @@ as a reference; no test builds them (the commit `b6905ce`).
    model of a rule (a scooter: 1.6 s, with its build at the far level).
    Open: the units and the axes of the project, and the tags of a part
    (a point on a face, for DIY).
-3. **The output `flat`** for any order: a budget of triangles, a color
-   at each point, as a GLB and as plain arrays. (A model from edits has
-   the look `flat` today; a model of a rule does not.)
+3. **The output `flat`. Done** (`World.Flat`, the file `flat` of an
+   order at each level, `?triangles=N`): one mesh, a color at each
+   point, no image. A scooter at the far level: 4,088 triangles, and 500
+   with a budget (58 KB; 14 KB in gzip). A house of a village at the
+   far level: 1,706 triangles, and 928 with a budget of 600 (the posts
+   and the bars are many small parts). Open: a smaller file (colors and
+   normals in fewer bytes), and a light at each point for the windows.
 4. **The store that stays. Done** (`World.Files`, `World.Line`, the
    routes `/o/` and `/m/` of `World.Service`): a file is kept by the
    hash of its order, with the version of the code of World that built

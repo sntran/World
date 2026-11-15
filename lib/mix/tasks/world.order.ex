@@ -12,7 +12,9 @@ defmodule Mix.Tasks.World.Order do
   `HASH.log.json` (the log of the run of the world that built it),
   `HASH.replay.glb` (each part in a node of its own, for the replay),
   `HASH.parts.json`, `HASH.receipt.json` and `HASH.solids.json` (the
-  simple solids of the model, `World.Solids`). A wrong order stops the task
+  simple solids of the model, `World.Solids`), and the flat look of each
+  level (`HASH.flat.glb`, `HASH.mid.flat.glb`, `HASH.far.flat.glb`,
+  `World.Flat`). A wrong order stops the task
   with each error.
   """
   use Mix.Task
@@ -36,10 +38,11 @@ defmodule Mix.Tasks.World.Order do
 
     files =
       for {level, ext} <- [{"near", ""}, {"mid", ".mid"}, {"far", ".far"}],
-          file <- if(level == "near", do: World.Orders.files(), else: ["glb"]) do
+          file <- if(level == "near", do: World.Orders.files(), else: ["glb", "flat"]) do
         name =
           case file do
             "glb" -> "#{hash}#{ext}.glb"
+            "flat" -> "#{hash}#{ext}.flat.glb"
             "replay" -> "#{hash}.replay.glb"
             _ -> "#{hash}.#{file}.json"
           end
