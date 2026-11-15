@@ -11,7 +11,8 @@ defmodule Mix.Tasks.World.Order do
   `HASH.mid.glb`, `HASH.far.glb`, and at the near level
   `HASH.log.json` (the log of the run of the world that built it),
   `HASH.replay.glb` (each part in a node of its own, for the replay),
-  `HASH.parts.json`, `HASH.receipt.json` and `HASH.solids.json` (the
+  `HASH.parts.json`, `HASH.receipt.json`, `HASH.drawing.json` (the
+  drawing of a model that has one) and `HASH.solids.json` (the
   simple solids of the model, `World.Solids`), and the flat look of each
   level (`HASH.flat.glb`, `HASH.mid.flat.glb`, `HASH.far.flat.glb`,
   and the light look: `HASH.light.glb`, `HASH.mid.light.glb`, `HASH.far.light.glb`,
@@ -39,7 +40,9 @@ defmodule Mix.Tasks.World.Order do
 
     files =
       for {level, ext} <- [{"near", ""}, {"mid", ".mid"}, {"far", ".far"}],
-          file <- if(level == "near", do: World.Orders.files(), else: ["glb", "flat", "light"]) do
+          file <- if(level == "near", do: World.Orders.files(), else: ["glb", "flat", "light"]),
+          # (The drawing only for a model that has one.)
+          file != "drawing" or World.Orders.Blueprints.drawing(order) != nil do
         name =
           case file do
             "glb" -> "#{hash}#{ext}.glb"

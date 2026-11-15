@@ -57,6 +57,7 @@ const FILES = [
   ['.parts.json', 'near', 'parts', 'application/json'],
   ['.receipt.json', 'near', 'receipt', 'application/json'],
   ['.solids.json', 'near', 'solids', 'application/json'],
+  ['.drawing.json', 'near', 'drawing', 'application/json'],
   ['.log.json', 'near', 'log', 'application/json'],
   ['.replay.glb', 'near', 'replay', 'model/gltf-binary'],
   ['.glb', 'near', 'glb', 'model/gltf-binary'],

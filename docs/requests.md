@@ -127,9 +127,13 @@ look at the result, and say what to change:
 4. **Again**, until the model is right. Then keep the last order and
    its lock.
 
-When no option of a rule can make the change, ask for the thing as a
-drawing of edits (the kind 3): each shape of each part is then in your
-order, and an edit can change, add or remove a shape. Tell the owner of
+When no option of a rule can make the change, take the model into
+your own hands: get the drawing of the order (`/o/HASH.drawing.json`,
+for a model that has one: a scooter, a car, a tube house, a statue),
+place it as an order of the blueprint `drawing`, and edit any shape of
+it. Or ask for the thing as a drawing of edits (the kind 3): each shape
+of each part is then in your order, and an edit can change, add or
+remove a shape. Tell the owner of
 World about a number that a rule does not let you change: the fix is to
 put that number in the request, not to make a new rule for your model.
 

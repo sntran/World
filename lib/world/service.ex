@@ -48,7 +48,8 @@ defmodule World.Service do
     now.
 
   - `GET /o/HASH.glb` (and `.mid.glb`, `.far.glb`, `.parts.json`,
-    `.receipt.json`, `.solids.json`, `.log.json`, `.replay.glb`, and
+    `.receipt.json`, `.solids.json`, `.drawing.json`, `.log.json`,
+    `.replay.glb`, and
     `.flat.glb`, `.mid.flat.glb`, `.far.flat.glb`, `.light.glb`,
     `.mid.light.glb`, `.far.light.glb`): a file
     of an order of `POST /orders`. `GET /m/BLUEPRINT.glb?OPTION=VALUE`
@@ -95,6 +96,7 @@ defmodule World.Service do
     {".parts.json", "near", "parts"},
     {".receipt.json", "near", "receipt"},
     {".solids.json", "near", "solids"},
+    {".drawing.json", "near", "drawing"},
     {".log.json", "near", "log"},
     {".replay.glb", "near", "replay"},
     {".glb", "near", "glb"}
@@ -108,6 +110,7 @@ defmodule World.Service do
     "parts" => "application/json",
     "receipt" => "application/json",
     "solids" => "application/json",
+    "drawing" => "application/json",
     "flat" => "model/gltf-binary",
     "light" => "model/gltf-binary"
   }

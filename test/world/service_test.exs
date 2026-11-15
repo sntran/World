@@ -64,7 +64,12 @@ defmodule World.ServiceTest do
     assert Plug.Conn.get_resp_header(replay, "content-type") == ["model/gltf-binary"]
     assert <<"glTF", _::binary>> = replay.resp_body
 
-    assert [%{"path" => "file", "message" => "must be one of: glb, log, replay, parts, receipt, solids, flat, light"}] =
+    assert [
+             %{
+               "path" => "file",
+               "message" => "must be one of: glb, log, replay, parts, receipt, solids, flat, light, drawing"
+             }
+           ] =
              json(call(:post, "/build?file=zip", @strut))["errors"]
 
     assert [%{"path" => "level"}] = json(call(:post, "/build?level=huge", @strut))["errors"]
@@ -135,6 +140,11 @@ defmodule World.ServiceTest do
     assert history == [%{"hash" => hash}, %{"hash" => new, "edits" => [%{"set" => "options.length", "to" => 0.45}]}]
     assert files["glb"] == "https://world.mkfifo.com/o/#{new}.glb"
     assert call(:get, "/o/#{new}.far.glb").status == 200
+    # (A strut comes from the code of a rule: it has no drawing. A model of the catalog with a drawing has one.)
+    assert call(:get, "/o/#{new}.drawing.json").status == 422
+    drawing = call(:get, "/m/catalog.drawing.json?name=cay_bang")
+    assert drawing.status == 200 and header(drawing, "content-type") == "application/json"
+    assert %{"name" => "cay_bang", "nodes" => [_ | _]} = json(drawing)
 
     # A length that the rule refuses, an edit that is not possible, a body with no edits, an order that is not there.
     wrong = call(:post, "/orders/#{hash}/edits", ~s({"edits": [{"set": "options.length", "to": -1}]}))

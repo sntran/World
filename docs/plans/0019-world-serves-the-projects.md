@@ -357,11 +357,15 @@ of thing that a project can want. It gets these abilities:
    jar gets higher, with two ears and a band, in four edits). The check
    of a model from edits no longer refuses a thing that stands (its
    base is as high as a cell of its far level).
-4. **Open:** the drawing of a model of a rule as a file of its order,
-   so that a project can take the model into free edits when the
-   options of the rule are not sufficient; a picture of a model from
-   the server, so that a project with no viewer can look; and edits of
-   one order from two projects at the same time.
+4. **The drawing of a model as a file of its order. Done**
+   (`/o/HASH.drawing.json`): a project takes a model of a blueprint in
+   data (a scooter, a car, a tube house, a statue) into free edits when
+   the options of the rule are not sufficient. Open: the same for a
+   model that the code of a rule makes (a plant, a person, an animal, a
+   house of a village): its rule must give a drawing.
+5. **Open:** a picture of a model from the server, so that a project
+   with no viewer can look; and a rule that takes each of its numbers
+   from the request.
 
 The rules that exist stay as a fast first answer. A new rule is made
 only when many requests of the same kind show that it saves time.

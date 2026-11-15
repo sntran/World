@@ -116,6 +116,34 @@ defmodule World.Orders.EditsTest do
     end
   end
 
+  test "a model of a rule into free edits: the drawing of its order is a file, and an order of a project" do
+    {:ok, placed} = Orders.place(%{"blueprint" => "scooter", "options" => %{"front_tire" => "80/90-14"}}, "o")
+    assert placed["files"]["drawing.json"] == "o/o/#{placed["hash"]}.drawing.json"
+    assert "drawing" in Orders.files()
+    {:ok, json} = Orders.build(placed["order"], "near", "drawing")
+    drawing = JSON.decode!(json)
+    assert {:ok, _} = World.Drawing.check(drawing, "d")
+    assert length(drawing["nodes"]) == 18
+
+    # The project places the drawing as its own order, and makes the middle of the seat 2.5 cm higher: one
+    # number of a row of the loft of the seat.
+    {:ok, mine} = Orders.place(%{"blueprint" => "drawing", "options" => %{"drawing" => drawing}}, "o")
+    row = "options.drawing.nodes.seat.skill.seat.shapes.0.loft.rows.2"
+    seat = fn placed -> Enum.find(placed["order"]["options"]["drawing"]["nodes"], &(&1["name"] == "seat")) end
+    rows = fn placed -> hd(seat.(placed)["skill"]["seat"]["shapes"])["loft"]["rows"] end
+    assert Enum.at(rows.(mine), 2) == [0.5, 0.72, 0.795, 0.15, 4]
+    assert {:ok, changed} = Edits.place(mine["hash"], [%{"set" => "#{row}.2", "to" => 0.82}], "o")
+    assert Enum.at(rows.(changed), 2) == [0.5, 0.72, 0.82, 0.15, 4] and changed["parent"] == mine["hash"]
+    assert List.delete_at(rows.(changed), 2) == List.delete_at(rows.(mine), 2)
+
+    # A model that the code of a rule makes has no drawing: no URL of it, and an error with the reason.
+    {:ok, plant} = Orders.place(%{"blueprint" => "plant"}, "o")
+    refute Map.has_key?(plant["files"], "drawing.json")
+
+    assert {:error, [%{"path" => "file", "message" => "the model of this order has no drawing" <> _}]} =
+             Orders.build(plant["order"], "near", "drawing")
+  end
+
   test "edits of a model with no rule of its own: a drawing of edits gets a new size, new shapes and a paint" do
     drawing = World.Village.Yard.drawing(%{"kind" => "jar", "name" => "chum"})
     {:ok, first} = Orders.place(%{"blueprint" => "drawing", "options" => %{"drawing" => drawing}}, "o")
