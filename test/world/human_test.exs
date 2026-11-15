@@ -587,6 +587,29 @@ defmodule World.HumanTest do
         do: assert(World.People.Data.target(name))
   end
 
+  test "a child has a flat chest: the shirt over the nipples is not in front of the shirt over the sternum" do
+    nipples =
+      for {v, d} <- World.People.Data.target("breast/nipple-point-decr"),
+          v < 13_380,
+          World.Vec.len(d) > 0.01,
+          into: MapSet.new(),
+          do: v
+
+    # How far the shirt over the nipples is in front of the shirt over the sternum, at the same height (m).
+    over = fn gender, age ->
+      [{_, _, items}] = Human.dressed(gender: gender, age: age, clothes: ["world_t_shirt"])
+      at_nipples = for {v, {_, y, z}, _} <- items, MapSet.member?(nipples, v), do: {y, z}
+      {y, _} = hd(at_nipples)
+      sternum = for {_, {x, ys, z}, _} <- items, abs(x) < 0.05, abs(ys - y) < 0.1, z > 0, do: z
+      (Enum.max(Enum.map(at_nipples, &elem(&1, 1))) - Enum.max(sternum)) / 10
+    end
+
+    # The shapes of a child of MakeHuman have a small bust, 6 to 8 mm in front of the sternum under a shirt.
+    for {gender, age} <- [{0.0, 6}, {1.0, 9}, {0.0, 12}], do: assert(over.(gender, age) < 0, "#{gender} #{age}")
+    # A man has the muscles of his chest; from 16 years the chest is as MakeHuman makes it.
+    assert over.(1.0, 30) > 0.004 and over.(1.0, 16) > 0.004
+  end
+
   test "a child has the height of its age, the head of a real child, the face and the skin of a child" do
     # The height: the median of the CDC for the age, as a part of the height of the adult of World.
     assert_in_delta Human.growth(10, 1.0), 138.6 / 176.8, 1.0e-9

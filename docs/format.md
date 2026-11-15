@@ -1351,11 +1351,14 @@ gives the head height of a real child of that age (Snyder and others,
 1977), and the height of the body is less by the same part, so the
 person keeps its height. The face of a child under 15 has more of the
 shapes of a young face (round cheeks, large eyes, a small nose and
-chin), most at 5 years and less to 15. A boy under 13 has the skin of a
-girl of the same tone (no shadow of a beard). A hat (the port `crown`,
-or a part of `wear` that does not fit the head) has the size of the real
-head, so it sits at the brow of a child and not over its eyes. The
-skeleton, the hair and the clothes are the same as an adult.
+chin), most at 5 years and less to 15. A child has a flat chest: the
+shapes of MakeHuman give a child a small bust, so the points of the
+breasts go to a smooth membrane over them, all the way at 11 years or
+less and none at 16. A boy under 13 has the skin of a girl of the same
+tone (no shadow of a beard). A hat (the port `crown`, or a part of
+`wear` that does not fit the head) has the size of the real head, so it
+sits at the brow of a child and not over its eyes. The skeleton, the
+hair and the clothes are the same as an adult.
 
 The GLB of a person has:
 

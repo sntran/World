@@ -420,7 +420,10 @@ Step T2 (in progress):
   round neck and covers the shoulders, the cloth over the chest has no
   fold, and a hat sits at the brow with the size of the real head (it
   was scaled two times: by the head node and by the head of the
-  person). Open: a hair of a child (the hairline of `short04` is of an
+  person). The owner then: "The child chest is also inappropriate." The
+  shapes of a child of MakeHuman have a small bust that a shirt shows,
+  so a child has a flat chest (a membrane over the points of the
+  breasts, to 16 years). Open: a hair of a child (the hairline of `short04` is of an
   adult), and the edge of a neck is not smooth.
 - **The clothes of old Việt Nam. Done** (`World.Sewing`): a loose tunic
   of homespun cotton with a round neck that hangs from the waist, with

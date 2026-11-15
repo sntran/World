@@ -680,7 +680,43 @@ defmodule World.People.Human do
   end
 
   # The points of the base mesh with the targets, in the axes of MakeHuman.
-  defp morph(points, o), do: add_targets(points, target_weights(o))
+  # A child has a flat chest (`flat_chest/2`).
+  defp morph(points, o), do: points |> add_targets(target_weights(o)) |> flat_chest(Map.get(o, :age, 30))
+
+  # The shapes of a child of MakeHuman have a small bust (13 mm at 6 years, 21 mm at 12, as much as a man),
+  # and a shirt shows it. The chest of a child is flat: the points of the breasts go to a membrane over
+  # them (each point at the mean of its neighbors, the points round them fixed), all the way at 11 years
+  # or less and none at 16. A membrane is never out of the body (the mean of the points round a point is
+  # not in front of them), so no cloth goes into the body. Each step is linear, as `smooth/1`.
+  @flat_steps 300
+
+  defp flat_chest(points, years) do
+    case min(max((16 - years) / 5, 0.0), 1.0) do
+      k when k == 0.0 ->
+        points
+
+      k ->
+        chest_membrane(points)
+        |> Enum.reduce(points, fn {v, p}, acc -> put_elem(acc, v, Vec.lerp(elem(acc, v), p, k)) end)
+    end
+  end
+
+  # The points of the breasts on a membrane: Gauss-Seidel steps, each a little past the mean (1.6), so
+  # that 300 steps are enough.
+  defp chest_membrane(points) do
+    area =
+      Data.cached(:chest_area, fn ->
+        ring = neighbors(Data.base())
+        for v <- Data.breast_points(), ns = Map.fetch!(ring, v), do: {v, ns, 1 / length(ns)}
+      end)
+
+    Enum.reduce(1..@flat_steps, Map.new(area, fn {v, _, _} -> {v, elem(points, v)} end), fn _, m ->
+      Enum.reduce(area, m, fn {v, ns, w}, m ->
+        mean = Enum.reduce(ns, {0.0, 0.0, 0.0}, fn n, s -> Vec.add(s, Map.get(m, n) || elem(points, n)) end)
+        Map.put(m, v, Vec.lerp(m[v], Vec.scale(mean, w), 1.6))
+      end)
+    end)
+  end
 
   # The body takes the shape that its clothes give it (the cups of a bra:
   # `World.Sewing`).
