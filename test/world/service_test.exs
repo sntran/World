@@ -74,7 +74,8 @@ defmodule World.ServiceTest do
     # of the order are in the time of the run.
     assert %{kind: "run_done", data: %{"ms" => run, "memory_peak" => peak, "memory_end" => memory}} = List.last(events)
     assert run <= String.to_integer(ms)
-    assert done.wall - first.wall <= run
+    # (Each time is a whole count of ms: the two can be 1 ms apart.)
+    assert done.wall - first.wall <= run + 1
     assert peak >= memory and memory > 0
     assert List.last(events).data["memory"] == "total"
   end

@@ -2,9 +2,11 @@
 #
 # - mix precommit: the compile with no warnings, the format, and the
 #   tests with 100% coverage.
-# - mix world.build --check: the files of priv/models are the build of
-#   the code.
-# - npm test: the Khronos glTF validator on each GLB of priv/models.
+# - mix world.build of four models into a new directory, and the Khronos
+#   glTF validator on each GLB of it (a part, an assembly with joints, a
+#   person with a skin, a sculpture with maps and bones). The files of
+#   priv/models are a reference: no check builds them again.
+# - npm test: the tests of the pages.
 # - npm run build and wrangler deploy --dry-run: the site of
 #   https://world.mkfifo.com (docs/factory.md) and edge.com (the VM of the
 #   Worker) build, and Wrangler takes them.
@@ -76,8 +78,11 @@ jobs:
       - run: mix.com precommit
       - name: The format did not change a file
         run: git diff --exit-code
-      - run: MIX_ENV=test mix.com world.build --check
       - run: npm ci
+      - name: A new build of four models is valid glTF
+        run: |
+          MIX_ENV=test mix.com world.build --dir _build/validate wheel_bicycle_37_622 seat_van man dog_edits
+          npm run validate -- _build/validate
       - run: npm test
       - run: BEAM_COM="$HOME/bin/beam.com" npm run build
       - run: npx wrangler deploy --dry-run

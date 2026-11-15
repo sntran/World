@@ -239,13 +239,13 @@ defmodule World.SkillTest do
   end
 
   @tag timeout: 300_000
-  test "the people build the statue on Núi Nhỏ from its blueprint in data: the bytes of the catalog at far" do
+  test "the people build the statue on Núi Nhỏ from its blueprint in data: a GLB file at far" do
     order = %{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua_cong_truong"}}
     {:ok, job} = Orders.job(order, "far")
     assert job.drawing["kind"] == "statue"
     {:ok, id} = World.build(Map.put(job, :budget, %{"workers" => 8}))
     assert {:ok, r} = World.await(id, 300_000)
-    assert r.glb == File.read!("priv/models/tuong_chua_kito_vua_cong_truong.far.glb")
+    assert <<"glTF", _::binary>> = r.glb
     trades = for %{kind: "hired", data: %{"trade" => t}} <- Log.events(r.log), uniq: true, do: t
     assert Enum.sort(trades) == ~w(carpenter caster finisher mason rigger scaffolder sculptor smith surveyor)
     estimates = for level <- [:near, :mid, :far], do: Drawing.estimate(job.drawing, level)

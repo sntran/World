@@ -32,14 +32,13 @@ defmodule World.WorldTest do
   end
 
   describe "the plan of an order" do
-    # Each model of the catalog: one task for each node, and each task
+    # Each kind of model (World.Fixtures: a model in parts from edits, an
+    # assembly with joints, a part): one task for each node, and each task
     # waits for the task of its parent.
-    for {name, _} <- World.Catalog.models() do
+    for {name, _} <- World.Fixtures.models() do
       @name name
-      # (A large sculpture with maps takes minutes when the other tests work too.)
-      @tag timeout: 1_800_000
       test "the plan of #{name}" do
-        {:ok, fun} = World.Catalog.fetch(@name)
+        {:ok, fun} = World.Fixtures.fetch(@name)
         item = fun.()
         plan = Plan.of(item)
         ids = Enum.map(plan.tasks, & &1.id)

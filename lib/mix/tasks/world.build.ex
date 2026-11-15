@@ -26,8 +26,10 @@ defmodule Mix.Tasks.World.Build do
     {opts, names} = OptionParser.parse!(args, strict: [check: :boolean, dir: :string, kit: :string])
     Mix.Task.run("app.start")
     dir = Keyword.get(opts, :dir, "priv/models")
-    models = World.Catalog.models()
-    chosen = if names == [], do: models, else: Enum.map(names, &{&1, fetch!(&1)})
+    # (The catalog: World.Catalog, or the module of the application environment `:catalog`.)
+    catalog = Application.get_env(:world, :catalog, World.Catalog)
+    models = catalog.models()
+    chosen = if names == [], do: models, else: Enum.map(names, &{&1, fetch!(catalog, &1)})
 
     files =
       Enum.flat_map(chosen, fn {name, fun} ->
@@ -46,21 +48,21 @@ defmodule Mix.Tasks.World.Build do
 
     files =
       if names == [],
-        do: [{Path.join(dir, "list.json"), JSON.encode!(Enum.map(models, &elem(&1, 0)))} | files] ++ kit(opts),
+        do: [{Path.join(dir, "list.json"), JSON.encode!(Enum.map(models, &elem(&1, 0)))} | files] ++ kit(catalog, opts),
         else: files
 
     if opts[:check], do: check(files), else: write(files)
   end
 
-  defp kit(opts) do
+  defp kit(catalog, opts) do
     dir = Keyword.get(opts, :kit, "priv/kit")
-    for {path, bin} <- World.People.Kit.files(), do: {Path.join(dir, path), bin}
+    for {path, bin} <- catalog.kit(), do: {Path.join(dir, path), bin}
   end
 
-  defp fetch!(name) do
-    case World.Catalog.fetch(name) do
+  defp fetch!(catalog, name) do
+    case catalog.fetch(name) do
       {:ok, fun} -> fun
-      :error -> Mix.raise("No model #{name} in World.Catalog")
+      :error -> Mix.raise("No model #{name} in #{inspect(catalog)}")
     end
   end
 

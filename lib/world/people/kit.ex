@@ -38,18 +38,26 @@ defmodule World.People.Kit do
   # up axis (y of glTF), as `World.People.traveler/3` at a vehicle.
   @turn [0.0, -0.70711, 0.0, 0.70711]
 
-  @doc "The files of the kit: a list of `{path, binary}`, with the paths in the folder of the kit."
-  def files do
-    bodies = for {sex, g} <- @sexes, do: {"person/#{sex}.glb", glb(Human.kit(g, :body))}
+  @doc """
+  The files of the kit: a list of `{path, binary}`, with the paths in
+  the folder of the kit. The options give a part of the kit: `sexes`
+  (`woman`, `man`), `hair` (names of hair) and `vehicles` (as
+  `vehicles/0`). Each is all of them by default.
+  """
+  def files(opts \\ []) do
+    sexes = for {sex, _} = s <- @sexes, sex in Keyword.get(opts, :sexes, ~w(woman man)), do: s
+    names = Keyword.get(opts, :hair, hair())
+    vehicles = Keyword.get(opts, :vehicles, vehicles())
+    bodies = for {sex, g} <- sexes, do: {"person/#{sex}.glb", glb(Human.kit(g, :body))}
 
     hair =
-      for {sex, g} <- @sexes, name <- hair(), do: {"person/#{sex}-hair-#{name}.glb", glb(Human.kit(g, {:hair, name}))}
+      for {sex, g} <- sexes, name <- names, do: {"person/#{sex}-hair-#{name}.glb", glb(Human.kit(g, {:hair, name}))}
 
     textures =
       for({name, path} <- textures("skins"), do: {"skins/#{name}#{Path.extname(path)}", File.read!(path)}) ++
         for {name, path} <- textures("eye_materials"), do: {"eyes/#{name}#{Path.extname(path)}", File.read!(path)}
 
-    vehicles = for {path, options} <- vehicles(), do: {path, vehicle_glb(options)}
+    vehicles = for {path, options} <- vehicles, do: {path, vehicle_glb(options)}
 
     [{"kit.json", JSON.encode!(manifest())} | bodies ++ hair ++ textures ++ vehicles]
   end

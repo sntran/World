@@ -61,6 +61,13 @@ defmodule World.HousesTest do
     end
   end
 
+  test "a unit of each material and a sample of a wall of studs are true models" do
+    for item <- [Buildings.brick_us(), Buildings.block_cmu(), Buildings.tile(), Buildings.wall_stud_sample()] do
+      assert %Assembly{} = item
+      assert World.Check.model(item) == :ok
+    end
+  end
+
   describe "the walls" do
     test "a wall of bricks with a window and its lintel" do
       parts = counts(Buildings.wall_brick_sample())

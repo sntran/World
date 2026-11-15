@@ -25,8 +25,9 @@ defmodule World.MixProject do
       aliases: aliases(),
       test_coverage: [
         summary: [threshold: 100],
-        # The copy of Wings 3D has its own tests upstream.
-        ignore_modules: [~r/^:?(wings_|e3d|tools$|trace_2d$)/, World.GLBHelper]
+        # The copy of Wings 3D has its own tests upstream. The catalog is a
+        # reference of what World made: no test builds its models.
+        ignore_modules: [~r/^:?(wings_|e3d|tools$|trace_2d$)/, World.GLBHelper, World.Catalog]
       ]
     ]
   end

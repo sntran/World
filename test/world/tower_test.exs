@@ -110,12 +110,13 @@ defmodule World.TowerTest do
     end
   end
 
-  test "the people build the lighthouse from its blueprint in data: the bytes of the catalog at far" do
+  test "the people build the lighthouse from its blueprint in data: the bytes of the direct build at far" do
     order = %{"blueprint" => "catalog", "options" => %{"name" => "hai_dang_vung_tau"}}
     {:ok, job} = Orders.job(order, "far")
     {:ok, id} = World.build(Map.put(job, :budget, %{"workers" => 3}))
     assert {:ok, r} = World.await(id, 120_000)
-    assert r.glb == File.read!("priv/models/hai_dang_vung_tau.far.glb")
+    {:ok, fun} = World.Catalog.fetch("hai_dang_vung_tau")
+    assert r.glb == World.Build.glb(World.Detail.with(:far, fun), level: :far)
     trades = for %{kind: "hired", data: %{"trade" => t}} <- World.Log.events(r.log), uniq: true, do: t
     assert Enum.sort(trades) == ~w(mason smith surveyor)
 

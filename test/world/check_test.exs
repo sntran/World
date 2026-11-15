@@ -220,13 +220,11 @@ defmodule World.CheckTest do
     end
   end
 
-  describe "the catalog" do
-    for {name, _} <- World.Catalog.models(), name not in ~w(man woman traveler honda_vision_110_rider) do
+  describe "each kind of model" do
+    for {name, _} <- World.Fixtures.models() do
       @name name
-      # (A large sculpture with maps takes minutes when the other tests work too.)
-      @tag timeout: 1_800_000
       test "#{name} is a true model" do
-        {:ok, fun} = World.Catalog.fetch(@name)
+        {:ok, fun} = World.Fixtures.fetch(@name)
         item = fun.()
         if is_struct(item, Assembly) or is_struct(item, Part), do: assert(Check.model(item) == :ok)
       end

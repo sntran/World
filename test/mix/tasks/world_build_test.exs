@@ -32,12 +32,30 @@ defmodule Mix.Tasks.World.BuildTest do
     assert_raise Mix.Error, ~r/No model nope/, fn -> Mix.Tasks.World.Build.run(["--dir", @dir, "nope"]) end
   end
 
-  # The build of all the models takes some minutes in the interpreter.
-  @tag timeout: :infinity
-  test "all the models, with the list" do
-    Mix.Tasks.World.Build.run(["--dir", @dir])
+  # With no name, the task builds each model of the catalog. The catalog of this test has small models
+  # (World.Fixtures): the tests do not build the models of World.Catalog.
+  test "all the models of a catalog, with the list and the kit" do
+    Application.put_env(:world, :catalog, World.Fixtures)
+    on_exit(fn -> Application.delete_env(:world, :catalog) end)
+    Mix.Tasks.World.Build.run(["--dir", @dir, "--kit", Path.join(@dir, "kit")])
     list = File.read!(Path.join(@dir, "list.json")) |> JSON.decode!()
-    assert list == Enum.map(World.Catalog.models(), &elem(&1, 0))
-    assert World.Catalog.fetch("nope") == :error
+    assert list == ~w(fixture_building fixture_seat fixture_wheel)
+
+    for name <- list,
+        ext <- ~w(.glb .mid.glb .far.glb .parts.json),
+        do: assert(File.exists?(Path.join(@dir, name <> ext)))
+
+    assert File.ls!(Path.join(@dir, "kit")) == ["kit.json"]
+
+    assert_raise Mix.Error, ~r/No model wheel_bicycle_37_622 in World.Fixtures/, fn ->
+      Mix.Tasks.World.Build.run(["--dir", @dir, "wheel_bicycle_37_622"])
+    end
+  end
+
+  test "the catalog gives the function of a model by its name" do
+    names = Enum.map(World.Catalog.models(), &elem(&1, 0))
+    assert names == Enum.sort(names) and names == Enum.uniq(names)
+    assert {:ok, fun} = World.Catalog.fetch("wheel_bicycle_37_622")
+    assert is_function(fun, 0) and World.Catalog.fetch("nope") == :error
   end
 end

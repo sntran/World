@@ -2503,7 +2503,11 @@ The build (`mix world.build`) writes:
 | `priv/models/NAME.vox` | the voxel version, when the model asks for one (step 8) |
 
 The build gives the same bytes for the same model.
-`mix world.build --check` builds again and compares; CI runs it.
+`mix world.build --check NAME` builds a model again and compares. The
+files of `priv/models` are a reference of what World made: no test and
+no check of CI builds them again. A project that needs a model asks
+World to build it (`docs/factory.md`). The tests of the rules use small
+models of their own (`test/support/fixtures.ex`).
 
 ## GLB
 

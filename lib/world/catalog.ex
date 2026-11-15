@@ -4,6 +4,11 @@ defmodule World.Catalog do
   The parts (wheels, seats), the vehicles, the people, and the items of
   DIY. `mix world.build` writes the files of each model in
   `priv/models`.
+
+  The catalog is a reference of what World made. No test builds its
+  models: the tests of the rules have small models of their own
+  (`test/support/fixtures.ex`). A project that needs a model asks World
+  to build it.
   """
 
   # A seat of a van: the sizes of the seats of the Transit (`priv/data/vans.json`).
@@ -85,6 +90,9 @@ defmodule World.Catalog do
       ] ++
       World.Buildings.all() ++ World.Framing.Builds.all()
   end
+
+  @doc "The files of the kit of the people (`World.People.Kit`): `mix world.build` writes them in `priv/kit`."
+  def kit, do: World.People.Kit.files()
 
   @doc "The function of a model by its name."
   def fetch(name) do
