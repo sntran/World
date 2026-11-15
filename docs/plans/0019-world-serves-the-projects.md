@@ -253,16 +253,61 @@ as a reference; no test builds them (the commit `b6905ce`).
    their budgets.
 7. **The server on the mini PC:** the release, the tunnel, the store on
    its disk, the measure of the line.
-8. **The Earth of Humans Must Die:** real relief for each cell of its
-   grid, as data. It needs a source of heights of the Earth and the
-   word of the owner on what "better" is.
+8. **The Earth of Humans Must Die:** real heights and kinds of land for
+   the points that the game sends (section 7.2).
+9. **The trial of Tre** (section 7.1).
 
-## 7. Open questions for the owner
+## 7. The answers of the owner (2026-11-15)
 
-- **Tre:** its own rules say that each thing is made in code from a
-  seed. Is the trial of five things the right first step, or do its
-  rules change first?
-- **Humans Must Die:** is a better Earth real relief and real coasts on
-  its grid, or more than that (cities, clouds, a look from the ground)?
-- **DIY:** does it keep its SVG from solids, or does it want pictures
-  that World draws (12 views of each kind)?
+- **Tre:** "Tre's rules were made by me, so I can change them. I chose
+  Voxel so models could be made by code, as Tre runs on the browser,
+  but I do want to see if World can build models better looking (as I
+  don't like Voxel look), then I can changes the rules. Tre uses
+  three.js so it can use World models."
+- **Humans Must Die:** "the player plays from outer space against a
+  region on Earth. I let you decide how you want to handle the Earth,
+  as long as the game can run on mobile phone (we can assume high end
+  phones for now)."
+- **DIY:** "DIY can build a converter to convert GLB to SVG if it needs
+  to. World keeps making GLB models."
+
+So each project takes a GLB. The output `solids` stays as a cheap view
+of a drawing, but no project waits for it. The output `flat` is a GLB
+too: a small mesh with a color at each point.
+
+### 7.1 Tre: a trial of the look
+
+Step T1 (done): a sheet of twelve models that World has and that fit
+the content of Tre (a buffalo, a chicken, a duck, a dog, a carp,
+bamboo, a banana plant, a tree, a woman with a nón lá, a basket boat in
+two looks, a house). It shows three looks: real, soft, and flat faces.
+The owner chooses the look.
+
+Step T2: five things of Tre in that look, as GLB files with their
+moves: the child (World has no child: a person is 25 years or more),
+the buffalo calf Nghé, a house on stilts, an areca palm, and a prop.
+
+### 7.2 Humans Must Die: the Earth
+
+The decision of World:
+
+1. **The game keeps its grid and its live state.** The ground changes
+   while the game runs (a crater, fire, ash), so it cannot be one mesh
+   file. The client draws it from its cells, as now.
+2. **World gives real data for each cell**, in the place of noise. The
+   game sends the points of its cells (latitude and longitude), and
+   World answers one or two bytes for each point: the height of the
+   land and of the sea floor, and the kind of land. At the default
+   level (40,962 cells) that is 41 to 82 KB: the size of the files of
+   the game today. So a phone does the same work as now, and the Earth
+   has its real mountains, coasts and deserts.
+3. **A finer patch for the region in play** comes later, if the look
+   from the play height needs it: the same answer for more points
+   near one place.
+4. **The things on the Earth are flat GLB files**: the buildings, the
+   vehicles, the turbines, the trees, each in a small budget of
+   triangles with a color at each point and a light for the windows.
+   The client loads each one time and draws its copies in a batch.
+
+World needs a source of heights of the Earth for step 2 (a public
+grid, for example ETOPO of NOAA), with its license in `CREDITS.md`.
