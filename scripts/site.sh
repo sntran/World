@@ -3,12 +3,16 @@
 # URLs"). Workers Builds runs it ("npm run build") before "wrangler
 # deploy", which uploads site/ as the static files of the Worker.
 #
-# - /: the review page (review/index.html), with the models at /models/.
+# - /: the world (review/world.html): the people of the node and each
+#   construction as it happens, from the stream /events.
+# - /review.html: the review page (review/index.html), with the models at
+#   /models/.
 # - /replay.html: the replay of an order (review/replay.html).
 # - /models/: the files of the catalog (priv/models), which CI checks
 #   against the build of the code.
 # - /kit/: the kit of a person (priv/kit, World.People.Kit), which CI
 #   checks with the catalog.
+# - /scene.js: the light of the three pages (review/scene.js).
 # - /palette.json, /version.json (the commit of the build).
 # - /_headers: CORS and the cache of each file.
 set -eu
@@ -23,12 +27,15 @@ cp priv/palette.json site/palette.json
 
 # The review page reads the models at ../priv/models/ in the repository,
 # and at /models/ on the site.
-sed "s#const base = '../priv/models/';#const base = '/models/';#" review/index.html > site/index.html
-if ! grep -q "const base = '/models/';" site/index.html; then
+sed "s#const base = '../priv/models/';#const base = '/models/';#" review/index.html > site/review.html
+if ! grep -q "const base = '/models/';" site/review.html; then
     echo "site.sh: the review page has no line const base = '../priv/models/';" >&2
     exit 1
 fi
 cp review/replay.html site/replay.html
+cp review/world.html site/index.html
+# The light of the three pages (plan 0004, D7), next to them.
+cp review/scene.js site/scene.js
 
 # The commit names the files that the VM builds in R2, so each deploy
 # must have its own. The commit of Workers Builds, else the commit of

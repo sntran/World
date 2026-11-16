@@ -33,6 +33,12 @@ again.
 
 ## The changes
 
+- The targets of a child (10 years) and of a baby (1 year) are in their
+  own file, `targets_child.bin.gz` (48 targets of `macrodetails`, of the
+  mean muscle only): `python3 -I scripts/makehuman.py MPFB_DATA
+  --children`. `World.People.Human` makes a person of 1 to 25 years from
+  them.
+
 - The base mesh, the skeleton, the weights, the meshes and the fit files
   of the assets are the same, in gzip.
 - The targets are in a small binary format (`World.People.Data`), in

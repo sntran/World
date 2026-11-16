@@ -37,10 +37,32 @@ defmodule World.MCPTest do
     {200, %{"result" => %{"tools" => tools}}} = rpc("tools/list", %{})
 
     assert Enum.map(tools, & &1["name"]) ==
-             ~w(list_blueprints get_blueprint check_order place_order check_drawing propose_drawing)
+             ~w(list_blueprints get_blueprint check_blueprint check_order edit_order place_order check_drawing plan_build build propose_drawing open_sculpture edit_sculpture close_sculpture)
 
     for t <- tools, do: assert(t["inputSchema"]["type"] == "object" and is_binary(t["description"]))
     assert tools == MCP.tools()
+  end
+
+  test "a thing of a rule is an order of the general tools: no tool for one kind of model" do
+    names = Enum.map(tool("list_blueprints", %{})["structuredContent"]["blueprints"], & &1["name"])
+    assert ~w(appliance building mini street street_house village_house village_thing) -- names == []
+    refute Enum.any?(MCP.tools(), &(&1["name"] =~ ~r/^draw_|^plan_street/))
+
+    # check_order gives the full request of the rule; place_order keeps it; edit_order changes one word of it.
+    full = tool("check_order", %{"order" => %{"blueprint" => "appliance", "options" => %{"kind" => "fridge"}}})
+    assert full["structuredContent"]["order"]["options"] == World.Home.Appliance.request(%{"kind" => "fridge"})
+    placed = tool("place_order", %{"order" => %{"blueprint" => "mini", "options" => %{"kind" => "jet"}}})
+    hash = placed["structuredContent"]["hash"]
+    edits = [%{"set" => "options.scale", "to" => 2}, %{"set" => "options.color", "to" => "#405060"}]
+    edited = tool("edit_order", %{"hash" => hash, "edits" => edits})["structuredContent"]
+    assert edited["order"]["options"] == World.Mini.request(%{"kind" => "jet", "scale" => 2, "color" => "#405060"})
+    assert edited["parent"] == hash
+
+    wrong = tool("check_order", %{"order" => %{"blueprint" => "appliance", "options" => %{"kind" => "toaster"}}})
+    assert wrong["isError"]
+
+    assert [%{"path" => "options", "message" => "the kind of an appliance is one of" <> _}] =
+             wrong["structuredContent"]["errors"]
   end
 
   test "list_blueprints gives the name and the description of each blueprint" do
@@ -86,6 +108,47 @@ defmodule World.MCPTest do
     assert <<"glTF", _::binary>> = glb.resp_body
 
     assert tool("place_order", %{"order" => %{"blueprint" => "ball"}})["isError"] == true
+
+    # edit_order: small changes to the placed order give a new order, with its parent and its history.
+    edits = [%{"set" => "options.length", "to" => 0.45}, %{"set" => "colors.steel", "to" => "#8090a0"}]
+    e = tool("edit_order", %{"hash" => hash, "edits" => edits})["structuredContent"]
+    assert e["parent"] == hash and e["hash"] != hash and e["order"]["options"]["length"] == 0.45
+    assert e["history"] == [%{"hash" => hash}, %{"hash" => e["hash"], "edits" => edits}]
+    assert e["files"]["glb"] == "#{@origin}/o/#{e["hash"]}.glb"
+    wrong = tool("edit_order", %{"hash" => hash, "edits" => [%{"remove" => "options.width"}]})
+    assert wrong["isError"]
+    assert [%{"path" => "edits.0"}] = wrong["structuredContent"]["errors"]
+
+    for args <- [%{}, %{"hash" => hash}, %{"hash" => 1, "edits" => edits}] do
+      wrong = tool("edit_order", args)
+
+      assert wrong["isError"] and
+               hd(wrong["content"])["text"] =~ ~s(the arguments \\"hash\\" and \\"edits\\" are necessary)
+    end
+  end
+
+  test "plan_build gives the tasks, the trades and the triangles of an order; build starts a construction to watch" do
+    r = tool("plan_build", %{"order" => @strut, "level" => "far"})["structuredContent"]
+    assert r["level"] == "far" and r["triangles"] > 0
+    assert Enum.sum(Map.values(r["trades"])) == length(r["tasks"])
+
+    # A drawing with skills: a task for each node, and the estimate of the skills.
+    statue = %{"blueprint" => "catalog", "options" => %{"name" => "tuong_chua_kito_vua_cong_truong"}}
+    r = tool("plan_build", %{"order" => statue})["structuredContent"]
+
+    assert r["level"] == "near" and length(r["tasks"]) == 57 and r["trades"]["caster"] == 11 and
+             r["trades"]["scaffolder"] == 9 and r["trades"]["rigger"] == 2
+
+    assert tool("plan_build", %{"order" => @strut, "level" => "huge"})["isError"] == true
+
+    b = tool("build", %{"order" => @strut, "level" => "far", "budget" => %{"workers" => 2}})["structuredContent"]
+    assert b["events"] == "/builds/#{b["build"]}/events?after=#{b["after"]}"
+    assert b["files"]["glb"] =~ b["hash"]
+    assert {:ok, %{level: :far}} = World.await(b["build"])
+
+    r = tool("build", %{"order" => @strut, "budget" => %{"workers" => 0}})
+    assert r["isError"] == true
+    assert [%{"path" => "budget.workers"}] = r["structuredContent"]["errors"]
   end
 
   test "an order that is not a JSON object is a tool error" do
@@ -102,7 +165,10 @@ defmodule World.MCPTest do
 
     {200, %{"error" => e}} = rpc("tools/call", %{"name" => "build_house"})
     assert e["code"] == -32602
-    assert e["message"] =~ "the tools are list_blueprints, get_blueprint, check_order, place_order"
+
+    assert e["message"] =~
+             "the tools are list_blueprints, get_blueprint, check_blueprint, check_order, edit_order, place_order"
+
     assert {200, %{"error" => %{"code" => -32602}}} = rpc("tools/call", "x")
 
     assert {400, %{"error" => %{"code" => -32700}}} = MCP.answer("nope", nil, @origin)

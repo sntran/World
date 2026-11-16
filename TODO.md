@@ -22,6 +22,46 @@ into the steps of `AGENTS.md`.
 - **The factories of a planet, for Humans Must Die.** Emergency
   vehicles, airplanes, ships, aircraft carriers, buildings: each family
   is a new factory of the world, with its modules and its sources.
+- **More of the houses from rules (plan 0016).** The types that are not
+  made yet (a shop with a sign over all its front, a house with
+  moldings, a hotel, a villa, an empty lot), a count of the houses of
+  one real street for the shares, a street with two sides and its
+  trees and wires, the inside of a house, and the people of World who
+  build such a house.
+- **People with parts from edits (plan 0017, in progress).** The body
+  of MakeHuman stays; hair, hats, helmets, shoes and thick clothes come
+  from edits. Made: a nón lá, a half helmet, and hair with strands
+  (short, a bun, long). Open: flip-flops, clothes and a mask (they need
+  the body in the field), long hair that bends, the tools that measure
+  a person, and the blind test.
+- **World serves the projects (plan 0019, in progress).** The probe of
+  Vũng Tàu, Phượt, DIY, Humans Must Die and Tre is made, with the
+  design and the guide (`docs/requests.md`). Made: the outputs `solids`
+  and `flat`, the store that stays after a deploy, the server on a
+  computer, the heights of the Earth, children, a house of a village,
+  the rule of an appliance, and the small models of Humans Must Die.
+  The faults that Vũng Tàu found are corrected (a person on the ground
+  at each level, hair at far, a side stand, the light look with a
+  budget and a wrap, the blueprint `plant`), and Tre has the clothes of
+  old Việt Nam, the things of a yard, the buffalo calf and the areca
+  palm. The direction after the word of the owner (plan 0019, 7.0):
+  World takes requests and edits for any model, and does not make a
+  rule for each model. Made: the edits of an order (`POST
+  /orders/HASH/edits`, the MCP tool `edit_order`), and the numbers of a
+  plant in the request. Open: the numbers of each other rule in the
+  request, the drawing of a model of a rule as a file of its order, a
+  picture of a model from the server, the kind of land of the Earth,
+  and the start of the server on the mini PC.
+- **The street Quang Trung of Vũng Tàu as it is (plan 0018, in
+  progress).** Made: the survey, the row of the numbers 4 to 26, the
+  office of the port at number 2, the two blocks of the Grand Hotel,
+  and the rules of a building (`World.Town.Building`). Open: the fore
+  court of the Grand Hotel and the round building between its blocks,
+  the House
+  of Children, the villas, the Rex and the Royal hotels, the ground
+  (the roads with the median, the parks, the sea wall, the trees), and
+  the place with each model on it. Photos of each front of the row 4
+  to 26 make its lots true.
 - **A hẻm of tube houses (nhà ống).** A blueprint for the narrow houses
   of a town of Việt Nam: a front of 3 to 5 m, 2 to 4 floors on a frame
   of concrete, walls of `brick_vn`, a roof of clay tiles or a flat
@@ -40,6 +80,21 @@ into the steps of `AGENTS.md`.
 
 ## From the development
 
+- **The rest of plan 0001.** The lot house as a blueprint in data
+  (the skills of the trades of a house from `World.Buildings.Lot`), the
+  van line as skills (station by station, each with the same bytes), and
+  then the places of the world (a warehouse, a factory for each trade, a
+  yard and the trucks) built once at the first start of a node, with the
+  log read at a later start (plan 0001, step 5, Q2).
+- **More of the world of plan 0001.** A WebSocket for a client that
+  sends a change while it watches; the engineers of the world; a crane
+  and a scaffold on a site; the materials by the cubic meter; the export
+  of a model to IFC (the words of the elements are its words already);
+  the skills as tools of an MCP server outside the repository.
+- **The memory and the time from the log.** A construction opens when
+  the memory of the VM has room for the estimate of its job, and a
+  skill gets its estimate of time from the builds of the log (plan 0001,
+  R21, R22, Q1, D33). Now a job has `memory_mb` only.
 - **More of the bamboo shop.** The fan of three spokes at the top of a
   back, the curved top rail, the seat of slats that bends between its
   rails, the culms that taper and are not quite straight, the hole of
@@ -464,22 +519,9 @@ and no logo on them.
     go up inside to its shoulders, where visitors look out). A base
     with panels of figures in relief (Christ and the twelve apostles).
     Done: `World.Cast`, `World.Statues`, the blueprint `statue`, and
-    `tuong_chua_kito_vua` (`docs/format.md`, "A statue"). The review of
-    the owner (2026-11-06, Vung_Tau `landmarks.md`): done, the base (the
-    plaza, the block with the panel of gold, the band of letters and the
-    windows with grilles, the terrace, the dome with its stair), the
-    robe to the sizes of the photos, and the head (4 m to the end of the
-    beard, the face, the hair to the shoulders and the beard on a grid of
-    3 cm at near; the limit of near is 400,000 triangles), and the
-    mantle (the cape with its level edge at 21.5 m, the point and the
-    collar; the sleeves with the cuff and the triangle of cloth), and
-    the Sacred Heart with its flame (1.6 m, 24.5 m over the feet), and
-    the 3 windows of 0.5 by 0.8 m with a square lattice, and the rays of
-    the halo (3 at each side, out to 1.52 of the radius of the ring, and
-    3 rods at the top), and the hands (open and flat, the fingers
-    together, a palm and a thumb). Not yet: the pattern of the grilles
-    of the windows (chữ thọ), the figures of the reliefs as figures of
-    people, the letters of the band as real text, the inside of the base
+    `tuong_chua_kito_vua_cong_truong` (`docs/format.md`, "A statue").
+    Not yet: the pattern of the grilles of the windows (chữ thọ), the
+    figures of the reliefs as figures of people, the inside of the base
     (a room), and the hollow at mid.
   - **A tower.** A tapered body of masonry or concrete, a gallery with a
     rail, the lantern room, and the cap (the lighthouse of Vũng Tàu,
@@ -500,3 +542,26 @@ and no logo on them.
   - **Pieces for a stone jetty.** Pieces of 2 m of the stone deck with
     its edge, as in the street kit: the game lays them along the line
     of Cầu Đá on the real ground.
+
+## From plan 0002
+
+- The survey and the field of the cast of a statue are one task each
+  (about 1 s each): a survey of each band, and a field in slabs, would
+  make the statue faster.
+- A scooter, a motorcycle and a car are shape data from the photos of
+  one model each (`scooter.json`, `motorcycle.json`, `car.json`): a spec
+  sheet of each kind (the wheelbase, the rake, the seat height, the
+  tires) that moves the shapes with the numbers would let Phượt order
+  another model of a kind with few numbers, as the bicycle does now.
+- The seats of a car or a van as a skill of an upholsterer from a spec
+  sheet (`World.Furniture.Seats`): the van line makes its seats now
+  (`van_seats`); the car of the catalog has none.
+- The drivers of the trucks are a part of each truck, not people of the
+  census: a driver of the census would need a trade `driver` and a hire
+  that lasts.
+- The people of a construction at a factory do not walk to the factory
+  on the map of the world page: the lot is at the place, the people at
+  the gate of the page.
+- The memory of a node with the yard (the warehouse, the factories, the
+  trucks) at the edge (128 MB) is not measured.
+

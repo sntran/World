@@ -8,7 +8,17 @@ defmodule World.Mesh do
   into triangles (`wings_tesselation:triangulate/2`).
   """
   alias World.{Frame, Vec}
-  defstruct points: [], faces: [], material: :paint, smooth: 0, angle: 40.0, skin: nil, matter: nil
+
+  defstruct points: [],
+            faces: [],
+            material: :paint,
+            smooth: 0,
+            angle: 40.0,
+            skin: nil,
+            matter: nil,
+            normals: nil,
+            colors: nil,
+            uvs: nil
 
   @type t :: %__MODULE__{
           points: [Vec.t()],
@@ -17,7 +27,9 @@ defmodule World.Mesh do
           smooth: non_neg_integer,
           angle: number,
           skin: number | nil,
-          matter: atom | nil
+          matter: atom | nil,
+          normals: [Vec.t()] | nil,
+          colors: [{0..255, 0..255, 0..255}] | nil
         }
 
   @doc """
@@ -57,8 +69,28 @@ defmodule World.Mesh do
     }
   end
 
+  @doc """
+  A mesh of triangles with the normal of each point (unit vectors: the
+  normals of the true surface, where the mesh comes from a field) and,
+  or, the color of each point (`{r, g, b}`, 0 to 255, which the color of
+  the material multiplies). A corner takes the normal of its point when
+  it is within the angle of the mesh from the normal of its face (a hard
+  edge stays hard: there the rule of the angle holds, `triangles/2`).
+  """
+  def finish(%__MODULE__{} = mesh, normals, colors), do: %{mesh | normals: normals, colors: colors}
+
+  @doc """
+  A mesh of triangles with the UV of each corner of each face (a list of
+  three `{u, v}` for each face, in the order of the faces): the place of
+  the corner in the maps of the mesh (`World.Sculpt.Bake`). `triangles/2`
+  gives corners `{point, normal, color, uv}` then (the color is nil for a
+  mesh with no colors).
+  """
+  def map(%__MODULE__{} = mesh, uvs), do: %{mesh | uvs: uvs}
+
   @doc "The mesh, moved by a frame."
-  def transform(%__MODULE__{points: ps} = m, %Frame{} = f), do: %{m | points: Enum.map(ps, &Frame.point(f, &1))}
+  def transform(%__MODULE__{points: ps, normals: ns} = m, %Frame{} = f),
+    do: %{m | points: Enum.map(ps, &Frame.point(f, &1)), normals: ns && Enum.map(ns, &Frame.dir(f, &1))}
 
   @doc "The box of the points: `{min, max}`."
   def bounds(%__MODULE__{points: ps}), do: Vec.bounds(ps)
@@ -85,14 +117,54 @@ defmodule World.Mesh do
   @doc """
   The triangles of the mesh at a smooth level (the level of the mesh by
   default): a list of corners `{point, normal}`, three for each triangle.
+  A mesh with the colors of its points (`finish/3`) gives corners
+  `{point, normal, color}`.
   """
   def triangles(%__MODULE__{} = m, level \\ nil) do
     level = if level == nil, do: m.smooth, else: level
     {tris, pos} = wings_triangles(m, level)
-    normals(tris, pos, if(level > 0, do: 180.0, else: m.angle))
+    corners = normals(tris, pos, if(level > 0, do: 180.0, else: m.angle))
+    if m.normals || m.colors || m.uvs, do: own(m, corners), else: corners
   end
 
-  defp wings_triangles(%__MODULE__{points: ps, faces: fs}, level) do
+  # The corners with the normals and the colors of the points of the mesh
+  # (a mesh of triangles: its faces are its triangles, in their order).
+  defp own(%__MODULE__{faces: faces, normals: normals, colors: colors, angle: angle, uvs: uvs}, corners) do
+    limit = :math.cos(angle * :math.pi() / 180) - 1.0e-6
+    {nt, ct} = {normals && List.to_tuple(normals), colors && List.to_tuple(colors)}
+
+    [faces, Enum.chunk_every(corners, 3), uvs || Enum.map(faces, fn _ -> [nil, nil, nil] end)]
+    |> Enum.zip()
+    |> Enum.flat_map(fn {vs, [{a, _}, {b, _}, {c, _}] = cs, us} ->
+      face = Vec.norm(Vec.cross(Vec.sub(b, a), Vec.sub(c, a)))
+
+      for {v, {p, n}, uv} <- Enum.zip([vs, cs, us]) do
+        n = if nt && Vec.dot(elem(nt, v), face) >= limit, do: elem(nt, v), else: n
+
+        cond do
+          uv -> {p, n, ct && elem(ct, v), uv}
+          ct -> {p, n, elem(ct, v)}
+          true -> {p, n}
+        end
+      end
+    end)
+  end
+
+  # A mesh of triangles only (a cast, a skin of surface nets) needs no
+  # pass of Wings: its faces are its triangles.
+  defp wings_triangles(%__MODULE__{points: ps, faces: fs}, 0)
+       when fs != [] and is_list(hd(fs)) and length(hd(fs)) == 3 do
+    if Enum.all?(fs, &match?([_, _, _], &1)) do
+      t = List.to_tuple(ps)
+      {fs, &elem(t, &1)}
+    else
+      wings(ps, fs, 0)
+    end
+  end
+
+  defp wings_triangles(%__MODULE__{points: ps, faces: fs}, level), do: wings(ps, fs, level)
+
+  defp wings(ps, fs, level) do
     we =
       try do
         :wings_we.build(fs, ps)

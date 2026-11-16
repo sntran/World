@@ -82,8 +82,29 @@ defmodule World.MeshTest do
 
   test "a mesh that the core of Wings refuses raises an error" do
     # Two faces with the same edge in the same direction.
-    bad = Mesh.new([{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}], [[0, 1, 2], [0, 1, 3]], :paint)
+    points = [{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}, {1, 0, 1}, {0, 0, 1}]
+    bad = Mesh.new(points, [[0, 1, 2, 3], [0, 1, 4, 5]], :paint)
     assert_raise ArgumentError, ~r/the core of Wings refused the mesh/, fn -> Mesh.triangles(bad) end
+  end
+
+  test "a mesh of triangles gives its faces as they are, with no pass of Wings" do
+    m = Mesh.new([{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}], [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]], :paint)
+
+    assert m |> Mesh.triangles() |> Enum.map(&elem(&1, 0)) |> Enum.take(3) == [
+             {0.0, 0.0, 0.0},
+             {0.0, 1.0, 0.0},
+             {1.0, 0.0, 0.0}
+           ]
+
+    # A mesh of triangles and a quad goes through Wings.
+    q =
+      Mesh.new(
+        [{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}, {0.5, 0.5, 1}],
+        [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4], [3, 2, 1, 0]],
+        :paint
+      )
+
+    assert length(Mesh.triangles(q)) == 18
   end
 
   test "an open mesh gives only its visible faces" do

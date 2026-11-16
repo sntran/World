@@ -1,7 +1,7 @@
 defmodule World.Enclosures do
   @moduledoc """
   The enclosures of the sheet metal shop (`docs/world.md`, step P6; the
-  family `:sheets`): boxes of steel sheet for electrical gear, each an
+  trade `sheet_metal_worker`): boxes of steel sheet for electrical gear, each an
   assembly of the kind `:enclosure`, from `World.Sheet`.
 
   - `hoffman_a16n126/0`: the nVent HOFFMAN A-16N126, a wall-mount box of

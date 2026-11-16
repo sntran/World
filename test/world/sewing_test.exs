@@ -142,7 +142,8 @@ defmodule World.SewingTest do
 
   test "the bust of a woman at mid is round: its faces are cut in sixteen; at far they stay" do
     triangles = fn level ->
-      fig = Detail.with(level, fn -> Human.person("t", gender: 0.0, bust: 0.75, clothes: ["world_t_shirt"]) end)
+      fig =
+        Detail.with(level, fn -> Human.person("t", gender: 0.0, bust: 0.75, hair: nil, clothes: ["world_t_shirt"]) end)
 
       fig.nodes
       |> List.last()
@@ -153,7 +154,8 @@ defmodule World.SewingTest do
     end
 
     # The low-poly bodies of MakeHuman: 1,584 and 730 quads (two triangles
-    # each). At mid, 22 quads on the breasts become 352.
+    # each). At mid, 22 quads on the breasts become 352. (The person has no
+    # hair: the hair at far has faces of its own in the color of the hair.)
     assert triangles.(:mid) >= 2 * (1584 - 22 + 352)
     assert triangles.(:far) == 2 * 730
   end
@@ -194,5 +196,91 @@ defmodule World.SewingTest do
     assert Enum.min(down) > Enum.max(soft) - 0.12
     # The baffles: the thickness of the down jacket changes, of the softshell only at the hem.
     assert Enum.max(down) - Enum.min(down) > 0.1
+  end
+
+  test "the clothes of a village of old Việt Nam: a tunic that hangs from the waist, wide pants, short pants" do
+    names = ~w(world_ao_canh world_ao_coc world_quan_ong_rong world_quan_dui)
+    assert names -- Sewing.names() == []
+    garments = Map.new(Sewing.garments(), &{&1.name, &1})
+    for n <- names, do: assert(garments[n].fabric == "homespun" and garments[n].shape == [])
+    assert Sewing.fabrics()["homespun"].span == 90
+
+    # The top of a tunic is on the body, its lower part is a tube on the skirt of the base mesh, and they join.
+    for n <- ~w(world_ao_canh world_ao_coc) do
+      assert Enum.map(garments[n].pieces, &{&1.name, &1.on}) == [
+               {"body", "body"},
+               {"skirt", "helper-skirt"},
+               {"sleeves", "body"}
+             ]
+
+      assert [{"body", "sleeves"}] = for({a, b, _} <- Sewing.seams(n), do: {a, b})
+    end
+
+    high = fn opts, role ->
+      fig = Detail.with(:near, fn -> Human.person("t", opts) end)
+      prim = fig.nodes |> List.last() |> Map.fetch!(:primitives) |> Enum.find(&(&1.material == role))
+      zs = Enum.map(prim.positions, &elem(&1, 2))
+      {Enum.min(zs), Enum.max(zs)}
+    end
+
+    child = [gender: 1.0, age: 9, hair: nil]
+    {_, top} = high.(child ++ [clothes: []], :skin)
+    # The long sleeves go lower on the arm than the short ones; the tunic goes from under the hips to the neck.
+    {low, neck} = high.(child ++ [clothes: ["world_ao_canh"]], :clothes_world_ao_canh)
+    assert neck > 0.78 * top and neck < 0.86 * top and low > 0.4 * top and low < 0.5 * top
+    {long, _} = high.(child ++ [clothes: ["world_quan_ong_rong"]], :clothes_world_quan_ong_rong)
+    {short, _} = high.(child ++ [clothes: ["world_quan_dui"]], :clothes_world_quan_dui)
+    assert long > 0.08 * top and long < 0.2 * top and short > 0.28 * top and short < 0.42 * top
+
+    # A person in these clothes with bare feet is an order.
+    order = %{
+      "blueprint" => "person",
+      "options" => %{
+        "age" => 7,
+        "clothes" => ["world_ao_coc", "world_quan_dui"],
+        "clothes_colors" => ["#7a5237", "#3a2e2a"]
+      }
+    }
+
+    assert {:ok, _} = World.Orders.place(order, "http://x")
+  end
+
+  test "a shirt has a round neck and covers the tops of the shoulders; the cloth over the nipples has no fold" do
+    # The points of the shirt (the base mesh and its offsets, dm) and the joint of the neck.
+    obj = Sewing.files() |> Map.new() |> Map.fetch!("world_t_shirt.obj.gz") |> :zlib.gunzip()
+    points = for "v " <> rest <- String.split(obj, "\n"), do: rest |> String.split() |> Enum.map(&String.to_float/1)
+    neck = Sewing.landmarks().neck
+    base = Data.base()
+
+    {_, _, nz} =
+      base.groups
+      |> Map.fetch!("joint-neck")
+      |> Enum.concat()
+      |> Enum.map(&elem(base.points, elem(&1, 0)))
+      |> Vec.mean()
+
+    # On the tops of the shoulders, near the neck: cloth up to the height of the neck.
+    assert Enum.any?(points, fn [x, y, _] -> abs(x) > 0.75 and abs(x) < 1.0 and y > neck - 0.1 end)
+    # No cloth round the neck over the cut: the neck is free (the cut is 0.72 dm from the axis, a little in front).
+    refute Enum.any?(points, fn [x, y, z] -> y > neck - 0.4 and :math.sqrt(x * x + (z - nz) * (z - nz)) < 0.45 end)
+
+    # The faces of the shirt on the chest of a man look to the front: no face of the cloth over a nipple is turned
+    # over (the small faces of a nipple folded and made a star in the cloth).
+    figure =
+      Detail.with(:near, fn -> Human.person("p", gender: 1.0, age: 30, hair: nil, clothes: ["world_t_shirt"]) end)
+
+    shirt =
+      figure.nodes |> List.last() |> Map.fetch!(:primitives) |> Enum.find(&(&1.material == :clothes_world_t_shirt))
+
+    at = List.to_tuple(shirt.positions)
+
+    front =
+      for [a, b, c] <- Enum.chunk_every(shirt.indices, 3),
+          {pa, pb, pc} = {elem(at, a), elem(at, b), elem(at, c)},
+          {x, y, z} = Vec.scale(Vec.add(Vec.add(pa, pb), pc), 1 / 3),
+          abs(x) > 0.05 and abs(x) < 0.15 and z > 1.15 and z < 1.32 and y > 0.05,
+          do: elem(Vec.norm(Vec.cross(Vec.sub(pb, pa), Vec.sub(pc, pa))), 1)
+
+    assert length(front) > 50 and Enum.min(front) > 0.2
   end
 end

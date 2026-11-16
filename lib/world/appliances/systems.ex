@@ -261,6 +261,8 @@ defmodule World.Appliances.Systems do
       Part.new("mini_split_body", :unit, [body, outlet | pipes], [origin()]),
       root: "body",
       kind: :appliance,
+      # (The unit hangs on a wall: its site holds it.)
+      extras: %{"site" => true},
       sources: ["Mitsubishi MSZ-GL12NA: 31 7/16 by 9 1/8 by 11 5/8 in (Mitsubishi spec sheet, the size of DIY)."]
     )
     |> Assembly.add("panel", panel,

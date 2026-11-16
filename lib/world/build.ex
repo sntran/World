@@ -33,8 +33,10 @@ defmodule World.Build do
   axes of the figure: `World.Limb`), and
   `split` (`true`: each part in a node of its own, with the id of its task
   of `World.Plan.flat/1` in the `"task"` of its extras, for the replay of
-  a run), and `instances` (`false`: no node with instances, for an app
-  that does not read `EXT_mesh_gpu_instancing`).
+  a run), `instances` (`false`: no node with instances, for an app that
+  does not read `EXT_mesh_gpu_instancing`), `triangles` (the triangles
+  of meshes that are made already) and `parallel` (`true`: a process for
+  each material, for the join of a construction).
 
   A mesh of #{@share} triangles or more that is in the model more than
   once (a wheel, a shoe and its mirror) is in the scene once: each part
@@ -43,16 +45,69 @@ defmodule World.Build do
   in one node (a wall of bricks) are one node with instances.
   """
   def scene(item, opts \\ []) do
+    # The triangles that the people of a construction made (a map of a
+    # mesh to its triangles): the build takes them, and makes the others.
+    old = Process.put(:world_triangles, Keyword.get(opts, :triangles, %{}))
+    parallel = Process.put(:world_parallel, Keyword.get(opts, :parallel, false))
+
+    try do
+      build(item, opts)
+    after
+      restore(:world_triangles, old)
+      restore(:world_parallel, parallel)
+    end
+  end
+
+  defp restore(key, old), do: if(old == nil, do: Process.delete(key), else: Process.put(key, old))
+
+  # The texture of a role (`World.Textures`) at the level of the scene: its
+  # images at near, none at mid and far. With `panel` [u0, v0, u1, v1]
+  # (in the UVs in metres of World.Surface), the image is once on that
+  # rectangle: u0 at its column 0, v0 at its row 0.
+  defp textures(materials, level) do
+    Map.new(materials, fn {role, spec} ->
+      {panel, spec} = Map.pop(spec, "panel")
+
+      case Map.pop(spec, "texture") do
+        {nil, _} -> {role, spec}
+        {name, rest} -> {role, rest |> Map.merge(World.Textures.spec(name, level) || %{}) |> on_panel(panel)}
+      end
+    end)
+  end
+
+  defp on_panel(spec, [u0, v0, u1, v1]) when is_map_key(spec, "image") do
+    {su, sv} = {1 / (u1 - u0), 1 / (v1 - v0)}
+    Map.put(spec, "image_transform", %{"scale" => [su, sv], "offset" => [-u0 * su, -v0 * sv]})
+  end
+
+  defp on_panel(spec, _panel), do: spec
+
+  defp build(item, opts) do
     level = Keyword.get(opts, :level, :near)
     pose = Keyword.get(opts, :pose, %{})
     targets = Keyword.get(opts, :targets, %{})
     name = item.name
     acc = walk(keep_root(item), Frame.identity(), 0, start(item, targets), level, pose)
-    fixed = %{acc | parts: Map.new(acc.parts, fn {i, ps} -> {i, Enum.reject(ps, fn {_, p, _} -> stretch?(p) end)} end)}
+    # A part that stretches to a node that is not in the item (a part of
+    # a model alone, as a person makes it) stays at rest.
+    names = MapSet.new(acc.nodes, & &1.name)
+
+    {stretches, _alone} =
+      Enum.split_with(acc.stretches, fn {_, p, _} -> MapSet.member?(names, p.params["stretch"]["to"]) end)
+
+    acc = %{acc | stretches: stretches}
+    skinned = MapSet.new(stretches, fn {_, p, _} -> p end)
+
+    fixed = %{
+      acc
+      | parts:
+          Map.new(acc.parts, fn {i, ps} -> {i, Enum.reject(ps, fn {_, p, _} -> MapSet.member?(skinned, p) end)} end)
+    }
+
     {nodes, _} = finish(fixed, {Keyword.get(opts, :split, false), Keyword.get(opts, :instances, true)})
     {nodes, skins} = stretched(nodes, acc.skins, Enum.reverse(acc.stretches), acc.moves)
 
-    materials = Map.merge(Map.get(item, :materials, %{}), acc.materials)
+    materials = textures(Map.merge(Map.get(item, :materials, %{}), acc.materials), level)
     animations = join(acc.animations ++ Enum.map(acc.clips, &clip(&1, acc.moves)))
     scene = %Scene{name: name, nodes: nodes, skins: skins, animations: animations, materials: materials}
     {lo, hi} = if Scene.triangles(scene) > 0, do: Scene.bounds(scene), else: {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}
@@ -142,15 +197,31 @@ defmodule World.Build do
   """
   def placed(item, pose \\ %{}) do
     acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), :near, pose)
-
-    frames =
-      acc.nodes
-      |> Enum.with_index()
-      |> Enum.reduce(%{}, fn {n, i}, frames ->
-        Map.put(frames, i, if(n.parent, do: Frame.compose(frames[n.parent], n.frame), else: n.frame))
-      end)
+    frames = frames(acc.nodes)
 
     for {i, parts} <- Enum.sort(acc.parts), {f, p, _} <- Enum.reverse(parts), do: {Frame.compose(frames[i], f), p}
+  end
+
+  @doc """
+  The elements of a model at a level, in a pose: for each node with
+  meshes, its path (the id of its task in `World.Plan.flat/1`), its frame
+  in the axes of the model, its part, and the meshes that it shows (the
+  meshes of the source of a mirror) with the scale of the mirror. A part
+  that the level drops is not an element.
+  """
+  def elements(item, level, pose \\ %{}) do
+    acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), level, pose)
+    frames = frames(acc.nodes)
+    for {i, f, p, path, shown} <- all_placed(acc.nodes, acc.parts), do: {path, Frame.compose(frames[i], f), p, shown}
+  end
+
+  # The frame of each node in the axes of the model.
+  defp frames(nodes) do
+    nodes
+    |> Enum.with_index()
+    |> Enum.reduce(%{}, fn {n, i}, frames ->
+      Map.put(frames, i, if(n.parent, do: Frame.compose(frames[n.parent], n.frame), else: n.frame))
+    end)
   end
 
   @doc "Write the GLB of a model at a level, in a pose."
@@ -301,6 +372,8 @@ defmodule World.Build do
   defp props(acc, %Figure{props: props} = f, offset, level, pose) do
     Enum.reduce(props, acc, fn {port, item, item_port}, acc ->
       {node, frame} = on_figure(f, offset, port)
+      # (A prop from edits has its image in its own materials.)
+      acc = %{acc | materials: Map.merge(Map.get(item, :materials, %{}), acc.materials)}
       walk(item, Frame.compose(frame, Frame.invert(Assembly.item_port_frame(item, item_port))), node, acc, level, pose)
     end)
   end
@@ -397,7 +470,7 @@ defmodule World.Build do
 
     nodes =
       for {n, i} <- Enum.with_index(nodes),
-          do: %{n | primitives: n.primitives ++ primitives(Map.get(once, i, []))}
+          do: %{n | primitives: n.primitives ++ primitives(Map.get(once, i, []), true)}
 
     {nodes ++ shared(many, keys, instances), parts}
   end
@@ -502,25 +575,62 @@ defmodule World.Build do
   # One material at a time: the corners of one material are live, not
   # the corners of all the parts, and a full collection after each
   # primitive keeps the peak low (`World.Detail.collect/1`).
-  defp primitives(placed) do
-    placed
-    |> Enum.flat_map(fn {f, shapes} -> for m <- shapes, do: {m.material, {f, m}} end)
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.sort_by(&elem(&1, 0))
-    |> Enum.map(fn {mat, shapes} ->
-      # The triangles of a mesh, kept for the next part with the same
-      # mesh, for this material only.
-      {corners, _} =
-        Enum.flat_map_reduce(shapes, %{}, fn {f, m}, memo ->
-          tris = Map.get_lazy(memo, m, fn -> Mesh.triangles(m) end)
-          {place(tris, f), Map.put(memo, m, tris)}
-        end)
+  #
+  # With `parallel: true` (the join of a construction), a process for each
+  # material makes its primitive, with the triangles of its meshes only.
+  # With `pack` and `parallel`, each process gives its primitive packed
+  # (`World.Scene.pack/1`): to the process of the join with no copy.
+  defp primitives(placed, pack \\ false) do
+    given = Process.get(:world_triangles, %{})
 
-      mat |> Scene.primitive(corners) |> Detail.collect()
-    end)
+    groups =
+      placed
+      |> Enum.flat_map(fn {f, shapes} -> for m <- shapes, do: {m.material, {f, m}} end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.sort_by(&elem(&1, 0))
+
+    if Process.get(:world_parallel, false) do
+      lean = Process.get(:world_lean, true)
+
+      # Each process gets the different meshes of its material once, and
+      # an index for each place of a mesh: a message copies a term with no
+      # sharing, so a list of the placed meshes would copy a mesh for each
+      # place (the 7,108 bricks of a house are 33 meshes).
+      groups
+      |> Enum.map(fn {mat, shapes} ->
+        meshes = for {_, m} <- shapes, uniq: true, do: m
+        index = meshes |> Enum.with_index() |> Map.new()
+        {mat, Enum.map(shapes, fn {f, m} -> {f, index[m]} end), List.to_tuple(meshes), Map.take(given, meshes)}
+      end)
+      |> Task.async_stream(
+        fn {mat, places, meshes, given} ->
+          g = {mat, Enum.map(places, fn {f, i} -> {f, elem(meshes, i)} end)}
+          Detail.lean(lean, fn -> if(pack, do: Scene.pack(primitive(g, given)), else: primitive(g, given)) end)
+        end,
+        ordered: true,
+        timeout: :infinity
+      )
+      |> Enum.map(fn {:ok, p} -> p end)
+    else
+      Enum.map(groups, &primitive(&1, given))
+    end
   end
 
-  defp place(corners, f), do: for({p, n} <- corners, do: {Frame.point(f, p), Frame.dir(f, n)})
+  defp primitive({mat, shapes}, given) do
+    # The triangles of a mesh, kept for the next part with the same mesh,
+    # for this material only; each mesh placed when the primitive comes
+    # to it (no list of all the corners).
+    memo = Map.new(for {_, m} <- shapes, uniq: true, do: {m, Map.get_lazy(given, m, fn -> Mesh.triangles(m) end)})
+    mat |> Scene.primitive(shapes, fn {f, m} -> place(memo[m], f) end) |> Detail.collect()
+  end
+
+  defp place(corners, f) do
+    Enum.map(corners, fn
+      {p, n} -> {Frame.point(f, p), Frame.dir(f, n)}
+      {p, n, c} -> {Frame.point(f, p), Frame.dir(f, n), c}
+      {p, n, c, uv} -> {Frame.point(f, p), Frame.dir(f, n), c, uv}
+    end)
+  end
 
   # A part that stretches between its node and another node (a spring):
   # `"stretch"` in its params, `%{"to" => node, "from" => point, "end" =>
@@ -547,7 +657,7 @@ defmodule World.Build do
 
     Enum.reduce(stretches, {nodes, skins}, fn {f, p, node}, {nodes, skins} ->
       %{"to" => to, "from" => a, "end" => b} = p.params["stretch"]
-      j = Enum.find_index(nodes, &(&1.name == to)) || raise ArgumentError, "no node #{to} for the stretch of #{p.name}"
+      j = Enum.find_index(nodes, &(&1.name == to))
       {ra, rb} = {rest.(node), rest.(j)}
       place = Frame.compose(ra, f)
       {pa, pb} = {Frame.point(place, List.to_tuple(a)), Frame.point(place, List.to_tuple(b))}

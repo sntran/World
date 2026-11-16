@@ -100,7 +100,7 @@ defmodule World.LoftTest do
       masses =
         for size <- ~w(1 6 9) do
           g = Molds.half_helmet(size)
-          assert g.kind == :helmet and World.Places.family_of(g) == :molds
+          assert g.kind == :helmet and World.Plan.trade(g) == :molder
           assert World.Check.model(g) == :ok
           %{mass: mass, unknown: []} = World.Mass.of(g)
           assert mass > 0.3 and mass <= Molds.mass_limit("half", size), "size #{size}: #{mass} kg"

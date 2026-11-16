@@ -1,0 +1,50 @@
+{
+  "note": "The ground of Núi Nhỏ and the cape of Nghinh Phong, Vũng Tàu (plan 0006, D3): a copy with no change of the height tiles of the Vũng Tàu game (data/geo/build/height/ of sntran/Vung_Tau). Each file X_Z.png is a tile of 256 m: 129 x 129 samples, one each 2 m; the sample of row r and column c is at the game point (256 X + 2 c, 256 Z + 2 r); its height in metres is offset + value * step. The frame of the game: X to the east, Z to the south, the height up; the origin is at Bãi Trước (the longitude and the latitude of origin). The notices of the data are in CREDITS.md.",
+  "frame": "vung_tau_game",
+  "origin": {
+    "lon": 107.07404669,
+    "lat": 10.34368307,
+    "epsg": 32648,
+    "utm_e": 727110,
+    "utm_n": 1144150
+  },
+  "chunk_m": 256,
+  "grid_m": 2,
+  "samples": 129,
+  "height": {
+    "offset": -20.0,
+    "step": 0.01
+  },
+  "source": {
+    "repository": "sntran/Vung_Tau",
+    "commit": "e0c6419754e649c6827f9b36fa14f31fe4b279a9",
+    "path": "data/geo/build/height/",
+    "changed": "6b702e7 (2026-10-26)"
+  },
+  "landmarks": {
+    "nui_nho": {
+      "name": "Núi Nhỏ",
+      "at": [
+        374.1,
+        1035.7
+      ],
+      "height": 175.6
+    },
+    "chua_kito_vua": {
+      "name": "Tượng Chúa Kitô Vua",
+      "at": [
+        1159.87,
+        1893.39
+      ],
+      "height": 138.33
+    },
+    "mui_nghinh_phong": {
+      "name": "Mũi Nghinh Phong",
+      "at": [
+        1076.55,
+        2561.69
+      ],
+      "height": 1.33
+    }
+  }
+}

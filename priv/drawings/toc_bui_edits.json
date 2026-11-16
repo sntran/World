@@ -1,0 +1,263 @@
+{
+ "name": "toc_bui_edits",
+ "kind": "prop",
+ "sources": [
+  "Hair in a bun from edits, for a person of World (plan 0017): a mass on the skull that goes back to a bun of 9 cm with a band, the surface `hair` for its strands, and three shells that show single strands at its outline. Its port crown is the top of the head. Its image is light: the color of its role is the color of the hair."
+ ],
+ "materials": {
+  "part_11": {
+   "color": "#ffffff",
+   "roughness": 0.6,
+   "metalness": 0.0
+  }
+ },
+ "nodes": [
+  {
+   "name": "toc_bui",
+   "skill": {
+    "sculpt": {
+     "edits": [
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.088,
+        0.106,
+        0.108
+       ],
+       "at": [
+        0,
+        -0.004,
+        -0.092
+       ],
+       "material": "part_11",
+       "color": "#b6b2aa",
+       "roughness": 0.42,
+       "surface": {
+        "kind": "hair",
+        "scale": 0.0015
+       }
+      },
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.07,
+        0.08,
+        0.13
+       ],
+       "at": [
+        0,
+        0.085,
+        -0.19
+       ],
+       "material": "part_11",
+       "color": "#b6b2aa",
+       "mode": "subtract",
+       "blend": 0.012,
+       "roughness": 0.42,
+       "surface": {
+        "kind": "hair",
+        "scale": 0.0015
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        0.2,
+        0.1
+       ],
+       "at": [
+        0,
+        0.05,
+        -0.285
+       ],
+       "material": "part_11",
+       "color": "#b6b2aa",
+       "axis": [
+        0,
+        0.34,
+        0.94
+       ],
+       "up": [
+        0,
+        0.94,
+        -0.34
+       ],
+       "mode": "subtract",
+       "blend": 0.01,
+       "roughness": 0.42,
+       "surface": {
+        "kind": "hair",
+        "scale": 0.0015
+       }
+      },
+      {
+       "shape": "ball",
+       "size": [
+        0.026
+       ],
+       "at": [
+        0.086,
+        0.012,
+        -0.135
+       ],
+       "material": "part_11",
+       "color": "#b6b2aa",
+       "mirror": "x",
+       "mode": "subtract",
+       "blend": 0.012,
+       "roughness": 0.42,
+       "surface": {
+        "kind": "hair",
+        "scale": 0.0015
+       }
+      },
+      {
+       "shape": "ellipsoid",
+       "size": [
+        0.045,
+        0.042,
+        0.04
+       ],
+       "at": [
+        0,
+        -0.118,
+        -0.105
+       ],
+       "material": "part_11",
+       "color": "#b6b2aa",
+       "blend": 0.012,
+       "roughness": 0.42,
+       "surface": {
+        "kind": "hair",
+        "scale": 0.0015
+       }
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.03,
+        0.004
+       ],
+       "at": [
+        0,
+        -0.1,
+        -0.105
+       ],
+       "material": "part_11",
+       "color": "#5a2a2a",
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "blend": 0.002,
+       "roughness": 0.6,
+       "surface": {
+        "kind": "fabric",
+        "scale": 0.001
+       }
+      }
+     ],
+     "cells": {
+      "near": 0.003,
+      "mid": 0.006,
+      "far": 0.006
+     },
+     "budget": {
+      "near": 3500,
+      "mid": 900,
+      "far": 150
+     },
+     "bake": {
+      "near": 1024,
+      "mid": 512,
+      "far": 128
+     },
+     "ports": {
+      "crown": {
+       "at": [
+        0,
+        0,
+        0
+       ],
+       "axis": [
+        0,
+        0,
+        1
+       ],
+       "up": [
+        0,
+        1,
+        0
+       ]
+      }
+     },
+     "strands": {
+      "shells": 3,
+      "length": 0.005,
+      "thin": [
+       {
+        "shape": "ellipsoid",
+        "size": [
+         0.082,
+         0.092,
+         0.142
+        ],
+        "at": [
+         0,
+         0.085,
+         -0.19
+        ],
+        "material": "part_11",
+        "blend": 0.03,
+        "mode": "paint"
+       },
+       {
+        "shape": "box",
+        "size": [
+         0.2,
+         0.2,
+         0.1
+        ],
+        "at": [
+         0,
+         0.05,
+         -0.27
+        ],
+        "material": "part_11",
+        "axis": [
+         0,
+         0.34,
+         0.94
+        ],
+        "up": [
+         0,
+         0.94,
+         -0.34
+        ],
+        "blend": 0.03,
+        "mode": "paint"
+       },
+       {
+        "shape": "ball",
+        "size": [
+         0.036
+        ],
+        "at": [
+         0.086,
+         0.012,
+         -0.135
+        ],
+        "material": "part_11",
+        "mirror": "x",
+        "blend": 0.02,
+        "mode": "paint"
+       }
+      ]
+     }
+    }
+   }
+  }
+ ]
+}

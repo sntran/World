@@ -37,9 +37,13 @@ defmodule World.Vehicles.Corners do
     |> Assembly.add("#{name}_wheel", wheel, to: knuckle_name, at: "axle", port: "hub", kind: :hinge, role: :wheel)
   end
 
-  # A knuckle: a small block inside the wheel, with its brake disc, and
-  # the axle port that looks out of the vehicle.
-  defp knuckle(name, {x, y, z}, side, disc) do
+  @doc """
+  A knuckle at the center of the hub of a corner: a small block inside
+  the wheel, with its brake disc of the diameter `disc` (or none: nil),
+  the port `steer` (its axis up) and the port `axle` that looks out of
+  the vehicle (`side`: 1.0 at the right, -1.0 at the left).
+  """
+  def knuckle(name, {x, y, z}, side, disc) do
     block =
       Shape.box({x - side * 0.02 - 0.03, y - 0.06, z - 0.08}, {x - side * 0.02 + 0.03, y + 0.06, z + 0.08}, :metal)
 

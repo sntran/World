@@ -48,7 +48,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { light } from './scene.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('view');
@@ -56,17 +56,14 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDraw
 renderer.setPixelRatio(devicePixelRatio);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(getComputedStyle(document.body).backgroundColor);
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8070, 0.6));
-const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-sun.position.set(3, 6, 4);
-scene.add(sun);
+const stage = light(renderer, scene);
 const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 200);
 const controls = new OrbitControls(camera, canvas);
 const grid = new THREE.GridHelper(10, 20, 0x9a927c, 0xc9c2ad);
 scene.add(grid);
 const loader = new GLTFLoader();
 let current = null;
+let drawn = true;
 let mixer = null;
 const clock = new THREE.Clock();
 const animationSelect = document.getElementById('animation');
@@ -111,8 +108,11 @@ async function load(remember) {
   animations(gltf);
   const rows = await parts(name);
   if (furBox.checked) fur(current, rows[0]?.params?.uv_size ?? 1);
+  stage.shade(current);
+  stage.fit(current);
   frame(params.get('yaw'));
-  window.READY = true;
+  // READY comes after the first frame of the model (a shot waits for it).
+  drawn = false;
 }
 
 // A slider for each node with a role: a turn around its y axis, or a move
@@ -250,8 +250,18 @@ function frame(yaw) {
 }
 
 resize();
+// The state of the page, for a test: the renderer, the scene, the model.
+window.REVIEW = { renderer, scene, model: () => current };
 await load(false);
-renderer.setAnimationLoop(() => { mixer?.update(clock.getDelta()); controls.update(); renderer.render(scene, camera); });
+renderer.setAnimationLoop(() => {
+  mixer?.update(clock.getDelta());
+  controls.update();
+  renderer.render(scene, camera);
+  if (!drawn) {
+    drawn = true;
+    window.READY = true;
+  }
+});
 </script>
 </body>
 </html>

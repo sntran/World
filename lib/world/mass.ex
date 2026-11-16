@@ -12,7 +12,11 @@ defmodule World.Mass do
   of its `matter` (`World.Mesh.matter/2`). A part that a shop buys (an
   engine, a battery, a lamp) has the mass of its data sheet in its
   params (`"mass"`, in kg, with its source), and its center is the center
-  of its box. A part with no meshes (a mark, a window that a van does not
+  of its box. A part can have `"contents"` in its params: the things in
+  it that its meshes do not show (the fuel in a tank, the oil in an
+  engine, a battery under a seat), each with its `"mass"` in kg and its
+  source; their mass adds to the mass of the meshes (or of the data
+  sheet), at the center of the box of the part. A part with no meshes (a mark, a window that a van does not
   have) has a mass of 0. A part with an open mesh that is not a skin, or
   a mesh with no density, has no mass: `part/1` gives `nil`, and `of/1`
   names it in `unknown`.
@@ -112,14 +116,14 @@ defmodule World.Mass do
 
   def part(%Part{params: %{"mass" => kg}} = p) when is_number(kg) do
     {a, b} = Part.bounds(p)
-    %{mass: kg / 1, center: Vec.scale(Vec.add(a, b), 0.5)}
+    %{mass: kg + Enum.sum(for({m, _} <- contents(p), do: m)), center: Vec.scale(Vec.add(a, b), 0.5)}
   end
 
-  def part(%Part{shapes: shapes}) do
+  def part(%Part{shapes: shapes} = p) do
     parts =
       Enum.map(shapes, fn m ->
         with d when is_number(d) <- density(m.matter || m.material), {v, c} <- volume(m), do: {d * v, c}
-      end)
+      end) ++ contents(p)
 
     if Enum.all?(parts, &is_tuple/1) do
       mass = parts |> Enum.map(&elem(&1, 0)) |> Enum.sum()
@@ -127,6 +131,14 @@ defmodule World.Mass do
       %{mass: mass, center: center}
     end
   end
+
+  # The contents of a part (its params), as one mass at the center of its box.
+  defp contents(%Part{params: %{"contents" => [_ | _] = list}} = p) do
+    {a, b} = Part.bounds(p)
+    [{list |> Enum.map(& &1["mass"]) |> Enum.sum() |> Kernel.*(1.0), Vec.scale(Vec.add(a, b), 0.5)}]
+  end
+
+  defp contents(_), do: []
 
   @doc """
   The mass of a model (kg), its center of mass (in the axes of the model)

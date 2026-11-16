@@ -175,7 +175,7 @@ defmodule World.AnimalsTest do
     assert slow > 0.2 and fast > 2 * slow and jump_speed > slow
 
     assert Animals.species() ==
-             ~w(alpaca carp cat chicken cow deer donkey douc duck fox gibbon goat horse husky hyena macaque pig pig_tailed_macaque red_deer rhesus_macaque sheep street_dog tilapia water_buffalo wolf)
+             ~w(alpaca buffalo_calf carp cat chicken cow deer donkey douc duck fox gibbon goat horse husky hyena macaque pig pig_tailed_macaque red_deer rhesus_macaque sheep street_dog tilapia water_buffalo wolf)
 
     assert Animals.animal("street_dog", []).name == "dog"
     assert_raise ArgumentError, ~r/unknown species "lion"/, fn -> Animals.animal("lion", []) end
@@ -246,6 +246,7 @@ defmodule World.AnimalsTest do
       {"donkey", 1.1},
       {"cow", 1.1},
       {"water_buffalo", 1.3},
+      {"buffalo_calf", 0.8},
       {"alpaca", 0.9},
       {"husky", 0.55},
       {"red_deer", 1.22},
@@ -641,6 +642,24 @@ defmodule World.AnimalsTest do
              end)
 
       # The peck: the beak goes down near the ground, the feet stay; the
+      # In the middle of the flap the two wings are open: the outline of the bird is much wider, on each side.
+      posed = fn clip, k ->
+        nodes =
+          Enum.reduce(clip.channels, a.nodes, fn c, nodes ->
+            List.update_at(nodes, c.node, fn n ->
+              case c.path do
+                :rotation -> %{n | frame: %{Enum.at(c.values, k) | at: n.frame.at}}
+                :translation -> %{n | frame: %{n.frame | at: Enum.at(c.values, k)}}
+              end
+            end)
+          end)
+
+        World.Contact.points(%{a | nodes: nodes}) |> Enum.map(&elem(&1, 0)) |> Enum.min_max()
+      end
+
+      {{left, right}, {open_left, open_right}} = {posed.(flap, 0), posed.(flap, 12)}
+      assert open_left < 1.5 * left and open_right > 1.5 * right
+
       # idle and the flap keep the feet too.
       pecks = frames(a, peck)
       assert Enum.min(Enum.map(pecks, &elem(&1["beak"].at, 2))) < 0.3 * height

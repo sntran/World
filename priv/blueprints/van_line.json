@@ -1,0 +1,247 @@
+{
+  "name": "van_line",
+  "doc": "A van built as on the line of its maker, by the people of each trade at the same time: an engineer gives the order to the line, a sheet metal worker presses the body, fitters make the hood and each door on its hinges or its rail, trimmers the plastic, the lamps, the grille, the small parts and the cab, a glazier the windows, an upholsterer the seats, mechanics the engine bay, the drive and each corner with its wheel, and an electrician the items on the roof. The origin is on the ground at the center of the van; the front is to +y. The color of the role paint is the color of the body.",
+  "sources": [
+    "The line of a van: World.Vehicles.Van, from the traces of its make and the photos of dealers; the sources of the make are in the receipt."
+  ],
+  "params": [
+    {
+      "name": "name",
+      "type": "text",
+      "default": "van",
+      "max": 40,
+      "doc": "The name of the model: a to z, 0 to 9 and _."
+    },
+    {
+      "name": "model",
+      "type": "skill",
+      "skill": "van_order",
+      "default": "transit_148",
+      "doc": "The make, the wheelbase and the roof (the models of priv/data/vans.json: transit_148, sprinter_144, promaster_136, and more)."
+    },
+    {
+      "name": "windows",
+      "type": "skill",
+      "skill": "van_order",
+      "default": "cargo",
+      "doc": "The windows behind the cab: a preset (cargo, crew, passenger) or a list, as in the blueprint van."
+    },
+    {
+      "name": "rows",
+      "type": "skill",
+      "skill": "van_order",
+      "default": null,
+      "doc": "The rows of seats behind the front seats; null for those of the preset."
+    },
+    {
+      "name": "doors",
+      "type": "skill",
+      "skill": "van_order",
+      "default": {},
+      "doc": "The numbers of the doors over those of the model, as in the blueprint van."
+    },
+    {
+      "name": "engine_bay",
+      "type": "skill",
+      "skill": "van_order",
+      "default": [],
+      "doc": "The items of DIY in the engine bay: dc_charger, second_alternator."
+    },
+    {
+      "name": "roof",
+      "type": "skill",
+      "skill": "van_order",
+      "default": [],
+      "doc": "The items on the roof: {kind: fan or solar, at: m from the front}."
+    },
+    {
+      "name": "size",
+      "type": "skill",
+      "skill": "van_order",
+      "default": {},
+      "doc": "The length, the width and the height of the van, over those of the model."
+    }
+  ],
+  "drawing": {
+    "name": {
+      "param": "name"
+    },
+    "kind": "vehicle",
+    "sources": [
+      "The line of a van: the traces of DIY, the sizes of the maker and the photos of dealers."
+    ],
+    "materials": {
+      "paint": {
+        "color": "#f0f1ee",
+        "roughness": 0.32,
+        "metalness": 0.05
+      }
+    },
+    "nodes": [
+      {
+        "name": "order",
+        "skill": {
+          "van_order": {
+            "model": {
+              "param": "model"
+            },
+            "windows": {
+              "param": "windows"
+            },
+            "rows": {
+              "param": "rows"
+            },
+            "doors": {
+              "param": "doors"
+            },
+            "engine_bay": {
+              "param": "engine_bay"
+            },
+            "roof": {
+              "param": "roof"
+            },
+            "size": {
+              "param": "size"
+            }
+          }
+        }
+      },
+      {
+        "name": "body",
+        "skill": {
+          "van_body": {}
+        },
+        "from": [
+          "order"
+        ]
+      },
+      {
+        "from": [
+          "order"
+        ],
+        "at": "origin",
+        "port": "origin",
+        "name": "inside",
+        "skill": {
+          "van_inside": {}
+        }
+      },
+      {
+        "repeat": {
+          "for": "group",
+          "in": [
+            "hood",
+            "front_door_right",
+            "front_door_left",
+            "sliding_door",
+            "rear_door_right",
+            "rear_door_left"
+          ]
+        },
+        "node": {
+          "from": [
+            "order"
+          ],
+          "at": "origin",
+          "port": "origin",
+          "name": "closure_{group}",
+          "skill": {
+            "van_closure": {
+              "group": {
+                "var": "group"
+              }
+            }
+          }
+        }
+      },
+      {
+        "repeat": {
+          "for": "group",
+          "in": [
+            "plastic",
+            "lamps",
+            "grille",
+            "details",
+            "cab"
+          ]
+        },
+        "node": {
+          "from": [
+            "order"
+          ],
+          "at": "origin",
+          "port": "origin",
+          "name": "trim_{group}",
+          "skill": {
+            "van_trim": {
+              "group": {
+                "var": "group"
+              }
+            }
+          }
+        }
+      },
+      {
+        "from": [
+          "order"
+        ],
+        "at": "origin",
+        "port": "origin",
+        "name": "glass",
+        "skill": {
+          "van_glass": {}
+        }
+      },
+      {
+        "from": [
+          "order"
+        ],
+        "at": "origin",
+        "port": "origin",
+        "name": "seats",
+        "skill": {
+          "van_seats": {}
+        }
+      },
+      {
+        "repeat": {
+          "for": "group",
+          "in": [
+            "engine_bay",
+            "drive",
+            "front_right",
+            "front_left",
+            "rear_right",
+            "rear_left"
+          ]
+        },
+        "node": {
+          "from": [
+            "order"
+          ],
+          "at": "origin",
+          "port": "origin",
+          "name": "chassis_{group}",
+          "skill": {
+            "van_chassis": {
+              "group": {
+                "var": "group"
+              }
+            }
+          }
+        }
+      },
+      {
+        "from": [
+          "order"
+        ],
+        "at": "origin",
+        "port": "origin",
+        "name": "upfit",
+        "skill": {
+          "van_upfit": {}
+        }
+      }
+    ]
+  }
+}

@@ -7,6 +7,9 @@ web service: <https://world.mkfifo.com>. A model has a URL. When World
 corrects a part, each model that uses the part changes at the same URL,
 and the projects do not deploy again.
 
+A person or an agent of another project starts with `docs/requests.md`:
+how to write a request, check it and build it.
+
 ## The words
 
 | Word | What it is |
@@ -34,19 +37,39 @@ An order is data, never code. World runs no code from an order.
 
 | URL | What |
 |---|---|
-| `/` | The review page: each model of the catalog, its levels, its joints and its parts. |
-| `/replay.html?order=HASH` | The replay of an order: the map of the yard with the truck on its road, what each person does, and the model that grows when each task ends (`docs/world.md`, step W3). |
+| `/` | The world page: the map of the yard (its places and their states, each construction on a lot at its place, the trucks on their drives), the people of the node, each construction with its elements as they come, and a form that orders a build (`review/world.html`, below, "The constructions"). |
+| `/review.html` | The review page: each model of the catalog, its levels, its joints and its parts. |
+| `/replay.html?order=HASH` | The replay of an order: what each person does, and the model that grows when each task ends (`docs/world.md`). |
 | `/models/list.json` | The names of the models of the catalog. |
 | `/models/NAME.glb`, `NAME.mid.glb`, `NAME.far.glb` | A model of the catalog at each level. |
 | `/models/NAME.parts.json` | The list of its parts. |
 | `/palette.json` | The default color of each material role. |
 | `/version.json` | The commit of World that the site has. |
 | `/blueprints` | Each blueprint with its options: the type, the default, the unit, the range or the values. |
+| `POST /blueprints` | A blueprint in data of a project (`docs/skills.md`): 201 with its `hash` (an order gives `{"blueprint": {"hash": HASH}}`), or 422 with the errors, each with its path. |
 | `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. |
-| `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the world build the GLB at each level (`World.Run`). |
-| `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the run of the world that built the near level (`World.Log`: one line for the clock and the yard, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. |
+| `POST /orders/HASH/edits` | Small changes to an order of `POST /orders`, in JSON: `{"edits": [...]}` ("An edit of an order"). The answer is as the answer of `POST /orders` for the new order, with `parent` (the hash of the order before) and `history` (each order from the first one to this one, with the edits that made it); 422 with the errors (the path `edits.N` for an edit that is not possible, else the paths of the check of the new order); 404 for a hash that the store does not have. |
+| `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the node build the GLB at each level (`World.Construction`). |
+| `/o/HASH.drawing.json` | The drawing of the model, with the options of the order in it: each part with its shapes or its skill, the nodes, the joints. It is the drawing that the edit `free` of an order puts in the order ("An edit of an order"). A model that the code of a rule makes as a mesh (a plant, a person, an animal) is the one node `model` of its drawing: an item of its blueprint. |
+| `/o/HASH.flat.glb`, `.mid.flat.glb`, `.far.flat.glb` | The model at a level with the flat look (`World.Flat`, plan 0019), for a project that draws many small things with no image: one node with one mesh, each face with its own three points, its normal and one color at each point (`COLOR_0`), a white material, no image, no skin. The points are at their places in the axes of the model. A drawing from edits is built with the look `flat` (the color of a face is the color of its edits); another model has the color of each of its roles. With `?triangles=N` (12 to 200,000), the mesh has at most N faces, or as few as the collapse can make. With `?wrap=1`, the mesh is one closed skin round the whole model (a cast of the model in a grid of 48 cells along its longest side, `World.Cast`), with the color of the nearest face of the model: for a model of many thin parts in a small budget. A part that is thinner than a cell is not in the skin. |
+| `/o/HASH.light.glb`, `.mid.light.glb`, `.far.light.glb` | The model at a level with the light look (`World.Flat`, `roles: true`), for a project that gives each role its own material: one node with one mesh, a primitive for each role of the model, flat faces, the material of each role with its color and no image, no skin. It takes `?triangles=N` and `?wrap=1` as the flat look: a budget keeps the border of two roles. A scooter at the far level: 4,120 triangles, and 500 with `?triangles=500&wrap=1` (50 KB, 15 KB in gzip, in 1.7 s). A coconut palm at the far level: 308 triangles, and 204 with `?triangles=204`. |
+| `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
+| `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
+| `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
+| `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
+| `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
+| `POST /builds/ID/pause`, `/resume`, `/cancel` | A pause (the people end the tasks in hand, and no task starts), a resume, or a cancel (the event `stopped` with the reason `cancelled`): 202, or 404. |
+| `POST /builds/ID/change` | In a pause, a new order of the same blueprint in data (the same nodes): each node whose data is the same stays made, and the people make the others again at the resume (the event `changed`, with `redo` and `keep`). 200, 409 when the build is not in a pause or has other nodes, 422, or 404. |
+| `/builds/ID/elements/KEY.glb` | The GLB of one element of a build, while the build goes on and for 5 minutes after its end. |
+| `/events` | The events of the whole node as a stream: each construction, each hire, each element. |
+| `/census` | The people of the node by trade, free and busy, and the constructions that wait for a person. And the crews (`crews`): the workers of the node, the nodes that share their workers, and the count of the sites with a stream of tasks now (`World.Crew`). |
+| `/sculptures/ID/events` | The stream of a live sculpture (`text/event-stream`, `World.Sculpt.Web`): a `piece` for each brick of its surface now (its brick and the mesh of each material), its `state`, then each `piece`, `gone`, `done` or `failed` after each change, and `closed` at its end. With `?until=V`, the stream ends after the `done` of the version `V`. |
+| `/sculptures/ID.glb` | The GLB of the surface of a live sculpture now. |
+| `/places` | The places of the yard (`World.Places`): each with its kind, its point, the kinds of the models that it makes, and its building; a place with a terrain has its lots (the game point, the height of the ground, the point on the yard, the turn) and the path of its ground; the speed limit of the yard. |
+| `/places/NAME/ground.glb` | The ground of a place with a terrain (`World.Places.ground/1`): the mesh of the height tiles of the Vũng Tàu game in the box of the place, flat on each lot, in the frame of World from the point of the place at the height of the sea. |
 | `/m/BLUEPRINT.glb?OPTION=VALUE` (and the other files) | An order in the URL: `color.ROLE=%23rrggbb` gives a color, `joint.NAME=50` a joint, `target.LIMB=X,Y,Z` the end of a limb, `A,B` a list, and `OPTION.FIELD=VALUE` a field of an object (`origin.asian=1`: give each field, because a field that is not in the URL has its default). |
 | `POST /sets` | A set of orders in JSON (`World.Orders.Set`): a list of orders (`"orders"`), or one order with `"count"` (1 to 64), `"seed"` and `"vary"` (an option to a list of its values). Each variant has the options of the order, a value of each list, and its own `seed` (`seed * 1000 + i`). The answer gives the hash of the set and each variant: its hash, its full order, the URLs of its files and its `lot` (`width` and `depth`), so a game makes a library from the set and picks a variant by the size of a lot (W19); or 422 with the errors (the path of each starts with `variants.N` or `orders.N`). |
+| `POST /earth/heights` | The heights of the real Earth (`World.Earth`, plan 0019): the body is `{"points": [[latitude, longitude], ...]}` in degrees (at most 200,000 points, and 1 MB), and the answer is `{"heights": [...], "unit": "m", "source": ...}`: one whole number of meters for each point, over the level of the sea (less than 0 under it). The data is ETOPO1 of NOAA at a quarter of a degree. For the planet of a game: the game sends the middle of each cell of its grid. |
 | `POST /mcp` | The MCP server: the same orders, as the tools of the Model Context Protocol (below, "The MCP server"). |
 | `/v/VERSION/...` | A copy that never changes, for a release of a game (later). |
 
@@ -65,7 +88,7 @@ An error tells the path of the wrong value and the rule:
 `{"errors": [{"path": "options.length", "message": "must be from 0.05 to 6.1 m"}]}`.
 
 The blueprints now: `catalog` (each model of the catalog, with colors
-and joints), `drawing`, `person`, `traveler`, `exercise`, `animal`, `house`,
+and joints), `drawing`, `person`, `traveler`, `exercise`, `animal`, `plant`, `house`,
 `lot_house` (a whole house on a lot of Vũng Tàu, `docs/format.md`, "A
 house on a lot"), `van`, `extrusion`, `strut` and `l_track`.
 
@@ -122,9 +145,58 @@ thing that World has no blueprint for, and get the same files: the GLB
 with its joints and clips, the list of the parts, the log. Each error
 has its path.
 
+A `plant` is a plant of the nursery, from the rules of its species:
+`species` (`coconut`, `areca`, `banana`, `bamboo`, `frangipani`), `height` (m;
+the common height of the species by default), `seed` (the small changes
+from plant to plant), `month` (the flowers of a frangipani) and
+`numbers`: the numbers of the plant over the numbers of its species
+(`priv/plants/species.json`), each from a quarter to four times the
+number of the species. A palm has `trunk` (its width, m), `base`,
+`lean` (degrees), `fronds` (their count), `frond` (its length),
+`leaflet`, `nuts`, `nut` and, for an areca palm, `crownshaft`. So a
+project asks for the palm that it wants, and corrects a number after it
+looks at the model.
+
+## An edit of an order
+
+World does not have a rule for each fault that a project can find in a
+model. A project asks for a model, looks at the files, and says what to
+change: `POST /orders/HASH/edits` (or the MCP tool `edit_order`) with a
+list of edits. World makes them on the full order (each option with its
+default), in their order, checks the new order as each order, and keeps
+it with its history. The new order has its own hash and its own files;
+the order before stays.
+
+| Edit | What it does |
+|---|---|
+| `{"set": PATH, "to": VALUE}` | The value at the path. In an object, a new key is possible. In a list, the index of the count of its items adds the value at the end. |
+| `{"remove": PATH}` | No key of an object, or no item of a list, at the path. |
+| `{"insert": PATH, "value": VALUE}` | A new item of a list before the item at the path. |
+| `{"free": true}` | The order becomes an order of its drawing (the blueprint `drawing`), with its colors and its joints: the model is the same, and each shape that its rule drew is then in the order. The edits after it change any of them: a number that is fixed in the code of the rule. A model that the code of a rule makes as a mesh (a plant, a person, an animal, a van) becomes the node `model` of the drawing: edits add parts to it (a part from edits at a port of the model), and change the options of its item (`options.drawing.nodes.model.item.options.age`); its joints get the name of the node before them (`model/elbow_r`). The options of the rule are not options of the new order. |
+
+A path is as the path of an error of a check: the keys from the order
+down, with a point between them. An item of a list is its index (from
+0), or its name when the items have names.
+
+```text
+POST /orders/3c3b21e548bad02796afb318900d876d/edits
+{"edits": [
+  {"set": "options.numbers.fronds", "to": 32},
+  {"set": "options.numbers.lean", "to": 7},
+  {"remove": "options.numbers.trunk"},
+  {"set": "colors.leaf", "to": "#5c9440"}]}
+```
+
+For a model from edits (the blueprint `drawing`), each shape of each
+part is in the order, so an edit can change a size
+(`options.drawing.nodes.chum_than.skill.sculpt.edits.0.size`), add a
+shape (`insert`), take one away (`remove`) or paint a part of the
+model. An edit that the rules refuse gives the errors of the check with
+their paths, and changes nothing.
+
 An `animal` is an animal of a species, from its bones: `species`
 (`street_dog`, `cat`, `wolf`, `fox`, `deer`, `goat`, `pig`, `horse`,
-`donkey`, `cow`, `water_buffalo`, `sheep`, `alpaca`, `husky`,
+`donkey`, `cow`, `water_buffalo`, `buffalo_calf`, `sheep`, `alpaca`, `husky`,
 `red_deer`, `hyena`, `macaque`, `rhesus_macaque`,
 `pig_tailed_macaque`, `douc`, `gibbon`, `carp`, `tilapia`, `chicken`,
 `duck`), `coat` (a
@@ -166,11 +238,13 @@ of 7 people is about 1.5 MB at the far level and 4.8 MB at the mid level. With
 and the leader in the left hand.
 
 A `person` can hold a prop in each hand (`right_hand`, `left_hand`:
-`fan` or `bottle`) and wear a hat (`hat`: `non_la`). The props follow
+`fan`, `bottle`, `bucket`, `trowel` or `hammer`) and wear a hat (`hat`:
+`non_la` or `hard_hat`), with up to 8 animations (the walk, the
+routines, the work of a site). The props follow
 the hands in the pose and in the animations, and they are in the list of
 the parts.
 At the edge, a group of more than 3 people needs more memory than the
-builder has (`AGENTS.md`, "Known problems"): order each person, or build
+VM has (`AGENTS.md`, "Known problems"): order each person, or build
 the group with `mix world.order`.
 
 An order of a van:
@@ -252,7 +326,14 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 | `list_blueprints` | The name and the description of each blueprint. |
 | `get_blueprint` | The options of one blueprint (`name`), as `GET /blueprints` gives them. |
 | `check_order` | Checks an `order` and does not keep it: the hash and the full order, or the errors. |
+| `edit_order` | Makes the `edits` on the order of a `hash` and keeps the new order, as `POST /orders/HASH/edits`. |
 | `place_order` | Checks an `order` and keeps it, as `POST /orders`: the hash, the full order, the URLs of its files and of its replay page, or the errors. |
+| `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for the owner. |
+| `plan_build` | The plan of the people for an `order` at a `level`, with no build: each task with its trade and its waits, the tasks of each trade, and the estimate of the triangles. |
+| `build` | Keeps an `order` and starts its construction in its `budget`, as `POST /builds`: the id of the build, the URL of the stream of its events, and the URLs of its files. |
+| `open_sculpture` | Opens a live sculpture from its `edits` (the skill `sculpt`, `docs/format.md`, "A sculpture") at a `level`, with a `name` or the hash of its edits: its id, its version, and the URLs of its stream and of its GLB. The node has at most 8 at one time. |
+| `edit_sculpture` | Changes the `edit` at an `index` of a live sculpture (null takes it away; the count of the edits adds one at the end): its new version. The stream gives the new pieces. |
+| `close_sculpture` | Stops a live sculpture. |
 
 The result of a tool has the data as JSON text and as structured
 content. A wrong order is a result with `isError` and the errors, each
@@ -347,8 +428,46 @@ version of the blueprint (`van@2`): the old version stays.
 
 | Order | Where |
 |---|---|
-| A model of the catalog | CI builds it natively (`mix world.build --check`), and the files are in the repository. The Worker serves them as static files: no build at a request. |
-| An order at a request | The VM of World (beam.com, WebAssembly) in a Durable Object of the Worker builds it (`worker.js`, `handler.js`, `World.Service`). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
+| A model of the catalog | `mix world.build` builds it natively, and the files are in the repository as a reference (no check builds them again). The Worker serves them as static files: no build at a request. |
+| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
+
+## The server on a computer
+
+World also runs as one native server, with no Worker: on a computer
+with more memory than the edge (plan 0019). `World.Service` has each
+route of the table above:
+
+```sh
+sh scripts/site.sh                 # the pages, the catalog and the kit, in site/
+WORLD_SERVER=true PORT=4000 \
+WORLD_SITE=site \
+WORLD_FILES=/var/lib/world/files \
+WORLD_ORDER_DIR=/var/lib/world/orders \
+WORLD_BUILDS=4 \
+mix.com run --no-halt
+```
+
+A tunnel (for example `cloudflared`) gives the port to
+`https://world.mkfifo.com`.
+
+- **The files stay** (`World.Files`, the folder `WORLD_FILES`): a file
+  of an order at a level is built one time, with a copy in gzip and an
+  ETag. Its key is the hash of the order, the level and the file, not
+  the commit of World.
+- **After a deploy**, a file from the older code is stale: the server
+  gives it at once (the header `x-world-stale`), and builds it again
+  one time in the back. So a deploy costs no wait, and a correction of
+  a rule is in the file after the next request.
+- **The line** (`World.Line`, `WORLD_BUILDS` builds at one time): a
+  build that a person waits for goes before a build of a batch
+  (`?class=batch`, or the header `x-world-class: batch`: the tool of a
+  project that gets all its files).
+- **Each answer** has the headers of CORS; a client that takes gzip
+  gets gzip.
+
+Measured on four cores (2026-11-15): a van at the mid level, 6.2 s for
+the first request and 0.18 s after it; the file is 232 KB, and 75 KB in
+gzip. A traveler on a motorbike at the far level: 3.7 s, then 0.2 s.
 
 The VM has the orders: their check, their store and the MCP server
 (`World.Service`, `World.Orders.place/2`, `World.MCP`). `POST /orders`
@@ -533,6 +652,63 @@ So the two agree in two ways:
    (`World.Mesh.clean/1`), and kept as a supplied part (step F6) with its
    text as its source. It is not a measured shape: the receipt says so.
    Read the license of the weights before a use.
+
+## The constructions
+
+A build of `POST /builds` is a construction of the node
+(`World.Construction`, `docs/world.md`): the people of the node build
+each element of the model at the same time, and each act is an event
+that a client can watch. The body is an order (`blueprint` and
+`options`, or `drawing`), with:
+
+| Field | What |
+|---|---|
+| `level` | `near` (the default), `mid` or `far`. |
+| `budget.workers` | The most people that the construction holds at one time: 1 to 64, 4 by default. |
+| `budget.seconds` | The deadline: after it, the construction stops (the event `stopped`) and keeps nothing. No deadline by default. |
+| `budget.triangles` | The most triangles of the model: the construction takes the most detailed level that fits (from `level` down), or stops (the event `stopped`, with the reason `triangles`). 1 to 10,000,000. |
+| `budget.memory_mb` | The memory of the people: each person has its part for the heap of a task (`max_heap_size`, with the binaries that it holds). A task over it fails (the event `failed`, the message `memory`). 1 to 4,096. |
+| `budget.clock` | `world` (the default): each person is busy for the days of its task on the world clock. `fast`: the log keeps the same days, but the people do not wait for them; the construction takes the results in the order of the ends of their tasks (plan 0007, D4). A site with stages or trucks keeps the world clock. |
+
+Each event of the stream is `id: N` and `data: JSON`, with the fields
+`id`, `kind`, `order` (the id of the build), `who` (the PID of the
+person), `at` (the milliseconds from the start of the build), `wall`
+and `data`. The kinds: `requested`, `plan_made` (the tasks, each with
+its trade and the tasks that it waits for), `hired`, `task_started`,
+`task_done`, `element` (the part of a task: its node, its GLB key and
+its matrix), `released`, `paused`, `resumed`, `changed` (the tasks
+made again, the nodes kept, the tasks that take down what it drops,
+the new lot), `element_removed` (a part that people took down),
+`stage_started` and `stage_done` (a stage of the method of the site:
+its name, its work, its days and its fit, its tasks), `aged` (a pause
+of a site: its days, the dirt, the weeds, the parts that go),
+`repaired`,
+`task_dropped`,
+`done` (the model is complete), `stopped`, `failed` and `run_done` (the
+time and the memory). A comment line
+(`: ping`) comes each 15 s when there is no event.
+
+The construction keeps the model and the elements of its tasks; the
+people make the shapes; a joiner (a process of its own) joins the model
+at the end, and its memory goes back to the node when it ends. The most
+memory of a build is in the join: `house_brick_vn` at near (7,594 tasks)
+needs about 680 MB at the peak, and `mix world.bench` gives the peak of
+each model (plan 0007, section 10).
+
+A game shows the elements as they come (the GLB of each key once, and
+an instance of it for each `element` event), then at `done` reads the
+model of the order (`/o/HASH.glb`) in their place. A client that comes
+late, or that loses its connection, sends `Last-Event-ID`: it gets the
+events after that id from the store of the log (the SQLite of the
+Durable Object, through the port `/env/LOG_STORE`), then the new
+events. `specs/Stream.tla` proves that it gets each event one time, in
+order, with no gap (`docs/specs.md`).
+
+```sh
+curl -N -H 'accept: text/event-stream' \
+  -d '{"blueprint": "catalog", "options": {"name": "house_brick_vn"}, "level": "far", "budget": {"workers": 8}}' \
+  https://world.mkfifo.com/builds
+```
 
 ## The steps
 

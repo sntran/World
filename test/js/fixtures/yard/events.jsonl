@@ -1,0 +1,48 @@
+{"id": 1, "at": 432000, "wall": 1794000000005, "kind": "requested", "order": "b1-mid", "who": null, "data": {"budget": {}, "level": "mid"}}
+{"id": 2, "at": 864000, "wall": 1794000000010, "kind": "place_raised", "order": "yard", "who": null, "data": {"place": "warehouse", "order": "b1-mid"}}
+{"id": 3, "at": 1296000, "wall": 1794000000015, "kind": "plan_made", "order": "b1-mid", "who": null, "data": {"level": "mid", "tasks": [{"id": "slab_0", "trade": "concreter", "waits": []}]}}
+{"id": 4, "at": 1728000, "wall": 1794000000020, "kind": "parts_asked", "order": "b1-mid", "who": null, "data": {"task": "slab_0", "place": "warehouse", "materials": {"cement": 7}}}
+{"id": 5, "at": 2160000, "wall": 1794000000025, "kind": "haul_asked", "order": "haul", "who": null, "data": {"for": "b1-mid|slab_0", "to": "warehouse", "from": "gate", "loads": [{"id": "L1", "items": {"cement": 7}, "mass": 350.0}]}}
+{"id": 6, "at": 2592000, "wall": 1794000000030, "kind": "loaded", "order": "haul", "who": null, "data": {"truck": "rented_1", "load": "L1", "at": "gate"}}
+{"id": 7, "at": 3024000, "wall": 1794000000035, "kind": "unloaded", "order": "haul", "who": null, "data": {"truck": "rented_1", "load": "L1", "at": "warehouse"}}
+{"id": 8, "at": 3456000, "wall": 1794000000040, "kind": "hauled", "order": "haul", "who": null, "data": {"for": "b1-mid|slab_0"}}
+{"id": 9, "at": 3888000, "wall": 1794000000045, "kind": "parts_here", "order": "b1-mid", "who": null, "data": {"task": "slab_0"}}
+{"id": 10, "at": 4320000, "wall": 1794000000050, "kind": "done", "order": "b1-mid", "who": null, "data": {"bytes": 2048, "level": "mid"}}
+{"id": 11, "at": 4752000, "wall": 1794000000055, "kind": "place_open", "order": "yard", "who": null, "data": {"place": "warehouse"}}
+{"id": 12, "at": 5184000, "wall": 1794000000060, "kind": "requested", "order": "b2-mid", "who": null, "data": {"budget": {}, "level": "mid"}}
+{"id": 13, "at": 5616000, "wall": 1794000000065, "kind": "place_raised", "order": "yard", "who": null, "data": {"place": "vehicles", "order": "b2-mid"}}
+{"id": 14, "at": 6048000, "wall": 1794000000070, "kind": "plan_made", "order": "b2-mid", "who": null, "data": {"level": "mid", "tasks": [{"id": "slab_0", "trade": "concreter", "waits": []}]}}
+{"id": 15, "at": 6480000, "wall": 1794000000075, "kind": "parts_asked", "order": "b2-mid", "who": null, "data": {"task": "slab_0", "place": "vehicles", "materials": {"cement": 7}}}
+{"id": 16, "at": 6912000, "wall": 1794000000080, "kind": "haul_asked", "order": "haul", "who": null, "data": {"for": "b2-mid|slab_0", "to": "vehicles", "from": "gate", "loads": [{"id": "L2", "items": {"cement": 7}, "mass": 350.0}]}}
+{"id": 17, "at": 7344000, "wall": 1794000000085, "kind": "loaded", "order": "haul", "who": null, "data": {"truck": "rented_2", "load": "L2", "at": "gate"}}
+{"id": 18, "at": 7776000, "wall": 1794000000090, "kind": "unloaded", "order": "haul", "who": null, "data": {"truck": "rented_2", "load": "L2", "at": "vehicles"}}
+{"id": 19, "at": 8208000, "wall": 1794000000095, "kind": "hauled", "order": "haul", "who": null, "data": {"for": "b2-mid|slab_0"}}
+{"id": 20, "at": 8640000, "wall": 1794000000100, "kind": "parts_here", "order": "b2-mid", "who": null, "data": {"task": "slab_0"}}
+{"id": 21, "at": 9072000, "wall": 1794000000105, "kind": "done", "order": "b2-mid", "who": null, "data": {"bytes": 2048, "level": "mid"}}
+{"id": 22, "at": 9504000, "wall": 1794000000110, "kind": "place_open", "order": "yard", "who": null, "data": {"place": "vehicles"}}
+{"id": 23, "at": 9936000, "wall": 1794000000115, "kind": "requested", "order": "b3-mid", "who": null, "data": {"budget": {}, "level": "mid"}}
+{"id": 24, "at": 10368000, "wall": 1794000000120, "kind": "place_raised", "order": "yard", "who": null, "data": {"place": "workshop", "order": "b3-mid"}}
+{"id": 25, "at": 10800000, "wall": 1794000000125, "kind": "plan_made", "order": "b3-mid", "who": null, "data": {"level": "mid", "tasks": [{"id": "slab_0", "trade": "concreter", "waits": []}]}}
+{"id": 26, "at": 11232000, "wall": 1794000000130, "kind": "parts_asked", "order": "b3-mid", "who": null, "data": {"task": "slab_0", "place": "workshop", "materials": {"cement": 7}}}
+{"id": 27, "at": 11664000, "wall": 1794000000135, "kind": "haul_asked", "order": "haul", "who": null, "data": {"for": "b3-mid|slab_0", "to": "workshop", "from": "gate", "loads": [{"id": "L3", "items": {"cement": 7}, "mass": 350.0}]}}
+{"id": 28, "at": 12096000, "wall": 1794000000140, "kind": "loaded", "order": "haul", "who": null, "data": {"truck": "rented_3", "load": "L3", "at": "gate"}}
+{"id": 29, "at": 12528000, "wall": 1794000000145, "kind": "unloaded", "order": "haul", "who": null, "data": {"truck": "rented_3", "load": "L3", "at": "workshop"}}
+{"id": 30, "at": 12960000, "wall": 1794000000150, "kind": "hauled", "order": "haul", "who": null, "data": {"for": "b3-mid|slab_0"}}
+{"id": 31, "at": 13392000, "wall": 1794000000155, "kind": "parts_here", "order": "b3-mid", "who": null, "data": {"task": "slab_0"}}
+{"id": 32, "at": 13824000, "wall": 1794000000160, "kind": "done", "order": "b3-mid", "who": null, "data": {"bytes": 2048, "level": "mid"}}
+{"id": 33, "at": 14256000, "wall": 1794000000165, "kind": "place_open", "order": "yard", "who": null, "data": {"place": "workshop"}}
+{"id": 34, "at": 14688000, "wall": 1794000000170, "kind": "place_held", "order": "yard", "who": null, "data": {"order": "s1-far", "place": "vehicles"}}
+{"id": 35, "at": 15120000, "wall": 1794000000175, "kind": "place_started", "order": "yard", "who": null, "data": {"order": "t1-mid", "place": "vehicles"}}
+{"id": 36, "at": 15552000, "wall": 1794000000180, "kind": "requested", "order": "t1-mid", "who": null, "data": {"budget": {}, "level": "mid"}}
+{"id": 37, "at": 15984000, "wall": 1794000000185, "kind": "done", "order": "t1-mid", "who": null, "data": {"bytes": 4096, "level": "mid"}}
+{"id": 38, "at": 16416000, "wall": 1794000000190, "kind": "truck_joined", "order": "haul", "who": null, "data": {"truck": "truck_1", "at": "vehicles"}}
+{"id": 39, "at": 16848000, "wall": 1794000000195, "kind": "truck_made", "order": "yard", "who": null, "data": {"truck": "truck_1", "order": "t1-mid"}}
+{"id": 40, "at": 17280000, "wall": 1794000000200, "kind": "place_started", "order": "yard", "who": null, "data": {"order": "t2-mid", "place": "vehicles"}}
+{"id": 41, "at": 17712000, "wall": 1794000000205, "kind": "requested", "order": "t2-mid", "who": null, "data": {"budget": {}, "level": "mid"}}
+{"id": 42, "at": 18144000, "wall": 1794000000210, "kind": "done", "order": "t2-mid", "who": null, "data": {"bytes": 4096, "level": "mid"}}
+{"id": 43, "at": 18576000, "wall": 1794000000215, "kind": "truck_joined", "order": "haul", "who": null, "data": {"truck": "truck_2", "at": "vehicles"}}
+{"id": 44, "at": 19008000, "wall": 1794000000220, "kind": "truck_made", "order": "yard", "who": null, "data": {"truck": "truck_2", "order": "t2-mid"}}
+{"id": 45, "at": 19440000, "wall": 1794000000225, "kind": "place_started", "order": "yard", "who": null, "data": {"order": "s1-far", "place": "vehicles"}}
+{"id": 46, "at": 19872000, "wall": 1794000000230, "kind": "requested", "order": "s1-far", "who": null, "data": {"budget": {}, "level": "far"}}
+{"id": 47, "at": 20304000, "wall": 1794000000235, "kind": "loaded", "order": "haul", "who": null, "data": {"truck": "truck_1", "load": "L9", "at": "warehouse"}}
+{"id": 48, "at": 20736000, "wall": 1794000000240, "kind": "unloaded", "order": "haul", "who": null, "data": {"truck": "truck_1", "load": "L9", "at": "site"}}

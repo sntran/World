@@ -39,7 +39,7 @@ defmodule World.BambooTest do
       assert World.Check.model(item) == :ok, name
       assert %{unknown: [], mass: mass} = Mass.of(item)
       assert mass > 1.0 and mass < 15.0, "#{name}: #{mass} kg"
-      assert World.Places.family_of(item) == :bamboo
+      assert World.Plan.trade(item) == :bamboo_worker
 
       for level <- [:near, :mid, :far] do
         tris = Scene.triangles(Build.scene(Detail.with(level, fun), level: level))

@@ -22,7 +22,7 @@ defmodule World.LaminateTest do
   test "the shell chair: a shell of the laminate on four legs, of its mass, it stands, the mold shop makes it" do
     c = World.Molds.shell_chair()
     assert World.Check.model(c) == :ok
-    assert World.Places.family_of(c) == :molds
+    assert World.Plan.trade(c) == :molder
     %{mass: mass, unknown: []} = World.Mass.of(c)
     assert mass > 3 and mass < 5
     {_, shell, _} = List.keyfind(c.nodes, "shell_chair_frp", 0)

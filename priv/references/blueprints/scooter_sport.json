@@ -1,0 +1,1836 @@
+{
+  "doc": "A scooter built by the people of each trade at the same time, from the skills of the vehicle trades: a welder makes the underbone frame, a molder the panels of the body, an electrician the lamps, an upholsterer the seat, mechanics the fork, the bars, the engine with its swing arm and the fasteners, wheelwrights the two cast wheels, a smith the shock spring and the center stand. The shapes are the data of the Sport version of a Honda Vision 110 (Việt Nam): the standard version (scooter.json) on a front wheel of 16 in, 24 mm higher, with its front axle 22 mm to the front; another scooter is another blueprint with its own shapes. The seat turns up, the fork steers, the engine moves on its shock, the stand turns down, the wheels turn. The origin is on the ground at the center of the scooter; the front is to +y.",
+  "drawing": {
+    "extras": {
+      "place": [
+        0.0,
+        -0.9355,
+        0.024
+      ]
+    },
+    "kind": "vehicle",
+    "name": {
+      "param": "name"
+    },
+    "nodes": [
+      {
+        "name": "frame",
+        "skill": {
+          "frame": {
+            "contents": [
+              {
+                "mass": 5.5,
+                "name": "the rails and the brackets under the body",
+                "source": "An estimate: the parts of the pressed frame that the tube does not show (the rails under the seat, the brackets of the engine, the floor and the body)."
+              }
+            ],
+            "inside": true,
+            "ports": {
+              "body": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              },
+              "pivot": {
+                "at": [
+                  0.0,
+                  0.8,
+                  0.3
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "seat": {
+                "at": [
+                  0.0,
+                  0.88,
+                  0.73
+                ],
+                "axis": [
+                  -1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "stand": {
+                "at": [
+                  0.0,
+                  0.78,
+                  0.173
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "steer": {
+                "at": [
+                  0.0,
+                  1.328,
+                  0.703
+                ],
+                "axis": [
+                  0.0,
+                  -0.447,
+                  0.894
+                ],
+                "up": [
+                  0.0,
+                  0.894,
+                  0.447
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "material": "black",
+                "matter": "steel",
+                "sides": 10,
+                "skin": 0.002,
+                "tube": {
+                  "line": [
+                    [
+                      0.0,
+                      1.33,
+                      0.7
+                    ],
+                    [
+                      0.0,
+                      1.22,
+                      0.3
+                    ],
+                    [
+                      0.0,
+                      0.95,
+                      0.24
+                    ],
+                    [
+                      0.0,
+                      0.75,
+                      0.42
+                    ],
+                    [
+                      0.0,
+                      0.35,
+                      0.62
+                    ],
+                    [
+                      0.0,
+                      0.08,
+                      0.66
+                    ]
+                  ],
+                  "radius": 0.024
+                }
+              },
+              {
+                "at": [
+                  0.0,
+                  1.328,
+                  0.703
+                ],
+                "axis": [
+                  0.0,
+                  -0.447,
+                  0.894
+                ],
+                "lathe": {
+                  "profile": [
+                    [
+                      0.0,
+                      -0.08
+                    ],
+                    [
+                      0.032,
+                      -0.08
+                    ],
+                    [
+                      0.032,
+                      0.08
+                    ],
+                    [
+                      0.0,
+                      0.08
+                    ]
+                  ]
+                },
+                "material": "black",
+                "matter": "steel",
+                "sides": 12,
+                "skin": 0.003,
+                "up": [
+                  0.0,
+                  0.894,
+                  0.447
+                ]
+              }
+            ],
+            "sources": [
+              "The eSAF frame of pressed steel (Honda, 2021), drawn as a tube of 48 mm with a wall of 2 mm and a head tube with a wall of 3 mm (by eye)."
+            ]
+          }
+        }
+      },
+      {
+        "at": "body",
+        "name": "body",
+        "port": "body",
+        "skill": {
+          "panel": {
+            "contents": [
+              {
+                "mass": 3.55,
+                "name": "fuel",
+                "source": "The tank of 4.8 L (Honda Việt Nam), full: gasoline at 0.74 kg/L. The curb mass (khối lượng bản thân) has a full tank."
+              },
+              {
+                "mass": 1.6,
+                "name": "battery",
+                "source": "A battery of 12 V and 3 Ah: the Yuasa YTZ4V, 1.6 kg with its acid (Yuasa, the data sheet of the YTZ4V)."
+              },
+              {
+                "mass": 1.0,
+                "name": "the fuel tank",
+                "source": "An estimate: a tank of steel or plastic of 4.8 L."
+              },
+              {
+                "mass": 1.4,
+                "name": "the box under the seat",
+                "source": "An estimate: a box of 17.7 L (Honda) of PP of 2.5 mm, about 0.6 m2."
+              },
+              {
+                "mass": 3.0,
+                "name": "the inner panels and the fenders",
+                "source": "An estimate: the floor, the inner cover and the fenders, of PP."
+              },
+              {
+                "mass": 2.0,
+                "name": "the wires, the ECU, the smart key and the horn",
+                "source": "An estimate."
+              },
+              {
+                "mass": 3.0,
+                "name": "the bolts, the cables, the footrests and the small brackets",
+                "source": "An estimate."
+              }
+            ],
+            "ports": {
+              "body": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      -0.03,
+                      0.67,
+                      0.73,
+                      0.045,
+                      3
+                    ],
+                    [
+                      0.06,
+                      0.56,
+                      0.76,
+                      0.11,
+                      3.5
+                    ],
+                    [
+                      0.22,
+                      0.45,
+                      0.76,
+                      0.16,
+                      4
+                    ],
+                    [
+                      0.45,
+                      0.4,
+                      0.74,
+                      0.175,
+                      4
+                    ],
+                    [
+                      0.66,
+                      0.34,
+                      0.71,
+                      0.165,
+                      4
+                    ],
+                    [
+                      0.82,
+                      0.3,
+                      0.63,
+                      0.14,
+                      4
+                    ]
+                  ],
+                  "x": 0.0
+                },
+                "material": "paint",
+                "matter": "plastic",
+                "skin": 0.0015,
+                "smooth": 2
+              },
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      0.74,
+                      0.2,
+                      0.33,
+                      0.15,
+                      6
+                    ],
+                    [
+                      0.9,
+                      0.19,
+                      0.31,
+                      0.17,
+                      6
+                    ],
+                    [
+                      1.18,
+                      0.19,
+                      0.31,
+                      0.17,
+                      6
+                    ],
+                    [
+                      1.3,
+                      0.2,
+                      0.34,
+                      0.15,
+                      6
+                    ]
+                  ],
+                  "x": 0.0
+                },
+                "material": "trim",
+                "matter": "plastic",
+                "skin": 0.0015,
+                "smooth": 1
+              },
+              {
+                "loft": {
+                  "along": "z",
+                  "rows": [
+                    [
+                      0.22,
+                      1.25,
+                      1.44,
+                      0.13,
+                      3
+                    ],
+                    [
+                      0.36,
+                      1.22,
+                      1.47,
+                      0.19,
+                      3.5
+                    ],
+                    [
+                      0.6,
+                      1.18,
+                      1.41,
+                      0.205,
+                      3.5
+                    ],
+                    [
+                      0.82,
+                      1.14,
+                      1.34,
+                      0.185,
+                      3.5
+                    ],
+                    [
+                      0.96,
+                      1.11,
+                      1.29,
+                      0.14,
+                      3
+                    ]
+                  ],
+                  "x": 0.0
+                },
+                "material": "paint",
+                "matter": "plastic",
+                "skin": 0.0015,
+                "smooth": 2
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.08,
+                    0.01,
+                    0.42
+                  ],
+                  "to": [
+                    0.08,
+                    0.025,
+                    0.54
+                  ]
+                },
+                "material": "white",
+                "matter": "aluminum",
+                "skin": 0.0005
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.035,
+                    0.03,
+                    0.52
+                  ],
+                  "to": [
+                    0.035,
+                    0.08,
+                    0.67
+                  ]
+                },
+                "material": "trim",
+                "matter": "plastic",
+                "skin": 0.0015
+              },
+              {
+                "material": "aluminum",
+                "sides": 8,
+                "tube": {
+                  "line": [
+                    [
+                      -0.14,
+                      0.32,
+                      0.8
+                    ],
+                    [
+                      -0.13,
+                      0.05,
+                      0.8
+                    ],
+                    [
+                      0.13,
+                      0.05,
+                      0.8
+                    ],
+                    [
+                      0.14,
+                      0.32,
+                      0.8
+                    ]
+                  ],
+                  "radius": 0.012
+                }
+              }
+            ],
+            "sources": [
+              "By eye, from photos; the panels are skins of ABS of 3 mm; the plate of aluminum of 1 mm and its holder of ABS."
+            ]
+          }
+        }
+      },
+      {
+        "at": "body",
+        "name": "lights",
+        "port": "body",
+        "skill": {
+          "lamp": {
+            "contents": [
+              {
+                "mass": 0.8,
+                "name": "the LEDs, their boards and the reflectors",
+                "source": "An estimate."
+              }
+            ],
+            "ports": {
+              "body": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "loft": {
+                  "along": "z",
+                  "rows": [
+                    [
+                      0.62,
+                      1.395,
+                      1.43,
+                      0.09,
+                      3
+                    ],
+                    [
+                      0.7,
+                      1.37,
+                      1.415,
+                      0.11,
+                      3
+                    ],
+                    [
+                      0.78,
+                      1.345,
+                      1.39,
+                      0.07,
+                      3
+                    ]
+                  ],
+                  "x": 0.0
+                },
+                "material": "light_front",
+                "matter": "plastic",
+                "sides": 12,
+                "skin": 0.0015,
+                "smooth": 1
+              },
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      -0.045,
+                      0.68,
+                      0.725,
+                      0.035,
+                      2.5
+                    ],
+                    [
+                      0.0,
+                      0.67,
+                      0.73,
+                      0.09,
+                      3
+                    ],
+                    [
+                      0.05,
+                      0.665,
+                      0.73,
+                      0.1,
+                      3
+                    ]
+                  ],
+                  "x": 0.0
+                },
+                "material": "light_back",
+                "matter": "plastic",
+                "sides": 12,
+                "skin": 0.0015,
+                "smooth": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "at": "seat",
+        "joint": {
+          "kind": "hinge",
+          "limits": [
+            0,
+            75
+          ],
+          "role": "lid"
+        },
+        "name": "seat",
+        "port": "hinge",
+        "skill": {
+          "seat": {
+            "contents": [
+              {
+                "mass": 1.2,
+                "name": "the pan and the cover of the seat",
+                "source": "An estimate: a pan of ABS of 3 mm and a cover of vinyl."
+              }
+            ],
+            "ports": {
+              "hinge": {
+                "at": [
+                  0.0,
+                  0.88,
+                  0.73
+                ],
+                "axis": [
+                  -1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      0.1,
+                      0.74,
+                      0.79,
+                      0.08,
+                      3
+                    ],
+                    [
+                      0.2,
+                      0.735,
+                      0.83,
+                      0.14,
+                      4
+                    ],
+                    [
+                      0.5,
+                      0.72,
+                      0.795,
+                      0.15,
+                      4
+                    ],
+                    [
+                      0.76,
+                      0.69,
+                      0.765,
+                      0.135,
+                      4
+                    ],
+                    [
+                      0.88,
+                      0.66,
+                      0.73,
+                      0.08,
+                      3
+                    ]
+                  ],
+                  "x": 0.0
+                },
+                "material": "seat",
+                "matter": "seat_foam",
+                "smooth": 2
+              }
+            ],
+            "sources": [
+              "Seat height 761 mm (data page)."
+            ]
+          }
+        }
+      },
+      {
+        "at": "steer",
+        "joint": {
+          "kind": "hinge",
+          "limits": [
+            -38,
+            38
+          ],
+          "role": "steer"
+        },
+        "name": "fork",
+        "port": "steer",
+        "skill": {
+          "fork": {
+            "contents": [
+              {
+                "mass": 0.6,
+                "name": "the springs and the oil in the legs",
+                "source": "An estimate."
+              },
+              {
+                "mass": 0.8,
+                "name": "the brake caliper and its hose",
+                "source": "An estimate: a caliper of one piston."
+              }
+            ],
+            "ports": {
+              "axle": {
+                "at": [
+                  0.0,
+                  1.577,
+                  0.25
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "axle_bolt": {
+                "at": [
+                  -0.095,
+                  1.577,
+                  0.25
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "axle_nut": {
+                "at": [
+                  0.088,
+                  1.577,
+                  0.25
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "bars": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              },
+              "steer": {
+                "at": [
+                  0.0,
+                  1.328,
+                  0.703
+                ],
+                "axis": [
+                  0.0,
+                  -0.447,
+                  0.894
+                ],
+                "up": [
+                  0.0,
+                  0.894,
+                  0.447
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "material": "aluminum",
+                "matter": "aluminum",
+                "sides": 12,
+                "skin": 0.004,
+                "tube": {
+                  "line": [
+                    [
+                      -0.065,
+                      1.577,
+                      0.25
+                    ],
+                    [
+                      -0.065,
+                      1.4,
+                      0.56
+                    ]
+                  ],
+                  "radius": 0.022
+                }
+              },
+              {
+                "material": "aluminum",
+                "matter": "aluminum",
+                "sides": 12,
+                "skin": 0.004,
+                "tube": {
+                  "line": [
+                    [
+                      0.065,
+                      1.577,
+                      0.25
+                    ],
+                    [
+                      0.065,
+                      1.4,
+                      0.56
+                    ]
+                  ],
+                  "radius": 0.022
+                }
+              },
+              {
+                "material": "chrome",
+                "matter": "steel",
+                "sides": 12,
+                "skin": 0.002,
+                "tube": {
+                  "line": [
+                    [
+                      -0.065,
+                      1.43,
+                      0.5
+                    ],
+                    [
+                      -0.065,
+                      1.33,
+                      0.7
+                    ]
+                  ],
+                  "radius": 0.016
+                }
+              },
+              {
+                "material": "chrome",
+                "matter": "steel",
+                "sides": 12,
+                "skin": 0.002,
+                "tube": {
+                  "line": [
+                    [
+                      0.065,
+                      1.43,
+                      0.5
+                    ],
+                    [
+                      0.065,
+                      1.33,
+                      0.7
+                    ]
+                  ],
+                  "radius": 0.016
+                }
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.09,
+                    1.31,
+                    0.7
+                  ],
+                  "to": [
+                    0.09,
+                    1.36,
+                    0.73
+                  ]
+                },
+                "material": "black",
+                "matter": "aluminum"
+              },
+              {
+                "arc": {
+                  "center": [
+                    1.577,
+                    0.25
+                  ],
+                  "from": 60,
+                  "half_height": 0.012,
+                  "half_width": 0.065,
+                  "radius": 0.33,
+                  "steps": 6,
+                  "to": -45
+                },
+                "material": "paint",
+                "matter": "plastic",
+                "sides": 8,
+                "skin": 0.0015,
+                "smooth": 2
+              }
+            ],
+            "sources": [
+              "A telescopic fork, 26.6 degrees from up: legs of aluminum with a wall of 4 mm, tubes of steel with a wall of 2 mm (by eye)."
+            ]
+          }
+        }
+      },
+      {
+        "at": "bars",
+        "name": "bars",
+        "port": "bars",
+        "skill": {
+          "fork": {
+            "contents": [
+              {
+                "mass": 1.6,
+                "name": "the brake master cylinder, the switches, the meter and the cables",
+                "source": "An estimate."
+              }
+            ],
+            "ports": {
+              "bars": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "material": "chrome",
+                "matter": "steel",
+                "sides": 10,
+                "skin": 0.0016,
+                "tube": {
+                  "line": [
+                    [
+                      -0.34,
+                      1.12,
+                      1.05
+                    ],
+                    [
+                      -0.18,
+                      1.14,
+                      1.04
+                    ],
+                    [
+                      0.0,
+                      1.16,
+                      1.0
+                    ],
+                    [
+                      0.18,
+                      1.14,
+                      1.04
+                    ],
+                    [
+                      0.34,
+                      1.12,
+                      1.05
+                    ]
+                  ],
+                  "radius": 0.011
+                }
+              },
+              {
+                "material": "steel",
+                "matter": "steel",
+                "sides": 10,
+                "skin": 0.002,
+                "tube": {
+                  "line": [
+                    [
+                      0.0,
+                      1.33,
+                      0.7
+                    ],
+                    [
+                      0.0,
+                      1.2,
+                      0.98
+                    ],
+                    [
+                      0.0,
+                      1.16,
+                      1.0
+                    ]
+                  ],
+                  "radius": 0.014
+                }
+              },
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      1.0,
+                      0.975,
+                      1.045,
+                      0.1,
+                      3
+                    ],
+                    [
+                      1.1,
+                      0.955,
+                      1.09,
+                      0.19,
+                      4
+                    ],
+                    [
+                      1.24,
+                      0.955,
+                      1.08,
+                      0.165,
+                      4
+                    ],
+                    [
+                      1.34,
+                      0.97,
+                      1.055,
+                      0.1,
+                      3
+                    ]
+                  ],
+                  "x": 0.0
+                },
+                "material": "paint",
+                "matter": "plastic",
+                "skin": 0.0015,
+                "smooth": 2
+              }
+            ],
+            "sources": [
+              "A steel bar of 22.2 mm."
+            ]
+          }
+        },
+        "to": "fork"
+      },
+      {
+        "at": "bars",
+        "name": "grips",
+        "port": "bars",
+        "skill": {
+          "fork": {
+            "ports": {
+              "bars": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "at": [
+                  0.22,
+                  1.12,
+                  1.05
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "lathe": {
+                  "profile": [
+                    [
+                      0.0111,
+                      0.0
+                    ],
+                    [
+                      0.017,
+                      0.0
+                    ],
+                    [
+                      0.017,
+                      0.12
+                    ],
+                    [
+                      0.0111,
+                      0.12
+                    ]
+                  ]
+                },
+                "material": "rubber",
+                "ring": true,
+                "sides": 12,
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              {
+                "at": [
+                  -0.22,
+                  1.12,
+                  1.05
+                ],
+                "axis": [
+                  -1.0,
+                  0.0,
+                  0.0
+                ],
+                "lathe": {
+                  "profile": [
+                    [
+                      0.0111,
+                      0.0
+                    ],
+                    [
+                      0.017,
+                      0.0
+                    ],
+                    [
+                      0.017,
+                      0.12
+                    ],
+                    [
+                      0.0111,
+                      0.12
+                    ]
+                  ]
+                },
+                "material": "rubber",
+                "ring": true,
+                "sides": 12,
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              }
+            ],
+            "sources": [
+              "Grips of rubber on the bar of 22.2 mm: 34 mm out."
+            ]
+          }
+        },
+        "to": "fork"
+      },
+      {
+        "at": "bars",
+        "name": "levers",
+        "port": "bars",
+        "skill": {
+          "fork": {
+            "ports": {
+              "bars": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "material": "aluminum",
+                "sides": 6,
+                "tube": {
+                  "line": [
+                    [
+                      0.2,
+                      1.15,
+                      1.06
+                    ],
+                    [
+                      0.30000000000000004,
+                      1.17,
+                      1.06
+                    ]
+                  ],
+                  "radius": 0.005
+                }
+              },
+              {
+                "material": "aluminum",
+                "sides": 6,
+                "tube": {
+                  "line": [
+                    [
+                      -0.2,
+                      1.15,
+                      1.06
+                    ],
+                    [
+                      -0.30000000000000004,
+                      1.17,
+                      1.06
+                    ]
+                  ],
+                  "radius": 0.005
+                }
+              }
+            ]
+          }
+        },
+        "to": "fork"
+      },
+      {
+        "at": "bars",
+        "name": "mirrors",
+        "port": "bars",
+        "skill": {
+          "fork": {
+            "ports": {
+              "bars": {
+                "at": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "axis": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "material": "black",
+                "matter": "steel",
+                "sides": 6,
+                "tube": {
+                  "line": [
+                    [
+                      0.17,
+                      1.13,
+                      1.06
+                    ],
+                    [
+                      0.21,
+                      1.11,
+                      1.03
+                    ],
+                    [
+                      0.25,
+                      1.1,
+                      1.05
+                    ]
+                  ],
+                  "radius": 0.006
+                }
+              },
+              {
+                "box": {
+                  "from": [
+                    0.19,
+                    1.08,
+                    1.04
+                  ],
+                  "to": [
+                    0.31,
+                    1.105,
+                    1.1
+                  ]
+                },
+                "material": "trim",
+                "matter": "plastic",
+                "round": 0.3,
+                "skin": 0.0015,
+                "smooth": 2
+              },
+              {
+                "material": "black",
+                "matter": "steel",
+                "sides": 6,
+                "tube": {
+                  "line": [
+                    [
+                      -0.17,
+                      1.13,
+                      1.06
+                    ],
+                    [
+                      -0.21,
+                      1.11,
+                      1.03
+                    ],
+                    [
+                      -0.25,
+                      1.1,
+                      1.05
+                    ]
+                  ],
+                  "radius": 0.006
+                }
+              },
+              {
+                "box": {
+                  "from": [
+                    -0.31,
+                    1.08,
+                    1.04
+                  ],
+                  "to": [
+                    -0.19,
+                    1.105,
+                    1.1
+                  ]
+                },
+                "material": "trim",
+                "matter": "plastic",
+                "round": 0.3,
+                "skin": 0.0015,
+                "smooth": 2
+              }
+            ]
+          }
+        },
+        "to": "fork"
+      },
+      {
+        "at": "axle",
+        "joint": {
+          "kind": "hinge",
+          "role": "wheel"
+        },
+        "name": "front_wheel",
+        "port": "hub",
+        "skill": {
+          "wheel": {
+            "build": "cast",
+            "disc": 0.19,
+            "tire": {
+              "param": "front_tire"
+            }
+          }
+        },
+        "to": "fork"
+      },
+      {
+        "at": "axle_bolt",
+        "name": "front_axle_bolt",
+        "port": "head",
+        "skill": {
+          "fastener": {
+            "kind": "bolt",
+            "length": 0.2,
+            "thread": "M12"
+          }
+        },
+        "to": "fork"
+      },
+      {
+        "at": "axle_nut",
+        "name": "front_axle_nut",
+        "port": "face",
+        "skill": {
+          "fastener": {
+            "kind": "nut",
+            "thread": "M12"
+          }
+        },
+        "to": "fork"
+      },
+      {
+        "at": "pivot",
+        "joint": {
+          "kind": "hinge",
+          "limits": [
+            -4,
+            8
+          ],
+          "role": "suspension"
+        },
+        "name": "engine",
+        "port": "pivot",
+        "skill": {
+          "engine": {
+            "contents": [
+              {
+                "mass": 0.7,
+                "name": "oil",
+                "source": "0.8 L of engine oil at 0.87 kg/L (an estimate of the capacity)."
+              },
+              {
+                "mass": 1.2,
+                "name": "the air cleaner",
+                "source": "An estimate."
+              }
+            ],
+            "mass": 29.5,
+            "ports": {
+              "axle": {
+                "at": [
+                  0.0,
+                  0.3,
+                  0.235
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "axle_nut": {
+                "at": [
+                  0.07,
+                  0.3,
+                  0.235
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "pivot": {
+                "at": [
+                  0.0,
+                  0.8,
+                  0.3
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "shock": {
+                "at": [
+                  0.12,
+                  0.28,
+                  0.33
+                ],
+                "axis": [
+                  0.0,
+                  0.25,
+                  0.97
+                ],
+                "up": [
+                  0.0,
+                  1.0,
+                  0.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      0.2,
+                      0.17,
+                      0.33,
+                      0.04,
+                      3
+                    ],
+                    [
+                      0.32,
+                      0.165,
+                      0.39,
+                      0.055,
+                      4
+                    ],
+                    [
+                      0.62,
+                      0.185,
+                      0.42,
+                      0.06,
+                      4
+                    ],
+                    [
+                      0.84,
+                      0.19,
+                      0.38,
+                      0.05,
+                      3
+                    ]
+                  ],
+                  "x": -0.115
+                },
+                "material": "aluminum",
+                "smooth": 2
+              },
+              {
+                "loft": {
+                  "along": "y",
+                  "rows": [
+                    [
+                      0.7,
+                      0.22,
+                      0.34,
+                      0.07,
+                      4
+                    ],
+                    [
+                      0.86,
+                      0.22,
+                      0.36,
+                      0.09,
+                      4
+                    ]
+                  ],
+                  "x": 0.0
+                },
+                "material": "metal",
+                "smooth": 1
+              },
+              {
+                "at": [
+                  0.13,
+                  0.36,
+                  0.3
+                ],
+                "axis": [
+                  0.0,
+                  -1.0,
+                  0.18
+                ],
+                "lathe": {
+                  "profile": [
+                    [
+                      0.0,
+                      -0.2
+                    ],
+                    [
+                      0.05,
+                      -0.18
+                    ],
+                    [
+                      0.058,
+                      0.0
+                    ],
+                    [
+                      0.05,
+                      0.14
+                    ],
+                    [
+                      0.03,
+                      0.16
+                    ],
+                    [
+                      0.0,
+                      0.16
+                    ]
+                  ]
+                },
+                "material": "chrome",
+                "sides": 16,
+                "smooth": 1,
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              {
+                "material": "steel",
+                "sides": 8,
+                "tube": {
+                  "line": [
+                    [
+                      0.0,
+                      0.84,
+                      0.24
+                    ],
+                    [
+                      0.06,
+                      0.7,
+                      0.2
+                    ],
+                    [
+                      0.13,
+                      0.6,
+                      0.24
+                    ],
+                    [
+                      0.13,
+                      0.52,
+                      0.27
+                    ]
+                  ],
+                  "radius": 0.018
+                }
+              }
+            ],
+            "sources": [
+              "A 110 cc engine, air cooled, with its belt case at the left.",
+              "The mass, an estimate: 26 kg for the engine with its belt drive and its final gears (soymotero.net gives 22 kg for the eSP engine of 110 cc and does not say what it has; a complete GY6 engine of 150 cc with its belt drive is 27 kg net, a retailer), and 3.5 kg for the muffler and its pipe."
+            ]
+          }
+        }
+      },
+      {
+        "at": "shock",
+        "name": "shock",
+        "port": "end_a",
+        "skill": {
+          "spring": {
+            "diameter": 0.045,
+            "length": 0.26,
+            "material": "paint",
+            "turns": 7,
+            "wire": 0.006
+          }
+        },
+        "to": "engine"
+      },
+      {
+        "at": "axle",
+        "joint": {
+          "kind": "hinge",
+          "role": "wheel"
+        },
+        "name": "rear_wheel",
+        "port": "hub",
+        "skill": {
+          "wheel": {
+            "build": "cast",
+            "tire": {
+              "param": "rear_tire"
+            }
+          }
+        },
+        "to": "engine"
+      },
+      {
+        "at": "axle_nut",
+        "name": "rear_axle_nut",
+        "port": "face",
+        "skill": {
+          "fastener": {
+            "kind": "nut",
+            "thread": "M14"
+          }
+        },
+        "to": "engine"
+      },
+      {
+        "at": "stand",
+        "joint": {
+          "kind": "hinge",
+          "limits": [
+            0,
+            92
+          ],
+          "role": "stand"
+        },
+        "name": "stand",
+        "port": "pivot",
+        "skill": {
+          "stand": {
+            "ports": {
+              "pivot": {
+                "at": [
+                  0.0,
+                  0.78,
+                  0.173
+                ],
+                "axis": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "up": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              }
+            },
+            "shapes": [
+              {
+                "material": "black",
+                "matter": "steel",
+                "sides": 8,
+                "tube": {
+                  "line": [
+                    [
+                      -0.1,
+                      0.78,
+                      0.173
+                    ],
+                    [
+                      -0.1,
+                      0.68,
+                      0.173
+                    ],
+                    [
+                      -0.12,
+                      0.583,
+                      0.163
+                    ]
+                  ],
+                  "radius": 0.011
+                }
+              },
+              {
+                "material": "black",
+                "matter": "steel",
+                "sides": 8,
+                "tube": {
+                  "line": [
+                    [
+                      0.1,
+                      0.78,
+                      0.173
+                    ],
+                    [
+                      0.1,
+                      0.68,
+                      0.173
+                    ],
+                    [
+                      0.12,
+                      0.583,
+                      0.163
+                    ]
+                  ],
+                  "radius": 0.011
+                }
+              },
+              {
+                "material": "black",
+                "matter": "steel",
+                "sides": 8,
+                "tube": {
+                  "line": [
+                    [
+                      -0.12,
+                      0.583,
+                      0.163
+                    ],
+                    [
+                      0.12,
+                      0.583,
+                      0.163
+                    ]
+                  ],
+                  "radius": 0.011
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "name": "scooter_sport",
+  "params": [
+    {
+      "default": "scooter_sport",
+      "doc": "The name of the model: a to z, 0 to 9 and _.",
+      "max": 40,
+      "name": "name",
+      "type": "text"
+    },
+    {
+      "default": "80/90-16",
+      "doc": "The code of the front tire.",
+      "max": 20,
+      "name": "front_tire",
+      "type": "text"
+    },
+    {
+      "default": "90/90-14",
+      "doc": "The code of the rear tire.",
+      "max": 20,
+      "name": "rear_tire",
+      "type": "text"
+    }
+  ],
+  "sources": [
+    "Honda Vision 110, the Sport version (Honda Việt Nam): length 1925 mm, width 686 mm, height 1126 mm, wheelbase 1277 mm, seat 785 mm, ground clearance 175 mm, curb mass 97 kg.",
+    "Tires: 80/90-16 at the front, 90/90-14 at the back.",
+    "The shapes: those of the standard version (scooter.json), 24 mm higher on the wheel of 16 in, with a front fender 25 mm larger; the rear axle 24 mm lower on the engine, so the rear wheel stays on the ground."
+  ]
+}

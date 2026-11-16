@@ -378,7 +378,39 @@
     "sources": [
      "The seats and their rows: by eye from the photos of the inside of a 2026 Transit passenger van (https://www.comvoy.com/work-van/fenton-mi/new-2026-ford-transit-350-xl-passenger-van-25226733); Ford gives 12 seats in four rows (2, 3, 3, 4)."
     ]
-   }
+   },
+   "contents": [
+    {
+     "name": "the rails, the cross members and the pillars inside the skin",
+     "mass": 220.0,
+     "source": "An estimate."
+    },
+    {
+     "name": "the climate unit, the wires and the electronics",
+     "mass": 60.0,
+     "source": "An estimate."
+    },
+    {
+     "name": "the dash, the steering and the pedals",
+     "mass": 35.0,
+     "source": "An estimate."
+    },
+    {
+     "name": "the brake lines, the booster and the fluids",
+     "mass": 25.0,
+     "source": "An estimate."
+    },
+    {
+     "name": "the beams of the bumpers",
+     "mass": 20.0,
+     "source": "An estimate."
+    },
+    {
+     "name": "the bolts, the seals and the insulation",
+     "mass": 40.0,
+     "source": "An estimate."
+    }
+   ]
   },
   "ram_promaster": {
    "name": "Ram ProMaster (US, 2023 to 2026)",

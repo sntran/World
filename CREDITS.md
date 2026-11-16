@@ -6,6 +6,9 @@ of World are under the AGPL-3.0 (`LICENSE`).
 | Folder | What | Source | License |
 |---|---|---|---|
 | `priv/osm/ba_cu.json` | The buildings, the roads and the trees of one block of the street Ba Cu, Vũng Tàu (2026-11-03), and the street of World made from them (`street_ba_cu`) | © OpenStreetMap contributors, [openstreetmap.org](https://www.openstreetmap.org/copyright), from the Overpass API | ODbL 1.0: the file is a derived database under the same license |
+| `priv/terrain/nui_nho/` | The height tiles of the ground of Núi Nhỏ and the cape of Nghinh Phong, Vũng Tàu: a copy with no change of 55 tiles of `data/geo/build/height/` of the Vũng Tàu game (sntran/Vung_Tau, commit e0c6419), and the ground of the place `nui_nho` that World makes from them (plan 0006) | The build of the game (`tools/geo/build.py` of sntran/Vung_Tau) from: the Copernicus DEM GLO-30, produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA, all rights reserved; © OpenStreetMap contributors ([openstreetmap.org](https://www.openstreetmap.org/copyright)), the roads and the coast; modified Copernicus Sentinel data 2017–2024 (Sentinel-2 L2A), the intertidal zone, with the EOT20 tide (Hart-Davis and others, 2021, SEANOE, [doi:10.17882/79489](https://doi.org/10.17882/79489)); the GEBCO Compilation Group (2025) GEBCO 2025 Grid ([doi:10.5285/37c52e96-24ea-67ce-e063-7086abc05f29](https://doi.org/10.5285/37c52e96-24ea-67ce-e063-7086abc05f29)), the deeper water | The Copernicus DEM license (the organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30); ODbL 1.0 for the data of OpenStreetMap: the tiles are a derived database under the same license; the Copernicus Sentinel data license; CC BY 4.0 for EOT20; the GEBCO terms of use |
+| `priv/measures/tuong_chua_kito_vua/` | The pixels of the marked features and the solved cameras of some frames of one drone video of the statue on Núi Nhỏ, and the points in 3D from them (plan 0005) | The video YouTube `8ShbTdMaE4g`, a copy that the owner sent (2026-11-08) | No part of the video is in the repository: only numbers measured from it |
+| `priv/textures/relief_*.jpg` | The panels in relief on the base of the statue on Núi Nhỏ: the Last Supper (`relief_last_supper`), the keys to Peter (`relief_keys`), Christ before Pilate (`relief_pilate`) and the three Magi (`relief_magi`), each a grey detail and a normal texture made from a photo by `scripts/measure/panel.py`; in the near file of the model `tuong_chua_kito_vua` | RG72, Wikimedia Commons: [Soklo de la statuo de Jesuo Kristo sur la monto Núi Nhỏ 01](https://commons.wikimedia.org/wiki/File:Soklo_de_la_statuo_de_Jesuo_Kristo_sur_la_monto_N%C3%BAi_Nh%E1%BB%8F_01.jpg), [03](https://commons.wikimedia.org/wiki/File:Soklo_de_la_statuo_de_Jesuo_Kristo_sur_la_monto_N%C3%BAi_Nh%E1%BB%8F_03.jpg), [04](https://commons.wikimedia.org/wiki/File:Soklo_de_la_statuo_de_Jesuo_Kristo_sur_la_monto_N%C3%BAi_Nh%E1%BB%8F_04.jpg) and [Soklo de la statuo de Jesuo Kristo sur la monto Núi Nh 04](https://commons.wikimedia.org/wiki/File:Soklo_de_la_statuo_de_Jesuo_Kristo_sur_la_monto_N%C3%BAi_Nh_04.jpg) | CC BY-SA 4.0: the textures, and the near file of `tuong_chua_kito_vua` that has them, are under the same license |
 | `wings/` | The mesh core of Wings 3D | [dgud/wings](https://github.com/dgud/wings) | The terms of Wings 3D (`wings/LICENSE`) |
 | `priv/makehuman/` | The base mesh, the targets, the units of the expressions of the mouth, the skeleton, the skins, the hair and the clothes of people | [MakeHuman](http://www.makehumancommunity.org/) (`priv/makehuman/README.md`) | CC0, except some clothes of the community (below): CC BY |
 | `priv/animals/meshes/shiba_inu.json`, `wolf.json`, `fox.json`, `deer.json`, `horse.json`, `donkey.json`, `cow.json`, `bull.json`, `alpaca.json`, `husky.json`, `stag.json` | The base meshes, the bones, the weights and the colors of the materials of the templates of the four-legged animals (from the glTF files, by `scripts/gltf_figure.exs`) | Quaternius, [Ultimate Animated Animal Pack](https://quaternius.com/packs/ultimateanimatedanimals.html), the glTF files from [PixelTriks](https://pixeltriks.com/browse?pack=quaternius-ultimate-animated-animals) | CC0 |
@@ -14,6 +17,34 @@ of World are under the AGPL-3.0 (`LICENSE`).
 | `priv/animals/clips/primate.json` | The walk, the run and the sit of the template of primates (by `scripts/bigmaq_clips.exs`: on the bones of World, the loops closed, the fingers and the toes level) | BigMaQ (L. Martini and others), [pose reconstructions](https://zenodo.org/records/20663410): action 458, individual G (walk); action 203, individual L (run); action 415, individual G (sit) | CC BY 4.0 |
 | `priv/animals/spaces/wolf.json` | The shape space of the template wolf: the shape changes of the eleven templates of the four-legged animals on the Ultimate rig that the numbers do not give, and their principal components (by `scripts/shape_space.exs`) | Quaternius, [Ultimate Animated Animal Pack](https://quaternius.com/packs/ultimateanimatedanimals.html), the glTF files from [PixelTriks](https://pixeltriks.com/browse?pack=quaternius-ultimate-animated-animals) | CC0 |
 | `priv/animals/meshes/primate.json`, `priv/animals/meshes/primate_upright.json` | The base mesh, the bones and the weights of the templates of primates (`primate_upright`: the arms up at rest, no tail): the low-poly template mesh of a rhesus macaque, its 115 bones and its weights (by `scripts/primate_template.exs`, in the pose at rest of the body plan; the eyes are of World) | [BigMaQ](https://github.com/martinivis/BigMaQ) (L. Martini and others, "BigMaQ: A Big Macaque Motion and Animation Dataset Bridging Image and 3D Pose Representations", ICLR 2026); the template mesh came from the Max Planck Institute for Intelligent Systems and M. J. Black (see below) | MIT |
+
+## The heights of children
+
+`@growth` in `lib/world/people/human.ex` has the median heights (the M
+of the LMS tables `statage.csv` and `lenageinf.csv`) of the growth
+charts of the CDC: Kuczmarski, R. J. and others, 2002, 2000 CDC Growth
+Charts for the United States: Methods and Development, Vital and Health
+Statistics 11 (246), National Center for Health Statistics. The data
+are in the public domain.
+
+`@heads` in the same file has the ratio of the head height of a child
+to that of an adult, from the means of the head height by age in:
+Snyder, R. G., L. W. Schneider, C. L. Owings, H. M. Reynolds, D. H.
+Golomb and M. A. Schork, 1977, Anthropometry of Infants, Children, and
+Youths to Age 18 for Product Safety Design, report UM-HSRI-77-17,
+Highway Safety Research Institute, The University of Michigan, for the
+U.S. Consumer Product Safety Commission. Only numbers measured from it
+are in the repository.
+
+## The heights of the Earth
+
+`priv/earth/etopo1_025.i16.gz` is from ETOPO1, the 1 arc-minute global
+relief model of NOAA (the surface of the ice), one value each quarter
+of a degree, from the ERDDAP server of NOAA CoastWatch (the data set
+`etopo180`, 2026-11-15). Amante, C. and B. W. Eakins, 2009: ETOPO1 1
+Arc-Minute Global Relief Model: Procedures, Data Sources and Analysis.
+NOAA Technical Memorandum NESDIS NGDC-24. The data may be used and
+redistributed for free.
 
 ## The clothes of the MakeHuman community
 

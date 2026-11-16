@@ -7,11 +7,20 @@ defmodule World.Orders.Blueprints do
   - `traveler`: a person on a vehicle of Phượt (`World.People.traveler/2`);
   - `exercise`: a group at a morning of exercise (`World.People.exercise/2`);
   - `animal`: an animal of a species (`World.Animals.animal/2`);
+  - `plant`: a plant of a species of the nursery (`World.Plants`);
+  - `street_house`, `building`, `village_house`, `village_thing`,
+    `appliance`, `mini`: a thing that a rule draws from a request of a
+    few words (`World.Town.House`, `World.Town.Building`,
+    `World.Village.House`, `World.Village.Yard`, `World.Home.Appliance`,
+    `World.Mini`), and `street`: one side of a street of houses
+    (`World.Town.Street`);
   - `drawing`: a model in the data of the order (`World.Drawing`);
   - `house`: a house of `World.Buildings`;
   - `lot_house`: a whole house on a lot of Vũng Tàu (`World.Buildings.Lot`);
-  - `statue`: a statue cast from a figure of a person (`World.Statues`);
-  - `tower`: a tower of masonry, a lighthouse (`World.Towers`);
+  - `statue`: a statue cast from a figure of a person, in data
+    (`priv/blueprints/statue.json`, the skills of `World.Skills`);
+  - `tower`: a tower of masonry, a lighthouse, in data
+    (`priv/blueprints/tower.json`, the skills of `World.Skills.Towers`);
   - `van`: a van of `World.Vehicles.Van`;
   - `extrusion`, `strut`, `l_track`: the framing of `World.Framing`.
   """
@@ -23,33 +32,132 @@ defmodule World.Orders.Blueprints do
   alias World.Vehicles.Van
   import Blueprint, only: [option: 3]
 
+  # The blueprints in data (`priv/blueprints/NAME.json`), read when the
+  # module compiles (a new file compiles the module again).
+  @root Path.expand("../../../priv/blueprints", __DIR__)
+  @files Path.wildcard(Path.join(@root, "*.json"))
+  for f <- @files, do: @external_resource(f)
+  @data Enum.map(@files, fn f -> f |> File.read!() |> JSON.decode!() end)
+  @hash :erlang.md5(Enum.join(@files))
+
+  @doc false
+  def __mix_recompile__?, do: :erlang.md5(Enum.join(Path.wildcard(Path.join(@root, "*.json")))) != @hash
+
+  # Each rule is a blueprint, so that an order and the edits of an order work for its things as for each
+  # other model. The options are the keys of the request of the rule, and the full order has the full
+  # request: each choice made (the size of an appliance from its kind).
+  @rules [
+    {"street_house", World.Town.House, :request,
+     "A house of a street of Vũng Tàu that looks real, from a request of a few words: type (cap4, pho2_flat, pho2_tile, pho3), family (old, steel, modern), width, depth, road, use, wall, sign, seed and more. The rules of World.Town.House make each choice that the request does not make, and its drawing: one part from edits for each of its walls, its roof, its doors."},
+    {"building", World.Town.Building, :spec,
+     "A building of a town that is not a house of a row (a hotel, an office, a villa), from a request: size or outline, storeys, floor, fronts (each with a style: plain, windows, loggias, glass; bays, a porch), roof (flat or tiles), colors, letters. The rules of World.Town.Building make its drawing."},
+    {"village_house", World.Village.House, :request,
+     "A house of a village of old Việt Nam: a frame of round posts, bays in a row, a porch, a low base or stilts with a stair, and a large roof of thatch or tiles with four slopes that curve. The request: bays (1 to 7), bay (m), deep (m), porch (m), stilts (m), wall (wood, bamboo, earth), roof (thatch, tiles), curve (0 to 1), eaves (m), age (0 to 1)."},
+    {"village_thing", World.Village.Yard, :request,
+     "A thing of the yard or of the lanes of a village of old Việt Nam: kind (well, fence, gate, haystack, bridge, jar), length (of a fence or of a bridge, 1 to 20 m), color."},
+    {"appliance", World.Home.Appliance, :request,
+     "An appliance or a part of the power system of a home, a body of its size with the details of the real thing: kind (ac_indoor, ac_outdoor, battery, box, busbar, dishwasher, dryer, freezer, fridge, inverter, microwave, power_station, range, solar_panel, tv, washer, water_heater, water_tank), size ([wide, deep, high] in m; the common size of the kind by default), color, doors of a fridge (french, top, single), ports of a busbar (1 to 24)."},
+    {"mini", World.Mini, :request,
+     "A very small model for a view from far, a few thick shapes with flat faces and a color at each point (ask for the file flat): kind (house, block, tower, office, factory, data_center, barn, stilt_house, lighthouse, jet, airliner, helicopter, carrier, destroyer, container_ship, tanker, patrol_boat, police_car, ambulance, fire_truck, tank, missile_battery, turbine, tree_broad, tree_pine, tree_palm), scale (0.1 to 10), color."}
+  ]
+
+  @doc "The blueprints in data, as they are in their files."
+  def data, do: @data
+
+  @doc """
+  The drawing of the people for a full order (`World.Orders.check/1`): the
+  drawing of a blueprint in data with the options of the order, the
+  drawing of the blueprint `drawing`, or the drawing of a model of the
+  catalog that is an order of them; nil for a model with no drawing. A
+  construction builds a drawing node by node (`World.Construction`).
+  """
+  def drawing(%{"blueprint" => "drawing", "options" => %{"drawing" => d}}), do: d
+
+  def drawing(%{"blueprint" => "catalog", "options" => %{"name" => name}}) do
+    case World.Drawing.raw(name) do
+      %{"blueprint" => _} = order ->
+        {:ok, full} = World.Orders.check(order)
+        drawing(full)
+
+      raw ->
+        World.Drawing.expand(raw)
+    end
+  end
+
+  def drawing(%{"blueprint" => %{} = raw, "options" => o}), do: World.Drawing.fill(raw, o)
+
+  def drawing(%{"blueprint" => "street", "options" => o}), do: street_drawing(o)
+
+  def drawing(%{"blueprint" => name, "options" => o}) do
+    case {Enum.find(@data, &(&1["name"] == name)), List.keyfind(@rules, name, 0)} do
+      {nil, nil} -> nil
+      {nil, {_, module, _, _}} -> module.drawing(o)
+      {raw, _} -> World.Drawing.fill(raw, o)
+    end
+  end
+
+  @doc """
+  The drawing of a full order for free edits (the file `drawing` of an
+  order, and the edit `free` of `World.Orders.Edits`): its drawing, or,
+  for a model that the code of a rule makes (a plant, a person, an
+  animal), a drawing with the model as its one node `model`: an item of
+  the blueprint, with the options of the order. A project adds nodes to
+  it (a part from edits at a port of the model: a hat on a head), and
+  changes the options of the item as before.
+  """
+  def free(order) do
+    case drawing(order) do
+      nil -> wrapped(order)
+      drawing -> drawing
+    end
+  end
+
+  defp wrapped(%{"blueprint" => name, "options" => options}) do
+    {:ok, blueprint} = fetch(name)
+    item = World.Detail.with(:far, fn -> blueprint.build.(options) end)
+    kind = Atom.to_string(Map.get(item, :kind) || :item)
+
+    %{
+      "name" => item.name,
+      "kind" => if(kind in World.Drawing.kinds(), do: kind, else: "item"),
+      "sources" => ["The model of an order of the blueprint #{name}, as an item of this drawing."],
+      "nodes" => [%{"name" => "model", "item" => %{"blueprint" => name, "options" => options}}]
+    }
+  end
+
   @doc "The blueprints, in the order of their names."
   def all,
     do:
       Enum.sort_by(
-        [
-          catalog(),
-          drawing(),
-          person(),
-          traveler(),
-          exercise(),
-          animal(),
-          house(),
-          lot_house(),
-          statue(),
-          tower(),
-          van(),
-          extrusion(),
-          strut(),
-          l_track()
-        ],
+        Enum.map(@data, &Blueprint.from_data/1) ++
+          [
+            catalog(),
+            drawing(),
+            person(),
+            traveler(),
+            exercise(),
+            animal(),
+            plant(),
+            street(),
+            house(),
+            lot_house(),
+            van(),
+            extrusion(),
+            strut(),
+            l_track()
+          ] ++ rules(),
         & &1.name
       )
 
   @doc "The names of the blueprints."
   def names, do: Enum.map(all(), & &1.name)
 
-  @doc "A blueprint by its name."
+  @doc """
+  A blueprint by its name, or a blueprint in data of an order that its
+  check passed (`World.Orders.Blueprint.check_data/2`).
+  """
+  def fetch(%{} = raw), do: {:ok, Blueprint.from_data(raw)}
+
   def fetch(name) do
     case Enum.find(all(), &(&1.name == name)) do
       nil -> :error
@@ -105,8 +213,9 @@ defmodule World.Orders.Blueprints do
             option("pose", :choice, default: "stand", values: Pose.names()),
             option("animations", :list,
               default: [],
-              item: option("item", :choice, values: ["walk" | Pose.routines()]),
-              max: 1
+              item: option("item", :choice, values: ["walk" | Pose.routines() ++ Pose.work()]),
+              # The walk and the work of each trade of a site (plan 0006, D10).
+              max: 8
             ),
             option("right_hand", :choice,
               default: "none",
@@ -212,6 +321,127 @@ defmodule World.Orders.Blueprints do
           do: {"options.animations.#{i}", "a #{o["species"]} has no animation #{a}: #{Enum.join(known, ", ")}"}
   end
 
+  # --- The rules that draw a thing from a request of a few words ---------------------------------
+
+  defp rules do
+    for {name, module, full, doc} <- @rules do
+      %Blueprint{
+        name: name,
+        doc: doc <> " Each option has a default; name and sources are options too.",
+        # (A building takes its `size` too: the full request has its `plan`, the outline.)
+        options:
+          for(
+            key <- Enum.sort(Map.keys(apply(module, full, [%{}])) ++ if(name == "building", do: ["size"], else: [])),
+            do: word(key)
+          ),
+        resolve: fn o -> resolved(fn -> apply(module, full, [given(o)]) end) end,
+        build: fn o -> World.Drawing.build(module.drawing(o)) end,
+        sources: ["The request of the order: its sources are in it. The rule: #{inspect(module)}."]
+      }
+    end
+  end
+
+  # An option of a rule: any value, that the rule checks in its request.
+  defp word(key), do: option(key, :data, default: nil, check: fn value, _path -> {:ok, value} end)
+  defp given(o), do: Map.reject(o, fn {_, v} -> v == nil end)
+
+  # The full request of a rule, or its error (a rule raises an `ArgumentError` with the reason).
+  defp resolved(fun) do
+    {:ok, fun.()}
+  rescue
+    e in ArgumentError -> {:error, [{"options", e.message}]}
+  end
+
+  # One side of a street: the plan of its lots from a seed (`World.Town.Street`), and the houses of some of
+  # its lots (`only`) as one model. The full order has the plan: each lot with the full request of its house.
+  defp street do
+    %Blueprint{
+      name: "street",
+      doc:
+        "One side of a street of houses of Vũng Tàu from a seed (World.Town.Street): seed, road (its width, m), count (the lots) or length (m), depth, sidewalk, types, families and widths (lists of [value, weight]), or lots (a list of what is known of each lot: type, family, width, use, number, name, same). The full order has the plan: each lot with the full request of its house and its place along the street. The model is the houses of the lots only: [first, last] (from 1; the first five lots by default, and five lots at the most).",
+      options: Enum.map(~w(count depth families length lots only road seed sidewalk types widths), &word/1),
+      resolve: fn o ->
+        with {:ok, plan} <- resolved(fn -> World.Town.Street.plan(given(Map.delete(o, "only"))) end) do
+          lots = length(plan["lots"])
+
+          case o["only"] || [1, min(5, lots)] do
+            [a, b] = only when is_integer(a) and is_integer(b) and a >= 1 and b >= a and b <= lots and b - a < 5 ->
+              {:ok, Map.put(plan, "only", only)}
+
+            _ ->
+              {:error,
+               [
+                 {"options.only",
+                  "must be [first, last]: the numbers of two lots of the #{lots}, five lots at the most"}
+               ]}
+          end
+        end
+      end,
+      build: fn o -> World.Drawing.build(street_drawing(o)) end,
+      sources: ["The shares of a common street of Vũng Tàu: World.Town.Street."]
+    }
+  end
+
+  defp street_drawing(%{"only" => [a, b]} = o), do: World.Town.Street.drawing(Map.delete(o, "only"), only: a..b)
+
+  # --- A plant of the nursery -----------------------------------------------------------------
+
+  defp plant do
+    %Blueprint{
+      name: "plant",
+      doc:
+        "A plant of the nursery (World.Plants), from the rules of its species: coconut (the coconut palm), areca (the areca palm, cau), banana, bamboo (a clump of thorny bamboo) or frangipani. The levels come from the rules: far away a frond or a spray of leaves is one card. For a count of triangles of a project, ask for the file light with triangles.",
+      options: [
+        option("species", :choice, default: "coconut", values: World.Plants.species()),
+        option("height", :number,
+          default: nil,
+          min: 0.5,
+          max: 30.0,
+          unit: "m",
+          doc: "The height (the common height of the species by default)."
+        ),
+        option("seed", :integer, default: 1, min: 0, max: 1_000_000, doc: "The small changes from plant to plant."),
+        option("month", :integer, default: 6, min: 1, max: 12, doc: "The month, for the flowers of a frangipani."),
+        option("numbers", :object,
+          default: %{},
+          fields:
+            for(
+              {key, {lo, hi, whole?}} <- Enum.sort(World.Plants.numbers()),
+              do: option(key, :number, default: nil, min: if(whole?, do: max(1, lo), else: lo), max: hi)
+            ),
+          doc:
+            "Numbers of the plant over the numbers of its species (priv/plants/species.json), in meters and degrees: a project gives the numbers of the plant that it wants, and corrects them after it looks at the model. A palm: trunk (its width), base, lean, fronds (their count), frond (its length), leaflet, nuts, nut, crownshaft. Each species has its own keys."
+        )
+      ],
+      build: fn o ->
+        opts = [seed: o["seed"]] ++ if(o["height"], do: [height: o["height"]], else: [])
+        numbers = for {k, v} <- o["numbers"], v != nil, into: %{}, do: {k, v}
+
+        World.Plants.with_numbers(numbers, fn ->
+          case o["species"] do
+            "coconut" -> World.Plants.coconut(opts)
+            "areca" -> World.Plants.areca(opts)
+            "banana" -> World.Plants.banana(opts)
+            "bamboo" -> World.Plants.bamboo(opts)
+            "frangipani" -> World.Plants.frangipani(opts ++ [month: o["month"]])
+          end
+        end)
+      end,
+      check: &plant_check/1,
+      sources: ["The numbers of each species are in priv/plants/species.json, each with its source."]
+    }
+  end
+
+  # A number of a request must be a number of the species.
+  defp plant_check(o) do
+    known = World.Plants.numbers(o["species"])
+
+    for {key, v} <- Enum.sort(o["numbers"]),
+        v != nil,
+        key not in known,
+        do: {"options.numbers.#{key}", "a #{o["species"]} has no number #{key}: #{Enum.join(known, ", ")}"}
+  end
+
   # --- A group at a morning of exercise ------------------------------------------------------
 
   defp exercise do
@@ -294,7 +524,7 @@ defmodule World.Orders.Blueprints do
 
     [
       option("gender", :number, default: 1.0, min: 0.0, max: 1.0, doc: "0 is a woman, 1 is a man."),
-      option("age", :number, default: 30.0, min: 25.0, max: 90.0, unit: "years"),
+      option("age", :number, default: 30.0, min: 1.0, max: 90.0, unit: "years"),
       share.("muscle", 0.5),
       share.("weight", 0.5),
       share.("height", 0.5)
@@ -624,311 +854,6 @@ defmodule World.Orders.Blueprints do
       sources: [
         "TCVN 9411:2012 (nhà ở liên kế): the ground floor 3.6 m clear at the least. The other sizes: by eye, from the photos of the streets of Vũng Tàu (World.Buildings.Lot)."
       ]
-    }
-  end
-
-  # --- A statue ------------------------------------------------------------------------------
-
-  defp statue do
-    hair = Data.assets() |> Map.fetch!("hair") |> Map.keys() |> Enum.sort()
-
-    m = fn name, default, min, max, doc ->
-      option(name, :number, default: default, min: min, max: max, unit: "m", doc: doc)
-    end
-
-    %Blueprint{
-      name: "statue",
-      doc:
-        "A statue: a figure of a person at any size and in a pose, in a long robe, cast as one solid of concrete or stone, with a halo, on a base: a round plaza with steps in rings, a block with round corners and a front that curves in, with panels of gold and figures in relief in white frames, a band of letters and small windows with grilles, a terrace with a pierced balustrade, and a low dome with a stair up its front to the feet. The option hollow gives walls, a spiral stair and openings inside, at the near level. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the base; the figure looks to +y.",
-      options: [
-        m.(
-          "height",
-          32.0,
-          1.0,
-          100.0,
-          "From the feet to the top of the figure (the top of the halo, when it has one)."
-        ),
-        m.(
-          "span",
-          nil,
-          0.5,
-          100.0,
-          "The hands, tip to tip, with the pose arms_out. None: the proportions of the person."
-        ),
-        m.("hand", nil, 0.1, 10.0, "A hand, from the wrist to the tip of the middle finger, with the pose arms_out."),
-        option("pose", :choice,
-          default: "arms_out",
-          values: ["arms_out" | Pose.names()],
-          doc: "arms_out: the arms straight out to the sides. Else a pose of a person."
-        ),
-        option("lift", :number,
-          default: 8.0,
-          min: -45.0,
-          max: 60.0,
-          unit: "deg",
-          doc: "The arms of arms_out over the level."
-        ),
-        option("gender", :number, default: 1.0, min: 0.0, max: 1.0, doc: "0 is a woman, 1 is a man."),
-        option("age", :number, default: 35.0, min: 25.0, max: 90.0, unit: "years"),
-        option("hair", :choice, default: Data.name!("hair", "long01"), values: ["none" | hair]),
-        option("robe", :boolean, default: true, doc: "A long robe with wide sleeves and two long panels at its sides."),
-        m.(
-          "head",
-          nil,
-          0.1,
-          20.0,
-          "In a robe: from the top of the head to the end of the beard. None: the head of the person."
-        ),
-        m.(
-          "mantle",
-          nil,
-          0.5,
-          100.0,
-          "In a robe: the lower edge of the mantle over the feet. None: 0.886 of the shoulders."
-        ),
-        m.(
-          "heart",
-          nil,
-          0.5,
-          100.0,
-          "In a robe: the center of the Sacred Heart in relief on the chest, over the feet. None: no heart."
-        ),
-        option("beard", :boolean,
-          default: false,
-          doc: "In a robe, with head: a beard along the jaw to a point, and a mustache."
-        ),
-        option("halo", :boolean, default: true, doc: "A ring behind the head with a cross."),
-        option("rays", :integer, default: 3, min: 0, max: 8, doc: "The straight metal rays at each side of the halo."),
-        option("rods", :integer,
-          default: 3,
-          min: 0,
-          max: 5,
-          doc: "The thin metal rods at the top of the halo (lightning rods)."
-        ),
-        option("material", :choice,
-          default: "concrete",
-          values: Enum.map(World.Statues.materials(), &Atom.to_string/1),
-          doc: "Concrete with a render of washed stone, or stone (granite)."
-        ),
-        option("hollow", :boolean,
-          default: false,
-          doc: "Walls, a spiral stair and openings inside (at the near level)."
-        ),
-        m.("wall", 0.3, 0.1, 2.0, "The wall of a hollow statue (at the least two cells of the cast)."),
-        option("steps", :integer,
-          default: 133,
-          min: 10,
-          max: 1000,
-          doc: "The steps of the spiral stair, to the shoulders."
-        ),
-        m.("well", 1.0, 0.3, 4.0, "The open well in the middle of the spiral stair."),
-        option("windows", :list,
-          default: [],
-          max: 12,
-          item:
-            option("window", :object,
-              fields: [
-                m.("z", :required, 0.0, 100.0, "Its center, over the feet."),
-                m.("width", 1.2, 0.2, 5.0, ""),
-                m.("height", 1.2, 0.2, 5.0, "")
-              ]
-            ),
-          doc: "The openings in the front of the robe of a hollow statue."
-        ),
-        m.("plaza_radius", 10.5, 0.0, 100.0, "The round plaza round the base. 0: no plaza."),
-        option("plaza_steps", :integer, default: 3, min: 1, max: 20, doc: "The steps in rings of the plaza."),
-        m.("plaza_rise", 0.15, 0.05, 0.5, "Each step of the plaza."),
-        m.("plaza_tread", 0.6, 0.2, 5.0, "Each step of the plaza."),
-        m.("base_width", 13.0, 1.0, 100.0, "The block, along x."),
-        m.("base_depth", 13.0, 1.0, 100.0, "The block, along y."),
-        m.("base_height", 6.5, 0.0, 50.0, "The block, from the plaza to the terrace. 0: no block."),
-        m.("corner", 1.5, 0.1, 10.0, "The radius of the round corners of the block."),
-        m.("base_curve", 0.8, 0.0, 5.0, "How far the front of the block curves in, at its middle."),
-        m.("panel_width", 8.0, 0.5, 100.0, "The panel of each relief."),
-        m.("panel_height", 3.0, 0.3, 20.0, "The panel of each relief."),
-        option("letters", :boolean, default: true, doc: "A band of letters over each panel."),
-        option("grilles", :integer,
-          default: 2,
-          min: 0,
-          max: 12,
-          doc: "The small windows with grilles under the panel of the front."
-        ),
-        option("reliefs", :list,
-          default: [],
-          max: 4,
-          item:
-            option("relief", :object,
-              fields: [
-                option("side", :choice, values: ~w(front back left right)),
-                option("figures", :integer, default: 3, min: 1, max: 20),
-                option("title", :data, default: "", check: &World.Statues.check_text/2)
-              ]
-            ),
-          doc: "The panels of figures in relief on the sides of the base."
-        ),
-        m.("terrace_rail", 1.0, 0.0, 3.0, "The pierced balustrade of the terrace on the block. 0: none."),
-        m.("dome_width", 8.0, 1.0, 50.0, "The low dome under the feet, across its faces."),
-        m.("dome_height", 3.0, 0.0, 20.0, "0: no dome."),
-        option("dome_sides", :integer, default: 8, min: 4, max: 32, doc: "The faces of the dome."),
-        m.("dome_stair", 1.2, 0.5, 5.0, "The stair up the front of the dome."),
-        option("weathering", :number,
-          default: 0.5,
-          min: 0.0,
-          max: 1.0,
-          doc: "The stains of the sea air, for the shader of an app: no change of the shape."
-        ),
-        option("sources", :data,
-          default: %{},
-          check: &World.Statues.check_sources/2,
-          doc: "The source of each size or choice, by its name (height, span, steps, base_width, ...)."
-        )
-      ],
-      build: fn o ->
-        World.Statues.statue(
-          height: o["height"],
-          span: o["span"],
-          hand: o["hand"],
-          pose: o["pose"],
-          lift: o["lift"],
-          gender: o["gender"],
-          age: o["age"],
-          hair: if(o["hair"] == "none", do: nil, else: o["hair"]),
-          robe: o["robe"],
-          head: o["head"],
-          beard: o["beard"],
-          mantle: o["mantle"],
-          heart: o["heart"],
-          halo: o["halo"],
-          rays: o["rays"],
-          rods: o["rods"],
-          material: String.to_existing_atom(o["material"]),
-          hollow: o["hollow"],
-          wall: o["wall"],
-          steps: o["steps"],
-          well: o["well"],
-          windows: for(w <- o["windows"], do: {w["z"], w["width"], w["height"]}),
-          plaza_radius: o["plaza_radius"],
-          plaza_steps: o["plaza_steps"],
-          plaza_rise: o["plaza_rise"],
-          plaza_tread: o["plaza_tread"],
-          base_width: o["base_width"],
-          base_depth: o["base_depth"],
-          base_height: o["base_height"],
-          corner: o["corner"],
-          base_curve: o["base_curve"],
-          panel_width: o["panel_width"],
-          panel_height: o["panel_height"],
-          letters: o["letters"],
-          grilles: o["grilles"],
-          reliefs: o["reliefs"],
-          terrace_rail: o["terrace_rail"],
-          dome_width: o["dome_width"],
-          dome_height: o["dome_height"],
-          dome_sides: o["dome_sides"],
-          dome_stair: o["dome_stair"],
-          weathering: o["weathering"],
-          sources: o["sources"]
-        )
-      end,
-      sources: [
-        "MakeHuman (CC0): the person of the figure. The sources of each size come with the order; the receipt lists them."
-      ]
-    }
-  end
-
-  # --- A tower -------------------------------------------------------------------------------
-
-  defp tower do
-    m = fn name, default, min, max, doc ->
-      option(name, :number, default: default, min: min, max: max, unit: "m", doc: doc)
-    end
-
-    %Blueprint{
-      name: "tower",
-      doc:
-        "A tower of masonry on a round platform: a lighthouse (a round body with pilasters that flare at the foot, bands, a cove under the gallery, the gallery and its rail, the drum, the lantern with its panes and its lens, the dome, a lightning rod). A house next to it is a model of its own. The option hollow gives the wall and a spiral stair inside at the near level. The ledge, the bands and the flare are over the platform, the other heights over the ground. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the platform.",
-      options: [
-        m.("height", 18.0, 3.0, 80.0, "From the ground to the top of the dome."),
-        m.("platform_width", 7.8, 0.0, 40.0, "The round platform."),
-        m.("platform_height", 0.3, 0.0, 3.0, ""),
-        m.("body", 3.2, 0.5, 20.0, "The round body at its foot."),
-        m.("top", 3.2, 0.5, 20.0, "The round body at the cornice."),
-        m.("ledge", 0.8, 0.0, 5.0, "The ledge round the foot of the body."),
-        option("bands", :list,
-          default: [4.1, 7.5],
-          max: 8,
-          item: option("band", :number, min: 0.0, max: 80.0, unit: "m"),
-          doc: "The heights of the bands round the body."
-        ),
-        option("pilasters", :integer, default: 4, min: 0, max: 16),
-        m.("pilaster_width", 0.7, 0.1, 3.0, ""),
-        m.("across", 5.1, 0.5, 30.0, "Across the pilasters."),
-        m.("foot", 6.4, 0.5, 40.0, "Across the flared foot of the pilasters."),
-        m.("flare", 3.1, 0.0, 30.0, "The height of the flare."),
-        m.("cornice", 10.2, 1.0, 80.0, "The foot of the cove under the gallery."),
-        m.("gallery", 12.7, 1.0, 80.0, "The floor of the gallery."),
-        m.("gallery_width", 5.6, 0.5, 30.0, ""),
-        m.("rail", 1.0, 0.5, 2.0, "The rail of the gallery."),
-        m.("drum", 2.5, 0.5, 20.0, "The drum under the lantern (the watch room)."),
-        m.("lantern_from", 15.4, 1.0, 80.0, ""),
-        m.("lantern_to", 17.3, 1.0, 80.0, ""),
-        m.("lantern_width", 2.2, 0.3, 10.0, ""),
-        option("panes", :integer, default: 10, min: 6, max: 24),
-        m.("rod", 21.0, 1.0, 100.0, "The top of the lightning rod."),
-        m.("door_width", 0.9, 0.5, 3.0, ""),
-        m.("door_height", 2.1, 1.5, 5.0, ""),
-        option("door_angle", :number,
-          default: 270.0,
-          min: 0.0,
-          max: 360.0,
-          unit: "deg",
-          doc: "The side of the door: 0 to +x (the east), 90 to +y."
-        ),
-        option("hollow", :boolean, default: false, doc: "The wall and a spiral stair inside (at the near level)."),
-        m.("wall", 0.5, 0.1, 3.0, ""),
-        option("steps", :integer, default: 55, min: 5, max: 500),
-        option("light", :data,
-          default: nil,
-          check: &World.Towers.check_light/2,
-          doc: "The light for the app: {color, flashes, period (s), range (nm)}."
-        ),
-        option("sources", :data,
-          default: %{},
-          check: &World.Towers.check_sources/2,
-          doc: "The source of each size, by its name."
-        )
-      ],
-      build: fn o ->
-        World.Towers.tower(
-          height: o["height"],
-          platform: {o["platform_width"], o["platform_height"]},
-          body: o["body"],
-          top: o["top"],
-          ledge: o["ledge"],
-          bands: o["bands"],
-          pilasters: o["pilasters"],
-          pilaster_width: o["pilaster_width"],
-          across: o["across"],
-          foot: o["foot"],
-          flare: o["flare"],
-          cornice: o["cornice"],
-          gallery: o["gallery"],
-          gallery_width: o["gallery_width"],
-          rail: o["rail"],
-          drum: o["drum"],
-          lantern: {o["lantern_from"], o["lantern_to"], o["lantern_width"]},
-          panes: o["panes"],
-          rod: o["rod"],
-          door: {o["door_width"], o["door_height"]},
-          door_angle: o["door_angle"],
-          hollow: o["hollow"],
-          wall: o["wall"],
-          steps: o["steps"],
-          light: o["light"],
-          sources: o["sources"]
-        )
-      end,
-      sources: ["The sources of each size come with the order; the receipt lists them."]
     }
   end
 

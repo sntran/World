@@ -203,6 +203,23 @@ defmodule World.KitTest do
     assert map_size(m["vehicles"]["camper"]) == length(World.Vehicles.Van.models())
   end
 
+  test "the files of a part of the kit: the data, a body, a hair, the textures, and a vehicle" do
+    {"vehicles/bicycle.glb", _} = bicycle = hd(Kit.vehicles())
+    files = Kit.files(sexes: ["woman"], hair: ["bob01"], vehicles: [bicycle])
+    paths = Enum.map(files, &elem(&1, 0))
+    assert hd(paths) == "kit.json" and paths == Enum.uniq(paths)
+    assert JSON.decode!(elem(hd(files), 1)) == JSON.decode!(JSON.encode!(Kit.manifest()))
+
+    assert Enum.filter(paths, &String.starts_with?(&1, "person/")) == [
+             "person/woman.glb",
+             "person/woman-hair-bob01.glb"
+           ]
+
+    assert Enum.any?(paths, &String.starts_with?(&1, "skins/")) and Enum.any?(paths, &String.starts_with?(&1, "eyes/"))
+    assert List.last(paths) == "vehicles/bicycle.glb"
+    for {path, bin} <- files, String.ends_with?(path, ".glb"), do: assert(<<"glTF", _::binary>> = bin)
+  end
+
   test "a vehicle of the kit is the file of the order of its URL" do
     {"vehicles/car.glb", options} = Enum.find(Kit.vehicles(), &(elem(&1, 0) == "vehicles/car.glb"))
 

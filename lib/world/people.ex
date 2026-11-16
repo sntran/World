@@ -4,6 +4,9 @@ defmodule World.People do
 
   - `traveler`: a traveler on foot for Phượt, with the animation "walk";
   - `man` and `woman`: adults of Việt Nam, standing;
+  - `woman_non_la` and `man_helmet`: a woman with a nón lá on a bun, and
+    a man with the helmet of a rider, with parts from edits
+    (`World.People.Parts`);
   - `honda_vision_110_rider`: a rider on the Honda Vision 110, in the pose
     "ride", with the hips on the seat.
 
@@ -16,6 +19,9 @@ defmodule World.People do
   alias World.People.{Data, Human, Props}
   require Data
   alias World.Vehicles.{ChevyBolt, FordTransit, HondaVision, RoyalEnfieldHimalayan, TouringBicycle, Van}
+
+  # The color of the hair of the people with a mass of hair: near black.
+  @hair [38, 30, 26]
 
   @doc "A traveler on foot: a t-shirt, cargo pants and shoes."
   def traveler do
@@ -48,9 +54,40 @@ defmodule World.People do
     )
   end
 
+  @doc """
+  A woman of Việt Nam with a nón lá and her hair in a bun: the two are
+  parts from edits (`World.People.Parts`).
+  """
+  def woman_non_la do
+    Human.person("woman_non_la",
+      gender: 0.0,
+      age: 45,
+      height: 0.5,
+      weight: 0.45,
+      skin: Data.name!("skins", "young_asian_female"),
+      eyebrows: Data.name!("eyebrows", "eyebrow010"),
+      hair: nil,
+      clothes: Data.names!("clothes", ["female_casualsuit01", "shoes02"]),
+      pose: "stand",
+      wear: [{"toc_bui_edits", [color: @hair]}, "non_la_edits"]
+    )
+  end
+
+  @doc "A man of Việt Nam with the half helmet of a rider and short hair: parts from edits (`World.People.Parts`)."
+  def man_helmet do
+    Human.person("man_helmet",
+      age: 35,
+      height: 0.55,
+      muscle: 0.55,
+      hair: nil,
+      pose: "stand",
+      wear: [{"toc_ngan_edits", [color: @hair]}, "mu_bao_hiem_edits"]
+    )
+  end
+
   # The hips of the rider on the seat of the scooter, in the axes of the
   # scooter (its center at y = 0).
-  @seat {0.0, -0.33, 0.86}
+  @seat {0.0, -0.33, 0.78}
 
   @doc "A rider on the Honda Vision 110: the scooter is the root."
   def rider do
@@ -77,7 +114,7 @@ defmodule World.People do
   # The camper is a van of the line (`camper/1`).
   @vehicles %{
     "car" => {&ChevyBolt.model/0, {-0.37, -0.15, 0.65}, "drive", {1.3, -0.6}},
-    "motorcycle" => {&RoyalEnfieldHimalayan.model/0, {0.0, -0.3, 0.88}, "ride", {0.75, -0.25}},
+    "motorcycle" => {&RoyalEnfieldHimalayan.model/0, {0.0, -0.3, 0.82}, "ride", {0.75, -0.25}},
     "motorbike" => {&HondaVision.model/0, @seat, "ride", {0.65, -0.2}},
     "bicycle" => {&TouringBicycle.model/0, {0.0, -0.3, 1.03}, "ride_bicycle", {0.55, -0.15}}
   }

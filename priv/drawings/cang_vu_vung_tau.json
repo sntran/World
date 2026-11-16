@@ -1,0 +1,11615 @@
+{
+ "name": "cang_vu_vung_tau",
+ "kind": "house",
+ "sources": [
+  "The office of the port of Vũng Tàu (Cảng vụ Hàng hải Vũng Tàu), 2 Quang Trung, at the corner of Trương Công Định, from edits (plan 0018). The plan is its footprint in OpenStreetMap (way 259732719, © OpenStreetMap contributors, ODbL): 21.3 m on Quang Trung.",
+  "The fronts are from two photos of 2014 (trungydang, Wikimedia Commons, CC BY 3.0): 5 storeys, white with light blue parts, a corner tower of glass and grey washed stone one storey higher, a porch at the corner with a blue board, a second porch with the sign VOSA over a bay of glass.",
+  "A guess: the heights (a ground storey of 4.4 m, each other storey 3.2 m, from the scale of a photo), the sizes of the windows, the back and the east walls (no photo), the roof behind the parapet, and the heights of the two masts."
+ ],
+ "materials": {
+  "part_01": {
+   "color": "#ffffff",
+   "roughness": 0.85,
+   "metalness": 0.0
+  },
+  "part_02": {
+   "color": "#ffffff",
+   "roughness": 0.85,
+   "metalness": 0.0
+  }
+ },
+ "nodes": [
+  {
+   "name": "cang_vu_vung_tau_than",
+   "skill": {
+    "sculpt": {
+     "edits": [
+      {
+       "shape": "extrude",
+       "size": {
+        "outline": [
+         [
+          0,
+          0
+         ],
+         [
+          21.3,
+          0
+         ],
+         [
+          21.7,
+          -16.9
+         ],
+         [
+          6.8,
+          -17.8
+         ],
+         [
+          7.3,
+          -26.5
+         ],
+         [
+          0.6,
+          -27.4
+         ],
+         [
+          -7.5,
+          -11.6
+         ],
+         [
+          -5.0,
+          -4.8
+         ],
+         [
+          -2.3,
+          -1.4
+         ]
+        ],
+        "depth": 18.2
+       },
+       "at": [
+        0,
+        0,
+        9.1
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "extrude",
+       "size": {
+        "outline": [
+         [
+          0.4,
+          -0.4
+         ],
+         [
+          20.9,
+          -0.4
+         ],
+         [
+          21.3,
+          -16.5
+         ],
+         [
+          6.4,
+          -17.4
+         ],
+         [
+          6.9,
+          -26.1
+         ],
+         [
+          0.8,
+          -26.9
+         ],
+         [
+          -7.0,
+          -11.5
+         ],
+         [
+          -4.7,
+          -5.0
+         ],
+         [
+          -2.1,
+          -1.8
+         ]
+        ],
+        "depth": 2.0
+       },
+       "at": [
+        0,
+        0,
+        18.2
+       ],
+       "material": "part_01",
+       "color": "#9a9d98",
+       "mode": "subtract",
+       "roughness": 0.95,
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.05
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        10.65,
+        0.35,
+        0.25
+       ],
+       "at": [
+        10.65,
+        0.0,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        10.65,
+        0.12,
+        0.25
+       ],
+       "at": [
+        10.65,
+        0.0,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        8.8776,
+        0.35,
+        0.25
+       ],
+       "at": [
+        -3.45,
+        -19.5,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        8.8776,
+        0.12,
+        0.25
+       ],
+       "at": [
+        -3.45,
+        -19.5,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3463,
+        0.35,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3463,
+        0.12,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.1708,
+        0.35,
+        0.25
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.1708,
+        0.12,
+        0.25
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.6225,
+        0.35,
+        0.25
+       ],
+       "at": [
+        -6.25,
+        -8.2,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.6225,
+        0.12,
+        0.25
+       ],
+       "at": [
+        -6.25,
+        -8.2,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.3801,
+        0.35,
+        0.25
+       ],
+       "at": [
+        3.95,
+        -26.95,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        0.133133,
+        -0.991098,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.3801,
+        0.12,
+        0.25
+       ],
+       "at": [
+        3.95,
+        -26.95,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        0.133133,
+        -0.991098,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        4.3572,
+        0.35,
+        0.25
+       ],
+       "at": [
+        7.05,
+        -22.15,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        0.998353,
+        0.057377,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        4.3572,
+        0.12,
+        0.25
+       ],
+       "at": [
+        7.05,
+        -22.15,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        0.998353,
+        0.057377,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        7.4636,
+        0.35,
+        0.25
+       ],
+       "at": [
+        14.25,
+        -17.35,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        7.4636,
+        0.12,
+        0.25
+       ],
+       "at": [
+        14.25,
+        -17.35,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        8.4524,
+        0.35,
+        0.25
+       ],
+       "at": [
+        21.5,
+        -8.45,
+        0.35
+       ],
+       "material": "part_01",
+       "color": "#c9cdc8",
+       "axis": [
+        0.99972,
+        0.023662,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        8.4524,
+        0.12,
+        0.25
+       ],
+       "at": [
+        21.5,
+        -8.45,
+        18.08
+       ],
+       "material": "part_01",
+       "color": "#d9dcd6",
+       "axis": [
+        0.99972,
+        0.023662,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.0,
+        6.4,
+        0.25
+       ],
+       "at": [
+        3.5,
+        0.0,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#a6cbe3",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.23,
+        0.83,
+        0.25
+       ],
+       "at": [
+        2.0,
+        0.0,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.15,
+        0.75,
+        0.25
+       ],
+       "at": [
+        2.0,
+        0.0,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        1.6167,
+        0.0,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        2.3833,
+        0.0,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.23,
+        0.83,
+        0.25
+       ],
+       "at": [
+        5.0,
+        0.0,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.15,
+        0.75,
+        0.25
+       ],
+       "at": [
+        5.0,
+        0.0,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        4.6167,
+        0.0,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        5.3833,
+        0.0,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.8,
+        0.07,
+        0.25
+       ],
+       "at": [
+        3.5,
+        0.25,
+        5.2
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        3.5,
+        0.3,
+        5.56
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.225,
+        0.2,
+        0.155
+       ],
+       "at": [
+        3.5,
+        0.3,
+        5.56
+       ],
+       "material": "part_01",
+       "color": "#7c8184",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01,
+       "raise": -0.005
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.25,
+        1.25,
+        0.9
+       ],
+       "at": [
+        9.35,
+        0.0,
+        5.95
+       ],
+       "material": "part_01",
+       "color": "#d9dedb",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "subtract",
+       "roughness": 0.8
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.0,
+        0.95,
+        0.05
+       ],
+       "at": [
+        9.35,
+        -0.86,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.08,
+       "metal": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        8.225,
+        -0.85,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        9.35,
+        -0.85,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        10.475,
+        -0.85,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        7.9,
+        -0.25,
+        5.0
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.0,
+        1.25,
+        0.9
+       ],
+       "at": [
+        18.6,
+        0.0,
+        5.95
+       ],
+       "material": "part_01",
+       "color": "#d9dedb",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "subtract",
+       "roughness": 0.8
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.75,
+        0.95,
+        0.05
+       ],
+       "at": [
+        18.6,
+        -0.86,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.08,
+       "metal": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        17.6,
+        -0.85,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        18.6,
+        -0.85,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        19.6,
+        -0.85,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        19.8,
+        -0.25,
+        5.0
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.23,
+        0.83,
+        0.25
+       ],
+       "at": [
+        2.0,
+        0.0,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.15,
+        0.75,
+        0.25
+       ],
+       "at": [
+        2.0,
+        0.0,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        1.6167,
+        0.0,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        2.3833,
+        0.0,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.23,
+        0.83,
+        0.25
+       ],
+       "at": [
+        5.0,
+        0.0,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.15,
+        0.75,
+        0.25
+       ],
+       "at": [
+        5.0,
+        0.0,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        4.6167,
+        0.0,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        5.3833,
+        0.0,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.8,
+        0.07,
+        0.25
+       ],
+       "at": [
+        3.5,
+        0.25,
+        8.4
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.25,
+        1.25,
+        0.9
+       ],
+       "at": [
+        9.35,
+        0.0,
+        9.15
+       ],
+       "material": "part_01",
+       "color": "#d9dedb",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "subtract",
+       "roughness": 0.8
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.0,
+        0.95,
+        0.05
+       ],
+       "at": [
+        9.35,
+        -0.86,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.08,
+       "metal": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        8.225,
+        -0.85,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        9.35,
+        -0.85,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        10.475,
+        -0.85,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        7.9,
+        -0.25,
+        8.2
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.0,
+        1.25,
+        0.9
+       ],
+       "at": [
+        18.6,
+        0.0,
+        9.15
+       ],
+       "material": "part_01",
+       "color": "#d9dedb",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "subtract",
+       "roughness": 0.8
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.75,
+        0.95,
+        0.05
+       ],
+       "at": [
+        18.6,
+        -0.86,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.08,
+       "metal": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        17.6,
+        -0.85,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        18.6,
+        -0.85,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        19.6,
+        -0.85,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        19.8,
+        -0.25,
+        8.2
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.23,
+        0.83,
+        0.25
+       ],
+       "at": [
+        2.0,
+        0.0,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.15,
+        0.75,
+        0.25
+       ],
+       "at": [
+        2.0,
+        0.0,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        1.6167,
+        0.0,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        2.3833,
+        0.0,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.23,
+        0.83,
+        0.25
+       ],
+       "at": [
+        5.0,
+        0.0,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.15,
+        0.75,
+        0.25
+       ],
+       "at": [
+        5.0,
+        0.0,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        4.6167,
+        0.0,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        5.3833,
+        0.0,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.8,
+        0.07,
+        0.25
+       ],
+       "at": [
+        3.5,
+        0.25,
+        11.6
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        3.5,
+        0.3,
+        11.96
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.225,
+        0.2,
+        0.155
+       ],
+       "at": [
+        3.5,
+        0.3,
+        11.96
+       ],
+       "material": "part_01",
+       "color": "#7c8184",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01,
+       "raise": -0.005
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.25,
+        1.25,
+        0.9
+       ],
+       "at": [
+        9.35,
+        0.0,
+        12.35
+       ],
+       "material": "part_01",
+       "color": "#d9dedb",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "subtract",
+       "roughness": 0.8
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.0,
+        0.95,
+        0.05
+       ],
+       "at": [
+        9.35,
+        -0.86,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.08,
+       "metal": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        8.225,
+        -0.85,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        9.35,
+        -0.85,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        10.475,
+        -0.85,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        7.9,
+        -0.25,
+        11.4
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.0,
+        1.25,
+        0.9
+       ],
+       "at": [
+        18.6,
+        0.0,
+        12.35
+       ],
+       "material": "part_01",
+       "color": "#d9dedb",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "subtract",
+       "roughness": 0.8
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.75,
+        0.95,
+        0.05
+       ],
+       "at": [
+        18.6,
+        -0.86,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.08,
+       "metal": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        17.6,
+        -0.85,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        18.6,
+        -0.85,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        19.6,
+        -0.85,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        19.8,
+        -0.25,
+        11.4
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.23,
+        0.83,
+        0.25
+       ],
+       "at": [
+        2.0,
+        0.0,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.15,
+        0.75,
+        0.25
+       ],
+       "at": [
+        2.0,
+        0.0,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        1.6167,
+        0.0,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        2.3833,
+        0.0,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.23,
+        0.83,
+        0.25
+       ],
+       "at": [
+        5.0,
+        0.0,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.15,
+        0.75,
+        0.25
+       ],
+       "at": [
+        5.0,
+        0.0,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        4.6167,
+        0.0,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        5.3833,
+        0.0,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.8,
+        0.07,
+        0.25
+       ],
+       "at": [
+        3.5,
+        0.25,
+        14.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.25,
+        1.25,
+        0.9
+       ],
+       "at": [
+        9.35,
+        0.0,
+        15.55
+       ],
+       "material": "part_01",
+       "color": "#d9dedb",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "subtract",
+       "roughness": 0.8
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.0,
+        0.95,
+        0.05
+       ],
+       "at": [
+        9.35,
+        -0.86,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.08,
+       "metal": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        8.225,
+        -0.85,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        9.35,
+        -0.85,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        10.475,
+        -0.85,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        7.9,
+        -0.25,
+        14.6
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.0,
+        1.25,
+        0.9
+       ],
+       "at": [
+        18.6,
+        0.0,
+        15.55
+       ],
+       "material": "part_01",
+       "color": "#d9dedb",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "subtract",
+       "roughness": 0.8
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.75,
+        0.95,
+        0.05
+       ],
+       "at": [
+        18.6,
+        -0.86,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.08,
+       "metal": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        17.6,
+        -0.85,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        18.6,
+        -0.85,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        0.95,
+        0.06
+       ],
+       "at": [
+        19.6,
+        -0.85,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        19.8,
+        -0.25,
+        14.6
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.85,
+        7.3,
+        0.25
+       ],
+       "at": [
+        14.15,
+        0.1,
+        11.7
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        6.0,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        10.9
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.05,
+       "roughness": 0.08,
+       "metal": 0.3,
+       "raise": -0.05
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        6.0,
+        0.45
+       ],
+       "at": [
+        13.31,
+        0.0,
+        10.9
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        6.0,
+        0.45
+       ],
+       "at": [
+        13.87,
+        0.0,
+        10.9
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        6.0,
+        0.45
+       ],
+       "at": [
+        14.43,
+        0.0,
+        10.9
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.03,
+        6.0,
+        0.45
+       ],
+       "at": [
+        14.99,
+        0.0,
+        10.9
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        5.7
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        6.5
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        7.3
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        8.1
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        8.9
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        9.7
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        10.5
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        11.3
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        12.1
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        12.9
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        13.7
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        14.5
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.4,
+        0.03,
+        0.45
+       ],
+       "at": [
+        14.15,
+        0.0,
+        15.3
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.2,
+        0.15,
+        1.3
+       ],
+       "at": [
+        18.0,
+        1.3,
+        3.45
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.2,
+        0.375,
+        0.08
+       ],
+       "at": [
+        18.0,
+        2.5,
+        3.95
+       ],
+       "material": "part_01",
+       "color": "#a6cbe3",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.7
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.1,
+        0.225,
+        0.1
+       ],
+       "at": [
+        18.0,
+        2.52,
+        3.95
+       ],
+       "material": "part_01",
+       "color": "#1f5fae",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.4
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.75,
+        0.05,
+        0.11
+       ],
+       "at": [
+        18.0,
+        2.53,
+        3.95
+       ],
+       "material": "part_01",
+       "color": "#f2f2ee",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01
+      },
+      {
+       "shape": "cylinder",
+       "size": [
+        0.2,
+        1.65
+       ],
+       "at": [
+        15.3,
+        2.3,
+        1.65
+       ],
+       "material": "part_01",
+       "color": "#f2f2ee",
+       "roughness": 0.7
+      },
+      {
+       "shape": "cylinder",
+       "size": [
+        0.2,
+        1.65
+       ],
+       "at": [
+        20.7,
+        2.3,
+        1.65
+       ],
+       "material": "part_01",
+       "color": "#f2f2ee",
+       "roughness": 0.7
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.38,
+        1.43,
+        0.25
+       ],
+       "at": [
+        18.0,
+        0.0,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3,
+        1.35,
+        0.25
+       ],
+       "at": [
+        18.0,
+        0.0,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.35,
+        0.25
+       ],
+       "at": [
+        17.35,
+        0.0,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.35,
+        0.25
+       ],
+       "at": [
+        18.0,
+        0.0,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.35,
+        0.25
+       ],
+       "at": [
+        18.65,
+        0.0,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.38,
+        1.08,
+        0.25
+       ],
+       "at": [
+        2.2,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3,
+        1.0,
+        0.25
+       ],
+       "at": [
+        2.2,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.0,
+        0.25
+       ],
+       "at": [
+        1.7667,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.0,
+        0.25
+       ],
+       "at": [
+        2.6333,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.18,
+        1.08,
+        0.25
+       ],
+       "at": [
+        5.4,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.1,
+        1.0,
+        0.25
+       ],
+       "at": [
+        5.4,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.0,
+        0.25
+       ],
+       "at": [
+        5.0333,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.0,
+        0.25
+       ],
+       "at": [
+        5.7667,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.78,
+        1.08,
+        0.25
+       ],
+       "at": [
+        9.3,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.7,
+        1.0,
+        0.25
+       ],
+       "at": [
+        9.3,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.0,
+        0.25
+       ],
+       "at": [
+        8.7333,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.0,
+        0.25
+       ],
+       "at": [
+        9.8667,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        1.08,
+        0.25
+       ],
+       "at": [
+        13.6,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        1.0,
+        0.25
+       ],
+       "at": [
+        13.6,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.0,
+        0.25
+       ],
+       "at": [
+        13.2667,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.0,
+        0.25
+       ],
+       "at": [
+        13.9333,
+        0.0,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.0,
+        0.15,
+        0.5
+       ],
+       "at": [
+        18.0,
+        0.5,
+        0.15
+       ],
+       "material": "part_01",
+       "color": "#b9bbb6",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.9,
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.03
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.0,
+        0.075,
+        0.9
+       ],
+       "at": [
+        18.0,
+        0.9,
+        0.075
+       ],
+       "material": "part_01",
+       "color": "#b9bbb6",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.9,
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.03
+       }
+      },
+      {
+       "shape": "extrude",
+       "size": {
+        "outline": [
+         [
+          -2.3,
+          -1.4
+         ],
+         [
+          -5.0,
+          -4.8
+         ],
+         [
+          -5.6,
+          -9.0
+         ],
+         [
+          -1.2,
+          -8.2
+         ],
+         [
+          1.6,
+          -4.2
+         ],
+         [
+          0.6,
+          -0.6
+         ]
+        ],
+        "depth": 21.2
+       },
+       "at": [
+        0,
+        0,
+        10.6
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.4725,
+        6.4,
+        0.25
+       ],
+       "at": [
+        -6.25,
+        -8.2,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#a6cbe3",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.1963,
+        6.4,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#a6cbe3",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.65,
+        8.4,
+        0.8
+       ],
+       "at": [
+        -3.5717,
+        -3.1622,
+        12.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.4,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        6.25
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.05,
+       "roughness": 0.08,
+       "metal": 0.3,
+       "raise": -0.05
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -4.1475,
+        -3.7265,
+        6.25
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.1525,
+        -2.4735,
+        6.25
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.65,
+        0.475,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        4.82
+       ],
+       "material": "part_01",
+       "color": "#8d979b",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "roughness": 0.95,
+       "surface": {
+        "kind": "stone",
+        "scale": 0.03
+       },
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.88,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.8,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3,
+        0.07,
+        0.25
+       ],
+       "at": [
+        -7.0445,
+        -9.6366,
+        5.2
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.4,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        9.45
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.05,
+       "roughness": 0.08,
+       "metal": 0.3,
+       "raise": -0.05
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -4.1475,
+        -3.7265,
+        9.45
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.1525,
+        -2.4735,
+        9.45
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.65,
+        0.475,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        8.02
+       ],
+       "material": "part_01",
+       "color": "#8d979b",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "roughness": 0.95,
+       "surface": {
+        "kind": "stone",
+        "scale": 0.03
+       },
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.88,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.8,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3,
+        0.07,
+        0.25
+       ],
+       "at": [
+        -7.0445,
+        -9.6366,
+        8.4
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.4,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        12.65
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.05,
+       "roughness": 0.08,
+       "metal": 0.3,
+       "raise": -0.05
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -4.1475,
+        -3.7265,
+        12.65
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.1525,
+        -2.4735,
+        12.65
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.65,
+        0.475,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        11.22
+       ],
+       "material": "part_01",
+       "color": "#8d979b",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "roughness": 0.95,
+       "surface": {
+        "kind": "stone",
+        "scale": 0.03
+       },
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.88,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.8,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3,
+        0.07,
+        0.25
+       ],
+       "at": [
+        -7.0445,
+        -9.6366,
+        11.6
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.4,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        15.85
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.05,
+       "roughness": 0.08,
+       "metal": 0.3,
+       "raise": -0.05
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -4.1475,
+        -3.7265,
+        15.85
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.1525,
+        -2.4735,
+        15.85
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.65,
+        0.475,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        14.42
+       ],
+       "material": "part_01",
+       "color": "#8d979b",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "roughness": 0.95,
+       "surface": {
+        "kind": "stone",
+        "scale": 0.03
+       },
+       "raise": 0.02
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.88,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.8,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -6.8099,
+        -9.7228,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3,
+        0.07,
+        0.25
+       ],
+       "at": [
+        -7.0445,
+        -9.6366,
+        14.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.4,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        19.05
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.05,
+       "roughness": 0.08,
+       "metal": 0.3,
+       "raise": -0.05
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -4.1475,
+        -3.7265,
+        19.05
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.035,
+        0.95,
+        0.95
+       ],
+       "at": [
+        -3.1525,
+        -2.4735,
+        19.05
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.65,
+        0.475,
+        0.95
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        17.62
+       ],
+       "material": "part_01",
+       "color": "#8d979b",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.02,
+       "roughness": 0.95,
+       "surface": {
+        "kind": "stone",
+        "scale": 0.03
+       },
+       "raise": 0.02
+      },
+      {
+       "shape": "extrude",
+       "size": {
+        "outline": [
+         [
+          -2.3,
+          -1.4
+         ],
+         [
+          -5.0,
+          -4.8
+         ],
+         [
+          -5.6,
+          -9.0
+         ],
+         [
+          -1.2,
+          -8.2
+         ],
+         [
+          1.6,
+          -4.2
+         ],
+         [
+          0.6,
+          -0.6
+         ]
+        ],
+        "depth": 0.5
+       },
+       "at": [
+        0,
+        0,
+        20.95
+       ],
+       "material": "part_01",
+       "color": "#8d979b",
+       "roughness": 0.95,
+       "surface": {
+        "kind": "stone",
+        "scale": 0.03
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.95,
+        0.25,
+        1.1
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        20.95
+       ],
+       "material": "part_01",
+       "color": "#8d979b",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.95,
+       "surface": {
+        "kind": "stone",
+        "scale": 0.03
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.5,
+        0.15,
+        1.6
+       ],
+       "at": [
+        -4.903,
+        -2.105,
+        3.5
+       ],
+       "material": "part_01",
+       "color": "#a6cbe3",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.7
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.3,
+        0.5,
+        0.09
+       ],
+       "at": [
+        -5.9993,
+        -1.2344,
+        4.25
+       ],
+       "material": "part_01",
+       "color": "#1f5fae",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.4
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.8,
+        0.07,
+        0.1
+       ],
+       "at": [
+        -6.0072,
+        -1.2281,
+        4.35
+       ],
+       "material": "part_01",
+       "color": "#f2f2ee",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3,
+        0.04,
+        0.1
+       ],
+       "at": [
+        -6.0072,
+        -1.2281,
+        4.05
+       ],
+       "material": "part_01",
+       "color": "#f2f2ee",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01
+      },
+      {
+       "shape": "cylinder",
+       "size": [
+        0.24,
+        1.7
+       ],
+       "at": [
+        -7.6462,
+        -3.6298,
+        1.7
+       ],
+       "material": "part_01",
+       "color": "#f2f2ee",
+       "roughness": 0.7
+      },
+      {
+       "shape": "cylinder",
+       "size": [
+        0.24,
+        1.7
+       ],
+       "at": [
+        -4.0393,
+        0.9123,
+        1.7
+       ],
+       "material": "part_01",
+       "color": "#f2f2ee",
+       "roughness": 0.7
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.38,
+        1.43,
+        0.25
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.3,
+        1.35,
+        0.25
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.35,
+        0.25
+       ],
+       "at": [
+        -4.0542,
+        -3.609,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.35,
+        0.25
+       ],
+       "at": [
+        -3.65,
+        -3.1,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.35,
+        0.25
+       ],
+       "at": [
+        -3.2458,
+        -2.591,
+        1.75
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.7,
+        0.225,
+        0.6
+       ],
+       "at": [
+        -4.1199,
+        -2.7269,
+        0.225
+       ],
+       "material": "part_01",
+       "color": "#b9bbb6",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.9,
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.03
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.7,
+        0.15,
+        1.0
+       ],
+       "at": [
+        -4.4331,
+        -2.4781,
+        0.15
+       ],
+       "material": "part_01",
+       "color": "#b9bbb6",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.9,
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.03
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        3.7,
+        0.075,
+        1.4
+       ],
+       "at": [
+        -4.7464,
+        -2.2294,
+        0.075
+       ],
+       "material": "part_01",
+       "color": "#b9bbb6",
+       "axis": [
+        -0.783111,
+        0.621882,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.9,
+       "surface": {
+        "kind": "concrete",
+        "scale": 0.03
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.98,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -1.15,
+        -0.7,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.519947,
+        0.854199,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.68,
+        0.98,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.6,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -5.5866,
+        -6.3956,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        8.6776,
+        6.4,
+        0.25
+       ],
+       "at": [
+        -3.45,
+        -19.5,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#a6cbe3",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.01
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        6.4,
+        0.25
+       ],
+       "at": [
+        0.2578,
+        -26.7326,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.03,
+       "raise": 0.03
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        6.4,
+        0.25
+       ],
+       "at": [
+        -1.4301,
+        -23.4401,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.03,
+       "raise": 0.03
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        6.4,
+        0.25
+       ],
+       "at": [
+        -3.118,
+        -20.1475,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.03,
+       "raise": 0.03
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        6.4,
+        0.25
+       ],
+       "at": [
+        -4.806,
+        -16.855,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.03,
+       "raise": 0.03
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.2,
+        6.4,
+        0.25
+       ],
+       "at": [
+        -6.5168,
+        -13.5179,
+        10.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.8,
+       "blend": 0.03,
+       "raise": 0.03
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        7.3,
+        0.07,
+        0.25
+       ],
+       "at": [
+        -3.2619,
+        -20.4149,
+        5.2
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        -3.0885,
+        -20.8628,
+        5.56
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.225,
+        0.2,
+        0.155
+       ],
+       "at": [
+        -3.0885,
+        -20.8628,
+        5.56
+       ],
+       "material": "part_01",
+       "color": "#7c8184",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01,
+       "raise": -0.005
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        7.3,
+        0.07,
+        0.25
+       ],
+       "at": [
+        -3.2619,
+        -20.4149,
+        8.4
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        -4.7764,
+        -17.5702,
+        8.76
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.225,
+        0.2,
+        0.155
+       ],
+       "at": [
+        -4.7764,
+        -17.5702,
+        8.76
+       ],
+       "material": "part_01",
+       "color": "#7c8184",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01,
+       "raise": -0.005
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        7.3,
+        0.07,
+        0.25
+       ],
+       "at": [
+        -3.2619,
+        -20.4149,
+        11.6
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        -6.4644,
+        -14.2777,
+        11.96
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.225,
+        0.2,
+        0.155
+       ],
+       "at": [
+        -6.4644,
+        -14.2777,
+        11.96
+       ],
+       "material": "part_01",
+       "color": "#7c8184",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01,
+       "raise": -0.005
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.83,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.75,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#f4f5f2",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        7.3,
+        0.07,
+        0.25
+       ],
+       "at": [
+        -3.2619,
+        -20.4149,
+        14.8
+       ],
+       "material": "part_01",
+       "color": "#ecf0ef",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.4,
+        0.28,
+        0.15
+       ],
+       "at": [
+        -1.4005,
+        -24.1553,
+        15.16
+       ],
+       "material": "part_01",
+       "color": "#dfe1dc",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.225,
+        0.2,
+        0.155
+       ],
+       "at": [
+        -1.4005,
+        -24.1553,
+        15.16
+       ],
+       "material": "part_01",
+       "color": "#7c8184",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.01,
+       "raise": -0.005
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.98,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -0.5861,
+        -25.0863,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.98,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -2.2741,
+        -21.7938,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.08,
+        0.98,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        1.0,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.9,
+        0.25
+       ],
+       "at": [
+        -3.962,
+        -18.5012,
+        2.2
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.88,
+        1.28,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        1.6
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.6,
+       "blend": 0.015,
+       "raise": 0.015
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.8,
+        1.2,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        1.6
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.06,
+       "raise": -0.06
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        1.2,
+        0.25
+       ],
+       "at": [
+        -5.65,
+        -15.2087,
+        1.6
+       ],
+       "material": "part_01",
+       "color": "#5d6266",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.006,
+       "roughness": 0.6
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        3.9303,
+        -26.9527,
+        2.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.133133,
+        -0.991098,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        3.9303,
+        -26.9527,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.133133,
+        -0.991098,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        3.9303,
+        -26.9527,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.133133,
+        -0.991098,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        3.9303,
+        -26.9527,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.133133,
+        -0.991098,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        3.9303,
+        -26.9527,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.133133,
+        -0.991098,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        7.0525,
+        -22.1928,
+        2.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.998353,
+        0.057377,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        7.0525,
+        -22.1928,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.998353,
+        0.057377,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        7.0525,
+        -22.1928,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.998353,
+        0.057377,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        7.0525,
+        -22.1928,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.998353,
+        0.057377,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        7.0525,
+        -22.1928,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.998353,
+        0.057377,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        18.2064,
+        -17.111,
+        2.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        12.7164,
+        -17.4426,
+        2.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        8.7237,
+        -17.6838,
+        2.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        18.2064,
+        -17.111,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        12.7164,
+        -17.4426,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        8.7237,
+        -17.6838,
+        6.15
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        18.2064,
+        -17.111,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        12.7164,
+        -17.4426,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        8.7237,
+        -17.6838,
+        9.35
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        18.2064,
+        -17.111,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        12.7164,
+        -17.4426,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        8.7237,
+        -17.6838,
+        12.55
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        18.2064,
+        -17.111,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        12.7164,
+        -17.4426,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.7,
+        0.65,
+        0.25
+       ],
+       "at": [
+        8.7237,
+        -17.6838,
+        15.75
+       ],
+       "material": "part_01",
+       "color": "#4f6f86",
+       "axis": [
+        0.060293,
+        -0.998181,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "roughness": 0.08,
+       "metal": 0.3,
+       "blend": 0.04,
+       "raise": -0.04
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0217,
+        0.7713,
+        0.25
+       ],
+       "at": [
+        20.0899,
+        0.0,
+        17.2287
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0421,
+        0.7095,
+        0.25
+       ],
+       "at": [
+        2.0569,
+        0.0,
+        17.2905
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0382,
+        0.4195,
+        0.25
+       ],
+       "at": [
+        14.1634,
+        0.0,
+        17.5805
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0248,
+        0.5697,
+        0.25
+       ],
+       "at": [
+        12.8608,
+        0.0,
+        17.4303
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0417,
+        0.4664,
+        0.25
+       ],
+       "at": [
+        9.2149,
+        0.0,
+        17.5336
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0363,
+        0.7722,
+        0.25
+       ],
+       "at": [
+        20.8928,
+        0.0,
+        17.2278
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0211,
+        0.3975,
+        0.25
+       ],
+       "at": [
+        9.5085,
+        0.0,
+        17.6025
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0296,
+        0.5057,
+        0.25
+       ],
+       "at": [
+        0.8681,
+        0.0,
+        17.4943
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0358,
+        0.7405,
+        0.25
+       ],
+       "at": [
+        8.1663,
+        0.0,
+        17.2595
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0207,
+        0.3799,
+        0.25
+       ],
+       "at": [
+        11.9026,
+        0.0,
+        17.6201
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0353,
+        0.3252,
+        0.25
+       ],
+       "at": [
+        7.0305,
+        0.0,
+        17.6748
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0255,
+        0.621,
+        0.25
+       ],
+       "at": [
+        20.9727,
+        0.0,
+        17.379
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.042,
+        0.6882,
+        0.25
+       ],
+       "at": [
+        18.7969,
+        0.0,
+        17.3118
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0437,
+        0.6696,
+        0.25
+       ],
+       "at": [
+        19.0665,
+        0.0,
+        17.3304
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0489,
+        0.7895,
+        0.25
+       ],
+       "at": [
+        7.6234,
+        0.0,
+        17.2105
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0415,
+        0.6647,
+        0.25
+       ],
+       "at": [
+        3.6365,
+        0.0,
+        17.3353
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0347,
+        0.5417,
+        0.25
+       ],
+       "at": [
+        9.8511,
+        0.0,
+        17.4583
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.0,
+        1.0,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0449,
+        0.5255,
+        0.25
+       ],
+       "at": [
+        -6.7749,
+        -13.0145,
+        17.4745
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.047,
+        0.7356,
+        0.25
+       ],
+       "at": [
+        -2.3068,
+        -21.73,
+        17.2644
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0476,
+        0.5622,
+        0.25
+       ],
+       "at": [
+        -3.1449,
+        -20.0952,
+        17.4378
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0267,
+        0.5176,
+        0.25
+       ],
+       "at": [
+        -5.2013,
+        -16.0839,
+        17.4824
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.025,
+        0.6348,
+        0.25
+       ],
+       "at": [
+        -2.0778,
+        -22.1766,
+        17.3652
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0473,
+        0.3975,
+        0.25
+       ],
+       "at": [
+        -6.6427,
+        -13.2724,
+        17.6025
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0412,
+        0.7765,
+        0.25
+       ],
+       "at": [
+        -1.9596,
+        -22.4072,
+        17.2235
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0395,
+        0.5348,
+        0.25
+       ],
+       "at": [
+        -3.4833,
+        -19.4351,
+        17.4652
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0262,
+        0.4215,
+        0.25
+       ],
+       "at": [
+        -4.1383,
+        -18.1574,
+        17.5785
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0387,
+        0.7638,
+        0.25
+       ],
+       "at": [
+        -3.5431,
+        -19.3185,
+        17.2362
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0418,
+        0.7012,
+        0.25
+       ],
+       "at": [
+        -0.1268,
+        -25.9824,
+        17.2988
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0423,
+        0.3553,
+        0.25
+       ],
+       "at": [
+        -6.6404,
+        -13.2767,
+        17.6447
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0282,
+        0.6091,
+        0.25
+       ],
+       "at": [
+        0.0033,
+        -26.236,
+        17.3909
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0232,
+        0.7315,
+        0.25
+       ],
+       "at": [
+        -1.3104,
+        -23.6735,
+        17.2685
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.889876,
+        -0.456202,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0273,
+        0.7197,
+        0.25
+       ],
+       "at": [
+        -6.1987,
+        -8.0605,
+        17.2803
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0327,
+        0.7343,
+        0.25
+       ],
+       "at": [
+        -6.9139,
+        -10.0057,
+        17.2657
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0309,
+        0.2675,
+        0.25
+       ],
+       "at": [
+        -5.7525,
+        -6.8468,
+        17.7325
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0225,
+        0.62,
+        0.25
+       ],
+       "at": [
+        -7.0024,
+        -10.2464,
+        17.38
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.0419,
+        0.2639,
+        0.25
+       ],
+       "at": [
+        -5.2077,
+        -5.365,
+        17.7361
+       ],
+       "material": "part_01",
+       "color": "#6f736c",
+       "axis": [
+        -0.938579,
+        0.345066,
+        0
+       ],
+       "up": [
+        0,
+        0,
+        1
+       ],
+       "mode": "paint",
+       "blend": 0.04,
+       "opacity": 0.3
+      }
+     ],
+     "dirt": 0.45,
+     "wear": 0.15,
+     "cells": {
+      "near": 0.05,
+      "mid": 0.1,
+      "far": 0.25
+     },
+     "budget": {
+      "near": 30000,
+      "mid": 5000,
+      "far": 600
+     },
+     "bake": {
+      "near": 2048,
+      "mid": 1024,
+      "far": 256
+     }
+    }
+   }
+  },
+  {
+   "name": "cang_vu_vung_tau_mai",
+   "skill": {
+    "sculpt": {
+     "edits": [
+      {
+       "shape": "box",
+       "size": [
+        2.6,
+        2.2,
+        1.4
+       ],
+       "at": [
+        14.2,
+        -4.0,
+        18.599999999999998
+       ],
+       "material": "part_02",
+       "color": "#ecf0ef",
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.75,
+        2.35,
+        0.08
+       ],
+       "at": [
+        14.2,
+        -4.0,
+        20.05
+       ],
+       "material": "part_02",
+       "color": "#d9dcd6",
+       "roughness": 0.85,
+       "surface": {
+        "kind": "plaster",
+        "scale": 0.04
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.3,
+        0.12,
+        0.75
+       ],
+       "at": [
+        14.15,
+        -0.3,
+        18.95
+       ],
+       "material": "part_02",
+       "color": "#e9e6da",
+       "roughness": 0.7
+      },
+      {
+       "shape": "box",
+       "size": [
+        2.4,
+        0.16,
+        0.06
+       ],
+       "at": [
+        14.15,
+        -0.3,
+        19.73
+       ],
+       "material": "part_02",
+       "color": "#bfc3bd",
+       "roughness": 0.7
+      },
+      {
+       "shape": "cylinder",
+       "size": [
+        0.6,
+        0.75
+       ],
+       "at": [
+        15.2,
+        -4.6,
+        21.049999999999997
+       ],
+       "material": "part_02",
+       "color": "#cfd2d4",
+       "roughness": 0.3,
+       "metal": 0.9,
+       "surface": {
+        "kind": "brushed",
+        "scale": 0.004
+       }
+      },
+      {
+       "shape": "box",
+       "size": [
+        0.5,
+        0.5,
+        0.1
+       ],
+       "at": [
+        15.2,
+        -4.6,
+        20.2
+       ],
+       "material": "part_02",
+       "color": "#7c8184",
+       "roughness": 0.6,
+       "metal": 0.7
+      },
+      {
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          15.9,
+          -0.17,
+          19.35
+         ],
+         [
+          15.6,
+          -0.17,
+          18.55
+         ],
+         [
+          15.3,
+          -0.17,
+          19.35
+         ]
+        ],
+        "radii": [
+         0.055,
+         0.055,
+         0.055
+        ]
+       },
+       "color": "#5a4a32",
+       "material": "part_02",
+       "roughness": 0.5
+      },
+      {
+       "shape": "ring",
+       "size": [
+        0.33,
+        0.055
+       ],
+       "at": [
+        14.55,
+        -0.17,
+        18.95
+       ],
+       "material": "part_02",
+       "color": "#5a4a32",
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "roughness": 0.5
+      },
+      {
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          13.8,
+          -0.17,
+          19.27
+         ],
+         [
+          13.65,
+          -0.17,
+          19.35
+         ],
+         [
+          13.4,
+          -0.17,
+          19.23
+         ],
+         [
+          13.48,
+          -0.17,
+          19.0
+         ],
+         [
+          13.7,
+          -0.17,
+          18.9
+         ],
+         [
+          13.78,
+          -0.17,
+          18.69
+         ],
+         [
+          13.55,
+          -0.17,
+          18.55
+         ],
+         [
+          13.35,
+          -0.17,
+          18.65
+         ]
+        ],
+        "radii": [
+         0.055,
+         0.055,
+         0.055,
+         0.055,
+         0.055,
+         0.055,
+         0.055,
+         0.055
+        ]
+       },
+       "color": "#5a4a32",
+       "material": "part_02",
+       "roughness": 0.5
+      },
+      {
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          13.0,
+          -0.17,
+          18.55
+         ],
+         [
+          12.7,
+          -0.17,
+          19.35
+         ],
+         [
+          12.4,
+          -0.17,
+          18.55
+         ]
+        ],
+        "radii": [
+         0.055,
+         0.055,
+         0.055
+        ]
+       },
+       "color": "#5a4a32",
+       "material": "part_02",
+       "roughness": 0.5
+      },
+      {
+       "shape": "tube",
+       "size": {
+        "points": [
+         [
+          12.88,
+          -0.17,
+          18.85
+         ],
+         [
+          12.52,
+          -0.17,
+          18.85
+         ]
+        ],
+        "radii": [
+         0.055,
+         0.055
+        ]
+       },
+       "color": "#5a4a32",
+       "material": "part_02",
+       "roughness": 0.5
+      }
+     ],
+     "dirt": 0.4,
+     "wear": 0.15,
+     "cells": {
+      "near": 0.03,
+      "mid": 0.06,
+      "far": 0.12
+     },
+     "budget": {
+      "near": 6000,
+      "mid": 1200,
+      "far": 200
+     },
+     "bake": {
+      "near": 512,
+      "mid": 256,
+      "far": 128
+     },
+     "details": [
+      {
+       "edits": [
+        {
+         "shape": "tube",
+         "size": {
+          "points": [
+           [
+            9.0,
+            -9.5,
+            17.2
+           ],
+           [
+            9.0,
+            -9.5,
+            27.2
+           ]
+          ],
+          "radii": [
+           0.09,
+           0.05
+          ]
+         },
+         "color": "#c8ccc9",
+         "material": "part_02",
+         "roughness": 0.4,
+         "metal": 0.8
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          9.0,
+          -9.5,
+          19.2
+         ],
+         "material": "part_02",
+         "color": "#b9382e",
+         "roughness": 0.5
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          9.0,
+          -9.5,
+          21.2
+         ],
+         "material": "part_02",
+         "color": "#f2f2ee",
+         "roughness": 0.5
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          9.0,
+          -9.5,
+          23.2
+         ],
+         "material": "part_02",
+         "color": "#b9382e",
+         "roughness": 0.5
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          9.0,
+          -9.5,
+          25.2
+         ],
+         "material": "part_02",
+         "color": "#f2f2ee",
+         "roughness": 0.5
+        },
+        {
+         "shape": "tube",
+         "size": {
+          "points": [
+           [
+            9.0,
+            -9.5,
+            25.2
+           ],
+           [
+            11.5981,
+            -8.0,
+            17.3
+           ]
+          ],
+          "radii": [
+           0.012,
+           0.012
+          ]
+         },
+         "color": "#8f9498",
+         "material": "part_02",
+         "roughness": 0.4,
+         "metal": 0.8
+        },
+        {
+         "shape": "tube",
+         "size": {
+          "points": [
+           [
+            9.0,
+            -9.5,
+            25.2
+           ],
+           [
+            6.4019,
+            -8.0,
+            17.3
+           ]
+          ],
+          "radii": [
+           0.012,
+           0.012
+          ]
+         },
+         "color": "#8f9498",
+         "material": "part_02",
+         "roughness": 0.4,
+         "metal": 0.8
+        },
+        {
+         "shape": "tube",
+         "size": {
+          "points": [
+           [
+            9.0,
+            -9.5,
+            25.2
+           ],
+           [
+            9.0,
+            -12.5,
+            17.3
+           ]
+          ],
+          "radii": [
+           0.012,
+           0.012
+          ]
+         },
+         "color": "#8f9498",
+         "material": "part_02",
+         "roughness": 0.4,
+         "metal": 0.8
+        },
+        {
+         "shape": "tube",
+         "size": {
+          "points": [
+           [
+            3.0,
+            -15.0,
+            17.2
+           ],
+           [
+            3.0,
+            -15.0,
+            29.2
+           ]
+          ],
+          "radii": [
+           0.09,
+           0.05
+          ]
+         },
+         "color": "#c8ccc9",
+         "material": "part_02",
+         "roughness": 0.4,
+         "metal": 0.8
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          3.0,
+          -15.0,
+          19.2
+         ],
+         "material": "part_02",
+         "color": "#b9382e",
+         "roughness": 0.5
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          3.0,
+          -15.0,
+          21.2
+         ],
+         "material": "part_02",
+         "color": "#f2f2ee",
+         "roughness": 0.5
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          3.0,
+          -15.0,
+          23.2
+         ],
+         "material": "part_02",
+         "color": "#b9382e",
+         "roughness": 0.5
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          3.0,
+          -15.0,
+          25.2
+         ],
+         "material": "part_02",
+         "color": "#f2f2ee",
+         "roughness": 0.5
+        },
+        {
+         "shape": "box",
+         "size": [
+          0.14,
+          0.14,
+          0.02
+         ],
+         "at": [
+          3.0,
+          -15.0,
+          27.2
+         ],
+         "material": "part_02",
+         "color": "#b9382e",
+         "roughness": 0.5
+        },
+        {
+         "shape": "tube",
+         "size": {
+          "points": [
+           [
+            3.0,
+            -15.0,
+            26.8
+           ],
+           [
+            5.5981,
+            -13.5,
+            17.3
+           ]
+          ],
+          "radii": [
+           0.012,
+           0.012
+          ]
+         },
+         "color": "#8f9498",
+         "material": "part_02",
+         "roughness": 0.4,
+         "metal": 0.8
+        },
+        {
+         "shape": "tube",
+         "size": {
+          "points": [
+           [
+            3.0,
+            -15.0,
+            26.8
+           ],
+           [
+            0.4019,
+            -13.5,
+            17.3
+           ]
+          ],
+          "radii": [
+           0.012,
+           0.012
+          ]
+         },
+         "color": "#8f9498",
+         "material": "part_02",
+         "roughness": 0.4,
+         "metal": 0.8
+        },
+        {
+         "shape": "tube",
+         "size": {
+          "points": [
+           [
+            3.0,
+            -15.0,
+            26.8
+           ],
+           [
+            3.0,
+            -18.0,
+            17.3
+           ]
+          ],
+          "radii": [
+           0.012,
+           0.012
+          ]
+         },
+         "color": "#8f9498",
+         "material": "part_02",
+         "roughness": 0.4,
+         "metal": 0.8
+        }
+       ],
+       "cells": {
+        "near": 0.012
+       },
+       "budget": {
+        "near": 3000
+       },
+       "levels": [
+        "near"
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

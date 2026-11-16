@@ -1,0 +1,204 @@
+{
+ "places": [
+  {
+   "name": "gate",
+   "kind": "supplier",
+   "at": [
+    -300.0,
+    0.0
+   ],
+   "doc": "The gate of the yard: the suppliers bring the materials, and rent a truck with its driver until the yard has its own trucks."
+  },
+  {
+   "name": "warehouse",
+   "kind": "warehouse",
+   "at": [
+    0.0,
+    0.0
+   ],
+   "doc": "The stock of the materials.",
+   "building": {
+    "blueprint": "tube_house",
+    "options": {
+     "name": "kho",
+     "width": 12.0,
+     "depth": 24.0,
+     "floors": 1,
+     "ground": 6.0,
+     "bays": 4,
+     "balcony": 0.0,
+     "roof": "metal",
+     "finish_front": "paint",
+     "finish_back": "plaster",
+     "finish_left": "plaster",
+     "finish_right": "plaster",
+     "openings": [
+      {
+       "side": "front",
+       "floor": 1,
+       "kind": "shutter",
+       "x": 0.0,
+       "width": 4.0,
+       "height": 4.5,
+       "sill": 0.0
+      },
+      {
+       "side": "left",
+       "floor": 1,
+       "kind": "window",
+       "x": 0.0,
+       "width": 1.6,
+       "height": 1.2,
+       "sill": 2.4
+      },
+      {
+       "side": "right",
+       "floor": 1,
+       "kind": "window",
+       "x": 0.0,
+       "width": 1.6,
+       "height": 1.2,
+       "sill": 2.4
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "vehicles",
+   "kind": "factory",
+   "at": [
+    160.0,
+    0.0
+   ],
+   "kinds": [
+    "vehicle"
+   ],
+   "doc": "The line of the vehicles: the vans and the scooters.",
+   "building": {
+    "blueprint": "tube_house",
+    "options": {
+     "name": "xuong_xe",
+     "width": 12.0,
+     "depth": 30.0,
+     "floors": 1,
+     "ground": 6.0,
+     "bays": 5,
+     "balcony": 0.0,
+     "roof": "metal",
+     "finish_front": "paint",
+     "finish_back": "plaster",
+     "finish_left": "plaster",
+     "finish_right": "plaster",
+     "openings": [
+      {
+       "side": "front",
+       "floor": 1,
+       "kind": "shutter",
+       "x": 0.0,
+       "width": 4.0,
+       "height": 4.5,
+       "sill": 0.0
+      },
+      {
+       "side": "left",
+       "floor": 1,
+       "kind": "window",
+       "x": 0.0,
+       "width": 1.6,
+       "height": 1.2,
+       "sill": 2.4
+      },
+      {
+       "side": "right",
+       "floor": 1,
+       "kind": "window",
+       "x": 0.0,
+       "width": 1.6,
+       "height": 1.2,
+       "sill": 2.4
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "workshop",
+   "kind": "factory",
+   "at": [
+    0.0,
+    120.0
+   ],
+   "kinds": [
+    "appliance",
+    "electrical",
+    "furniture",
+    "item",
+    "prop"
+   ],
+   "doc": "The workshop of the small things: the furniture, the items and the appliances.",
+   "building": {
+    "blueprint": "tube_house",
+    "options": {
+     "name": "xuong_moc",
+     "width": 10.0,
+     "depth": 16.0,
+     "floors": 1,
+     "ground": 6.0,
+     "bays": 3,
+     "balcony": 0.0,
+     "roof": "metal",
+     "finish_front": "paint",
+     "finish_back": "plaster",
+     "finish_left": "plaster",
+     "finish_right": "plaster",
+     "openings": [
+      {
+       "side": "front",
+       "floor": 1,
+       "kind": "shutter",
+       "x": 0.0,
+       "width": 3.0,
+       "height": 3.5,
+       "sill": 0.0
+      },
+      {
+       "side": "left",
+       "floor": 1,
+       "kind": "window",
+       "x": 0.0,
+       "width": 1.6,
+       "height": 1.2,
+       "sill": 2.4
+      },
+      {
+       "side": "right",
+       "floor": 1,
+       "kind": "window",
+       "x": 0.0,
+       "width": 1.6,
+       "height": 1.2,
+       "sill": 2.4
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "site",
+   "kind": "site",
+   "at": [
+    160.0,
+    160.0
+   ],
+   "kinds": [
+    "building",
+    "house",
+    "statue",
+    "tower"
+   ],
+   "doc": "The site: a house, a statue or a tower is built where it stands."
+  }
+ ],
+ "speed_kmh": 20
+}

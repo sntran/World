@@ -52,7 +52,7 @@ defmodule World.GLB do
   defp gltf(%Scene{nodes: nodes} = scene) do
     roles = nodes |> Enum.flat_map(& &1.primitives) |> Enum.map(& &1.material) |> Enum.uniq() |> Enum.sort()
     mat_index = roles |> Enum.with_index() |> Map.new()
-    buf = %{bin: <<>>, views: [], accessors: [], images: [], image_of: %{}}
+    buf = %{bin: <<>>, views: [], accessors: [], images: [], image_of: %{}, plain: MapSet.new()}
 
     # The roles with a normal texture: their primitives have tangents.
     bumpy =
@@ -136,21 +136,44 @@ defmodule World.GLB do
           %{"name" => scene.name, "nodes" => roots}
           |> put_some("extras", if(scene.extras == %{}, do: nil, else: scene.extras))
         ],
-        "nodes" => json_nodes,
-        "materials" => materials
+        "nodes" => json_nodes
       }
+      # (A list of glTF cannot be empty: a model with no surface has no materials.)
+      |> put_some("materials", nonempty(materials))
       |> put_some("meshes", nonempty(Enum.reverse(meshes)))
       |> put_some("skins", nonempty(skins))
       |> put_some("animations", nonempty(animations))
       |> put_some("extensionsUsed", extensions(materials, node_instances != %{}))
       |> put_some("images", nonempty(Enum.reverse(buf.images)))
-      |> put_some("textures", nonempty(for {_, i} <- Enum.with_index(buf.images), do: %{"source" => i, "sampler" => 0}))
-      |> put_some("samplers", if(buf.images == [], do: nil, else: [%{"magFilter" => 9729, "minFilter" => 9987}]))
+      |> put_some(
+        "textures",
+        nonempty(
+          for {_, i} <- Enum.with_index(buf.images),
+              do: %{"source" => i, "sampler" => if(MapSet.member?(buf.plain, i), do: 1, else: 0)}
+        )
+      )
+      |> put_some("samplers", samplers(buf))
       |> put_some("accessors", nonempty(Enum.reverse(buf.accessors)))
       |> put_some("bufferViews", nonempty(Enum.reverse(buf.views)))
       |> put_some("buffers", if(buf.bin == <<>>, do: nil, else: [%{"byteLength" => byte_size(pad(buf.bin, <<0>>))}]))
 
     {json, buf.bin}
+  end
+
+  # A packed primitive (`World.Scene.pack/1`): its points and its normals
+  # from its binaries, the same bytes.
+  defp primitive(%Scene.Primitive{packed: %{count: n, positions: pos, normals: nor}} = p, buf, mat_index, _, _) do
+    {pos, buf} = packed(buf, pos, n, true)
+    {nor, buf} = packed(buf, nor, n, false)
+    {ind, buf} = indices(buf, p.indices, n)
+
+    World.Detail.collect(
+      {%{
+         "attributes" => %{"POSITION" => pos, "NORMAL" => nor},
+         "indices" => ind,
+         "material" => Map.fetch!(mat_index, p.material)
+       }, buf}
+    )
   end
 
   defp primitive(%Scene.Primitive{} = p, buf, mat_index, {names, normals?}, bumpy) do
@@ -371,6 +394,22 @@ defmodule World.GLB do
   defp scale(s), do: [s, s, s]
 
   # The extensions that the materials and the nodes use.
+  # The samplers: the first one with the smaller copies of an image
+  # (mipmaps) and a repeat; the second one for the maps of a sculpture
+  # (`"atlas"` in the spec of a material): no smaller copies and no
+  # repeat, so a texel of one chart is never in the next one.
+  defp samplers(%{images: []}), do: nil
+
+  defp samplers(buf) do
+    [%{"magFilter" => 9729, "minFilter" => 9987}] ++
+      if MapSet.size(buf.plain) > 0,
+        do: [%{"magFilter" => 9729, "minFilter" => 9729, "wrapS" => 33071, "wrapT" => 33071}],
+        else: []
+  end
+
+  defp plain(buf, %{"index" => image}, spec),
+    do: if(spec["atlas"], do: %{buf | plain: MapSet.put(buf.plain, image)}, else: buf)
+
   defp extensions(materials, instances?) do
     transform? =
       Enum.any?(materials, fn m ->
@@ -384,7 +423,8 @@ defmodule World.GLB do
   end
 
   # A texture of an image. Two materials with the same image share it. A
-  # texture that repeats (`scale`: the times in one unit of UV) has a
+  # texture that repeats (`scale`: the times in one unit of UV), or that
+  # is once on a panel (`scale` a map: its scale and its offset), has a
   # transform (KHR_texture_transform).
   defp texture(buf, {mime, data} = file, scale) do
     {image, buf} =
@@ -408,9 +448,11 @@ defmodule World.GLB do
     texture = %{"index" => image}
 
     texture =
-      if scale,
-        do: Map.put(texture, "extensions", %{"KHR_texture_transform" => %{"scale" => [scale, scale]}}),
-        else: texture
+      cond do
+        is_map(scale) -> Map.put(texture, "extensions", %{"KHR_texture_transform" => scale})
+        scale -> Map.put(texture, "extensions", %{"KHR_texture_transform" => %{"scale" => [scale, scale]}})
+        true -> texture
+      end
 
     {texture, buf}
   end
@@ -432,6 +474,21 @@ defmodule World.GLB do
       "metallicFactor" => spec["metalness"] / 1
     }
 
+    # The finish of a sculpture as an image (`World.Sculpt.Bake`): its
+    # green is the roughness and its blue the metal, so the two factors
+    # are 1.
+    {pbr, buf} =
+      case spec["finish_image"] do
+        nil ->
+          {pbr, buf}
+
+        file ->
+          {texture, buf} = texture(buf, file, nil)
+
+          {Map.merge(pbr, %{"metallicRoughnessTexture" => texture, "roughnessFactor" => 1.0, "metallicFactor" => 1.0}),
+           plain(buf, texture, spec)}
+      end
+
     # The color of the spec is a factor of the texture: white by
     # default, the color of a hair, or a tint of clothes.
     {pbr, buf} =
@@ -440,8 +497,8 @@ defmodule World.GLB do
           {pbr, buf}
 
         file ->
-          {texture, buf} = texture(buf, file, spec["image_scale"])
-          {Map.put(pbr, "baseColorTexture", texture), buf}
+          {texture, buf} = texture(buf, file, spec["image_transform"] || spec["image_scale"])
+          {Map.put(pbr, "baseColorTexture", texture), plain(buf, texture, spec)}
       end
 
     material =
@@ -454,6 +511,14 @@ defmodule World.GLB do
       # can show another color at once, as factor = color * 255 / base.
       |> put_some("extras", if(base = spec["tint_base"], do: %{"tintBase" => base}))
 
+    # The red of the finish of a sculpture is how open each place is: the occlusion.
+    material =
+      put_some(
+        material,
+        "occlusionTexture",
+        if(spec["occlusion"] && spec["finish_image"], do: Map.take(pbr["metallicRoughnessTexture"], ["index"]))
+      )
+
     # Small bumps (the pores of the skin) are a normal texture.
     {material, buf} =
       case spec["normal_image"] do
@@ -461,8 +526,23 @@ defmodule World.GLB do
           {material, buf}
 
         file ->
-          {texture, buf} = texture(buf, file, spec["normal_image_scale"])
-          {Map.put(material, "normalTexture", Map.put(texture, "scale", Map.get(spec, "normal_scale", 1.0) / 1)), buf}
+          {texture, buf} = texture(buf, file, spec["image_transform"] || spec["normal_image_scale"])
+
+          {Map.put(material, "normalTexture", Map.put(texture, "scale", Map.get(spec, "normal_scale", 1.0) / 1)),
+           plain(buf, texture, spec)}
+      end
+
+    # The glow of a sculpture as an image: the light that the surface gives.
+    {material, buf} =
+      case spec["glow_image"] do
+        nil ->
+          {material, buf}
+
+        file ->
+          {texture, buf} = texture(buf, file, nil)
+
+          {Map.merge(material, %{"emissiveTexture" => texture, "emissiveFactor" => [1.0, 1.0, 1.0]}),
+           plain(buf, texture, spec)}
       end
 
     # Skin is not plastic: light goes in and comes out red at the edges
@@ -516,6 +596,24 @@ defmodule World.GLB do
       end
 
     add_accessor(buf, data, target, acc)
+  end
+
+  # The points (or the normals) of a packed primitive: floats of 64 bits in
+  # the axes of World, to floats of 32 bits in the axes of glTF.
+  defp packed(buf, bin, count, bounds?) do
+    data =
+      for <<x::float-64, y::float-64, z::float-64 <- bin>>, {a, b, c} = gl({x, y, z}), into: <<>> do
+        <<a::little-float-32, b::little-float-32, c::little-float-32>>
+      end
+
+    acc = %{"componentType" => 5126, "count" => count, "type" => "VEC3"}
+
+    acc =
+      if bounds?,
+        do: (fn {lo, hi} -> Map.merge(acc, %{"min" => lo, "max" => hi}) end).(bounds(data, 3)),
+        else: acc
+
+    add_accessor(buf, data, 34962, acc)
   end
 
   # The least and the most of each column of a binary of floats.

@@ -1,10 +1,8 @@
 defmodule World.Openings do
   @moduledoc """
-  The openings factory (`docs/world.md`, "The factories"): it makes the
-  doors and the windows of all kinds, each an assembly of the kind
-  `:door` or `:window` (`World.Places.family_of/1`). So the factory of a
-  house or of a vehicle orders its doors and its windows here, and the
-  truck of the openings factory brings them.
+  The openings: the doors and the windows of all kinds, each an assembly
+  of the kind `:door` or `:window`, so a joiner makes them
+  (`World.Plan.trade/1`) for a house or for a vehicle.
 
   - The prehung door of a building: a frame of jambs, the slab on its
     hinges, and a knob (`prehung/4`).

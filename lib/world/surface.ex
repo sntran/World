@@ -51,6 +51,8 @@ defmodule World.Surface do
   end
 
   defp primitive(%Scene.Primitive{} = p, f, corners) do
+    p = Scene.unpack(p)
+
     {uvs, uvs2, data} =
       Enum.zip(p.positions, p.normals)
       |> Enum.map(fn {pt, n} -> point(Frame.point(f, pt), Frame.dir(f, n), corners) end)

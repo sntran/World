@@ -12,9 +12,13 @@ defmodule World.Orders.Blueprint do
   - `check`: a function of the options to a list of errors, for the
     checks across options (a window must be in its wall). Each error is
     `{path, message}`.
+  - `resolve`: nil, or a function of the options to `{:ok, options}` or
+    `{:error, errors}`: the options with each choice made, for a rule
+    whose defaults come from its other options (the size of an appliance
+    comes from its kind). The full order has these options.
   - `sources`: where the data of the blueprint comes from.
   """
-  defstruct name: nil, doc: "", options: [], build: nil, check: nil, sources: []
+  defstruct name: nil, doc: "", options: [], build: nil, check: nil, resolve: nil, sources: []
 
   defmodule Option do
     @moduledoc """
@@ -52,6 +56,164 @@ defmodule World.Orders.Blueprint do
 
   @doc "An option: the name, the type, and the keys of `World.Orders.Blueprint.Option`."
   def option(name, type, opts \\ []), do: struct!(Option, [name: name, type: type] ++ opts)
+
+  @doc """
+  A blueprint in data (`priv/blueprints/NAME.json`, `docs/format.md`): its
+  `name`, `doc`, `sources`, `params` (the options) and `drawing`, a
+  drawing whose values can be `{"param": NAME}` (`World.Drawing.fill/2`).
+  A param has the keys of an option (`type`, `default`, `min`, `max`,
+  `unit`, `values`, `item`, `fields`, `doc`); with no `default`, an order
+  must give it. Two types are for data only: `text` (at most `max` bytes,
+  200 by default), `sources` (the source of each name of the `sizes` of
+  the blueprint: `World.Sizes`) and `skill` (a value that the skill
+  `skill` checks, as the key of the name of the param in its data).
+  """
+  def from_data(raw) do
+    sized = for s <- Map.get(raw, "sizes", []), do: s["name"]
+
+    %__MODULE__{
+      name: raw["name"],
+      doc: Map.get(raw, "doc", ""),
+      options: for(p <- Map.get(raw, "params", []), do: param(p, sized)),
+      build: fn o -> World.Drawing.build(World.Drawing.fill(raw, o)) end,
+      check: fn o ->
+        case World.Drawing.check(World.Drawing.fill(raw, o), "drawing") do
+          {:ok, _} -> []
+          {:error, errors} -> errors
+        end
+      end,
+      sources: Map.get(raw, "sources", [])
+    }
+  end
+
+  @types ~w(number integer choice boolean color list object text sources skill materials)
+  @param_keys ~w(name type default unit min max values item fields doc skill)
+
+  @doc """
+  The errors of a blueprint in data from a project (plan 0002, D1), each
+  `{path, message}` with the path from `path`: its keys, its `name`, each
+  param (its keys, its type, the `values` of a choice, the `item` of a
+  list, the `fields` of an object, the `skill` of a param of the type
+  skill), and its drawing with the default of each param: the errors of
+  the data of each skill (`World.Drawing.check/2`). `[]` when the
+  blueprint is good.
+  """
+  def check_data(raw, path) when is_map(raw) do
+    keys = World.Skill.keys(raw, path, ~w(name doc sources params sizes drawing), ~w(name drawing))
+
+    name =
+      if Map.has_key?(raw, "name") and not name?(raw["name"]),
+        do: [{path <> ".name", "must be a name: a to z, 0 to 9 and _, 1 to 40"}],
+        else: []
+
+    params =
+      case Map.get(raw, "params", []) do
+        list when is_list(list) ->
+          list |> Enum.with_index() |> Enum.flat_map(fn {p, i} -> param_errors(p, "#{path}.params.#{i}") end)
+
+        _ ->
+          [{path <> ".params", "must be a list"}]
+      end
+
+    drawing =
+      if Map.has_key?(raw, "drawing") and not is_map(raw["drawing"]),
+        do: [{path <> ".drawing", "must be an object"}],
+        else: []
+
+    case keys ++ name ++ params ++ drawing do
+      [] -> drawing_errors(raw, path)
+      errors -> errors
+    end
+  end
+
+  def check_data(_raw, path), do: [{path, "must be an object"}]
+
+  defp name?(name), do: is_binary(name) and name =~ ~r/^[a-z0-9_]{1,40}$/
+
+  defp param_errors(p, path) when is_map(p) do
+    keys =
+      World.Skill.keys(p, path, @param_keys, ~w(type) ++ if(String.ends_with?(path, ".item"), do: [], else: ~w(name)))
+
+    type =
+      case p["type"] do
+        t when t in @types -> type_errors(t, p, path)
+        nil -> []
+        _ -> [{path <> ".type", "must be one of: #{Enum.join(@types, ", ")}"}]
+      end
+
+    keys ++ type
+  end
+
+  defp param_errors(_p, path), do: [{path, "must be an object"}]
+
+  defp type_errors("choice", %{"values" => [_ | _] = values}, path),
+    do: if(Enum.all?(values, &is_binary/1), do: [], else: [{path <> ".values", "must be a list of texts"}])
+
+  defp type_errors("choice", _p, path), do: [{path <> ".values", "must be a list of texts"}]
+  defp type_errors("list", %{"item" => item}, path), do: param_errors(item, path <> ".item")
+  defp type_errors("list", _p, path), do: [{path <> ".item", "is required"}]
+
+  defp type_errors("object", %{"fields" => fields}, path) when is_list(fields),
+    do: fields |> Enum.with_index() |> Enum.flat_map(fn {f, i} -> param_errors(f, "#{path}.fields.#{i}") end)
+
+  defp type_errors("object", _p, path), do: [{path <> ".fields", "must be a list"}]
+
+  defp type_errors("skill", p, path),
+    do:
+      if(World.Skills.fetch(p["skill"]) == :error,
+        do: [{path <> ".skill", "must be a skill: #{Enum.join(World.Skills.names(), ", ")}"}],
+        else: []
+      )
+
+  defp type_errors(_type, _p, _path), do: []
+
+  # The drawing with the default of each param: the errors of the data of
+  # its nodes. A param with no default: the order gives it, and checks it.
+  defp drawing_errors(raw, path) do
+    b = from_data(raw)
+
+    with {:ok, o} <- check_options(b.options, %{}, path <> ".params"),
+         {:error, errors} <- World.Drawing.check(World.Drawing.fill(raw, o), path <> ".drawing") do
+      errors
+    else
+      _ -> []
+    end
+  end
+
+  defp param(p, sized) do
+    opts = [
+      default: Map.get(p, "default", :required),
+      unit: p["unit"],
+      min: p["min"],
+      max: p["max"],
+      values: p["values"],
+      doc: Map.get(p, "doc", "")
+    ]
+
+    case p["type"] do
+      "list" -> option(p["name"], :list, opts ++ [item: param(p["item"], sized)])
+      "object" -> option(p["name"], :object, opts ++ [fields: for(f <- p["fields"], do: param(f, sized))])
+      "text" -> option(p["name"], :data, opts ++ [check: &text(&1, &2, p["max"] || 200)])
+      "sources" -> option(p["name"], :data, opts ++ [check: &World.Sizes.check(&1, &2, sized)])
+      "skill" -> option(p["name"], :data, opts ++ [check: &by_skill(&1, &2, p)])
+      "materials" -> option(p["name"], :data, opts ++ [check: &World.Drawing.check_materials/2])
+      type -> option(p["name"], String.to_existing_atom(type), opts)
+    end
+  end
+
+  # A value that a skill checks as one key of its data (`skill`): the light
+  # of a tower is checked by the skill tower_site.
+  defp by_skill(raw, path, %{"name" => name, "skill" => skill}) do
+    {:ok, mod} = World.Skills.fetch(skill)
+
+    case mod.check(%{name => raw}, String.replace_suffix(path, "." <> name, "")) do
+      [] -> {:ok, raw}
+      errors -> {:error, errors}
+    end
+  end
+
+  defp text(raw, _path, max) when is_binary(raw) and byte_size(raw) <= max, do: {:ok, raw}
+  defp text(_, path, max), do: {:error, [{path, "must be a text of at most #{max} bytes"}]}
 
   @doc """
   Check the options of an order (a map with string keys) against the

@@ -44,6 +44,20 @@ test('a proposal of a new drawing has a key of its own', async () => {
   assert.equal(await text(await store.port(input(), { argv: ['get', key] })), '{}');
 });
 
+test('the history of the edits of an order has a key of its own', async () => {
+  const store = orderStore(bucket());
+  const key = 'history/0123456789abcdef0123456789abcdef.json';
+  assert.equal(await text(await store.port(input('[]'), { argv: ['put', key, '2'] })), 'ok\n');
+  assert.equal(await text(await store.port(input(), { argv: ['get', key] })), '[]');
+});
+
+test('a blueprint in data of a project has a key of its own', async () => {
+  const store = orderStore(bucket());
+  const key = 'blueprints/0123456789abcdef0123456789abcdef.json';
+  assert.equal(await text(await store.port(input('{}'), { argv: ['put', key, '2'] })), 'ok\n');
+  assert.equal(await text(await store.port(input(), { argv: ['get', key] })), '{}');
+});
+
 test('get of an order that the store does not have gives nothing', async () => {
   const store = orderStore(bucket());
   assert.equal(await text(await store.port(input(), { argv: ['get', KEY] })), '');

@@ -24,7 +24,8 @@ defmodule Mix.Tasks.World.OrderTest do
     hash = World.Orders.hash(full)
     assert_received {:mix_shell, :info, ["Wrote the files of " <> _]}
 
-    for ext <- ~w(.glb .mid.glb .far.glb .log.json .replay.glb .parts.json .receipt.json),
+    for ext <-
+          ~w(.glb .mid.glb .far.glb .log.json .replay.glb .parts.json .receipt.json .solids.json .drawing.json .flat.glb .mid.flat.glb .far.flat.glb .light.glb .mid.light.glb .far.light.glb),
         do: assert(File.exists?(Path.join([@dir, "out", hash <> ext])), ext)
   end
 

@@ -5,45 +5,43 @@ defmodule World.Log do
   the replay and the statistics read it only.
 
   Each event has its world time (`at`) and its wall time (`wall`), in
-  milliseconds, its kind, its order (the hash), its place, its person or
-  vehicle (`who`), and the data of its kind. The log keeps the scale and
-  the start of its clock, and the yard of the run (`World.Yard.describe/1`)
-  when it has one. In JSON, the log is one line for the clock and the
-  yard, then one line for each event.
+  milliseconds, its kind, its order (the id of its construction), its
+  person (`who`: the name of its process), and the data of its kind. The
+  log keeps the scale and the start of its clock. In JSON, the log is one
+  line for the clock, then one line for each event.
   """
   alias World.Clock
 
-  @kinds ~w(order_received plan_made stock_checked part_ordered picked stored refused
-            loaded departed arrived unloaded received task_started task_done model_done delivered
-            build_started build_done run_done)
+  @kinds ~w(requested plan_made hired released task_started task_done task_dropped element paused resumed changed done stopped failed run_done parts_asked parts_here haul_asked loaded unloaded hauled truck_joined place_raised place_open place_held place_started truck_made element_removed stage_started stage_done aged repaired)
 
   defmodule Event do
-    @moduledoc "One thing that happened: its world time, wall time, kind, order, place, person or vehicle, and data."
-    defstruct at: 0, wall: 0, kind: nil, order: nil, place: nil, who: nil, data: %{}
+    @moduledoc "One thing that happened: its world time, wall time, kind, order, person and data."
+    defstruct at: 0, wall: 0, kind: nil, order: nil, who: nil, data: %{}
   end
 
-  defstruct clock: nil, yard: nil, events: []
+  defstruct clock: nil, events: []
 
   @doc "The kinds of an event."
   def kinds, do: @kinds
 
-  @doc "An empty log with its clock, and the yard of its run (data)."
-  def new(%Clock{} = clock, yard \\ nil), do: %__MODULE__{clock: clock, yard: yard}
+  @doc "An empty log with its clock."
+  def new(%Clock{} = clock), do: %__MODULE__{clock: clock}
 
   @doc """
   Add an event of a kind. The options: `wall` (the wall time, now by
-  default), `order`, `place`, `who`, `data`. The log refuses an unknown
-  kind, and an event before the last one: `{:error, reason}`.
+  default), `at` (the world time: the world time of `wall` by default; a
+  construction on the fast clock gives it), `order`, `who`, `data`. The
+  log refuses an unknown kind, and an event before the last one:
+  `{:error, reason}`.
   """
   def add(%__MODULE__{clock: clock, events: events} = log, kind, opts \\ []) do
     wall = Keyword.get_lazy(opts, :wall, &Clock.wall/0)
 
     event = %Event{
-      at: Clock.at(clock, wall),
+      at: Keyword.get_lazy(opts, :at, fn -> Clock.at(clock, wall) end),
       wall: wall,
       kind: kind,
       order: opts[:order],
-      place: opts[:place],
       who: opts[:who],
       data: Keyword.get(opts, :data, %{})
     }
@@ -60,23 +58,16 @@ defmodule World.Log do
 
   @doc "The log in JSON: one line for the clock, then one line for each event."
   def to_json(%__MODULE__{clock: clock} = log) do
-    head = JSON.encode!(%{"scale" => clock.scale, "start" => clock.start, "yard" => log.yard})
+    head = %{"scale" => clock.scale, "start" => clock.start}
+    head = JSON.encode!(if clock.fast, do: Map.put(head, "fast", true), else: head)
 
-    lines =
-      for e <- events(log) do
-        JSON.encode!(%{
-          "at" => e.at,
-          "wall" => e.wall,
-          "kind" => e.kind,
-          "order" => e.order,
-          "place" => e.place,
-          "who" => e.who,
-          "data" => e.data
-        })
-      end
-
+    lines = for e <- events(log), do: JSON.encode!(data(e))
     Enum.join([head | lines], "\n") <> "\n"
   end
+
+  @doc "An event as data, for JSON: its time, wall time, kind, order, person and data."
+  def data(%Event{} = e),
+    do: %{"at" => e.at, "wall" => e.wall, "kind" => e.kind, "order" => e.order, "who" => e.who, "data" => e.data}
 
   @doc "A log from its JSON, then checked (`check/1`): `{:ok, log}` or `{:error, reason}`."
   def from_json(json) do
@@ -90,19 +81,23 @@ defmodule World.Log do
           wall: e["wall"],
           kind: e["kind"],
           order: e["order"],
-          place: e["place"],
           who: e["who"],
           data: e["data"]
         }
       end
 
-    log = %__MODULE__{clock: %Clock{scale: scale, start: start}, yard: head["yard"], events: Enum.reverse(events)}
+    log = %__MODULE__{
+      clock: %Clock{scale: scale, start: start, fast: head["fast"] == true},
+      events: Enum.reverse(events)
+    }
+
     with :ok <- check(log), do: {:ok, log}
   end
 
   @doc """
   Check a log: each event has a known kind, a world time from its wall
-  time and the clock, and no event comes before the last one. For each
+  time and the clock (not on the fast clock: there the world time is that
+  of the construction), and no event comes before the last one. For each
   order, a task starts once, after the plan of the order (`plan_made`),
   after each task it waits for is done; and a task is done after its
   start. `:ok`, or `{:error, {reason, event}}`.
@@ -125,7 +120,7 @@ defmodule World.Log do
   defp step(e, last, orders, clock) do
     cond do
       e.kind not in @kinds -> {:error, :unknown_kind}
-      e.at != Clock.at(clock, e.wall) -> {:error, :wrong_time}
+      not clock.fast and e.at != Clock.at(clock, e.wall) -> {:error, :wrong_time}
       last != nil and e.at < last -> {:error, :before_last}
       true -> task(e, orders)
     end
@@ -145,6 +140,28 @@ defmodule World.Log do
         "task_started" -> start(orders, order, o, id, waits)
         "task_done" -> finish(orders, order, o, id)
       end
+    end
+  end
+
+  # A change makes its tasks again: they did not start, and are not done.
+  # The tasks that take down what it drops (`remove`) are new tasks.
+  defp task(%Event{kind: "changed", order: order, data: %{"redo" => redo} = d}, orders) do
+    with {:ok, o} <- Map.fetch(orders, order) |> plan() do
+      removes = Map.new(Map.get(d, "remove", []) ++ Map.get(d, "add", []), &{&1["id"], &1["waits"]})
+      # The new waits of the tasks of a change (the parts made again first).
+      waits = Map.merge(o.waits, removes, fn _, a, b -> a ++ b end)
+
+      waits =
+        Enum.reduce(Map.get(d, "waits", %{}), waits, fn {id, more}, w -> Map.update(w, id, more, &(&1 ++ more)) end)
+
+      o = %{
+        o
+        | waits: waits,
+          started: MapSet.difference(o.started, MapSet.new(redo)),
+          done: MapSet.difference(o.done, MapSet.new(redo))
+      }
+
+      {:ok, Map.put(orders, order, o)}
     end
   end
 

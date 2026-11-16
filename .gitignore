@@ -10,3 +10,7 @@ erl_crash.dump
 
 # The tmp_dir of the tests (ExUnit).
 /tmp/
+
+# The Python of the measure tools (scripts/measure/README.md).
+/.venv/
+__pycache__/

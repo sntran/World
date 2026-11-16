@@ -7,7 +7,8 @@ defmodule World.Drawing do
 
   - `name`, `kind` (`item` by default), `sources`;
   - `materials`: a role of the palette to its `color`, `roughness` and
-    `metalness` in this model;
+    `metalness` in this model, and its `texture` (a texture that World
+    makes, `World.Textures`: `washed_stone`; only at near);
   - `parts`: a name to a part: its `shapes` (`box`, `cylinder`,
     `sphere`, `prism`, `lathe`, `tube`, each with its `material` and its
     frame `at`, `axis`, `up`; for its mass, a `matter` when the material
@@ -23,24 +24,41 @@ defmodule World.Drawing do
     origin by default), with a `turn` and an `offset`, and can be a
     `joint` (`kind` hinge or slide, `role`, `limits`);
   - `clips`: animations of the joints: a `name`, a `length` in seconds,
-    and `keys`, each a time `t` and the values of some `joints`.
+    and `keys`, each a time `t` and the values of some `joints`;
+  - `extras`: the data of the model for an app (`site`, `ports`,
+    `collision`, `surface`, `weathering`: `docs/format.md`).
+
+  A node can also be an element that a person of a trade makes with a
+  skill (`World.Skill`): `skill` is `{NAME: data}`, `trade` the trade of
+  the person (the trade of the skill by default), `from` the nodes whose
+  data it takes, and `after` the nodes that it comes after (as on a real
+  site: the base, then the figure, then the cast). A skill gives the part
+  of its node (or nil: a node of data only, not in the model), its data
+  for the nodes that take it, and the extras of the model. A node to a
+  node with no part goes to the root, the first node with a part.
 
   The limits keep a drawing small for the builder at the edge: 64 parts,
-  256 shapes, 128 nodes, 64 points in a list, 8 clips of 64 keys, points
+  256 shapes, 512 nodes (a house of many floors), 64 points in a list, 8 clips of 64 keys, points
   within 50 m, and 3 drawings one in the other.
   """
-  alias World.{Assembly, Frame, GLB, Part, Port, Shape, Vec}
+  alias World.{Assembly, Detail, Frame, GLB, Part, Port, Shape, Vec}
   alias World.Orders.Blueprints
 
-  @kinds ~w(appliance building electrical furniture item prop vehicle)
-  @roles ~w(crank door drawer handle knob lid pedal recline slide spin stand steer suspension vane wheel)
-  @shapes ~w(box cylinder sphere prism lathe tube)
+  @kinds ~w(appliance boat building electrical furniture house item plant prop statue tower vehicle)
+  @roles ~w(crank door drawer handle knob lid open pedal recline slide spin stand steer suspension vane wheel)
+  @shapes ~w(box cylinder sphere prism lathe tube loft body arc rings)
+  # The options of a shape: the points of each ring, the steps of the
+  # smooth, the round edges of a box, and a lathe that is a ring.
+  @options ~w(sides smooth round ring)
   @standards ~w(bolt cap_screw nut washer bearing)
 
   # The atom of each name of a list of the checks: a drawing names only
   # these, and the atoms exist when the drawing builds.
   @atoms Map.new(@kinds ++ @roles ++ @standards ++ ~w(hinge slide), &{&1, String.to_atom(&1)})
-  @keys ~w(name kind materials parts nodes clips sources)
+
+  @doc "The kinds of a drawing."
+  def kinds, do: @kinds
+  @keys ~w(name kind materials parts nodes clips sources extras)
   @name ~r/^[a-z0-9_]{1,40}$/
   @size 50.0
   @depth 3
@@ -63,6 +81,7 @@ defmodule World.Drawing do
   errors}`: each error is `{path, message}`, with the path from `path`.
   """
   def check(raw, path) when is_map(raw) do
+    raw = expand(raw)
     depth = Process.get(:world_drawing, 0)
 
     if depth >= @depth do
@@ -77,9 +96,11 @@ defmodule World.Drawing do
             optional(raw, "kind", path, &choice(&1, &2, @kinds)) ++
             optional(raw, "sources", path, &sources/2) ++
             optional(raw, "materials", path, &materials/2) ++
+            optional(raw, "extras", path, &extras/2) ++
             parts(Map.get(raw, "parts", %{}), "#{path}.parts")
 
         errors = errors ++ if(errors == [], do: nodes(raw, path), else: [])
+        errors = errors ++ if(errors == [], do: check_waits(raw["nodes"], path), else: [])
         if errors == [], do: {:ok, raw}, else: {:error, errors}
       after
         Process.put(:world_drawing, depth)
@@ -88,6 +109,59 @@ defmodule World.Drawing do
   end
 
   def check(_raw, path), do: {:error, [{path, "must be an object"}]}
+
+  @doc """
+  The drawing with each repeat of a node expanded: `{"repeat": {"for":
+  NAME, "in": [values]}, "node": {...}}`, or `"in": {"count": n}` (1 to
+  n, at most #{128}), gives one copy of the node for each value; `{"repeat":
+  ..., "item": X}` in any other list gives copies of X (the names of the
+  pours in a `from`: `"pour_{i}"`). In a
+  copy, `{"var": NAME}` is the value, and `{NAME}` in a text is the value
+  as a text (`"course_{floor}"`), and `{NAME-1}` or `{NAME+1}` a whole
+  number less or more (`"slab_{floor-1}"`). A repeat can hold a repeat. A wrong
+  repeat stays as it is, and the check gives its error. The check
+  expands a drawing first: the paths of its errors are in the copies.
+  """
+  def expand(%{} = m), do: Map.new(m, fn {k, v} -> {k, expand(v)} end)
+  def expand(l) when is_list(l), do: Enum.flat_map(l, &copies/1)
+  def expand(v), do: v
+
+  # A repeat in a list: of a node (`node`), or of any item (`item`: the
+  # names of the pours in a `from`).
+  defp copies(%{"repeat" => %{"for" => var, "in" => values} = r} = n)
+       when map_size(n) == 2 and map_size(r) == 2 and is_binary(var) and
+              (is_map_key(n, "node") or is_map_key(n, "item")) do
+    item = n["node"] || n["item"]
+
+    case values(values) do
+      {:ok, values} -> Enum.flat_map(values, &copies(bind(item, var, &1)))
+      :error -> [n]
+    end
+  end
+
+  defp copies(x), do: [expand(x)]
+
+  defp values(%{"count" => n}) when :erlang.is_integer(n, 0, 128), do: {:ok, Enum.to_list(1..n//1)}
+  defp values(l) when is_list(l) and length(l) <= 128, do: {:ok, l}
+  defp values(_), do: :error
+
+  defp bind(%{"var" => var} = m, var, v) when map_size(m) == 1, do: v
+  defp bind(%{} = m, var, v), do: Map.new(m, fn {k, x} -> {k, bind(x, var, v)} end)
+  defp bind(l, var, v) when is_list(l), do: Enum.map(l, &bind(&1, var, v))
+
+  defp bind(s, var, v) when is_binary(s) do
+    Regex.replace(~r/\{#{Regex.escape(var)}([+-]\d+)?\}/, s, fn
+      _, "" -> text(v)
+      _, n when is_integer(v) -> Integer.to_string(v + String.to_integer(n))
+      all, _ -> all
+    end)
+  end
+
+  defp bind(x, _var, _v), do: x
+
+  defp text(v) when is_binary(v), do: v
+  defp text(v) when is_integer(v), do: Integer.to_string(v)
+  defp text(v), do: JSON.encode!(v)
 
   # --- The checks ---------------------------------------------------------------------------
 
@@ -118,6 +192,18 @@ defmodule World.Drawing do
     if is_number(v) and v >= lo and v <= hi, do: [], else: [{path, "must be a number from #{lo} to #{hi}"}]
   end
 
+  # The work of a node on a site (World.Site): each work of the rates to
+  # its amount.
+  defp work(w, path) when is_map(w) do
+    Enum.flat_map(Enum.sort(w), fn {k, v} ->
+      if k in World.Site.works(),
+        do: number(v, "#{path}.#{k}", 0, 1.0e9),
+        else: [{"#{path}.#{k}", "is not a work of a site"}]
+    end)
+  end
+
+  defp work(_w, path), do: [{path, "must be an object: each work of a site to its amount"}]
+
   defp positive(v, path),
     do: if(is_number(v) and v > 0 and v <= @size, do: [], else: [{path, "must be a length from 0 to #{@size} m"}])
 
@@ -144,9 +230,11 @@ defmodule World.Drawing do
     if is_map(v), do: unknown(v, keys, path) ++ check.(v), else: [{path, "must be an object"}]
   end
 
+  defp extras(v, path), do: if(is_map(v), do: [], else: [{path, "must be an object"}])
+
   defp sources(v, path),
     do:
-      list(v, path, 0, 16, fn s, p ->
+      list(v, path, 0, 64, fn s, p ->
         if is_binary(s) and byte_size(s) <= 500, do: [], else: [{p, "must be a text of at most 500 bytes"}]
       end)
 
@@ -157,10 +245,12 @@ defmodule World.Drawing do
       p = "#{path}.#{role}"
 
       if role in roles do
-        object(spec, p, ~w(color roughness metalness), fn spec ->
+        object(spec, p, ~w(color roughness metalness texture panel), fn spec ->
           optional(spec, "color", p, &color/2) ++
             optional(spec, "roughness", p, &number(&1, &2, 0, 1)) ++
-            optional(spec, "metalness", p, &number(&1, &2, 0, 1))
+            optional(spec, "metalness", p, &number(&1, &2, 0, 1)) ++
+            optional(spec, "texture", p, &choice(&1, &2, World.Textures.names())) ++
+            optional(spec, "panel", p, &panel/2)
         end)
       else
         [{p, "must be a role of the palette: #{Enum.join(roles, ", ")}"}]
@@ -169,6 +259,25 @@ defmodule World.Drawing do
   end
 
   defp materials(_v, path), do: [{path, "must be an object"}]
+
+  # A rectangle of the UVs in metres (World.Surface) for the image of a
+  # texture: [u0, v0, u1, v1], u1 over u0 and v1 over v0.
+  defp panel([u0, v0, u1, v1], _path)
+       when is_number(u0) and is_number(v0) and is_number(u1) and is_number(v1) and u1 > u0 and v1 > v0,
+       do: []
+
+  defp panel(_v, path), do: [{path, "must be [u0, v0, u1, v1], u1 over u0 and v1 over v0"}]
+
+  @doc """
+  Check the `materials` of a drawing (a param of the type `materials` of
+  a blueprint): `{:ok, materials}` or `{:error, [{path, message}]}`.
+  """
+  def check_materials(v, path) do
+    case materials(v, path) do
+      [] -> {:ok, v}
+      errors -> {:error, errors}
+    end
+  end
 
   defp color(v, path),
     do: if(is_binary(v) and v =~ ~r/^#[0-9a-fA-F]{6}$/, do: [], else: [{path, "must be a color #rrggbb"}])
@@ -236,7 +345,11 @@ defmodule World.Drawing do
   defp shape(v, path) when is_map(v) do
     case for k <- @shapes, Map.has_key?(v, k), do: k do
       [kind] ->
-        unknown(v, [kind | ~w(material matter skin at axis up)], path) ++
+        unknown(v, [kind | ~w(material matter skin at axis up)] ++ @options, path) ++
+          optional(v, "sides", path, &whole(&1, &2, 3, 128)) ++
+          optional(v, "smooth", path, &whole(&1, &2, 0, 3)) ++
+          optional(v, "round", path, &number(&1, &2, 0.01, 0.49)) ++
+          optional(v, "ring", path, &choice(&1, &2, [true, false])) ++
           optional(v, "material", path, &material/2) ++
           optional(v, "matter", path, &choice(&1, &2, World.Mass.materials())) ++
           optional(v, "skin", path, &number(&1, &2, 0.0001, 0.1)) ++
@@ -296,6 +409,60 @@ defmodule World.Drawing do
           required(d, "radius", path, &positive/2)
       end)
 
+  defp dims("loft", v, path),
+    do:
+      object(v, path, ~w(rows along x), fn d ->
+        required(d, "rows", path, &rows/2) ++
+          optional(d, "along", path, &choice(&1, &2, ~w(y z))) ++
+          optional(d, "x", path, &number(&1, &2, -@size, @size))
+      end)
+
+  defp dims("body", v, path),
+    do:
+      object(v, path, ~w(rows arches step x), fn d ->
+        required(d, "rows", path, &rows/2) ++
+          optional(d, "arches", path, &list(&1, &2, 0, 8, fn a, p -> point(a, p) end)) ++
+          optional(d, "step", path, &positive/2) ++
+          optional(d, "x", path, &number(&1, &2, -@size, @size))
+      end)
+
+  defp dims("arc", v, path),
+    do:
+      object(v, path, ~w(center radius from to steps half_width half_height power), fn d ->
+        required(d, "center", path, &pair(&1, &2, -@size)) ++
+          required(d, "radius", path, &positive/2) ++
+          required(d, "from", path, &number(&1, &2, -360, 360)) ++
+          required(d, "to", path, &number(&1, &2, -360, 360)) ++
+          required(d, "steps", path, &whole(&1, &2, 1, 64)) ++
+          required(d, "half_width", path, &positive/2) ++
+          required(d, "half_height", path, &positive/2) ++
+          optional(d, "power", path, &number(&1, &2, 0.5, 16))
+      end)
+
+  defp dims("rings", v, path),
+    do:
+      object(
+        v,
+        path,
+        ~w(rings),
+        &required(&1, "rings", path, fn x, p ->
+          list(x, p, 2, 256, fn ring, q -> list(ring, q, 3, 256, fn pt, r -> point(pt, r) end) end)
+        end)
+      )
+
+  # The key rows of a loft: [a, low, high, half_width, power] (along y:
+  # a = y, low and high in z; along z: a = z, low and high in y).
+  defp rows(v, path), do: list(v, path, 2, 64, &row/2)
+
+  defp row(v, path) do
+    if match?([_, _, _, _, _], v) and Enum.all?(v, &(is_number(&1) and abs(&1) <= @size)) and Enum.at(v, 4) > 0,
+      do: [],
+      else: [{path, "must be a row [a, low, high, half_width, power], in meters, the power more than 0"}]
+  end
+
+  defp whole(v, path, lo, hi),
+    do: if(is_integer(v) and v >= lo and v <= hi, do: [], else: [{path, "must be a whole number from #{lo} to #{hi}"}])
+
   # A point of a plane: [x, y] (a loop), or [r, z] with r from 0 (a profile).
   defp pair(v, path, lo) do
     if match?([a, b] when is_number(a) and is_number(b) and a >= lo and a <= @size and abs(b) <= @size, v),
@@ -305,7 +472,7 @@ defmodule World.Drawing do
 
   defp nodes(raw, path) do
     case Map.get(raw, "nodes") do
-      nodes when is_list(nodes) and nodes != [] and length(nodes) <= 128 ->
+      nodes when is_list(nodes) and nodes != [] and length(nodes) <= 512 ->
         parts = Map.get(raw, "parts", %{})
 
         {errors, known} =
@@ -320,13 +487,15 @@ defmodule World.Drawing do
             known =
               if is_binary(name) and not Map.has_key?(known, name), do: Map.put(known, name, {item, node}), else: known
 
+            known = if i == 0, do: Map.put(known, :root, name), else: known
+
             {errors ++ more, known}
           end)
 
         errors ++ if(errors == [], do: optional(raw, "clips", path, &clips(&1, &2, joints(known))), else: [])
 
       _ ->
-        [{"#{path}.nodes", "must be a list of 1 to 128 nodes, the root first"}]
+        [{"#{path}.nodes", "must be a list of 1 to 512 nodes, the root first"}]
     end
   end
 
@@ -334,8 +503,22 @@ defmodule World.Drawing do
 
   # A node: its errors, and its item (the part, or the item of the order).
   defp node(node, path, i, parts, known) when is_map(node) do
-    keys = ~w(name part item to at port joint turn offset)
-    base = unknown(node, keys, path) ++ required(node, "name", path, &name/2)
+    keys = ~w(name part item skill trade after from to at port joint turn offset temporary work cure down only)
+
+    keys =
+      if Map.has_key?(node, "repeat"),
+        do: keys ++ ~w(repeat node),
+        else: keys
+
+    base =
+      unknown(node, keys, path) ++
+        required(node, "name", path, &name/2) ++
+        optional(node, "trade", path, &choice(&1, &2, World.Plan.trades())) ++
+        optional(node, "temporary", path, &choice(&1, &2, [true, false])) ++
+        optional(node, "work", path, &work/2) ++
+        optional(node, "cure", path, &choice(&1, &2, World.Site.cures())) ++
+        optional(node, "down", path, &name/2)
+
     name = node["name"]
 
     base =
@@ -344,17 +527,23 @@ defmodule World.Drawing do
         else: base
 
     {errors, item} =
-      case {node["part"], node["item"]} do
-        {part, nil} when is_binary(part) ->
+      case {node["part"], node["item"], node["skill"]} do
+        _ when is_map_key(node, "repeat") ->
+          {[{"#{path}.repeat", "must be {\"for\": NAME, \"in\": a list or {\"count\": 0 to 128}} with a node"}], nil}
+
+        {part, nil, nil} when is_binary(part) ->
           if Map.has_key?(parts, part),
             do: {[], {:part, parts[part]}},
             else: {[{"#{path}.part", "is not a part of the drawing"}], nil}
 
-        {nil, order} when is_map(order) ->
+        {nil, order, nil} when is_map(order) ->
           item(order, "#{path}.item")
 
+        {nil, nil, skill} ->
+          skill(skill, "#{path}.skill")
+
         _ ->
-          {[{path, "must have a part or an item"}], nil}
+          {[{path, "must have a part, an item or a skill"}], nil}
       end
 
     root =
@@ -387,9 +576,75 @@ defmodule World.Drawing do
     end
   end
 
+  # A skill of a trade with its data: `{NAME: data}`.
+  defp skill(v, path) do
+    with %{} <- v,
+         [{name, data}] <- Map.to_list(v),
+         {:ok, mod} <- World.Skills.fetch(name) do
+      {mod.check(data, "#{path}.#{name}"), {:skill, mod}}
+    else
+      _ -> {[{path, "must be one skill and its data: #{Enum.join(World.Skills.names(), ", ")}"}], nil}
+    end
+  end
+
+  # The waits of the nodes: `after` and `from` name nodes of the drawing,
+  # and no node waits for itself through them (a graph with no cycle).
+  defp check_waits(nodes, path) do
+    names = for n <- nodes, do: n["name"]
+
+    errors =
+      for {n, i} <- Enum.with_index(nodes),
+          key <- ~w(after from),
+          Map.has_key?(n, key),
+          p = "#{path}.nodes.#{i}.#{key}" do
+        case n[key] do
+          l when is_list(l) and length(l) <= 128 ->
+            for(x <- l, x not in names, do: {p, "must be the names of nodes of the drawing"}) |> Enum.take(1)
+
+          _ ->
+            [{p, "must be a list of the names of nodes"}]
+        end
+      end
+
+    case List.flatten(errors) do
+      [] -> cycle(nodes, path)
+      errors -> errors
+    end
+  end
+
+  defp cycle(nodes, path) do
+    g = graph(nodes)
+
+    if :graph.is_acyclic(g) do
+      []
+    else
+      # The first node of the drawing that is on a cycle.
+      {cycle, i} =
+        nodes |> Enum.with_index() |> Enum.find_value(fn {n, i} -> (c = :graph.get_cycle(g, n["name"])) && {c, i} end)
+
+      [{"#{path}.nodes.#{i}", "must not wait for itself: #{Enum.join(cycle, ", ")}"}]
+    end
+  end
+
+  # The graph of the waits: an edge from each node to each node that waits for it.
+  defp graph(nodes) do
+    g = Enum.reduce(nodes, :graph.new(), &:graph.add_vertex(&2, &1["name"]))
+    root = hd(nodes)["name"]
+    Enum.reduce(nodes, g, fn n, g -> Enum.reduce(waits(n, root), g, &:graph.add_edge(&2, &1, n["name"])) end)
+  end
+
+  @doc """
+  The names of the nodes that a node waits for: its parent (the root
+  `root` when it has none), its `after` and its `from`.
+  """
+  def waits(node, root) do
+    parent = if node["name"] == root, do: [], else: [node["to"] || root]
+    Enum.uniq(parent ++ Map.get(node, "after", []) ++ Map.get(node, "from", []))
+  end
+
   # The connection of a node to its parent: the parent, the ports, the joint.
   defp links(node, path, item, known) do
-    case Map.fetch(known, node["to"]) do
+    case Map.fetch(known, node["to"] || known[:root]) do
       {:ok, {parent, _}} ->
         port(node, "at", path, parent) ++
           port(node, "port", path, item) ++
@@ -417,6 +672,9 @@ defmodule World.Drawing do
 
   defp kind({:part, _}), do: "part"
   defp kind({:item, _}), do: "item"
+
+  # A part that a skill makes is not known before: any name of a port.
+  defp has_port?({:skill, _}, _name), do: true
 
   defp has_port?({:part, %{"standard" => s}}, name), do: Map.has_key?(standard_part(s).ports, name)
   defp has_port?({:part, part}, name), do: Map.has_key?(Map.get(part, "ports", %{}), name)
@@ -479,36 +737,287 @@ defmodule World.Drawing do
   # --- The build ----------------------------------------------------------------------------
 
   @doc """
-  The assembly of a drawing of the catalog: the file
-  `priv/drawings/NAME.json`. A name with no drawing raises.
+  The assembly of a model of the catalog in `priv/drawings/NAME.json`: a
+  drawing, or an order of a blueprint (a blueprint in data with its
+  options: the statue on Núi Nhỏ). A name with no file raises.
   """
   def file(name) do
-    raw = Map.get(@drawings, name) || raise ArgumentError, "no drawing #{inspect(name)}"
-    {:ok, raw} = check(raw, name)
-    build(raw)
+    case raw(name) || raise(ArgumentError, "no drawing #{inspect(name)}") do
+      %{"blueprint" => _} = order ->
+        {:ok, full} = World.Orders.check(order)
+        {:ok, blueprint} = Blueprints.fetch(full["blueprint"])
+        blueprint.build.(full["options"])
+
+      raw ->
+        {:ok, raw} = check(raw, name)
+        build(raw)
+    end
   end
+
+  @doc "The data of the file `priv/drawings/NAME.json`, or nil."
+  def raw(name), do: Map.get(@drawings, name)
 
   @doc "The names of the drawings of the catalog, in order."
   def names, do: @drawings |> Map.keys() |> Enum.sort()
 
   @doc """
   The names of the drawings (of `drawings`, by default the drawings of the
-  catalog), after a check of each one: a drawing with errors raises an
+  catalog), after a check of each one (an order of a blueprint with
+  `World.Orders.check/1`): a drawing with errors raises an
   `ArgumentError` with its errors.
   """
   def check_all!(drawings \\ @drawings) do
     for {name, raw} <- Enum.sort(drawings) do
-      case check(raw, name) do
+      result = if raw["blueprint"], do: World.Orders.check(raw), else: check(raw, name)
+
+      case result do
         {:ok, _} -> name
         {:error, errors} -> raise ArgumentError, "the drawing #{name} has errors: #{inspect(errors)}"
       end
     end
   end
 
-  @doc "The assembly of a drawing that `check/2` accepts."
-  def build(raw) do
-    parts = Map.new(Map.get(raw, "parts", %{}), fn {name, p} -> {name, part(name, p)} end)
-    [root | rest] = raw["nodes"]
+  @doc """
+  The drawing of a blueprint in data (`World.Orders.Blueprint.from_data/1`)
+  with the options of an order: each `{"param": NAME}` takes the value of
+  its option, each `{"sum": [...]}` the sum of its numbers, and each
+  `{"product": [...]}` their product (the work of a site, plan 0006); a
+  node with `"only": [A, B]` is in the drawing when A is B. The texts
+  of the option of the type `sources`, in the order of their names, go
+  after the sources of the drawing, and the `sizes` of the blueprint go
+  into its extras (`"sizes"`): each with its value, its unit and its
+  source, or `World.Sizes.none/0`. A size with `row` gives each item of a
+  list as the list of the values of its fields, and a size `of` some
+  options the list of their values.
+  """
+  def fill(blueprint, options) do
+    # The params, the repeats, then the params that a repeat names
+    # (`{"param": "finish_{side}"}`).
+    drawing = blueprint["drawing"] |> put(options) |> expand() |> put(options) |> only()
+    params = Map.get(blueprint, "params", [])
+    sources = Enum.find_value(params, %{}, &(&1["type"] == "sources" && options[&1["name"]]))
+
+    sizes =
+      for s <- Map.get(blueprint, "sizes", []), v = size(s, options), v != nil do
+        v = if s["row"], do: for(item <- v, do: Enum.map(s["row"], &item[&1])), else: v
+        entry = %{"name" => s["name"], "value" => v, "source" => sources[s["name"]] || World.Sizes.none()}
+        if s["unit"], do: Map.put(entry, "unit", s["unit"]), else: entry
+      end
+
+    texts = for {_, v} <- Enum.sort(sources), do: v
+    drawing = Map.update(drawing, "sources", texts, &(&1 ++ texts))
+    if sizes == [], do: drawing, else: Map.update(drawing, "extras", %{"sizes" => sizes}, &Map.put(&1, "sizes", sizes))
+  end
+
+  # The nodes of the options: a node with `"only": [A, B]` is in the
+  # drawing when A is B (`[{"param": "method"}, "today"]`: the crane of a
+  # site of today), and the key goes.
+  defp only(%{"nodes" => nodes} = d) do
+    kept = for n <- nodes, match?([a, a], Map.get(n, "only", [0, 0])), do: Map.delete(n, "only")
+    %{d | "nodes" => kept}
+  end
+
+  defp only(d), do: d
+
+  # A size of one option, or of some (`of`: a list of their values).
+  defp size(%{"of" => names}, options), do: for(n <- names, do: options[n])
+  defp size(s, options), do: options[s["name"]]
+
+  defp put(%{"param" => name} = m, o) when map_size(m) == 1, do: Map.get(o, name, m)
+  defp put(%{"sum" => l} = m, o) when map_size(m) == 1, do: l |> Enum.map(&put(&1, o)) |> Enum.sum()
+  defp put(%{"product" => l} = m, o) when map_size(m) == 1, do: l |> Enum.map(&put(&1, o)) |> Enum.product()
+  defp put(%{} = m, o), do: Map.new(m, fn {k, v} -> {k, put(v, o)} end)
+  defp put(l, o) when is_list(l), do: Enum.map(l, &put(&1, o))
+  defp put(v, _o), do: v
+
+  @doc """
+  The assembly of a drawing that `check/2` accepts, at the level of
+  detail of the process: each node made in the order of its waits
+  (`make/3`), then put together (`assemble/2`).
+  """
+  def build(raw, opts \\ []) do
+    g = graph(raw["nodes"])
+    by_name = Map.new(raw["nodes"], &{&1["name"], &1})
+    {parts, rest} = Enum.split_with(:graph.topsort(g), &sculpture?(by_name[&1]))
+
+    made =
+      Enum.reduce(rest, at_once(raw, by_name, parts), fn name, made ->
+        Map.put(made, name, make(raw, name, inputs(raw, name, made)))
+      end)
+
+    assemble(raw, made, opts)
+  end
+
+  # A node that is a sculpture, and needs no data of another node (the
+  # skill `sculpt` makes it from its own edits).
+  defp sculpture?(node), do: match?(%{"skill" => %{"sculpt" => _}}, node) and Map.get(node, "from", []) == []
+
+  # The sculptures of a model in parts (plan 0014, D2), made at the same
+  # time: each one in a process of its own, as a site with its crew
+  # (`World.Crew`), the largest first (it takes its place at the gate of
+  # the node first: `World.Sculpt.Gate`). A model with one sculpture makes
+  # it here, as each other node.
+  defp at_once(raw, _by_name, [name]), do: %{name => make(raw, name, %{})}
+
+  defp at_once(raw, by_name, names) do
+    {level, lean} = {Detail.level(), Process.get(:world_lean, true)}
+    size = fn name -> World.Skills.Sculpt.estimate(by_name[name]["skill"]["sculpt"], level) end
+
+    names
+    |> Enum.sort_by(&{-size.(&1), &1})
+    |> Enum.map(fn name ->
+      {name, Task.async(fn -> Detail.with(level, fn -> Detail.lean(lean, fn -> make(raw, name, %{}) end) end) end)}
+    end)
+    |> Map.new(fn {name, task} -> {name, Task.await(task, :infinity)} end)
+  end
+
+  @doc "The names of the nodes in the order of their waits: each node after the nodes that it waits for."
+  def order(raw), do: :graph.topsort(graph(raw["nodes"]))
+
+  @doc """
+  The key of each node of a drawing, by its name: a hash of its data and
+  of the keys of the nodes that it waits for. A change of a node changes
+  the key of each node that waits for it.
+  """
+  def keys(raw) do
+    root = hd(raw["nodes"])["name"]
+    by_name = Map.new(raw["nodes"], &{&1["name"], &1})
+
+    Enum.reduce(order(raw), %{}, fn name, keys ->
+      node = by_name[name]
+      waits = for w <- waits(node, root), do: keys[w]
+      Map.put(keys, name, :erlang.phash2({Map.delete(node, "name"), waits}, 4_294_967_296))
+    end)
+  end
+
+  @doc """
+  The drawing of one node: the node, the sources and its part. A person
+  of a construction makes the node from it (`make/3`) with its inputs
+  (plan 0007, D3).
+  """
+  def node(raw, name) do
+    node = Enum.find(raw["nodes"], &(&1["name"] == name))
+    parts = Map.take(Map.get(raw, "parts") || %{}, List.wrap(node["part"]))
+    %{"nodes" => [node], "sources" => Map.get(raw, "sources", []), "parts" => parts}
+  end
+
+  @doc "The data of the nodes `from` of a node, by their names, from the nodes made."
+  def inputs(raw, name, made) do
+    node = Enum.find(raw["nodes"], &(&1["name"] == name))
+    Map.new(Map.get(node, "from", []), &{&1, elem(made[&1], 1)})
+  end
+
+  @doc """
+  The takeoff of one node of a drawing (`World.Skill`, `materials/2`):
+  the materials of the stock that its skill needs, with the data of its
+  nodes `from`. Nothing for a node that is not a skill, or a skill with
+  no takeoff.
+  """
+  def materials(raw, name, inputs) do
+    with %{"skill" => skill} <- Enum.find(raw["nodes"], &(&1["name"] == name)),
+         [{skill, data}] = Map.to_list(skill),
+         {:ok, mod} = World.Skills.fetch(skill),
+         {:module, _} = Code.ensure_loaded(mod),
+         true <- function_exported?(mod, :materials, 2) do
+      mod.materials(data, inputs)
+    else
+      _ -> %{}
+    end
+  end
+
+  @doc """
+  Make one node of a drawing, at the level of detail of the process, with
+  the data of its nodes `from` (`inputs`): `{thing, data, extras}`. The
+  thing is the part or the item of the node, or what its skill makes (nil:
+  a node of data only).
+  """
+  def make(raw, name, inputs) do
+    node = Enum.find(raw["nodes"], &(&1["name"] == name))
+
+    case node do
+      %{"skill" => skill} ->
+        [{skill, data}] = Map.to_list(skill)
+        {:ok, mod} = World.Skills.fetch(skill)
+
+        context = %{
+          level: Detail.level(),
+          sources: Map.get(raw, "sources", []),
+          from: Map.get(node, "from", []),
+          name: node["name"]
+        }
+
+        mod.make(data, inputs, context)
+
+      %{"part" => p} ->
+        {part(p, raw["parts"][p]), %{}, %{}}
+
+      _ ->
+        {built(node), %{}, %{}}
+    end
+  end
+
+  @doc """
+  The triangles of a drawing at a level, an estimate before the people
+  make it: the estimate of each skill (`World.Skill`), and the faces of
+  each part and item (each of n corners is n - 2).
+  """
+  def estimate(raw, level) do
+    for node <- raw["nodes"], reduce: 0 do
+      n ->
+        case node do
+          %{"skill" => skill} ->
+            [{skill, data}] = Map.to_list(skill)
+            {:ok, mod} = World.Skills.fetch(skill)
+            n + mod.estimate(data, level)
+
+          _ ->
+            {thing, _, _} = Detail.with(level, fn -> make(raw, node["name"], %{}) end)
+            n + World.Construction.estimate(thing, level)
+        end
+    end
+  end
+
+  @doc """
+  The assembly of the nodes made (`made`: a name to `{thing, data,
+  extras}`), in the order of the nodes: each node with a thing, the extras
+  of the drawing and of each node in order. A node to a node with no
+  thing goes to the parent of that node, or to the root. A node with
+  `temporary`, or whose skill gives `"temporary" => true` in its data
+  (the plaster under the paint), is not in the model: the people make it, and a watcher sees it
+  in the stream (`stream: true` gives the model with them, for the
+  stream). The extras `place` (`[x, y, z]`: a move of the whole model)
+  and `sources` of a node are of the model, not of its extras.
+  """
+  def assemble(raw, made, opts \\ []) do
+    stream = Keyword.get(opts, :stream, false)
+
+    temporary? = fn n -> Map.get(n, "temporary", false) or match?({_, %{"temporary" => true}, _}, made[n["name"]]) end
+
+    nodes =
+      for n <- raw["nodes"],
+          Map.has_key?(made, n["name"]),
+          elem(made[n["name"]], 0) != nil,
+          stream or not temporary?.(n),
+          do: n
+
+    # The root is the first node that is not temporary.
+    root = Enum.find(nodes, &(not temporary?.(&1)))
+    rest = List.delete(nodes, root)
+    by_name = Map.new(raw["nodes"], &{&1["name"], &1})
+    thing = fn n -> elem(made[n["name"]], 0) end
+
+    extras =
+      Enum.reduce(
+        raw["nodes"],
+        extras(Map.get(raw, "extras", %{})),
+        &Map.merge(&2, elem(Map.get(made, &1["name"], {nil, nil, %{}}), 2))
+      )
+
+    # The extras `place` and `sources` of a node are of the model: the move
+    # of the whole model and more of its sources (a van to its center, with
+    # the sources of its make).
+    {place, extras} = Map.pop(extras, "place")
+    {more, extras} = Map.pop(extras, "sources", [])
 
     materials =
       Map.new(Map.get(raw, "materials", %{}), fn {role, spec} ->
@@ -516,13 +1025,26 @@ defmodule World.Drawing do
         {GLB.role(role), Map.merge(GLB.palette()[role], spec)}
       end)
 
+    # The maps of a node (the data `materials` of its skill: the images
+    # of a sculpture, `World.Sculpt.Bake`) go to the material of each of
+    # its roles.
+    materials =
+      for n <- raw["nodes"],
+          {_, %{"materials" => more}, _} <- [made[n["name"]]],
+          {role, spec} <- more,
+          reduce: materials do
+        acc -> Map.update(acc, GLB.role(role), Map.merge(GLB.palette()[role], spec), &Map.merge(&1, spec))
+      end
+
     a =
-      Assembly.new(Map.get(raw, "name", "drawing"), built(root, parts),
+      Assembly.new(Map.get(raw, "name", "drawing"), thing.(root),
         root: root["name"],
         kind: Map.fetch!(@atoms, Map.get(raw, "kind", "item")),
         materials: materials,
-        sources: Map.get(raw, "sources", []),
-        clips: for(c <- Map.get(raw, "clips", []), do: clip(c))
+        sources: Map.get(raw, "sources", []) ++ more,
+        clips: for(c <- Map.get(raw, "clips", []), do: clip(c)),
+        extras: extras,
+        place: if(place, do: World.Frame.move(List.to_tuple(place)), else: World.Frame.identity())
       )
 
     Enum.reduce(rest, a, fn node, a ->
@@ -530,7 +1052,7 @@ defmodule World.Drawing do
 
       opts =
         [
-          to: node["to"],
+          to: parent(node["to"], by_name, made, root["name"]),
           at: ref(node["at"]),
           port: ref(node["port"]),
           turn: Map.get(node, "turn", 0),
@@ -544,13 +1066,37 @@ defmodule World.Drawing do
             ],
             else: []
 
-      Assembly.add(a, node["name"], built(node, parts), opts)
+      Assembly.add(a, node["name"], thing.(node), opts)
     end)
   end
 
-  defp built(%{"part" => name}, parts), do: parts[name]
+  # The node to connect to: the parent, or the nearest node over it with a
+  # thing, or the root.
+  defp parent(nil, _by_name, _made, root), do: root
 
-  defp built(%{"item" => order}, _parts) do
+  defp parent(name, by_name, made, root) do
+    case made[name] do
+      {nil, _, _} ->
+        parent(by_name[name]["to"], by_name, made, root)
+
+      _ ->
+        if Map.get(by_name[name], "temporary", false), do: parent(by_name[name]["to"], by_name, made, root), else: name
+    end
+  end
+
+  # The extras of the data: the points of the ports and of the collision
+  # boxes as tuples (`World.Build`).
+  defp extras(e) do
+    tuples = fn m, keys ->
+      Map.new(m, fn {k, v} -> {k, if(k in keys and is_list(v), do: List.to_tuple(v), else: v)} end)
+    end
+
+    e
+    |> Map.replace_lazy("ports", fn ps -> for(p <- ps, do: tuples.(p, ~w(at normal))) end)
+    |> Map.replace_lazy("collision", fn bs -> for(b <- bs, do: tuples.(b, ~w(at size axis up))) end)
+  end
+
+  defp built(%{"item" => order}) do
     {:ok, full} = World.Orders.check(order)
     {:ok, blueprint} = Blueprints.fetch(full["blueprint"])
     blueprint.build.(full["options"])
@@ -574,20 +1120,63 @@ defmodule World.Drawing do
     Part.new(name, :part, Enum.map(p["shapes"], &shape/1), ports, sources: Map.get(p, "sources", []))
   end
 
+  @doc """
+  The mesh of a shape of a drawing (`docs/format.md`, "A drawing"): for
+  the skills of the vehicle trades, whose data has shapes too.
+  """
+  def mesh(s), do: shape(s)
+
+  @doc "The errors of a list of shapes of a drawing at `path` (`check/2` of a part)."
+  def check_shapes(v, path), do: list(v, path, 1, 512, &shape/2)
+
+  @doc "The errors of the ports of a part of a drawing (a name to `at`, `axis`, `up`) at `path`."
+  def check_ports(v, path), do: ports(v, path)
+
+  @doc "The ports of a part of a drawing (a name to `at`, `axis`, `up`)."
+  def ports(v), do: for({n, port} <- Enum.sort(v), do: new_port(n, port))
+
   defp shape(s) do
     material = GLB.role(Map.get(s, "material", "gray"))
-    frame = [frame: frame(s)]
+
+    frame =
+      [frame: frame(s)] ++
+        for {k, key} <- [{"sides", :sides}, {"smooth", :smooth}, {"round", :round}], Map.has_key?(s, k), do: {key, s[k]}
+
+    frame = if s["ring"], do: frame ++ [kind: :ring], else: frame
     [kind] = for k <- @shapes, Map.has_key?(s, k), do: k
     d = s[kind]
 
     mesh =
       case kind do
-        "box" -> Shape.box(List.to_tuple(d["from"]), List.to_tuple(d["to"]), material, frame)
-        "cylinder" -> Shape.cylinder(d["radius"], d["length"], material, frame)
-        "sphere" -> Shape.sphere(d["radius"], material, frame)
-        "prism" -> Shape.prism(Enum.map(d["loop"], &List.to_tuple/1), d["length"], material, frame)
-        "lathe" -> Shape.lathe(Enum.map(d["profile"], &List.to_tuple/1), material, frame)
-        "tube" -> Shape.sweep(Enum.map(d["line"], &List.to_tuple/1), d["radius"], material, frame)
+        "box" ->
+          Shape.box(List.to_tuple(d["from"]), List.to_tuple(d["to"]), material, frame)
+
+        "cylinder" ->
+          Shape.cylinder(d["radius"], d["length"], material, frame)
+
+        "sphere" ->
+          Shape.sphere(d["radius"], material, frame)
+
+        "prism" ->
+          Shape.prism(Enum.map(d["loop"], &List.to_tuple/1), d["length"], material, frame)
+
+        "lathe" ->
+          Shape.lathe(Enum.map(d["profile"], &List.to_tuple/1), material, frame)
+
+        "tube" ->
+          Shape.sweep(Enum.map(d["line"], &List.to_tuple/1), d["radius"], material, frame)
+
+        "loft" ->
+          Shape.loft(loft_rows(d), material, frame)
+
+        "body" ->
+          World.Vehicles.Body.loft(tuples(d["rows"]), tuples(Map.get(d, "arches", [])), material, body(d, frame))
+
+        "arc" ->
+          Shape.loft(arc(d), material, frame)
+
+        "rings" ->
+          Shape.rings(for(r <- d["rings"], do: tuples(r)), material, frame)
       end
 
     # The name is one of the list of `World.Mass.materials/0` (the check).
@@ -597,6 +1186,33 @@ defmodule World.Drawing do
       nil -> if s["matter"], do: World.Mesh.matter(mesh, matter), else: mesh
       t -> World.Mesh.skin(mesh, t, matter)
     end
+  end
+
+  defp tuples(list), do: Enum.map(list, &List.to_tuple/1)
+
+  defp loft_rows(%{"rows" => rows} = d) do
+    x = Map.get(d, "x", 0.0) / 1
+    if Map.get(d, "along", "y") == "y", do: Shape.rows_y(tuples(rows), x), else: Shape.rows_z(tuples(rows), x)
+  end
+
+  defp body(d, opts) do
+    extra = for {k, key} <- [{"step", :step}, {"x", :x0}], Map.has_key?(d, k), do: {key, d[k] / 1}
+    opts ++ extra
+  end
+
+  defp arc(d) do
+    [cy, cz] = d["center"]
+
+    Shape.arc(
+      {cy, cz},
+      d["radius"],
+      d["from"],
+      d["to"],
+      d["steps"],
+      d["half_width"],
+      d["half_height"],
+      Map.get(d, "power", 4)
+    )
   end
 
   # The frame of a shape: its origin at `at`, its z on `axis`, its y on

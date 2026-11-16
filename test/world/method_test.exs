@@ -1,0 +1,207 @@
+defmodule World.MethodTest do
+  # The methods of a site (plan 0006, D6 to D8; R4 to R6): the statue on
+  # Núi Nhỏ with the method of today and with the true history of 1974,
+  # the facts of the history and their sources, and the old statue in a
+  # pause.
+  use ExUnit.Case, async: true
+
+  alias World.{Clock, Drawing, Log, Method, Orders}
+
+  @moduletag :tmp_dir
+
+  defp order(method), do: put_in(Drawing.raw("tuong_chua_kito_vua_cong_truong"), ["options", "method"], method)
+
+  test "the history of the statue: each fact names its sources, each stage its facts, the dates in order" do
+    h = Method.history("tuong_chua_kito_vua_cong_truong")
+    sources = Map.keys(h["sources"])
+    facts = for f <- h["facts"], into: %{}, do: {f["id"], f}
+    assert map_size(facts) == 14 and length(sources) == 6
+
+    for f <- h["facts"] do
+      assert f["sources"] != [] and f["sources"] -- sources == [], f["id"]
+      assert is_binary(f["text"])
+    end
+
+    for st <- h["stages"] ++ h["changes"], do: assert(st["facts"] != [] and st["facts"] -- Map.keys(facts) == [])
+
+    assert Enum.map(h["stages"], & &1["name"]) == ~w(first_build first_pause first_down rough pause finish)
+    pairs = Enum.chunk_every(h["stages"], 2, 1, :discard)
+    for [a, b] <- pairs, do: assert(a["to"] == b["from"])
+    assert hd(h["changes"])["date"] == Enum.find(h["stages"], &(&1["name"] == "first_down"))["from"]
+    # Each value with no source says so.
+    assert Enum.find(h["stages"], &(&1["name"] == "first_build"))["estimate"] =~ "no source"
+    assert Method.history("nobody") == nil
+  end
+
+  test "the stages of a method: one build today; the six stages of 1974 with their days" do
+    assert [%{name: "build", work: "build", until: "all", to: nil}] = Method.stages(order("today"))
+    stages = Method.stages(order("1974"))
+    assert Enum.map(stages, & &1.work) == ~w(build pause change build pause build)
+    assert hd(stages).from == 0 and hd(stages).lot == "cape"
+    # 16 February 1974 is day 595 of the site (from 1 July 1972).
+    assert Enum.at(stages, 2).from == 595 and Enum.at(stages, 2).lot == "top"
+    # The pause of 17 years: 30 April 1975 to 28 January 1992.
+    pause = Enum.at(stages, 4)
+    assert pause.to - pause.from == 6117 and pause.lost == ["the copper cable of the lightning rod"]
+    assert List.last(stages).repair and List.last(stages).to == 8188
+    assert Method.of(%{"options" => %{}}) == "today" and Method.workers("1974") == 50
+    # A statue with no history: 1974 is one stage, at the rates of 1974.
+    other = put_in(order("1974"), ["options", "name"], "another")
+    assert [%{name: "build"}] = Method.stages(other)
+  end
+
+  test "the statue today and in 1974: the same model, two schedules, the six stages, the change and the pauses",
+       %{tmp_dir: dir} do
+    {:ok, today} = Orders.job(order("today"), "far")
+    {:ok, old} = Orders.job(order("1974"), "far")
+    assert today.hash != old.hash and old.method == "1974" and old.lot == "cape"
+    # The first statue: 8.6 m on its base.
+    assert Enum.find(old.drawing["nodes"], &(&1["name"] == "survey"))["skill"]["cast_survey"]["height"] == 8.6
+
+    {:ok, a} = World.build(%{today | id: "method-today-#{System.unique_integer([:positive])}"})
+    {:ok, b} = World.build(%{old | id: "method-1974-#{System.unique_integer([:positive])}"})
+    assert {:ok, ra} = World.await(a, 60_000)
+    assert {:ok, rb} = World.await(b, 120_000)
+    assert ra.glb == rb.glb
+    assert Log.check(ra.log) == :ok and Log.check(rb.log) == :ok
+    assert World.BuildSpec.replay([rb.log], dir) == :ok
+
+    events = Log.events(rb.log)
+    start = hd(events).at
+    day = fn e -> (e.at - start) / Clock.day() end
+    stages = for e <- events, e.kind == "stage_started", do: e.data["name"]
+    assert stages == ~w(first_build first_pause first_down rough pause finish)
+
+    # The means of the time (D6): no machine; the carriers of the path go
+    # up the hill to the top (the cape is at the sea).
+    started = for e <- events, e.kind == "stage_started", into: %{}, do: {e.data["name"], e.data}
+    assert "carry_path" in started["rough"]["means"] and "pulley" in started["finish"]["means"]
+    refute "tower_crane" in started["rough"]["means"]
+    assert length(started["rough"]["path"]) == 6 and started["first_build"]["path"] == nil
+    assert started["pause"]["means"] == []
+
+    # Each stage starts at its date, or later when the computer is slow:
+    # at 1,000 days in a second, the work of the computer on the figure
+    # (0.8 s) is 800 days (at one day in a second, less than one day).
+    # The days of the tasks of a stage are fitted to the days that are left.
+    plan = Method.stages(order("1974"))
+
+    for e <- events, e.kind == "stage_started" do
+      st = Enum.find(plan, &(&1.name == e.data["name"]))
+      assert day.(e) >= st.from - 1, st.name
+
+      if st.work == "build" do
+        drawing = if st.name == "first_build", do: old.drawing, else: today.drawing
+        span = World.Site.span(World.Site.schedule(drawing, "1974", e.data["tasks"]))
+        # (The fit is from the day of the clock a moment before the event: with other tests on the same
+        # cores, some ms more, and 1 ms is one day.)
+        assert_in_delta e.data["fit"] * span, max(st.to - max(day.(e), st.from), 1), 25.0
+      end
+    end
+
+    # The change of 16 February 1974: the first statue comes down at the cape.
+    assert %{data: %{"lot" => "top", "remove" => [_ | _] = removes}} = Enum.find(events, &(&1.kind == "changed"))
+    changed = Enum.find_index(events, &(&1.kind == "changed"))
+    gone = for e <- Enum.drop(events, changed), e.kind == "element_removed", do: e.data["task"]
+    assert removes != [] and Enum.all?(removes, &(String.replace_prefix(&1["id"], "remove/", "") in gone))
+
+    # The pauses: the statue gets old with the years, the cable of the
+    # lightning rod goes in the middle of the pause of 17 years, and the
+    # repair of 1992 makes it clean (plan 0006, D8).
+    aged = for e <- events, e.kind == "aged", do: e.data
+    # The pause of 17 years: an age each year that is left of it, and one
+    # at its end. A slow computer starts the pause late, so fewer years
+    # are left, and the count comes from the days that are left.
+    long = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "pause"))
+    pause = Enum.at(events, long)
+    left = pause.data["to"] - max(day.(pause), pause.data["from"])
+    years = Enum.count(1..max(floor(left / 365), 1), &(&1 * 365 < left))
+    in_pause = for e <- Enum.drop(events, long), e.kind == "aged", do: e.data
+    assert left > 365 and abs(length(in_pause) - (years + 1)) <= 1
+    assert_in_delta List.last(in_pause)["days"], left, 30
+    # The new statue has no age at the change: its dirt grows in the long pause.
+    dirt = for e <- in_pause, do: e["dirt"]
+    assert dirt == Enum.sort(dirt)
+    # The dirt and the weeds from the years (a pause that starts late is shorter).
+    last = List.last(aged)
+    assert_in_delta last["dirt"], 1 - :math.exp(-last["days"] / 365 / 8), 0.001
+    assert_in_delta last["weeds"], min(last["days"] / 365 / 5, 1.0), 0.001
+    # The cable goes in the year of the middle of the pause. A pause that starts after that year (a slow
+    # computer) does not have it: the cable stays.
+    half = (pause.data["to"] - pause.data["from"]) / 2
+    lost = for(a <- aged, a["lost"] != [], do: a["lost"])
+
+    if left > half + 365,
+      do: assert(lost == [["the copper cable of the lightning rod"]]),
+      else: assert(lost in [[], [["the copper cable of the lightning rod"]]])
+
+    assert %{data: %{"parts" => ["the copper cable of the lightning rod"]}} =
+             Enum.find(events, &(&1.kind == "repaired"))
+
+    assert Enum.find_index(events, &(&1.kind == "repaired")) > Enum.find_index(events, &(&1.kind == "aged"))
+
+    # The scaffold and the board of the mixing go in the first year of the
+    # pause; the repair of 1992 puts them up again before the render (the
+    # far level has no cast, so no scaffold: the board of the mixing).
+    pause = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "pause"))
+    finish = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "finish"))
+    lost = for e <- Enum.slice(events, pause..finish), e.kind == "element_removed", do: e.data
+    assert lost == [%{"task" => "mixing", "lost" => true}]
+    %{data: %{"add" => add, "waits" => waits}} = Enum.at(events, finish - 1)
+    assert length(add) == 9 and waits["shell"] == Enum.map(add, & &1["id"])
+    again = Enum.find_index(events, &(&1.kind == "task_done" and &1.data["task"] == "again/mixing"))
+    shell = Enum.find_index(events, &(&1.kind == "task_started" and &1.data["task"] == "shell"))
+    assert again > finish and again < shell
+    back = for e <- Enum.slice(events, finish..shell), e.kind == "element", do: e.data["task"]
+    assert back == ["mixing"]
+    # The crew of a pour by hand: 12 people (the rate concrete of 1974).
+    assert %{data: %{"crew" => 12}} = Enum.find(events, &(&1.kind == "task_started" and &1.data["task"] == "pour_1"))
+
+    # The end: on or after 1 December 1994.
+    assert day.(List.last(events)) >= 8188 - 1
+    # Today: one stage, about a year, with the machines of today.
+    assert [%{data: %{"name" => "build", "fit" => 1.0, "means" => means}}] =
+             for(e <- Log.events(ra.log), e.kind == "stage_started", do: e)
+
+    assert "tower_crane" in means and Map.keys(Method.means()) -- means != []
+
+    span = (List.last(Log.events(ra.log)).at - hd(Log.events(ra.log)).at) / Clock.day()
+    # About a year of the plan; more with the work of a slow computer.
+    assert span > 300 and World.Site.span(World.Site.schedule(today.drawing)) < 400
+  end
+
+  test "the replay of the statue has each part that a person sees on the site, with its tasks; the model passes its checks" do
+    glb = Orders.build(order("1974"), "mid", "replay") |> elem(1)
+    <<"glTF", _::binary-8, n::little-32, "JSON", json::binary-size(n), _::binary>> = glb
+    nodes = for n <- JSON.decode!(json)["nodes"], e = n["extras"], e["from"], into: %{}, do: {e["from"], e["to"]}
+
+    for i <- 1..8 do
+      assert nodes["scaffold_#{i}"] == "unscaffold" and nodes["form_#{i}"] == "strip_#{i}"
+      assert nodes["pour_#{i}"] == "tuong_chua_kito_vua_cong_truong"
+    end
+
+    # The parts of the end stay: no task takes them down.
+    assert Map.has_key?(nodes, "tuong_chua_kito_vua_cong_truong") and nodes["be"] == nil
+    {:ok, job} = Orders.job(order("1974"), "mid")
+    stream = World.Detail.with(:mid, fn -> Drawing.build(job.model, stream: true) end)
+    assert World.Check.model(stream) == :ok
+
+    # The tower crane of a site of today (D6): up after the base, down
+    # after the scaffold; no crane in 1974.
+    {:ok, today} = Orders.job(order("today"), "mid")
+    crane = Enum.find(today.drawing["nodes"], &(&1["name"] == "crane"))
+    assert crane["down"] == "crane_down" and crane["temporary"] and not Map.has_key?(crane, "only")
+    assert Enum.find(today.drawing["nodes"], &(&1["name"] == "crane_down"))["after"] == ["unscaffold"]
+    refute Enum.any?(job.model["nodes"], &(&1["name"] in ~w(crane crane_down)))
+    # The board of the mixing by hand of 1974.
+    assert Enum.any?(job.model["nodes"], &(&1["name"] == "mixing"))
+    refute Enum.any?(today.drawing["nodes"], &(&1["name"] == "mixing"))
+    assert nodes["mixing"] == "tuong_chua_kito_vua_cong_truong"
+    stream = World.Detail.with(:mid, fn -> Drawing.build(today.drawing, stream: true) end)
+    assert World.Check.model(stream) == :ok
+    {p, _, _} = World.Skills.Crane.make(crane["skill"]["crane"], %{}, %{name: "crane"})
+    {{_, _, _}, {_, _, top}} = World.Part.bounds(p)
+    # Its jib over the top of the statue (the halo at 7.7 + 28 m).
+    assert top > 7.7 + 28.0 + 7 and World.Skills.Crane.check(%{"at" => [1]}, "c") != []
+  end
+end

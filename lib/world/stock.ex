@@ -1,91 +1,68 @@
 defmodule World.Stock do
   @moduledoc """
-  The stock of a warehouse: each item by its name, with its count and the
-  bytes of one item (the size of its files). The `limit` is the size of
-  the warehouse, in bytes: the limit of its store (`docs/world.md`, "What
-  is real"). The stock is never less than zero, and never more than the
-  limit.
-
-  The stock is the files: the store (`World.Store`) keeps the files of
-  each model in the stock (`put_files/3`, `files/2`).
+  The stock of the warehouse (plan 0002, D6): each material by its name,
+  with its count in its unit and the mass of one unit (`priv/places.json`).
+  The count is never less than zero: a take of more than the stock takes
+  nothing, and gives what is short. The suppliers bring the rest
+  (`World.Haul`).
   """
-  alias World.Store
 
-  defstruct limit: 0, items: %{}, store: %Store{}
+  defstruct items: %{}
 
-  @doc "An empty stock with a limit in bytes, and the store of its files (the memory of the VM by default)."
-  def new(limit, store \\ Store.memory()) when is_integer(limit) and limit >= 0,
-    do: %__MODULE__{limit: limit, store: store}
+  @doc "The stock of the yard at the start: the counts of `priv/places.json`."
+  def new, do: new(World.Places.data()["stock"])
+
+  @doc "A stock of the given materials: a map of a name to `%{\"count\", \"unit\", \"kg\"}`."
+  def new(items), do: %__MODULE__{items: items}
+
+  @doc "The count of a material, 0 for a material that the stock does not have."
+  def count(%__MODULE__{items: items}, name), do: get_in(items, [name, "count"]) || 0
 
   @doc """
-  The stock of a catalog (a store of the kind `:release`): each model of
-  the store, one time. The limit is the bytes of the models: a catalog is
-  always full.
+  Take the materials of a takeoff (a map of a name to a count): `{:ok,
+  stock}`, or `{:short, wants}` with the count that is short of each
+  material that the stock does not have enough of.
   """
-  def catalog(%Store{kind: :release} = store) do
-    items = Map.new(Store.list(store), fn {name, bytes} -> {model(name), {1, bytes}} end)
-    s = %__MODULE__{items: items, store: store}
-    %{s | limit: used(s)}
+  def take(%__MODULE__{} = stock, wants) do
+    short = for {name, n} <- wants, n > count(stock, name), into: %{}, do: {name, n - count(stock, name)}
+
+    if short == %{},
+      do: {:ok, Enum.reduce(wants, stock, fn {name, n}, s -> add(s, name, -n) end)},
+      else: {:short, short}
   end
 
-  @doc "The name of the files of a model in a stock."
-  def model(name), do: "model:" <> name
+  @doc "Put materials into the stock (a delivery of a supplier)."
+  def put(%__MODULE__{} = stock, wants), do: Enum.reduce(wants, stock, fn {name, n}, s -> add(s, name, n) end)
 
-  @doc "The bytes in the stock."
-  def used(%__MODULE__{items: items}), do: items |> Map.values() |> Enum.map(fn {n, b} -> n * b end) |> Enum.sum()
+  defp add(%__MODULE__{items: items} = s, name, n) do
+    item = Map.get(items, name, %{"count" => 0, "unit" => "", "kg" => 0.0})
+    %{s | items: Map.put(items, name, Map.update!(item, "count", &(&1 + n)))}
+  end
 
-  @doc "The bytes that the stock can still take."
-  def free(%__MODULE__{limit: limit} = s), do: limit - used(s)
-
-  @doc "The count of an item in the stock."
-  def count(%__MODULE__{items: items}, name), do: items |> Map.get(name, {0, 0}) |> elem(0)
+  @doc "The mass in kg of a takeoff."
+  def mass(%__MODULE__{items: items}, wants),
+    do: Enum.sum(for({name, n} <- wants, do: n * get_in(items, [name, "kg"]))) / 1
 
   @doc """
-  Put `count` items of `bytes` each. A warehouse that is too full
-  refuses all of them: `{:error, :full}`. The items of one name have one
-  size: an item of the same name with another size is refused,
-  `{:error, :other_size}`.
+  The loads of a takeoff for trucks of `load_kg`: each a map of a name to
+  a count, each at most `load_kg` (one unit heavier than a load is a load
+  of its own), in the order of the names.
   """
-  def put(%__MODULE__{items: items} = s, name, count, bytes)
-      when is_integer(count) and count > 0 and is_integer(bytes) and bytes >= 0 do
-    {n, b} = Map.get(items, name, {0, bytes})
+  def loads(%__MODULE__{items: items}, wants, load_kg) do
+    units = for {name, n} <- Enum.sort(wants), _ <- 1..ceil(n)//1, do: {name, items[name]["kg"]}
 
-    cond do
-      b != bytes -> {:error, :other_size}
-      count * bytes > free(s) -> {:error, :full}
-      true -> {:ok, %{s | items: Map.put(items, name, {n + count, bytes})}}
-    end
-  end
-
-  @doc "Take `count` items. With less in the stock: `{:error, :missing}`."
-  def take(%__MODULE__{items: items} = s, name, count) when is_integer(count) and count > 0 do
-    case Map.get(items, name) do
-      {n, b} when n > count -> {:ok, %{s | items: Map.put(items, name, {n - count, b})}}
-      {^count, _} -> {:ok, %{s | items: Map.delete(items, name)}}
-      _ -> {:error, :missing}
-    end
-  end
-
-  @doc """
-  Put the files of a model (`"model:NAME"`) into the stock and its store:
-  `{:ok, stock}`, `{:error, :read_only}` (a catalog), `{:error, :full}` or
-  `{:error, :other_size}`.
-  """
-  def put_files(%__MODULE__{store: %Store{kind: :release}}, "model:" <> _, _files), do: {:error, :read_only}
-
-  def put_files(%__MODULE__{} = s, "model:" <> name = item, files) do
-    with {:ok, s} <- put(s, item, 1, byte_size(files)),
-         {:ok, store} <- Store.put(s.store, name, files) do
-      {:ok, %{s | store: store}}
-    end
-  end
-
-  @doc "The files of a model in the stock: `{:ok, files}`, or `{:error, :missing}`."
-  def files(%__MODULE__{} = s, "model:" <> name = item) do
-    with true <- count(s, item) > 0, {:ok, files} <- Store.get(s.store, name) do
-      {:ok, files}
-    else
-      _ -> {:error, :missing}
-    end
+    units
+    |> Enum.chunk_while(
+      {%{}, 0.0},
+      fn {name, kg}, {load, mass} ->
+        if mass > 0 and mass + kg > load_kg,
+          do: {:cont, load, {%{name => 1}, kg}},
+          else: {:cont, {Map.update(load, name, 1, &(&1 + 1)), mass + kg}}
+      end,
+      fn
+        {load, _} when load == %{} -> {:cont, {%{}, 0.0}}
+        {load, _} -> {:cont, load, {%{}, 0.0}}
+      end
+    )
   end
 end

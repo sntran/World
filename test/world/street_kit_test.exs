@@ -16,7 +16,7 @@ defmodule World.Places.StreetKitTest do
       assert Check.model(item) == :ok, name
       [near, mid, far] = for l <- [:near, :mid, :far], do: Scene.triangles(scene(fun, l))
       assert near >= mid and mid >= far and far > 0, name
-      assert World.Places.family_of(item) == :houses
+      assert World.Plan.trade(item) == :mason
     end
 
     assert length(StreetKit.models()) == 15

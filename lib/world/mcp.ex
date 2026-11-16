@@ -22,6 +22,10 @@ defmodule World.MCP do
   2. Call check_order with the order until it has no errors. Each error has the path of the wrong value and the rule.
   3. Call place_order. The answer has the hash of the order and the URLs of its files: the GLB at the near, mid and far levels, the list of the parts, the receipt, and the log of the people of the world that built it.
   The factory builds each file at its first GET (this can take some seconds; 503 means that the order needs more memory than the edge has), and keeps it. The same order always gives the same hash and the same URLs.
+  To watch the people build a model: call plan_build for the tasks, the trades and the triangles of an order at a level, then build with a budget. The answer has the URL of the stream of the events of the construction (server-sent events), and each element as it comes.
+  To correct a model after you look at its files: call edit_order with the hash and small changes (set, remove or insert at a path of the full order). The answer is a new order with its own hash and files, its parent and its history. Do not send the full request again, and do not wait for a new rule: say what to change.
+  A thing that a rule draws from a few words is a blueprint as each other one (list_blueprints): street_house, street, building, village_house, village_thing, appliance, mini. Its options are the words of its request, and the full order has each choice that the rule made, so edit_order can change one of them.
+  A sculpture from edits (simple shapes that add, take away or paint, with a blend): send it in a node of the skill sculpt of a blueprint, or call open_sculpture for a live sculpture, then edit_sculpture for each change, and follow its stream of pieces.
   A new model for the catalog (an engineer): get_blueprint drawing gives the format of a drawing (its shapes, their materials and matter, standard parts, nodes and joints). Call check_drawing until the drawing has no errors and passes the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop, each part has a mass). Then call propose_drawing with the request: the owner reviews the proposal, and accepts or refuses it.
   """
 
@@ -31,7 +35,11 @@ defmodule World.MCP do
     "description" =>
       ~s(An order: {"blueprint": NAME, "options": {...}, "colors": {ROLE: "#rrggbb"}, "joints": {NAME: DEGREES}, "targets": {LIMB: [X, Y, Z]}}. Only "blueprint" is necessary: each option that the order does not give has its default.),
     "properties" => %{
-      "blueprint" => %{"type" => "string", "description" => "The name of a blueprint (list_blueprints)."},
+      "blueprint" => %{
+        "type" => ["string", "object"],
+        "description" =>
+          ~s[The name of a blueprint (list_blueprints), or a blueprint in data of the project (check_blueprint), or {"hash": HASH} of a blueprint that POST /blueprints keeps.]
+      },
       "options" => %{
         "type" => "object",
         "description" => "The options of the blueprint (get_blueprint), by their names."
@@ -45,10 +53,24 @@ defmodule World.MCP do
 
   @read %{"readOnlyHint" => true, "openWorldHint" => false}
 
+  @level %{"type" => "string", "enum" => ~w(near mid far), "description" => "The level of detail: near by default."}
+
+  @budget %{
+    "type" => "object",
+    "description" =>
+      "The budget of the construction: workers (the most people at one time, 1 to 64, 4 by default), seconds (the deadline; no model after it), triangles (the most triangles: the most detailed level that fits), memory_mb (the memory of the people), clock (world, by default, or fast: the log keeps the days of each task, and the people do not wait for them)."
+  }
+
   @drawing %{
     "type" => "object",
     "description" =>
       "A drawing (docs/format.md, \"A drawing\"): name, kind, materials, parts (shapes or a standard part), nodes, clips, sources."
+  }
+
+  @edit %{
+    "type" => "object",
+    "description" =>
+      ~s<An edit (docs/format.md, "A sculpture"): {"shape": "ball", "size": [0.1], "at": [x, y, z], "axis": [x, y, z], "up": [x, y, z], "mode": "add" | "subtract" | "paint", "blend": M, "material": ROLE, "color": "#rrggbb", "mirror": "x", "repeat": {"count": N}}.>
   }
 
   @tools [
@@ -73,12 +95,53 @@ defmodule World.MCP do
       "annotations" => @read
     },
     %{
+      "name" => "check_blueprint",
+      "title" => "Check a blueprint in data",
+      "description" =>
+        "Checks a blueprint in data of a project (docs/format.md, \"A blueprint in data\"; the skills of the trades: docs/skills.md) and does not keep it: its params, and its drawing with the default of each param, each error with its path. Gives its options, the hash, and the plan of the people at the level far; an order can give the blueprint itself as its blueprint.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "blueprint" => %{
+            "type" => "object",
+            "description" => "A blueprint in data: name, doc, sources, params, drawing."
+          }
+        },
+        "required" => ["blueprint"]
+      },
+      "annotations" => @read
+    },
+    %{
       "name" => "check_order",
       "title" => "Check an order",
       "description" =>
         "Checks an order and does not keep it. Gives the hash and the full order (with each default), or the errors: each error has the path of the wrong value and the rule.",
       "inputSchema" => %{"type" => "object", "properties" => %{"order" => @order}, "required" => ["order"]},
       "annotations" => @read
+    },
+    %{
+      "name" => "edit_order",
+      "title" => "Change an order that World has",
+      "description" =>
+        ~s(Makes small changes to a placed order and keeps the new order: the way to correct a model after you look at its files, with no new full request. Each edit is {"set": PATH, "to": VALUE}, {"remove": PATH}, {"insert": PATH, "value": VALUE} or {"free": true} \(the order becomes an order of its drawing: each shape that its rule drew is then in the order for the edits after it, and a person, an animal or a plant is the node model of the drawing, so that edits add parts to it\). A path is as the path of an error of a check: options.height, colors.paint, joints.stand, options.numbers.fronds, options.drawing.nodes.0.skill.sculpt.edits.3.size \(an item of a list is its index from 0, or its name\). The edits are on the full order \(each option with its default: get it from place_order or check_order\). Gives the new hash, the full order, the URLs of its files, the hash of its parent and its history; or the errors, with the path edits.N of an edit that is not possible.),
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "hash" => %{"type" => "string", "description" => "The hash of the order to change."},
+          "edits" => %{
+            "type" => "array",
+            "items" => %{"type" => "object"},
+            "description" => "The edits, in their order."
+          }
+        },
+        "required" => ["hash", "edits"]
+      },
+      "annotations" => %{
+        "readOnlyHint" => false,
+        "destructiveHint" => false,
+        "idempotentHint" => true,
+        "openWorldHint" => false
+      }
     },
     %{
       "name" => "place_order",
@@ -102,6 +165,35 @@ defmodule World.MCP do
       "annotations" => @read
     },
     %{
+      "name" => "plan_build",
+      "title" => "Plan a build",
+      "description" =>
+        "Gives the plan of the people for an order at a level, with no build: each task with its trade and the tasks that it waits for, the count of the tasks of each trade, and the estimate of the triangles of the model. A node of a drawing that a skill makes is one task.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{"order" => @order, "level" => @level},
+        "required" => ["order"]
+      },
+      "annotations" => @read
+    },
+    %{
+      "name" => "build",
+      "title" => "Build an order",
+      "description" =>
+        "Keeps an order and starts its construction: the people of the node build it element by element, in its budget. Gives the id of the build, the hash of the order, the URL of the stream of its events (server-sent events: plan_made, hired, task_started, element, done, stopped), and the URLs of its files; or the errors.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{"order" => @order, "level" => @level, "budget" => @budget},
+        "required" => ["order"]
+      },
+      "annotations" => %{
+        "readOnlyHint" => false,
+        "destructiveHint" => false,
+        "idempotentHint" => true,
+        "openWorldHint" => false
+      }
+    },
+    %{
       "name" => "propose_drawing",
       "title" => "Propose a new drawing",
       "description" =>
@@ -120,10 +212,52 @@ defmodule World.MCP do
         "idempotentHint" => true,
         "openWorldHint" => false
       }
+    },
+    %{
+      "name" => "open_sculpture",
+      "title" => "Open a live sculpture",
+      "description" =>
+        "Open a live sculpture from a list of edits (the skill sculpt). The answer has its id, its version and the URLs of the stream of its pieces (server-sent events: a piece for each brick of its surface, then each new piece after each change) and of its GLB now. The same edits open the same sculpture.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "edits" => %{"type" => "array", "items" => @edit, "description" => "The edits, in their order: 1 to 10,000."},
+          "level" => @level,
+          "name" => %{
+            "type" => "string",
+            "description" => "A name for the sculpture (a-z, 0-9, _ and -): by default, the hash of its edits."
+          }
+        },
+        "required" => ["edits"]
+      }
+    },
+    %{
+      "name" => "edit_sculpture",
+      "title" => "Change one edit of a live sculpture",
+      "description" =>
+        "Change the edit at an index of a live sculpture (the index of the count of its edits adds one at the end; an edit of null takes it away). The new edit stops the work of the last one. The answer has the new version; the stream gives the new pieces, then done with the version.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "sculpture" => %{"type" => "string", "description" => "The id of the sculpture (open_sculpture)."},
+          "index" => %{"type" => "integer", "description" => "The index of the edit, from 0."},
+          "edit" => Map.put(@edit, "type", ["object", "null"])
+        },
+        "required" => ["sculpture", "index", "edit"]
+      }
+    },
+    %{
+      "name" => "close_sculpture",
+      "title" => "Close a live sculpture",
+      "description" => "Stop a live sculpture and its work: the stream of its pieces ends with closed.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{"sculpture" => %{"type" => "string", "description" => "The id of the sculpture."}},
+        "required" => ["sculpture"]
+      }
     }
   ]
 
-  @doc "The tools of the server."
   def tools, do: @tools
 
   @doc """
@@ -208,6 +342,22 @@ defmodule World.MCP do
     end
   end
 
+  defp call("check_blueprint", %{"blueprint" => %{} = raw}, _origin) do
+    case World.Orders.Blueprint.check_data(raw, "blueprint") do
+      [] ->
+        b = World.Orders.Blueprint.from_data(raw)
+        # A blueprint with a param that has no default: no plan before an order gives it.
+        plan = with {:error, _} <- Orders.plan(%{"blueprint" => raw}, "far"), do: nil
+        plan = with {:ok, p} <- plan, do: p
+        result(Map.merge(Blueprint.describe(b), %{"hash" => Orders.hash(raw), "plan" => plan}))
+
+      errors ->
+        result(%{"errors" => for({path, message} <- errors, do: %{"path" => path, "message" => message})}, true)
+    end
+  end
+
+  defp call("check_blueprint", _args, _origin), do: wrong(~s(the argument "blueprint" must be a JSON object))
+
   defp call("check_drawing", %{"drawing" => drawing}, _origin) do
     case World.Engineers.review(drawing) do
       {:ok, review} -> result(review)
@@ -223,8 +373,61 @@ defmodule World.MCP do
     end
   end
 
+  defp call("plan_build", %{"order" => order} = args, _origin) when is_map(order) do
+    case Orders.plan(order, Map.get(args, "level", "near")) do
+      {:ok, data} -> result(data)
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("build", %{"order" => order} = args, origin) when is_map(order) do
+    case Orders.construction(args, origin) do
+      {:ok, job, placed} ->
+        after_id = World.Log.Server.last()
+        {:ok, id} = World.build(job)
+        result(Orders.started(id, placed, after_id))
+
+      {:error, :store} ->
+        wrong("the store of the orders failed; try again later")
+
+      {:error, errors} ->
+        result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("open_sculpture", args, origin) do
+    case World.Sculpt.Web.open(args, origin) do
+      {:ok, data} -> result(data)
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("edit_sculpture", args, _origin) do
+    case World.Sculpt.Web.edit(args) do
+      {:ok, data} -> result(data)
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("close_sculpture", args, _origin) do
+    case World.Sculpt.Web.close(args) do
+      :ok -> result(%{"sculpture" => args["sculpture"], "closed" => true})
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
   defp call(tool, _args, _origin) when tool in ~w(check_drawing propose_drawing),
     do: wrong(~s(the argument "drawing" must be a JSON object))
+
+  defp call("edit_order", %{"hash" => hash, "edits" => edits}, origin) when is_binary(hash) do
+    case World.Orders.Edits.place(hash, edits, origin) do
+      {:ok, data} -> result(data)
+      {:error, :store} -> wrong("the store of the orders failed; try again later")
+      {:error, errors} -> result(%{"errors" => errors}, true)
+    end
+  end
+
+  defp call("edit_order", _args, _origin), do: wrong(~s(the arguments "hash" and "edits" are necessary))
 
   defp call(tool, %{"order" => order}, origin) when is_map(order) do
     case if(tool == "check_order", do: check(order), else: Orders.place(order, origin)) do

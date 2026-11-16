@@ -19,6 +19,9 @@ defmodule World.Vehicles.HondaVision do
   @steer_axis {0.0, -0.447, 0.894}
   @steer_at {0.0, 1.328, 0.703}
 
+  # The pivot of the side stand: at the left, under the floor.
+  @side_stand {-0.15, 0.86, 0.2}
+
   @sources [
     "Honda Vision 110 (2021, Việt Nam): length 1871 mm, width 686 mm, height 1101 mm, wheelbase 1255 mm, seat 761 mm.",
     "Tires: 80/90-14 at the front, 90/90-14 at the back; a disc brake of 190 mm at the front.",
@@ -38,6 +41,13 @@ defmodule World.Vehicles.HondaVision do
     |> Assembly.add("fork", fork(), at: "steer", port: "steer", kind: :hinge, role: :steer, limits: [-38, 38])
     |> Assembly.add("engine", engine(), at: "pivot", port: "pivot", kind: :hinge, role: :suspension, limits: [-4, 8])
     |> Assembly.add("stand", stand(), at: "stand", port: "pivot", kind: :hinge, role: :stand, limits: [0, 92])
+    |> Assembly.add("side_stand", side_stand(),
+      at: "side_stand",
+      port: "pivot",
+      kind: :hinge,
+      role: :stand,
+      limits: [0, 80]
+    )
   end
 
   # The same port on two parts: the child stays where its shapes are.
@@ -69,10 +79,11 @@ defmodule World.Vehicles.HondaVision do
       [tube, head],
       [
         origin("body"),
-        same("seat", {0.0, 0.88, 0.79}, {-1, 0, 0}, {0, 0, 1}),
+        same("seat", {0.0, 0.88, 0.73}, {-1, 0, 0}, {0, 0, 1}),
         same("steer", @steer_at, @steer_axis, {0.0, 0.894, 0.447}),
         same("pivot", @pivot, {1, 0, 0}, {0, 0, 1}),
-        same("stand", {0.0, 0.70, 0.125}, {1, 0, 0}, {0, 0, 1})
+        same("stand", {0.0, 0.75, 0.173}, {1, 0, 0}, {0, 0, 1}),
+        same("side_stand", @side_stand, {1, 0, 0}, {0, 0, 1})
       ],
       inside: true,
       sources: ["An underbone frame of steel tube, 48 mm."]
@@ -83,12 +94,12 @@ defmodule World.Vehicles.HondaVision do
     rear =
       Shape.loft(
         Shape.rows_y([
-          {-0.03, 0.73, 0.79, 0.045, 3},
-          {0.06, 0.6, 0.82, 0.11, 3.5},
-          {0.22, 0.47, 0.82, 0.16, 4},
-          {0.45, 0.4, 0.8, 0.175, 4},
-          {0.66, 0.34, 0.76, 0.165, 4},
-          {0.82, 0.3, 0.66, 0.14, 4}
+          {-0.03, 0.67, 0.73, 0.045, 3},
+          {0.06, 0.56, 0.76, 0.11, 3.5},
+          {0.22, 0.45, 0.76, 0.16, 4},
+          {0.45, 0.4, 0.74, 0.175, 4},
+          {0.66, 0.34, 0.71, 0.165, 4},
+          {0.82, 0.3, 0.63, 0.14, 4}
         ]),
         :paint,
         smooth: 2
@@ -129,17 +140,17 @@ defmodule World.Vehicles.HondaVision do
 
     rear_light =
       Shape.loft(
-        Shape.rows_y([{-0.045, 0.74, 0.785, 0.035, 2.5}, {0.0, 0.73, 0.79, 0.09, 3}, {0.05, 0.725, 0.79, 0.1, 3}]),
+        Shape.rows_y([{-0.045, 0.68, 0.725, 0.035, 2.5}, {0.0, 0.67, 0.73, 0.09, 3}, {0.05, 0.665, 0.73, 0.1, 3}]),
         :light_back,
         smooth: 1,
         sides: 12
       )
 
-    plate = Shape.box({-0.08, 0.01, 0.48}, {0.08, 0.025, 0.6}, :white)
-    holder = Shape.box({-0.035, 0.03, 0.58}, {0.035, 0.08, 0.72}, :trim)
+    plate = Shape.box({-0.08, 0.01, 0.42}, {0.08, 0.025, 0.54}, :white)
+    holder = Shape.box({-0.035, 0.03, 0.52}, {0.035, 0.08, 0.67}, :trim)
 
     rail =
-      Shape.sweep([{-0.14, 0.32, 0.86}, {-0.13, 0.05, 0.86}, {0.13, 0.05, 0.86}, {0.14, 0.32, 0.86}], 0.012, :aluminum,
+      Shape.sweep([{-0.14, 0.32, 0.80}, {-0.13, 0.05, 0.80}, {0.13, 0.05, 0.80}, {0.14, 0.32, 0.80}], 0.012, :aluminum,
         sides: 8
       )
 
@@ -162,17 +173,17 @@ defmodule World.Vehicles.HondaVision do
     shape =
       Shape.loft(
         Shape.rows_y([
-          {0.1, 0.8, 0.85, 0.08, 3},
-          {0.2, 0.795, 0.895, 0.14, 4},
-          {0.5, 0.78, 0.875, 0.15, 4},
-          {0.76, 0.75, 0.84, 0.135, 4},
-          {0.88, 0.72, 0.79, 0.08, 3}
+          {0.1, 0.74, 0.79, 0.08, 3},
+          {0.2, 0.735, 0.83, 0.14, 4},
+          {0.5, 0.72, 0.795, 0.15, 4},
+          {0.76, 0.69, 0.765, 0.135, 4},
+          {0.88, 0.66, 0.73, 0.08, 3}
         ]),
         :seat,
         smooth: 2
       )
 
-    Part.new("seat_vision", :seat, shape, [same("hinge", {0.0, 0.88, 0.79}, {-1, 0, 0}, {0, 0, 1})],
+    Part.new("seat_vision", :seat, shape, [same("hinge", {0.0, 0.88, 0.73}, {-1, 0, 0}, {0, 0, 1})],
       sources: ["Seat height 761 mm (data page)."]
     )
   end
@@ -280,8 +291,8 @@ defmodule World.Vehicles.HondaVision do
         Shape.rows_y(
           [
             {0.2, 0.17, 0.33, 0.04, 3},
-            {0.32, 0.14, 0.39, 0.055, 4},
-            {0.62, 0.15, 0.42, 0.06, 4},
+            {0.32, 0.165, 0.39, 0.055, 4},
+            {0.62, 0.185, 0.42, 0.06, 4},
             {0.84, 0.19, 0.38, 0.05, 3}
           ],
           -0.115
@@ -332,9 +343,18 @@ defmodule World.Vehicles.HondaVision do
   defp stand do
     legs =
       for x <- [-0.1, 0.1],
-          do: Shape.sweep([{x, 0.70, 0.125}, {x, 0.62, 0.125}, {x * 1.2, 0.575, 0.115}], 0.011, :black, sides: 8)
+          do: Shape.sweep([{x, 0.75, 0.173}, {x, 0.65, 0.173}, {x * 1.2, 0.577, 0.163}], 0.011, :black, sides: 8)
 
-    foot = Shape.sweep([{-0.12, 0.575, 0.115}, {0.12, 0.575, 0.115}], 0.011, :black, sides: 8)
-    Part.new("center_stand_vision", :stand, legs ++ [foot], [same("pivot", {0.0, 0.70, 0.125}, {1, 0, 0}, {0, 0, 1})])
+    foot = Shape.sweep([{-0.12, 0.577, 0.163}, {0.12, 0.577, 0.163}], 0.011, :black, sides: 8)
+    Part.new("center_stand_vision", :stand, legs ++ [foot], [same("pivot", {0.0, 0.75, 0.173}, {1, 0, 0}, {0, 0, 1})])
+  end
+
+  # The side stand at the left: at rest along the floor, at 80 degrees down
+  # on the ground. It is shorter than its pivot is high, so the scooter
+  # leans on it to the left.
+  defp side_stand do
+    leg = Shape.sweep([@side_stand, {-0.16, 0.68, 0.2}], 0.01, :black, sides: 8)
+    foot = Shape.box({-0.18, 0.665, 0.193}, {-0.14, 0.705, 0.207}, :black)
+    Part.new("side_stand_vision", :stand, [leg, foot], [same("pivot", @side_stand, {1, 0, 0}, {0, 0, 1})])
   end
 end

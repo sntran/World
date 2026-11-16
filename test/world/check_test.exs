@@ -172,7 +172,7 @@ defmodule World.CheckTest do
       assert {:error, _} = Check.fits(van, Check.door())
       assert {_, _} = Check.drive_in()
 
-      for kind <- [:house, :wall] do
+      for kind <- [:house, :building, :wall] do
         assert Check.model(
                  model([{"slab", part("slab", Shape.box({-4.0, -4.0, 0.0}, {4.0, 4.0, 0.1}, :concrete))}], kind: kind)
                ) == :ok
@@ -200,6 +200,32 @@ defmodule World.CheckTest do
       assert {:error, [{:tips, _, _}]} = Check.model(%{tip | kind: :part})
     end
 
+    test "a person keeps its balance with a thing in a hand, and a unit on a wall is held by its site" do
+      {:ok, job} = World.Orders.job(%{"blueprint" => "person", "options" => %{"right_hand" => "bucket"}}, "far")
+      person = job.item.(:far)
+      assert [_ | _] = person.props
+      assert Check.model(person) == :ok
+
+      # (The person as the first node of a model, with a thing in a hand: a free order of a person.)
+      assert Check.model(Assembly.new("model", person, root: "model")) == :ok
+
+      unit = World.Detail.with(:far, &World.Appliances.Systems.mini_split/0)
+      assert unit.extras == %{"site" => true} and Check.model(unit) == :ok
+    end
+
+    test "the height of the base of a model: more for a model from a field of cells" do
+      # A solid on a bottom that is not flat by 1 cm: with a base of 2 mm it is on one corner.
+      rough = [
+        Shape.box({0.0, 0.0, 0.01}, {1.0, 1.0, 1.0}, :steel),
+        Shape.box({0.0, 0.0, 0.0}, {0.05, 0.05, 0.01}, :steel)
+      ]
+
+      assert {:error, [{:tips, _, _}]} = Check.model(part("rough", rough))
+      assert Check.model(part("rough", rough), %{}, base: 0.02) == :ok
+      assert {:error, {:tips, _, _}} = Check.stands(part("rough", rough))
+      assert Check.stands(part("rough", rough), 0.02) == :ok
+    end
+
     test "the text of each reason" do
       assert Check.message({:tips, {0.1, -0.02}, {{0.0, 0.0}, {0.05, 0.05}}}) =~ "(100, -20 mm) is not over its base"
       assert Check.message({:overlap, [{"a", "b"}, {"c", "d"}]}) == "parts are in one place: a and b, c and d"
@@ -220,13 +246,11 @@ defmodule World.CheckTest do
     end
   end
 
-  describe "the catalog" do
-    for {name, _} <- World.Catalog.models(), name not in ~w(man woman traveler honda_vision_110_rider) do
+  describe "each kind of model" do
+    for {name, _} <- World.Fixtures.models() do
       @name name
-      # The statue casts its head and its hands on a grid of 3 cm.
-      @tag timeout: 600_000
       test "#{name} is a true model" do
-        {:ok, fun} = World.Catalog.fetch(@name)
+        {:ok, fun} = World.Fixtures.fetch(@name)
         item = fun.()
         if is_struct(item, Assembly) or is_struct(item, Part), do: assert(Check.model(item) == :ok)
       end

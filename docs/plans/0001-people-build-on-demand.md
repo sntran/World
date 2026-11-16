@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Draft |
+| Status | Done: steps 1, 2, 3 and 6, and the tower of step 4 (section 10). The rest of steps 4 and 5 moved to plan 0002, with a new direction of the owner: World builds any blueprint that a project sends, and the cast is pours in parallel (0002, D3, in place of D30). |
 | Depends on | The matter of World as it is (`docs/format.md`), the drawing format (`docs/format.md`, "A drawing"), the MCP server (`World.MCP`), the stores (`World.Store`), the log (`World.Log`). |
 | Changes | `docs/world.md` (the world layer: the run, the foreman, the workers), `specs/Order.tla`, `docs/factory.md` (the calls of the site), plan 0023 of Vũng Tàu (the fetch at compile time) and a new plan of Vũng Tàu (the QA mode). |
 
@@ -79,6 +79,30 @@ code.
 | D10 | There is no line between a building and another thing. A camper van is a house on wheels: its cabinets, its insulation, its wires and its appliances are elements of the same kinds as in a house. A cup is one element of one task. One drawing holds every thing. | The owner, 2026-11-07. |
 | D11 | The drawing of World stays its own small JSON. It takes the words of IFC (element, storey, material, task, sequence) and the names of elements of IFC where IFC has one (a wall, a slab, a stair, a cabinet), and the word of World where IFC has none (a wheel, a hull, a robe). An export to IFC can come later. | The full IFC is hundreds of kinds of things, too big for the builder at the edge. A person who knows BIM reads the drawing. |
 | D12 | The clock stays: one second of the wall clock is one day of the world. The log of a construction is the truth: the web page and the statistics read it. | `docs/world.md`. |
+| D13 | `World.Supervisor` is the module of the supervisor of the node, and `World.Application` starts it. Its children: `World.Census`, the registries `World.Names` (a construction by its id) and `World.Events` (the watchers), the dynamic supervisors with the names `World.Persons` and `World.Constructions` (names, not modules), the log of the node, and Bandit when `WORLD_SERVER` is set. | Flat names. A supervisor decides nothing. |
+| D14 | `World.Census` keeps the pool of the people: the free people of each trade, the people that each construction holds, and the queue of the constructions that wait. The construction that holds fewer workers gets the next free person first. A construction hires and lets go through `World.Person.hire/2` and `World.Person.release/2`. | D6 and R5. |
+| D15 | In step 1, the work of a worker is the triangles of the meshes of its element (`World.Mesh.triangles/1`, the pass of Wings: the cost of a build). `World.Build.scene/2` takes them with the option `triangles`, in place of its own memo, so the file has the same bytes. From step 2, a worker also runs the skill of its element. | The worker does real work, and the construction joins the elements with no second pass. |
+| D16 | At the edge, one Durable Object with the name `world` is the node: the people, the constructions, the stream and the log. The four builders of today go. A file that R2 has still goes out with no VM. | One node, one census. The memory budget (R22) keeps one or two builds at one time there. |
+| D17 | `POST /builds` with `accept: text/event-stream` gives the stream at once: the request keeps the Durable Object alive while the people build. With `accept: application/json` it gives the id and the plan. | A Durable Object with no open request can stop. A client that watches keeps it. |
+| D18 | The log of the node goes into the SQLite of the Durable Object through the port `/env/LOG_STORE`, in batches, as the orders go to R2 through `/env/ORDER_STORE`. The full log of a build also goes to R2 as `/o/HASH.log.json`. | A page that opens later replays the history (with `Last-Event-ID`), then follows the stream. A deploy starts the Durable Object again. |
+| D19 | A blueprint in data has parameters: `params`, with the types of the options of `World.Orders.Blueprint` (a default, a minimum, a maximum, a unit, a text). A value of a drawing can be `{"param": "height"}`. The files are in `priv/blueprints/`, next to the blueprints in code. A model of the catalog is an order of a blueprint (`priv/drawings/NAME.json` with `blueprint` and `options`). | Vũng Tàu orders the statue, the tower and the lot house with options. A drawing with no options cannot do that. |
+| D20 | A node of a drawing can be an element made by a skill: `{"name", "skill": {"cast": {...}}, "trade", "after", "from"}`. `from` names the elements whose data it takes. A skill gives the part (or the smaller assembly) of the element, its data for the elements that take it, and model extras, which go into the model in the order of the nodes. A drawing also gets `extras`, the kinds `statue`, `tower` and `house`, and the role `open`. | A statue needs the data of its figure, a lot house the data of its plan, a van the data of its hull. The extras hold `site`, `sizes`, `ports`, `collision` and `surface`. |
+| D21 | The code of a kind does not go away: it becomes skills of the trades in `lib/world/skills/`. What goes is the module of the kind and its blueprint in code. The elements, their sequence and their numbers become data. | The lot house has 1,639 lines of rules, and the line of the vans has about 2,500 lines. A skill keeps them, so another person can make a better skill. |
+| D22 | `World.Places.family_of/1` becomes `World.Plan.trade/1`: the kind of an item gives the trade of its workers. | The new world has trades, not factories by family. |
+| D23 | A person has its PID as its name in the log (`"<0.123.0>"`). | The owner, 2026-11-07 (Q3). |
+| D24 | A construction has a priority alias (Erlang/OTP 28, EEP 76): the deadline comes to it as a priority message (`:timer.apply_after/4`, because a timer cannot send to an alias), and so do the pause, the resume, the cancel and the change (step 3). It watches each person that it holds with a monitor of priority, and the census watches the constructions and the people in the same way. | The results of the people fill the mailbox of a construction (thousands for a house of bricks). A message of priority does not wait behind them. The owner, 2026-11-07. |
+| D25 | Each worker has a limit of its heap, its part of the memory budget, with its shared binaries (`max_heap_size` with `include_shared_binaries`, Erlang/OTP 27). A worker over its limit stops alone, and its task fails with the reason `memory` (step 3). | The edge has 128 MB. One big element must not stop the VM and each construction in it. |
+| D26 | Each process of the node has a label (`Process.set_label/1`): `{:person, job, trade}`, `{:construction, id}`, `{:stream, key}`. | A crash report and the observer name the person or the construction, not only a PID. |
+| D27 | The watchers are in a registry with duplicate keys in partitions by key (`keys: {:duplicate, :key}`, Elixir 1.20). | A dispatch to the watchers of one construction reads one partition only. |
+| D28 | The sequence of the elements of a drawing is a graph (`:graph`, Erlang/OTP 29): its check finds a cycle (`get_cycle`), and a build with no world takes the elements in the order of `topsort` (step 2). | A functional graph of the standard library, with no table to delete. |
+| D29 | A check of a whole number in a range uses the guard `:erlang.is_integer/3` (Erlang/OTP 29), for example the workers of a budget, 1 to 64. | One guard, and a float is not a whole number. |
+| D30 | The cast of a statue is one task (the skill `shell`), not pours from the feet up. A test in step 2 showed that the pass of the distances of `World.Cast` depends on the order of the triangles: the first nearest sample of a cell wins, and a sample adds to the sums of a loose cell only when it is not the nearest at that time. So pours in parallel, merged after, give other bytes. The blueprint of the statue is `priv/blueprints/statue.json` (the options of before as params), and the statue on Núi Nhỏ is an order of it in `priv/drawings/`. | The bytes stay the same (R7). A cast in pours needs a new pass of the distances, with its own files: an idea for later (`TODO.md`). |
+| D32 | A change comes in a pause, as a call (it needs an answer), and it keeps the nodes of the drawing: a drawing with other nodes is a new build. The key of a node is a hash of its data and of the keys of the nodes that it waits for, so a change of a node changes each node after it. A task in hand that a change makes again ends for nobody (`task_dropped`). In `specs/Build.tla` a change is one `Redo` for each task, the tasks after a task first. | The tasks of the plan stay the same, so the replay of a log with a change is one behavior of the specification. |
+| D33 | The memory budget (step 3) is `memory_mb`: each person runs a task in a process of its own with a limit of its heap (its part of the budget), and a task over it fails with the message `memory`. Two parts of R22 are not done yet: the node does not wait for room in the memory before it opens a construction, and the estimate of a skill does not come from the log (Q1). | One big element stops alone, not the VM. The rest needs measures at the edge (`TODO.md`). |
+| D34 | The tower is `priv/blueprints/tower.json` with five skills (step 4), and the lighthouse of Vũng Tàu is an order of it in `priv/drawings/`: its files have the same bytes. The lot house (1,639 lines of rules) and the van line (about 2,500 lines) stay in code in this branch: each needs its own work, station by station, with the same bytes. | The risk of step 4 that the plan names: the work stops where a kind needs more than a port of its code. |
+| D31 | A node of a drawing that a skill makes is one task of a construction, and the key of the GLB of an element is a hash of its meshes. The elements go to the watchers in the order of the nodes: a node is in the model when the nodes before it are made. | A person makes the part of a skill on its own; the hash needs no count that the people share. |
+
+The other new features of Erlang/OTP 28 and 29 and of Elixir 1.19 and 1.20 are not used: native records are experimental and Elixir has no syntax for them; the zip, strict and multi-valued comprehensions are syntax of Erlang only; nominal types are for Dialyzer, which World does not use; and the people already hibernate after each task (`erlang:hibernate/0` adds nothing for a `GenServer`). The type inference of Elixir 1.20 checks each commit, because `mix precommit` compiles with the warnings as errors.
 
 ## 5. Requirements
 
@@ -293,8 +317,28 @@ the risks are in the sizes, not in the idea.
 
 - **Q1.** The first estimate of a skill (R21): a fixed guess in the
   skill, or a first build with no limit of seconds that fills the log?
+  Answered (the owner, 2026-11-07): a first build with no time limit.
+  Its log gives the estimate of the next builds.
 - **Q2.** The web page at the start of a node (R24, step 5): the people
   build the places at each start of the Durable Object, or only once,
   with the log of that first build kept in the SQLite?
+  Answered (the owner, 2026-11-07): once. A later start reads the log of
+  that first build from the store.
 - **Q3.** The names of the first people (the figures and the names of
   the yard of `World.Run` today, or new ones)?
+  Answered (the owner, 2026-11-07): the PID of the process
+  (`"<0.123.0>"`).
+
+## 10. The state of the work
+
+On the branch `feat/0001-people-build-on-demand`:
+
+| Step | State |
+|---|---|
+| 1. The people build the model, and anyone can watch | Done. The node, the census, the people, the constructions, the log of the node and its store, the stream, the world page, and four specifications (`docs/specs.md`). |
+| 2. The statue as data, with the skills | Done: `priv/blueprints/statue.json`, ten skills, the MCP tools `plan_build` and `build`. The cast is one task (D30). |
+| 3. Pause, resume, change, cancel, the memory budget | Done, with `specs/Build.tla` and two more fault models. Not done: the wait for room in the memory, and the estimate of a skill from the log (D33, `TODO.md`). |
+| 4. The other kinds as drawings | The tower is done (D34). The lot house and the van are not: they stay in code (`World.Buildings.Lot`, the van line). |
+| 5. The world builds its own places | Not done. The places of the old yard went with step 1; the warehouse, the factories and the trucks as blueprints in data come after the lot house and the van, because the factories are houses and the trucks are vans (`TODO.md`). |
+| 6. Vũng Tàu | Done: the draft plan 0025 of Vung_Tau ("QA mode: build a house at an address"), on its branch `docs/0025-qa-build-at-address`. |
+

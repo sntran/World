@@ -1,0 +1,719 @@
+{
+  "name": "tube_house",
+  "doc": "A tube house (nhà ống) of Vũng Tàu, built as on a real site: the footings and the ground slab, then floor by floor the columns, the beams and the slab of reinforced concrete, the infill of bricks laid in three bands of courses by many masons at one time on each wall, the stair, the rail of the balcony, the plaster and the paint, the doors, the windows and the shutter, and the roof. The origin is on the ground at the center of the lot; the front is to +y.",
+  "sources": [
+    "The frame and the infill of a tube house of Việt Nam: TCVN 5574:2018 (concrete), TCVN 1451:1998 (bricks), TCVN 4451:2012 (the stair); the sizes of each part are estimates of a house of two to four floors."
+  ],
+  "params": [
+    {
+      "name": "name",
+      "type": "text",
+      "default": "nha_ong",
+      "max": 40,
+      "doc": "The name of the model: a to z, 0 to 9 and _."
+    },
+    {
+      "name": "width",
+      "type": "number",
+      "default": 4.0,
+      "min": 2.5,
+      "max": 12.0,
+      "unit": "m",
+      "doc": "The front of the lot."
+    },
+    {
+      "name": "depth",
+      "type": "number",
+      "default": 16.0,
+      "min": 4.0,
+      "max": 40.0,
+      "unit": "m",
+      "doc": "The lot from the front to the back."
+    },
+    {
+      "name": "floors",
+      "type": "integer",
+      "default": 3,
+      "min": 1,
+      "max": 8
+    },
+    {
+      "name": "ground",
+      "type": "number",
+      "default": 3.6,
+      "min": 2.4,
+      "max": 6.0,
+      "unit": "m",
+      "doc": "The ground floor, from its floor to the floor over it."
+    },
+    {
+      "name": "storey",
+      "type": "number",
+      "default": 3.3,
+      "min": 2.4,
+      "max": 5.0,
+      "unit": "m",
+      "doc": "Each other floor."
+    },
+    {
+      "name": "bays",
+      "type": "integer",
+      "default": 4,
+      "min": 1,
+      "max": 12,
+      "doc": "The spans between the columns along the depth."
+    },
+    {
+      "name": "balcony",
+      "type": "number",
+      "default": 0.8,
+      "min": 0.0,
+      "max": 2.0,
+      "unit": "m",
+      "doc": "The balcony of each floor over the ground floor, at the front."
+    },
+    {
+      "name": "roof",
+      "type": "choice",
+      "default": "terrace",
+      "values": [
+        "terrace",
+        "metal"
+      ]
+    },
+    {
+      "name": "finish_front",
+      "type": "choice",
+      "default": "paint",
+      "values": [
+        "plaster",
+        "paint",
+        "bare"
+      ],
+      "doc": "The finish of the front wall."
+    },
+    {
+      "name": "finish_back",
+      "type": "choice",
+      "default": "plaster",
+      "values": [
+        "plaster",
+        "paint",
+        "bare"
+      ],
+      "doc": "The finish of the back wall."
+    },
+    {
+      "name": "finish_left",
+      "type": "choice",
+      "default": "bare",
+      "values": [
+        "plaster",
+        "paint",
+        "bare"
+      ],
+      "doc": "The finish of the left wall."
+    },
+    {
+      "name": "finish_right",
+      "type": "choice",
+      "default": "bare",
+      "values": [
+        "plaster",
+        "paint",
+        "bare"
+      ],
+      "doc": "The finish of the right wall."
+    },
+    {
+      "name": "openings",
+      "type": "list",
+      "default": [
+        {
+          "side": "front",
+          "floor": 1,
+          "kind": "shutter",
+          "x": 0.0,
+          "width": 3.2,
+          "height": 2.8,
+          "sill": 0.0
+        },
+        {
+          "side": "front",
+          "floor": 2,
+          "kind": "door",
+          "x": -0.9,
+          "width": 0.9,
+          "height": 2.2,
+          "sill": 0.0
+        },
+        {
+          "side": "front",
+          "floor": 2,
+          "kind": "window",
+          "x": 0.7,
+          "width": 1.4,
+          "height": 1.4,
+          "sill": 0.8
+        },
+        {
+          "side": "front",
+          "floor": 3,
+          "kind": "door",
+          "x": -0.9,
+          "width": 0.9,
+          "height": 2.2,
+          "sill": 0.0
+        },
+        {
+          "side": "front",
+          "floor": 3,
+          "kind": "window",
+          "x": 0.7,
+          "width": 1.4,
+          "height": 1.4,
+          "sill": 0.8
+        },
+        {
+          "side": "back",
+          "floor": 1,
+          "kind": "window",
+          "x": 0.0,
+          "width": 1.0,
+          "height": 1.0,
+          "sill": 1.2
+        },
+        {
+          "side": "back",
+          "floor": 2,
+          "kind": "window",
+          "x": 0.0,
+          "width": 1.0,
+          "height": 1.0,
+          "sill": 1.2
+        },
+        {
+          "side": "back",
+          "floor": 3,
+          "kind": "window",
+          "x": 0.0,
+          "width": 1.0,
+          "height": 1.0,
+          "sill": 1.2
+        }
+      ],
+      "max": 64,
+      "doc": "The doors, the windows and the shutters: the side, the floor, the kind, the center from the middle of the wall (to the right, seen from outside), the width, the height and the sill.",
+      "item": {
+        "name": "opening",
+        "type": "object",
+        "fields": [
+          {
+            "name": "side",
+            "type": "choice",
+            "values": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ]
+          },
+          {
+            "name": "floor",
+            "type": "integer",
+            "min": 1,
+            "max": 8
+          },
+          {
+            "name": "kind",
+            "type": "choice",
+            "default": "window",
+            "values": [
+              "window",
+              "door",
+              "shutter"
+            ]
+          },
+          {
+            "name": "x",
+            "type": "number",
+            "default": 0.0,
+            "min": -20.0,
+            "max": 20.0,
+            "unit": "m",
+            "doc": ""
+          },
+          {
+            "name": "width",
+            "type": "number",
+            "default": 1.2,
+            "min": 0.3,
+            "max": 12.0,
+            "unit": "m",
+            "doc": ""
+          },
+          {
+            "name": "height",
+            "type": "number",
+            "default": 1.4,
+            "min": 0.3,
+            "max": 5.0,
+            "unit": "m",
+            "doc": ""
+          },
+          {
+            "name": "sill",
+            "type": "number",
+            "default": 0.9,
+            "min": 0.0,
+            "max": 4.0,
+            "unit": "m",
+            "doc": ""
+          }
+        ]
+      }
+    }
+  ],
+  "drawing": {
+    "name": {
+      "param": "name"
+    },
+    "kind": "house",
+    "sources": [
+      "A tube house of the people of World: each size of a part is an estimate, with its code."
+    ],
+    "nodes": [
+      {
+        "name": "plan",
+        "skill": {
+          "house_plan": {
+            "width": {
+              "param": "width"
+            },
+            "depth": {
+              "param": "depth"
+            },
+            "floors": {
+              "param": "floors"
+            },
+            "ground": {
+              "param": "ground"
+            },
+            "storey": {
+              "param": "storey"
+            },
+            "bays": {
+              "param": "bays"
+            },
+            "balcony": {
+              "param": "balcony"
+            },
+            "roof": {
+              "param": "roof"
+            },
+            "openings": {
+              "param": "openings"
+            }
+          }
+        }
+      },
+      {
+        "name": "slab_0",
+        "skill": {
+          "footing": {}
+        },
+        "from": [
+          "plan"
+        ]
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "name": "col_{floor}",
+          "skill": {
+            "column": {
+              "floor": {
+                "var": "floor"
+              }
+            }
+          },
+          "from": [
+            "plan"
+          ],
+          "after": [
+            "slab_{floor-1}"
+          ]
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "name": "slab_{floor}",
+          "skill": {
+            "slab": {
+              "floor": {
+                "var": "floor"
+              }
+            }
+          },
+          "from": [
+            "plan"
+          ],
+          "after": [
+            "col_{floor}"
+          ]
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "repeat": {
+            "for": "side",
+            "in": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ]
+          },
+          "node": {
+            "name": "wall_{side}_{floor}_1",
+            "skill": {
+              "course": {
+                "side": {
+                  "var": "side"
+                },
+                "floor": {
+                  "var": "floor"
+                },
+                "band": 1,
+                "bands": 3,
+                "finish": {
+                  "param": "finish_{side}"
+                }
+              }
+            },
+            "from": [
+              "plan"
+            ],
+            "after": [
+              "slab_{floor}",
+              "col_{floor}"
+            ]
+          }
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "repeat": {
+            "for": "side",
+            "in": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ]
+          },
+          "node": {
+            "name": "wall_{side}_{floor}_2",
+            "skill": {
+              "course": {
+                "side": {
+                  "var": "side"
+                },
+                "floor": {
+                  "var": "floor"
+                },
+                "band": 2,
+                "bands": 3,
+                "finish": {
+                  "param": "finish_{side}"
+                }
+              }
+            },
+            "from": [
+              "plan"
+            ],
+            "after": [
+              "wall_{side}_{floor}_1"
+            ]
+          }
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "repeat": {
+            "for": "side",
+            "in": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ]
+          },
+          "node": {
+            "name": "wall_{side}_{floor}_3",
+            "skill": {
+              "course": {
+                "side": {
+                  "var": "side"
+                },
+                "floor": {
+                  "var": "floor"
+                },
+                "band": 3,
+                "bands": 3,
+                "finish": {
+                  "param": "finish_{side}"
+                }
+              }
+            },
+            "from": [
+              "plan"
+            ],
+            "after": [
+              "wall_{side}_{floor}_2"
+            ]
+          }
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "repeat": {
+            "for": "side",
+            "in": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ]
+          },
+          "node": {
+            "name": "plaster_{side}_{floor}",
+            "skill": {
+              "plaster": {
+                "side": {
+                  "var": "side"
+                },
+                "floor": {
+                  "var": "floor"
+                },
+                "finish": {
+                  "param": "finish_{side}"
+                }
+              }
+            },
+            "from": [
+              "plan"
+            ],
+            "after": [
+              "wall_{side}_{floor}_3"
+            ]
+          }
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "repeat": {
+            "for": "side",
+            "in": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ]
+          },
+          "node": {
+            "name": "paint_{side}_{floor}",
+            "skill": {
+              "paint": {
+                "side": {
+                  "var": "side"
+                },
+                "floor": {
+                  "var": "floor"
+                },
+                "finish": {
+                  "param": "finish_{side}"
+                }
+              }
+            },
+            "from": [
+              "plan"
+            ],
+            "after": [
+              "plaster_{side}_{floor}"
+            ]
+          }
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "repeat": {
+            "for": "side",
+            "in": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ]
+          },
+          "node": {
+            "name": "opening_{side}_{floor}",
+            "skill": {
+              "opening": {
+                "side": {
+                  "var": "side"
+                },
+                "floor": {
+                  "var": "floor"
+                }
+              }
+            },
+            "from": [
+              "plan"
+            ],
+            "after": [
+              "plaster_{side}_{floor}"
+            ]
+          }
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "name": "flight_{floor}",
+          "skill": {
+            "flight": {
+              "floor": {
+                "var": "floor"
+              }
+            }
+          },
+          "from": [
+            "plan"
+          ],
+          "after": [
+            "slab_{floor}"
+          ]
+        }
+      },
+      {
+        "repeat": {
+          "for": "floor",
+          "in": {
+            "count": {
+              "param": "floors"
+            }
+          }
+        },
+        "node": {
+          "name": "iron_{floor}",
+          "skill": {
+            "iron": {
+              "floor": {
+                "var": "floor"
+              }
+            }
+          },
+          "from": [
+            "plan"
+          ],
+          "after": [
+            "slab_{floor}"
+          ]
+        }
+      },
+      {
+        "name": "roof",
+        "skill": {
+          "roof": {}
+        },
+        "from": [
+          "plan"
+        ],
+        "after": [
+          {
+            "repeat": {
+              "for": "f",
+              "in": {
+                "count": {
+                  "param": "floors"
+                }
+              }
+            },
+            "item": "slab_{f}"
+          }
+        ]
+      }
+    ]
+  }
+}

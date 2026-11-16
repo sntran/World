@@ -23,10 +23,11 @@ From step 1, in the directory of the project:
 ```sh
 mix.com deps.get
 mix.com test --cover            # the coverage must be 100%; it checks specs/ too
-mix.com accord.check --extra specs/MCOrder.tla   # the model check alone
-mix.com world.build             # the files of priv/models
-mix.com world.build --check     # build again and compare, as CI does
-npm install && npm test         # the Khronos validator on each GLB
+mix.com accord.check --extra specs/MCBuild.tla   # one model check alone
+mix.com world.build NAME        # the files of a model in priv/models
+mix.com world.build --check NAME   # build a model again and compare
+npm install && npm test         # the tests of the pages
+npm run validate -- DIR         # the Khronos validator on each GLB of a directory
 sh scripts/wings.sh COMMIT      # copy the core of Wings 3D again
 ```
 
@@ -56,8 +57,13 @@ materials").
 
 A model is an assembly in the context of its family. Connect each part to its
 parent at two ports, with the kind of the connection. Give each joint
-its role. Then run `mix.com world.build` and commit the files of
-`priv/models` with the code.
+its role.
+
+World is an engine: its rules make a model on demand, for the project
+that asks for it. The models of `World.Catalog` and their files in
+`priv/models` are a reference of what World made. No test and no check
+builds them again, and a new real thing of a project does not need a
+place in the catalog.
 
 ## Rules for a change
 
@@ -66,6 +72,9 @@ its role. Then run `mix.com world.build` and commit the files of
   can.
 - The coverage of the tests is 100%: each line runs in a test. Do not
   keep code that no feature uses.
+- A test is for a rule, not for a model of the catalog. It makes a
+  small model of its own (`test/support/fixtures.ex` has three), so that
+  all the tests run in minutes.
 - Keep each change small, and give it one purpose.
 - Make a branch from `main` for each change, with the type of the change
   as a prefix: `feat/`, `fix/`, `docs/`, `test/`, `refactor/`, `build/`.

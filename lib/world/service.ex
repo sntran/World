@@ -25,6 +25,50 @@ defmodule World.Service do
     the full order (the Worker keeps the file of a URL `/m/` by it).
   - `POST /mcp`: the MCP server (`World.MCP`). The other methods give
     405.
+  - `POST /builds`: a job in the body: `{"order", "level", "budget"}`
+    (`World.budget/1`). The order goes into the store of the orders, and
+    a construction of the people of the node builds it
+    (`World.build/1`). With `accept: text/event-stream`, the response is
+    the stream of the construction until its end; else 202 with
+    `{"build", "hash", "after", "events", "files"}`. 422 with
+    `{"errors"}`, or 503 when the store failed.
+  - `GET /builds/ID`: the state of a construction from the log of the
+    node: its status, its tasks, the tasks done and its elements (404
+    when the log has none).
+  - `GET /builds/ID/events`: the stream of a construction until its end,
+    after the id of `Last-Event-ID` or of `?after=N`.
+  - `GET /builds/ID/elements/KEY.glb`: the GLB of an element.
+  - `GET /events`: the stream of the whole world, after the id of
+    `Last-Event-ID` or of `?after=N`.
+  - `GET /census`: the people of the node (`World.census/0`).
+  - `GET /sculptures/ID/events`: the stream of the pieces of a live
+    sculpture (`World.Sculpt.Web.follow/3`), until the end of the version
+    of `?until=V`.
+  - `GET /sculptures/ID.glb`: the GLB of the surface of a live sculpture
+    now.
+
+  - `GET /o/HASH.glb` (and `.mid.glb`, `.far.glb`, `.parts.json`,
+    `.receipt.json`, `.solids.json`, `.drawing.json`, `.log.json`,
+    `.replay.glb`, and
+    `.flat.glb`, `.mid.flat.glb`, `.far.flat.glb`, `.light.glb`,
+    `.mid.light.glb`, `.far.light.glb`): a file
+    of an order of `POST /orders`. `GET /m/BLUEPRINT.glb?OPTION=VALUE`
+    (and the other files): a file of an order in the URL
+    (`color.ROLE`, `joint.NAME`, `target.LIMB=X,Y,Z`, `OPTION.FIELD`).
+    The file comes from the store of the node (`World.Files`), else the
+    node builds it in its line (`World.Line`; `?class=batch` or the
+    header `x-world-class: batch` for a build that no person waits for)
+    and keeps it. A file from an older version of World goes out at
+    once, with the header `x-world-stale`, and the node builds it again
+    one time. The answer has an ETag (304 for the same one), and it is
+    in gzip for a client that accepts gzip. A file of the flat look
+    or of the light look takes `?triangles=N` (the most faces of its
+    mesh) and `?wrap=1` (one closed skin round the model).
+  - Each other `GET`: a file of the site (the application environment
+    `:site`, from `WORLD_SITE`: the folder that `scripts/site.sh`
+    makes), with `index.html` for `/`.
+
+  Each answer has the headers of CORS, and `OPTIONS` gives 204.
 
   A body that is not JSON gives 400. A body of more than 1 MB gives 413.
   The header `x-world-origin` (from the Worker) is the start of the URLs
@@ -32,28 +76,80 @@ defmodule World.Service do
   """
   use Plug.Router
 
-  alias World.{MCP, Orders}
+  alias World.{Construction, Files, Line, MCP, Orders, Stream}
   alias World.Orders.{Blueprint, Blueprints, Set, Store}
 
+  plug(:cors)
   plug(:match)
   plug(:dispatch)
+
+  # The suffix of each file of an order: its level and its file.
+  @suffixes [
+    {".mid.flat.glb", "mid", "flat"},
+    {".far.flat.glb", "far", "flat"},
+    {".flat.glb", "near", "flat"},
+    {".mid.light.glb", "mid", "light"},
+    {".far.light.glb", "far", "light"},
+    {".light.glb", "near", "light"},
+    {".mid.glb", "mid", "glb"},
+    {".far.glb", "far", "glb"},
+    {".parts.json", "near", "parts"},
+    {".receipt.json", "near", "receipt"},
+    {".solids.json", "near", "solids"},
+    {".drawing.json", "near", "drawing"},
+    {".log.json", "near", "log"},
+    {".replay.glb", "near", "replay"},
+    {".glb", "near", "glb"}
+  ]
+  @cache "public, max-age=300, stale-while-revalidate=86400"
 
   @types %{
     "glb" => "model/gltf-binary",
     "replay" => "model/gltf-binary",
     "log" => "application/json",
     "parts" => "application/json",
-    "receipt" => "application/json"
+    "receipt" => "application/json",
+    "solids" => "application/json",
+    "drawing" => "application/json",
+    "flat" => "model/gltf-binary",
+    "light" => "model/gltf-binary"
   }
 
   get "/blueprints" do
     json(conn, 200, Enum.map(Blueprints.all(), &Blueprint.describe/1))
   end
 
+  # A blueprint in data of a project (plan 0002, D1): the store keeps it,
+  # and an order gives {"hash": HASH} as its blueprint.
+  post "/blueprints" do
+    with_order(conn, fn raw ->
+      case Orders.keep_blueprint(raw) do
+        {:ok, kept} ->
+          json(conn, 201, kept)
+
+        {:error, :store} ->
+          json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the blueprints failed"}]})
+
+        {:error, errors} ->
+          json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
   post "/check" do
     with_order(conn, fn order ->
       case Orders.check(order) do
         {:ok, full} -> json(conn, 200, %{"hash" => Orders.hash(full), "order" => full})
+        {:error, errors} -> json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
+  # The heights of the real Earth at the points of a project (World.Earth).
+  post "/earth/heights" do
+    with_order(conn, fn body ->
+      case World.Earth.heights(is_map(body) && body["points"]) do
+        {:ok, heights} -> json(conn, 200, %{"heights" => heights, "unit" => "m", "source" => World.Earth.source()})
         {:error, errors} -> json(conn, 422, %{"errors" => errors})
       end
     end)
@@ -67,6 +163,24 @@ defmodule World.Service do
 
         {:error, :store} ->
           json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+        {:error, errors} ->
+          json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
+  post "/orders/:hash/edits" do
+    with_order(conn, fn body ->
+      case Orders.Edits.place(hash, is_map(body) && body["edits"], origin(conn)) do
+        {:ok, placed} ->
+          json(conn, 200, placed)
+
+        {:error, :store} ->
+          json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+        {:error, [%{"path" => "order"} | _] = errors} ->
+          json(conn, 404, %{"errors" => errors})
 
         {:error, errors} ->
           json(conn, 422, %{"errors" => errors})
@@ -124,7 +238,7 @@ defmodule World.Service do
     level = Map.get(conn.query_params, "level", "near")
 
     with_order(conn, fn order ->
-      case one_at_a_time(fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end) do
+      case Line.run(class(conn), fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end) do
         {ms, {:ok, out}} ->
           {:ok, full} = Orders.check(order)
 
@@ -140,14 +254,390 @@ defmodule World.Service do
     end)
   end
 
-  match _ do
-    json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such page"}]})
+  post "/builds" do
+    with_order(conn, fn job -> builds(conn, job) end)
   end
 
-  # One build at a time in the VM: the edge has 128 MB, and two builds of
-  # a near level at one time need more. A second build waits for the lock
-  # (`:global.trans/4` tries again until it has it).
-  defp one_at_a_time(fun), do: :global.trans({__MODULE__, self()}, fun, [node()], :infinity)
+  get "/builds/:id" do
+    case summary(id) do
+      nil -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such construction"}]})
+      state -> json(conn, 200, state)
+    end
+  end
+
+  # A pause, a resume or a cancel: messages of priority to the construction.
+  post "/builds/:id/:act" when act in ["pause", "resume", "cancel"] do
+    fun = %{"pause" => &World.pause/1, "resume" => &World.resume/1, "cancel" => &World.cancel/1}[act]
+
+    case fun.(id) do
+      :ok -> json(conn, 202, %{"build" => id, "asked" => act})
+      {:error, :none} -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such construction"}]})
+    end
+  end
+
+  # A change in a pause: a new order, into the store, for the construction.
+  post "/builds/:id/change" do
+    with_order(conn, fn body ->
+      case Orders.construction(body, origin(conn)) do
+        {:ok, job, placed} ->
+          changed(conn, id, World.change(id, job), placed)
+
+        {:error, :store} ->
+          json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+        {:error, errors} ->
+          json(conn, 422, %{"errors" => errors})
+      end
+    end)
+  end
+
+  get "/builds/:id/events" do
+    conn = conn |> fetch_query_params() |> Stream.open(id)
+    Stream.follow(conn, id, after_id(conn), &over?/1)
+  end
+
+  get "/builds/:id/elements/:file" do
+    with [key, "glb"] <- String.split(file, "."),
+         {:ok, glb} <- Construction.element(id, key) do
+      conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
+    else
+      _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such element"}]})
+    end
+  end
+
+  get "/events" do
+    conn = conn |> fetch_query_params() |> Stream.open(:world)
+    Stream.follow(conn, :world, after_id(conn))
+  end
+
+  get "/sculptures/:id/events" do
+    conn = fetch_query_params(conn)
+
+    until =
+      case Integer.parse(conn.query_params["until"] || "") do
+        {n, ""} when n >= 0 -> n
+        _ -> nil
+      end
+
+    World.Sculpt.Web.follow(conn, id, until)
+  end
+
+  get "/sculptures/:file" do
+    with [id, "glb"] <- String.split(file, ".", parts: 2),
+         {:ok, glb} <- World.Sculpt.Web.glb(id) do
+      conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
+    else
+      _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such live sculpture"}]})
+    end
+  end
+
+  get "/census" do
+    json(conn, 200, World.census())
+  end
+
+  # The places of the yard, for the map of the world page.
+  get "/places" do
+    json(conn, 200, %{"places" => World.Places.view(), "speed_kmh" => World.Places.data()["speed_kmh"]})
+  end
+
+  # The ground of a place with a terrain (plan 0006, D3), made once.
+  get "/places/:name/ground.glb" do
+    case World.Places.fetch(name) do
+      {:ok, %{"terrain" => _} = p} ->
+        glb =
+          with nil <- :persistent_term.get({World.Places, :ground, name}, nil) do
+            glb = World.Build.glb(World.Places.ground(p))
+            :persistent_term.put({World.Places, :ground, name}, glb)
+            glb
+          end
+
+        conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
+
+      _ ->
+        json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such ground"}]})
+    end
+  end
+
+  get "/o/:name" do
+    with {hash, level, file} <- split(name),
+         true <- hash =~ ~r/^[0-9a-f]{32}$/,
+         {:ok, order} <- Store.get(hash) do
+      serve(conn, JSON.decode!(order), level, file)
+    else
+      :error -> json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+      _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such file"}]})
+    end
+  end
+
+  get "/m/:name" do
+    case split(name) do
+      {blueprint, level, file} -> serve(conn, order_of(blueprint, conn.query_string), level, file)
+      nil -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such file"}]})
+    end
+  end
+
+  match _ do
+    case site_file(conn) do
+      nil ->
+        json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such page"}]})
+
+      path ->
+        conn
+        |> put_resp_content_type(MIME.from_path(path), nil)
+        |> put_resp_header("cache-control", @cache)
+        |> send_file(200, path)
+    end
+  end
+
+  # The headers of CORS on each answer, and 204 for OPTIONS.
+  defp cors(conn, _opts) do
+    conn =
+      conn
+      |> put_resp_header("access-control-allow-origin", "*")
+      |> put_resp_header("access-control-allow-methods", "GET, POST, OPTIONS")
+      |> put_resp_header(
+        "access-control-allow-headers",
+        "content-type, accept, mcp-protocol-version, mcp-session-id, last-event-id"
+      )
+
+    if conn.method == "OPTIONS",
+      do: conn |> put_resp_header("access-control-max-age", "86400") |> send_resp(204, "") |> halt(),
+      else: conn
+  end
+
+  # The name, the level and the file of a path: "ford.mid.glb" is {"ford", "mid", "glb"}.
+  defp split(name) do
+    Enum.find_value(@suffixes, fn {suffix, level, file} ->
+      if String.ends_with?(name, suffix) and byte_size(name) > byte_size(suffix),
+        do: {binary_part(name, 0, byte_size(name) - byte_size(suffix)), level, file}
+    end)
+  end
+
+  # The order of a URL /m/BLUEPRINT.EXT?...: `color.ROLE`, `joint.NAME` and
+  # `target.LIMB` (a point X,Y,Z), and the options. `OPTION.FIELD` is a
+  # field of an option that is an object (`origin.asian=1`).
+  defp order_of(blueprint, query) do
+    Enum.reduce(URI.query_decoder(query), %{"blueprint" => blueprint, "options" => %{}}, fn
+      {"color." <> role, value}, order ->
+        put_in(order, [Access.key("colors", %{}), role], value)
+
+      {"joint." <> name, value}, order ->
+        put_in(order, [Access.key("joints", %{}), name], number(value))
+
+      {"target." <> limb, value}, order ->
+        put_in(order, [Access.key("targets", %{}), limb], Enum.map(String.split(value, ","), &number/1))
+
+      {key, _}, order when key in ["class", "triangles", "wrap"] ->
+        order
+
+      {key, value}, order ->
+        case String.split(key, ".", parts: 2) do
+          [option, field] ->
+            update_in(order, ["options", option], &Map.put(if(is_map(&1), do: &1, else: %{}), field, value))
+
+          [option] ->
+            put_in(order, ["options", option], value)
+        end
+    end)
+  end
+
+  # A whole number of a URL, or the text when it is not one (the build gives the error).
+  defp whole(text) do
+    case Integer.parse(text) do
+      {n, ""} -> n
+      _ -> text
+    end
+  end
+
+  # A number of a URL, or the text when it is not a number (the check of the order gives the error).
+  defp number(text) do
+    case Float.parse(text) do
+      {n, ""} -> n
+      _ -> text
+    end
+  end
+
+  # A file of an order: from the store of the node, else the node builds
+  # it in its line and keeps it. A file of an older version of World goes
+  # out at once, and the node builds it again one time.
+  defp serve(conn, order, level, kind) do
+    # (The flat or the light look with a budget of triangles or a wrap is a file of its own in the store.)
+    conn = fetch_query_params(conn)
+    small? = kind in ["flat", "light"]
+    count = if small?, do: conn.query_params["triangles"]
+    wrap? = small? and conn.query_params["wrap"] in ["1", "true"]
+    opts = if(count, do: [triangles: whole(count)], else: []) ++ if(wrap?, do: [wrap: true], else: [])
+    file = Enum.join([kind] ++ if(count, do: [count], else: []) ++ if(wrap?, do: ["wrap"], else: []), ".")
+
+    case Orders.check(order) do
+      {:error, errors} ->
+        json(conn, 422, %{"errors" => errors})
+
+      {:ok, full} ->
+        hash = Orders.hash(full)
+
+        case Files.get(hash, level, file) do
+          {:ok, entry} ->
+            fresh? = Files.fresh?(entry)
+            unless fresh?, do: refresh(full, hash, level, file, kind, opts)
+            send_entry(conn, entry, hash, kind, not fresh?)
+
+          :error ->
+            case Line.run(class(conn), fn -> Orders.build(full, level, kind, opts) end) do
+              {:ok, body} -> send_entry(conn, Files.put(hash, level, file, body), hash, kind, false)
+              {:error, errors} -> json(conn, 422, %{"errors" => errors})
+            end
+        end
+    end
+  end
+
+  # A new build of a stale file, in a process of its own; one for a file at one time.
+  defp refresh(full, hash, level, file, kind, opts) do
+    spawn(fn ->
+      with {:ok, _} <- Registry.register(World.Names, {:refresh, hash, level, file}, nil),
+           {:ok, body} <- Line.run(:batch, fn -> Orders.build(full, level, kind, opts) end) do
+        Files.put(hash, level, file, body)
+      end
+    end)
+  end
+
+  defp send_entry(conn, entry, hash, file, stale?) do
+    conn =
+      conn
+      |> put_resp_header("etag", entry.etag)
+      |> put_resp_header("cache-control", @cache)
+      |> put_resp_header("vary", "accept-encoding")
+      |> put_resp_header("x-world-order", hash)
+      |> put_resp_header("x-world-version", entry.version)
+
+    conn = if stale?, do: put_resp_header(conn, "x-world-stale", "true"), else: conn
+    gzip? = Enum.any?(get_req_header(conn, "accept-encoding"), &String.contains?(&1, "gzip"))
+
+    cond do
+      entry.etag in get_req_header(conn, "if-none-match") ->
+        send_resp(conn, 304, "")
+
+      gzip? ->
+        conn
+        |> put_resp_content_type(Map.fetch!(@types, file), nil)
+        |> put_resp_header("content-encoding", "gzip")
+        |> send_resp(200, entry.gzip)
+
+      true ->
+        conn |> put_resp_content_type(Map.fetch!(@types, file), nil) |> send_resp(200, entry.body)
+    end
+  end
+
+  # The class of the build of a request in the line: `batch` when the request says so.
+  defp class(conn) do
+    conn = fetch_query_params(conn)
+
+    if conn.query_params["class"] == "batch" or get_req_header(conn, "x-world-class") == ["batch"],
+      do: :batch,
+      else: :now
+  end
+
+  # The file of the site for a GET, when the node has a site and the file is in it.
+  defp site_file(%{method: "GET", path_info: info}) do
+    with dir when is_binary(dir) <- Application.get_env(:world, :site),
+         true <- Enum.all?(info, &(&1 =~ ~r/\A[A-Za-z0-9_][A-Za-z0-9_.-]*\z/)),
+         path = Path.join([dir | if(info == [], do: ["index.html"], else: info)]),
+         true <- File.regular?(path) do
+      path
+    else
+      _ -> nil
+    end
+  end
+
+  defp site_file(_conn), do: nil
+
+  defp changed(conn, id, :ok, placed),
+    do: json(conn, 200, %{"build" => id, "hash" => placed["hash"], "files" => placed["files"]})
+
+  defp changed(conn, _id, {:error, :none}, _),
+    do: json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such construction"}]})
+
+  defp changed(conn, _id, {:error, reason}, _) do
+    message = %{
+      not_paused: "the construction is not in a pause",
+      not_a_drawing: "the construction is not a drawing",
+      other_nodes: "the drawing has other nodes"
+    }
+
+    json(conn, 409, %{"errors" => [%{"path" => "", "message" => message[reason]}]})
+  end
+
+  # A job of a request: its order into the store, then a construction.
+  defp builds(conn, body) do
+    case Orders.construction(body, origin(conn)) do
+      {:ok, job, placed} ->
+        after_id = World.Log.Server.last()
+
+        if "text/event-stream" in get_req_header(conn, "accept") do
+          conn = Stream.open(conn, job.id)
+          {:ok, id} = World.build(job)
+          Stream.follow(conn, id, after_id, &over?/1)
+        else
+          {:ok, id} = World.build(job)
+          json(conn, 202, Orders.started(id, placed, after_id))
+        end
+
+      {:error, :store} ->
+        json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+      {:error, errors} ->
+        json(conn, 422, %{"errors" => errors})
+    end
+  end
+
+  # The end of a construction.
+  defp over?(e), do: e["kind"] in ~w(done stopped failed)
+
+  # The id after which a stream starts: `Last-Event-ID`, else `?after=N`, else 0.
+  defp after_id(conn) do
+    text = List.first(get_req_header(conn, "last-event-id")) || conn.query_params["after"] || "0"
+
+    case Integer.parse(text) do
+      {n, ""} when n >= 0 -> n
+      _ -> 0
+    end
+  end
+
+  # The state of a construction: its last run in the log of the node.
+  defp summary(id) do
+    events = for e <- World.Log.Server.history(0), e["order"] == id, do: e
+
+    case Enum.split_while(Enum.reverse(events), &(&1["kind"] != "requested")) do
+      {_, []} ->
+        nil
+
+      {after_request, [requested | _]} ->
+        run = [requested | Enum.reverse(after_request)]
+        plan = Enum.find(run, &(&1["kind"] == "plan_made"))
+        last = List.last(run)
+        over = Enum.find(Enum.reverse(run), &over?/1)
+
+        %{
+          "build" => id,
+          "status" => status(run, over),
+          "level" => (plan || requested)["data"]["level"],
+          "tasks" => if(plan, do: length(plan["data"]["tasks"]), else: 0),
+          "done" => Enum.count(run, &(&1["kind"] == "task_done")),
+          "elements" => for(e <- run, e["kind"] == "element", do: Map.take(e["data"], ~w(task part glb matrix))),
+          "last" => last["id"]
+        }
+    end
+  end
+
+  # The state of a construction: the kind of its end, or paused, or building.
+  defp status(_run, %{"kind" => kind}), do: kind
+
+  defp status(run, nil) do
+    case Enum.find(Enum.reverse(run), &(&1["kind"] in ~w(paused resumed))) do
+      %{"kind" => "paused"} -> "paused"
+      _ -> "building"
+    end
+  end
 
   # The start of the URLs of an order: from the Worker, else this server.
   defp origin(conn) do

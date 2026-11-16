@@ -1,0 +1,443 @@
+{
+  "name": "cuc_nong_may_lanh_edits",
+  "kind": "appliance",
+  "sources": [
+    "The outdoor unit of an air conditioner of 2.5 kW (1 HP): 550 mm high, 658 mm wide, 275 mm deep (Daikin data books of the RXF25C and of the RXP25M). A case of painted steel, the grille of the fan, the louvers of the coil, the cover of the valves. No badge. It is from edits only (plan 0011): no code of World knows this kind of model. It is not a copy of a real thing."
+  ],
+  "materials": {
+    "paint": {
+      "color": "#ffffff",
+      "roughness": 0.6,
+      "metalness": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "name": "cuc_nong_may_lanh",
+      "skill": {
+        "sculpt": {
+          "edits": [
+            {
+              "shape": "round_box",
+              "size": [
+                0.329,
+                0.1375,
+                0.265,
+                0.012
+              ],
+              "at": [
+                0,
+                0,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#dcdad2",
+              "roughness": 0.55
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.02,
+                0.1675,
+                0.012
+              ],
+              "at": [
+                0.22,
+                0,
+                0.012
+              ],
+              "material": "paint",
+              "color": "#8a8c90",
+              "mirror": "x",
+              "finish": "metal",
+              "surface": {
+                "kind": "rust",
+                "scale": 0.04
+              }
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.215,
+                0.05
+              ],
+              "at": [
+                -0.07,
+                0.1375,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#3a3c40",
+              "mode": "paint",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "blend": 0.012,
+              "roughness": 0.8,
+              "raise": -0.012
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.03,
+                0.005
+              ],
+              "at": [
+                -0.07,
+                0.1375,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#c8c6be",
+              "mode": "paint",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "blend": 0.01,
+              "roughness": 0.5,
+              "raise": 0.01
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.07,
+                0.005
+              ],
+              "at": [
+                -0.07,
+                0.1375,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#c8c6be",
+              "mode": "paint",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "blend": 0.01,
+              "roughness": 0.5,
+              "raise": 0.01
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.11,
+                0.005
+              ],
+              "at": [
+                -0.07,
+                0.1375,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#c8c6be",
+              "mode": "paint",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "blend": 0.01,
+              "roughness": 0.5,
+              "raise": 0.01
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.15,
+                0.005
+              ],
+              "at": [
+                -0.07,
+                0.1375,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#c8c6be",
+              "mode": "paint",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "blend": 0.01,
+              "roughness": 0.5,
+              "raise": 0.01
+            },
+            {
+              "shape": "ring",
+              "size": [
+                0.19,
+                0.005
+              ],
+              "at": [
+                -0.07,
+                0.1375,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#c8c6be",
+              "mode": "paint",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "blend": 0.01,
+              "roughness": 0.5,
+              "raise": 0.01
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.006,
+                0.02,
+                0.2
+              ],
+              "at": [
+                -0.07,
+                0.1375,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#c8c6be",
+              "mode": "paint",
+              "blend": 0.01,
+              "roughness": 0.5,
+              "repeat": {
+                "count": 6,
+                "axis": [
+                  0,
+                  1,
+                  0
+                ],
+                "center": [
+                  -0.07,
+                  0,
+                  0.28500000000000003
+                ],
+                "angle": 30
+              },
+              "raise": 0.01
+            },
+            {
+              "shape": "cylinder",
+              "size": [
+                0.045,
+                0.012
+              ],
+              "at": [
+                -0.07,
+                0.14150000000000001,
+                0.28500000000000003
+              ],
+              "material": "paint",
+              "color": "#dcdad2",
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "blend": 0.004,
+              "roughness": 0.5
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.02,
+                0.0975,
+                0.006
+              ],
+              "at": [
+                -0.329,
+                0,
+                0.07
+              ],
+              "material": "paint",
+              "color": "#3a3c40",
+              "mode": "paint",
+              "blend": 0.005,
+              "repeat": {
+                "count": 20,
+                "move": [
+                  0,
+                  0,
+                  0.022
+                ]
+              },
+              "raise": -0.005
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.269,
+                0.02,
+                0.006
+              ],
+              "at": [
+                0,
+                -0.1375,
+                0.07
+              ],
+              "material": "paint",
+              "color": "#3a3c40",
+              "mode": "paint",
+              "blend": 0.005,
+              "repeat": {
+                "count": 20,
+                "move": [
+                  0,
+                  0,
+                  0.022
+                ]
+              },
+              "raise": -0.005
+            },
+            {
+              "shape": "round_box",
+              "size": [
+                0.03,
+                0.08,
+                0.11,
+                0.01
+              ],
+              "at": [
+                0.34900000000000003,
+                0.02,
+                0.2
+              ],
+              "material": "paint",
+              "color": "#dcdad2",
+              "blend": 0.004,
+              "roughness": 0.55
+            },
+            {
+              "shape": "capsule",
+              "size": [
+                0.05,
+                0.008
+              ],
+              "at": [
+                0.389,
+                0.03,
+                0.12
+              ],
+              "material": "paint",
+              "color": "#b87840",
+              "axis": [
+                1,
+                0,
+                -0.3
+              ],
+              "finish": "metal"
+            },
+            {
+              "shape": "capsule",
+              "size": [
+                0.05,
+                0.011
+              ],
+              "at": [
+                0.389,
+                0.03,
+                0.17
+              ],
+              "material": "paint",
+              "color": "#e8e6e0",
+              "axis": [
+                1,
+                0,
+                -0.3
+              ],
+              "roughness": 0.8,
+              "surface": {
+                "kind": "fabric",
+                "scale": 0.004
+              }
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.329,
+                0.14750000000000002,
+                0.002
+              ],
+              "at": [
+                0,
+                0,
+                0.52
+              ],
+              "material": "paint",
+              "color": "#b0aea6",
+              "mode": "paint",
+              "blend": 0.002,
+              "raise": -0.0015
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.002,
+                0.14750000000000002,
+                0.275
+              ],
+              "at": [
+                0.19,
+                0,
+                0.275
+              ],
+              "material": "paint",
+              "color": "#b0aea6",
+              "mode": "paint",
+              "blend": 0.002,
+              "raise": -0.0015
+            },
+            {
+              "shape": "box",
+              "size": [
+                0.339,
+                0.14750000000000002,
+                0.03
+              ],
+              "at": [
+                0,
+                0,
+                0.04
+              ],
+              "material": "paint",
+              "mode": "paint",
+              "blend": 0.03,
+              "opacity": 0.6,
+              "surface": {
+                "kind": "rust",
+                "scale": 0.05
+              }
+            }
+          ],
+          "dirt": 0.7,
+          "wear": 0.3,
+          "cells": {
+            "near": 0.006,
+            "mid": 0.012,
+            "far": 0.025
+          },
+          "budget": {
+            "near": 10000,
+            "mid": 2500,
+            "far": 400
+          },
+          "bake": {
+            "near": 1024,
+            "mid": 512,
+            "far": 256
+          }
+        }
+      }
+    }
+  ]
+}

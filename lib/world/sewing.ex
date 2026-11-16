@@ -55,7 +55,9 @@ defmodule World.Sewing do
     "foam_cup" => %{thick: 0.025, span: 0, grain: 8, shade: 240},
     "nylon_shell" => %{thick: 0.02, span: 16, grain: 4, shade: 225},
     "softshell" => %{thick: 0.02, span: 12, grain: 10, shade: 225},
-    "down" => %{thick: 0.1, span: 8, grain: 6, shade: 225}
+    "down" => %{thick: 0.1, span: 8, grain: 6, shade: 225},
+    # (Cotton that a village weaves on a hand loom: a coarse weave.)
+    "homespun" => %{thick: 0.014, span: 90, grain: 3, shade: 216}
   }
 
   # The bones of the parts of the body (the bone with the largest weight
@@ -140,12 +142,14 @@ defmodule World.Sewing do
       layer: 2,
       fabric: "cotton_jersey",
       pieces: [
-        # The front and the back to the hips, with a crew neck.
+        # The front and the back to the hips, with a crew neck (`neck`: a round cut about the axis of the neck,
+        # lower at the front), so the cloth covers the tops of the shoulders.
         %{
           name: "body",
           on: "body",
-          bones: @torso ++ ["pelvis", "thigh_l", "thigh_r"],
-          y: {{:hip, -0.6}, {:neck, -0.35}},
+          bones: @torso ++ ["neck_01", "pelvis", "thigh_l", "thigh_r"],
+          y: {{:hip, -0.6}, {:neck, 0.4}},
+          neck: {0.72, 0.55, 0.12},
           ease: 0.02,
           room: 0.08,
           drape: true
@@ -224,6 +228,79 @@ defmodule World.Sewing do
         },
         %{name: "collar", on: "body", bones: ["neck_01"], y: {nil, {:neck, :head, 0.7}}, ease: 0.05, puff: 0.12}
       ]
+    },
+    # The clothes of a village of old Việt Nam (for Tre), of homespun cotton: an order gives the brown
+    # of the dye (`clothes_colors`).
+    %{
+      name: "world_ao_canh",
+      layer: 2,
+      fabric: "homespun",
+      pieces: [
+        # A loose tunic with a round neck at the base of the neck (`neck`: a round cut about the axis of the
+        # neck). Its top is on the body to the waist.
+        %{
+          name: "body",
+          on: "body",
+          bones: @torso ++ ["neck_01", "pelvis"],
+          y: {{:waist, -0.7}, {:neck, 0.4}},
+          neck: {0.72, 0.5, 0.1},
+          ease: 0.3,
+          drape: true
+        },
+        # From the waist it hangs to under the hips, as a tube round the two legs.
+        %{name: "skirt", on: "helper-skirt", y: {{:hip, -1.2}, {:waist, 0.0}}, ease: 0.2},
+        # The long loose sleeves, to above the wrists.
+        %{name: "sleeves", on: "body", bones: @arms, arm: 0.82, ease: 0.3}
+      ]
+    },
+    %{
+      name: "world_ao_coc",
+      layer: 2,
+      fabric: "homespun",
+      pieces: [
+        # The same tunic with short sleeves, for work in the fields and for a child.
+        %{
+          name: "body",
+          on: "body",
+          bones: @torso ++ ["neck_01", "pelvis"],
+          y: {{:waist, -0.7}, {:neck, 0.4}},
+          neck: {0.72, 0.5, 0.1},
+          ease: 0.3,
+          drape: true
+        },
+        %{name: "skirt", on: "helper-skirt", y: {{:hip, -1.0}, {:waist, 0.0}}, ease: 0.2},
+        %{name: "sleeves", on: "body", bones: @arms, arm: 0.3, ease: 0.3}
+      ]
+    },
+    %{
+      name: "world_quan_ong_rong",
+      layer: 1,
+      fabric: "homespun",
+      pieces: [
+        # Wide pants from the waist to the middle of the calf.
+        %{
+          name: "legs",
+          on: "body",
+          bones: ["spine_01", "pelvis"] ++ @legs,
+          y: {{:knee, :ankle, 0.55}, {:waist, 0.1}},
+          ease: {:flare, 0.03, 0.45}
+        }
+      ]
+    },
+    %{
+      name: "world_quan_dui",
+      layer: 1,
+      fabric: "homespun",
+      pieces: [
+        # Short pants to above the knees, for a child.
+        %{
+          name: "legs",
+          on: "body",
+          bones: ["spine_01", "pelvis"] ++ @legs,
+          y: {{:hip, :knee, 0.8}, {:waist, 0.1}},
+          ease: {:flare, 0.04, 0.9}
+        }
+      ]
     }
   ]
 
@@ -238,7 +315,7 @@ defmodule World.Sewing do
   The names of the garments.
 
       iex> World.Sewing.names()
-      ["world_bra", "world_ao_dai", "world_quan", "world_t_shirt", "world_pants", "world_rain_shell", "world_softshell", "world_down_jacket"]
+      ["world_bra", "world_ao_dai", "world_quan", "world_t_shirt", "world_pants", "world_rain_shell", "world_softshell", "world_down_jacket", "world_ao_canh", "world_ao_coc", "world_quan_ong_rong", "world_quan_dui"]
   """
   def names, do: Enum.map(@garments, & &1.name)
 
@@ -440,6 +517,7 @@ defmodule World.Sewing do
     {_, _, zc} = joint("joint-pelvis")
     {_, _, zs} = joint("joint-spine-2")
     arm = arm_axis()
+    neck = joint("joint-neck")
 
     fn v ->
       {x, y, z} = p = elem(points, v)
@@ -450,10 +528,19 @@ defmodule World.Sewing do
         (cups == nil or MapSet.member?(cups, v)) and
         (not Map.get(piece, :front, false) or z > zs) and
         in_x?(piece[:x], x) and
+        in_neck?(piece[:neck], p, neck) and
         in_angle?(piece[:angle], x, z - zc) and
         in_arm?(piece[:arm], b, p, arm)
     end
   end
+
+  # A round neck: a point near the axis of the neck (less than `r` dm from it, in the plane of the
+  # ground) and higher than `drop` dm under the joint of the neck is out of the piece. The axis is `front`
+  # dm in front of the joint, so the cut is lower at the front than at the back.
+  defp in_neck?(nil, _p, _neck), do: true
+
+  defp in_neck?({r, drop, front}, {x, y, z}, {nx, ny, nz}),
+    do: y < ny - drop or :math.sqrt((x - nx) * (x - nx) + (z - nz - front) * (z - nz - front)) >= r
 
   defp in_x?(nil, _x), do: true
   defp in_x?({a, b}, x), do: abs(x) >= a and abs(x) <= b
@@ -555,10 +642,14 @@ defmodule World.Sewing do
 
   # The normal of a point of a surface: the sum of the normals of its
   # faces (each face is a quad: the cross of its diagonals), made a unit.
+  # The direction of the cloth at a point: the normal of the surface of the body as the clothes fit to it
+  # (no nipples, smooth breasts: `World.People.Human.cloth_points/1`). The normals of the base mesh with
+  # its nipples point into each other there, and make a pit in the cloth.
   defp normal(surface, v) do
     normals =
       Data.cached({:sewing_normals, surface}, fn ->
-        %{points: points, groups: groups} = Data.base()
+        %{groups: groups} = Data.base()
+        points = World.People.Human.cloth_points(Data.base().points)
 
         groups
         |> Map.fetch!(surface)
@@ -568,12 +659,26 @@ defmodule World.Sewing do
           Enum.reduce(f, acc, fn {v, _}, acc -> Map.update(acc, v, n, &Vec.add(&1, n)) end)
         end)
         |> Map.new(fn {v, n} -> {v, Vec.norm(n)} end)
+        |> even(neighbors(), 4)
       end)
 
     Map.fetch!(normals, v)
   end
 
   # The neighbors of each point of the body: the other points of its faces.
+  # The normals, each the mean of its own and of the normals of its neighbors, `n` times: the direction of
+  # the cloth does not change at a small face (the small faces of a nipple).
+  defp even(normals, _ring, 0), do: normals
+
+  defp even(normals, ring, n) do
+    normals
+    |> Map.new(fn {v, nv} ->
+      around = for w <- Map.get(ring, v, []), m = normals[w], m != nil, do: m
+      {v, Vec.norm(Enum.reduce(around, nv, &Vec.add/2))}
+    end)
+    |> even(ring, n - 1)
+  end
+
   defp neighbors do
     Data.cached(:sewing_ring, fn ->
       Data.base().groups

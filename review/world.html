@@ -1,0 +1,2061 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World</title>
+<style>
+  :root { --paper: #f4f1e6; --ink: #222; --line: #c9c2ad; --soft: #6b6656; --mark: #c8551b; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #1d1f22; --ink: #e8e6df; --line: #45484d; --soft: #a19d92; --mark: #f08a4b; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: var(--paper); color: var(--ink); display: grid; grid-template-columns: 340px 1fr; grid-template-rows: auto 1fr; height: 100vh; }
+  header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; }
+  header nav a { color: inherit; margin-right: 12px; }
+  #counts { color: var(--soft); font-variant-numeric: tabular-nums; }
+  aside { padding: 8px 16px; overflow: auto; border-right: 1px solid var(--line); }
+  aside h2 { font-size: 13px; margin: 14px 0 4px; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; }
+  form { display: grid; gap: 6px; }
+  label { display: grid; gap: 2px; font-size: 12px; color: var(--soft); }
+  input, select, textarea, button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; min-height: 32px; }
+  textarea { min-height: 64px; font-family: ui-monospace, monospace; font-size: 12px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { border-top: 1px solid var(--line); padding: 2px 4px; vertical-align: top; }
+  td.n { font-variant-numeric: tabular-nums; }
+  ol { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+  ol li { border-top: 1px solid var(--line); padding: 3px 0; }
+  ol li time { color: var(--soft); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  main { position: relative; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #message { position: absolute; left: 16px; bottom: 12px; margin: 0; color: var(--soft); }
+  #lapse { position: absolute; left: 16px; top: 12px; margin: 0; font: 600 16px/1.3 system-ui, sans-serif; color: #fff; text-shadow: 0 1px 3px #000a; max-width: calc(100% - 32px); }
+  #lapsebar { position: absolute; right: 16px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: end; background: var(--paper); padding: 6px; border-radius: 6px; max-width: calc(100% - 32px); }
+  #lapsebar[hidden] { display: none; }
+  @media (max-width: 700px) {
+    body { grid-template-columns: 1fr; grid-template-rows: auto 55vh auto; height: auto; }
+    main { grid-row: 2; height: 55vh; }
+    aside { grid-row: 3; border: 0; }
+  }
+</style>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header>
+  <h1>World</h1>
+  <nav><a href="review.html">The models</a><a href="replay.html">A replay</a></nav>
+  <span id="counts" aria-live="polite"></span>
+</header>
+<aside>
+  <h2>Build a model</h2>
+  <form id="job">
+    <label>Blueprint <select id="blueprint" required></select></label>
+    <label>Options (JSON) <textarea id="options">{}</textarea></label>
+    <div class="row">
+      <label>Level <select id="level"><option>near</option><option>mid</option><option selected>far</option></select></label>
+      <label>Workers <input id="workers" type="number" min="1" max="64" value="4"></label>
+      <label>Seconds <input id="seconds" type="number" min="1" placeholder="no limit"></label>
+    </div>
+    <button type="submit">Build</button>
+    <p id="answer" role="status"></p>
+  </form>
+  <h2>The places</h2>
+  <table id="places"></table>
+  <h2>The constructions</h2>
+  <table id="builds"></table>
+  <h2>The people</h2>
+  <table id="people"></table>
+  <h2>The events</h2>
+  <ol id="events"></ol>
+</aside>
+<main><canvas id="view"></canvas><p id="message">The world starts.</p><p id="lapse" aria-live="polite"></p>
+  <div id="lapsebar" hidden>
+    <button id="play" type="button">Pause</button>
+    <label>Days in a second <select id="speed"><option>5</option><option>10</option><option selected>20</option><option>50</option><option>100</option><option>500</option></select></label>
+    <label>View <select id="viewsel"><option value="three_quarters">Three quarters</option><option value="front">Front</option><option value="side">Side</option><option value="back">Back</option><option value="base">The base</option><option value="above">Above</option></select></label>
+    <label><span>Turn</span> <input id="turn" type="checkbox"></label>
+    <button id="copycam" type="button">Copy the camera</button>
+  </div>
+</main>
+<script type="module">
+// The world (docs/plans/0001-people-build-on-demand.md, R24): the people of
+// the node, and each construction on its lot as its elements arrive. The
+// page reads the stream of the world (GET /events): first the events of
+// the past from the log of the node, then each new event. A person is a
+// figure on the lot of the construction that holds it: it walks to the
+// lot when a construction hires it, and works when it has a task. Each
+// element (a part that a person made) comes as a GLB of its own
+// (/builds/ID/elements/KEY.glb) at its place in the model.
+//
+// The map of the yard (plan 0002, D6 and D7): the places of the node (GET
+// /places) at their points, each construction on a lot at the place of
+// its order (the events of the yard), and the trucks of the haul on their
+// drives: a truck drives to the source of its load, then to its place.
+//
+// ?events=URL reads a recorded stream (one event of JSON on each line),
+// ?places=URL the places, and ?files=URL the folder of its elements, for
+// a test with no server.
+//
+// The time lapse (plan 0006, D11): ?follow=ORDER (or ?follow=1, the first
+// construction) follows one construction on the clock of its log, at
+// ?days=N days of the world in one second of the page (20 by default),
+// the same for each step and each pause: a film is the days of the site
+// over N seconds. The camera turns with the mouse or a finger, has views
+// (?view=three_quarters, front, side, back, base, above), a slow turn
+// (?turn=1), and takes ?cam=x,y,z, ?target=x,y,z (m, in the frame of the
+// lot) and ?fov=deg. ?still=1 waits for window.TIMELAPSE.to(day) (a
+// video, scripts/timelapse.mjs). ?worker=URL is the GLB of a person with
+// the animations of the work (an order of the blueprint person). An
+// element whose GLB the node does not keep now (5 minutes after the end
+// of its construction) does not show.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { light } from './scene.js';
+
+const params = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const files = params.get('files') ?? '';
+
+// The scene: a ground with a lot for each construction.
+const canvas = $('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// A part grows from its foot to its top over the days of its task.
+renderer.localClippingEnabled = true;
+renderer.setPixelRatio(devicePixelRatio);
+const scene = new THREE.Scene();
+const style = getComputedStyle(document.body);
+scene.background = new THREE.Color(style.backgroundColor);
+const stage = light(renderer, scene);
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 8000);
+camera.position.set(40, 45, 70);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(20, 0, 10);
+const grid = new THREE.GridHelper(400, 80, 0x9a927c, 0xc9c2ad);
+scene.add(grid);
+const mark = new THREE.MeshStandardMaterial({ color: style.getPropertyValue('--mark').trim() });
+const loader = new GLTFLoader();
+
+// The places of the yard: a ground of the color of its kind at its point
+// (x to the right, y of the yard to -z), and a row of the table with its
+// state. A place with a building is closed until the yard opens it.
+const KINDS = { supplier: 0x8f8a7a, warehouse: 0x6f8fa8, factory: 0xb0784a, site: 0x7f9a5c };
+const places = new Map();
+// The name of a place on the map: a sprite of text that faces the camera.
+function label(text, x, z, y = 4) {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 64;
+  const g = c.getContext('2d');
+  g.font = '600 36px system-ui, sans-serif';
+  g.fillStyle = style.color;
+  g.textAlign = 'center';
+  g.fillText(text, 128, 44);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  sprite.scale.set(80, 20, 1);
+  sprite.position.set(x, y, z);
+  sprite.userData.label = true;
+  return sprite;
+}
+const yard = await fetch(params.get('places') ?? '/places').then((r) => r.json()).catch(() => ({ places: [] }));
+// The sun and its shadows cover the yard: each place, 40 m round it.
+const area = new THREE.Box3(new THREE.Vector3(-40, 0, -40), new THREE.Vector3(80, 30, 60));
+for (const p of yard.places) area.expandByPoint(new THREE.Vector3(p.at[0] - 40, 0, -p.at[1] - 40)).expandByPoint(new THREE.Vector3(p.at[0] + 40, 30, -p.at[1] + 40));
+// The box of a terrain on the yard (plan 0006, D4): the point of the
+// place is the game point `origin`; the game Z goes to the south, the y
+// of the yard to the north.
+const terrainBox = (p) => {
+  const [ox, oz] = p.terrain.origin;
+  const [x0, z0, x1, z1] = p.terrain.box;
+  return new THREE.Box3(new THREE.Vector3(p.at[0] + x0 - ox, 0, -(p.at[1] + oz - z0)), new THREE.Vector3(p.at[0] + x1 - ox, 0, -(p.at[1] + oz - z1)));
+};
+for (const p of yard.places) if (p.terrain) area.union(terrainBox(p).expandByPoint(new THREE.Vector3(p.at[0], 180, -p.at[1])));
+stage.fit(area);
+const ready = [];
+for (const p of yard.places) {
+  let ground;
+  if (p.terrain) {
+    // The true ground of the place, from the Vũng Tàu game (plan 0006,
+    // D3): the GLB is in the frame of World from the point of the place
+    // (x east, y north, z up); its glTF x is to the west and its z to
+    // the north, so a half turn puts it on the yard.
+    ground = new THREE.Group();
+    ground.position.set(p.at[0], 0, -p.at[1]);
+    ground.rotation.y = Math.PI;
+    scene.add(ground);
+    ready.push(loader.loadAsync(p.terrain.ground).then((g) => { stage.shade(g.scene); ground.add(g.scene); }).catch(() => {}));
+    // The sea round the ground, at the height 0.
+    const box = terrainBox(p);
+    const size = box.getSize(new THREE.Vector3());
+    const middle = box.getCenter(new THREE.Vector3());
+    // A film has the sea to the horizon; the map keeps the yard clear.
+    const margin = params.get('follow') ? 6000 : 200;
+    const sea = new THREE.Mesh(new THREE.PlaneGeometry(size.x + margin, size.z + margin), new THREE.MeshStandardMaterial({ color: 0x3f7f9f, roughness: 0.3 }));
+    sea.rotation.x = -Math.PI / 2;
+    sea.position.set(middle.x, 0.02, middle.z);
+    sea.receiveShadow = true;
+    sea.name = 'sea';
+    scene.add(sea);
+    const top = p.terrain.lots[0];
+    scene.add(label(p.name, top.yard[0], -top.yard[1] + 42, top.height + 4));
+  } else {
+    ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: KINDS[p.kind] ?? 0x999999, transparent: true, opacity: 0.3 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(p.at[0], 0.01, -p.at[1]);
+    ground.userData.flat = true;
+    scene.add(ground);
+    scene.add(label(p.name, p.at[0], -p.at[1] + 42));
+  }
+  const row = $('places').insertRow();
+  row.insertCell().textContent = p.name;
+  row.insertCell().textContent = p.kind;
+  const state = row.insertCell();
+  state.textContent = p.building ? 'closed' : 'open';
+  places.set(p.name, { ...p, ground, state, lots: 0 });
+}
+// The point of a place: on a terrain, the first lot at the height of its ground.
+const point = (name) => {
+  const p = places.get(name);
+  const top = p?.terrain?.lots?.[0];
+  if (top) return new THREE.Vector3(top.yard[0], top.height, -top.yard[1]);
+  return p ? new THREE.Vector3(p.at[0], 0, -p.at[1]) : new THREE.Vector3();
+};
+// The view of the map: the middle of the places, from the front and over.
+// The grid is under the flat places only: a place with a terrain has its
+// ground and its sea.
+const spread = (list) => {
+  const xs = list.map((p) => p.at[0]);
+  const ys = list.map((p) => p.at[1]);
+  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + 120;
+  return { x: (Math.min(...xs) + Math.max(...xs)) / 2, z: -(Math.min(...ys) + Math.max(...ys)) / 2, span };
+};
+if (places.size) {
+  const all = spread(yard.places);
+  const flat = yard.places.filter((p) => !p.terrain);
+  const g = flat.length ? spread(flat) : all;
+  grid.position.set(g.x, 0, g.z);
+  grid.scale.setScalar(g.span / 400);
+  camera.position.set(all.x, all.span * 1.1, all.z + all.span * 1.25);
+  controls.target.set(all.x, 0, all.z);
+}
+
+// A lot for each construction, in rows of four, 30 m apart; on the map, a
+// lot at the place of its order.
+const LOT = 30;
+const builds = new Map();
+const at = new Map();
+function lot(id) {
+  if (builds.has(id)) return builds.get(id);
+  const n = builds.size;
+  const group = new THREE.Group();
+  group.position.set((n % 4) * LOT, 0, Math.floor(n / 4) * LOT);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(LOT - 4, LOT - 4), new THREE.MeshStandardMaterial({ color: 0xb8ad8f, transparent: true, opacity: 0.35 }));
+  ground.rotation.x = -Math.PI / 2;
+  ground.name = 'lot';
+  group.add(ground);
+  if (at.has(id)) settle(group, ...at.get(id));
+  scene.add(group);
+  const row = $('builds').insertRow();
+  row.insertCell().textContent = id.slice(0, 12);
+  const state = row.insertCell();
+  const b = { id, group, state, tasks: 0, done: 0, elements: 0, status: 'plan', parts: {} };
+  builds.set(id, b);
+  return b;
+}
+
+// A lot at a place: the next lot of the place, 30 m apart. On a terrain,
+// the lot of the yard (or the next one) at the height of its ground, with
+// its turn from the north to the east (plan 0006, D5): the front of a
+// model (+y of World, +z of glTF) looks to the south with no turn of the
+// group, and to the north with a half turn.
+function settle(group, name, lotName) {
+  const p = places.get(name);
+  if (!p) return;
+  const lots = p.terrain?.lots ?? [];
+  if (lots.length) {
+    const l = lots.find((l) => l.name === lotName) ?? lots[p.lots % lots.length];
+    group.position.set(l.yard[0], l.height, -l.yard[1]);
+    group.rotation.y = Math.PI - THREE.MathUtils.degToRad(l.turn);
+    group.getObjectByName('lot').visible = false;
+    p.lots += 1;
+    return;
+  }
+  group.position.copy(point(name)).add(new THREE.Vector3((p.lots % 2) * LOT - LOT / 2, 0, -Math.floor(p.lots / 2) * LOT));
+  p.lots += 1;
+}
+
+// The trucks: a box of the size of a van; a drive of 2 s to the source of
+// a load, then to its place. A rented truck goes back to the gate.
+const trucks = new Map();
+const van = new THREE.BoxGeometry(2.1, 2.6, 6);
+function truck(name, place) {
+  if (trucks.has(name)) return trucks.get(name);
+  const mesh = new THREE.Mesh(van, mark);
+  mesh.position.copy(point(place)).add(new THREE.Vector3(0, 1.3, 0));
+  scene.add(mesh);
+  const t = { name, mesh, from: mesh.position.clone(), to: mesh.position.clone(), start: 0 };
+  trucks.set(name, t);
+  return t;
+}
+function drive(t, place) {
+  t.from.copy(t.mesh.position);
+  t.to.copy(point(place)).add(new THREE.Vector3(0, 1.3, 0));
+  t.start = performance.now();
+}
+
+// A model as a person sees it: the COLOR_0 of a model with a surface is
+// data for a shader (World.Surface), not a color, and a collision box is
+// not seen.
+function plain(model) {
+  model.traverse((o) => {
+    if (o.isMesh && model.userData.surface) o.material.vertexColors = false;
+    if (o.userData.collision) o.visible = false;
+  });
+  return model;
+}
+
+// The GLB of an element, once for each build and key; a copy for each place.
+const glbs = new Map();
+function element(id, key) {
+  const url = `${files}/builds/${id}/elements/${key}.glb`;
+  if (!glbs.has(url)) glbs.set(url, loader.loadAsync(url).then((g) => plain(g.scene)));
+  return glbs.get(url);
+}
+
+// The people: a figure each, from the catalog (a person at the level far),
+// or a plain body when the catalog is not there.
+// The people: a figure each, from ?worker=URL (a person with the
+// animations of the work, plan 0006, D10), or the man of the catalog (a
+// person at the level far), or a plain body when neither is there.
+const plainBody = () => {
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.2, 4, 8), mark);
+  m.position.y = 0.85;
+  const g = new THREE.Group();
+  g.add(m);
+  return { scene: g, clips: [] };
+};
+const body = loader.loadAsync(params.get('worker') ?? `${files}/m/catalog.far.glb?name=man`)
+  .then((g) => ({ scene: g.scene, clips: g.animations }))
+  .catch(() => plainBody());
+// The work of each trade (World.People.Pose.work/0).
+const WORK = { caster: 'pour', carpenter: 'set_panel', scaffolder: 'climb', rigger: 'guide', mason: 'trowel', finisher: 'trowel', smith: 'hammer', sculptor: 'hammer', surveyor: 'guide', builder: 'carry' };
+const people = new Map();
+const gate = new THREE.Vector3(-20, 0, -20);
+// A figure that moves: a person of the census, a helper of its crew, or a
+// carrier of the path.
+let seeds = 0;
+function worker(kit, work) {
+  const figure = SkeletonUtils.clone(kit.scene);
+  figure.position.copy(gate);
+  stage.shade(figure);
+  scene.add(figure);
+  return { figure, mixer: kit.clips.length ? new THREE.AnimationMixer(figure) : null, clips: kit.clips, clip: null, work, seed: ++seeds, route: null, place: null };
+}
+async function person(name) {
+  if (people.has(name)) return people.get(name);
+  const p = Object.assign(worker(await body, 'carry'), { name, task: null, build: null, crew: [], row: $('people').insertRow() });
+  p.row.insertCell().textContent = name;
+  p.trade = p.row.insertCell();
+  p.status = p.row.insertCell();
+  people.set(name, p);
+  return p;
+}
+// A clip of a person (walk, the work of its trade), or none.
+function act(p, name) {
+  if (!p.mixer || p.clip === name) return;
+  const clip = p.clips.find((c) => c.name === name);
+  p.mixer.stopAllAction();
+  p.clip = name;
+  if (clip) p.mixer.clipAction(clip).play();
+}
+// The people at work (plan 0006, D10; the owner, 2026-11-10 and 11): the
+// people of a stage walk in on the way to the lot (the path of the hill
+// when there is one) before its work starts, and wait at the head of the
+// way. A person and its crew go to the place of their task, each to a
+// place of its own round the work: on the ground round the part, or on
+// the deck of the scaffold of the band (they climb the ladder at the
+// corner of the scaffold to it, and down from it). There each does the
+// work cycle of its trade (D12, below): it takes a load at the source of
+// its place, carries it to a point of the work on the part, and works
+// there. A free person gets the materials ready at the heap, and at the
+// end of a stage the people walk out on the way. The clock is the second of the
+// film (of the page, with no time lapse); a walk is at SPEED m in a
+// second of the film, and a way from one place of the lot to another
+// takes at most HOP s.
+const WAY = 4;
+// A move to a new lot: the film waits REST s at the old site, then the
+// camera goes up the road in RIDE s.
+const REST = 1;
+const RIDE = 8;
+const SPEED = 12;
+const HOP = 2.5;
+const CROWD = 60;
+const clock = (day) => (lapse ? (day === undefined ? lapse.t : lapse.film(day)) : performance.now() / 1000);
+const hash = (seed, k) => {
+  const x = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+const smooth = (f) => f * f * (3 - 2 * f);
+const helpers = new Set();
+const lotAt = (b) => b.group.getWorldPosition(new THREE.Vector3());
+
+// The places of a lot. `c` is the center at the level of the place, `rx`
+// and `rz` the half sizes of its ring, `r` the ring of the people.
+function lotRing(b) {
+  return { c: lotAt(b), rx: 10, rz: 10, r: 1, ground: true };
+}
+// The head of the way into the lot: the people wait there.
+function restOf(b) {
+  return { c: way(b)[0].clone(), rx: 3, rz: 3, r: 1, ground: true, rest: true };
+}
+// The place of a task: the deck of the scaffold of its band (scaffold_N of
+// a task ..._N), or the ground round its parts, or the ring of the lot.
+function placeOf(b, task) {
+  const m = /_(\d+)$/.exec(task ?? '');
+  const key = m && 'scaffold_' + m[1];
+  const sc = key && b.parts[key];
+  const own = b.parts[(task ?? '').replace(/^(again|remove)\//, '')];
+  const list = sc?.length ? sc : own?.length ? own : null;
+  if (!list) return lotRing(b);
+  const name = sc?.length ? key : task;
+  const old = b.rings?.[name];
+  if (old?.list === list && old.n === list.length) return old;
+  const box = new THREE.Box3();
+  for (const part of list) box.expandByObject(part);
+  const size = box.getSize(new THREE.Vector3());
+  const y = lotAt(b).y;
+  const pl = sc?.length && box.min.y > y + 1
+    ? { c: box.getCenter(new THREE.Vector3()).setY(box.min.y + 0.05), rx: size.x / 2, rz: size.z / 2, r: 0.85 }
+    : { c: box.getCenter(new THREE.Vector3()).setY(y), rx: size.x / 2 + 0.8, rz: size.z / 2 + 0.8, r: 1, ground: true };
+  // The ladder: the corner of the scaffold to the side of the way in. Its
+  // foot is on what is under it (the base, the dome); a ladder at the edge
+  // of the base goes up to the base from the ground.
+  if (!pl.ground) {
+    const a = angleOf(pl, way(b)[0]);
+    pl.ladder = ringAt(pl, a, 1);
+    const foot = surface(b, pl.ladder) ?? pl.ladder.clone().setY(y);
+    pl.down = [{ at: pl.ladder }, { at: foot, clip: 'climb' }];
+    const base = b.parts.be?.length && new THREE.Box3();
+    if (base && foot.y > y + 0.5) {
+      for (const part of b.parts.be) base.expandByObject(part);
+      const bs = base.getSize(new THREE.Vector3());
+      const ring = { c: lotAt(b), rx: bs.x / 2 + 0.4, rz: bs.z / 2 + 0.4, r: 1 };
+      const edge = ringAt(ring, angleOf(ring, foot));
+      const top = surface(b, ringAt(ring, angleOf(ring, foot), 0.9)) ?? foot;
+      pl.down.push({ at: top.clone().setX(edge.x).setZ(edge.z) }, { at: edge, clip: 'climb' });
+    }
+    pl.foot = pl.down.at(-1).at;
+    ladder(b, list, pl);
+  }
+  pl.list = list;
+  pl.n = list.length;
+  return ((b.rings ??= {})[name] = pl);
+}
+// The ladder of a deck: rails and rungs from the foot to the deck, at the
+// corner of the scaffold. It goes with the scaffold.
+const rail = new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.9 });
+function ladder(b, list, pl) {
+  list.ladder?.removeFromParent();
+  const g = new THREE.Group();
+  const out = pl.ladder.clone().sub(pl.c).setY(0).normalize();
+  const across = new THREE.Vector3(-out.z, 0, out.x).multiplyScalar(0.25);
+  // Each leg up from the foot: the edge of the base, the base, the deck.
+  const pts = [...pl.down].reverse().map((d) => d.at);
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const [lo, hi] = [pts[i], pts[i + 1]];
+    if (hi.y - lo.y < 0.8) continue;
+    const len = hi.distanceTo(lo);
+    for (const side of [-1, 1]) {
+      const r = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len, 5), rail);
+      r.position.copy(lo).add(hi).multiplyScalar(0.5).addScaledVector(across, side);
+      r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), hi.clone().sub(lo).normalize());
+      g.add(r);
+    }
+    for (let y = 0.3; y < len; y += 0.35) {
+      const at = lo.clone().lerp(hi, y / len);
+      const rung = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.03), rail);
+      rung.position.copy(at);
+      rung.lookAt(at.clone().add(out));
+      g.add(rung);
+    }
+  }
+  for (const m of g.children) m.castShadow = true;
+  scene.add(g);
+  list.ladder = g;
+}
+// The surface under a point: the top of the parts of the lot (not the
+// scaffold, the forms or the machines) under it, or none.
+function surface(b, at) {
+  const solid = Object.entries(b.parts).filter(([k]) => !/^(scaffold_|form_|crane|mixing)/.test(k)).flatMap(([, list]) => list);
+  const ray = new THREE.Raycaster(at.clone().setY(at.y - 0.3), new THREE.Vector3(0, -1, 0));
+  const hit = ray.intersectObjects(solid, true).find(shown);
+  return hit ? hit.point.clone() : null;
+}
+const ringAt = (pl, a, r = pl.r) => new THREE.Vector3(pl.c.x + Math.cos(a) * pl.rx * r, pl.c.y, pl.c.z + Math.sin(a) * pl.rz * r);
+const angleOf = (pl, v) => Math.atan2((v.z - pl.c.z) / pl.rz, (v.x - pl.c.x) / pl.rx);
+// The points of a ring from one angle to another, the short way.
+function arc(pl, a1, a2, r = pl.r) {
+  const d = Math.atan2(Math.sin(a2 - a1), Math.cos(a2 - a1));
+  const n = Math.max(1, Math.ceil(Math.abs(d) / 0.4));
+  return Array.from({ length: n + 1 }, (_, i) => ringAt(pl, a1 + (d * i) / n, r));
+}
+
+// The way out of a lot, from its edge: down the path of the hill when the
+// lot has one, or 45 m on the ground to the side of the camera.
+function way(b) {
+  const at = lotAt(b);
+  if (b.line && b.line.at(-1).distanceTo(at) < 80) return b.line.slice().reverse();
+  const key = at.toArray().map(Math.round).join();
+  if (b.way?.key === key) return b.way.pts;
+  b.group.updateWorldMatrix(true, false);
+  const d = new THREE.Vector3(...(lapse ? lapse.cam ?? VIEWS[lapse.view].cam : [0.6, 0, 0.8])).setY(0).transformDirection(b.group.matrixWorld).setY(0).normalize();
+  const hill = [...places.values()].find((p) => p.terrain)?.ground;
+  const ray = new THREE.Raycaster();
+  const pts = [];
+  for (let r = 13; r <= 46; r += 3) {
+    const v = at.clone().addScaledVector(d, r);
+    if (hill) {
+      ray.set(v.clone().setY(1000), new THREE.Vector3(0, -1, 0));
+      const hit = ray.intersectObject(hill, true)[0];
+      if (hit) v.y = hit.point.y;
+    }
+    pts.push(v);
+  }
+  b.way = { key, pts };
+  return pts;
+}
+
+// A route: points, the clip of the leg to each point, the second of the
+// film at its start, and its seconds;
+// its points up to `way` are a way into a lot.
+function go(w, legs, t0, dur, way = 0) {
+  if (legs.length < 2) legs = [legs[0], legs[0]];
+  const pts = legs.map((l) => l.at ?? l);
+  const clips = legs.map((l) => l.clip ?? 'walk');
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  w.route = { pts, clips, cum, t0, dur: dur ?? Math.max(cum.at(-1) / SPEED, 0.2), way };
+}
+function along(r, t) {
+  const s = Math.min(Math.max((t - r.t0) / r.dur, 0), 1) * r.cum.at(-1);
+  let i = 1;
+  while (i < r.pts.length - 1 && r.cum[i] < s) i++;
+  const len = r.cum[i] - r.cum[i - 1];
+  const f = len > 0 ? Math.min(Math.max((s - r.cum[i - 1]) / len, 0), 1) : 1;
+  return { at: r.pts[i - 1].clone().lerp(r.pts[i], f), ahead: r.pts[i], clip: r.clips[i], i };
+}
+const moving = (w, t) => w.route && t < w.route.t0 + w.route.dur;
+
+// Where a figure is at the second `t` of the film, and its clip.
+function where(w, t) {
+  if (w.route && (moving(w, t) || !w.place)) {
+    const { at, ahead, clip } = along(w.route, still ? Infinity : t);
+    return { at, ahead, clip: moving(w, t) && !still ? clip : 'none', done: !moving(w, t) };
+  }
+  if (!w.place) return { at: w.figure.position.clone(), clip: 'none' };
+  const pl = w.place;
+  const home = w.lot ?? w.boss?.lot ?? w.build;
+  if (pl.rest) return { at: ringAt(pl, w.a, 0.25 + 0.75 * hash(w.seed, 5)), ahead: home ? lotAt(home) : pl.c, clip: 'none' };
+  return cycle(home, w, t);
+}
+
+// The work cycle (plan 0006, D12): a person at work goes to the source of
+// its materials, takes a load, carries it to the next point of the work on
+// the part, and works there; then the next cycle, at the next point along
+// the part. A cycle takes about CYCLE s of the film. The person of a task
+// takes a load in one cycle of three, and steps to the next point in the
+// others; its helpers take a load in each cycle; a person that guides
+// takes none. A free helper mixes at the heap, or carries loads from the
+// heap to the foot of the lift (or to the work on the ground); one free
+// helper works the lift at its foot.
+const CYCLE = 6;
+const SPREAD = 0.9;
+function cycle(b, w, t) {
+  const pl = w.place;
+  const P = CYCLE * (0.8 + 0.5 * hash(w.seed, 11));
+  const s = still ? 0.6 : Math.max(t - w.legT0, 0) / P + hash(w.seed, 12);
+  const k = Math.floor(s);
+  const u = s - k;
+  const lead = !w.boss && !b?.pool?.includes(w);
+  const boss = w.boss ?? w;
+  const wait = boss.waiting && !w.yard;
+  // A free helper at the heap.
+  if (b && w.yard && !w.task) {
+    const lift = b.lift;
+    if (lift && w === liftHand(b)) return { at: lift.foot.clone().add(lift.side), ahead: lift.foot, clip: lift.kind === 'crane' ? 'guide' : 'climb' };
+    if (hash(w.seed, 8) >= 0.3) return haul(b, w, k, u);
+  }
+  const job = w.work === 'carry' ? 'trowel' : w.work;
+  const c = plan(b, w, k, !wait && w.work !== 'guide' && (!lead || k % 3 === 0));
+  if (!c.fetch || wait) {
+    if (u < 0.12 && !wait) return { ...alongPts(c.step, smooth(u / 0.12)), clip: 'walk' };
+    return { at: c.at, ahead: c.face, clip: wait ? 'none' : job };
+  }
+  // Out to the source, the load, back to the work, the work.
+  if (u < 0.22) return { ...alongPts(c.out, smooth(u / 0.22)), clip: 'walk' };
+  if (u < 0.3) return { at: c.out.pts.at(-1), ahead: c.src, clip: 'pour', load: u > 0.26 };
+  if (u < 0.55) return { ...alongPts(c.back, smooth((u - 0.3) / 0.25)), clip: 'carry', load: true };
+  return { at: c.at, ahead: c.face, clip: job };
+}
+// A path of points with their lengths, and the point at a part of it.
+function pathOf(pts) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  return { pts, cum };
+}
+function alongPts(r, f) {
+  if (r.pts.length < 2) return { at: r.pts[0].clone(), ahead: r.pts[0] };
+  const x = f * r.cum.at(-1);
+  let i = 1;
+  while (i < r.pts.length - 1 && r.cum[i] < x) i++;
+  const len = r.cum[i] - r.cum[i - 1];
+  return { at: r.pts[i - 1].clone().lerp(r.pts[i], len > 0 ? Math.min(Math.max((x - r.cum[i - 1]) / len, 0), 1) : 1), ahead: r.pts[i] };
+}
+// The point of the work `k` of a figure: on its place, at an angle near
+// its own, at the surface of the part (the forms, the cast, the base).
+function workAt(b, w, k) {
+  const pl = w.place;
+  w.points ??= new Map();
+  const key = `${k}`;
+  if (w.points.pl !== pl) w.points = Object.assign(new Map(), { pl });
+  if (w.points.has(key)) return w.points.get(key);
+  const a = w.a + (hash(w.seed, 30 + (((k % 9) + 9) % 9)) - 0.5) * SPREAD;
+  const ring = ringAt(pl, a, pl.ground ? 1 : 0.95);
+  const dir = pl.c.clone().setY(ring.y).sub(ring);
+  const len = dir.length();
+  dir.normalize();
+  let at = ringAt(pl, a, pl.ground ? 0.9 : 0.7);
+  let face = pl.c.clone().setY(ring.y + 1);
+  if (b && len > 0.5) {
+    reach.set(ring.clone().setY(ring.y + 1), dir);
+    reach.far = len;
+    const hit = reach.intersectObjects(solids(b), true).find(shown);
+    if (hit) {
+      at = ring.clone().addScaledVector(dir, Math.max(hit.distance - 0.45, 0));
+      face = hit.point.clone();
+    }
+  }
+  const p = { at, face, a };
+  if (w.points.size > 12) w.points.clear();
+  w.points.set(key, p);
+  return p;
+}
+const reach = new THREE.Raycaster();
+// A hit on a part that is seen: not on a part that is cut off (a band that
+// grows, a band of the finished model).
+const shown = (hit) => hit.object.visible && (hit.object.material?.clippingPlanes ?? []).every((p) => p.distanceToPoint(hit.point) >= -0.01);
+// The parts that a person works on (not the scaffold, the machines or the
+// heap).
+function solids(b) {
+  return Object.entries(b.parts).filter(([k]) => !/^(scaffold_|crane|mixing)/.test(k)).flatMap(([, list]) => list);
+}
+// The cycle `k` of a figure: the point of its work, the step to it from the
+// last point, and (when it takes a load) the way out to the source and the
+// way back with the load.
+function plan(b, w, k, fetch) {
+  const pl = w.place;
+  const now = workAt(b, w, k);
+  const last = workAt(b, w, k - 1);
+  const c = { at: now.at, face: now.face, fetch: fetch && !!b };
+  c.step = pathOf([last.at, now.at]);
+  if (!c.fetch) return c;
+  const src = sourceOf(b, pl);
+  const via = (from, a1, a2) => [from, ...arc(pl, a1, a2, pl.ground ? 1 : 0.95)];
+  c.src = src;
+  c.out = pathOf([...via(last.at, last.a, angleOf(pl, src)), src]);
+  c.back = pathOf([src, ...via(now.at, now.a, angleOf(pl, src)).reverse()]);
+  return c;
+}
+// The source of the loads of a place: the lift at a deck (the bucket of
+// the crane, the pulley at the ladder), or the heap of the materials (the
+// mixing board, the stack of a site of today) on the ground.
+function sourceOf(b, pl) {
+  if (!pl.ground) {
+    if (b.lift?.pl === pl) return b.lift.deck;
+    return pl.ladder;
+  }
+  return yardOf(b);
+}
+function yardOf(b) {
+  const heap = b.parts.mixing?.[0];
+  if (heap) return new THREE.Box3().setFromObject(heap).getCenter(new THREE.Vector3()).setY(lotAt(b).y);
+  return laydown(b);
+}
+// The stack of the materials of a site with no heap: near the foot of the
+// crane, or at the ring of the lot to the side of the way in.
+function laydown(b) {
+  const crane = craneOf(b);
+  if (crane) return crane.pick.clone().addScaledVector(crane.across, 3.5);
+  // To the side of the camera, so that the stack does not hide the work.
+  const ring = lotRing(b);
+  b.group.updateWorldMatrix(true, false);
+  const d = new THREE.Vector3(...(lapse ? lapse.cam ?? VIEWS[lapse.view].cam : [0.6, 0, 0.8])).setY(0).transformDirection(b.group.matrixWorld).setY(0).normalize();
+  const base = new THREE.Box3();
+  for (const part of b.parts.be ?? []) base.expandByObject(part);
+  const half = base.isEmpty() ? 6 : Math.max(base.max.x - base.min.x, base.max.z - base.min.z) / 2;
+  const at = ring.c.clone().addScaledVector(d.applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.6), half + 2.5);
+  return groundAt(b, at);
+}
+// The ground under a point: the top of the parts of the lot, or the hill.
+function groundAt(b, at) {
+  const top = surface(b, at.clone().setY(at.y + 30));
+  if (top) return top;
+  const hill = [...places.values()].find((p) => p.terrain)?.ground;
+  if (!hill) return at;
+  reach.set(at.clone().setY(1000), new THREE.Vector3(0, -1, 0));
+  reach.far = Infinity;
+  const hit = reach.intersectObject(hill, true)[0];
+  return hit ? at.clone().setY(hit.point.y) : at;
+}
+// A free helper that carries: from the heap to the foot of the lift (or to
+// the work on the ground), with a load, and back.
+function haul(b, w, k, u) {
+  const yard = yardOf(b);
+  const side = new THREE.Vector3(hash(w.seed, 41) - 0.5, 0, hash(w.seed, 42) - 0.5).multiplyScalar(4);
+  const a = yard.clone().add(side);
+  // To a deck: most carry the load up the ladder by hand; the others take
+  // it to the foot of the lift.
+  const pl = b.lift?.pl;
+  let pts;
+  if (pl && hash(w.seed, 43) >= 0.35) pts = [a, ...[...pl.down].reverse().map((d) => d.at), pl.ladder];
+  else {
+    const to = b.lift?.foot ?? (b.workPl?.ground ? ringAt(b.workPl, angleOf(b.workPl, yard) + (hash(w.seed, 40 + (k % 5)) - 0.5) * 3) : ringAt(lotRing(b), angleOf(lotRing(b), yard) + 0.4));
+    pts = [a, to.clone().add(side.clone().multiplyScalar(0.4))];
+  }
+  const r = w.haul?.key === pts.at(-1).toArray().join() + pts.length ? w.haul : (w.haul = Object.assign(pathOf(pts), { key: pts.at(-1).toArray().join() + pts.length }));
+  const z = pts.at(-1);
+  // A leg that goes up or down more than along is on the ladder.
+  const leg = (s, clip) => {
+    const p = alongPts(r, s);
+    const d = p.ahead.clone().sub(p.at);
+    const steep = Math.abs(d.y) > Math.hypot(d.x, d.z);
+    return { at: p.at, ahead: steep && pl ? pl.c.clone().setY(p.at.y) : p.ahead, clip: steep ? 'climb' : clip };
+  };
+  if (u < 0.1) return { at: a, ahead: yard, clip: 'pour', load: u > 0.06 };
+  if (u < 0.5) return { ...leg(smooth((u - 0.1) / 0.4), 'carry'), load: true };
+  if (u < 0.6) return { at: z, ahead: pl?.c ?? z, clip: 'pour', load: u < 0.54 };
+  const back = alongPts(r, 1 - smooth((u - 0.6) / 0.4));
+  const d = back.ahead.clone().sub(back.at);
+  const steep = Math.abs(d.y) > Math.hypot(d.x, d.z);
+  return { at: back.at, ahead: steep && pl ? pl.c.clone().setY(back.at.y) : r.pts[0], clip: steep ? 'climb' : 'walk' };
+}
+// The free helper that works the lift: the first one at the heap.
+function liftHand(b) {
+  return (b.pool ?? []).find((h) => h.yard && !h.task && !h.leaving && !h.gone && hash(h.seed, 8) >= 0.3);
+}
+
+// The tower crane of a lot (plan 0006, D6): the foot of its mast, the
+// way of its jib, and the height of the jib, from the part.
+function craneOf(b) {
+  const part = b.parts.crane?.[0];
+  if (!part?.parent) return null;
+  if (b.crane?.part === part) return b.crane;
+  part.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(part);
+  const v = new THREE.Vector3();
+  const foot = new THREE.Vector3();
+  let n = 0;
+  let tip = null;
+  const high = [];
+  part.traverse((o) => {
+    const pos = o.isMesh && o.geometry.attributes.position;
+    if (!pos) return;
+    for (let i = 0; i < pos.count; i += 3) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+      if (v.y < box.min.y + 2) { foot.add(v); n++; }
+      else if (v.y > box.max.y - 2.5) high.push(v.clone());
+    }
+  });
+  if (!n || !high.length) return null;
+  foot.divideScalar(n);
+  for (const h of high) if (!tip || h.clone().setY(0).distanceTo(foot.clone().setY(0)) > tip.clone().setY(0).distanceTo(foot.clone().setY(0))) tip = h;
+  const dir = tip.clone().sub(foot).setY(0).normalize();
+  const ground = lotAt(b).y;
+  const pick = foot.clone().addScaledVector(dir, 4).setY(ground);
+  b.crane = { part, foot: foot.setY(ground), dir, across: new THREE.Vector3(-dir.z, 0, dir.x), top: box.max.y - 1.8, pick, reach: tip.clone().setY(0).distanceTo(foot.clone().setY(0)) };
+  return b.crane;
+}
+// The lift of a deck (plan 0006, D12): the bucket of the tower crane (a
+// site of today) from the stack at the foot of the mast to the edge of the
+// deck under the jib; or the bucket on the rope of a pulley at the corner
+// of the ladder (1974), pulled at the foot. `foot` is where the bucket is
+// filled, `deck` where the people of the deck take the load.
+function liftOf(b, pl) {
+  if (pl.ground) return null;
+  const means = b.stage?.means;
+  const crane = (!means || means.includes('tower_crane')) && craneOf(b);
+  if (crane) {
+    // The point of the jib over the edge of the deck, on the side of the mast.
+    let at = null;
+    for (let d = 0; d <= crane.reach; d += 0.5) {
+      const p = crane.foot.clone().addScaledVector(crane.dir, d);
+      const e = ((p.x - pl.c.x) / (pl.rx * 1.15)) ** 2 + ((p.z - pl.c.z) / (pl.rz * 1.15)) ** 2;
+      if (e <= 1) { at = p; break; }
+    }
+    if (!at) return null;
+    const drop = at.clone().setY(pl.c.y + 1.4);
+    return { kind: 'crane', pl, crane, foot: crane.pick.clone(), drop, deck: ringAt(pl, angleOf(pl, drop), 0.95), side: crane.across.clone().multiplyScalar(1.2), period: 10 };
+  }
+  const out = pl.ladder.clone().sub(pl.c).setY(0).normalize();
+  const foot = pl.foot.clone().addScaledVector(out, 0.9);
+  const sc = new THREE.Box3();
+  for (const part of pl.list) sc.expandByObject(part);
+  const wheel = pl.ladder.clone().addScaledVector(out, 0.9).setY(Math.max(sc.max.y, pl.c.y + 2) + 0.6);
+  return { kind: 'pulley', pl, foot, drop: wheel.clone().setY(pl.c.y + 1), wheel, deck: pl.ladder.clone(), side: out.clone().multiplyScalar(1.1), period: 6 };
+}
+// The bucket of a lift at `t`: up full, a stop at the deck, down empty, a
+// stop at the foot.
+function lifting(b, t) {
+  const lift = b.lift;
+  if (!lift) {
+    if (b.hoist) b.hoist.visible = false;
+    return;
+  }
+  if (!b.hoist) {
+    const g = new THREE.Group();
+    const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.35, 0.8, 10), new THREE.MeshStandardMaterial({ color: 0x5b6168, roughness: 0.7 }));
+    bucket.castShadow = true;
+    const rope = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 1, 0)]), new THREE.LineBasicMaterial({ color: 0x222222 }));
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.06, 6, 12), new THREE.MeshStandardMaterial({ color: 0x6b4a2b }));
+    g.add(bucket, rope, wheel);
+    scene.add(g);
+    b.hoist = Object.assign(g, { bucket, rope, wheel });
+  }
+  const h = b.hoist;
+  h.visible = true;
+  const u = (still ? 0.3 : t / lift.period) % 1;
+  const low = lift.foot.clone().setY(lift.foot.y + 0.4);
+  const high = lift.drop;
+  let at;
+  if (lift.kind === 'crane') {
+    // Up at the stack, along the jib, down to the deck; and back.
+    const up = lift.crane.top - 4;
+    const way = pathOf([low, low.clone().setY(up), high.clone().setY(up), high]);
+    at = u < 0.15 ? low.clone() : u < 0.45 ? alongPts(way, smooth((u - 0.15) / 0.3)).at : u < 0.6 ? high.clone() : u < 0.9 ? alongPts(way, 1 - smooth((u - 0.6) / 0.3)).at : low.clone();
+    h.rope.geometry.setFromPoints([at.clone().setY(lift.crane.top), at.clone().setY(at.y + 0.4)]);
+    h.wheel.visible = false;
+  } else {
+    at = u < 0.2 ? low.clone() : u < 0.5 ? low.clone().lerp(high, smooth((u - 0.2) / 0.3)) : u < 0.65 ? high.clone() : u < 0.9 ? high.clone().lerp(low, smooth((u - 0.65) / 0.25)) : low.clone();
+    at.setX(lift.wheel.x).setZ(lift.wheel.z);
+    h.rope.geometry.setFromPoints([lift.wheel, at.clone().setY(at.y + 0.4), lift.wheel, lift.foot.clone().add(lift.side).setY(lift.foot.y + 1.4)]);
+    h.wheel.visible = true;
+    h.wheel.position.copy(lift.wheel);
+    h.wheel.lookAt(lift.wheel.clone().add(lift.side));
+    h.bucket.scale.setScalar(0.5);
+  }
+  h.bucket.position.copy(at);
+}
+
+// The load in the hands of a figure (plan 0006, D12): a panel of the
+// forms, a bar of the steel, a tube of the scaffold, or a bucket.
+const LOADS = {
+  set_panel: () => new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.0, 1.2), new THREE.MeshStandardMaterial({ color: 0xb98a4e, roughness: 0.9 })),
+  hammer: () => new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 4), new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.6 })),
+  climb: () => new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3, 6).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x8f969c, metalness: 0.4, roughness: 0.5 })),
+  bucket: () => new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x3a3f45, roughness: 0.8 })),
+};
+const HOLD = { set_panel: [0.32, 0.85, 0.15], hammer: [0.2, 1.5, 0.6], climb: [0.2, 1.5, 0.4], bucket: [0.3, 0.55, 0.12] };
+function hold(w, on) {
+  const kind = LOADS[w.work] ? w.work : 'bucket';
+  if (!on) {
+    if (w.load) w.load.visible = false;
+    return;
+  }
+  if (!w.load || w.load.kind !== kind) {
+    w.load?.removeFromParent();
+    w.load = Object.assign(LOADS[kind](), { kind });
+    w.load.castShadow = true;
+    w.load.position.fromArray(HOLD[kind]);
+    w.figure.add(w.load);
+  }
+  w.load.visible = true;
+}
+// The points of the way in that a figure has still to walk at `t`, and
+// their seconds; else where it is.
+function rest(w, t) {
+  if (!moving(w, t)) return { legs: [where(w, t).at], left: 0 };
+  const r = w.route;
+  const { at, i } = along(r, t);
+  if (i > r.way || w.leaving) return { legs: [at], left: 0 };
+  const v = r.cum.at(-1) / r.dur;
+  const s = r.cum[i - 1] + at.distanceTo(r.pts[i - 1]);
+  return { legs: [at, ...r.pts.slice(i, r.way + 1)], left: (r.cum[r.way] - s) / v };
+}
+// The legs from a point on one place to a point on another: down the
+// ladder of a deck, round the lot on the ground, up the ladder of the
+// other deck, and along the deck.
+function legs(b, from, fromPl, pl, a) {
+  const out = [];
+  let at = from;
+  // From one deck to another: on the ladder.
+  if (fromPl && !fromPl.ground && !pl.ground && fromPl !== pl) {
+    for (const p of arc(fromPl, angleOf(fromPl, at), angleOf(fromPl, fromPl.ladder)).slice(1)) out.push({ at: p });
+    out.push({ at: fromPl.ladder }, { at: pl.ladder, clip: 'climb' });
+    for (const p of arc(pl, angleOf(pl, pl.ladder), a).slice(1)) out.push({ at: p });
+    return out;
+  }
+  if (fromPl && !fromPl.ground && fromPl !== pl) {
+    for (const p of arc(fromPl, angleOf(fromPl, at), angleOf(fromPl, fromPl.ladder)).slice(1)) out.push({ at: p });
+    out.push(...fromPl.down);
+    at = fromPl.foot;
+  }
+  if (fromPl === pl && !pl.ground) {
+    for (const p of arc(pl, angleOf(pl, at), a).slice(1)) out.push({ at: p });
+    return out;
+  }
+  // On the ground: out to the ring of the lot, round it, and in.
+  const ring = lotRing(b);
+  const end = pl.ground ? ringAt(pl, a) : pl.foot;
+  const a1 = angleOf(ring, at);
+  const a2 = angleOf(ring, end);
+  if (at.distanceTo(end) > 3) for (const p of arc(ring, a1, a2, 1.15)) out.push({ at: p });
+  out.push({ at: end });
+  // Up: each leg of the way down, the other way.
+  if (!pl.ground) {
+    const down = pl.down;
+    for (let i = down.length - 2; i >= 0; i--) out.push({ at: down[i].at, clip: down[i + 1].clip });
+    for (const p of arc(pl, angleOf(pl, pl.ladder), a).slice(1)) out.push({ at: p });
+  }
+  return out;
+}
+// A figure goes to a place at its angle there (from the rest of its way
+// in, if it is on it).
+function toPlace(b, w, pl, a, t) {
+  const r = rest(w, t);
+  const from = r.legs.at(-1);
+  const more = legs(b, from, r.left > 0 ? null : w.place, pl, a);
+  const all = [from, ...more];
+  let len = 0;
+  for (let i = 1; i < all.length; i++) len += (all[i - 1].at ?? all[i - 1]).distanceTo(all[i].at ?? all[i]);
+  go(w, [...r.legs, ...more], t, r.left + Math.min(Math.max(len / SPEED, 0.2), HOP), r.legs.length - 1);
+  w.leaving = false;
+  w.place = pl;
+  w.a = a;
+  w.legT0 = t + w.route.dur;
+  w.yard = false;
+}
+// A figure comes on the way in to the head of the way, and waits there.
+function come(b, w, t, dur = WAY) {
+  const side = new THREE.Vector3(hash(w.seed, 1) - 0.5, 0, hash(w.seed, 2) - 0.5).multiplyScalar(3);
+  const pts = way(b).slice().reverse().map((v) => v.clone().add(side));
+  const pl = restOf(b);
+  const a = hash(w.seed, 6) * 2 * Math.PI;
+  // The people of a stage do not start at one time.
+  const late = hash(w.seed, 7) * dur * 0.4;
+  w.route = null;
+  w.hidden = t + late;
+  go(w, [...pts, ringAt(pl, a, 0.25 + 0.75 * hash(w.seed, 5))], t + late, dur - late, pts.length);
+  w.figure.visible = true;
+  w.leaving = w.gone = false;
+  w.place = pl;
+  w.a = a;
+  w.legT0 = t + dur;
+  w.yard = false;
+}
+// A figure goes from a lot: down from its deck, to the head of the way,
+// and out on it (on its way in: back on it).
+function leave(b, w, t) {
+  if (moving(w, t) && !w.leaving && along(w.route, t).i <= w.route.way) {
+    const { at, i } = along(w.route, t);
+    go(w, [at, ...w.route.pts.slice(0, i).reverse()], t, Math.max(t - w.route.t0, 0.2));
+  } else {
+    const from = where(w, t).at;
+    const head = restOf(b);
+    const side = new THREE.Vector3(hash(w.seed, 3) - 0.5, 0, hash(w.seed, 4) - 0.5).multiplyScalar(1.5);
+    const down = w.place && !w.place.rest ? legs(b, from, w.place, head, angleOf(head, from)) : [];
+    go(w, [from, ...down, ...way(b).map((v) => v.clone().add(side))], t, WAY);
+  }
+  w.place = null;
+  w.leaving = true;
+}
+// The free people of a lot and the free helpers of its crews go (at the
+// end of a stage).
+function depart(b, t) {
+  for (const p of people.values()) {
+    if (p.lot !== b || !p.waiting) continue;
+    leave(b, p, t);
+    p.waiting = false;
+    p.lot = null;
+    p.build = null;
+  }
+  for (const h of b.pool ?? []) if (!h.task) leave(b, h, t);
+  b.pool = (b.pool ?? []).filter((h) => h.task);
+}
+// A helper of the crews of a lot (the pool of the lot), that walks in.
+async function helper(b, t, dur = WAY) {
+  const h = Object.assign(worker(await body, 'carry'), { lot: b, task: null });
+  come(b, h, t, dur);
+  helpers.add(h);
+  (b.pool ??= []).push(h);
+  free(b, h, t);
+  return h;
+}
+// A helper with no task mixes and shovels at the heap of the materials (the
+// mixing board of a site with no machine), or works round the lot.
+function free(b, h, t) {
+  Object.assign(h, { task: null, boss: null, work: hash(h.seed, 8) < 0.5 ? 'pour' : 'trowel' });
+  toPlace(b, h, yardPlace(b), hash(h.seed, 9) * 2 * Math.PI, t);
+  h.yard = true;
+}
+// The place at the heap: the mixing board, or the stack of the materials.
+function yardPlace(b) {
+  if (b.parts.mixing?.length) return placeOf(b, 'mixing');
+  const c = laydown(b);
+  if (b.stack?.c.distanceTo(c) < 0.1) return b.stack;
+  pile(b, c);
+  return (b.stack = { c, rx: 2.6, rz: 2.6, r: 1, ground: true });
+}
+// The stack of the materials of a site of today: the panels of the forms,
+// the bars of the steel, the tubes of the scaffold.
+function pile(b, c) {
+  b.pile?.removeFromParent();
+  const g = new THREE.Group();
+  const put = (size, color, x, z, n, turn) => {
+    for (let i = 0; i < n; i++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(...size), new THREE.MeshStandardMaterial({ color, roughness: 0.8 }));
+      m.position.set(x, size[1] / 2 + i * size[1], z);
+      m.rotation.y = turn;
+      m.castShadow = m.receiveShadow = true;
+      g.add(m);
+    }
+  };
+  put([2.4, 0.12, 1.2], 0xb98a4e, -0.6, 0.4, 5, 0.2);
+  put([5, 0.14, 0.5], 0x7a4a2a, 0.9, -0.6, 2, 0.5);
+  put([3, 0.12, 0.6], 0x8f969c, 0.2, -1.4, 3, -0.3);
+  g.position.copy(c);
+  scene.add(g);
+  b.pile = g;
+}
+// A person that waits for its next task gets the materials ready at the
+// heap (it walks there on its way in).
+function prepare(b, p, t) {
+  toPlace(b, p, yardPlace(b), hash(p.seed, 9) * 2 * Math.PI, t);
+  p.yard = true;
+}
+// The people of a stage come before its work: the page reads the events
+// of the stage in the log ahead, and each person that it hires walks in
+// with the crew of its biggest task (at most CROWD people on the lot).
+async function arrive(b, e, t, dur = WAY) {
+  if (!lapse) return;
+  // The people that the stage hires, and the most people that work in it
+  // at one time (the crews of the tasks at one time).
+  const who = new Set();
+  const running = new Map();
+  let most = 0;
+  for (const x of lapse.pending) {
+    if (x.order !== e.order) continue;
+    if (x.kind === 'stage_started') break;
+    if (x.kind === 'hired' || x.kind === 'task_started') who.add(x.who);
+    if (x.kind === 'task_started') running.set(x.who, x.data?.crew ?? 1);
+    if (x.kind === 'task_done') running.delete(x.who);
+    most = Math.max(most, [...running.values()].reduce((n, c) => n + c, 0));
+  }
+  for (const name of who) {
+    const p = await person(name);
+    if (p.lot === b && !p.gone && !p.leaving) continue;
+    p.lot = b;
+    p.waiting = true;
+    p.status.textContent = 'comes';
+    come(b, p, t, dur);
+    prepare(b, p, t);
+  }
+  const free = (b.pool ?? []).filter((h) => !h.leaving && !h.gone).length;
+  for (let k = free; k < Math.min(most, CROWD) - who.size; k++) await helper(b, t, dur);
+}
+// The people on the deck of a scaffold that goes come down from it: a free
+// helper to the heap, a person to the ring of the lot. The list keeps the
+// time when the last of them is down: the scaffold stays until then.
+function comeDown(b, list, t) {
+  if (list && b.lift?.pl.list === list) b.lift = null;
+  if (list && b.workPl?.list === list) b.workPl = null;
+  for (const w of [...people.values(), ...(b.pool ?? [])]) {
+    if (!list || w.place?.list !== list || w.leaving || w.gone) continue;
+    if (b.pool?.includes(w) && !w.task) free(b, w, t);
+    else toPlace(b, w, lotRing(b), angleOf(lotRing(b), where(w, t).at), t);
+    if (w.route) list.down = Math.max(list.down ?? 0, w.route.t0 + w.route.dur);
+  }
+}
+// A figure now: its place and its clip; a figure that went is not seen.
+function step(w, t, dt, now) {
+  if (w.gone) return;
+  const s = where(w, t);
+  if (s.done && w.leaving) {
+    w.gone = true;
+    w.figure.visible = false;
+    if (!people.has(w.name)) {
+      w.figure.removeFromParent();
+      helpers.delete(w);
+    }
+    return;
+  }
+  w.figure.visible = !(t < w.hidden);
+  w.figure.position.copy(s.at);
+  hold(w, !!s.load);
+  if (s.ahead && s.ahead.distanceToSquared(s.at) > 1e-6) w.figure.lookAt(s.ahead.x, s.at.y, s.ahead.z);
+  act(w, s.clip);
+  if (w.mixer && !still) w.mixer.update(dt);
+  if (!w.mixer && !['walk', 'none'].includes(s.clip) && !still) w.figure.position.y += Math.abs(Math.sin(now / 200)) * 0.15;
+}
+
+// The carriers of a site with no machine (the means carry_path of the
+// history): a crew that carries the materials up the path of the hill
+// from its foot to the lot, and walks down again, a trip in 20 s of the
+// film. They come up the path one after the other, and go down it when
+// the stage has no path. The page draws the crew; a person of the census
+// is a task (docs/world.md). The path is in points of the game, on the
+// ground of the place.
+const CARRIERS = 24;
+const TRIP = 20;
+async function carriers(b, path, t) {
+  const key = path && JSON.stringify(path);
+  if (key && key === b.pathKey && b.carriers?.length) return;
+  for (const c of b.carriers ?? []) {
+    const { at, i } = carrierAt(b, c, t);
+    if (c.figure.visible && b.line) {
+      go(c, [at, ...b.line.slice(0, i + 1).reverse()], t, WAY * ((i + 1) / b.line.length) + 0.2);
+      c.leaving = true;
+      c.place = null;
+      helpers.add(c);
+    } else c.figure.removeFromParent();
+  }
+  b.carriers = [];
+  b.pathKey = key;
+  const place = [...places.values()].find((p) => p.terrain);
+  if (!path || !place) return;
+  b.trail?.removeFromParent();
+  await Promise.all(ready);
+  const [ox, oz] = place.terrain.origin;
+  const down = new THREE.Raycaster();
+  const points = path.map(([x, z]) => {
+    const at = new THREE.Vector3(place.at[0] + x - ox, 400, -(place.at[1] + oz - z));
+    down.set(at, new THREE.Vector3(0, -1, 0));
+    const hit = down.intersectObject(place.ground, true)[0];
+    return at.setY(hit ? hit.point.y : 0);
+  });
+  // Points each 2 m along the path.
+  const line = [];
+  for (let i = 0; i + 1 < points.length; i++) {
+    const n = Math.max(1, Math.ceil(points[i].distanceTo(points[i + 1]) / 2));
+    for (let k = 0; k < n; k++) line.push(points[i].clone().lerp(points[i + 1], k / n));
+  }
+  line.push(points.at(-1));
+  for (const p of line.slice(1)) {
+    down.set(p.clone().setY(400), new THREE.Vector3(0, -1, 0));
+    const hit = down.intersectObject(place.ground, true)[0];
+    if (hit) p.y = hit.point.y;
+  }
+  // The path on the ground: a strip of earth, 1.5 m wide, 0.15 m over it.
+  const strip = [];
+  for (let i = 0; i < line.length; i++) {
+    const a = line[Math.max(i - 1, 0)], c = line[Math.min(i + 1, line.length - 1)];
+    const side = new THREE.Vector3(c.z - a.z, 0, a.x - c.x).normalize().multiplyScalar(0.75);
+    strip.push(line[i].clone().add(side).setY(line[i].y + 0.15), line[i].clone().sub(side).setY(line[i].y + 0.15));
+  }
+  const geometry = new THREE.BufferGeometry().setFromPoints(strip);
+  const index = [];
+  for (let i = 0; i + 1 < line.length; i++) index.push(2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2);
+  geometry.setIndex(index);
+  geometry.computeVertexNormals();
+  b.trail = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0xa08560, roughness: 1, side: THREE.DoubleSide }));
+  b.trail.receiveShadow = true;
+  scene.add(b.trail);
+  b.line = line;
+  const kit = await body;
+  for (let i = 0; i < CARRIERS; i++) {
+    const c = worker(kit, 'carry');
+    c.t0 = t + (i * TRIP) / CARRIERS;
+    c.figure.visible = false;
+    b.carriers.push(c);
+  }
+}
+// A carrier at `t`: up with a load, down with none; not seen before it
+// starts at the foot of the path.
+function carrierAt(b, c, t) {
+  const s = (t - c.t0) / TRIP;
+  if (s < 0 || !b.line) return { at: b.line?.[0] ?? c.figure.position.clone(), i: 0, up: true, wait: true };
+  const u = s % 1;
+  const up = u < 0.5;
+  const f = up ? u * 2 : 2 - u * 2;
+  const x = f * (b.line.length - 1);
+  const i = Math.min(Math.floor(x), b.line.length - 2);
+  return { at: b.line[i].clone().lerp(b.line[i + 1], x - i), ahead: b.line[up ? i + 1 : i], i, up };
+}
+function carry(b, t, dt) {
+  for (const c of b.carriers ?? []) {
+    const { at, ahead, up, wait } = carrierAt(b, c, t);
+    c.figure.visible = !wait;
+    if (wait) continue;
+    c.figure.position.copy(at);
+    c.figure.lookAt(ahead.x, at.y, ahead.z);
+    act(c, up ? 'carry' : 'walk');
+    hold(c, up);
+    if (c.mixer && !still) c.mixer.update(dt);
+  }
+}
+
+// The parts of a task in a time lapse: the page reads the elements of the
+// task in the log ahead (they come at its end) and shows them from the
+// start of the task, cut at a height that rises from the foot of the part
+// to its top over the days of the task. A part made again after a pause
+// (`again/NODE`) is the part of its node.
+async function grow(b, e) {
+  const key = e.data.task.replace(/^again\//, '');
+  // The end of this task: before the next start of a task of its name (a
+  // jump of the film can pass the end, and a later task of the name is
+  // not this one).
+  const same = (x) => x.order === e.order && x.data?.task === e.data.task;
+  const done = lapse.pending.findIndex((x) => same(x) && (x.kind === 'task_done' || x.kind === 'task_started'));
+  if (done < 0 || lapse.pending[done].kind !== 'task_done') return;
+  const to = (lapse.pending[done].at - lapse.t0) / DAY;
+  const from = (e.at - lapse.t0) / DAY;
+  // A task that takes a part down: the part goes from its top to its foot
+  // over the days of the task (the owner, 2026-11-11: it must not just
+  // disappear).
+  if (key.startsWith('remove/')) return wreck(b, key.slice(7), from, to);
+  // The finished model ahead in the log: a pour is a band of it, the render
+  // covers it with its stone, the halo is its steel (the owner, 2026-11-11:
+  // the statue that the people built must not change at the end).
+  const fin = finished(b, e);
+  if (fin && (key === 'shell' || key === 'halo')) await coat(b, fin, key, from, to);
+  for (let i = done + 1; i < lapse.pending.length; i++) {
+    const x = lapse.pending[i];
+    if (x.order !== e.order || x.kind !== 'element' || x.data.task !== key) break;
+    const glb = await element(x.order, x.data.glb).catch(() => null);
+    if (!glb) continue;
+    x.shown = true;
+    if (fin && /^pour_\d+$/.test(key) && await band(b, fin, glb, x, key, from, to)) continue;
+    const part = glb.clone();
+    part.matrixAutoUpdate = false;
+    part.matrix.fromArray(x.data.matrix);
+    stage.shade(part);
+    b.group.add(part);
+    (b.parts[key] ??= []).push(part);
+    // The finished model over its render: it is there at once.
+    if (key === b.model && b.coated) {
+      landed(b);
+      continue;
+    }
+    part.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(part);
+    const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), box.min.y);
+    part.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.clippingPlanes = [plane]; } });
+    (b.growing ??= []).push({ part, plane, box, from, to });
+  }
+}
+// The finished model is on the lot: the bands, the render and the halo
+// under it go (it has the same surface, so nothing changes).
+function landed(b) {
+  b.coated = false;
+  for (const k of Object.keys(b.parts)) if (/^pour_\d+$/.test(k)) for (const part of b.parts[k]) part.visible = false;
+  for (const k of ['shell', 'halo']) for (const part of b.parts[k] ?? []) part.removeFromParent();
+  delete b.parts.shell;
+  delete b.parts.halo;
+}
+// The element of the finished model of a lot ahead in the log (not after a
+// change of the lot: a statue that was not finished keeps its rough
+// bands), and the last band that is poured before it.
+function finished(b, e) {
+  let last = 0;
+  for (const x of lapse.pending) {
+    if (x.order !== e.order) continue;
+    if (x.kind === 'changed' && x.data?.lot) return null;
+    if (x.kind !== 'element') continue;
+    const m = /^pour_(\d+)$/.exec(x.data.task);
+    if (m) last = Math.max(last, Number(m[1]));
+    if (b.model && x.data.task === b.model) return { x, last };
+  }
+  return null;
+}
+// The meshes of the finished model: the stone (the shell, the head, the
+// hands), or the steel (the halo, the grilles).
+async function model(b, fin, steel) {
+  const whole = await element(fin.x.order, fin.x.data.glb).catch(() => null);
+  if (!whole) return null;
+  const part = whole.clone();
+  part.matrixAutoUpdate = false;
+  part.matrix.fromArray(fin.x.data.matrix);
+  stage.shade(part);
+  const out = [];
+  part.traverse((o) => { if (o.isMesh && (o.material?.name === 'steel') !== steel) out.push(o); });
+  for (const o of out) o.visible = false;
+  b.group.add(part);
+  part.updateWorldMatrix(true, true);
+  for (const o of out) o.removeFromParent();
+  return part;
+}
+// A pour: the band of the finished model between the foot and the top of
+// the rough band, in its concrete (the first band from the foot of the
+// model, the last to its top).
+async function band(b, fin, rough, x, key, from, to) {
+  const n = Number(key.slice(5));
+  const probe = rough.clone();
+  probe.matrixAutoUpdate = false;
+  probe.matrix.fromArray(x.data.matrix);
+  b.group.add(probe);
+  probe.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(probe);
+  let concrete = null;
+  probe.traverse((o) => { if (o.isMesh && !concrete) concrete = o.material; });
+  probe.removeFromParent();
+  const part = await model(b, fin, false);
+  if (!part || box.isEmpty()) return false;
+  const whole = new THREE.Box3().setFromObject(part);
+  const lo = n === 1 ? whole.min.y - 0.05 : box.min.y;
+  const hi = n >= fin.last ? whole.max.y : box.max.y;
+  const keep = n === 1 ? [] : [new THREE.Plane(new THREE.Vector3(0, 1, 0), -lo)];
+  const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), lo);
+  part.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = (concrete ?? o.material).clone();
+    o.material.clippingPlanes = [plane, ...keep];
+  });
+  (b.parts[key] ??= []).push(part);
+  // At its end the band keeps both cuts: the top at the top of the band.
+  (b.growing ??= []).push({ part, plane, keep: [plane, ...keep], box: { min: { y: lo }, max: { y: hi } }, from, to });
+  return true;
+}
+// The render of the shell (its stone over the concrete, from the foot to
+// the top), or the halo (its steel).
+async function coat(b, fin, key, from, to) {
+  const part = await model(b, fin, key === 'halo');
+  if (!part) return;
+  const box = new THREE.Box3().setFromObject(part);
+  const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), box.min.y);
+  part.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = o.material.clone();
+    o.material.clippingPlanes = [plane];
+    // Over the concrete of the same surface.
+    Object.assign(o.material, { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+  });
+  (b.parts[key] ??= []).push(part);
+  (b.growing ??= []).push({ part, plane, box, from, to });
+  if (key === 'shell') b.coated = true;
+}
+function wreck(b, key, from, to) {
+  for (const part of b.parts[key] ?? []) {
+    part.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(part);
+    if (box.isEmpty()) continue;
+    const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), box.max.y + 0.05);
+    part.traverse((o) => {
+      if (!o.isMesh) return;
+      const planes = o.material.clippingPlanes ?? [];
+      o.material = o.material.clone();
+      o.material.clippingPlanes = [...planes, plane];
+    });
+    (b.growing ??= []).push({ part, plane, box, from, to, down: true, heap: heap(b, box) });
+  }
+}
+// The rubble of a part that is taken down (the owner, 2026-11-12): a heap
+// of broken concrete round its foot on the ground, that grows as the part
+// goes, and pieces that fall from its top while it goes. The heap stays.
+const chunk = new THREE.BoxGeometry(1, 1, 1);
+const broken = new THREE.MeshStandardMaterial({ color: 0x9a968e, roughness: 1 });
+function hillAt(v) {
+  const hill = [...places.values()].find((p) => p.terrain)?.ground;
+  if (!hill) return v.y;
+  reach.set(v.clone().setY(1000), new THREE.Vector3(0, -1, 0));
+  reach.far = Infinity;
+  const hit = reach.intersectObject(hill, true)[0];
+  return hit ? hit.point.y : v.y;
+}
+function heap(b, box) {
+  const size = box.getSize(new THREE.Vector3());
+  const c = box.getCenter(new THREE.Vector3());
+  const n = Math.round(Math.min(Math.max(size.x * size.y * size.z * 0.6, 30), 160));
+  const mesh = new THREE.InstancedMesh(chunk, broken, n);
+  mesh.castShadow = mesh.receiveShadow = true;
+  let seed = Math.round(c.x * 7 + c.z * 13) || 1;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const m = new THREE.Matrix4();
+  const half = Math.max(size.x, size.z) / 2;
+  // On the ground of the lot, under any part.
+  const floor = lotAt(b).y;
+  // Two heaps at the sides of the part, low at their edges.
+  const sides = [rand() * 2 * Math.PI];
+  sides.push(sides[0] + Math.PI * (0.6 + 0.6 * rand()));
+  for (let i = 0; i < n; i++) {
+    const a = sides[i % 2] + (rand() - 0.5) * 1.2;
+    const r = rand();
+    const at = new THREE.Vector3(c.x + Math.cos(a) * (half + 0.5 + r * 3), 0, c.z + Math.sin(a) * (half + 0.5 + r * 3));
+    const k = 0.25 + rand() * 0.5;
+    at.y = Math.max(hillAt(at), floor) + (1 - r) * 1.2 * rand() + k / 2;
+    m.compose(at, new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3)), new THREE.Vector3(k, k * (0.5 + rand()), k * (0.6 + rand() * 0.6)));
+    mesh.setMatrixAt(i, m);
+  }
+  mesh.count = 0;
+  scene.add(mesh);
+  // The pieces that fall.
+  const fall = new THREE.InstancedMesh(chunk, broken, 10);
+  fall.count = 0;
+  scene.add(fall);
+  return { mesh, n, fall, box, ground: Math.max(hillAt(c), floor) };
+}
+// A heap at a part of the take-down `f` (0 to 1), and the pieces that fall
+// at the second `t` of the film.
+function crumble(h, f, t) {
+  h.mesh.count = Math.round(h.n * f);
+  h.fall.count = f > 0 && f < 1 ? 10 : 0;
+  if (!h.fall.count) return;
+  const top = h.box.min.y + (h.box.max.y - h.box.min.y) * (1 - f);
+  const m = new THREE.Matrix4();
+  for (let i = 0; i < 10; i++) {
+    const s = (t + i * 0.37) / 0.7;
+    const k = Math.floor(s);
+    const u = s - k;
+    const a = hash(i + 1, k) * 2 * Math.PI;
+    const x = h.box.min.x + (h.box.max.x - h.box.min.x) * (0.5 + 0.55 * Math.cos(a));
+    const z = h.box.min.z + (h.box.max.z - h.box.min.z) * (0.5 + 0.55 * Math.sin(a));
+    const y = top - (top - h.ground) * u * u;
+    const q = 0.2 + 0.25 * hash(i + 1, k + 3);
+    m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(u * 4, u * 3, 0)), new THREE.Vector3(q, q, q));
+    h.fall.setMatrixAt(i, m);
+  }
+  h.fall.instanceMatrix.needsUpdate = true;
+}
+function growing(b, day) {
+  b.growing = (b.growing ?? []).filter((g) => {
+    const f = Math.min(Math.max((day - g.from) / Math.max(g.to - g.from, 1e-6), 0), 1);
+    // A part that goes: its top comes down; at the end nothing of it is seen.
+    if (g.down) {
+      g.plane.constant = g.box.max.y + 0.05 - (g.box.max.y - g.box.min.y + 0.1) * f;
+      const more = f < 1 && !!g.part.parent;
+      crumble(g.heap, more ? f : 1, lapse?.t ?? 0);
+      return more;
+    }
+    g.plane.constant = g.box.min.y + (g.box.max.y - g.box.min.y + 0.05) * f;
+    if (f < 1 && g.part.parent) return true;
+    g.part.traverse((o) => { if (o.isMesh) o.material.clippingPlanes = g.keep ?? []; });
+    return false;
+  });
+}
+
+// The grass and the bushes of a site in a pause (plan 0006, D8): on the
+// ground of the lot and round the base, more with the years (`weeds` of
+// the event, 0 to 1); none after the repair.
+const GRASS = 700;
+async function grass(b, weeds) {
+  // The grass of the lot where the pause is (the lot can change).
+  const here = b.group.getWorldPosition(new THREE.Vector3());
+  if (b.grass && b.grassAt?.distanceTo(here) > 1) {
+    for (const g of b.grass) g.removeFromParent();
+    b.grass = null;
+  }
+  if (!b.grass) {
+    b.grassAt = here;
+    const place = [...places.values()].find((p) => p.terrain);
+    await Promise.all(ready);
+    const blade = new THREE.InstancedMesh(new THREE.ConeGeometry(0.25, 1, 5), new THREE.MeshStandardMaterial({ color: 0x5e7d34, roughness: 1 }), GRASS);
+    const bush = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0x46612a, roughness: 1 }), GRASS / 7);
+    const m = new THREE.Matrix4();
+    const at = b.group.getWorldPosition(new THREE.Vector3());
+    let seed = 7;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const put = (mesh, i, size) => {
+      const a = rand() * 2 * Math.PI;
+      const r = 5 + rand() * 15;
+      const p = new THREE.Vector3(at.x + Math.cos(a) * r, 1000, at.z + Math.sin(a) * r);
+      down.set(p, new THREE.Vector3(0, -1, 0));
+      const hit = [...(b.parts.be ?? []), place?.ground].filter(Boolean).flatMap((o) => down.intersectObject(o, true))
+        .sort((x, y) => x.distance - y.distance)[0];
+      p.y = hit ? hit.point.y : at.y;
+      const s = size * (0.5 + rand());
+      m.compose(p.setY(p.y + s / 2), new THREE.Quaternion(), new THREE.Vector3(s, s, s));
+      mesh.setMatrixAt(i, m);
+    };
+    for (let i = 0; i < GRASS; i++) put(blade, i, 0.8);
+    for (let i = 0; i < GRASS / 7; i++) put(bush, i, 1.4);
+    b.grass = [blade, bush];
+    for (const g of b.grass) { g.castShadow = true; scene.add(g); }
+  }
+  b.grass[0].count = Math.round(GRASS * weeds);
+  b.grass[1].count = Math.round((GRASS / 7) * weeds);
+}
+
+// The people now: each figure at its place and with its clip (with no
+// motion when the reader asks for none).
+function walking(now, dt) {
+  const t = clock();
+  for (const p of people.values()) step(p, t, dt, now);
+  for (const h of helpers) step(h, t, dt, now);
+  for (const b of builds.values()) {
+    if (b.carriers?.length) carry(b, t, dt);
+    if (b.going?.length) goes(b, t);
+    lifting(b, t);
+  }
+}
+// The parts that a task took down go when their time comes. The people
+// come down a ladder on all the scaffolds, so the scaffolds go together.
+function goes(b, t) {
+  const last = Math.max(...b.going.map((g) => g.t));
+  b.going = b.going.filter((g) => {
+    if ((g.scaffold ? last : g.t) > t) return true;
+    for (const part of g.list) part.removeFromParent();
+    g.list.ladder?.removeFromParent();
+    return false;
+  });
+}
+
+// What an event tells, in words.
+const say = (e) => {
+  const d = e.data ?? {};
+  switch (e.kind) {
+    case 'requested': return `A construction opens, at the level ${d.level}.`;
+    case 'plan_made': return `The plan: ${d.tasks.length} tasks.`;
+    case 'hired': return `${e.who} (${d.trade}) comes to the construction.`;
+    case 'released': return `${e.who} goes back.`;
+    case 'task_started': return `${e.who} starts ${d.task}.`;
+    case 'task_done': return `${e.who} ends ${d.task}.`;
+    case 'element': return `${d.part} is in place.`;
+    case 'done': return `The model is done (${Math.round(d.bytes / 1024)} KB).`;
+    case 'stopped': return `The construction stops: ${d.reason}.`;
+    case 'failed': return `The construction fails: ${d.message}.`;
+    case 'run_done': return `The construction took ${(d.ms / 1000).toFixed(1)} s.`;
+    case 'place_raised': return `The people raise the building of ${d.place}.`;
+    case 'place_open': return `${d.place} opens.`;
+    case 'place_held': return `A construction waits for ${d.place}.`;
+    case 'place_started': return `A construction starts at ${d.place}.`;
+    case 'truck_made': return `${d.truck} joins the haul.`;
+    case 'truck_joined': return `${d.truck} is at ${d.at}.`;
+    case 'parts_asked': return `The materials of ${d.task} go to ${d.place}.`;
+    case 'parts_here': return `The materials of ${d.task} are there.`;
+    case 'haul_asked': return `${d.loads.length} loads from ${d.from} to ${d.to}.`;
+    case 'loaded': return `${d.truck} takes ${d.load} at ${d.at}.`;
+    case 'unloaded': return `${d.truck} puts ${d.load} down at ${d.at}.`;
+    case 'hauled': return `Each load of ${d.for} is there.`;
+    default: return e.kind;
+  }
+};
+
+// An event of the yard or of the haul: the places, the lots, the trucks.
+function yardEvent(e) {
+  const d = e.data ?? {};
+  const p = places.get(d.place);
+  if (e.kind === 'place_raised' && p) p.state.textContent = 'raised';
+  if (e.kind === 'place_open' && p) p.state.textContent = 'open';
+  if (['place_raised', 'place_held', 'place_started'].includes(e.kind) && !at.has(d.order)) {
+    at.set(d.order, [d.place, d.lot]);
+    if (builds.has(d.order)) settle(builds.get(d.order).group, d.place, d.lot);
+  }
+  if (e.kind === 'truck_joined') truck(d.truck, d.at);
+  if (e.kind === 'loaded') drive(truck(d.truck, 'gate'), d.at);
+  if (e.kind === 'unloaded') {
+    const t = truck(d.truck, d.at);
+    drive(t, d.at);
+    if (d.truck.startsWith('rented_')) t.back = true;
+  }
+}
+
+// The day of the event that the page takes now (in a time lapse).
+let eventDay = 0;
+async function take(e) {
+  if (lapse) eventDay = (e.at - lapse.t0) / DAY;
+  if (e.order === 'yard' || e.order === 'haul') {
+    yardEvent(e);
+    return log(e);
+  }
+  const b = lot(e.order);
+  const d = e.data ?? {};
+  if (e.kind === 'plan_made') {
+    b.tasks = d.tasks.length;
+    b.model = d.name;
+  }
+  if (e.kind === 'hired') {
+    const p = await person(e.who);
+    p.trade.textContent = d.trade;
+    p.build = b;
+    p.status.textContent = `at ${b.id.slice(0, 12)}`;
+    p.job = d.trade;
+    p.work = WORK[d.trade] ?? 'carry';
+    // A person that came with its stage is on the lot; another walks in.
+    if (p.lot !== b || p.gone || p.leaving) come(b, p, clock(eventDay));
+    p.lot = b;
+    p.waiting = false;
+  }
+  // A free person and its crew wait at the head of the way (the
+  // construction can take them again soon); they walk out at the end of
+  // the stage.
+  if (e.kind === 'released') {
+    const p = await person(e.who);
+    const t = clock(eventDay);
+    prepare(b, p, t);
+    p.waiting = true;
+    p.task = null;
+    p.status.textContent = 'free';
+  }
+  if (e.kind === 'task_started') {
+    const p = await person(e.who);
+    p.task = d.task;
+    p.status.textContent = `works on ${d.task}`;
+    // The parts of the task (in a time lapse, from its start); the people on
+    // a scaffold that the task takes down come down from it first.
+    if (lapse) {
+      await grow(b, e);
+      // (The parts go after the end of the task.)
+      let end = false;
+      for (const x of lapse.pending) {
+        if (x.order !== e.order || x.who !== e.who) continue;
+        if (x.kind === 'element_removed') comeDown(b, b.parts[x.data.task], clock(eventDay));
+        else if (end) break;
+        else if (x.kind === 'task_done') end = true;
+      }
+    }
+    // The person and its crew go to the place of the task, each to its own
+    // place round it (plan 0006, D10: the crew of the rate of its work,
+    // `crew` of the event). A crew that grows takes people that walk in;
+    // a helper with no work in this task waits.
+    const t = clock(eventDay);
+    const pl = placeOf(b, d.task);
+    const n = d.crew ?? 1;
+    // The free helpers nearest to the place.
+    const crew = (b.pool ?? []).filter((h) => !h.task && !h.leaving && !h.gone)
+      .map((h) => [where(h, t).at.distanceTo(pl.c), h]).sort((x, y) => x[0] - y[0]).slice(0, n - 1).map(([, h]) => h);
+    while (crew.length < n - 1) crew.push(await helper(b, t));
+    p.crew = crew;
+    const base = angleOf(pl, way(b)[0]) + 0.5;
+    [p, ...crew].forEach((w, k) => {
+      if (w !== p) Object.assign(w, { task: d.task, boss: p, work: p.work });
+      toPlace(b, w, pl, base + (2 * Math.PI * k) / n, t);
+    });
+    b.task = d.task;
+    b.workY = pl.c.y - b.group.position.y;
+    // The work now, and the lift to its deck.
+    b.workPl = pl;
+    if (!pl.ground) b.lift = liftOf(b, pl) ?? b.lift;
+  }
+  // The crew of a task is free: it goes on at its place until a task
+  // takes it.
+  if (e.kind === 'task_done') {
+    b.done += 1;
+    // A render or a halo that the film passed at a jump.
+    if (lapse && (d.task === 'shell' || d.task === 'halo') && !b.parts[d.task]) {
+      const fin = finished(b, e);
+      if (fin) await coat(b, fin, d.task, eventDay, eventDay);
+    }
+    const p = await person(e.who);
+    p.task = null;
+    for (const h of p.crew ?? []) Object.assign(h, { task: null, boss: null });
+    p.crew = [];
+  }
+  if (e.kind === 'stage_started') {
+    b.stage = d;
+    b.lift = b.workPl = null;
+    if (b.pile) b.pile.visible = d.work === 'build';
+    depart(b, clock(eventDay));
+    // A change makes a new statue: it has no age.
+    if (d.work === 'change') b.aged = null;
+    // The carriers of the path, with the means of the time (plan 0006, D6).
+    await carriers(b, d.work === 'build' && d.means?.includes('carry_path') ? d.path : null, clock(eventDay));
+    if (d.date) b.date0 = new Date(Date.parse(d.date) - d.from * 86400000);
+    // A change of the lot: the people take down the old parts where they
+    // stand; the next build is on the new lot.
+    if (d.lot && d.work === 'change') b.nextLot = d.lot;
+    if (d.work === 'build' && b.nextLot) {
+      b.group.updateWorldMatrix(true, false);
+      const from = b.group.matrixWorld.clone();
+      settle(b.group, at.get(b.id)?.[0] ?? 'nui_nho', b.nextLot);
+      b.nextLot = null;
+      // The camera goes up the road to the new lot after a short look at
+      // the old site, with the people of the stage (the owner, 2026-11-11).
+      if (lapse) b.move = { from, t0: clock(eventDay) };
+    }
+    // The people of the stage walk in before its work (after a move, up the
+    // road with the camera).
+    const t = clock(eventDay);
+    if (d.work !== 'pause') await arrive(b, e, b.move?.t0 === t ? t + REST : t, b.move?.t0 === t ? RIDE : WAY);
+  }
+  if (e.kind === 'aged') { b.aged = d; await grass(b, d.weeds); }
+  if (e.kind === 'repaired') { b.aged = null; await grass(b, 0); }
+  if (e.kind === 'element' && e.shown) b.elements += 1;
+  if (e.kind === 'element' && !e.shown) {
+    b.elements += 1;
+    const glb = await element(e.order, d.glb).catch(() => null);
+    // A pour that the film passed at a jump: its band of the finished model.
+    const fin = lapse && /^pour_\d+$/.test(d.task) && finished(b, e);
+    if (glb && fin && await band(b, fin, glb, e, d.task, eventDay, eventDay)) {
+      // (There.)
+    } else if (glb) {
+      const part = glb.clone();
+      part.matrixAutoUpdate = false;
+      part.matrix.fromArray(d.matrix);
+      stage.shade(part);
+      b.group.add(part);
+      (b.parts[d.task] ??= []).push(part);
+      if (d.task === b.model) landed(b);
+    }
+  }
+  // A task that takes down a part (plan 0006, D7): its elements go.
+  if (e.kind === 'element_removed') {
+    const list = b.parts[d.task] ?? [];
+    comeDown(b, list, clock(eventDay));
+    // The parts go when the people on them are down.
+    (b.going ??= []).push({ list, t: list.down ?? 0, scaffold: d.task.startsWith('scaffold') });
+    delete b.parts[d.task];
+  }
+  if (['done', 'stopped', 'failed'].includes(e.kind)) {
+    b.status = e.kind;
+    b.lift = b.workPl = null;
+    if (b.pile) b.pile.visible = false;
+    depart(b, clock(eventDay));
+  }
+  b.state.textContent = `${b.done} of ${b.tasks} tasks, ${b.elements} elements, ${b.status}`;
+  log(e);
+}
+
+function log(e) {
+  $('counts').textContent = `${people.size} people, ${builds.size} constructions, ${trucks.size} trucks`;
+  const li = document.createElement('li');
+  const time = document.createElement('time');
+  time.textContent = new Date(e.wall).toLocaleTimeString();
+  li.append(time, say(e));
+  $('events').prepend(li);
+  while ($('events').children.length > 40) $('events').lastChild.remove();
+}
+
+// The events in the order of their ids, one at a time.
+let queue = Promise.resolve();
+const events = [];
+const next = (e) => { events.push(e); queue = queue.then(() => take(e)).catch((err) => console.error(err)); };
+
+// The time lapse (plan 0006, D11): the events of a recorded log on the
+// clock of the log, at `days` days of the world in one second.
+const DAY = 86400000;
+// The move to a new lot (the owner, 2026-11-11: up the road to the hill,
+// "back a bit as third person, but follow to the hill from up high"): the
+// view of the old site for REST s, then from the old lot along the ground
+// to the foot of the path and up the path, BACK m behind the point of the
+// road and HIGH m over it, looking along the road, and back to the view of
+// the new lot at the end.
+const BACK = 30;
+const HIGH = 22;
+function ride(b, move, u, from, to) {
+  if (u < REST) return from;
+  const r = (u - REST) / RIDE;
+  // The road: the old lot, the ground to the foot of the path, the path.
+  if (!move.road) {
+    const start = new THREE.Vector3().setFromMatrixPosition(move.from);
+    const line = b.line ?? way(b).slice().reverse();
+    const pts = [];
+    const n = Math.max(1, Math.ceil(start.distanceTo(line[0]) / 5));
+    for (let i = 0; i < n; i++) pts.push(groundAt(b, start.clone().lerp(line[0], i / n)));
+    pts.push(...line);
+    move.road = pathOf(pts);
+  }
+  const road = move.road;
+  // Behind the point of the road and up high, looking far along the road
+  // (the way of the road over 50 m, so that the camera does not swing).
+  const len = road.cum.at(-1);
+  const at = (f) => {
+    const x = Math.min(Math.max(f, 0), 1) * len;
+    const p = alongPts(road, x / len).at;
+    const way = alongPts(road, Math.min((x + 25) / len, 1)).at.sub(alongPts(road, Math.max((x - 25) / len, 0)).at).setY(0);
+    if (way.lengthSq() < 1e-6) way.copy(lotAt(b)).sub(p).setY(0);
+    way.normalize();
+    return { pos: p.clone().addScaledVector(way, -BACK).setY(p.y + HIGH), target: p.clone().addScaledVector(way, 45).setY(p.y + 4) };
+  };
+  const E = 0.1;
+  const blend = (a, c, f) => ({ pos: a.pos.clone().lerp(c.pos, f), target: a.target.clone().lerp(c.target, f) });
+  if (r < E) return blend(from, at(0), smooth(r / E));
+  if (r > 1 - E) return blend(at(1), to, smooth((r - 1 + E) / E));
+  return at((r - E) / (1 - 2 * E));
+}
+const VIEWS = {
+  three_quarters: { cam: [38, 14, 60], target: [0, 10, 0] },
+  front: { cam: [0, 12, 72], target: [0, 10, 0] },
+  side: { cam: [72, 12, 0], target: [0, 10, 0] },
+  back: { cam: [0, 12, -72], target: [0, 10, 0] },
+  base: { cam: [9, 2.5, 20], target: [0, 6, 0] },
+  above: { cam: [0.1, 110, 0.1], target: [0, 10, 0] },
+};
+const vec = (text) => text?.split(',').map(Number);
+const down = new THREE.Raycaster();
+const lapse = params.get('follow') ? {
+  pending: [],
+  t0: null,
+  day: 0,
+  end: 0,
+  // The days of the world in one second of the film: of the work, and of
+  // a pause.
+  days: Number(params.get('days') ?? 5),
+  pause: Number(params.get('pause') ?? 365),
+  segments: [],
+  playing: !params.has('still'),
+  turn: params.get('turn') === '1',
+  angle: 0,
+  view: VIEWS[params.get('view')] ? params.get('view') : 'three_quarters',
+  cam: vec(params.get('cam')),
+  target: vec(params.get('target')),
+  order: null,
+  // The events of the days up to `day`, in their order; `t` is the second
+  // of the film now.
+  t: 0,
+  async to(day) {
+    this.day = day;
+    this.t = this.film(day);
+    while (this.pending.length && (this.pending[0].at - this.t0) / DAY <= day) next(this.pending.shift());
+    await queue;
+    this.place();
+  },
+  async at(t) {
+    this.t = t;
+    this.day = this.dayAt(t);
+    while (this.pending.length && (this.pending[0].at - this.t0) / DAY <= this.day) next(this.pending.shift());
+    await queue;
+    this.place();
+  },
+  // The speed at a day: a pause of the construction is faster.
+  rate(day) {
+    let rate = this.days;
+    for (const s of this.segments) if (s.day <= day) rate = s.pause ? this.pause : this.days;
+    return rate;
+  },
+  // The seconds of the film at a day, and the day at a second of the film.
+  // At the start of each stage the day waits WAY s: the people of the
+  // stage walk in (or out, at a pause).
+  film(day) {
+    let t = 0;
+    let last = 0;
+    for (const s of [...this.segments, { day: Infinity }]) {
+      const upto = Math.min(s.day, day);
+      if (upto > last) t += (upto - last) / this.rate(last);
+      last = Math.max(last, upto);
+      if (s.day >= day) break;
+    }
+    for (const s of this.segments) if (s.hold && s.day < day) t += s.move ? REST + RIDE : WAY;
+    return t;
+  },
+  dayAt(t) {
+    let lo = 0, hi = this.end;
+    for (let k = 0; k < 60; k++) { const mid = (lo + hi) / 2; if (this.film(mid) < t) lo = mid; else hi = mid; }
+    return hi;
+  },
+  // The day waits: the people come, or go.
+  holding() {
+    return this.t < this.film(this.day) - 1e-6;
+  },
+  frame(dt) {
+    if (this.playing && this.t0 !== null) {
+      this.t = Math.min(this.t + dt, this.film(this.end));
+      this.day = this.dayAt(this.t);
+      while (this.pending.length && (this.pending[0].at - this.t0) / DAY <= this.day) next(this.pending.shift());
+    }
+    this.place();
+  },
+  // The height of the top of the parts on the lot (m over the lot), each
+  // second of the film.
+  top(b) {
+    const now = Math.floor(this.t);
+    if (b.topAt !== now) {
+      b.topAt = now;
+      const box = new THREE.Box3();
+      for (const list of Object.values(b.parts)) for (const p of list) box.expandByObject(p);
+      b.topY = box.isEmpty() ? 0 : box.max.y - b.group.getWorldPosition(new THREE.Vector3()).y;
+    }
+    return Math.min(b.topY, 60);
+  },
+  // The camera in the frame of the lot of the construction, and the label.
+  place() {
+    const b = builds.get(this.order);
+    if (!b) return;
+    const v = VIEWS[this.view];
+    growing(b, this.day);
+    // The slow turn: 0.15 rad in each second of the film.
+    if (this.turn) this.angle = this.t * 0.15;
+    // The camera follows the height of the work, and holds what stands: it
+    // aims at the middle of the built height or higher, and goes back as
+    // the model rises (a view, not a camera of the URL).
+    const top = this.top(b);
+    const aim = Math.min(Math.max(b.workY ?? v.target[1], top / 2, v.target[1]), Math.max(top, v.target[1]));
+    const lift = this.target ? 0 : aim - v.target[1];
+    const back = this.cam ? 1 : Math.max(1, (top + 6) / 26);
+    const cam = new THREE.Vector3(...(this.cam ?? v.cam)).multiplyScalar(back).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.angle).add(new THREE.Vector3(0, lift, 0));
+    // The camera and its target in the frame of a lot; from the old lot to
+    // the new one after a change of the lot, up over the hill and down.
+    const pose = (m) => ({ pos: cam.clone().applyMatrix4(m), target: new THREE.Vector3(...(this.target ?? v.target)).add(new THREE.Vector3(0, lift, 0)).applyMatrix4(m) });
+    b.group.updateWorldMatrix(true, false);
+    let { pos, target } = pose(b.group.matrixWorld);
+    const move = b.move && this.t >= b.move.t0 && this.t < b.move.t0 + REST + RIDE ? b.move : null;
+    const riding = move && this.t >= move.t0 + REST;
+    if (move) ({ pos, target } = ride(b, move, this.t - move.t0, pose(move.from), { pos, target }));
+    camera.position.copy(pos);
+    // The camera stays 10 m over the ground of a hill.
+    const hill = [...places.values()].find((p) => p.terrain)?.ground;
+    if (hill) {
+      down.set(camera.position.clone().setY(1000), new THREE.Vector3(0, -1, 0));
+      const hit = down.intersectObject(hill, true)[0];
+      if (hit && camera.position.y < hit.point.y + 10) camera.position.y = hit.point.y + 10;
+    }
+    controls.target.copy(target);
+    const date = b.date0 ? ' · ' + new Date(b.date0.getTime() + this.day * DAY).toISOString().slice(0, 10) : '';
+    const stage = b.stage ? ` · ${b.stage.name}` : '';
+    const work = b.task && b.stage?.work !== 'pause' ? ` · ${b.task}` : '';
+    const old = b.aged && b.stage?.work === 'pause' ? ` · the site gets old (${Math.round(b.aged.days / 365)} years)` : '';
+    const r = this.rate(this.day);
+    const hold = move ? (riding ? 'up the road to the new lot' : 'the old site is down') : this.holding() ? (b.stage?.work === 'pause' ? 'the people leave the site' : 'the people come to the site') : null;
+    const speed = hold ?? (r === 365 ? 'a year in a second' : `${r} days in a second`);
+    $('lapse').textContent = `Day ${Math.floor(this.day) + 1}${date}${stage}${work}${old} · ${speed}`;
+    // The old statue: the concrete gets darker in a pause, and weeds
+    // grow on the base (D8).
+    const dirt = b.aged ? b.aged.dirt : 0;
+    const weeds = b.aged ? b.aged.weeds : 0;
+    if (dirt !== b.dirt) {
+      b.dirt = dirt;
+      const base = new Set(b.parts.be ?? []);
+      const green = new THREE.Color(0x4f6b32);
+      b.group.traverse((o) => {
+        if (!o.isMesh || !o.material?.color) return;
+        o.userData.base ??= o.material.color.clone();
+        o.material = o.material.clone();
+        o.material.color.copy(o.userData.base).multiplyScalar(1 - 0.55 * dirt);
+        let p = o;
+        while (p && !base.has(p)) p = p.parent;
+        if (p) o.material.color.lerp(green, 0.45 * weeds);
+      });
+    }
+  },
+} : null;
+// The sky of a film, and no names of the places in front of the camera.
+if (lapse) {
+  scene.background = new THREE.Color(0x9fc3e0);
+  scene.traverse((o) => { if (o.userData.label) o.visible = false; });
+  // A film of a lot on the hill: the flat yard of the node is not in it.
+  grid.visible = false;
+  scene.traverse((o) => { if (o.userData.flat) o.visible = false; });
+}
+if (lapse && params.get('fov')) {
+  camera.fov = Number(params.get('fov'));
+  camera.updateProjectionMatrix();
+}
+
+if (params.get('events')) {
+  const text = await (await fetch(params.get('events'))).text();
+  const all = text.split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  if (lapse) {
+    // The construction to follow, and its days.
+    const first = all.find((e) => e.order !== 'yard' && e.order !== 'haul');
+    lapse.order = params.get('follow') === '1' ? first?.order : params.get('follow');
+    const own = all.filter((e) => e.order === lapse.order);
+    lapse.t0 = own[0]?.at ?? 0;
+    lapse.end = ((own.at(-1)?.at ?? 0) - lapse.t0) / DAY;
+    // The first stage of work after a change of the lot waits longer: the
+    // move to the new lot.
+    let moved = false;
+    lapse.segments = [];
+    for (const e of own) {
+      if (e.kind === 'changed' && e.data?.lot) moved = true;
+      if (e.kind !== 'stage_started' && e.kind !== 'stage_done') continue;
+      const move = e.kind === 'stage_started' && e.data.work === 'build' && moved;
+      if (move) moved = false;
+      lapse.segments.push({ day: (e.at - lapse.t0) / DAY, pause: e.kind === 'stage_started' && e.data.work === 'pause', hold: e.kind === 'stage_started', move });
+    }
+    lapse.pending = all;
+    await lapse.to(0);
+  } else {
+    for (const e of all) next(e);
+  }
+} else {
+  const source = new EventSource('/events');
+  source.onmessage = (m) => next(JSON.parse(m.data));
+  source.onerror = () => { $('message').textContent = 'The stream of the world stops; the page tries again.'; };
+  source.onopen = () => { $('message').textContent = ''; };
+  fetch('/blueprints').then((r) => r.json()).then((list) => {
+    for (const b of list) $('blueprint').add(new Option(b.name, b.name));
+  }).catch(() => {});
+}
+await queue;
+$('message').textContent = events.length ? '' : 'No construction yet.';
+
+// A job from the page: POST /builds.
+$('job').onsubmit = async (ev) => {
+  ev.preventDefault();
+  let options;
+  try { options = JSON.parse($('options').value || '{}'); } catch { $('answer').textContent = 'The options are not JSON.'; return; }
+  const budget = { workers: Number($('workers').value) };
+  if ($('seconds').value) budget.seconds = Number($('seconds').value);
+  const r = await fetch('/builds', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ order: { blueprint: $('blueprint').value, options }, level: $('level').value, budget }),
+  });
+  const answer = await r.json();
+  $('answer').textContent = r.ok ? `The construction ${answer.build} opens.` : answer.errors.map((x) => `${x.path}: ${x.message}`).join('; ');
+};
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = canvas.parentElement;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// The bar of the time lapse.
+if (lapse) {
+  $('lapsebar').hidden = false;
+  $('viewsel').value = lapse.view;
+  $('turn').checked = lapse.turn;
+  $('speed').value = String(lapse.days);
+  $('play').textContent = lapse.playing ? 'Pause' : 'Play';
+  $('play').onclick = () => { lapse.playing = !lapse.playing; $('play').textContent = lapse.playing ? 'Pause' : 'Play'; };
+  $('speed').onchange = () => { lapse.days = Number($('speed').value); lapse.t = lapse.film(lapse.day); };
+  $('viewsel').onchange = () => { lapse.view = $('viewsel').value; lapse.cam = lapse.target = null; lapse.angle = 0; };
+  $('turn').onchange = () => { lapse.turn = $('turn').checked; };
+  // The camera as the viewer sets it, in the frame of the lot, for the URL.
+  controls.addEventListener('start', () => { lapse.turn = false; $('turn').checked = false; });
+  controls.addEventListener('end', () => {
+    const b = builds.get(lapse.order);
+    const inv = b.group.matrixWorld.clone().invert();
+    lapse.cam = camera.position.clone().applyMatrix4(inv).toArray().map((x) => Math.round(x * 10) / 10);
+    lapse.target = controls.target.clone().applyMatrix4(inv).toArray().map((x) => Math.round(x * 10) / 10);
+    lapse.angle = 0;
+  });
+  $('copycam').onclick = () => {
+    const u = new URL(location.href);
+    if (lapse.cam) u.searchParams.set('cam', lapse.cam.join(','));
+    if (lapse.target) u.searchParams.set('target', lapse.target.join(','));
+    u.searchParams.set('fov', String(camera.fov));
+    navigator.clipboard?.writeText(u.toString());
+    $('copycam').textContent = 'Copied';
+  };
+}
+
+// The state of the page, for a test: the lots and the people; and the
+// time lapse, for a video.
+window.WORLD = { builds, people, helpers, places, trucks };
+const draw = () => { walking(performance.now(), 1 / 30); controls.update(); renderer.render(scene, camera); };
+window.TIMELAPSE = lapse && {
+  to: (day) => lapse.to(day).then(draw),
+  // The second `t` of the film (the stages at their speeds).
+  at: (t) => lapse.at(t).then(draw),
+  get end() { return lapse.end; },
+  get days() { return lapse.days; },
+  get film() { return lapse.film(lapse.end); },
+  // The second of the film at a day.
+  filmAt: (day) => lapse.film(day),
+};
+await Promise.all(ready);
+window.READY = true;
+let last = performance.now();
+renderer.setAnimationLoop((now) => {
+  const dt = Math.min((now - last) / 1000, 0.1);
+  last = now;
+  if (lapse) lapse.frame(dt);
+  walking(now, dt);
+  for (const t of trucks.values()) {
+    // A drive takes 2 s; a rented truck goes back to the gate after its load.
+    const f = Math.min((now - t.start) / 2000, 1);
+    t.mesh.position.lerpVectors(t.from, t.to, still ? 1 : f);
+    if (f === 1 && t.back) {
+      t.back = false;
+      drive(t, 'gate');
+    }
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

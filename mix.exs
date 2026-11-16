@@ -25,15 +25,24 @@ defmodule World.MixProject do
       aliases: aliases(),
       test_coverage: [
         summary: [threshold: 100],
-        # The copy of Wings 3D has its own tests upstream.
-        ignore_modules: [~r/^:?(wings_|e3d|tools$|trace_2d$)/, World.GLBHelper]
+        # The copy of Wings 3D has its own tests upstream. The catalog is a
+        # reference of what World made: no test builds its models.
+        ignore_modules: [~r/^:?(wings_|e3d|tools$|trace_2d$)/, World.GLBHelper, World.Catalog]
       ]
     ]
   end
 
   def cli, do: [preferred_envs: [precommit: :test]]
 
-  def application, do: [mod: {World.Application, []}, extra_applications: [:logger, :crypto]]
+  # The scale of the clock of the world (World.Clock.world/0): one day in
+  # a second, and in the tests 1,000 days in a second (a site of a year
+  # takes 0.4 s of the wall clock).
+  def application,
+    do: [
+      mod: {World.Application, []},
+      extra_applications: [:logger, :crypto],
+      env: [scale: if(Mix.env() == :test, do: 86_400_000, else: 86_400)]
+    ]
 
   defp deps do
     [

@@ -11,7 +11,12 @@ defmodule Mix.Tasks.World.Order do
   `HASH.mid.glb`, `HASH.far.glb`, and at the near level
   `HASH.log.json` (the log of the run of the world that built it),
   `HASH.replay.glb` (each part in a node of its own, for the replay),
-  `HASH.parts.json` and `HASH.receipt.json`. A wrong order stops the task
+  `HASH.parts.json`, `HASH.receipt.json`, `HASH.drawing.json` (the
+  drawing of the model, for free edits) and `HASH.solids.json` (the
+  simple solids of the model, `World.Solids`), and the flat look of each
+  level (`HASH.flat.glb`, `HASH.mid.flat.glb`, `HASH.far.flat.glb`,
+  and the light look: `HASH.light.glb`, `HASH.mid.light.glb`, `HASH.far.light.glb`,
+  `World.Flat`). A wrong order stops the task
   with each error.
   """
   use Mix.Task
@@ -19,7 +24,7 @@ defmodule Mix.Tasks.World.Order do
   @impl true
   def run(args) do
     {opts, files} = OptionParser.parse!(args, strict: [dir: :string])
-    Mix.Task.run("compile")
+    Mix.Task.run("app.start")
     dir = Keyword.get(opts, :dir, "out")
 
     file =
@@ -35,10 +40,12 @@ defmodule Mix.Tasks.World.Order do
 
     files =
       for {level, ext} <- [{"near", ""}, {"mid", ".mid"}, {"far", ".far"}],
-          file <- if(level == "near", do: World.Orders.files(), else: ["glb"]) do
+          file <- if(level == "near", do: World.Orders.files(), else: ["glb", "flat", "light"]) do
         name =
           case file do
             "glb" -> "#{hash}#{ext}.glb"
+            "flat" -> "#{hash}#{ext}.flat.glb"
+            "light" -> "#{hash}#{ext}.light.glb"
             "replay" -> "#{hash}.replay.glb"
             _ -> "#{hash}.#{file}.json"
           end

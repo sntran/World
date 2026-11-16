@@ -42,28 +42,45 @@ defmodule World.Vehicles.Van do
   @doc "The names of the models of vans."
   def models, do: @data["models"] |> Map.keys() |> Enum.sort()
 
+  # The parts out of the hull: the bumper before its nose, the step and
+  # the handle behind its back, the handles of the doors at its sides. The
+  # sizes of a model are its overall sizes (SAE J1100: with the bumpers,
+  # the moldings and the handles), so the hull is smaller by these.
+  @nose 0.018
+  @tail 0.035
+  @side 0.025
+
+  @doc """
+  The front overhang of the hull of a model (`model/2`): from its nose to
+  the front axle. The front overhang of the sheet is from the bumper.
+  """
+  def front(m), do: m["front"] / 1 - @nose
+
   # The sizes that an order can give, and how far each can go from the
   # size of the model (the height: down only to the traces, see `sizes/1`).
   @sizes %{"length" => 0.05, "width" => 0.05, "height" => 0.3}
 
   @doc """
-  The data of a model, with its make. The `openings` of a model (a
+  The data of a model, with its make: a name of `priv/data/vans.json`,
+  or the data of a model in its format, with the data of its make in
+  `make` (a van of a project; its `id` names the parts, `van` by
+  default). The `openings` of a model (a
   standard roof has lower doors) replace those of its make: each key of
   a map, or the full value of the key. An order (a map) replaces more:
   its `size` (`length`, `width`, `height`, in meters; nil for the size
   of the model) and its `doors` (`World.Vehicles.Van.Order`).
   """
   def model(name, order \\ %{}) do
-    m = Map.fetch!(@data["models"], name)
+    m = if is_map(name), do: name, else: Map.fetch!(@data["models"], name)
     m = for {k, v} <- order["size"] || %{}, Map.has_key?(@sizes, k), v != nil, into: m, do: {k, v / 1}
     own = Map.get(m, "openings", %{})
+    # A make in data names the parts by its `id` (`van` by default).
+    {base, m} =
+      if is_map(m["make"]),
+        do: {m["make"], %{m | "make" => Map.get(m["make"], "id", "van")}},
+        else: {Map.fetch!(@data["makes"], m["make"]), m}
 
-    make =
-      Map.update!(
-        Map.fetch!(@data["makes"], m["make"]),
-        "openings",
-        &Map.merge(&1, own, fn _k, a, b -> merge(a, b) end)
-      )
+    make = Map.update!(base, "openings", &Map.merge(&1, own, fn _k, a, b -> merge(a, b) end))
 
     m = Map.put(m, "make_data", make)
     if Map.has_key?(order, "doors"), do: Order.put_doors(m, order["doors"]), else: m
@@ -89,7 +106,11 @@ defmodule World.Vehicles.Van do
     end)
   end
 
-  @doc "The hull of a model, with the sizes of an order (`model/2`)."
+  @doc """
+  The hull of a model, with the sizes of an order (`model/2`): smaller
+  than the overall sizes by the parts out of it (the bumper, the step,
+  the handles).
+  """
   def hull(name, order \\ %{}) do
     m = model(name, order)
     make = m["make_data"]
@@ -105,13 +126,13 @@ defmodule World.Vehicles.Van do
     end
 
     line = fn pts -> for [d, zz] <- pts, do: {d / 1, z.(zz)} end
-    {f, wb} = {m["front"] / 1, m["wheelbase"] / 1}
+    {f, wb} = {front(m), m["wheelbase"] / 1}
     r = Wheels.tire_radius(m["tire"])
     [af, ar] = h["arches"]
 
     Hull.new(
-      length: m["length"] / 1,
-      width: m["width"] / 1,
+      length: m["length"] / 1 - @nose - @tail,
+      width: m["width"] / 1 - 2 * @side,
       top: height,
       front: line.(make["front"] ++ t["roof"]),
       back: line.(t["back"]),
@@ -156,7 +177,7 @@ defmodule World.Vehicles.Van do
   those of the model: `sizes/1`).
   """
   def build(model_name, opts \\ []) do
-    van = order(model_name, opts)
+    van = line(model_name, opts)
 
     Assembly.new(Keyword.get(opts, :name, "van_" <> model_name), BodyShop.body(van),
       root: "body",
@@ -192,9 +213,13 @@ defmodule World.Vehicles.Van do
       else: sizes
   end
 
-  # The order on the line: the model with the sizes and the doors of the
-  # order, its make, its hull, its windows and its rows of seats.
-  defp order(model_name, opts) do
+  @doc """
+  The order on the line, for each station: the model with the sizes and
+  the doors of the order (`m`), its make, its hull (`h`), its length
+  (`l`), its front axle (`f`), its windows (`glass`) and its rows of
+  seats. The options are those of `build/2`.
+  """
+  def line(model_name, opts) do
     order = %{"size" => Keyword.get(opts, :size, %{}), "doors" => Keyword.get(opts, :doors, %{})}
     m = model(model_name, order)
     h = hull(model_name, order)
@@ -205,7 +230,7 @@ defmodule World.Vehicles.Van do
       make: m["make_data"],
       h: h,
       l: h.length,
-      f: m["front"] / 1,
+      f: front(m),
       glass: Order.windows(m, windows),
       rows: Order.rows(m, windows, Keyword.get(opts, :rows))
     }

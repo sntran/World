@@ -31,8 +31,7 @@ defmodule World.Check do
   """
   alias World.{Assembly, Build, Frame, Joint, Mass, Part, Vec}
 
-  # The overhead door of a factory of the world (World.Buildings.Plants):
-  # 9 by 8 ft.
+  # The overhead door of a factory of the world: 9 by 8 ft.
   @door {9 * 12 * 0.0254, 8 * 12 * 0.0254}
 
   # The kinds of the fasteners: a fastener goes through its parts.
@@ -50,11 +49,14 @@ defmodule World.Check do
 
   @doc """
   All the checks of a model, in a pose (a map of a joint to its value):
-  `:ok`, or `{:error, reasons}` (a list of `{check, details}`).
+  `:ok`, or `{:error, reasons}` (a list of `{check, details}`). The
+  option `base` is the height (m) over the lowest point of the model
+  where a point is a point of its base (2 mm by default; more for a
+  model from a field of cells, whose surface is not that exact).
   """
-  def model(item, pose \\ %{}) do
+  def model(item, pose \\ %{}, opts \\ []) do
     reasons =
-      [stand(item), overlaps(item), joints(item, pose), door(item)]
+      [stand(item, Keyword.get(opts, :base, 0.002)), overlaps(item), joints(item, pose), door(item)]
       |> Enum.flat_map(fn
         :ok -> []
         {:error, reason} -> [reason]
@@ -67,19 +69,26 @@ defmodule World.Check do
   # roof, an enclosure on its wall: they do not stand on their own. A boat
   # floats (its check is its stability: TODO.md). A helmet is worn, and
   # its strap hangs under its rim. A plant grows in the ground: its roots
-  # hold it.
-  defp stand(%{kind: kind}) when kind in [:door, :window, :material, :enclosure, :boat, :helmet, :plant], do: :ok
+  # hold it. A prop is held or worn by a person (a hat, a mass of hair).
+  defp stand(%{kind: kind}, _) when kind in [:door, :window, :material, :enclosure, :boat, :helmet, :plant, :prop],
+    do: :ok
+
   # A thing on its site (a hammock between two trees, a swing on a
   # branch or under a ceiling: `"site"` in its extras) is held by its site.
-  defp stand(%Assembly{extras: %{"site" => true}}), do: :ok
-  defp stand(item), do: stands(item)
+  defp stand(%Assembly{extras: %{"site" => true}}, _), do: :ok
+  # A person keeps its balance, with a thing in a hand too.
+  defp stand(%World.Figure{}, _), do: :ok
+  defp stand(%Assembly{nodes: [{_, %World.Figure{}, _} | _]}, _), do: :ok
+  defp stand(item, base), do: stands(item, base)
 
   # A house, a wall or a street is built on its site, a boat on the
   # slipway of its yard, a plant grows where it stands: they go through no
   # door. A
   # thing put together on its site (an overhead door: `"site"` in its
   # extras) goes through the door in its parts.
-  defp door(%Assembly{kind: kind}) when kind in [:wall, :house, :boat, :street, :plant, :statue, :tower], do: :ok
+  defp door(%Assembly{kind: kind}) when kind in [:wall, :house, :building, :boat, :street, :plant, :statue, :tower],
+    do: :ok
+
   defp door(%Assembly{kind: :vehicle} = item), do: fits(item, @drive_in)
 
   defp door(%Assembly{extras: %{"site" => true}} = item),
@@ -91,6 +100,9 @@ defmodule World.Check do
   If the model stands on its base: `:ok`, or `{:error, {:tips, center,
   base}}` with the center of mass and the box of the base (x and y).
 
+  `high` is the height over the lowest point where a point is a point
+  of the base.
+
   A joint of the role `:stand` (the stand of a scooter, the side stand of
   a motorcycle) goes down to the angle where its stand first touches the
   ground, or to its upper limit. When the model is then on a line (two
@@ -98,7 +110,7 @@ defmodule World.Check do
   that side until a point touches the ground: a motorcycle on its side
   stand.
   """
-  def stands(item) do
+  def stands(item, high \\ 0.002) do
     pose = stand_pose(item)
     placed = Build.placed(item, pose)
     points = for {f, p} <- placed, m <- p.shapes, pt <- m.points, do: Frame.point(f, pt)
@@ -111,7 +123,7 @@ defmodule World.Check do
         stand = for {f, %{kind: :stand} = p} <- placed, m <- p.shapes, pt <- m.points, do: Frame.point(f, pt)
         {points, {x, y, _}} = lean(points, stand, center(item, pose, placed, points))
         low = points |> Enum.map(&elem(&1, 2)) |> Enum.min()
-        base = points |> Enum.filter(&(elem(&1, 2) < low + 0.002)) |> Enum.map(fn {x, y, _} -> {x, y} end) |> hull()
+        base = points |> Enum.filter(&(elem(&1, 2) < low + high)) |> Enum.map(fn {x, y, _} -> {x, y} end) |> hull()
 
         if inside?(base, {x, y}, 0.001),
           do: :ok,

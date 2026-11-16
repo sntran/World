@@ -52,7 +52,7 @@ defmodule World.SheetTest do
 
   test "the enclosure A-16N126: its sizes, its cover on hinges, and a true model" do
     e = World.Enclosures.hoffman_a16n126()
-    assert e.kind == :enclosure and World.Places.family_of(e) == :sheets
+    assert e.kind == :enclosure and World.Plan.trade(e) == :sheet_metal_worker
     assert World.Check.model(e) == :ok
     assert World.Check.joints(e, %{"cover" => 120}) == {:error, {:joints, ["cover"]}}
 

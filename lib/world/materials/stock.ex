@@ -276,7 +276,11 @@ defmodule World.Materials.Stock do
     )
   end
 
-  @doc "A helical spring along z from 0 to `length`: the mean diameter, the wire and the turns."
+  @doc """
+  A helical spring along z from 0 to `length`: the mean diameter, the
+  wire and the turns. A spring of a color (a paint) is of steel for its
+  mass.
+  """
   def spring(diameter, wire, length, turns, material, opts \\ []) do
     steps = turns * 12
     line = for i <- 0..steps, do: helix(diameter / 2, length, i / steps, turns)
@@ -284,11 +288,13 @@ defmodule World.Materials.Stock do
     Part.new(
       Keyword.get(opts, :name, "spring_#{mm(diameter)}x#{mm(length)}"),
       :spring,
-      Shape.sweep(line, wire / 2, material, sides: 6),
+      coil(Shape.sweep(line, wire / 2, material, sides: 6), material),
       [Part.port("end_a", {0, 0, 0}, {0, 0, -1}, {0, 1, 0}), Part.port("end_b", {0, 0, length}, {0, 0, 1}, {0, 1, 0})],
       params: %{"diameter" => diameter, "wire" => wire, "length" => length, "turns" => turns}
     )
   end
+
+  defp coil(mesh, material), do: if(World.Mass.density(material), do: mesh, else: World.Mesh.matter(mesh, :steel))
 
   defp helix(r, length, t, turns) do
     a = 2 * :math.pi() * turns * t

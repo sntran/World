@@ -10,7 +10,8 @@
   "scripts": {
     "build": "sh scripts/site.sh && sh scripts/edge.sh",
     "deploy": "wrangler deploy",
-    "test": "node --test test/js/*.test.js && node scripts/validate.mjs priv/models"
+    "test": "node --test test/js/*.test.js",
+    "validate": "node scripts/validate.mjs"
   },
   "devDependencies": {
     "beam.com": "0.1.0-rc.6",

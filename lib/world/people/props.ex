@@ -11,8 +11,8 @@ defmodule World.People.Props do
   """
   alias World.{Detail, Frame, Part, Shape}
 
-  @hand ~w(bottle fan)
-  @head ~w(non_la)
+  @hand ~w(bottle bucket fan hammer trowel)
+  @head ~w(hard_hat non_la)
   @props @hand ++ @head
 
   @doc "The names of the props."
@@ -99,6 +99,68 @@ defmodule World.People.Props do
       sources: [
         "A nón lá of Việt Nam: a cone of palm leaves, about 41 cm across and 19 cm high (a common size of the nón lá of Huế)."
       ]
+    )
+  end
+
+  # The props of the people of a site (plan 0006, D10).
+  def prop("hard_hat") do
+    # A hard hat of EN 397: a shell of about 30 cm by 22 cm and 13 cm high
+    # over the crown, with a brim; a round shell here.
+    loop = [{0.0, 0.13}, {0.09, 0.12}, {0.13, 0.06}, {0.14, 0.0}, {0.16, -0.01}, {0.16, -0.02}, {0.0, -0.02}]
+
+    Part.new(
+      "hard_hat",
+      :prop,
+      [Shape.lathe(loop, :orange, sides: 24, frame: Frame.move({0.0, 0.0, -0.06}))],
+      [
+        Part.port("crown", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
+      ],
+      sources: ["A hard hat of EN 397: a shell of about 30 by 22 cm, about 13 cm over the crown (common sizes)."]
+    )
+  end
+
+  def prop("bucket") do
+    # A bucket of a site of 10 L: 28 cm across at the top, 25 cm high; the
+    # hand holds its handle 12 cm over the rim.
+    loop = [{0.0, 0.0}, {0.12, 0.0}, {0.14, 0.25}, {0.13, 0.25}, {0.11, 0.01}, {0.0, 0.01}]
+
+    Part.new(
+      "bucket",
+      :prop,
+      [Shape.lathe(loop, :black, sides: 16, frame: Frame.move({0.0, 0.0, -0.37}))],
+      [
+        Part.port("grip", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})
+      ],
+      sources: ["A bucket of a site of 10 L: about 28 cm across and 25 cm high (common sizes)."]
+    )
+  end
+
+  def prop("trowel") do
+    # A trowel of a mason: a blade of steel of 28 by 12 cm on a handle of
+    # wood of 12 cm.
+    Part.new(
+      "trowel",
+      :prop,
+      [
+        Shape.box({-0.015, -0.015, -0.06}, {0.015, 0.015, 0.06}, :wood),
+        Shape.box({-0.06, -0.002, -0.34}, {0.06, 0.002, -0.06}, :steel)
+      ],
+      [Part.port("grip", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})],
+      sources: ["A trowel of a mason: a blade of about 28 by 12 cm, a handle of about 12 cm (common sizes)."]
+    )
+  end
+
+  def prop("hammer") do
+    # A hammer of a site: a handle of 33 cm, a head of steel of 11 cm.
+    Part.new(
+      "hammer",
+      :prop,
+      [
+        Shape.box({-0.013, -0.013, -0.08}, {0.013, 0.013, 0.25}, :wood),
+        Shape.box({-0.055, -0.016, 0.22}, {0.055, 0.016, 0.26}, :steel)
+      ],
+      [Part.port("grip", {0, 0, 0}, {0, 0, 1}, {0, 1, 0})],
+      sources: ["A hammer of a site: a handle of about 33 cm, a head of about 11 cm (common sizes)."]
     )
   end
 

@@ -549,6 +549,123 @@ defmodule World.HumanTest do
     assert ups != [] and Enum.all?(ups, &(&1 > -0.005))
   end
 
+  test "a child and a baby: the shapes of MakeHuman for the height of the age, with the mean muscle" do
+    o = %{gender: 1.0, age: 10, muscle: 0.9, weight: 0.5, height: 0.5, race: %{"asian" => 1.0}}
+    weights = fn opts -> Map.new(Human.target_weights(Map.merge(o, opts))) end
+
+    # A boy of 10 years is 78% of the height of a man (the CDC): mostly the child of MakeHuman (81%), a little of
+    # the baby, with the mean muscle only.
+    child = weights.(%{})
+    assert child["asian-male-child"] > 0.85 and child["asian-male-baby"] < 0.15
+    assert child["universal-male-child-averagemuscle-averageweight"] == child["asian-male-child"]
+    refute Enum.any?(child, fn {name, _} -> String.contains?(name, ["young", "old", "maxmuscle"]) end)
+
+    # A boy grows fast and then stops: at 16 years he is almost a man, with the muscle of the adult part.
+    teen = weights.(%{age: 16})
+    assert teen["asian-male-young"] > 0.8 and teen["universal-male-young-maxmuscle-averageweight"] > 0.3
+    # Between a baby and a child; an age of 1 year or less is mostly the baby of MakeHuman (its height is of a
+    # baby of about 6 months: 37% of the man); from 25 years, the young and the old adult.
+    small = weights.(%{age: 4})
+    assert small["asian-male-baby"] > 0.3 and small["asian-male-child"] > 0.3
+    assert_in_delta small["asian-male-baby"] + small["asian-male-child"], 1.0, 1.0e-9
+    assert weights.(%{age: 0}) == weights.(%{age: 1}) and weights.(%{age: 0})["asian-male-baby"] > 0.85
+    assert_in_delta weights.(%{age: 25})["asian-male-young"], 1.0, 1.0e-9
+
+    # The bust is a shape of the adult part of a girl: a child has none.
+    girl = Human.target_weights(Map.merge(o, %{gender: 0.0, age: 14, bust: 1.0}))
+    assert Enum.any?(girl, fn {name, _} -> String.starts_with?(name, "breast/female-young-") end)
+    refute Enum.any?(girl, fn {name, _} -> String.starts_with?(name, "breast/female-child") end)
+
+    refute Enum.any?(
+             Human.target_weights(Map.merge(o, %{gender: 0.0, age: 8, bust: 1.0})),
+             &String.starts_with?(elem(&1, 0), "breast/")
+           )
+
+    # Each target of these weights is in the data.
+    for age <- [1, 4, 10, 16],
+        {name, _} <- Human.target_weights(%{o | age: age}),
+        do: assert(World.People.Data.target(name))
+  end
+
+  test "a child has a flat chest: the shirt over the nipples is not in front of the shirt over the sternum" do
+    nipples =
+      for {v, d} <- World.People.Data.target("breast/nipple-point-decr"),
+          v < 13_380,
+          World.Vec.len(d) > 0.01,
+          into: MapSet.new(),
+          do: v
+
+    # How far the shirt over the nipples is in front of the shirt over the sternum, at the same height (m).
+    over = fn gender, age ->
+      [{_, _, items}] = Human.dressed(gender: gender, age: age, clothes: ["world_t_shirt"])
+      at_nipples = for {v, {_, y, z}, _} <- items, MapSet.member?(nipples, v), do: {y, z}
+      {y, _} = hd(at_nipples)
+      sternum = for {_, {x, ys, z}, _} <- items, abs(x) < 0.05, abs(ys - y) < 0.1, z > 0, do: z
+      (Enum.max(Enum.map(at_nipples, &elem(&1, 1))) - Enum.max(sternum)) / 10
+    end
+
+    # The shapes of a child of MakeHuman have a small bust, 6 to 8 mm in front of the sternum under a shirt.
+    for {gender, age} <- [{0.0, 6}, {1.0, 9}, {0.0, 12}], do: assert(over.(gender, age) < 0, "#{gender} #{age}")
+    # A man has the muscles of his chest; from 16 years the chest is as MakeHuman makes it.
+    assert over.(1.0, 30) > 0.004 and over.(1.0, 16) > 0.004
+  end
+
+  test "a child has the height of its age, the head of a real child, the face and the skin of a child" do
+    # The height: the median of the CDC for the age, as a part of the height of the adult of World.
+    assert_in_delta Human.growth(10, 1.0), 138.6 / 176.8, 1.0e-9
+    assert_in_delta Human.growth(6.5, 0.0), (114.7 + 121.5) / 2 / 163.3, 1.0e-9
+    assert Human.growth(0, 1.0) == Human.growth(1, 1.0) and Human.growth(40, 0.0) == 1.0
+
+    size = fn opts -> Build.scene(Detail.with(:far, fn -> Human.person("p", opts) end), level: :far) end
+    [_, _, man] = size.(age: 30, gender: 1.0).extras["size"]
+    [_, _, woman] = size.(age: 30, gender: 0.0).extras["size"]
+
+    for {age, gender, adult} <- [{2, 1.0, man}, {6, 0.0, woman}, {9, 1.0, man}, {12, 0.0, woman}, {16, 1.0, man}] do
+      scene = size.(age: age, gender: gender)
+      [_, _, h] = scene.extras["size"]
+      assert_in_delta h / adult, Human.growth(age, gender), 0.03, "#{age} #{gender}"
+      # The head of a child is larger than the head of the shape of its height: the scale of its bone.
+      assert Enum.find(scene.nodes, &(&1.name == "head")).scale == Human.child_head(age, gender)
+    end
+
+    assert Human.child_head(6, 1.0) > 1.1 and Human.child_head(12, 1.0) > Human.child_head(16, 1.0)
+    assert Human.child_head(18.25, 1.0) == 1.0 and Human.child_head(30, 0.0) == 1.0
+
+    # The height of the head, chin to top, of a child of 6 and of a man: 86% in the 1977 study (18.4 cm of 21.4 cm).
+    head = fn age ->
+      figure = Detail.with(:near, fn -> Human.person("p", age: age, gender: 1.0, hair: nil, clothes: []) end)
+      skin = figure.nodes |> List.last() |> Map.fetch!(:primitives) |> Enum.find(&(&1.material == :skin))
+      bone = Enum.find_index(figure.skins |> hd() |> Map.fetch!(:joints), &(Enum.at(figure.nodes, &1).name == "head"))
+
+      zs =
+        for {{_, _, z}, js, ws} <- Enum.zip([skin.positions, skin.joints, skin.weights]),
+            {j, w} <- Enum.zip(Tuple.to_list(js), Tuple.to_list(ws)),
+            j == bone and w > 0.9,
+            do: z
+
+      (Enum.max(zs) - Enum.min(zs)) * Human.child_head(age, 1.0)
+    end
+
+    assert_in_delta head.(6) / head.(30), 0.86, 0.04
+
+    # The face and the body of a child: the younger head of MakeHuman, large eyes, full cheeks, no muscle
+    # on the chest; less at 12 years, none for an adult. The option shape comes after them.
+    o = %{gender: 1.0, age: 4, muscle: 0.5, weight: 0.5, height: 0.5, race: %{"asian" => 1.0}}
+    face = fn opts -> Map.new(Human.target_weights(Map.merge(o, opts))) end
+    assert face.(%{})["head/head-age-decr"] == 1.0 and face.(%{})["eyes/l-eye-scale-incr"] == 0.5
+    assert_in_delta face.(%{age: 12})["head/head-age-decr"], 0.3, 1.0e-9
+    refute Map.has_key?(face.(%{age: 30}), "head/head-age-decr")
+    refute Map.has_key?(face.(%{shape: %{"head-age-decr-incr" => 0.0}}), "head/head-age-decr")
+    assert Human.youth(5) == 1.0 and Human.youth(15) == 0.0 and Human.youth(10) == 0.5
+
+    # The skin of a boy is the skin of a girl of the same origin (the skin of a man has the shadow of a beard).
+    boy = Detail.with(:far, fn -> Human.person("p", age: 8, skin: "young_asian_male") end)
+    assert Enum.any?(boy.sources, &(&1 =~ "young_asian_female"))
+    man = Detail.with(:far, fn -> Human.person("p", age: 30, skin: "young_asian_male") end)
+    assert Enum.any?(man.sources, &(&1 =~ "young_asian_male"))
+    assert Detail.with(:far, fn -> Human.person("p", age: 8, skin: "young_asian_female") end).sources
+  end
+
   test "the numbers of a person give the weights of the targets" do
     o = %{gender: 0.25, age: 90, muscle: 0.25, weight: 0.75, height: 0.25, race: %{"asian" => 2.0, "african" => 2.0}}
     weights = Map.new(Human.target_weights(o))
@@ -697,7 +814,8 @@ defmodule World.HumanTest do
     end
 
     test "the targets and the assets" do
-      assert map_size(Data.targets()) == 856
+      # (856 targets of an adult, and 48 of a child and of a baby.)
+      assert map_size(Data.targets()) == 904
       [{i, {dx, _, _}} | _] = Data.target("asian-male-young")
       assert is_integer(i) and is_float(dx)
       assert Data.asset("eye_materials", "brown").mesh == nil
@@ -705,5 +823,41 @@ defmodule World.HumanTest do
       assert_raise ArgumentError, ~r/no asset/, fn -> Data.asset("hair", "none") end
       assert Data.dir() =~ "priv/makehuman"
     end
+  end
+
+  test "each level of a person stands on the ground and is as high: soles under the shoes, and the form of the hair at far" do
+    scene = fn opts, level -> Build.scene(Detail.with(level, fn -> Human.person("p", opts) end), level: level) end
+
+    for opts <- [
+          [clothes: ["mindfront_shoes_biker_boots_male"]],
+          [gender: 0.0, hair: "bob01"],
+          [hair: "afro01"],
+          [hair: nil, clothes: []]
+        ] do
+      [{_, near} | low] = for level <- [:near, :mid, :far], do: Scene.bounds(scene.(opts, level))
+
+      # The feet are on the ground (the shoes are a color on the feet at mid and far: 2.9 cm for these boots),
+      # and the top is at most 3 cm lower (it was 1.2 % with no hair at far).
+      for {lo, hi} <- low do
+        assert_in_delta elem(lo, 2), 0.0, 0.004
+        assert elem(near, 2) - elem(hi, 2) < 0.03 and elem(hi, 2) <= elem(near, 2) + 0.001
+      end
+    end
+
+    # A person at far is about 1 500 triangles: the eyes in 24, the hair in 80 at the most.
+    far = scene.([gender: 0.0, hair: "long01"], :far)
+    assert Scene.triangles(far) < 1_600
+    prims = Enum.flat_map(far.nodes, & &1.primitives)
+    assert [eyes] = Enum.filter(prims, &(&1.material == :eyes))
+    assert length(eyes.indices) == 72 and length(eyes.uvs) == length(eyes.positions)
+    # Long hair is long: a primitive in the color of the hair goes down from the head to the back, and its
+    # material is seen from the two sides.
+    assert [_scalp, hair] = Enum.filter(prims, &(&1.material == :color_long01))
+    assert div(length(hair.indices), 3) in 40..80
+    zs = Enum.map(hair.positions, &elem(&1, 2))
+    {_, {_, _, top}} = Scene.bounds(far)
+    assert Enum.max(zs) > top - 0.04 and Enum.min(zs) < top - 0.4
+    assert far.materials[:color_long01]["double_sided"]
+    refute far.materials[:skin]["double_sided"]
   end
 end

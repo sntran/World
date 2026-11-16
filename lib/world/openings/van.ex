@@ -346,8 +346,8 @@ defmodule World.Openings.Van do
   # A window: its glass at the root, of the kind `:window`.
   defp window(name, glass, sources), do: Assembly.new(name, glass, root: "glass", kind: :window, sources: sources)
 
-  # A door: its panel at the root, of the kind `:door` (the openings
-  # factory makes it, `World.Places.family_of/1`).
+  # A door: its panel at the root, of the kind `:door` (a joiner makes
+  # it, `World.Plan.trade/1`).
   defp door(name, panel, sources), do: Assembly.new(name, panel, root: "panel", kind: :door, sources: sources)
 
   defp add(door, name, part), do: Assembly.add(door, name, part, at: "origin", port: "origin")

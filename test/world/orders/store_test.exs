@@ -56,6 +56,7 @@ defmodule World.Orders.StoreTest do
     assert JSON.decode!(placed.resp_body)["errors"] == [%{"path" => "", "message" => "the store of the orders failed"}]
 
     assert service.(:post, "/build?hash=#{@hash}", "").status == 503
+    assert service.(:get, "/o/#{@hash}.glb", nil).status == 503
 
     call =
       ~s({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"place_order","arguments":{"order":{"blueprint":"strut","options":{"length":0.3}}}}})
@@ -63,5 +64,33 @@ defmodule World.Orders.StoreTest do
     {200, %{"result" => result}} = World.MCP.answer(call, nil, "https://world.mkfifo.com")
     assert result["isError"] == true
     assert [%{"message" => "the store of the orders failed; try again later"}] = result["structuredContent"]["errors"]
+
+    # The edits of an order: the store does not give the order.
+    assert World.Orders.Edits.place(@hash, [%{"set" => "options.length", "to" => 0.4}], "o") == {:error, :store}
+    edits = ~s({"edits": [{"set": "options.length", "to": 0.4}]})
+    assert service.(:post, "/orders/#{@hash}/edits", edits).status == 503
+
+    call =
+      ~s({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"edit_order","arguments":{"hash":"#{@hash}","edits":[{"remove":"options.length"}]}}})
+
+    {200, %{"result" => result}} = World.MCP.answer(call, nil, "https://world.mkfifo.com")
+    assert [%{"message" => "the store of the orders failed; try again later"}] = result["structuredContent"]["errors"]
+  end
+
+  @tag :tmp_dir
+  test "a store that keeps the new order and not its history: the edits of an order tell it", %{tmp_dir: tmp} do
+    {:ok, first} = World.Orders.place(%{"blueprint" => "strut", "options" => %{"length" => 0.3}}, "o")
+    script = Path.expand("../../../scripts/order-store.mjs", __DIR__)
+    program = Path.join(tmp, "store.sh")
+
+    File.write!(program, """
+    #!/bin/sh
+    case "$1 $2" in "put history/"*) exit 1 ;; esac
+    exec "#{script}" "$@"
+    """)
+
+    File.chmod!(program, 0o755)
+    with_store(program: program)
+    assert World.Orders.Edits.place(first["hash"], [%{"set" => "options.length", "to" => 0.4}], "o") == {:error, :store}
   end
 end

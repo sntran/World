@@ -19,17 +19,20 @@
 // The routes:
 //
 // - GET /blueprints: the blueprints and their options (the VM).
+// - POST /blueprints: a blueprint in data of a project (the VM keeps it).
 // - POST /orders: an order in JSON (the VM). 200 with the hash, the full
 //   order, the URLs of its files and the URL of its replay page; 422
 //   with the errors.
+// - POST /orders/HASH/edits: small changes to an order (the VM,
+//   World.Orders.Edits). 200 with the new hash and its history.
 // - POST /sets: a set of orders in JSON (the VM, World.Orders.Set). 200
 //   with the hash of the set and each variant (its hash, its order, its
 //   files and its lot); 422 with the errors.
 // - /mcp: the MCP server (the VM, World.MCP).
 // - GET /o/HASH.glb, .mid.glb, .far.glb, .parts.json, .receipt.json,
-//   .log.json, .replay.glb: the files of an order of POST /orders. The
-//   people of the world build the model (World.Run): the log tells what
-//   each one did, and the replay GLB has a node for each part.
+//   .solids.json, .log.json, .replay.glb: the files of an order of POST /orders. The
+//   people of the node build the model (World.Construction): the log
+//   tells what each one did, and the replay GLB has a node for each part.
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
 //   %23rrggbb&joint.NAME=DEGREES&target.LIMB=X,Y,Z: an order in the URL. A list is
 //   VALUE,VALUE, and OPTION.FIELD=VALUE is a field of an object.
@@ -43,10 +46,18 @@ const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
 // The suffix of each file: the level and the file of /build.
 const FILES = [
+  ['.mid.flat.glb', 'mid', 'flat', 'model/gltf-binary'],
+  ['.far.flat.glb', 'far', 'flat', 'model/gltf-binary'],
+  ['.flat.glb', 'near', 'flat', 'model/gltf-binary'],
+  ['.mid.light.glb', 'mid', 'light', 'model/gltf-binary'],
+  ['.far.light.glb', 'far', 'light', 'model/gltf-binary'],
+  ['.light.glb', 'near', 'light', 'model/gltf-binary'],
   ['.mid.glb', 'mid', 'glb', 'model/gltf-binary'],
   ['.far.glb', 'far', 'glb', 'model/gltf-binary'],
   ['.parts.json', 'near', 'parts', 'application/json'],
   ['.receipt.json', 'near', 'receipt', 'application/json'],
+  ['.solids.json', 'near', 'solids', 'application/json'],
+  ['.drawing.json', 'near', 'drawing', 'application/json'],
   ['.log.json', 'near', 'log', 'application/json'],
   ['.replay.glb', 'near', 'replay', 'model/gltf-binary'],
   ['.glb', 'near', 'glb', 'model/gltf-binary'],
@@ -94,14 +105,15 @@ export function orderOf(blueprint, params) {
 }
 
 // A request of the client to the VM, with its method, its body, the
-// headers that the VM reads, and the origin of the URLs.
+// headers that the VM reads, and the origin of the URLs. A stream of
+// events (text/event-stream) goes back as it comes.
 async function forward(request, vm, origin, path) {
-  const keep = ['content-type', 'mcp-protocol-version'].filter((name) => request.headers.has(name));
+  const keep = ['content-type', 'accept', 'mcp-protocol-version', 'last-event-id'].filter((name) => request.headers.has(name));
   const ask = new Headers(keep.map((name) => [name, request.headers.get(name)]));
   ask.set('x-world-origin', origin);
   const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer();
   const r = await vm(new Request(`http://vm${path}`, { method: request.method, headers: ask, body }));
-  const extra = Object.fromEntries(['content-type', 'allow'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
+  const extra = Object.fromEntries(['content-type', 'allow', 'cache-control'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
   return new Response(r.status === 202 ? null : r.body, { status: r.status, headers: headers(extra) });
 }
 
@@ -181,9 +193,20 @@ async function route(request, env, { vm, commit }) {
 
   if (path === '/orders' && request.method === 'POST') return forward(request, vm, url.origin, '/orders');
 
+  // The edits of an order that the VM has.
+  if (/^\/orders\/[0-9a-f]{32}\/edits$/.test(path) && request.method === 'POST') return forward(request, vm, url.origin, path);
+
+  if (path === '/blueprints' && request.method === 'POST') return forward(request, vm, url.origin, '/blueprints');
+
   if (path === '/sets' && request.method === 'POST') return forward(request, vm, url.origin, '/sets');
 
   if (path === '/mcp') return forward(request, vm, url.origin, '/mcp');
+
+  // The constructions of the people of the node, and the streams.
+  if (path === '/builds' && request.method === 'POST') return forward(request, vm, url.origin, '/builds');
+
+  // A pause, a resume, a cancel or a change of a construction.
+  if (/^\/builds\/[^/]+\/(pause|resume|cancel|change)$/.test(path) && request.method === 'POST') return forward(request, vm, url.origin, path);
 
   if (request.method !== 'GET' && request.method !== 'HEAD') return errors(405, 'the method is not allowed');
 
@@ -192,6 +215,8 @@ async function route(request, env, { vm, commit }) {
     if (!parts || !HASH.test(parts[0])) return errors(404, 'no such file');
     return file(request, env, vm, commit, parts[0], parts[1]);
   }
+
+  if (path === '/events' || path === '/census' || path === '/places' || path.startsWith('/places/') || path.startsWith('/builds/')) return forward(request, vm, url.origin, path + url.search);
 
   if (path.startsWith('/m/')) {
     const parts = split(path.slice(3));

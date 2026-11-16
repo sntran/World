@@ -62,16 +62,16 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
               {x * 0.4, 1.42, 0.98},
               {x, 1.30, 0.62},
               {x, 1.22, 0.30},
-              {x, 0.98, 0.26},
+              {x, 0.98, 0.239},
               {x, 0.88, 0.44},
-              {x, 0.86, 0.78},
-              {x * 1.4, 0.40, 0.86},
+              {x, 0.86, 0.72},
+              {x * 1.4, 0.40, 0.82},
               {x * 1.4, 0.18, 0.88}
             ],
             0.016
           ),
-          tube.([{x * 0.4, 1.44, 1.03}, {x, 1.10, 0.92}, {x, 0.86, 0.78}], 0.018),
-          tube.([{x, 0.88, 0.50}, {x * 1.4, 0.45, 0.84}], 0.012)
+          tube.([{x * 0.4, 1.44, 1.03}, {x, 1.10, 0.92}, {x, 0.86, 0.72}], 0.018),
+          tube.([{x, 0.88, 0.50}, {x * 1.4, 0.45, 0.80}], 0.012)
         ]
       end
 
@@ -162,8 +162,8 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
         Shape.rows_y([
           {0.3, 0.86, 0.9, 0.08, 3},
           {0.45, 0.86, 0.94, 0.12, 4},
-          {0.75, 0.80, 0.86, 0.13, 4},
-          {1.0, 0.82, 0.9, 0.12, 3}
+          {0.75, 0.72, 0.795, 0.13, 4},
+          {1.0, 0.76, 0.85, 0.12, 3}
         ]),
         :seat,
         smooth: 2
@@ -171,7 +171,7 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
 
     fender =
       Shape.loft(
-        Shape.rows_y([{0.05, 0.86, 0.88, 0.07, 4}, {0.3, 0.84, 0.87, 0.1, 4}, {0.5, 0.80, 0.84, 0.1, 4}]),
+        Shape.rows_y([{-0.03, 0.86, 0.88, 0.07, 4}, {0.3, 0.84, 0.87, 0.1, 4}, {0.5, 0.80, 0.84, 0.1, 4}]),
         :black,
         smooth: 1
       )
@@ -181,8 +181,8 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
         sides: 6
       )
 
-    plate = Shape.box({-0.09, 0.02, 0.64}, {0.09, 0.03, 0.76}, :white)
-    tail = Shape.box({-0.05, 0.06, 0.82}, {0.05, 0.1, 0.86}, :light_back, round: 0.3, smooth: 1)
+    plate = Shape.box({-0.09, -0.05, 0.64}, {0.09, -0.04, 0.76}, :white)
+    tail = Shape.box({-0.05, -0.02, 0.82}, {0.05, 0.02, 0.86}, :light_back, round: 0.3, smooth: 1)
     lights = Part.new("tail_light_himalayan", :light, tail, [origin()], detail: :always)
 
     body =
@@ -216,11 +216,11 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
     bar =
       Shape.sweep(
         [
-          Vec.add(bar_c, {-0.42, -0.12, 0.08}),
+          Vec.add(bar_c, {-0.416, -0.12, 0.08}),
           Vec.add(bar_c, {-0.2, -0.05, 0.05}),
           bar_c,
           Vec.add(bar_c, {0.2, -0.05, 0.05}),
-          Vec.add(bar_c, {0.42, -0.12, 0.08})
+          Vec.add(bar_c, {0.416, -0.12, 0.08})
         ],
         0.0127,
         :black,
@@ -232,7 +232,7 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
           do:
             Shape.cylinder(0.017, 0.13, :rubber,
               sides: 12,
-              frame: Frame.new(Vec.add(bar_c, {s * 0.30, -0.10, 0.075}), {s * 1.0, -0.2, 0.0}, {0, 0, 1})
+              frame: Frame.new(Vec.add(bar_c, {s * 0.289, -0.10, 0.075}), {s * 1.0, -0.2, 0.0}, {0, 0, 1})
             )
 
     light =
@@ -253,14 +253,14 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
       for s <- [-1, 1],
           do: [
             Shape.sweep(
-              [Vec.add(bar_c, {s * 0.24, -0.06, 0.06}), Vec.add(bar_c, {s * 0.3, -0.04, 0.26})],
+              [Vec.add(bar_c, {s * 0.24, -0.06, 0.06}), Vec.add(bar_c, {s * 0.3, -0.04, 0.192})],
               0.006,
               :black,
               sides: 6
             ),
             Shape.box(
-              Vec.add(bar_c, {s * 0.3 - 0.05, -0.05, 0.25}),
-              Vec.add(bar_c, {s * 0.3 + 0.05, -0.03, 0.32}),
+              Vec.add(bar_c, {s * 0.3 - 0.05, -0.05, 0.182}),
+              Vec.add(bar_c, {s * 0.3 + 0.05, -0.03, 0.252}),
               :black,
               round: 0.3,
               smooth: 2
@@ -324,16 +324,22 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
       Part.new(
         "swingarm_himalayan",
         :swingarm,
-        [arms, cross, chain] |> List.flatten(),
+        List.flatten([arms, cross]),
         [
+          origin(),
           port("pivot", @pivot, {1, 0, 0}, {0, 0, 1}),
           port("axle", {0.0, ry, rz}, {1, 0, 0}, {0, 0, 1}),
-          port("shock", {0.0, 0.78, 0.46}, Vec.norm({0.0, 0.3, 1.0}), {0, 1, 0})
+          port("shock", {0.0, 0.78, 0.46}, Vec.norm({0.0, -0.3, -1.0}), {0, 1, 0})
         ],
         sources: ["A box section swing arm with a monoshock (linkage)."]
       )
 
+    # The chain turns with the sprocket of the rear wheel: a part of its own.
+    chain = Part.new("chain_520", :chain, chain, [origin()])
+
+    # The monoshock goes up from the linkage of the swing arm to the frame.
     Assembly.new("swingarm_himalayan", arm, root: "arm")
+    |> Assembly.add("chain", chain, at: "origin", port: "origin")
     |> Assembly.add(
       "shock",
       Stock.spring(0.06, 0.009, 0.28, 8, :paint, name: "monoshock_spring_himalayan") |> Map.put(:inside, true),
@@ -351,10 +357,11 @@ defmodule World.Vehicles.RoyalEnfieldHimalayan do
   end
 
   # The side stand at the left: at rest along the frame, at 80 degrees down
-  # on the ground.
+  # on the ground. It is shorter than its pivot is high, so the bike leans
+  # on it to the left.
   defp side_stand do
-    leg = Shape.sweep([{-0.12, 1.0, 0.30}, {-0.13, 0.72, 0.30}], 0.012, :black, sides: 8)
-    foot = Shape.box({-0.15, 0.70, 0.29}, {-0.11, 0.75, 0.31}, :black)
+    leg = Shape.sweep([{-0.12, 1.0, 0.30}, {-0.13, 0.735, 0.30}], 0.012, :black, sides: 8)
+    foot = Shape.box({-0.15, 0.715, 0.29}, {-0.11, 0.765, 0.31}, :black)
     Part.new("side_stand_himalayan", :stand, [leg, foot], [port("pivot", {-0.12, 1.0, 0.30}, {1, 0, 0}, {0, 0, 1})])
   end
 end

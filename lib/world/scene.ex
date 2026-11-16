@@ -48,6 +48,12 @@ defmodule World.Scene do
     `data` a list of `{r, g, b, a}` (0 to 1) for each point that goes
     into `COLOR_0` as it is: numbers for a shader of an app, not colors
     (`World.Surface`).
+
+    A primitive with only points, normals and indices can be `packed`
+    (`World.Scene.pack/1`): its points and its normals as binaries of
+    floats of 64 bits (`%{count, positions, normals}`), and `positions`
+    and `normals` empty. A binary goes from one process to another with no
+    copy, and takes less memory than a list of tuples of floats.
     """
     defstruct material: :paint,
               positions: [],
@@ -61,22 +67,93 @@ defmodule World.Scene do
               fur_dirs: nil,
               targets: nil,
               uvs2: nil,
-              data: nil
+              data: nil,
+              packed: nil
   end
+
+  @doc """
+  The primitive with its points and its normals as binaries
+  (`World.Scene.Primitive`), when it has only points, normals and
+  indices; else the same primitive.
+  """
+  def pack(
+        %Primitive{
+          uvs: nil,
+          uvs2: nil,
+          joints: nil,
+          weights: nil,
+          colors: nil,
+          fur: nil,
+          fur_dirs: nil,
+          targets: nil,
+          data: nil,
+          packed: nil
+        } = p
+      ) do
+    %{
+      p
+      | positions: [],
+        normals: [],
+        packed: %{count: length(p.positions), positions: floats(p.positions), normals: floats(p.normals)}
+    }
+  end
+
+  def pack(%Primitive{} = p), do: p
+
+  @doc "The primitive with its points and its normals as lists (`pack/1`)."
+  def unpack(%Primitive{packed: %{positions: pos, normals: nor}} = p),
+    do: %{p | positions: points(pos), normals: points(nor), packed: nil}
+
+  def unpack(%Primitive{} = p), do: p
+
+  @doc "The points of a primitive (packed or not)."
+  def positions(%Primitive{packed: %{positions: pos}}), do: points(pos)
+  def positions(%Primitive{positions: pos}), do: pos
+
+  defp floats(list), do: for({x, y, z} <- list, into: <<>>, do: <<x::float-64, y::float-64, z::float-64>>)
+  defp points(bin), do: for(<<x::float-64, y::float-64, z::float-64 <- bin>>, do: {x, y, z})
 
   @doc """
   A primitive from the corners of `World.Mesh.triangles/2` (three for
   each triangle). Corners with the same point and normal share an index.
   """
-  def primitive(material, corners) do
-    {indices, {_, verts, _}} =
-      Enum.map_reduce(corners, {%{}, [], 0}, fn {p, n}, {seen, verts, count} ->
-        key = {round6(p), round6(n)}
+  def primitive(material, corners), do: primitive(material, [corners], & &1)
 
-        case seen do
-          %{^key => i} -> {i, {seen, verts, count}}
-          _ -> {count, {Map.put(seen, key, count), [key | verts], count + 1}}
-        end
+  @doc """
+  A primitive from many lists of corners, with no list of all of them:
+  `place` gives the corners of each item of `items` when it comes to it
+  (a mesh at its place), so only the points of the primitive are live,
+  not each corner. The same primitive as `primitive/2` of all the corners
+  in their order. A corner can be `{point, normal, color}` (the color of
+  a point of a mesh, `World.Mesh.finish/3`): the primitive then has the
+  color of each point. A corner can be `{point, normal, color, uv}` (a
+  mesh with maps, `World.Mesh.map/2`): the primitive then has the UV of
+  each point, and corners with the same point and normal and two UVs are
+  two points.
+  """
+  def primitive(material, items, place) do
+    {indices, verts, _seen, _count, colors?, uvs?} =
+      Enum.reduce(items, {[], [], %{}, 0, false, false}, fn item, acc ->
+        Enum.reduce(place.(item), acc, fn corner, {indices, verts, seen, count, colors?, uvs?} ->
+          {p, n, c, uv} =
+            case corner do
+              {p, n} -> {p, n, nil, nil}
+              {p, n, c} -> {p, n, c, nil}
+              four -> four
+            end
+
+          {rp, rn} = {round6(p), round6(n)}
+          key = if uv, do: {key(rp, rn), uv}, else: key(rp, rn)
+
+          case seen do
+            %{^key => i} ->
+              {[i | indices], verts, seen, count, colors?, uvs?}
+
+            _ ->
+              {[count | indices], [{rp, rn, c, uv} | verts], Map.put(seen, key, count), count + 1, colors? or c != nil,
+               uvs? or uv != nil}
+          end
+        end)
       end)
 
     verts = Enum.reverse(verts)
@@ -85,9 +162,32 @@ defmodule World.Scene do
       material: material,
       positions: Enum.map(verts, &elem(&1, 0)),
       normals: Enum.map(verts, &elem(&1, 1)),
-      indices: indices
+      indices: Enum.reverse(indices),
+      colors: if(colors?, do: colors(Enum.map(verts, &elem(&1, 2)))),
+      # A corner with no UV in a primitive with UVs is at the first texel.
+      uvs: if(uvs?, do: Enum.map(verts, &(elem(&1, 3) || {0.0, 0.0})))
     }
   end
+
+  # The colors of the points of a primitive. A corner with no color is
+  # white. When one color has an alpha, each color has one: a color with
+  # none is whole.
+  defp colors(list) do
+    if Enum.any?(list, &match?({_, _, _, _}, &1)) do
+      Enum.map(list, fn
+        nil -> {255, 255, 255, 1.0}
+        {r, g, b} -> {r, g, b, 1.0}
+        color -> color
+      end)
+    else
+      Enum.map(list, &(&1 || {255, 255, 255}))
+    end
+  end
+
+  # The key of a corner in the map of the points seen: a binary of its six
+  # numbers (smaller than two tuples of boxed floats; the same keys:
+  # 0.0 and -0.0 are two keys in each).
+  defp key({a, b, c}, {d, e, f}), do: <<a::float-64, b::float-64, c::float-64, d::float-64, e::float-64, f::float-64>>
 
   defp round6({x, y, z}), do: {Float.round(x / 1, 6), Float.round(y / 1, 6), Float.round(z / 1, 6)}
 
@@ -136,7 +236,7 @@ defmodule World.Scene do
         []
 
       {%{skin: nil} = n, i} ->
-        for f <- places(frames[i], n.instances), p <- n.primitives, pt <- p.positions, do: Frame.point(f, pt)
+        for f <- places(frames[i], n.instances), p <- n.primitives, pt <- positions(p), do: Frame.point(f, pt)
 
       {n, _} ->
         skinned(n, Enum.at(skins, n.skin), frames)

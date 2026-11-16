@@ -11,9 +11,11 @@
 //
 // An error ends the port with the exit status 1.
 
-// The keys of World.Orders.Store: orders/HASH.json, and the proposals of
-// new drawings, proposals/HASH.json.
-const KEY = /^(orders|proposals)\/[0-9a-f]{32}\.json$/;
+// The keys of World.Orders.Store: orders/HASH.json, the history of the
+// edits of an order, history/HASH.json, the proposals of new
+// drawings, proposals/HASH.json, and the blueprints in data of the
+// projects, blueprints/HASH.json.
+const KEY = /^(orders|history|proposals|blueprints)\/[0-9a-f]{32}\.json$/;
 
 const key = (value) => {
   if (!KEY.test(value ?? '')) throw new Error(`not a key of an order: ${value}`);
@@ -24,7 +26,7 @@ const text = (value) => new Response(value).body;
 
 // The first `total` bytes of the input. The VM does not end the input
 // of a port, so the length comes in the arguments.
-async function read(stdin, total) {
+export async function read(stdin, total) {
   const bytes = new Uint8Array(total);
   const reader = stdin.getReader();
   let n = 0;

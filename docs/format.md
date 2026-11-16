@@ -215,7 +215,9 @@ The build writes three levels of each model:
   level, 12,000 or fewer in the mid level, and 5,000 or fewer in the far
   level. A house can have 300,000 in the near level (one part for each
   brick and tile), 20,000 in the mid level and 12,000 in the far level.
-  A test of each model checks it.
+  A monument (a statue of 32 m, seen up close and from far) can have
+  100,000 in the near level, 12,000 in the mid level and 300 in the far
+  level (plan 0004, D2). A test of each model checks it.
 
 ## A house
 
@@ -299,6 +301,35 @@ of bricks. A town has thousands of them.
   of 0.9 by 2.1 m. The front room is at near and mid; its collision
   boxes are at each level.
 
+### A tube house that the people build
+
+A tube house (`priv/blueprints/tube_house.json`, the skills of
+`World.Skills.House`; plan 0002, D4) is built as on a real site in Việt
+Nam. The kind is `house`; the origin is on the ground at the center of
+the lot, the front to +y. Its nodes, with `repeat` over the floors and
+the sides:
+
+| Node | Skill | Trade | What it makes |
+|---|---|---|---|
+| `plan` | `house_plan` | engineer | The sizes, the grid of the columns, the openings: data only. |
+| `slab_0` | `footing` | concreter | The footings (at near), the ground beams and the ground slab: the root. |
+| `col_F` | `column` | concreter | The columns of floor F, after the slab under it. |
+| `slab_F` | `slab` | concreter | The beams and the slab over floor F, with the well of the stair and the balcony. |
+| `wall_S_F_1` to `_3` | `course` | mason | The three bands of the infill of bricks of side S of floor F, a band after the band under it; all the walls at the same time. |
+| `plaster_S_F` | `plaster` | plasterer | The render of the wall. |
+| `paint_S_F` | `paint` | painter | The paint on the render. |
+| `opening_S_F` | `opening` | joiner | The doors, the windows and the shutter of the wall. |
+| `flight_F` | `flight` | concreter | The stair to the floor over it (at near). |
+| `iron_F` | `iron` | smith | The rail of the balcony over floor F (not at far). |
+| `roof` | `roof` | roofer | The parapet, and a roof of corrugated steel. |
+
+The frame of a floor goes up while the masons lay the walls of the floor
+under it. The bricks under a render and the render under the paint are
+temporary: the stream shows them, and the model leaves them out. At far
+the model is the faces of the walls from the ground to the roof, the
+slab of the roof and the roof: at most 300 triangles for a house of
+three floors.
+
 ### The street kit
 
 The pieces of a street of Vũng Tàu (`World.Places.StreetKit`, W21), each
@@ -322,13 +353,744 @@ of the parts:
   (`den_duong`) and the bin of 240 L (`thung_rac_240l`, its lid on a
   hinge of the role `open`).
 
+### A house and a street from rules
+
+A house of a street of Vũng Tàu that looks real is a drawing from
+rules (`World.Town.House`; `docs/plans/0016-a-house-and-a-street.md`):
+a model in parts from edits (below, "A model in parts"), with maps.
+`World.Buildings.Lot` (above) stays for a town of thousands of cheap
+houses.
+
+- **The request** is a map. Each key has a default:
+
+  | Key | Values | Default |
+  |---|---|---|
+  | `type` | `cap4` (one storey, a roof of steel), `pho2_flat` (two storeys, a terrace), `pho2_tile` (two storeys, red tiles), `pho3` (three storeys, a terrace) | `pho2_flat` |
+  | `family` | `old` (1985 to 2000), `steel` (2000 to 2015), `modern` (2015 to now) | by the seed |
+  | `use` | `home`, or `bar` (a bar, a restaurant or a shop: an open front with a counter and a shelf of light, a sign, an awning) | `home` |
+  | `width`, `depth` | 3 to 8 m, 6 to 30 m | 5 and 16 |
+  | `road` | The width of the road (m): it gives the reach of each balcony (TCVN 9411:2012) | 13 |
+  | `seed` | A whole number | 1 |
+  | `left`, `right` | `shared` (a bare wall at a neighbor) or `free` | `shared` |
+  | `wall`, `ground`, `rail`, `sign`, `awning`, `vents`, `roof`, `age`, `flip` | A choice of the rules (`World.Town.House.request/1` shows each) | by the family and the seed |
+
+- **The parts.** `NAME_mat_tien` (the front: cells of 2.5 cm, an image
+  of 2048, and the thin rails and the awning in a detail at near),
+  `NAME_than` (the body with its side walls and its back) and
+  `NAME_mai` (the roof: a terrace with its parapet, the head of the
+  stair and a tank; or tiles; or steel sheet). The kind is `house`.
+- **The axes.** x across the front, the front wall at y = 0, the street
+  to +y, z up from the sidewalk. The floor is 0.3 m over the sidewalk.
+  The balcony, the sign, the awning and the step go out over the
+  sidewalk.
+- **The extras.** `house` is the request with each choice made, and
+  `lot` has the width and the depth.
+- **A street** (`World.Town.Street`): `plan/1` gives a row of lots (each
+  the request of its house, with `at`, its place along the street), and
+  `drawing/2` the drawing of a row of 5 houses at the most on its
+  sidewalk, with `street` (the plan) in its extras. A project makes a
+  longer street lot by lot, or part by part (the option `only`, a range
+  of lots). The sidewalk is 3 m wide, or `sidewalk` (2 m to 10 m): on a
+  sidewalk of 4.5 m or more, a parasol with a table stands in front of
+  each house with the use `bar`.
+- **A real street** (`docs/plans/0018-quang-trung-street.md`): the plan
+  takes `lots`, a list with what is known of each lot (keys of the
+  request of a house; `number` and `name`, which the plan keeps; and
+  `same`, for a lot that is one building with the lot before it). The
+  seed makes each other choice. A survey (`World.Town.Survey`,
+  `priv/surveys/NAME.json`) has a row for each lot of a street, with a
+  mark for each value (where it comes from, or `GUESS`) and its
+  sources; `lots/1` gives the lots of its rows. The street Quang Trung
+  of Vũng Tàu is the first (`World.Town.QuangTrung`).
+- **A building that is not a house of a row** (`World.Town.Building`;
+  `docs/plans/0018-quang-trung-street.md`, section 11): a hotel, an
+  office, a villa. The request is a short list of words, and `drawing/1`
+  gives a model in parts from edits, as a house. The words:
+  - `plan`: the corners `[x, y]` (m), counterclockwise seen from above.
+    Or `size`: `[long, deep]`, a rectangle with its front (side 1) on
+    y = 0 and the street at +y. Side `k` goes from corner `k` to the
+    next one. The way along a side goes from the left to the right for
+    a person in front of it.
+  - `storeys`, `ground` (the height of the ground storey to its
+    lintel), `band` (between the ground storey and the first floor) and
+    `storey` (from a floor to the next one). `heights/1` gives the
+    floors, the eaves and the top.
+  - `colors`: `wall`, `trim`, `band`, `cornice`, `glass`, `frame`,
+    `rail`, `roof`, `deck`, `ground`, `letters`.
+  - `fronts`: a list. A front is a part of one side (`side`, `from`,
+    `to`, `inset`) with a `style` and a count of equal `bays`:
+    `windows` (a window in a hollow at each bay and each storey, or at
+    `places`; `ledges` with the boxes of the air conditioners;
+    `pilasters`), `loggias` (a loggia taken away at each storey over
+    the ground storey, a door of glass at its back, a rail of iron
+    (`cross`, `bars` or `none`) in a detail of the near level,
+    pilasters, the bands, and at the ground storey openings between
+    `piers`, `windows` or a `blank` wall), `glass` (a grid of glass) or
+    `plain`. A front can stand `out`, and have a `paint` and a `band`.
+  - `cornice` (`high`, `out`), and `roof`: `flat` behind a `parapet`, or
+    `tiles` on a plan of four square corners (`high`, `inset`, and
+    `gables`: the short sides with a gable; each other end has a
+    slope).
+  - `porches`: a slab on columns with steps and a door of glass; a
+    `board` on its front, or a rail round a `terrace` on it.
+  - `letters`: a line of text (A to Z) from tubes, in front of a wall or
+    of the cornice, or on the top of the cornice. The letters are a part
+    of their own, with small cells.
+  - `more`: edits for a part (`than`: the body, `mai`: the roof, `chu`:
+    the letters, `nen`: the ground), for a thing that the rules do not
+    have.
+
+  A value that is not possible is an error with its message.
+  `World.Town.Wall` has the tools: a wall with its own axes (the way
+  along it and the height), and on it a box, a paint and a window.
+
+  ```text
+  {"name": "khach_san", "size": [39.7, 20.3],
+   "fronts": [{"style": "loggias", "inset": 0.4, "bays": 9},
+              {"side": 2, "style": "loggias", "inset": 0.4, "bays": 4},
+              {"side": 3, "style": "windows", "bays": 8, "band": true}],
+   "roof": {"kind": "tiles", "high": 3.0},
+   "letters": [{"text": "GRAND HOTEL", "z": 12.1}]}
+  ```
+- **A house of a village of old Việt Nam** (`World.Village.House`;
+  `docs/plans/0019-world-serves-the-projects.md`, 7.1): a frame of
+  round posts of wood, `bays` in a row (1 to 7, each `bay` wide), a
+  `porch` along the front, and a large roof with four slopes that sag,
+  with its corners lifted (`curve`, 0 to 1). The house is on a low base
+  of earth with two steps, or on `stilts` with a stair. The `roof` is
+  `thatch` (steep) or `tiles` (with rows); the `wall` is `wood`
+  (planks), `bamboo` (woven) or `earth`. The front wall has a door in
+  the middle bay (two for an even count of bays) and a window with
+  upright bars in each other bay. `sizes/1` gives the frame, the floor,
+  the eaves and the ridge. The drawing has four parts: the frame
+  (`_khung`), the two long slopes with the ridge and the hips (`_mai`),
+  the two end slopes (`_dau_hoi`) and the ground (`_nen`).
+- **A thing of the yard of a village** (`World.Village.Yard`; plan
+  0019, 7.1; for Tre): one part from edits, from its `kind`: `well` (a
+  round wall of brick on a platform of stone, with water), `fence`
+  (bamboo: a post each meter, two rails, a slat each 11 cm; one panel
+  at the mid and far levels), `gate` (two pillars of brick, a beam with
+  a red board for the name, a small roof of tiles), `haystack` (straw
+  round a pole), `bridge` (bamboo: a pole to walk on, a rail, two
+  trestles of crossed poles; its site holds it) and `jar` (a large jar
+  of glazed clay with water). The request has `name`, `sources`,
+  `length` (a fence or a bridge, along x, 1 to 20 m) and `color` (the
+  main color). The thing stands on z = 0, with its middle at x = 0 and
+  y = 0.
+- **An appliance of a home** (`World.Home.Appliance`; plan 0019, step
+  5; for DIY): a body of the `size` of the request (`[wide, deep,
+  high]` in m; the common size of the `kind` by default) with the
+  details of the real thing, as one part from edits. The kinds:
+  `fridge` (`doors`: `french`, `top` or `single`, each with its seams
+  and its handles), `freezer` (a chest with a lid), `range` (four
+  burners, knobs, an oven door with a window), `microwave` (a window
+  and keys), `dishwasher`, `washer` and `dryer` (a round door),
+  `water_heater` (a tank with its pipes), `tv`, `battery` (a label and
+  two terminals), `power_station` (handles, a screen, outlets),
+  `inverter` (fins), `solar_panel` (the lines of its cells), `busbar`
+  (a stud for each of its `ports`), `water_tank`, `ac_indoor` and
+  `ac_outdoor` (the two units of a split air conditioner: the indoor
+  unit with its outlet and its vane, the outdoor unit with the round
+  grille of its fan, on two rails) and `box`. The front
+  is to +y, and the thing stands on z = 0. The extras have `tags`: the
+  place of the label of the real thing. A kind builds in about 1 s at
+  the mid level.
+- **A very small model for a view from far** (`World.Mini`; plan 0019,
+  step 10; for Humans Must Die): a thing as a few thick solid shapes
+  (12 at the most), as one part from edits with the look `flat`: no
+  image, flat faces, a color at each point. The request has `kind`,
+  `name`, `sources`, `scale` (0.1 to 10; 1 is the real size) and
+  `color` (the main color). The 26 kinds: `house`, `block`, `tower`,
+  `office`, `factory`, `data_center`, `barn`, `stilt_house`,
+  `lighthouse`; `jet`, `airliner`, `helicopter`; `carrier`,
+  `destroyer`, `container_ship`, `tanker`, `patrol_boat`;
+  `police_car`, `ambulance`, `fire_truck`, `tank`, `missile_battery`;
+  `turbine`; `tree_broad`, `tree_pine`, `tree_palm`. The front is to
+  +y, and the thing stands on z = 0 (a ship floats at z = 0). The
+  cells are large (the longest size of the thing is 56 cells at the
+  near level, 40 at mid and 28 at far; 10 m at the most), and the
+  budgets are 900, 450 and 220 triangles. The file `flat` of the order
+  is one mesh: about 220 triangles and 6 KB in gzip at the far level,
+  in less than 1 s.
+- **Each of these rules is a blueprint**, so an order and the edits of
+  an order work for its things as for each other model (there is no
+  MCP tool for one kind of model): `street_house`, `building`,
+  `village_house`, `village_thing`, `appliance` and `mini`. The options
+  of the order are the keys of the request, and the full order has the
+  full request (each choice that the rule made), so an edit can change
+  one of them: `{"blueprint": "appliance", "options": {"kind":
+  "fridge"}}`, then `{"set": "options.doors", "to": "single"}`. The
+  blueprint `street` is one side of a street: its options are `seed`,
+  `road`, `count` or `length`, `depth`, `sidewalk`, `lots`, and
+  `types`, `families`, `widths` as lists of `[value, weight]`; its full
+  order has the plan (each lot with the full request of its house), and
+  its model is the houses of the lots `only`: `[first, last]` (the
+  first five lots by default, five lots at the most).
+
+### The words of IFC
+
+The words of a construction are the words of IFC (ISO 16739, the format
+of the data of buildings), so that a model can go to IFC later:
+
+| World | IFC |
+|---|---|
+| A node of a drawing (an element) | `IfcElement` (a part of a node: `IfcBuildingElementPart`) |
+| An assembly | `IfcElementAssembly` |
+| The task of a node | `IfcTask` |
+| `after` and the waits of a node | `IfcRelSequence` |
+| The person of a trade | `IfcLaborResource` |
+| A construction | `IfcWorkSchedule` |
+
+## A blueprint in data
+
+A blueprint can be data (`priv/blueprints/NAME.json`,
+`World.Orders.Blueprint.from_data/1`): an architect writes it, and World
+needs no new code for it. It has a `name`, a `doc`, `sources`, `params`
+(the options of an order), `sizes` and a `drawing`.
+
+- **A param** has the keys of an option (`name`, `type`, `default`,
+  `min`, `max`, `unit`, `values`, `item`, `fields`, `doc`). The types:
+  `number`, `integer`, `choice`, `boolean`, `color`, `list`, `object`,
+  `text` (at most `max` bytes, 200 by default), `sources` (the source of
+  each name of the `sizes`), `skill` (a value that the skill `skill`
+  checks: the light of a tower) and `materials` (the `materials` of a
+  drawing, below). A param with no `default` is required.
+- **In the drawing**, a value `{"param": NAME}` takes the value of the
+  option, and `{"sum": [...]}` the sum of its numbers.
+- **The sizes** go into the extras of the model (`"sizes"`, `World.Sizes`):
+  each with its value, its `unit` and its source, or "estimate (no
+  source)". A size with `row` gives each item of a list as the list of
+  the values of its fields, and a size `of` some options gives the list
+  of their values (the platform of a tower: its width and its height). The texts of the sources also go after the
+  `sources` of the drawing, in the order of their names.
+
+A project can give its own blueprint in data (plan 0002, D1): in the
+order itself (`{"blueprint": {...}, "options": {...}}`), or by its hash
+after `POST /blueprints` keeps it (`{"blueprint": {"hash": HASH}}`).
+`World.Orders.Blueprint.check_data/2` checks it: its keys, its name, each
+param, and its drawing with the default of each param (the data of each
+skill), each error with its path from `blueprint`. The full order has the
+blueprint itself, so its hash names the blueprint and its options. The
+skills that a blueprint can use are in `docs/skills.md`.
+
+A model of the catalog can be an order of a blueprint
+(`priv/drawings/NAME.json` with `blueprint` and `options`): the statue
+of the site on Núi Nhỏ is
+`priv/drawings/tuong_chua_kito_vua_cong_truong.json`, an order of the
+blueprint `statue`.
+
+## A sculpture
+
+A sculpture is a part from a list of edits (`World.Skills.Sculpt`, the
+skill `sculpt` of a sculptor; `docs/plans/0008-model-from-edits.md`).
+Each edit is a simple shape at a place, with a mode: it adds to the
+sculpture, takes away from it, or paints its surface. The edits are the
+source: World makes the part again from them at each level.
+
+The data of the skill:
+
+- `edits`: a list of 1 to 10,000 edits, in their order;
+- `groups`: lists of edits with a name, for the edits of the shape
+  `group` (below);
+- `details`: at most 16 sculptures of their own in the same part ("The
+  details of a sculpture" below);
+- `ports`: the ports of the part (as in "A drawing");
+- `sources`: at most 16 texts;
+- `budget`: the most triangles at `near`, `mid` and `far` (12 to
+  1,000,000 each). With a budget, an edge collapse by quadric error
+  metrics takes the faces to the budget, and keeps the shape and the
+  borders of the materials. A flat part keeps few faces, also when the
+  budget has room for more (a collapse that moves the surface by less
+  than a fiftieth of a cell costs nothing). The budget goes to the
+  parts of the sculpture by the cost of their collapses, so a small
+  part with hard edges (a chimney on a roof) keeps its corners;
+- `cells`: the size of the cells at `near`, `mid` and `far` (m, 0.001 to
+  10). A part thinner than about two cells can go. With no `cells` for a
+  level that has a budget, World chooses them: the largest cells that
+  give about 1.5 times the budget before the collapse, but at most half
+  the thinnest edit that adds or takes away. With neither, the cells of
+  the level (below);
+- `bake`: the side of the image of the maps at `near`, `mid` and `far`
+  (64, 128, 256, 512, 1024, 2048 or 4096 texels; "The maps of a
+  sculpture" below). A level with a bake needs a budget;
+- `occlusion` (true by default), `dirt` and `wear` (0 to 1, 0 by
+  default): the look of the surface from its shape, in the maps of a
+  level with a bake ("The maps of a sculpture" below);
+- `strands`: the strands of a sculpture of hair, at a level with a
+  bake ("The strands of a sculpture" below);
+- `look`: `real` (by default) or `flat`. With `flat`, the model has flat
+  faces, each with one color (the color of the edits at its middle),
+  and no image at any level (a `bake` is not used): the look of a game
+  with low-poly models. Give a small `budget`: each triangle shows.
+
+An edit has its `shape` and its `size`, and these keys:
+
+- `at`, `axis`, `up`: the place of the shape and its turn (its z on
+  `axis`, its y on `up`), as a port; with no `axis`, z up, and with no
+  `up`, y to the front (z, when the axis is along y);
+- `mode`: `add` (by default), `subtract`, `crop` (only the part of the
+  sculpture in the shape stays, and the cut face has the material and
+  the color of the edit) or `paint` (the shape gives its material to the
+  surface in it, and does not change the shape);
+- `blend` (m, 0 by default, at most 10): with 0 the edge between the edit
+  and the sculpture is sharp; with more, the joint is smooth (the
+  quadratic smooth minimum), and the edit reaches `blend` past its shape
+  and no more;
+- `blend_type`: `soft` (by default: a round joint) or `hard`: a flat
+  slope across the joint, as wide as the `blend` (a chamfer: the weld of
+  two plates, the bevel of a cut);
+- `opacity` (0 to 1, 1 by default; for an edit of the mode `paint`): the
+  part of its color, its finish and its glow that the paint gives. With
+  a half, the surface has the mean of its color and the color of the
+  paint (a glaze, a stain, dirt);
+- `material`: a role of the palette (`priv/palette.json`);
+- `color` (`#rrggbb`): the color of the surface of the edit. The color at
+  a point of the surface is the fold of the edits in their order, as its
+  shape is: an edit that adds takes the color to its own across its
+  `blend` (a soft border for a smooth joint, a sharp one for a hard
+  joint); an edit that paints gives its color in its shape, with a soft
+  border as wide as its `blend`; an edit that takes away gives its color
+  to the surface that it cuts. An edit that adds with no color is white.
+  The mesh has the color of each point (`COLOR_0`), and the color of the
+  material multiplies it: with a white material (a role with the color
+  `#ffffff` in the `materials` of the drawing), the colors are as they
+  are written. A border of two colors of one material is smooth; a border
+  of two materials follows the cells. The cut to a budget keeps the
+  points where the colors change (a point there has a cost for a move,
+  as large as the change), when the budget keeps many of the faces; and
+  the color of a point is even over the faces round it (half the color
+  at the point, half the mean of the colors at the centers of its
+  faces). So a small spot keeps its border at near, and a pattern
+  smaller than the faces of mid or far is its mean color there, with no
+  noise.
+
+- `finish`, `roughness`, `metal`, `glow`: the finish of the surface of
+  the edit, for a level with maps (`bake`, below). `roughness` and
+  `metal` are from 0 to 1, as in the palette; `finish` is a name for the
+  two: `plastic`, `shiny`, `rough`, `metal`, `shiny_metal` or
+  `rough_metal` (the numbers of the edit come first). `glow` (0 to 1) is
+  the light that the surface gives: its color times the glow. The finish
+  at a point is the fold of the edits, as the color is: an edit that
+  adds gives its finish to its surface (with none of its own, the finish
+  of its material in the palette); an edit that paints or takes away
+  gives the parts that it has, with a soft border as wide as its
+  `blend`. So a part of one surface is metal, or wet, or a lamp;
+- `surface`: the surface of the edit, for a level with maps: the name
+  of a kind, or `{"kind": NAME, "scale": M}` (the size of one mark of
+  the kind in meters, 0.0005 to 10). A surface is a small relief, a
+  change of the color and a change of the roughness from place to
+  place, in the axes of the edit (the grain of a leg goes along the
+  leg, and turns with it; for a box, along its longest side). Only the
+  maps have it: the mesh does not change. A mark smaller than 1.5
+  texels of the image does not show at that level. An edit that paints
+  or takes away with a surface gives it in its shape (a patch of rust).
+  The kinds (`World.Sculpt.Texture`):
+
+  | Kind | What it is | One mark (the scale by default) |
+  |---|---|---|
+  | `wood` | Rings and streaks along the z of the edit. | A ring: 6 mm. |
+  | `bark` | Ridges along z, with dark cracks. | A ridge: 30 mm. |
+  | `brushed` | Fine lines along z: a metal from a mill. | A line: 2 mm. |
+  | `cast` | Small bumps: a cast or forged metal. | A bump: 3 mm. |
+  | `plaster` | Soft bumps and patches: a wall. | A bump: 10 mm. |
+  | `concrete` | Patches, fine grains and some pits. | A patch: 20 mm. |
+  | `fabric` | The threads of a cloth, on the side that the surface faces. | A thread: 2 mm. |
+  | `weave` | Strips over and under, flat across z and pressed to the shape: a basket. | A strip: 20 mm. |
+  | `leather` | A net of fine creases. | A cell: 4 mm. |
+  | `rubber` | A fine grain with no shine. | A grain: 3 mm. |
+  | `leaves` | Clumps, light at their tops and dark between them. | A clump: 120 mm. |
+  | `stone` | Bumps of three sizes and spots. | A bump: 50 mm. |
+  | `rust` | Patches of rust on a metal: brown, rough, no metal there. | A patch: 30 mm. |
+  | `hair` | Strands that go out and down from the z of the edit, as hair from the top of a head: locks, single strands, some that catch the light. | 1.5 mm (along a strand; 377 strands go round the z). |
+  | `palm` | 40 blades of a leaf of palm round the z of the edit, each with its tone and its fibers, with a dark line between two blades: a nón lá. | 3 mm (along a fiber). |
+- `raise` (m, from -0.1 to 0.1; for an edit of the mode `paint`, and at
+  most its `blend`): the surface moves out by that much in the shape of
+  the edit, or in with less than 0, with a slope across its border as
+  wide as its `blend`. The relief follows the surface under it: a
+  cylinder across a body makes a round scale on each side, a thin box
+  through a fin makes a ray, a thin box along a body makes a groove.
+  With maps for a level (below), a raise of less than half a cell is in
+  the maps only, not in the mesh.
+
+An edit can be only at some levels:
+
+- `levels`: a list of `near`, `mid` and `far` (all by default): the
+  edit is in the sculpture only at those levels. The inside of a large
+  model (a room, a well for a stair, an opening for a window) is at
+  `near` only: at `mid` and `far` the model is solid, and a paint is in
+  the place of the opening.
+
+An edit can have copies, so a few edits make much:
+
+- `mirror`: `x`, `y` or `z`, or a list of them: the copy of the edit
+  across that plane of the sculpture (through its origin); two planes
+  give four copies, three give eight (an edit with the mode
+  `crop` and a mirror keeps only what is in the two shapes: for a cut
+  of two sides, write one outline with the two sides);
+- `repeat`: `{"count": N}` (2 to 1,000) gives a ring of N copies round
+  the z of the sculpture; `axis` and `center` give another axis, `angle`
+  the degrees from one copy to the next (360 / N by default), and `move`
+  a step `[x, y, z]` from one copy to the next (with a move and no
+  angle, a row; with both, a stair or a spiral). The mirror of each copy
+  comes after it.
+
+A group is a list of edits with a name, in `groups` of the data
+(`{"scale": [...edits...]}`; no group in a group). An edit of the shape
+`group` uses it: `{"shape": "group", "group": NAME}` with `at`, `axis`
+and `up` (the place of the origin of the group), a `scale` (its sizes,
+its places and its blends times the scale), and a `mirror` and a `repeat`
+(each copy is the whole group). A sculpture has at most 10,000 edits
+with their copies.
+
+```json
+{"groups": {"eye": [
+   {"shape": "ball", "size": [0.012], "color": "#f4f0e6"},
+   {"shape": "ball", "size": [0.006], "at": [0.008, 0, 0], "color": "#101010"}]},
+ "edits": [
+   {"shape": "ellipsoid", "size": [0.05, 0.12, 0.05], "color": "#a88840"},
+   {"shape": "group", "group": "eye", "at": [0.04, 0.08, 0.015], "mirror": "x"},
+   {"shape": "ellipsoid", "size": [0.004, 0.012, 0.01], "at": [0.05, -0.05, 0],
+    "blend": 0.004, "color": "#846034", "repeat": {"count": 6, "axis": [0, 1, 0]}}]}
+```
+
+After the cut to its budget, each point of the mesh goes back onto the
+surface of the edits, and takes the normal of the surface there
+(`World.Sculpt.Finish`): a mesh of few triangles is on the true shape and
+has its smooth light, and a hard edge of hard edits stays hard.
+
+| Shape | Size (m) |
+|---|---|
+| `ball` | `[r]` |
+| `box` | `[hx, hy, hz]`: the half sizes |
+| `round_box` | `[hx, hy, hz, r]`: the half sizes, and the radius of its edges (at most the least half size) |
+| `capsule` | `[h, r]`: a segment from z = -h to z = h, and its radius |
+| `cylinder` | `[r, h]`: from z = -h to z = h |
+| `cone` | `[r1, r2, h]`: the radius `r1` at z = -h and `r2` at z = h |
+| `ring` | `[big, r]`: a torus round z, the radius of its circle and of its tube |
+| `ellipsoid` | `[rx, ry, rz]` |
+| `superellipsoid` | `[rx, ry, rz, e]`: `|x/rx|^e + |y/ry|^e + |z/rz|^e = 1`, the power `e` from 2 (the ellipsoid) to 64 (near a box) |
+| `tube` | `{"points": [[x, y, z], ...], "radii": [r, ...]}`: round cones through 2 to 256 points, with the radius at each point; two points next to each other are not at one place |
+| `wedge` | `[hx, hy, hz]`: a box of these half sizes with a slope from its top edge at the back (y = -hy) to its bottom edge at the front (y = hy): a ramp, a roof, a blade |
+| `prism` | `[r, h, n]`: `n` flat sides (3 to 12) round z, each `r` from the axis, from z = -h to z = h: with 6, a nut or a pencil |
+| `pyramid` | `[hx, hy, h]`: a base of `2 hx` by `2 hy` at z = -h, and its point at z = h |
+| `extrude` | `{"outline": [[x, y], ...], "depth": d}`: a closed outline of 3 to 256 points in the plane of x and y of the edit, `d` deep along its z (half to each side). `round` (0 to half of the depth): the radius of the edges of its two flat ends. `smooth` (0 to 3): each time, each corner of the outline is cut, so a few points make a curve. The side of a car, the section of a hull, a gear, a letter |
+| `revolve` | `{"profile": [[r, z], ...]}`: a closed profile of 3 to 256 points (`r` of 0 or more), turned round the z of the edit; `smooth` as for the extrude. A bottle, a bowl, a baluster, a wheel. A profile away from the axis makes a hollow thing |
+
+The levels: cells of 2 cm at near, 8 cm at mid and 32 cm at far. The
+grid of each level is the same for each sculpture, so a brick (8 × 8 × 8
+cells) keeps its place when an edit changes, and the node keeps the
+piece of each brick in a cache by the hash of its place, its cells and
+its edits: the next build of the same edits, or of the edits after a
+change of one, makes only the bricks that the change reaches. The cache
+also keeps the bricks under each cell of the tree by the hash of its
+short list of edits, so the walk visits only the cells that a change
+reaches. A sculpture can also be live (`World.Sculpt.Live`): a process that takes a
+change of one edit at a time, and sends the new pieces of its surface as
+they come.
+
+A thin wall (the hull of a boat, the side of a bowl) needs cells of
+half its thickness or less at each level: with larger cells its two
+faces are one, and the mesh is broken there. Give the same `cells` to
+each level then: the levels use the same bricks from the cache, and
+only their budgets and their images are different. A small budget
+cannot keep many thin parts: put them in a detail that the far level
+does not have (`levels`, below).
+
+A stone with a hole and a handle:
+
+```json
+{"name": "stone", "skill": {"sculpt": {
+  "edits": [
+    {"shape": "ellipsoid", "size": [0.4, 0.3, 0.25], "material": "stone_wash"},
+    {"shape": "cylinder", "size": [0.08, 0.4], "axis": [1, 0, 0], "up": [0, 0, 1], "mode": "subtract", "blend": 0.02},
+    {"shape": "tube", "size": {"points": [[-0.2, 0, 0.2], [0, 0, 0.4], [0.2, 0, 0.2]], "radii": [0.03, 0.03, 0.03]}, "blend": 0.03}
+  ],
+  "budget": {"near": 20000, "mid": 2000}
+}}}
+```
+
+### The maps of a sculpture
+
+With `bake` for a level, the sculpture has a color map and a normal map
+at that level (`World.Sculpt.Bake`), and its mesh has no color for each
+point. The maps come from the field of the edits, not from the mesh:
+
+- the triangles of the mesh are in charts: a chart is a patch of
+  triangles that are next to each other on the surface and face about
+  one direction (less than 30 degrees from the first one, and less than
+  35 degrees across an edge), seen flat from that direction. A texel
+  has one size on the surface for each triangle of the image, a long
+  thin one too, and nothing is cut at an edge inside a patch;
+- the color of a texel is the color of the edits at its place on its
+  triangle;
+- the normal of a texel is the gradient of the field there, in the
+  tangent space of glTF (the mesh has a tangent for each point);
+- a chart has a border of two texels with the values of the texels next
+  to it. An app with antialiasing reads the maps as far as a pixel past
+  the edge of a triangle: it reads the same surface there, when a pixel
+  is not more than two texels. So show each level at the distance where
+  that holds (a level has its own image).
+
+So the detail of the model is the detail of the edits at the size of a
+texel. A mesh of 600 triangles shows a pattern of colors and a round
+shape, and an edit that is smaller than the cells (a bump, a groove)
+shows in the light, but not in the outline of the model. The image must
+have a place for the triangles of the budget: about 20 texels for each
+triangle or more (the check gives the least side). About half of the
+image is in the triangles; the rest is the borders of the charts. With an edit that is
+thinner than the cells must be, give `cells`: with no `cells`, World
+takes them from the thinnest edit (the ring of 8 mm below would make
+cells of 4 mm). The two images are
+PNG files in the GLB, on each material of the sculpture, with a sampler
+that makes no smaller copies of the image (each level has its own
+image). The GLB has a third image, the finish: the roughness of each
+texel in its green and the metal in its blue (the finish of each edit,
+or of its material), and the occlusion in its red. When an edit glows,
+it has a fourth one (the light of each texel).
+
+The occlusion is how open each place is: on an open face the light of
+the sky comes from each side, and in a crease (the foot of a post, the
+arch over a wheel) less of it comes. It comes from the field along the
+normal of the place, so it is in the model for each app, with no light
+of the app (`"occlusion": false` for none: then the GLB has the finish
+only when an edit has one). `dirt` makes the creases darker and more
+rough, as on a thing that is not clean. `wear` makes the sharp edges
+lighter and less rough, as on a thing that is not new. In a model, the roles of the materials of a baked sculpture have
+its maps: another node of the same model must use other roles.
+
+```json
+{"name": "stone", "skill": {"sculpt": {
+  "edits": [
+    {"shape": "ellipsoid", "size": [0.4, 0.3, 0.25], "material": "stone_wash", "color": "#b8b0a0"},
+    {"shape": "ball", "size": [0.06], "at": [0.3, 0.1, 0.12], "mode": "subtract", "blend": 0.01, "color": "#6a6458"},
+    {"shape": "ring", "size": [0.2, 0.004], "at": [0, 0, 0.2], "blend": 0.004}
+  ],
+  "cells": {"near": 0.01, "mid": 0.02, "far": 0.04},
+  "budget": {"near": 4000, "mid": 1000, "far": 200},
+  "bake": {"near": 1024, "mid": 512, "far": 256}
+}}}
+```
+
+### The strands of a sculpture
+
+A mass with the surface `hair` looks as clay with lines: its outline is
+smooth. The key `strands` of a sculpture makes the outline and the
+borders of the mass from single strands
+(`docs/plans/0017-people-with-parts-from-edits.md`, section 9):
+
+```text
+"strands": {"shells": 3, "length": 0.005,
+            "thin": [{"shape": "ball", "size": [0.04], "at": [0.09, 0, -0.13], "mode": "paint", "blend": 0.02}]}
+```
+
+- **The cover.** The color image of each level has an alpha: the cover
+  of each place. A place with the surface `hair` has half of the alpha
+  with the lowest strand and all of it with the highest one. A place
+  of another surface is whole. The material has the alpha mode `MASK`
+  (a cut at 0.5) and two sides.
+- **`thin`** (a list of edits of the mode `paint`): the shapes where
+  the hair is thin. In a shape, the low strands have
+  less than half of the alpha and are cut: the line of the hair on the
+  brow, the tips of long hair. The `blend` of a shape is the width of
+  the change, and its `opacity` is how thin the hair is there (1 by
+  default: at its middle no strand stays). A shape of `thin` is not
+  part of the field: it makes no surface.
+- **`shells`** (1 to 8, 3 by default) and **`length`** (m, 0.0005 to
+  0.05, 0.006 by default): copies of the mesh, out along its normals,
+  the last one out by `length`. The points of a shell have less alpha
+  in their color (`COLOR_0` with four numbers; the points of the mass
+  have 1), so a shell shows only the strands that are higher than its
+  part of the way out. All the shells are there at `near`, one at
+  `mid`, and none at `far`. The shells are over the budget of the
+  level: with 3 shells, a level has four times its budget.
+- A level with no bake has no strands.
+
+### The details of a sculpture
+
+A sculpture has cells of one size. A part that is much smaller than the
+rest (a whisker, a tooth, a ring on a hand) needs much smaller cells,
+and small cells for the whole sculpture cost much time. A detail is a
+sculpture of its own in the same part: `details` is a list of at most 16
+objects, each with:
+
+- `edits`: its own list of edits (it can use the `groups` of the
+  sculpture);
+- `cells` and `budget`: as for the sculpture; with a budget and no
+  cells, the cells fit the budget and its thinnest edit;
+- `levels`: the levels that have the detail (`near`, `mid`, `far`; all
+  by default). A whisker is not in the far level.
+
+The meshes of a detail are in the part of the sculpture, on the same
+bones and in the same maps (a level with a bake needs the budget of
+each of its details). A detail and the sculpture do not blend: they are
+two surfaces, one in the other, as two sculptures of Dreams are.
+
+```json
+{"name": "cat_head", "skill": {"sculpt": {
+  "edits": [{"shape": "ellipsoid", "size": [0.06, 0.07, 0.055], "color": "#8a7a68"}],
+  "budget": {"near": 3000, "mid": 800},
+  "details": [{
+    "edits": [{"shape": "tube", "mirror": "x", "color": "#f0ece0",
+               "size": {"points": [[0.03, 0.05, -0.01], [0.07, 0.06, -0.012], [0.11, 0.055, -0.02]],
+                        "radii": [0.0008, 0.0006, 0.0004]}}],
+    "budget": {"near": 300},
+    "levels": ["near"]
+  }]
+}}}
+```
+
+### A model in parts
+
+A large model (a statue, a building) is not one sculpture. One
+sculpture has cells of one size, and its cost is its surface in cells:
+a face that needs cells of 2 cm and a robe of 250 m2 that needs cells
+of 5 cm do not go together. So the model is some nodes, each a
+sculpture of its own, as the elements of a scene of Dreams and as the
+parts of a statue that a workshop makes away from its site:
+
+- each node has its `edits`, its `cells`, its `budget` and its `bake`:
+  small cells and a large image only where the eye looks;
+- each node with a `bake` uses a role of its own for its edits, so it
+  has its own images. The palette has the roles `part_01` to `part_16`
+  for that (white, a roughness of 0.6): give each node one of them, and
+  put them in the `materials` of the drawing;
+- the parts do not blend: a part goes into the next one at a line of
+  the thing (a cuff, a collar, a hem), and they overlap a little;
+- with no `at`, a node is at the origin of the first node: write the
+  edits of each part in the axes of the model. The extras `place` of
+  the drawing move the whole model (the ground under a base);
+- World makes the sculptures of a drawing at the same time, each in a
+  process of its own with its crew (`World.Crew`), the largest first;
+  the gate of the node (`World.Sculpt.Gate`) lets some of them work at
+  one time.
+
+A relief of a paint that is half a cell or more is in the mesh, and a
+thin relief in the mesh costs many triangles: keep the raise of a
+paint under half a cell, so it is in the maps only.
+
+### The sculptures of the catalog
+
+Some models of the catalog are a sculpture each, from edits only: no
+code of World makes their kind (`priv/drawings/NAME.json`; plans 0011
+and 0012). They are the examples of the format. The first ten are not
+copies of real things; the next four have the sizes of real things,
+each with its source; the last three are real things from their
+sources, each with its form too (plan 0013); the last one is a
+landmark in parts (plan 0014).
+
+| Model | What | It shows |
+|---|---|---|
+| `carp_edits` | A carp of 0.5 m | Groups, a mirror, a repeat, details, the body plan `fish`. |
+| `robot_edits` | A robot of 0.95 m | Hard edges, a finish of metal, a glow, the body plan `biped`. |
+| `dog_edits` | A dog of 0.5 m | The body plan `quadruped`: it walks and trots. |
+| `bird_edits` | A bird of 0.3 m | The body plan `bird`: it walks, pecks and opens its wings. |
+| `car_edits` | A car of 3.7 m | Hard edges, windows by a paint, wheels by a mirror, lamps that glow. |
+| `house_edits` | A house of 5 m by 6 m | Flat walls and a roof with few faces, a small chimney. |
+| `tree_edits` | A tree of 5 m | Tubes for the trunk and the branches, a soft crown. |
+| `chair_edits` | A chair of 0.9 m | Thin parts (the slats of the back), a paint for the cushion. |
+| `teapot_edits` | A teapot of 0.19 m | A ring, a tube, a band of gold, flowers by a repeat. |
+| `hammer_edits` | A hammer of 0.3 m | A handle of wood and a head with the finish of metal, in one mesh; the surfaces `wood`, `cast` and `brushed`. |
+| `thung_chai_edits` | A basket boat of Việt Nam (thúng chai), 1.8 m across | A `revolve` of a profile, the surface `weave`, a rim with lashings by a repeat, dirt and wear. Its wall is 3.5 cm thick: the same cells of 12 mm at each level. |
+| `thung_chai_flat_edits` | The same boat | The look `flat`: flat faces, one color each, no image. |
+| `ghe_nhua_thap_edits` | A low plastic stool, 26 cm high | An `extrude` of its side view, cut to the same view from the other side (`crop`), with arches taken away. |
+| `cuc_nong_may_lanh_edits` | The outdoor unit of an air conditioner, 550 by 658 by 275 mm | Paints with a raise for a grille, louvers and seams; a paint with the surface `rust`. |
+| `ghe_danh_ca_vung_tau` | A motor fishing boat of Vũng Tàu with a beak (ghe mỏ nhọn), 11 m long: the class C5-T2-A of the Blue Book of Coastal Vessels (1967) | A hollow hull: a `tube` along the sheer, the same tube smaller taken away, a `crop` by the side view (the sheer) and a `crop` by the tube again, so the decks and the cabin end at the hull. The same cells at each level (a thin wall needs two cells), and a detail that the far level does not have. The port `waterline`. |
+| `toyota_vios` | A Toyota Vios (XP150), 4425 by 1730 by 1475 mm | The side view as an `extrude`, with a `crop` by the plan and a `crop` by the section (each with a blend: round edges); the glass and the pillars by paints of side views; wheels as a `revolve` with a `repeat` for the spokes. |
+| `cay_bang` | A cây bàng (Terminalia catappa) of a street, 9 m high | Tiers of level branches by a `repeat`, leaves as rings of small flat clumps with the surface `leaves`, old leaves by paints with an `opacity`. |
+| `non_la_edits`, `mu_bao_hiem_edits`, `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | The parts of a person: a nón lá, a half helmet, three masses of hair | The kind `prop` and the port `crown` (above, "The ports and the props of a person"): rings by paints with a raise, a thin shell with the same cells at each level, a strap as a tube through a smooth line, the surfaces `hair` and `palm`, and `strands` for the hair. |
+| `nha_pho_2_tang_vung_tau` | The most common town house of Vũng Tàu: two storeys, 5 m by 16 m, a terrace | From the rules of `World.Town.House` (above, "A house and a street from rules"): a roll-up door between piers of granite, a sign with no words at the balcony, a rail of stainless tubes in a detail, the head of the stair and a tank. |
+| `quang_trung_4_10`, `quang_trung_12_18`, `quang_trung_20_26` | The block of the numbers 4 to 26 of the street Quang Trung of Vũng Tàu: 12 lots of bars, restaurants and shops, 70 m | From the survey of the street (`World.Town.QuangTrung`): the order, the numbers and the uses are true, the corner house is white with three storeys, and the seed makes each other choice. Open fronts, signs, awnings, parasols on a sidewalk of 5.5 m. |
+| `cang_vu_vung_tau` | The office of the port of Vũng Tàu (Cảng vụ Hàng hải), 2 Quang Trung: 5 storeys, 21.3 m on the street, a corner tower of 21.2 m | The mass is an `extrude` of its footprint of OpenStreetMap, with the roof behind its parapet taken away. Each front is a wall with its own axes: windows as paints in hollows, loggias taken away, ledges, a bay of glass with its grid. Two porches, a board with four letters from tubes, two masts in a detail. From two photos of 2014. |
+| `khach_san_grand_canh_nam` | The south wing of the Grand Hotel of Vũng Tàu, on Quang Trung at the corner of Nguyễn Trãi: 3 storeys, 39.7 m by 20.3 m | From a request of `World.Town.Building` (above, "A house and a street from rules"; the request is in `World.Town.QuangTrung`): two fronts of loggias (9 bays and 4 bays), each with a loggia at two storeys, a door of glass at its back, a pilaster, a pier, the brown bands; two fronts of windows. The rails of iron are 390 thin tubes in a detail of the near level. The roof of tiles has four slopes, 3 m high. A bed behind a low wall, with the stone of the name, as `more` edits. From a photo of 2015 and a photo from the air. |
+| `khach_san_grand` | The main block of the Grand Hotel of Vũng Tàu, behind its fore court: 3 storeys, 37.2 m by 24 m | From a request of `World.Town.Building`: a front of 8 bays of balconies with rails of upright bars, over a ground storey of windows; a porch 35 m wide with a terrace on it (a rail round it); the name GRAND HOTEL in red letters on the top of the cornice (a part of its own); a roof of tiles behind a terrace, with a gable to Nguyễn Du and a slope at the other end. The pergola of the terrace and the tower of the stair are `more` edits. From two photos of 2014, a photo from the air and a photo at night. |
+| `hai_dang_vung_tau_edits` | The lighthouse of Vũng Tàu on Núi Nhỏ from edits: the look of its photos (the tower that the people build, with its stair inside, is `hai_dang_vung_tau`) | The round body with the corbel of its gallery, the two deep rings, the wall of the lantern and its dome are each a `revolve` of a profile. Four ribs are an `extrude` of a side view. The lantern is a cylinder of glass with bars. The rail of 72 bars, the ladder, the rod and the flag are a detail with cells of 12 mm at near and mid. The sizes are those of the tower of the catalog; the forms are from about ten photos. |
+| `day_pho_vung_tau` | A row of five houses of Vũng Tàu on their sidewalk, 26 m long | From `World.Town.Street`: each type and each family, wall to wall; 16 parts, each with its image. |
+| `tuong_chua_kito_vua` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key by paints with a raise; groups with a scale for the head and the hands. Its inside is at near only (`levels`): a room in the base, the dome, six open windows, and a stair of 133 steps round an open well of eight sides: the steps as one edit with a `repeat` (a turn and a move), the handrail as one tube through 67 corners, and the balusters in a detail with cells of 12 mm. Each balcony has a rail of bars. |
+
+### A sculpture with bones
+
+With `bones`, the sculptor makes a figure in place of a part
+(`World.Sculpt.Bones`): one skinned mesh that follows the bones, as the
+skin of an animal does. The data:
+
+- `bones`: a list of 1 to 64 bones, parents first. Each has a `name`
+  (small letters, digits and `_`), a `head` and a `tail` (points in the
+  axes of the sculpture) and, but for the first bone (the root), a
+  `parent`: the name of a bone before it. A bone turns round its head;
+- `bone_blend` (m, 0.001 to 10; half the mean length of the bones by
+  default): each point follows the bone nearest to it (the distance to
+  the line from its head to its tail), and each other bone less as it is
+  farther, down to nothing at `bone_blend` more than the nearest. A
+  wider blend gives a softer bend at a joint. The bones of a point are
+  the bones of the edit that makes its surface: the bones with a part of
+  their line inside the shape of that edit. So the wing of a bird
+  follows the bones of the wing, and the body next to it does not. An
+  edit with no bone inside it has all the bones (a long fin on a body
+  bends with the body);
+- `plan`: the name of a body plan (`fish`, `bird`, `biped` or `quadruped`). The bones must
+  have the names of the bones of the plan ("Species and body plans"),
+  and can have more. The left side of a body (`_l`) is at -x: x is to
+  the right side. The plan gives its limbs, its joints, its ports (a port of
+  the data with the same name replaces it), its animations (`swim`
+  and `idle` of a fish, the y of the sculpture to the front) and its
+  speeds (`swim_speed` in the list of the parts); `gait` gives its
+  numbers (`period`, `stride`, `lift`). A bird has `walk`, `idle`,
+  `peck` and `flap`, and `walk_speed`. A `biped` is a body on two legs
+  with the names of the bones of a person of World (`pelvis`,
+  `spine_01`, `neck_01`, `head`, and on each side `upperarm`,
+  `lowerarm`, `hand`, `thigh`, `calf`, `foot`): a puppet, a robot, a
+  person of a sculptor. It has `walk`, `run` and `idle`, with
+  `walk_speed` and `run_speed`: the feet go in turn, each flat on the
+  ground for its part of the step; the hips are as high as the legs let
+  them; the arms come down from their rest (out to the sides or down)
+  and swing against the legs. Its ports are `ground`, `head`, `grip_l`
+  and `grip_r`. A `quadruped` is a body on four legs with the names of
+  the bones of a four-legged animal of World (`pelvis`, `spine_01`,
+  `neck_01`, `head`, and on each side `front_upper`, `front_lower`,
+  `front_foot`, `hind_upper`, `hind_lower`, `hind_foot`). It has `walk`
+  (one foot after the other: the left hind foot, the left front foot,
+  the right hind foot, the right front foot), `trot` (the two feet of a
+  diagonal at one time) and `idle`, with `walk_speed` and `trot_speed`.
+  Make its legs with a small bend at rest, so each foot reaches the two
+  ends of its path. Its ports are `ground`, `collar`, `back` and
+  `mouth`;
+- `clips`: at most 16 clips from keys. A clip has a `name`, a `length`
+  (s, 0.1 to 60) and 1 to 64 `keys`; a key has its time `at` (s) and a
+  `pose`: a bone to its turns from its rest in degrees (`flex` round the
+  hinge of the bone, `spread` to the side, `twist` round its length).
+  The pose between two keys is the mean by the time; before the first
+  key and after the last, the pose of that key. The clip has 12 frames
+  in a second.
+
+The hinge of a bone is the x of the sculpture (the z, for a bone along
+x), or the hinge of its plan. A port of the data is on the bone nearest
+to it. The normals of a sculpture with bones are the normals of its
+surface at each point: a hard edge of hard edits is not hard there.
+
+A worm of two bones that lifts its head:
+
+```json
+{"name": "worm", "skill": {"sculpt": {
+  "edits": [{"shape": "capsule", "size": [0.1, 0.02], "axis": [0, 1, 0], "color": "#b06a50"}],
+  "bones": [
+    {"name": "body", "head": [0, -0.1, 0], "tail": [0, 0, 0]},
+    {"name": "neck", "parent": "body", "head": [0, 0, 0], "tail": [0, 0.1, 0]}
+  ],
+  "clips": [{"name": "look", "length": 2, "keys": [
+    {"at": 0, "pose": {}},
+    {"at": 1, "pose": {"neck": {"flex": 40}}},
+    {"at": 2, "pose": {}}]}]
+}}}
+```
+
 ## A statue
 
-A statue (`World.Statues`, W13 of Vũng Tàu; the blueprint `statue`) is a
+A statue (`priv/blueprints/statue.json`, W13 of Vũng Tàu; the blueprint
+`statue`, the skills of `World.Skills.Statue`) is a
 figure of a person (`World.People.Human`, at the level `mid`) in a pose,
-in a long robe, cast as one solid by `World.Cast`, on a base: a plaza, a
-block, a terrace and a dome. The kind is `statue`. The origin is on the
-ground at the center of the base, and the figure looks to +y.
+in a long robe, cast as one solid by `World.Cast`, on a round plinth and
+a base. The kind is `statue`. The origin is on the ground at the center
+of the base, and the figure looks to +y.
 
 - **The figure.** The pose `arms_out` puts the hands straight out to
   the sides, `lift` degrees over the level; any other pose is a pose of
@@ -336,108 +1098,115 @@ ground at the center of the base, and the figure looks to +y.
   when it has one) is `height` over its feet. With `span` (the hands, tip
   to tip) and `hand` (a hand from the wrist to the tip of the middle
   finger), the arms out to the sides become shorter or longer along x
-  from the shoulders: a statue has the proportions of its sculptor. In a
-  robe, each hand is open and flat, the palm to the front, from the wrist
-  to the tip of the hand of the person: a palm (0.5 of the length of the
-  hand, 0.54 wide), the four fingers together side by side (the middle
-  one to the tip), and the thumb up and out from the top of the palm,
-  each a cast of its own on the fine grid.
-- **The head.** In a robe, with `head`, the head is smaller than the
-  head of the person, so that `head` m go from its top to the end of its
-  beard (with `beard`; the beard is 0.32 of the head under the chin). At
-  near the face comes from the full mesh of the person (its eyes, its
-  nose, its lips, its ears). The hair is a solid mass round the skull
-  down to the shoulders, with the face open; with `beard`, a beard along
-  the jaw to a point, and a mustache.
-- **The robe.** A straight column with a flat front from the neck to the
-  feet; the mantle, a cape on the shoulders with its lower edge level at
-  `mantle` m over the feet (by default 0.886 of the height of the
-  shoulders), a point at the front center under the edge, and a square
-  collar band round the foot of the neck; the sleeves, with their top
-  along the arm, a cuff band at the wrist, and a large triangle of cloth
-  that falls from the cuff to the side of the body at the edge of the
-  mantle; and two long panels at its sides, from the edge of the mantle
-  to a little over the feet. With `heart`, the Sacred Heart in relief on
-  the chest (its center `heart` m over the feet): two lobes and a point,
-  and a flame over them, 0.0846 of the figure high in all and 0.037 wide
-  (1.6 by 0.7 m on Núi Nhỏ), a cast of its own on the fine grid, half out
-  of the face of the shell. In a robe, the cast takes only the
-  hair, the head and the neck over the collar, and the hands out of the
-  sleeves from the person: a statue is a column, not a body in clothes.
+  from the shoulders: a statue has the proportions of its sculptor. At
+  mid a mitt goes round each hand (the fingers together).
+- **The carved head and hands (near).** A face cannot be cast in cells of
+  0.32 m. At near the head (with its eyes) and the open hands are carved
+  from the full mesh of the person at near, in the same pose and at the
+  same scale (the hands stretch out from the wrists to the span), and the
+  triangles of their bones go out of the cast. The hair stays in the cast
+  (plan 0004, D4).
+- **The robe.** A column from the neck to the feet, wide sleeves along
+  the bones of the arms, and two long panels at its sides. The triangles
+  of the person that the robe covers go out of the cast.
 - **The cast.** One closed shell of the role `stone_wash` (concrete
   with a render of washed stone) or `stone` (granite), on a grid of cells
-  of 1/100 of the height at near and 1/56 at mid. In a robe, the head and
-  each hand are casts of their own on a finer grid: 1/1000 of the height
-  at near (3 cm for 32 m) and 1/320 at mid (10 cm). Each triangle marks the
+  of 1/100 of the height at near and 1/56 at mid. Each triangle marks the
   cells round its points; a fill from the edge of the grid gives the
   outside, and the rest is the solid. Near the surface each cell has its
   signed distance: the distance to the plane of the nearest triangle
   that its foot falls in, or else the distance to the nearest point with
   the side of the sum of the normals near it. Surface nets give the mesh,
   after a repair of the field so that each edge is in two faces. A part
-  thicker than one cell stays.
+  thicker than one cell stays. The cast is steps that casters do at the
+  same time: the marks and the distances of the bands of triangles from
+  the feet up (the pours), in any order, with one result (the least
+  distance wins, then the least index of the triangle and of its
+  sample); one fill of the outside and one field; the mesh in slabs.
 - **Hollow** (near only). A wall of `wall` m (at the least two cells), a
   spiral stair (the part `cau_thang`: `steps` treads, 12 to a turn, round
   an open well of `well` m with a rail at its edge, each tread from the
-  well 0.1 m into the wall, from the dome to the floor of the
-  shoulders), the openings of the `windows` (each cut 0.12 m wider at
-  each side than the window, so that a small window has cells to cut), a
-  balcony in the top of each arm, and the shaft of the stair down to the
-  dome. Mid and far are solid: the inside is closed to the player.
-- **The windows** (`windows`, a list of `{z, width, height}` in a line
-  down the center of the robe): a frame of 0.25 m round each, out of the
-  face, with a square lattice of bars (3 up, 5 across) in the opening of
-  a hollow statue at near; else a dark panel in the frame.
+  well 0.1 m into the wall, from the plinth to the floor of the
+  shoulders), the `windows`
+  in the front of the robe with a grille, a balcony in the top of each
+  arm, and the shaft of the stair down to the plinth. Mid and far are
+  solid: the inside is closed to the player.
 - **The halo.** A ring behind the head with the three arms of a cross,
-  `rays` straight metal rays (role `steel`) at each side of the ring, 10
-  degrees apart round the level, out to 1.52 of its radius (7 m across a
-  ring of 4.6 m on the photos), and `rods` thin rods up from its top,
-  10 degrees apart round the vertical (the lightning rods).
-- **The base**, from the ground up (each part can be 0: none):
-  - the plaza (`plaza_radius`): a round floor with `plaza_steps` steps in
-    rings up to the block, each `plaza_rise` high and `plaza_tread` deep;
-  - the block (`base_width`, `base_depth`, `base_height`): round corners
-    (`corner`), a band at its foot and at its top, its middle in a recess,
-    its front curved in between its corner piers (`base_curve` at the
-    middle); on each side of `reliefs` a panel of gold (role `gold`,
-    `panel_width` by `panel_height`) with its figures in relief (near
-    only), in a white frame with a sill, and a band of letters over it
-    (`letters`); under the panel of the front, `grilles` small square
-    windows with a grille of bars (at near);
-  - the terrace on the block (`lan_can`): a pierced balustrade of
-    `terrace_rail` m along its 8 sides and its curved front (a foot
-    rail, a top rail and rings between them at near; a low wall at
-    mid);
-  - the dome under the feet (`dome_width` across its faces,
-    `dome_height`, `dome_sides` faces, one face to the front): a drum
-    and faces that curve in to the feet, and a narrow stair
-    (`dome_stair`) up its front (blocks at near, a wedge at mid).
+  and `rays` metal rays (role `steel`) round its top half.
+- **The base.** A block with round corners (`corner`), a band at its
+  foot and at its top, a frame round a panel on each side, and on each
+  side of `reliefs` a row of figures in relief (near only); the rail
+  round its top (`lan_can`: a low wall at mid, rails and balusters at
+  near), and the round plinth on it.
 - **The far form.** The robe, the arms from hand to hand, the head, the
   halo ring and the base: at most 300 triangles (R9 of plan 0008).
+
+The option `method` (`today` by default, or `1974`) is the method of
+the site (plan 0006, `World.Method`): the same model, other days and
+other stages (`docs/world.md`, "A job, from start to end").
 
 The extras: `"sizes"` (each size of the order with its value, its unit
 and its source; a size with no source has the source `"estimate (no
 source)"`), `"weathering"` (0 to 1, the stains of the sea air, for the
 shader of an app), `"site"` (a statue is cast fixed to its site: no check
-of a stand), the ports (`light` at the corners of the terrace, `door` at
-the back of the block, and with `hollow` the `stair` and a `view` at each
-balcony), the collision boxes (the plaza, the block, the dome, the robe,
-the arms, the head), and
+of a stand), the ports (`light` at the corners of the base, `door` at its
+back, and with `hollow` the `stair` and a `view` at each balcony), the
+collision boxes (the base, the plinth, the robe, the arms, the head), and
 the corners of the base for `World.Surface`. The receipt of an order of a
-statue has the list `sizes`.
+statue has the list `sizes`. The source `scale` is not the source of one
+size: it says where the scale of the sizes comes from.
 
-The statue on Núi Nhỏ (`tuong_chua_kito_vua`) is the first order: 32 m
-from the feet to the top of the halo, the hands 18.4 m apart, the hands
-2.2 m, the head 4 m with the beard, the edge of the mantle 21.5 m over
-the feet, the Sacred Heart 24.5 m over the feet, 3 windows of 0.5 by
-0.8 m at 20, 17.25 and 14.5 m over the feet, 133 steps inside; a plaza of 21 m with 3 steps, a block of 13 by
-13 by 6.5 m with four reliefs, and a dome of 8 faces, 8 m wide and 3 m
-high. The sizes of the base are measured from photos (Vung_Tau
-`landmarks.md`, about 15%), and the receipt says so.
+A model that the people build on a lot of a place with a terrain (a
+statue on the hill of Núi Nhỏ, plan 0006) has its place in the Vũng Tàu
+game in its extras: `"geo": {"frame": "vung_tau_game", "at": [X, height,
+Z], "turn": deg}`. `at` is the game point of the origin of the model (X
+to the east, Z to the south, in metres from Bãi Trước) and the height of
+the ground there; `turn` is the turn of the model round the vertical,
+from the north to the east (the front of a model is +y: with a turn of
+0 it looks to the north). The game puts the model on its ground with no
+other data.
+
+The statue on Núi Nhỏ (`tuong_chua_kito_vua_cong_truong`) is the first
+order: 27.5 m from the feet to the top of the halo, the hands 23.5 m
+apart (18.4 m from cuff to cuff), the hands 2.6 m, 133 steps inside, a
+base of 14.5 by 14.5 by 4 m with four reliefs. It is the model of the
+site and of its time lapse (plan 0006). Its scale is not right: 18.4 m
+is from fingertip to fingertip, so the model is about 28% too large.
+The model `tuong_chua_kito_vua` has the true sizes: it is a model in
+parts (see "A model in parts").
+
+The people make a statue as on a site, one node of the drawing each:
+
+| Node | Skill | Trade | What it makes |
+|---|---|---|---|
+| `be` | `base` | mason | The base and the plinth (the root). |
+| `figure` | `figure` | sculptor | The posed and scaled person: data only. |
+| `robe` | `robe` | sculptor | The robe and the mitts (at mid): data only. |
+| `survey` | `cast_survey` | surveyor | The grid of the cast: data only. |
+| `form_1` to `form_8` | `formwork` | carpenter | The forms of a band of the cast, from the feet up, all at the same time. |
+| `outside` | `cast_outside` | caster | The outside of the cast. |
+| `pour_1` to `pour_8` | `pour` | caster | The pour of a band, all at the same time, in any order. |
+| `field` | `cast_field` | caster | The field of the cast, with the walls and the openings of a hollow statue. |
+| `slab_1` to `slab_8` | `shell_slab` | finisher | The surface of a slab of the shell, all at the same time. |
+| `shell` | `shell` | caster | The shell from its slabs (or the far form): data only. |
+| `grille` | `grille` | smith | The grilles of the windows: data only. |
+| `halo` | `halo` | smith | The halo and its rays: data only. |
+| `carve` | `carve` | sculptor | The carved head and hands, at near: data only. |
+| NAME | `set` | sculptor | The part of the statue: the shell, the grilles, the halo and the carved head and hands on the plinth. |
+| `cau_thang` | `stair` | mason | The spiral stair, in the cells of the cast. |
+| `lan_can` | `rail` | mason | The rail round the top of the base. |
+| `site` | `site` | surveyor | The ports, the collision boxes and the corners of the base, into the extras. |
+
+The cast is many tasks: the forms and the pours of its bands from the
+feet up (each band with about the same work), and the slabs of its
+surface. Any order of the pours gives one field (`World.Cast`).
 
 ## A tower
 
-A tower (`World.Towers`, W13 of Vũng Tàu; the blueprint `tower`) is a
+A tower (`priv/blueprints/tower.json`, W13 of Vũng Tàu; the blueprint
+`tower`, the skills of `World.Skills.Towers`: `tower_body` of a mason,
+`lantern` of a smith, `tower` of a mason that sets them as one part,
+`spiral_stair` of a mason, and `tower_site` of a surveyor) is a
 lighthouse of masonry on a round platform. The kind is `tower`; the
 origin is on the ground at the center of the platform. The tower only: a
 house next to it is a model of its own (`lot_house`), and the game puts
@@ -469,6 +1238,59 @@ The lighthouse of Vũng Tàu (`hai_dang_vung_tau`) is the first order:
 18 m from the ground to the top of the dome, a round body of 3.2 m, four
 pilasters, 55 steps. Most of its sizes are measured on a photo (±10%) and say
 so in the receipt.
+
+## A van that the people build
+
+A van of the line (`priv/blueprints/van_line.json`, the skills of
+`World.Skills.Van`; plan 0002, D5) is built as on the line of its maker
+(`World.Vehicles.Van`), by the people of each trade at the same time. The
+kind is `vehicle`; the origin is on the ground at the center of the van,
+the front to +y. The options are those of the blueprint `van`; the skill
+`van_order` checks them. The `model` can be the data of a model in the
+format of `priv/data/vans.json`, with the data of its make in `make` (its
+traces, its hull, its front, its openings, its seats, its sources): a van
+of a project, with no change of World. Its keys are checked, and its
+data must make a hull.
+
+| Node | Skill | Trade | What it makes |
+|---|---|---|---|
+| `order` | `van_order` | engineer | The order of the line: the model, its sizes, its doors, its windows, its rows, the items of DIY. Data only; the extras `place` move the model to its center. |
+| `body` | `van_body` | sheet_metal_worker | The body in white, with its openings at near: the root. |
+| `inside` | `van_inside` | trimmer | The floors, the wells of the wheels and the pillar (at near). |
+| `closure_G` | `van_closure` | fitter | The hood, or one door on its hinges or its rail. |
+| `trim_G` | `van_trim` | trimmer | The black plastic, the lamps, the grille, and at near the small parts and the cab. |
+| `glass` | `van_glass` | glazier | The windshield and the windows of the body. |
+| `seats` | `van_seats` | upholsterer | The seats on their mounts (at near). |
+| `chassis_G` | `van_chassis` | mechanic | The engine bay, the drive, or the corner of one wheel on its knuckle. |
+| `upfit` | `van_upfit` | electrician | The items on the roof; none when the order has none. |
+
+Each group is a small assembly on a mark (a part with no mesh, with the
+ports of the body at the origin of the van), so each part is where the
+line puts it. The van of the line has the same triangles, joints and
+size as the van of the blueprint `van` at each level. The extras
+`place` (a move of the whole model) and `sources` (more sources of the
+model) of a node go to the model, not into its extras.
+
+## The vehicles that the people build
+
+A vehicle of the people (plan 0002, D5) is a blueprint in data made of
+the skills of the vehicle trades only (`docs/skills.md`, "The vehicle
+trades"): no skill names a model. A part with a spec sheet takes its
+numbers (a wheel its tire code, a bicycle frame its geometry, a spring
+its coil, a fastener its thread); a free shape from the photos is shape
+data (the shapes of "A drawing"). The joints are in the drawing, and the
+extras `place` of the drawing move the model to its center. The kind is
+`vehicle`; the origin is on the ground at the center, the front to +y.
+
+| Blueprint | Its nodes | The model of the catalog with the same triangles, joints and size |
+|---|---|---|
+| `bicycle.json` | the frame and the fork from the geometry sheet, two wheels, the crankset, the rack, the kickstand | `touring_bicycle` |
+| `scooter.json` | the frame, the panels, the lamps, the seat, the fork, the bars, the grips, the levers, the mirrors, two cast wheels, the axle bolt and nuts, the engine with its swing arm, the shock spring, the center stand (the joint `stand`), the side stand at the left (the joint `side_stand`, 0 to 80 degrees) | `honda_vision_110` |
+| `car.json` | the body on lofts with the arches of its wheels, the glass, the trim, the lamps, and at each corner a knuckle (it steers at the front) with its wheel | `chevy_bolt_ev` |
+| `motorcycle.json` | the cradle frame, the engine, the tank, the seat, the rear fender, the rack, the lamps, the fork, the cockpit, two wheels with wire spokes, the axle bolt and nut, the swing arm, the monoshock spring, the side stand | `royal_enfield_himalayan` |
+
+A part that is small at a level (a brake lever) is a node of its own, so
+that the levels leave it out as they do in the model of the catalog.
 
 ## The materials
 
@@ -517,6 +1339,26 @@ assembly holds a figure as a part, at one of its two ports:
 - `ground`: on the ground, between the feet, with z up;
 - `hips`: at the head of the bone `pelvis`, with z up (the seat of a
   rider).
+
+A person has an age from 1 to 90 years (`age`; the blueprint `person`).
+MakeHuman has the shape of a baby (1 year), a child (10), a young adult
+(25) and an old one (90). A person under 25 has the parts of two of them
+that give the median height of its age and gender in the growth charts
+of the CDC (2000), within 2 cm: a girl of 7 is about 1.22 m high, a boy
+of 12 is about 1.49 m high. The head of a child is larger than the head
+of the shapes of MakeHuman: its scale (the node of the bone `head`)
+gives the head height of a real child of that age (Snyder and others,
+1977), and the height of the body is less by the same part, so the
+person keeps its height. The face of a child under 15 has more of the
+shapes of a young face (round cheeks, large eyes, a small nose and
+chin), most at 5 years and less to 15. A child has a flat chest: the
+shapes of MakeHuman give a child a small bust, so the points of the
+breasts go to a smooth membrane over them, all the way at 11 years or
+less and none at 16. A boy under 13 has the skin of a girl of the same
+tone (no shadow of a beard). A hat (the port `crown`, or a part of
+`wear` that does not fit the head) has the size of the real head, so it
+sits at the brow of a child and not over its eyes. The skeleton, the
+hair and the clothes are the same as an adult.
 
 The GLB of a person has:
 
@@ -644,6 +1486,7 @@ for the bone `pelvis`. An option `delay` starts a person late, and
 | `tai_chi` | 16 s | The opening: the arms rise with the palms down and sink on bent knees; "wave hands like clouds" to the left and to the right, with the weight from one leg to the other and the waist turning. |
 | `yoga` | 24 s | Mountain with the palms together at the chest, the arms up, a forward fold, the tree on the left leg (the right foot at the left knee, the hands together over the head), warrior II to the left. |
 | `aerobics` | 8 s | At 120 beats a minute: a march with the knees up and the arms pumping, jumping jacks, steps to the side with punches, knee lifts with a clap. |
+| `carry`, `set_panel`, `pour`, `trowel`, `hammer`, `climb`, `guide` | 2 s each | The work of the trades of a site (plan 0006, D10): a load at the chest, a panel set up high, a pour from a bucket, the strokes of a trowel, the blows of a hammer, a climb of a scaffold, a load of a crane guided with an arm up. Two poses each, in a loop. |
 
 
 The flex of a hinge (the elbow, the wrist, the knee, the joints of the
@@ -685,9 +1528,40 @@ in the pose and in each animation. The props now:
 | `fan` | `grip` | An open tai chi fan: ribs of bamboo of about 33 cm, a leaf of red silk, open to 160 degrees. |
 | `bottle` | `grip` | A bottle of water of 500 ml (65 by 205 mm), held at its side. |
 | `non_la` | `crown` | A nón lá: a cone of palm leaves of about 41 cm across and 19 cm high. |
+| `hard_hat` | `crown` | A hard hat of EN 397, about 30 by 22 cm. |
+| `bucket` | `grip` | A bucket of a site of 10 L. |
+| `trowel` | `grip` | A trowel of a mason, a blade of 28 by 12 cm. |
+| `hammer` | `grip` | A hammer of a site, a handle of 33 cm. |
 
 A node of an assembly can also connect to a port on a bone (`at:
 "grip_r"`): it goes in the node of the bone too.
+
+**The parts from edits** (`World.People.Parts`;
+`docs/plans/0017-people-with-parts-from-edits.md`) are sculptures of
+the catalog that a person wears on its port `crown`: the option `wear`
+of `Human.person/2` is a list of their names, or of `{name, opts}`. The
+body, the face and the skeleton stay those of MakeHuman.
+
+| Part | The thing | Its size |
+|---|---|---|
+| `non_la_edits` | A nón lá: a cone of 40 blades of palm (the surface `palm`) on 15 rings of bamboo, 41 cm across, with the ring for the head and a strap. | One size |
+| `mu_bao_hiem_edits` | The half helmet of a rider: a shell with a peak, a liner of foam with a pad of cloth, a band of rubber, straps with a buckle. Its shell is 3.8 cm over the top of the head: hair is under it. | The size of the head |
+| `toc_ngan_edits`, `toc_bui_edits`, `toc_dai_edits` | Hair: short, in a bun, long (behind the neck and on the back, to the shoulder blades). A mass with the surface `hair` and with `strands` ("The strands of a sculpture"): single strands at its outline, a thin line of hair on the brow, at the ears and at the neck. | The size of the head |
+
+- Each part is a drawing of the kind `prop` with one sculpture, and its
+  port `crown` is at the top of the head (0 of its axes; z up, y to
+  the front).
+- A part of the size of the head is drawn on the head of the woman of
+  the catalog (16.4 cm wide with the ears, 18.8 cm long with the nose).
+  On a person, it grows from its port by the mean of the two ratios of
+  the head of that person, and by the option `head`.
+- Each part has a role of its own (`part_09` to `part_11`), so a
+  person can wear a hat on hair, each with its image. The image of the
+  hair is light: the option `color` of a part (`[r, g, b]`) is the
+  color of its role, and so the color of the hair.
+- With a mass of hair, give `hair: nil` (no hair of MakeHuman).
+- Long hair is one piece on the bone of the head: it does not bend on
+  the shoulders.
 
 ### The joints of a person in an order
 
@@ -804,9 +1678,14 @@ never nearer to the body than at the fit.
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair (with each face on the
 breasts cut in sixteen, on the surface of the body: about 1,900 faces);
-far is a body of 730 faces.
+far is a body of 730 faces: a person at far is about 1,550 triangles.
 At mid and far, the faces under clothes have the mean color of the
-clothes, and at far the scalp has the color of the hair. A face under
+clothes, and each point of the sole of a foot goes down to the ground
+of the shoes: a person stands on z = 0 at each level. At far the scalp
+has the color of the hair, and the hair has its form in 80 triangles at
+the most (the points of its mesh in one cell of a grid become one
+point), so a person is as high as at near (3 cm less at the most) and
+long hair is long. The eyes at far have 24 triangles. A face under
 two items has the color of the item on the outer layer, then of the
 item that covers the most of its points; with the same count, the item
 first in `clothes`: put a jacket before the shirt under it. An item that fits to a helper of the base mesh (the
@@ -1140,6 +2019,7 @@ The species now:
 | `horse` | quadruped | A horse of Việt Nam (ngựa): about 1.35 m at the withers. | The template `horse`. |
 | `donkey` | quadruped | A donkey (lừa): about 1.1 m at the withers. | The template `donkey`. |
 | `cow` | quadruped | A cow of Việt Nam (bò vàng): about 1.1 m at the withers, yellow-brown. | The template `cow`, with a yellow-brown coat. |
+| `buffalo_calf` | quadruped | A calf of the water buffalo of Việt Nam (nghé): about 0.8 m at the withers, long legs, a large head, gray brown, horns that only start. | Numbers on the template `bull`: a guess, not a measurement. |
 | `water_buffalo` | quadruped | A water buffalo of Việt Nam (trâu): about 1.3 m at the withers, dark gray, wide horns. | Numbers on the template `bull`, with wide horns of World in place of the horns of the file. |
 | `pig` | quadruped | A pig of Việt Nam (lợn Móng Cái): about 60 cm at the shoulder, a black head and back, a white belly and white legs. | The template `pig`, with shorter legs and a deeper body. |
 | `hyena` | quadruped | A spotted hyena: about 80 cm at the shoulder, a wide head with a blunt muzzle, round ears, a strong neck and forequarters, a short tail, a pale grey-brown coat. | Numbers and the shape space on the template `wolf` (0.4 of the coefficients of the bull). No spots: the coat has no region for spots. |
@@ -1308,6 +2188,33 @@ highest point (the top of the head, or of the comb).
   in short jerks, in 3 s), `peck` (the neck goes down to the ground
   twice, the body leans a little) and `flap` (the wings open, beat three
   times and fold, in 1.2 s). In each, the feet stay on the ground.
+
+A body on two legs (`World.Animals.Biped`; the plan `biped` of a
+sculpture with bones, "A sculpture with bones"): its bones have the
+names of a person of World: `pelvis` (the root), `spine_01`, `neck_01`,
+`head`, and for each side the arm (`upperarm_l`, `lowerarm_l`,
+`hand_l`) and the leg (`thigh_l`, `calf_l`, `foot_l`). Its size (its
+`height`) is the height of its highest point. No species of the catalog
+has this plan: a person of the catalog is a `World.People.Human`.
+
+- Joints: the balls `shoulder_l`, `shoulder_r`, `hip_l`, `hip_r`,
+  `neck`, and the hinges `elbow_l`, `elbow_r`, `knee_l`, `knee_r`. The
+  hinge of an elbow takes the hand to the front and the hinge of a knee
+  takes the foot to the back, for a body made in any pose (the arms out
+  to the sides, or down).
+- Limbs: `arm_l`, `arm_r` (the end is the wrist), `leg_l`, `leg_r` (the
+  end is the ankle).
+- Ports: `ground`, `head` (the top of the head), `grip_l`, `grip_r`.
+- Animations: `walk` (the feet in turn, each flat on the ground for 0.6
+  of the step; the hips are as high as the two legs let them, with a
+  small bend of the knee: up over the foot on the ground, down between
+  two steps; the hands hang at the sides and swing against the legs;
+  the speed is in `walk_speed`), `run` (a step of 0.65 of the period
+  and 1.5 times the stride, each foot on the ground for 0.35 of it: the
+  body is in the air between two steps; the elbows bent, the body to
+  the front; `run_speed`) and `idle` (the body stands and breathes, in
+  3 s). The gait: `period` (1.1 s), `stride` (0.36 of the height) and
+  `lift` (0.05 of the height).
 
 A new species: write `priv/animals/species/NAME.json` with the
 template of the nearest body, the numbers of its shape, its colors,
@@ -1529,11 +2436,12 @@ the catalog: `banh_mi_cart`).
 
 | Key | What it is |
 |---|---|
-| `name`, `kind`, `sources` | The name of the model (a to z, 0 to 9 and _), its kind (`appliance`, `building`, `electrical`, `furniture`, `item`, `prop`, `vehicle`; `item` by default), and where its data comes from. |
-| `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model. A drawing makes no new role. |
+| `name`, `kind`, `sources` | The name of the model (a to z, 0 to 9 and _), its kind (`appliance`, `boat`, `building`, `electrical`, `furniture`, `house`, `item`, `plant`, `prop`, `statue`, `tower`, `vehicle`; `item` by default: a `house`, a `building`, a `plant`, a `statue` and a `tower` are made where they stand, so they go through no door; a `boat` is built on a slipway and floats, so it has no check of its stand and of a door), and where its data comes from. |
+| `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model, and its `texture`, only at near (`World.Textures`): `washed_stone`, the pebbles of a render of washed stone, a tile of 0.3 m on the UVs in metres of a surface; or a photo of a relief of `priv/textures/` (`relief_last_supper`, `relief_keys`, `relief_pilate`, `relief_magi`) with `panel` `[u0, v0, u1, v1]`: the rectangle of the UVs in metres where the image is once. A drawing makes no new role. |
 | `parts` | A name to a part: its `shapes`, its `ports` (a name to `at`, `axis`, `up`), its `sources`; or a standard part: `standard` (`"bolt M8x40"`, `"cap_screw M6x20"`, `"nut M8"`, `"washer M8"`, `"bearing 6204"`), with the ports of the standard part (a bolt has `head` and `tip`). |
 | `nodes` | The tree of the model, the root first. |
 | `clips` | The animations of the joints. |
+| `extras` | The data of the model for an app: `site`, `ports` and `collision` (points as `[x, y, z]`), `surface`, `weathering` (`docs/format.md`, "GLB"). |
 
 A shape has one of these keys, with its `material` (a role of the
 palette, `gray` by default) and its frame: `at` (its origin), `axis`
@@ -1551,6 +2459,15 @@ panel).
 | `prism` | `loop` (points `[x, y]`) and `length` along z from 0. |
 | `lathe` | `profile` (points `[r, z]`): it turns around z. |
 | `tube` | `line` (points `[x, y, z]`) and `radius`. |
+| `loft` | `rows` (each `[a, low, high, half_width, power]`: a superellipse; power 2 is an ellipse, 4 a box with round corners), `along` (`y`, the default: `a` is y, low and high in z; or `z`: `a` is z, low and high in y), `x` (the center). A panel, a seat, a lamp. |
+| `body` | `rows` along y, `arches` (`[y, z, radius]`: the bottom goes over each wheel), `step` (between two sections, 0.1 m), `x`. The body of a car (`World.Vehicles.Body`). |
+| `arc` | `center` (`[y, z]`), `radius`, `from` and `to` (degrees from up, to the front), `steps`, `half_width`, `half_height`, `power`. A fender over a wheel. |
+| `rings` | `rings`: lists of points, each with the same count, joined in order. |
+
+The options of each shape (plan 0002, D5): `sides` (3 to 128: the
+points of each ring), `smooth` (0 to 3 steps), `round` (the round edges
+of a box: 0.01 to 0.49), and `ring` (`true`: a lathe whose profile is a
+closed loop, a tire or a chainring).
 
 A node has a `name` and holds a part (`part`) or an item of another
 blueprint (`item`: an order with only `blueprint` and `options`: a model
@@ -1561,8 +2478,72 @@ person has `grip_r` and the others: a node can be in a hand), or a port
 in the data (`at`, `axis`, `up`); the origin by default. A node can have
 a `turn` (degrees) and an `offset` (meters), and be a `joint`: `kind`
 (`hinge` or `slide`), `role` (`crank`, `door`, `drawer`, `handle`,
-`knob`, `lid`, `pedal`, `recline`, `slide`, `spin`, `stand`, `steer`,
-`suspension`, `vane`, `wheel`) and `limits`.
+`knob`, `lid`, `open`, `pedal`, `recline`, `slide`, `spin`, `stand`,
+`steer`, `suspension`, `vane`, `wheel`) and `limits`.
+
+A node can also be an element that a person of a trade makes with a
+skill (`World.Skill`, `World.Skills`): `skill` is `{NAME: data}`, with
+the data of the skill. Each skill checks its data (each error with its
+path). The keys of such a node:
+
+| Key | What it is |
+|---|---|
+| `skill` | One skill and its data: `{"shell": {"height": 32.0, "hollow": true}}`. |
+| `trade` | The trade of the person that makes it (`mason`, `caster`, `sculptor`, `smith`, `surveyor`, `builder`, and the trades of the kinds); the trade of the skill by default. |
+| `from` | The nodes whose data it takes: the shell takes the figure and the robe. |
+| `after` | The nodes that it comes after, as on a real site (the rail after the cast). |
+
+A drawing can repeat a node: `{"repeat": {"for": NAME, "in": [values]},
+"node": {...}}`, or `"in": {"count": n}` (1 to n, at most 128). Each value
+gives a copy of the node: in it, `{"var": NAME}` is the value, and
+`{NAME}` in a text is the value as a text (`"course_{floor}"`). A repeat
+can hold a repeat (`"wall_{side}_{floor}"`). The copies are tasks that
+people do at the same time: the floors of a house, the courses of a wall,
+the pours of a cast, the wheels of a vehicle. `{"repeat": ..., "item":
+X}` in any other list gives copies of X (the names of the pours in a
+`from`), and `{NAME-1}` in a text is the value less one
+(`"slab_{floor-1}"`). The check expands the repeats first, so the paths
+of its errors are in the copies; the fill of a blueprint puts its params
+before and after the repeats (`{"param": "finish_{side}"}`).
+
+A node can give its work on a site (plan 0006, `World.Site`):
+`"work"`, each work of `priv/standards/site.json` (`concrete`, `formwork`,
+`scaffold`, `rebar`, `render`, `carve`, ...) to its amount in the unit of
+the work, and `"cure"`, the wait after it (`lift`, `strip`, `set`). Each
+`{"product": [...]}` in a value is the product of its numbers, so an
+amount follows the options (`{"product": [0.123, {"param": "height"},
+{"param": "height"}, {"param": "wall"}]}`: the concrete of a band of the
+cast of a statue). The days of a task are the amounts over the rates of
+their crews.
+
+A node can name the node whose task takes it down on the site
+(`"down"`, plan 0006, D9): when that task is done, its element goes
+(`element_removed`). The statue has the stages of a site as nodes: the
+scaffold of each band (`scaffold_N`, down at `unscaffold`), its forms
+(`form_N`, down at `strip_N`), and the band in rough grey concrete after
+its pour (`pour_N`, down when the statue in washed stone is set), each
+temporary. With the method of today the site has a tower crane
+(`crane`, the skill `crane` of a rigger: a lattice mast on a block,
+its jib 8 m over the top of the statue, a counter jib, the cab and the
+line of the hook), up after the base and down after the scaffold
+(`crane_down`). A node with `"only": [A, B]` is in the drawing when A
+is B: the crane has `"only": [{"param": "method"}, "today"]`.
+
+A node with `"temporary": true`, or whose skill gives `"temporary" =>
+true` in its data, is not in the model: the people make it, and the
+stream shows it (the bricks under a render, the render under the paint).
+
+A skill gives the part of its node (or nothing: a node of data only,
+which is not in the model), its data for the nodes that take it, and
+extras for the model, which go in in the order of the nodes. A node
+with no `to` goes to the root; a node to a node with no part goes to the
+parent of that node, or to the root. The root is the first node with a
+part. Each node waits for its parent, its `after` and its `from`, and no
+node waits for itself (a graph with no cycle: `:graph` of Erlang/OTP).
+In a construction (`World.Construction`), each node is one task: the
+person of its trade runs the skill, and the element goes to the
+watchers when the nodes before it are made. With no world,
+`World.Drawing.build/1` makes the nodes in the order of their waits.
 
 A clip has a `name`, a `length` in seconds and `keys`: each a time `t`
 and the values of some `joints` of the drawing. Between two keys a value
@@ -1617,7 +2598,11 @@ The build (`mix world.build`) writes:
 | `priv/models/NAME.vox` | the voxel version, when the model asks for one (step 8) |
 
 The build gives the same bytes for the same model.
-`mix world.build --check` builds again and compares; CI runs it.
+`mix world.build --check NAME` builds a model again and compares. The
+files of `priv/models` are a reference of what World made: no test and
+no check of CI builds them again. A project that needs a model asks
+World to build it (`docs/factory.md`). The tests of the rules use small
+models of their own (`test/support/fixtures.ex`).
 
 ## GLB
 

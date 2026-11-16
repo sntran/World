@@ -184,9 +184,14 @@ defmodule World.Animals.Bird do
       open = :math.sin(:math.pi() * t / 1.2)
       beat = :math.sin(2 * :math.pi() * t / 0.4)
 
+      # The same turn for the two sides: the skeleton turns the right
+      # side the other way (`World.People.Skeleton`). The turn that opens
+      # a wing depends on the side of the left wing at rest (-x in the
+      # axes of World; the template of the birds has it at +x).
+      out = if elem(skeleton.rest["upperarm_l"].at, 0) < 0, do: 1, else: -1
+
       for s <- @sides, into: %{} do
-        sign = if s == "l", do: -1, else: 1
-        {"upperarm_#{s}", [spread: sign * (80 * open + 25 * open * beat), flex: 20 * open]}
+        {"upperarm_#{s}", [spread: out * (80 * open + 25 * open * beat), flex: 20 * open]}
       end
       |> Map.merge(planted(skeleton))
       |> Map.merge(%{"neck_01" => [flex: 10 * open]})

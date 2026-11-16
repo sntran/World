@@ -1,110 +1,120 @@
 defmodule World.Places do
   @moduledoc """
-  The places of the world (`docs/world.md`, "The places"): buildings at a
-  position on the yard, in meters, in one flat frame.
+  The places of the yard of the node (plan 0002, D6; `priv/places.json`):
+  the gate of the suppliers, the warehouse, the factories and the site,
+  each at a point in meters on one flat plane, with the stock of the
+  warehouse and the trucks of the yard.
 
-  - A **warehouse** keeps stock (`World.Stock`). Its limit is the size of
-    its store (`World.Store`): the memory of the VM, an R2 bucket, or the
-    catalog of the release (`catalog/3`).
-  - A **factory** makes one family of things: `:materials`, `:frames`,
-    `:houses`, `:wheels`, `:seats`, `:openings`, `:vehicles`, `:appliances`,
-    `:clothes`, `:people`.
-  - A **supplier** gives a part that the world cannot make.
-  - A **site** is where a delivery ends: a project of the owner.
+  - A **supplier** (the gate) brings the materials from outside, and
+    rents a truck with its driver until the yard has trucks of its own.
+  - The **warehouse** keeps the stock (`World.Stock`).
+  - A **factory** makes the things of its kinds: a construction of a
+    model of such a kind is at the factory, and its materials come there
+    by truck.
+  - The **site**: a house or a tower is built where it stands.
+  - A place can have a **terrain** (plan 0006, D4): the true ground of a
+    place of the Vũng Tàu game (`World.Terrain`), with its lots at their
+    points of the game. The hill of Núi Nhỏ (`nui_nho`) has the lot of
+    the statue on its top and the lot of the cape of Nghinh Phong.
+
+  The warehouse and each factory have a building: an order of a house
+  that the people build (D7). The trucks are an order of a van.
   """
-  alias World.{Stock, Store}
 
-  @kinds [:warehouse, :factory, :supplier, :site]
-  @families [
-    :materials,
-    :frames,
-    :houses,
-    :wheels,
-    :seats,
-    :openings,
-    :turned,
-    :boats,
-    :sheets,
-    :molds,
-    :nursery,
-    :footwear,
-    :bamboo,
-    :hanging,
-    :sewing,
-    :vehicles,
-    :appliances,
-    :clothes,
-    :people
-  ]
+  alias World.{Part, Terrain}
 
-  defmodule Place do
-    @moduledoc "A place: its name, its kind, its position `{x, y}` on the yard, its family (a factory) and its stock (a warehouse)."
-    defstruct name: nil, kind: nil, at: {0.0, 0.0}, family: nil, stock: nil
+  @external_resource path = Path.join([__DIR__, "..", "..", "priv", "places.json"])
+  @data path |> File.read!() |> JSON.decode!()
+
+  @doc "The data of the yard: the places, the stock, the trucks."
+  def data, do: @data
+
+  @doc "The places, in their order."
+  def all, do: @data["places"]
+
+  @doc "A place by its name: `{:ok, place}` or `:error`."
+  def fetch(name) do
+    case Enum.find(all(), &(&1["name"] == name)) do
+      nil -> :error
+      p -> {:ok, p}
+    end
   end
 
-  @doc "The kinds of a place."
-  def kinds, do: @kinds
+  @doc "The place where a model of a kind (`\"vehicle\"`, `\"house\"`) is built, or nil."
+  def for_kind(kind), do: Enum.find_value(all(), &(kind in Map.get(&1, "kinds", []) && &1["name"]))
 
-  @doc "The families of things, one for each factory."
-  def families, do: @families
-
-  # The family of an assembly by its kind: the factory that makes it.
-  @family_of_kind %{
-    wheel: :wheels,
-    seat: :seats,
-    door: :openings,
-    window: :openings,
-    house: :houses,
-    turned: :turned,
-    boat: :boats,
-    enclosure: :sheets,
-    helmet: :molds,
-    plant: :nursery,
-    street: :houses,
-    chair: :molds,
-    sandal: :footwear,
-    clog: :footwear,
-    bamboo: :bamboo,
-    hanging: :hanging,
-    mattress: :sewing
-  }
-
-  @doc """
-  The family of an item: the factory that makes it (`:wheels` for a
-  wheel, `:seats` for a seat or a bench, `:openings` for a door or a
-  window, `:turned` for a part of the lathe (`World.Lathe`), `:boats` for a boat
-  (`World.Boats`), `:sheets` for a box of sheet metal (`World.Enclosures`), `:molds` for a shell from a mold (`World.Molds`), `:footwear` for a sandal (`World.Footwear`), `:bamboo` for furniture of bamboo (`World.Furniture.Bamboo`), `:hanging` for a hammock or a swing (`World.Furniture.Hanging`), `:sewing` for a mattress (`World.Sewing.Cushion`), `:nursery` for a plant (`World.Plants`), `:houses` for a house, a
-  street or a building of the world), or `nil` for an item that the factory of its
-  parent makes.
-  """
-  def family_of(%World.Assembly{kind: kind}), do: Map.get(@family_of_kind, kind)
-  def family_of(_item), do: nil
-
-  @doc "A warehouse with the limit of its store, in bytes, and its store (the memory of the VM by default)."
-  def warehouse(name, at, limit, store \\ Store.memory()),
-    do: place(name, :warehouse, at, stock: Stock.new(limit, store))
-
-  @doc """
-  The catalog: a warehouse of the models of a release (the folder `dir`,
-  `World.Store.release/1`). It is read only and always full.
-  """
-  def catalog(name, at, dir), do: place(name, :warehouse, at, stock: Stock.catalog(Store.release(dir)))
-
-  @doc "A factory of a family of things."
-  def factory(name, at, family) do
-    unless family in @families, do: raise(ArgumentError, "no family of things #{inspect(family)}")
-    place(name, :factory, at, family: family)
+  @doc "The distance in meters between two places, on a straight line of the yard."
+  def distance(a, b) do
+    {:ok, %{"at" => [x0, y0]}} = fetch(a)
+    {:ok, %{"at" => [x1, y1]}} = fetch(b)
+    :math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
   end
 
-  @doc "A supplier."
-  def supplier(name, at), do: place(name, :supplier, at)
+  @doc """
+  The world time of a drive between two places, in milliseconds: the
+  distance at the speed limit of the yard (`speed_kmh`).
+  """
+  def drive(a, b), do: round(distance(a, b) / (@data["speed_kmh"] / 3.6) * 1000)
 
-  @doc "The site of a customer."
-  def site(name, at), do: place(name, :site, at)
+  @doc "The places with a building, in their order: the warehouse and the factories."
+  def buildings, do: for(p <- all(), Map.has_key?(p, "building"), do: p)
 
-  defp place(name, kind, {x, y}, fields \\ []) when is_binary(name) and is_number(x) and is_number(y),
-    do: struct!(Place, [name: name, kind: kind, at: {x / 1, y / 1}] ++ fields)
+  @doc """
+  The lots of a place with a terrain, in their order: each with the
+  height of its ground (m, over the sea) and its point on the yard
+  (`"yard"`; the point of the place is the game point `origin` of its
+  terrain). A place with no terrain has no lots.
+  """
+  def lots(%{"terrain" => t, "at" => [px, py]}) do
+    [ox, oz] = t["origin"]
 
-  @doc "The straight distance between two places, in meters."
-  def distance(%Place{at: {x0, y0}}, %Place{at: {x1, y1}}), do: :math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
+    for %{"at" => [x, z]} = l <- t["lots"] do
+      Map.merge(l, %{"height" => Terrain.height(t["name"], {x, z}), "yard" => [px + x - ox, py + oz - z]})
+    end
+  end
+
+  def lots(_place), do: []
+
+  @doc "A lot of a place by its name (`lots/1`), or nil."
+  def lot(place, name), do: Enum.find(lots(place), &(&1["name"] == name))
+
+  @doc """
+  The ground of a place with a terrain: a part with the mesh of its
+  terrain in the box of the place, flat on each lot (`World.Terrain.mesh/7`),
+  in the frame of World from the game point `origin` at the height of the
+  sea (x east, y north, z up). So a model on a lot stands at the point
+  of the lot and the height of its ground.
+  """
+  def ground(%{"terrain" => t} = place) do
+    [ox, oz] = t["origin"]
+    [x0, z0, x1, z1] = t["box"]
+    pads = for %{"at" => [x, z]} = l <- lots(place), do: {x, z, l["radius"], l["height"]}
+    mesh = Terrain.mesh(t["name"], {x0, z0, x1, z1}, t["step"], {ox, oz, 0.0}, :grass, pads)
+    Part.new(place["name"] <> "_ground", :ground, [mesh], [])
+  end
+
+  @doc """
+  The place of a model on a lot of a place with a terrain, in the frame
+  of the game (plan 0006, D5; `World.Terrain.geo/3`).
+  """
+  def geo(place, lot) do
+    %{"at" => [x, z], "height" => h, "turn" => turn} = lot(place, lot)
+    Terrain.geo({x, z}, h, turn)
+  end
+
+  @doc """
+  The places for the map of the world page: a place with a terrain has
+  its lots (`lots/1`) and the path of its ground (`ground/1`, a GLB).
+  """
+  def view do
+    for p <- all() do
+      if p["terrain"],
+        do:
+          Map.update!(p, "terrain", &Map.merge(&1, %{"lots" => lots(p), "ground" => "/places/#{p["name"]}/ground.glb"})),
+        else: p
+    end
+  end
+
+  @doc "The trucks of the yard: `count`, `load_kg` and the `order` of each."
+  def trucks, do: @data["trucks"]
 end

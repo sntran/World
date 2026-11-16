@@ -1,0 +1,2652 @@
+{
+  "name": "statue",
+  "doc": "A statue: a figure of a person at any size and in a pose, in a long robe, cast as one solid of concrete or stone, with a halo, on a round plinth and a base with panels of figures in relief. The option hollow gives walls, a spiral stair and openings inside, at the near level. Each size can have its source; a size with no source is an estimate, and the receipt says so. The origin is on the ground at the center of the base; the figure looks to +y. The people build it as on a site: a mason lays the base, a sculptor makes the figure and its robe, carpenters set the forms of the cast and casters pour it in bands from the feet up, all at the same time, then finishers make the slabs of its surface, a smith makes the grilles and the halo, a mason makes the stair and the rail, and a surveyor marks the site.",
+  "sources": [
+    "MakeHuman (CC0): the person of the figure. The sources of each size come with the order; the receipt lists them."
+  ],
+  "params": [
+    {
+      "name": "name",
+      "type": "text",
+      "default": "tuong",
+      "max": 40,
+      "doc": "The name of the model and of the node of the statue: a to z, 0 to 9 and _."
+    },
+    {
+      "name": "height",
+      "type": "number",
+      "default": 32.0,
+      "min": 1.0,
+      "max": 100.0,
+      "unit": "m",
+      "doc": "From the feet to the top of the figure (the top of the halo, when it has one)."
+    },
+    {
+      "name": "span",
+      "type": "number",
+      "default": null,
+      "min": 0.5,
+      "max": 100.0,
+      "unit": "m",
+      "doc": "The hands, tip to tip, with the pose arms_out. None: the proportions of the person."
+    },
+    {
+      "name": "hand",
+      "type": "number",
+      "default": null,
+      "min": 0.1,
+      "max": 10.0,
+      "unit": "m",
+      "doc": "A hand, from the wrist to the tip of the middle finger, with the pose arms_out."
+    },
+    {
+      "name": "pose",
+      "type": "choice",
+      "default": "arms_out",
+      "values": [
+        "arms_out",
+        "drive",
+        "rest",
+        "ride",
+        "ride_bicycle",
+        "sit",
+        "stand"
+      ],
+      "doc": "arms_out: the arms straight out to the sides. Else a pose of a person."
+    },
+    {
+      "name": "lift",
+      "type": "number",
+      "default": 8.0,
+      "min": -45.0,
+      "max": 60.0,
+      "unit": "deg",
+      "doc": "The arms of arms_out over the level."
+    },
+    {
+      "name": "gender",
+      "type": "number",
+      "default": 1.0,
+      "min": 0.0,
+      "max": 1.0,
+      "doc": "0 is a woman, 1 is a man."
+    },
+    {
+      "name": "age",
+      "type": "number",
+      "default": 35.0,
+      "min": 25.0,
+      "max": 90.0,
+      "unit": "years"
+    },
+    {
+      "name": "race",
+      "type": "skill",
+      "skill": "figure",
+      "default": null,
+      "doc": "The race of the carved head: a map of african, asian and caucasian to a weight from 0 to 1. None: the person of World."
+    },
+    {
+      "name": "face",
+      "type": "skill",
+      "skill": "figure",
+      "default": {},
+      "doc": "The face of the carved head as the sculptor made it: a map of a slider of MakeHuman to a value from -1 to 1."
+    },
+    {
+      "name": "hair",
+      "type": "choice",
+      "default": "long01",
+      "values": [
+        "none",
+        "afro01",
+        "bob01",
+        "bob02",
+        "braid01",
+        "long01",
+        "ponytail01",
+        "short01",
+        "short02",
+        "short03",
+        "short04"
+      ]
+    },
+    {
+      "name": "robe",
+      "type": "boolean",
+      "default": true,
+      "doc": "A long robe with wide sleeves and two long panels at its sides."
+    },
+    {
+      "name": "forms",
+      "type": "skill",
+      "skill": "robe",
+      "default": [],
+      "doc": "The forms of the robe as data, in m over the feet (World.Forms): the planes, the sleeves, the cape, the hood, the reliefs. At near they are the outside of the statue. None: the robe of a person."
+    },
+    {
+      "name": "head",
+      "type": "skill",
+      "skill": "carve",
+      "default": null,
+      "doc": "The carved head where the measures put it: {top, nose: [y, z], narrow}. None: the head of the person."
+    },
+    {
+      "name": "hands",
+      "type": "skill",
+      "skill": "carve",
+      "default": null,
+      "doc": "The carved hands: {length, turn, wrist: [x, z]}. None: the hands of the person."
+    },
+    {
+      "name": "halo",
+      "type": "boolean",
+      "default": true,
+      "doc": "A ring behind the head with a cross."
+    },
+    {
+      "name": "rays",
+      "type": "integer",
+      "default": 9,
+      "min": 0,
+      "max": 17,
+      "doc": "The metal rays of the halo (lightning rods)."
+    },
+    {
+      "name": "ring",
+      "type": "skill",
+      "skill": "halo",
+      "default": null,
+      "doc": "The ring of the halo where the measures put it: {center: [y, z], radius, tube, lean, rods}. None: round the head of the person."
+    },
+    {
+      "name": "material",
+      "type": "choice",
+      "default": "concrete",
+      "values": [
+        "concrete",
+        "stone"
+      ],
+      "doc": "Concrete with a render of washed stone, or stone (granite)."
+    },
+    {
+      "name": "materials",
+      "type": "materials",
+      "default": {
+        "stone_wash": {
+          "texture": "washed_stone"
+        }
+      },
+      "doc": "The materials of the drawing: a role of the palette to its color, roughness, metalness, texture (World.Textures) and panel (the rectangle of the UVs in metres where the image is once)."
+    },
+    {
+      "name": "hollow",
+      "type": "boolean",
+      "default": false,
+      "doc": "Walls, a spiral stair and openings inside (at the near level)."
+    },
+    {
+      "name": "wall",
+      "type": "number",
+      "default": 0.3,
+      "min": 0.1,
+      "max": 2.0,
+      "unit": "m",
+      "doc": "The wall of a hollow statue (at the least two cells of the cast)."
+    },
+    {
+      "name": "steps",
+      "type": "integer",
+      "default": 133,
+      "min": 10,
+      "max": 1000,
+      "doc": "The steps of the spiral stair, to the shoulders."
+    },
+    {
+      "name": "well",
+      "type": "number",
+      "default": 1.0,
+      "min": 0.3,
+      "max": 4.0,
+      "unit": "m",
+      "doc": "The open well in the middle of the spiral stair."
+    },
+    {
+      "name": "windows",
+      "type": "list",
+      "default": [],
+      "max": 12,
+      "doc": "The openings in the front of the robe of a hollow statue.",
+      "item": {
+        "name": "window",
+        "type": "object",
+        "fields": [
+          {
+            "name": "z",
+            "type": "number",
+            "min": 0.0,
+            "max": 100.0,
+            "unit": "m",
+            "doc": "Its center, over the feet."
+          },
+          {
+            "name": "width",
+            "type": "number",
+            "default": 1.2,
+            "min": 0.2,
+            "max": 5.0,
+            "unit": "m",
+            "doc": ""
+          },
+          {
+            "name": "height",
+            "type": "number",
+            "default": 1.2,
+            "min": 0.2,
+            "max": 5.0,
+            "unit": "m",
+            "doc": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "plinth_radius",
+      "type": "number",
+      "default": 4.5,
+      "min": 0.0,
+      "max": 50.0,
+      "unit": "m",
+      "doc": "The round plinth under the feet."
+    },
+    {
+      "name": "plinth_height",
+      "type": "number",
+      "default": 1.2,
+      "min": 0.0,
+      "max": 20.0,
+      "unit": "m",
+      "doc": "0: no plinth."
+    },
+    {
+      "name": "plinth_top",
+      "type": "number",
+      "default": null,
+      "min": 0.0,
+      "max": 50.0,
+      "unit": "m",
+      "doc": "The radius of the top of a plinth of facets, under the hem. None: a round plinth with a curved top."
+    },
+    {
+      "name": "plinth_sides",
+      "type": "integer",
+      "default": 32,
+      "min": 3,
+      "max": 64,
+      "doc": "The sides of the plinth (8: an octagon)."
+    },
+    {
+      "name": "base_width",
+      "type": "number",
+      "default": 12.0,
+      "min": 1.0,
+      "max": 100.0,
+      "unit": "m",
+      "doc": "The base, along x."
+    },
+    {
+      "name": "base_depth",
+      "type": "number",
+      "default": 12.0,
+      "min": 1.0,
+      "max": 100.0,
+      "unit": "m",
+      "doc": "The base, along y."
+    },
+    {
+      "name": "base_height",
+      "type": "number",
+      "default": 4.0,
+      "min": 0.0,
+      "max": 50.0,
+      "unit": "m",
+      "doc": "0: no base."
+    },
+    {
+      "name": "corner",
+      "type": "number",
+      "default": 1.5,
+      "min": 0.1,
+      "max": 10.0,
+      "unit": "m",
+      "doc": "The radius of the round corners of the base."
+    },
+    {
+      "name": "base_plan",
+      "type": "choice",
+      "default": "square",
+      "values": [
+        "square",
+        "curved"
+      ],
+      "doc": "square: a block with round corners. curved: the front and the back straight, the two sides curved in by base_curve (the base on Núi Nhỏ)."
+    },
+    {
+      "name": "base_curve",
+      "type": "number",
+      "default": 1.5,
+      "min": 0.0,
+      "max": 10.0,
+      "unit": "m",
+      "doc": "How far the sides of a curved base go in, at their middle."
+    },
+    {
+      "name": "base_room",
+      "type": "boolean",
+      "default": false,
+      "doc": "The base is a room with a door at its back; the plinth is hollow, and the stair of a hollow statue starts on the floor of the room."
+    },
+    {
+      "name": "relief_metal",
+      "type": "boolean",
+      "default": false,
+      "doc": "The figures of the panels of the base are of bronze."
+    },
+    {
+      "name": "relief_photos",
+      "type": "boolean",
+      "default": false,
+      "doc": "Each panel of the base is of its own role (relief_front, relief_back, relief_left, relief_right) for the photo of its relief, a texture of the param materials; no figures of lofts."
+    },
+    {
+      "name": "terrace",
+      "type": "number",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 100.0,
+      "unit": "m",
+      "doc": "The radius of a round platform of three steps round the base; 0: none."
+    },
+    {
+      "name": "reliefs",
+      "type": "list",
+      "default": [],
+      "max": 4,
+      "doc": "The panels of figures in relief on the sides of the base.",
+      "item": {
+        "name": "relief",
+        "type": "object",
+        "fields": [
+          {
+            "name": "side",
+            "type": "choice",
+            "values": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ]
+          },
+          {
+            "name": "figures",
+            "type": "integer",
+            "default": 3,
+            "min": 1,
+            "max": 20
+          },
+          {
+            "name": "title",
+            "type": "text",
+            "default": "",
+            "max": 200
+          }
+        ]
+      }
+    },
+    {
+      "name": "rail",
+      "type": "number",
+      "default": 1.0,
+      "min": 0.0,
+      "max": 3.0,
+      "unit": "m",
+      "doc": "The rail round the top of the base. 0: no rail."
+    },
+    {
+      "name": "weathering",
+      "type": "number",
+      "default": 0.5,
+      "min": 0.0,
+      "max": 1.0,
+      "doc": "The stains of the sea air, for the shader of an app: no change of the shape."
+    },
+    {
+      "name": "method",
+      "type": "choice",
+      "values": [
+        "today",
+        "1974"
+      ],
+      "default": "today",
+      "doc": "The method of the site (plan 0006, D6): today (a crane, a pump, a scaffold of steel, forms of plywood) or 1974 (no machine: the people carry the materials up the path, mix the concrete on the site and pour it by hand). The model is the same; the days of the site are not. With 1974, a statue with a history (priv/history/NAME.json) follows its stages."
+    },
+    {
+      "name": "sources",
+      "type": "sources",
+      "default": {},
+      "doc": "The source of each size or choice, by its name (height, span, steps, base_width, ...)."
+    }
+  ],
+  "sizes": [
+    {
+      "name": "height",
+      "unit": "m"
+    },
+    {
+      "name": "span",
+      "unit": "m"
+    },
+    {
+      "name": "hand",
+      "unit": "m"
+    },
+    {
+      "name": "lift",
+      "unit": "deg"
+    },
+    {
+      "name": "wall",
+      "unit": "m"
+    },
+    {
+      "name": "steps",
+      "unit": "steps"
+    },
+    {
+      "name": "well",
+      "unit": "m"
+    },
+    {
+      "name": "plinth_radius",
+      "unit": "m"
+    },
+    {
+      "name": "plinth_height",
+      "unit": "m"
+    },
+    {
+      "name": "plinth_top",
+      "unit": "m"
+    },
+    {
+      "name": "base_width",
+      "unit": "m"
+    },
+    {
+      "name": "base_depth",
+      "unit": "m"
+    },
+    {
+      "name": "base_height",
+      "unit": "m"
+    },
+    {
+      "name": "corner",
+      "unit": "m"
+    },
+    {
+      "name": "base_plan"
+    },
+    {
+      "name": "base_curve",
+      "unit": "m"
+    },
+    {
+      "name": "terrace",
+      "unit": "m"
+    },
+    {
+      "name": "rail",
+      "unit": "m"
+    },
+    {
+      "name": "rays"
+    },
+    {
+      "name": "material"
+    },
+    {
+      "name": "reliefs"
+    },
+    {
+      "name": "windows",
+      "row": [
+        "z",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "name": "forms"
+    },
+    {
+      "name": "head"
+    },
+    {
+      "name": "hands"
+    },
+    {
+      "name": "ring"
+    },
+    {
+      "name": "scale"
+    }
+  ],
+  "drawing": {
+    "name": {
+      "param": "name"
+    },
+    "kind": "statue",
+    "materials": {
+      "param": "materials"
+    },
+    "sources": [
+      "MakeHuman (CC0): the person of the figure.",
+      "The sizes of the order and their sources are in the extras (\"sizes\"); a size with no source is an estimate."
+    ],
+    "extras": {
+      "weathering": {
+        "param": "weathering"
+      }
+    },
+    "nodes": [
+      {
+        "name": "be",
+        "skill": {
+          "base": {
+            "material": {
+              "param": "material"
+            },
+            "base_width": {
+              "param": "base_width"
+            },
+            "base_depth": {
+              "param": "base_depth"
+            },
+            "base_height": {
+              "param": "base_height"
+            },
+            "corner": {
+              "param": "corner"
+            },
+            "reliefs": {
+              "param": "reliefs"
+            },
+            "plinth_radius": {
+              "param": "plinth_radius"
+            },
+            "plinth_height": {
+              "param": "plinth_height"
+            },
+            "plinth_top": {
+              "param": "plinth_top"
+            },
+            "plinth_sides": {
+              "param": "plinth_sides"
+            },
+            "base_plan": {
+              "param": "base_plan"
+            },
+            "base_curve": {
+              "param": "base_curve"
+            },
+            "base_room": {
+              "param": "base_room"
+            },
+            "relief_metal": {
+              "param": "relief_metal"
+            },
+            "terrace": {
+              "param": "terrace"
+            },
+            "well": {
+              "param": "well"
+            },
+            "relief_photos": {
+              "param": "relief_photos"
+            }
+          }
+        },
+        "work": {
+          "concrete": {
+            "product": [
+              0.334,
+              {
+                "param": "base_width"
+              },
+              {
+                "param": "base_depth"
+              },
+              {
+                "sum": [
+                  {
+                    "param": "base_height"
+                  },
+                  {
+                    "param": "plinth_height"
+                  }
+                ]
+              }
+            ]
+          },
+          "formwork": {
+            "product": [
+              4.0,
+              {
+                "sum": [
+                  {
+                    "param": "base_width"
+                  },
+                  {
+                    "param": "base_depth"
+                  }
+                ]
+              },
+              {
+                "sum": [
+                  {
+                    "param": "base_height"
+                  },
+                  {
+                    "param": "plinth_height"
+                  }
+                ]
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              26.7,
+              {
+                "param": "base_width"
+              },
+              {
+                "param": "base_depth"
+              },
+              {
+                "sum": [
+                  {
+                    "param": "base_height"
+                  },
+                  {
+                    "param": "plinth_height"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "cure": "set"
+      },
+      {
+        "name": "figure",
+        "skill": {
+          "figure": {
+            "name": {
+              "param": "name"
+            },
+            "height": {
+              "param": "height"
+            },
+            "span": {
+              "param": "span"
+            },
+            "hand": {
+              "param": "hand"
+            },
+            "pose": {
+              "param": "pose"
+            },
+            "lift": {
+              "param": "lift"
+            },
+            "gender": {
+              "param": "gender"
+            },
+            "age": {
+              "param": "age"
+            },
+            "hair": {
+              "param": "hair"
+            },
+            "halo": {
+              "param": "halo"
+            },
+            "race": {
+              "param": "race"
+            },
+            "face": {
+              "param": "face"
+            }
+          }
+        },
+        "work": {
+          "design": 1.0
+        }
+      },
+      {
+        "name": "robe",
+        "skill": {
+          "robe": {
+            "robe": {
+              "param": "robe"
+            },
+            "forms": {
+              "param": "forms"
+            },
+            "material": {
+              "param": "material"
+            }
+          }
+        },
+        "from": [
+          "figure"
+        ],
+        "work": {
+          "design": 0.3
+        }
+      },
+      {
+        "name": "crane",
+        "only": [
+          {
+            "param": "method"
+          },
+          "today"
+        ],
+        "skill": {
+          "crane": {
+            "height": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                },
+                {
+                  "param": "height"
+                },
+                8.0
+              ]
+            },
+            "jib": 40.0,
+            "at": [
+              -11.0,
+              -11.0
+            ],
+            "turn": 45.0
+          }
+        },
+        "temporary": true,
+        "down": "crane_down",
+        "work": {
+          "crane": 1.0
+        }
+      },
+      {
+        "name": "mixing",
+        "only": [
+          {
+            "param": "method"
+          },
+          "1974"
+        ],
+        "skill": {
+          "mixing": {
+            "at": [
+              11.0,
+              -11.0
+            ]
+          }
+        },
+        "temporary": true,
+        "down": {
+          "param": "name"
+        },
+        "work": {}
+      },
+      {
+        "name": "survey",
+        "skill": {
+          "cast_survey": {
+            "height": {
+              "param": "height"
+            }
+          }
+        },
+        "from": [
+          "figure",
+          "robe"
+        ],
+        "work": {
+          "survey": 1.0
+        }
+      },
+      {
+        "name": "scaffold_1",
+        "skill": {
+          "scaffold": {
+            "band": 1,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_1",
+        "skill": {
+          "formwork": {
+            "band": 1,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        },
+        "after": [
+          "scaffold_1"
+        ],
+        "temporary": true,
+        "down": "strip_1"
+      },
+      {
+        "name": "scaffold_2",
+        "skill": {
+          "scaffold": {
+            "band": 2,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "pour_1"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_2",
+        "skill": {
+          "formwork": {
+            "band": 2,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "scaffold_2",
+          "pour_1"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        },
+        "temporary": true,
+        "down": "strip_2"
+      },
+      {
+        "name": "scaffold_3",
+        "skill": {
+          "scaffold": {
+            "band": 3,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "pour_2"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_3",
+        "skill": {
+          "formwork": {
+            "band": 3,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "scaffold_3",
+          "pour_2"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        },
+        "temporary": true,
+        "down": "strip_3"
+      },
+      {
+        "name": "scaffold_4",
+        "skill": {
+          "scaffold": {
+            "band": 4,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "pour_3"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_4",
+        "skill": {
+          "formwork": {
+            "band": 4,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "scaffold_4",
+          "pour_3"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        },
+        "temporary": true,
+        "down": "strip_4"
+      },
+      {
+        "name": "scaffold_5",
+        "skill": {
+          "scaffold": {
+            "band": 5,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "pour_4"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_5",
+        "skill": {
+          "formwork": {
+            "band": 5,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "scaffold_5",
+          "pour_4"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        },
+        "temporary": true,
+        "down": "strip_5"
+      },
+      {
+        "name": "scaffold_6",
+        "skill": {
+          "scaffold": {
+            "band": 6,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "pour_5"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_6",
+        "skill": {
+          "formwork": {
+            "band": 6,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "scaffold_6",
+          "pour_5"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        },
+        "temporary": true,
+        "down": "strip_6"
+      },
+      {
+        "name": "scaffold_7",
+        "skill": {
+          "scaffold": {
+            "band": 7,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "pour_6"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_7",
+        "skill": {
+          "formwork": {
+            "band": 7,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "scaffold_7",
+          "pour_6"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        },
+        "temporary": true,
+        "down": "strip_7"
+      },
+      {
+        "name": "scaffold_8",
+        "skill": {
+          "scaffold": {
+            "band": 8,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "pour_7"
+        ],
+        "temporary": true,
+        "down": "unscaffold",
+        "work": {
+          "scaffold": {
+            "product": [
+              0.15,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "form_8",
+        "skill": {
+          "formwork": {
+            "band": 8,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "method": {
+              "param": "method"
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "scaffold_8",
+          "pour_7"
+        ],
+        "work": {
+          "formwork": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        },
+        "temporary": true,
+        "down": "strip_8"
+      },
+      {
+        "name": "outside",
+        "skill": {
+          "cast_outside": {
+            "bands": 8
+          }
+        },
+        "from": [
+          "survey"
+        ],
+        "work": {}
+      },
+      {
+        "name": "pour_1",
+        "skill": {
+          "pour": {
+            "band": 1,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_1"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_1",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_1"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "pour_2",
+        "skill": {
+          "pour": {
+            "band": 2,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_2",
+          "pour_1"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_2",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_2"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "pour_3",
+        "skill": {
+          "pour": {
+            "band": 3,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_3",
+          "pour_2"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_3",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_3"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "pour_4",
+        "skill": {
+          "pour": {
+            "band": 4,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_4",
+          "pour_3"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_4",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_4"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "pour_5",
+        "skill": {
+          "pour": {
+            "band": 5,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_5",
+          "pour_4"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_5",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_5"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "pour_6",
+        "skill": {
+          "pour": {
+            "band": 6,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_6",
+          "pour_5"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_6",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_6"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "pour_7",
+        "skill": {
+          "pour": {
+            "band": 7,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_7",
+          "pour_6"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_7",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_7"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "pour_8",
+        "skill": {
+          "pour": {
+            "band": 8,
+            "bands": 8,
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "survey",
+          "outside"
+        ],
+        "after": [
+          "form_8",
+          "pour_7"
+        ],
+        "work": {
+          "concrete": {
+            "product": [
+              0.123,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          },
+          "rebar": {
+            "product": [
+              9.84,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              },
+              {
+                "param": "wall"
+              }
+            ]
+          }
+        },
+        "cure": "lift",
+        "temporary": true,
+        "down": {
+          "param": "name"
+        }
+      },
+      {
+        "name": "strip_8",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "carpenter",
+        "after": [
+          "pour_8"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              0.246,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "field",
+        "skill": {
+          "cast_field": {
+            "hollow": {
+              "param": "hollow"
+            },
+            "wall": {
+              "param": "wall"
+            },
+            "well": {
+              "param": "well"
+            },
+            "windows": {
+              "param": "windows"
+            }
+          }
+        },
+        "from": [
+          "figure",
+          "survey",
+          "outside",
+          {
+            "repeat": {
+              "for": "i",
+              "in": {
+                "count": 8
+              }
+            },
+            "item": "pour_{i}"
+          }
+        ],
+        "work": {}
+      },
+      {
+        "repeat": {
+          "for": "j",
+          "in": {
+            "count": 8
+          }
+        },
+        "node": {
+          "name": "slab_{j}",
+          "skill": {
+            "shell_slab": {
+              "band": {
+                "var": "j"
+              },
+              "bands": 8
+            }
+          },
+          "from": [
+            "field"
+          ],
+          "work": {
+            "concrete": {
+              "product": [
+                0.0013,
+                {
+                  "param": "height"
+                },
+                {
+                  "param": "height"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "shell",
+        "skill": {
+          "shell": {
+            "hand": {
+              "param": "hand"
+            },
+            "material": {
+              "param": "material"
+            }
+          }
+        },
+        "from": [
+          "figure",
+          "robe",
+          "field",
+          {
+            "repeat": {
+              "for": "j",
+              "in": {
+                "count": 8
+              }
+            },
+            "item": "slab_{j}"
+          }
+        ],
+        "work": {
+          "render": {
+            "product": [
+              0.984,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "unscaffold",
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "scaffolder",
+        "after": [
+          "shell"
+        ],
+        "work": {
+          "strip": {
+            "product": [
+              1.2,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "crane_down",
+        "only": [
+          {
+            "param": "method"
+          },
+          "today"
+        ],
+        "skill": {
+          "site_step": {}
+        },
+        "trade": "rigger",
+        "after": [
+          "unscaffold"
+        ],
+        "work": {
+          "crane": 1.0
+        }
+      },
+      {
+        "name": "grille",
+        "skill": {
+          "grille": {
+            "material": {
+              "param": "material"
+            },
+            "hollow": {
+              "param": "hollow"
+            },
+            "windows": {
+              "param": "windows"
+            }
+          }
+        },
+        "from": [
+          "shell"
+        ],
+        "work": {
+          "steel": 200.0
+        }
+      },
+      {
+        "name": "halo",
+        "skill": {
+          "halo": {
+            "material": {
+              "param": "material"
+            },
+            "halo": {
+              "param": "halo"
+            },
+            "rays": {
+              "param": "rays"
+            },
+            "ring": {
+              "param": "ring"
+            }
+          }
+        },
+        "after": [
+          "shell"
+        ],
+        "from": [
+          "figure"
+        ],
+        "work": {
+          "steel": {
+            "product": [
+              2.0,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "carve",
+        "skill": {
+          "carve": {
+            "material": {
+              "param": "material"
+            },
+            "head": {
+              "param": "head"
+            },
+            "hands": {
+              "param": "hands"
+            }
+          }
+        },
+        "after": [
+          "shell"
+        ],
+        "from": [
+          "figure"
+        ],
+        "work": {
+          "carve": {
+            "product": [
+              0.049,
+              {
+                "param": "height"
+              },
+              {
+                "param": "height"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": {
+          "param": "name"
+        },
+        "skill": {
+          "set": {
+            "name": {
+              "param": "name"
+            },
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            }
+          }
+        },
+        "from": [
+          "shell",
+          "grille",
+          "halo",
+          "carve"
+        ],
+        "to": "be",
+        "at": "o",
+        "port": "o",
+        "work": {}
+      },
+      {
+        "name": "cau_thang",
+        "skill": {
+          "stair": {
+            "hollow": {
+              "param": "hollow"
+            },
+            "steps": {
+              "param": "steps"
+            },
+            "well": {
+              "param": "well"
+            },
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "base_room": {
+              "param": "base_room"
+            }
+          }
+        },
+        "from": [
+          "figure",
+          "shell"
+        ],
+        "to": "be",
+        "at": "o",
+        "port": "o",
+        "work": {
+          "stair": {
+            "param": "steps"
+          }
+        }
+      },
+      {
+        "name": "lan_can",
+        "skill": {
+          "rail": {
+            "material": {
+              "param": "material"
+            },
+            "rail": {
+              "param": "rail"
+            },
+            "base_width": {
+              "param": "base_width"
+            },
+            "base_depth": {
+              "param": "base_depth"
+            },
+            "base_height": {
+              "param": "base_height"
+            },
+            "base_plan": {
+              "param": "base_plan"
+            },
+            "base_curve": {
+              "param": "base_curve"
+            }
+          }
+        },
+        "after": [
+          "shell"
+        ],
+        "to": "be",
+        "at": "o",
+        "port": "o",
+        "work": {
+          "rail": {
+            "product": [
+              2.0,
+              {
+                "sum": [
+                  {
+                    "param": "base_width"
+                  },
+                  {
+                    "param": "base_depth"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "site",
+        "skill": {
+          "site": {
+            "hand": {
+              "param": "hand"
+            },
+            "hollow": {
+              "param": "hollow"
+            },
+            "well": {
+              "param": "well"
+            },
+            "base_width": {
+              "param": "base_width"
+            },
+            "base_depth": {
+              "param": "base_depth"
+            },
+            "base_height": {
+              "param": "base_height"
+            },
+            "plinth_radius": {
+              "param": "plinth_radius"
+            },
+            "feet": {
+              "sum": [
+                {
+                  "param": "base_height"
+                },
+                {
+                  "param": "plinth_height"
+                }
+              ]
+            },
+            "base_room": {
+              "param": "base_room"
+            }
+          }
+        },
+        "from": [
+          "figure"
+        ],
+        "work": {}
+      }
+    ]
+  }
+}

@@ -61,6 +61,13 @@ defmodule World.HousesTest do
     end
   end
 
+  test "a unit of each material and a sample of a wall of studs are true models" do
+    for item <- [Buildings.brick_us(), Buildings.block_cmu(), Buildings.tile(), Buildings.wall_stud_sample()] do
+      assert %Assembly{} = item
+      assert World.Check.model(item) == :ok
+    end
+  end
+
   describe "the walls" do
     test "a wall of bricks with a window and its lintel" do
       parts = counts(Buildings.wall_brick_sample())
@@ -161,6 +168,26 @@ defmodule World.HousesTest do
   end
 
   describe "the houses" do
+    test "a workshop of studs with an overhead door of 9 by 8 ft in its side wall, a true model" do
+      {w, h} = World.Openings.standard("garage", "9x8")
+
+      shop =
+        Buildings.house("workshop",
+          length: 8.0,
+          depth: 8.0,
+          wall: :studs,
+          wall_height: 3.0,
+          roof: :metal,
+          pitch: 4 / 12,
+          overhang: 0.3,
+          openings: %{left: [{:overhead, 4.0, w, h}]}
+        )
+
+      {"wall_left", wall, _} = List.keyfind(shop.nodes, "wall_left", 0)
+      assert {"overhead_left_1", %Assembly{}, _} = List.keyfind(wall.nodes, "overhead_left_1", 0)
+      assert World.Check.model(shop) == :ok
+    end
+
     test "the house of bricks of Việt Nam: its bricks, its tiles and its levels" do
       parts = counts(Buildings.house_brick_vn())
       assert parts["brick_vn"] in 6000..8000

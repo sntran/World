@@ -11,6 +11,12 @@ test('the name and the file of a path', () => {
   assert.equal(split('van.mid.glb')[1][1], 'mid');
   assert.equal(split('van.glb')[1][1], 'near');
   assert.equal(split('van.receipt.json')[1][2], 'receipt');
+  assert.equal(split('van.solids.json')[1][2], 'solids');
+  assert.deepEqual(split('van.far.flat.glb').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['far', 'flat']]);
+  assert.deepEqual(split('van.flat.glb').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['near', 'flat']]);
+  assert.deepEqual(split('van.far.light.glb').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['far', 'light']]);
+  assert.deepEqual(split('van.light.glb').map((x, i) => (i ? x.slice(1, 3) : x)), ['van', ['near', 'light']]);
+  assert.equal(split('van.drawing.json')[1][2], 'drawing');
   assert.equal(split('van.log.json')[1][2], 'log');
   assert.deepEqual(split('van.replay.glb').map((x, i) => (i ? x[2] : x)), ['van', 'replay']);
   assert.equal(split('.glb'), null);
@@ -40,6 +46,15 @@ test('POST /orders goes to the VM, with the origin of the URLs', async () => {
   assert.equal(body.replay, `https://world.mkfifo.com/replay.html?order=${HASH}`);
   assert.equal(v.last.headers.get('content-type'), 'application/json');
   assert.ok(v.orders.has(HASH));
+});
+
+test('POST /orders/HASH/edits goes to the VM, with the origin of the URLs', async () => {
+  const v = vm();
+  const hash = '0123456789abcdef0123456789abcdef';
+  const r = await handler(req(`/orders/${hash}/edits`, { method: 'POST', body: JSON.stringify({ edits: [] }) }), { ORDERS: bucket() }, { vm: v, commit: 'c1' });
+  assert.equal(r.status, 422);
+  assert.deepEqual(v.calls, [`/orders/${hash}/edits`]);
+  assert.equal(v.last.headers.get('x-world-origin'), 'https://world.mkfifo.com');
 });
 
 test('POST /sets goes to the VM, with the origin of the URLs', async () => {
@@ -174,6 +189,38 @@ test('GET /m/ of a URL that the factory knows needs no VM', async () => {
   const calls = v.calls.length;
   await handler(req('/m/box.mid.glb?size=2'), env, { vm: v, commit: 'c2' });
   assert.equal(v.calls.length, calls + 1);
+});
+
+test('a blueprint in data of a project goes to the VM', async () => {
+  const v = vm();
+  await handler(req('/blueprints', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }), { ORDERS: bucket() }, { vm: v, commit: 'c1' });
+  assert.equal(v.calls.at(-1), '/blueprints');
+  assert.equal(v.last.method, 'POST');
+});
+
+test('the constructions and the streams go to the VM, with Last-Event-ID, and come back as they come', async () => {
+  const env = { ORDERS: bucket() };
+  const v = vm();
+  const post = await handler(req('/builds', { method: 'POST', headers: { accept: 'text/event-stream', 'content-type': 'application/json' }, body: '{}' }), env, { vm: v, commit: 'c1' });
+  assert.equal(post.headers.get('content-type'), 'text/event-stream');
+  assert.equal(post.headers.get('cache-control'), 'no-cache');
+  assert.equal(await post.text(), 'id: 1\ndata: {"id":1}\n\n');
+  assert.equal(v.last.headers.get('accept'), 'text/event-stream');
+  assert.equal(v.last.headers.get('x-world-origin'), 'https://world.mkfifo.com');
+
+  const events = await handler(req('/events?after=4', { headers: { 'last-event-id': '7' } }), env, { vm: v, commit: 'c1' });
+  assert.equal(events.status, 200);
+  assert.equal(v.last.headers.get('last-event-id'), '7');
+  for (const path of ['/census', '/places', '/places/nui_nho/ground.glb', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']) {
+    await handler(req(path), env, { vm: v, commit: 'c1' });
+  }
+  assert.deepEqual(v.calls.slice(-8), ['/builds', '/events?after=4', '/census', '/places', '/places/nui_nho/ground.glb', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']);
+  assert.equal((await handler(req('/builds', { method: 'PUT' }), env, { vm: v, commit: 'c1' })).status, 405);
+  for (const act of ['pause', 'resume', 'cancel', 'change']) {
+    await handler(req(`/builds/abc-far/${act}`, { method: 'POST', body: '{}' }), env, { vm: v, commit: 'c1' });
+  }
+  assert.deepEqual(v.calls.slice(-4), ['/builds/abc-far/pause', '/builds/abc-far/resume', '/builds/abc-far/cancel', '/builds/abc-far/change']);
+  assert.equal((await handler(req('/builds/abc-far/stop', { method: 'POST' }), env, { vm: v, commit: 'c1' })).status, 405);
 });
 
 test('the other routes', async () => {

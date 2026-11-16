@@ -138,6 +138,22 @@ defmodule World.DrawingTest do
     refute Drawing.__mix_recompile__?()
   end
 
+  test "the drawing of one node: a person makes the node from it and its inputs, as from the whole drawing (plan 0007, D3)" do
+    {:ok, %{drawing: raw}} = Orders.job(Drawing.raw("tuong_chua_kito_vua_cong_truong"), "far")
+
+    made =
+      Enum.reduce(["figure", "robe"], %{}, fn n, made ->
+        Map.put(made, n, Drawing.make(raw, n, Drawing.inputs(raw, n, made)))
+      end)
+
+    one = Drawing.node(raw, "survey")
+    assert [%{"name" => "survey"}] = one["nodes"]
+    assert one["sources"] == raw["sources"] and one["parts"] == %{}
+    inputs = Drawing.inputs(raw, "survey", made)
+    assert Map.keys(inputs) == ["figure", "robe"]
+    assert Drawing.make(one, "survey", inputs) == Drawing.make(raw, "survey", inputs)
+  end
+
   test "the errors of a drawing, each with its path" do
     d = "options.drawing"
     put = fn keys, value -> put_in(box(), Enum.map(keys, &Access.key(&1)), value) end
@@ -155,14 +171,15 @@ defmodule World.DrawingTest do
       {[], [d]},
       {base.("color", 1), ["#{d}.color"]},
       {base.("name", "Box!"), ["#{d}.name"]},
-      {base.("kind", "boat"), ["#{d}.kind"]},
+      {base.("kind", "ship"), ["#{d}.kind"]},
       {base.("sources", "a"), ["#{d}.sources"]},
       {base.("sources", [String.duplicate("a", 501)]), ["#{d}.sources.0"]},
       {base.("materials", []), ["#{d}.materials"]},
-      {base.("materials", %{"silver" => %{}}), ["#{d}.materials.silver"]},
+      {base.("materials", %{"gold" => %{}}), ["#{d}.materials.gold"]},
       {base.("materials", %{"wood" => 1}), ["#{d}.materials.wood"]},
       {base.("materials", %{"wood" => %{"color" => "red", "roughness" => 2, "shine" => 1}}),
        ["#{d}.materials.wood.shine", "#{d}.materials.wood.color", "#{d}.materials.wood.roughness"]},
+      {base.("materials", %{"wood" => %{"texture" => "marble"}}), ["#{d}.materials.wood.texture"]},
       {base.("parts", []), ["#{d}.parts"]},
       {put.(["parts", "Lid"], %{"shapes" => [%{"sphere" => %{"radius" => 1}}]}), ["#{d}.parts.Lid"]},
       {put.(["parts", "drawer"], 1), ["#{d}.parts.drawer"]},
@@ -174,7 +191,7 @@ defmodule World.DrawingTest do
       {shape.(%{
          "sphere" => %{"radius" => 1},
          "size" => 1,
-         "material" => "silver",
+         "material" => "gold",
          "at" => [1],
          "axis" => [0, 0, 0],
          "up" => [0, 0, 99]
