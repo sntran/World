@@ -729,12 +729,17 @@ The owner does this one time:
 
 1. In the dashboard of Cloudflare, Workers and Pages, make a Worker from
    the repository `sntran/World` (Workers Builds). The build command is
-   `npm run build`, the deploy command is `npx wrangler deploy`.
+   `npm run build`, the deploy command is `npx wrangler deploy`. A push
+   to another branch (a pull request) runs `npm run build` and then
+   `npx wrangler preview`: a Preview of the branch at its own URL, with
+   the settings of the block `previews` of `wrangler.jsonc` (a Preview
+   does not take the settings of the site).
 2. `wrangler.jsonc` has the custom domain `world.mkfifo.com`: the deploy
    makes its DNS record and its certificate in the zone `mkfifo.com`.
 3. Make the R2 bucket of the orders before the first deploy:
-   `npx wrangler r2 bucket create world`. It needs no public
-   access: the Worker reads it.
+   `npx wrangler r2 bucket create world`, and the bucket of the orders
+   of the Previews: `npx wrangler r2 bucket create world-preview`. They
+   need no public access: the Worker reads them.
 4. The Worker needs the Workers Paid plan: `edge.com` is about 44 MB (with no files of the catalog and of the kit: the site serves them), and
    a build takes more CPU time than the Free plan gives. Cloudflare
    refuses a Worker of more than 64 MiB (before compression), and then
