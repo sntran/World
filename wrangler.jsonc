@@ -32,11 +32,12 @@
   // wrangler preview" for it). A Preview does not take the settings
   // above, and Wrangler refuses a Preview with no "previews" block. The
   // Durable Object and its migrations stay above: each Preview gets its
-  // own namespace. The orders of a Preview go to their own bucket, so a
-  // Preview does not change the orders of the site. Make the bucket one
-  // time: npx wrangler r2 bucket create world-preview
+  // own namespace. A Preview uses the bucket of the orders of the site:
+  // the key of an order is the hash of its text, so an order has the
+  // same key in a Preview and on the site. (A Preview can add to the
+  // history of the edits of an order of the site.)
   "previews": {
-    "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world-preview" }],
+    "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world" }],
     "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "BEAM_ERL_FLAGS": "-Mea min" }
   },
   "observability": { "enabled": true }

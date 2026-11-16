@@ -737,9 +737,9 @@ The owner does this one time:
 2. `wrangler.jsonc` has the custom domain `world.mkfifo.com`: the deploy
    makes its DNS record and its certificate in the zone `mkfifo.com`.
 3. Make the R2 bucket of the orders before the first deploy:
-   `npx wrangler r2 bucket create world`, and the bucket of the orders
-   of the Previews: `npx wrangler r2 bucket create world-preview`. They
-   need no public access: the Worker reads them.
+   `npx wrangler r2 bucket create world`. It needs no public access:
+   the Worker reads it. A Preview uses the same bucket (the key of an
+   order is the hash of its text).
 4. The Worker needs the Workers Paid plan: `edge.com` is about 44 MB (with no files of the catalog and of the kit: the site serves them), and
    a build takes more CPU time than the Free plan gives. Cloudflare
    refuses a Worker of more than 64 MiB (before compression), and then
