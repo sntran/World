@@ -26,6 +26,7 @@ defmodule World.MCP do
   To correct a model after you look at its files: call edit_order with the hash and small changes (set, remove or insert at a path of the full order). The answer is a new order with its own hash and files, its parent and its history. Do not send the full request again, and do not wait for a new rule: say what to change.
   A thing that a rule draws from a few words is a blueprint as each other one (list_blueprints): street_house, street, building, village_house, village_thing, appliance, mini. Its options are the words of its request, and the full order has each choice that the rule made, so edit_order can change one of them.
   A sculpture from edits (simple shapes that add, take away or paint, with a blend): send it in a node of the skill sculpt of a blueprint, or call open_sculpture for a live sculpture, then edit_sculpture for each change, and follow its stream of pieces.
+  When a tool is missing (a shape, a finish, a joint, a garment, an option that a rule does not let an order change), ask for the tool, not for the model: call request_tool with what the tool does in general, the smallest order or drawing that needs it, and the error or the result that shows the gap. World adds the tool in general, with its tests, for every project; then make the model with it.
   A new model for the catalog (an engineer): get_blueprint drawing gives the format of a drawing (its shapes, their materials and matter, standard parts, nodes and joints). Call check_drawing until the drawing has no errors and passes the checks of a true model (it stands, no two parts in one place, the joints in their limits, it goes through the door of its workshop, each part has a mass). Then call propose_drawing with the request: the owner reviews the proposal, and accepts or refuses it.
   """
 
@@ -214,6 +215,32 @@ defmodule World.MCP do
       }
     },
     %{
+      "name" => "request_tool",
+      "title" => "Ask for a tool that is missing",
+      "description" =>
+        "Asks World for a tool that it does not have: a shape, a finish, a joint, a garment, an option that a rule does not let an order change. Give what the tool does in general (not the model of your project), the smallest order or drawing that needs it, and the error or the result that shows the gap. The factory checks the order or the drawing and keeps the request for the owner: World adds the tool in general, with its tests, for every project. Gives the hash of the request and the check of its order or drawing.",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "project" => %{"type" => "string", "description" => "The name of your project."},
+          "tool" => %{"type" => "string", "description" => "What the tool does in general, in one or two lines."},
+          "gap" => %{
+            "type" => "string",
+            "description" => "The error or the result that shows that the tool is missing."
+          },
+          "order" => @order,
+          "drawing" => @drawing
+        },
+        "required" => ["project", "tool", "gap"]
+      },
+      "annotations" => %{
+        "readOnlyHint" => false,
+        "destructiveHint" => false,
+        "idempotentHint" => true,
+        "openWorldHint" => false
+      }
+    },
+    %{
       "name" => "open_sculpture",
       "title" => "Open a live sculpture",
       "description" =>
@@ -370,6 +397,14 @@ defmodule World.MCP do
       {:ok, data} -> result(data)
       {:error, :store} -> wrong("the store of the proposals failed; try again later")
       {:error, review} -> result(review, true)
+    end
+  end
+
+  defp call("request_tool", args, _origin) do
+    case World.Engineers.request_tool(args) do
+      {:ok, data} -> result(data)
+      {:error, :store} -> wrong("the store of the requests failed; try again later")
+      {:error, errors} -> result(errors, true)
     end
   end
 

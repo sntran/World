@@ -66,3 +66,13 @@ again.
 - The textures of the hair are gray, made bright, so a hair can have
   any color (`docs/format.md`, "A person").
 - `assets.json` lists the assets, with the mean color of each texture.
+- The targets of the body are in one pack, `targets.pack`: an index of
+  the names, then each target compressed alone, so a person reads only
+  its targets. `scripts/makehuman.py` writes `targets.bin.gz` and
+  `targets_child.bin.gz`; then `mix run scripts/targets.exs` packs them
+  and deletes them. (The two tables in memory were 34 MB, and the memory
+  of the edge is 128 MB: `docs/factory.md`.)
+- Each item of clothes with a texture has a swatch,
+  `clothes/NAME.swatch.png`: the texture at 64 by 64 texels, for the
+  colors of the clothes of a person at mid and far
+  (`python3 -I scripts/swatches.py`, with Pillow).

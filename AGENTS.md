@@ -45,6 +45,14 @@ about it.
     -c commit.gpgsign=false commit
   ```
 
+- The files of `priv/models` are the build of the code at each commit:
+  a commit that changes a model builds its files again (`mix world.build
+  NAME`, or `mix world.build`). CI fails when a file is not the same as
+  the build (`mix world.build --check --part I/8`).
+- When a project sends a tool request (`request_tool`,
+  `docs/requests.md`, "When a tool is missing") with an order or a
+  drawing that shows a gap, add the tool in general, with its tests, for
+  every project. Do not make the model of the project.
 - Look at each new or changed model on the review page
   (`scripts/shot.mjs`) before a commit, from the front, the side and
   three quarters. `FOCUS=x,y,z ZOOM=4` gives a close view of a point

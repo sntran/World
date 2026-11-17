@@ -30,6 +30,12 @@ defmodule World.Orders.Store do
   """
   def proposal(hash), do: "proposals/#{hash}.json"
 
+  @doc """
+  The key of a request of a tool of a hash (`World.Engineers`): a project
+  asks for a tool that World does not have, and the owner reads it.
+  """
+  def request(hash), do: "requests/#{hash}.json"
+
   @doc "Puts the full order (its JSON) of a hash in the store."
   @spec put(String.t(), binary()) :: :ok | :error
   def put(hash, json), do: put_key(key(hash), json)

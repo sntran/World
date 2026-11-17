@@ -60,10 +60,15 @@ parent at two ports, with the kind of the connection. Give each joint
 its role.
 
 World is an engine: its rules make a model on demand, for the project
-that asks for it. The models of `World.Catalog` and their files in
-`priv/models` are a reference of what World made. No test and no check
-builds them again, and a new real thing of a project does not need a
-place in the catalog.
+that asks for it. A new real thing of a project does not need a place in
+the catalog. The files of the models of `World.Catalog` in
+`priv/models` are always the build of the code: a project compares the
+files of the factory with a clone of World. CI builds the whole catalog
+again at each commit, in 8 parts at the same time (`mix world.build
+--check --part I/8`), and fails when a file is not the same as the
+build, or is of a model that is not in the catalog. So a commit that
+changes a model builds its files again (`mix world.build NAME`, or
+`mix world.build` for all of them, one model on each core).
 
 ## Rules for a change
 

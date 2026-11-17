@@ -1307,8 +1307,8 @@ strips), `glass`, `glass_dark`, `tire`, `rim`, `chrome`, `metal`,
 `ground` (a street). The `paint` of the palette is a neutral gray: a
 model gives its own color of paint. A person
 has more roles with their textures: `eyes`, `eyebrows`, `eyelashes`,
-`clothes_NAME`, `color_NAME` (the mean color of an asset at mid and
-far), `hole` (the dark inside of the mouth at mid and far),
+`clothes_NAME`, `color_NAME` (an asset at mid and far: the colors of
+its swatch at the points, or one color), `hole` (the dark inside of the mouth at mid and far),
 and with `speech` or `expressions` `teeth` and `tongue`.
 
 The mass (`World.Mass`): a mesh has the density of its role, or of its
@@ -1679,8 +1679,13 @@ The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair (with each face on the
 breasts cut in sixteen, on the surface of the body: about 1,900 faces);
 far is a body of 730 faces: a person at far is about 1,550 triangles.
-At mid and far, the faces under clothes have the mean color of the
-clothes, and each point of the sole of a foot goes down to the ground
+At mid and far, the faces under clothes have the colors of the
+clothes: an item of MakeHuman with a texture of many colors (blue
+overalls over a white shirt) gives each point the color of the swatch of
+its texture (`NAME.swatch.png`, 64 by 64 texels, `scripts/swatches.py`)
+at the place of the item over that point, tinted by the color of the
+order as at near, and its material is white; a garment of World is of
+one fabric, and its material has its color. Each point of the sole of a foot goes down to the ground
 of the shoes: a person stands on z = 0 at each level. At far the scalp
 has the color of the hair, and the hair has its form in 80 triangles at
 the most (the points of its mesh in one cell of a grid become one
@@ -2599,10 +2604,12 @@ The build (`mix world.build`) writes:
 
 The build gives the same bytes for the same model.
 `mix world.build --check NAME` builds a model again and compares. The
-files of `priv/models` are a reference of what World made: no test and
-no check of CI builds them again. A project that needs a model asks
-World to build it (`docs/factory.md`). The tests of the rules use small
-models of their own (`test/support/fixtures.ex`).
+files of `priv/models` are always the build of the code: CI checks the
+whole catalog at each commit, in parts at the same time (`--part I/N`),
+and also fails on a file of a model that is not in the catalog. A
+project that needs a model asks World to build it (`docs/factory.md`).
+The tests of the rules use small models of their own
+(`test/support/fixtures.ex`).
 
 ## GLB
 

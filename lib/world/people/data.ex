@@ -26,13 +26,76 @@ defmodule World.People.Data do
   def weights, do: cached(:weights, fn -> read_gz("weights.json.gz") |> JSON.decode!() |> Map.fetch!("weights") end)
 
   @doc """
-  The targets, by name (see `parse_targets/1` and `target/1`): those of
-  an adult, and those of a child and of a baby (`targets_child.bin.gz`).
+  The names of the targets of the body (of an adult, of a child and of a
+  baby), with the place of each one in `targets.pack`
+  (`pack_targets/1`): a map of the name to `{offset, length}`.
   """
   def targets do
     cached(:targets, fn ->
-      Map.merge(parse_targets(read_gz("targets.bin.gz")), parse_targets(read_gz("targets_child.bin.gz")))
+      {:ok, file} = :file.open(Path.join(dir(), "targets.pack"), [:read, :binary, :raw])
+
+      try do
+        {:ok, <<"XTP1", count::little-32, size::little-32>>} = :file.pread(file, 0, 12)
+        {:ok, index} = :file.pread(file, 12, size)
+
+        {entries, <<>>} =
+          Enum.map_reduce(1..count//1, index, fn _,
+                                                 <<len::little-16, name::binary-size(len), at::little-32, n::little-32,
+                                                   rest::binary>> ->
+            {{:binary.copy(name), {at, n}}, rest}
+          end)
+
+        Map.new(entries)
+      after
+        :file.close(file)
+      end
     end)
+  end
+
+  @doc """
+  The pack of the targets of a table (`parse_targets/1`): an index of the
+  names, then each target compressed alone, so that a person reads only
+  its targets (`load_targets/1`). `scripts/targets.exs` writes it.
+  """
+  def pack_targets(table) do
+    names = table |> Map.keys() |> Enum.sort()
+    blocks = for name <- names, {idx, dx, dy, dz} = table[name], do: :zlib.compress([idx, dx, dy, dz])
+    entry = fn name, at, n -> <<byte_size(name)::little-16, name::binary, at::little-32, n::little-32>> end
+    size = names |> Enum.map(&(byte_size(&1) + 10)) |> Enum.sum()
+
+    {index, _} =
+      Enum.zip(names, blocks)
+      |> Enum.map_reduce(12 + size, fn {name, b}, at -> {entry.(name, at, byte_size(b)), at + byte_size(b)} end)
+
+    IO.iodata_to_binary([<<"XTP1", length(names)::little-32, size::little-32>>, index, blocks])
+  end
+
+  @doc """
+  Reads the targets of these names that the cache does not have, with one
+  open of `targets.pack`, and keeps each one decoded (`target/1`).
+  """
+  def load_targets(names) do
+    missing = for name <- Enum.uniq(names), :persistent_term.get({__MODULE__, {:target, name}}, nil) == nil, do: name
+
+    if missing != [] do
+      index = targets()
+      {:ok, file} = :file.open(Path.join(dir(), "targets.pack"), [:read, :binary, :raw])
+
+      try do
+        for name <- missing do
+          {at, n} = Map.fetch!(index, name)
+          {:ok, block} = :file.pread(file, at, n)
+          data = :zlib.uncompress(block)
+          size = div(byte_size(data), 4)
+          <<idx::binary-size(^size), dx::binary-size(^size), dy::binary-size(^size), dz::binary-size(^size)>> = data
+          decode(:target, name, fn -> {idx, dx, dy, dz} end)
+        end
+      after
+        :file.close(file)
+      end
+    end
+
+    :ok
   end
 
   # The sliders, read when the module compiles (a literal of the module:
@@ -156,8 +219,24 @@ defmodule World.People.Data do
         transparent: Map.get(entry, "transparent", false),
         layer: Map.get(entry, "layer", 1),
         shape: for([t, w] <- Map.get(entry, "shape", []), do: {t, w}),
-        drape: with(%{"points" => ps, "steps" => n} <- entry["drape"], do: %{points: ps, steps: n})
+        drape:
+          with(
+            %{"file" => file, "steps" => n} <- entry["drape"],
+            do: %{points: JSON.decode!(File.read!(Path.join(folder, file))), steps: n}
+          )
       }
+    end)
+  end
+
+  @doc """
+  The swatch of the texture of an item of clothes of MakeHuman
+  (`scripts/swatches.py`: `NAME.swatch.png`, 64 by 64 texels), as
+  `World.PNG.decode/1` gives it, or nil (a garment of World has none).
+  """
+  def swatch(name) do
+    cached({:swatch, name}, fn ->
+      path = Path.join([dir(), "clothes", name <> ".swatch.png"])
+      if File.exists?(path), do: World.PNG.decode(File.read!(path))
     end)
   end
 
@@ -350,7 +429,9 @@ defmodule World.People.Data do
 
   @doc """
   Parse the binary targets (format XTG2 of `scripts/makehuman.py`): a map
-  of each name to its columns, not decoded yet (`target/1` decodes one).
+  of each name to its columns, not decoded yet. (`scripts/targets.exs`
+  packs those of the body, `pack_targets/1`; the expressions stay in this
+  format.)
   """
   def parse_targets(<<"XTG2", count::little-32, rest::binary>>) do
     {targets, <<>>} =
@@ -367,14 +448,18 @@ defmodule World.People.Data do
   end
 
   @doc "A target by its name: a list of `{point, {dx, dy, dz}}`, in decimeters."
-  def target(name), do: decode(:target, targets(), name)
+  def target(name) do
+    load_targets([name])
+    :persistent_term.get({__MODULE__, {:target, name}})
+  end
 
   @doc "A unit of an expression by its name (`units/ORIGIN/mouth-UNIT`), as `target/1`."
-  def expression(name), do: decode(:expression, expressions(), name)
+  def expression(name), do: decode(:expression, name, fn -> Map.fetch!(expressions(), name) end)
 
-  defp decode(kind, table, name) do
+  # (The table is read only when the cache does not have the name.)
+  defp decode(kind, name, entry) do
     cached({kind, name}, fn ->
-      {idx, dx, dy, dz} = Map.fetch!(table, name)
+      {idx, dx, dy, dz} = entry.()
       indices = Enum.scan(for(<<d::little-16 <- idx>>, do: d), &(&1 + &2))
       [xs, ys, zs] = for b <- [dx, dy, dz], do: for(<<v::little-signed-16 <- b>>, do: v * 0.0025)
       Enum.zip_with([indices, xs, ys, zs], fn [i, x, y, z] -> {i, {x, y, z}} end)

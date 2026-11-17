@@ -412,10 +412,14 @@ defmodule World.FactoryTest do
         m["pbrMetallicRoughness"]["baseColorFactor"]
       end
 
-      # At mid, the clothes have the color of the order, and the gray hair
+      # At mid, the clothes have the color of the order: at the points of
+      # an item with a swatch (the material is white), and in the material
+      # of the light look, which has no colors at the points. The gray hair
       # has it as its factor; with no color, the hair has its own color.
       {:ok, mid} = Orders.build(order, "mid", "glb")
-      assert [r, g, b, 1.0] = factor.(mid, "color_female_sportsuit01")
+      assert factor.(mid, "color_female_sportsuit01") == [1.0, 1.0, 1.0, 1.0]
+      {:ok, light} = Orders.build(order, "mid", "light")
+      assert [r, g, b, 1.0] = factor.(light, "color_female_sportsuit01")
       assert r > g and r > b
       assert [hr, hg, hb, 1.0] = factor.(mid, "hair")
       assert hr > hg and hg > hb

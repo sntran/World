@@ -191,10 +191,6 @@ into the steps of `AGENTS.md`.
   and the routines of a morning of exercise. Next: a run, a sit down,
   the hands that turn the bars of a scooter. Each clip is a function of
   the turns of the bones in time (`World.People.Pose`).
-- **The patterns of clothes at mid and far.** A face of a low-poly body
-  under a piece of clothes has the mean color of that piece, so a check
-  or a print is one color there. The color of each face can come from
-  the texture of the clothes.
 - **More people.** Children (the targets of a child are not in the
   folder yet), more hair and clothes from the packs of MakeHuman.
 - **More of a house.** Floors of joists, a ceiling, inner walls, stairs,

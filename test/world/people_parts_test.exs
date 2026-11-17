@@ -97,6 +97,21 @@ defmodule World.People.PartsTest do
     end)
   end
 
+  # A tool that Vũng Tàu asked for (the half helmet on a rider who stands): an order of the blueprint
+  # person puts parts from edits on the head (the option wear), as World.People.Human.person/2 does.
+  test "an order of a person wears parts from edits: the option wear of the blueprint person" do
+    order = %{"blueprint" => "person", "options" => %{"wear" => ["mu_bao_hiem_edits"]}}
+    assert {:ok, full} = World.Orders.check(order)
+    assert full["options"]["wear"] == ["mu_bao_hiem_edits"]
+    {:ok, blueprint} = World.Orders.Blueprints.fetch("person")
+    person = Detail.with(:far, fn -> blueprint.build.(full["options"]) end)
+    assert [{"crown", %World.Assembly{}, "crown"}] = person.props
+    assert {:ok, %{"options" => %{"wear" => []}}} = World.Orders.check(%{"blueprint" => "person"})
+
+    assert {:error, [%{"path" => "options.wear.0"}]} =
+             World.Orders.check(put_in(order, ["options", "wear"], ["nope"]))
+  end
+
   test "the two people of the catalog with parts from edits" do
     Detail.with(:far, fn ->
       woman = World.People.woman_non_la()

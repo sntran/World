@@ -599,13 +599,25 @@ defmodule World.People.Human do
   defp flat_nipples(points) do
     {area, normal} = nipples()
 
-    Enum.reduce(1..@nipple_steps, points, fn _, acc ->
-      Enum.reduce(area, acc, fn {v, side, ns}, a ->
-        p = elem(acc, v)
-        n = normal[side]
-        put_elem(a, v, Vec.add(p, Vec.scale(n, Vec.dot(Vec.sub(ns |> Enum.map(&elem(acc, &1)) |> Vec.mean(), p), n))))
+    # (The points that move are in a map, and they go into the tuple of the points one time: a put_elem
+    # copies the whole tuple.)
+    moved =
+      Enum.reduce(1..@nipple_steps, Map.new(area, fn {v, _, _} -> {v, elem(points, v)} end), fn _, m ->
+        at = fn v -> Map.get(m, v) || elem(points, v) end
+
+        Map.new(area, fn {v, side, ns} ->
+          p = m[v]
+          n = normal[side]
+          {v, Vec.add(p, Vec.scale(n, Vec.dot(Vec.sub(ns |> Enum.map(at) |> Vec.mean(), p), n)))}
+        end)
       end)
-    end)
+
+    put_all(points, moved)
+  end
+
+  # A tuple of points with the points of a map (an index to a point) in their places, in one copy.
+  defp put_all(points, moved) do
+    points |> Tuple.to_list() |> Enum.with_index(fn p, i -> Map.get(moved, i, p) end) |> List.to_tuple()
   end
 
   # The points of the nipples (that the target nipple-point-decr moves) and of the ring round them, each
@@ -664,7 +676,7 @@ defmodule World.People.Human do
         Map.new(chest, fn {v, ns} -> {v, Vec.lerp(at.(v), ns |> Enum.map(at) |> Vec.mean(), t)} end)
       end)
 
-    Enum.reduce(moved, points, fn {v, p}, acc -> put_elem(acc, v, p) end)
+    put_all(points, moved)
   end
 
   # The points of the breasts with their neighbors.
@@ -696,8 +708,7 @@ defmodule World.People.Human do
         points
 
       k ->
-        chest_membrane(points)
-        |> Enum.reduce(points, fn {v, p}, acc -> put_elem(acc, v, Vec.lerp(elem(acc, v), p, k)) end)
+        put_all(points, Map.new(chest_membrane(points), fn {v, p} -> {v, Vec.lerp(elem(points, v), p, k)} end))
     end
   end
 
@@ -723,6 +734,8 @@ defmodule World.People.Human do
   defp worn(points, clothes), do: add_targets(points, Enum.flat_map(clothes, & &1.shape))
 
   defp add_targets(points, weights) do
+    # (One read of the pack for all the targets that the cache does not have.)
+    Data.load_targets(Enum.map(weights, &elem(&1, 0)))
     arr = :array.from_list(Tuple.to_list(points))
 
     weights
@@ -886,6 +899,9 @@ defmodule World.People.Human do
         if(o.hair, do: [{:hair, Data.asset("hair", o.hair), nil}], else: []) ++
         for(c <- clothes, do: {String.to_atom("clothes_" <> c.name), c, nil})
 
+    # The body that the clothes fit to, one time for all of them (`cloth/1`).
+    dressed = if clothes == [], do: points, else: cloth(points)
+
     # A collection after each mesh (World.Detail.collect/1).
     prims =
       [Detail.collect(body)] ++
@@ -898,7 +914,7 @@ defmodule World.People.Human do
         ) ++
         for(
           {role, a, _} <- assets,
-          do: Detail.collect(fitted(role, a, on(role, points), weights, o.ground, face(role, shapes)))
+          do: Detail.collect(fitted(role, a, on(role, points, dressed), weights, o.ground, face(role, shapes)))
         )
 
     materials =
@@ -915,7 +931,10 @@ defmodule World.People.Human do
   end
 
   # The levels mid and far: a low-poly body. Each face under clothes has
-  # the mean color of those clothes; the hair stays at mid.
+  # the color of those clothes: an item with a texture of many colors
+  # (blue overalls over a white shirt) gives each point the color of its
+  # swatch at the place of the item over the point (`point_colors/4`), and
+  # an item of one color gives that color. The hair stays at mid.
   defp proxy(points, weights, o, clothes, level) do
     name = if level == :far, do: "proxy741", else: if(o.gender >= 0.5, do: "male1591", else: "female1605")
     p = proxy_asset(name)
@@ -956,8 +975,10 @@ defmodule World.People.Human do
     shapes = fit_shapes(p, shapes(o))
 
     prims =
-      for {c, faces} <- groups,
-          do: mesh(role.(c), faces, &elem(pts, &1), if(c, do: nil, else: uv), &elem(wts, &1), o.ground, shapes)
+      for {c, faces} <- groups do
+        color = point_colors(c, p, o, ring)
+        mesh(role.(c), faces, &elem(pts, &1), if(c, do: nil, else: uv), &elem(wts, &1), o.ground, shapes, color)
+      end
 
     # The eyes of few faces, the eyebrows at mid, and the mouth closed
     # behind.
@@ -996,7 +1017,9 @@ defmodule World.People.Human do
 
     colors =
       for {c, _} <- covers do
-        spec = %{"color" => Map.get(o.colors, c.name, c.color), "roughness" => 0.9, "metalness" => 0.0}
+        # (The points of an item with a swatch have their colors: the material is white.)
+        color = if swatch(c), do: [255, 255, 255], else: Map.get(o.colors, c.name, c.color)
+        spec = %{"color" => color, "roughness" => 0.9, "metalness" => 0.0}
         # (The faces of the hair at far are seen from their two sides.)
         {role.(c), if(level == :far and c.name == o.hair, do: Map.put(spec, "double_sided", true), else: spec)}
       end
@@ -1227,6 +1250,85 @@ defmodule World.People.Human do
     end
   end
 
+  # The color of each point of the proxy under an item at mid and far (for `mesh/8`), from the swatch of
+  # its texture: the mean of the swatch at the places (UV) of the points of the item over the body points
+  # of the point, or over their neighbors when the item has no point over them. An order with a color of
+  # the item tints them, as at near (`tint/3`). An item with no swatch (a garment of World, of one
+  # fabric: one color) gives nil: it keeps the color of its material.
+  defp point_colors(nil, _proxy, _o, _ring), do: nil
+
+  defp point_colors(c, proxy, o, ring) do
+    case swatch(c) do
+      nil ->
+        nil
+
+      sw ->
+        over = items_over(c)
+        mean = List.to_tuple(c.color)
+
+        factor =
+          case Map.fetch(o.colors, c.name) do
+            {:ok, rgb} -> Enum.zip_with(rgb, c.color, &(&1 / max(&2, 1)))
+            :error -> [1.0, 1.0, 1.0]
+          end
+
+        fn v ->
+          {body, _, _} = elem(proxy.fit.refs, v)
+
+          case near_items(body, over, ring, 3) do
+            [] -> mean
+            uvs -> uvs |> Enum.map(&sample(sw, &1)) |> Vec.mean()
+          end
+          |> Tuple.to_list()
+          |> Enum.zip_with(factor, &min(255, round(&1 * &2)))
+          |> List.to_tuple()
+        end
+    end
+  end
+
+  # The UVs of the points of an item over some body points, else over their neighbors (at most `steps`
+  # rings out).
+  defp near_items(body, over, ring, steps) do
+    case Enum.flat_map(body, &Map.get(over, &1, [])) do
+      [] when steps > 0 ->
+        near_items(body |> Enum.flat_map(&Map.get(ring, &1, [])) |> Enum.uniq(), over, ring, steps - 1)
+
+      uvs ->
+        uvs
+    end
+  end
+
+  # For each point of the body, the UVs of the points of an item over it (the first point of the fit of
+  # each point of the item; a point of a helper is the point of the body under it).
+  defp items_over(c) do
+    Data.cached({:items_over, c.name}, fn ->
+      under = Data.body_points()
+
+      uv =
+        for f <- c.mesh.groups |> Map.values() |> Enum.concat(), {v, t} <- f, t != nil, reduce: %{} do
+          acc -> Map.put_new(acc, v, elem(c.mesh.uvs, t))
+        end
+
+      for {{[b | _], _, _}, v} <- c.fit.refs |> Tuple.to_list() |> Enum.with_index(),
+          at = uv[v],
+          at != nil,
+          reduce: %{} do
+        acc -> Map.update(acc, Map.get(under, b, b), [at], &[at | &1])
+      end
+    end)
+  end
+
+  # The swatch of an item (`scripts/swatches.py`), or nil.
+  defp swatch(c), do: Data.swatch(c.name)
+
+  # The color of a swatch at a UV (v from the bottom of the image, and the image wraps).
+  defp sample({w, h, ch, rows}, {u, v}) do
+    x = Integer.mod(floor(u * w), w)
+    y = Integer.mod(floor((1 - v) * h), h)
+    <<r, g, b, _::binary>> = binary_part(elem(rows, y), x * ch, ch)
+    {r / 1, g / 1, b / 1}
+  end
+
   # A low-poly body of MakeHuman for mid, with each face on the breasts
   # cut in four, two times: with its 11 faces on a breast, the bust of a
   # woman at mid is a cone (at far the body stays as it is). Each new
@@ -1262,7 +1364,14 @@ defmodule World.People.Human do
 
     halved = Enum.reduce(1..2, start, fn _, acc -> quarter(acc) end)
     n0 = tuple_size(p.mesh.points)
-    new_refs = for i <- n0..(map_size(halved.points) - 1)//1, do: on_body(halved.points[i], halved.offsets[i])
+    # (The faces round each point of the body: made here and not kept, since the refined proxy is kept.)
+    around =
+      for f <- Map.fetch!(Data.base().groups, "body"), vs = Enum.map(f, &elem(&1, 0)), v <- vs, reduce: %{} do
+        acc -> Map.update(acc, v, [vs], &[vs | &1])
+      end
+
+    new_refs =
+      for i <- n0..(map_size(halved.points) - 1)//1, do: on_body(halved.points[i], halved.offsets[i], around)
 
     # The faces around: the new points of their edges, in their order.
     split = fn split, {a, ta}, {b, tb} ->
@@ -1366,15 +1475,9 @@ defmodule World.People.Human do
   # The place on the surface of the body nearest to a point of the base
   # mesh: of the triangles of the faces around the nearest point of the
   # body, the nearest one, and the weights of its three corners there.
-  defp on_body(q, offset) do
-    %{points: base, groups: groups} = Data.base()
-
-    around =
-      Data.cached(:faces_around, fn ->
-        for f <- Map.fetch!(groups, "body"), vs = Enum.map(f, &elem(&1, 0)), v <- vs, reduce: %{} do
-          acc -> Map.update(acc, v, [vs], &[vs | &1])
-        end
-      end)
+  # `around`: the faces round each point of the body.
+  defp on_body(q, offset, around) do
+    %{points: base} = Data.base()
 
     v = Enum.min_by(0..13379, &Vec.len(Vec.sub(elem(base, &1), q)))
 
@@ -1530,7 +1633,8 @@ defmodule World.People.Human do
 
   # The points of the body that an asset fits to: a cloth fits to the body
   # with no nipples (`cloth/1`).
-  defp on(role, points), do: if(String.starts_with?(Atom.to_string(role), "clothes_"), do: cloth(points), else: points)
+  defp on(role, points, dressed),
+    do: if(String.starts_with?(Atom.to_string(role), "clothes_"), do: dressed, else: points)
 
   # The eyebrows and the eyelashes move with the skin of the face.
   defp face(role, shapes) when role in [:eyebrows, :eyelashes], do: shapes
@@ -1691,7 +1795,7 @@ defmodule World.People.Human do
   # normal of each point from its faces, and the 4 weights.
   # `shapes`: a list of `{name, move}`, the move of a point of the base
   # mesh (in the units of MakeHuman): the morph targets of the mesh.
-  defp mesh(role, faces, pos, uv, wts, ground, shapes) do
+  defp mesh(role, faces, pos, uv, wts, ground, shapes, color \\ nil) do
     tris = Enum.flat_map(faces, fn [a, b, c | rest] -> fan(a, [b, c | rest]) end)
     p = fn v -> Vec.sub(to_world(pos.(v)), {0.0, 0.0, ground}) end
 
@@ -1722,6 +1826,7 @@ defmodule World.People.Human do
       positions: for({v, _} <- verts, do: p.(v)),
       normals: for({v, _} <- verts, do: normals[v]),
       uvs: if(uv, do: for({_, t} <- verts, do: flip_v(uv.(t)))),
+      colors: if(color, do: for({v, _} <- verts, do: color.(v))),
       joints: for(js <- joints, do: List.to_tuple(Enum.map(js, &elem(&1, 0)))),
       weights: for(js <- joints, do: List.to_tuple(Enum.map(js, &(elem(&1, 1) / 1)))),
       indices: indices,

@@ -52,7 +52,7 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the node build the GLB at each level (`World.Construction`). |
 | `/o/HASH.drawing.json` | The drawing of the model, with the options of the order in it: each part with its shapes or its skill, the nodes, the joints. It is the drawing that the edit `free` of an order puts in the order ("An edit of an order"). A model that the code of a rule makes as a mesh (a plant, a person, an animal) is the one node `model` of its drawing: an item of its blueprint. |
 | `/o/HASH.flat.glb`, `.mid.flat.glb`, `.far.flat.glb` | The model at a level with the flat look (`World.Flat`, plan 0019), for a project that draws many small things with no image: one node with one mesh, each face with its own three points, its normal and one color at each point (`COLOR_0`), a white material, no image, no skin. The points are at their places in the axes of the model. A drawing from edits is built with the look `flat` (the color of a face is the color of its edits); another model has the color of each of its roles. With `?triangles=N` (12 to 200,000), the mesh has at most N faces, or as few as the collapse can make. With `?wrap=1`, the mesh is one closed skin round the whole model (a cast of the model in a grid of 48 cells along its longest side, `World.Cast`), with the color of the nearest face of the model: for a model of many thin parts in a small budget. A part that is thinner than a cell is not in the skin. |
-| `/o/HASH.light.glb`, `.mid.light.glb`, `.far.light.glb` | The model at a level with the light look (`World.Flat`, `roles: true`), for a project that gives each role its own material: one node with one mesh, a primitive for each role of the model, flat faces, the material of each role with its color and no image, no skin. It takes `?triangles=N` and `?wrap=1` as the flat look: a budget keeps the border of two roles. A scooter at the far level: 4,120 triangles, and 500 with `?triangles=500&wrap=1` (50 KB, 15 KB in gzip, in 1.7 s). A coconut palm at the far level: 308 triangles, and 204 with `?triangles=204`. |
+| `/o/HASH.light.glb`, `.mid.light.glb`, `.far.light.glb` | The model at a level with the light look (`World.Flat`, `roles: true`), for a project that gives each role its own material: one node with one mesh, a primitive for each role of the model, flat faces, the material of each role with its color (the mean of the colors at the points of a role that has them: a sculpture, the clothes of a person at mid and far) and no image, no skin. It takes `?triangles=N` and `?wrap=1` as the flat look: a budget keeps the border of two roles. A scooter at the far level: 4,120 triangles, and 500 with `?triangles=500&wrap=1` (50 KB, 15 KB in gzip, in 1.7 s). A coconut palm at the far level: 308 triangles, and 204 with `?triangles=204`. |
 | `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
@@ -329,6 +329,7 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 | `edit_order` | Makes the `edits` on the order of a `hash` and keeps the new order, as `POST /orders/HASH/edits`. |
 | `place_order` | Checks an `order` and keeps it, as `POST /orders`: the hash, the full order, the URLs of its files and of its replay page, or the errors. |
 | `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for the owner. |
+| `request_tool` | A project asks for a tool that World does not have (`docs/requests.md`, "When a tool is missing"): its `project`, what the `tool` does in general, the smallest `order` or `drawing` that needs it, and the `gap` (the error or the result). The factory checks the example and keeps the request (`requests/HASH.json`): its hash and the check. |
 | `plan_build` | The plan of the people for an `order` at a `level`, with no build: each task with its trade and its waits, the tasks of each trade, and the estimate of the triangles. |
 | `build` | Keeps an `order` and starts its construction in its `budget`, as `POST /builds`: the id of the build, the URL of the stream of its events, and the URLs of its files. |
 | `open_sculpture` | Opens a live sculpture from its `edits` (the skill `sculpt`, `docs/format.md`, "A sculpture") at a `level`, with a `name` or the hash of its edits: its id, its version, and the URLs of its stream and of its GLB. The node has at most 8 at one time. |
@@ -428,7 +429,7 @@ version of the blueprint (`van@2`): the old version stays.
 
 | Order | Where |
 |---|---|
-| A model of the catalog | `mix world.build` builds it natively, and the files are in the repository as a reference (no check builds them again). The Worker serves them as static files: no build at a request. |
+| A model of the catalog | `mix world.build` builds it natively, and the files are in the repository. CI checks at each commit that they are the build of the code. The Worker serves them as static files: no build at a request. |
 | An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 ## The server on a computer
@@ -592,12 +593,51 @@ item) is 12 MB of terms: lists of tuples of floats for each point. Less
 needs a packed format for the meshes (binaries of floats), a larger
 change.
 
-Still to do: a packed format for the meshes of a person; the data of
-MakeHuman in the memory of the VM (the targets are a
-binary of 14.6 MB, the base mesh 6 MB of terms, the assets 8 MB: a
-format that reads only the targets of a person); and the peak at the
-end of a build, where the person, the scene and the buffer of the GLB
-are all live.
+F4, part 3 (2026-11-17). At `8fbf36c` the factory gave 503 for the mid
+and the near level of a person, and for its receipt and its list of the
+parts (they come from the near level); Vũng Tàu found it. The causes:
+
+- A construction that was done kept its plan for its 5 minutes after the
+  end, and the plan had the item: a person is 13 MB of terms, and with
+  its garbage the process kept 28 MB. Its reply copied the item too.
+  Now the plan keeps its tasks with no items when the joiner starts, and
+  a full collection runs after that state is in place.
+- The targets of the body stayed in memory: 21 MB for those of an
+  adult (more than before: the sliders and the breasts), and 13 MB more
+  for those of a child, read for each person. Now they are one pack
+  (`priv/makehuman/targets.pack`): an index of the names, then each
+  target compressed alone, so a person reads only its targets.
+- The list of the assets made the cut of all 12 garments of the sewing
+  shop (8 MB kept, and its garbage) to find the points that drape. Now
+  those points are a file of each garment (`NAME.drape.json`).
+- The fit of the clothes wrote each moved point into the tuple of all
+  the points (19,000) with `put_elem`: one copy of the tuple for each
+  point and each step, about 5,000 copies for the nipples. Now the moved
+  points go in with one copy, and the near level makes the body of the
+  clothes one time, not one time for each item.
+- The faces round each point of the body (4.7 MB) stayed after the
+  refinement of the body at mid. Now they go after it.
+
+The linear memory of the VM in `wrangler dev` (it never shrinks: its
+peak), each level of a person (the defaults) in a new VM, after
+`POST /orders` in its own VM:
+
+| Step | `8d59a75` (built at the edge) | `8fbf36c` (503 at the edge) | Now |
+|---|---|---|---|
+| `POST /orders` | 40 MB | 148 MB | 84 MB |
+| far | 93 MB | 153 MB | 83 MB |
+| mid | 98 MB | 153 MB | 89 MB |
+| near | 131 MB | 184 MB | 122 MB |
+
+A child of 9 years in the clothes of a village: near 120 MB, its
+receipt 122 MB. (`POST /orders` of `8d59a75` did not build the item;
+now the check of a true model builds it at far.)
+
+Still to do: a packed format for the meshes of a person (the item is
+13 MB of terms); the check of a group of people (`exercise` with
+`fans`: 272 MB, so its order stops the VM); and the peak at the end of
+a build, where the person, the scene and the buffer of the GLB are all
+live.
 
 ## Realism
 

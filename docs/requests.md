@@ -54,7 +54,11 @@ made, so that you can change one of them later:
 
 The MCP server has no tool for one kind of model. Its tools are for a
 model of any kind: `list_blueprints` and `get_blueprint` to find a
-rule, `check_order` and `place_order` to ask, `edit_order` to change.
+rule, `check_order` and `place_order` to ask, `edit_order` to change,
+`check_drawing` for a drawing, and `request_tool` when a tool is
+missing. A project needs no clone of World and no `mix`: each of these
+tools, and the files of each level, come from the factory
+(`https://world.mkfifo.com/mcp`).
 
 A person (`person`) has an age from 1 to 90 years: a child has its own
 size and proportions. The clothes of a village of old Việt Nam are
@@ -62,6 +66,10 @@ items of `clothes`: `world_ao_canh` (a loose tunic with long sleeves),
 `world_ao_coc` (short sleeves), `world_quan_ong_rong` (wide pants) and
 `world_quan_dui` (short pants), each with its color in
 `clothes_colors`. With no shoes in `clothes`, the person has bare feet.
+The option `wear` puts parts from edits on the head: the half helmet of
+a rider (`mu_bao_hiem_edits`), hair (`toc_ngan_edits`, `toc_bui_edits`,
+`toc_dai_edits`) and a nón lá (`non_la_edits`); a helmet and hair take
+the size of the head of the person.
 The animal `buffalo_calf` is the calf of a water buffalo, and the plant
 `areca` is the areca palm.
 
@@ -166,6 +174,27 @@ With the server of World (`https://world.mkfifo.com`):
   that a person who waits for one model goes first.
 - Ask for gzip (`accept-encoding: gzip`): a GLB is about 3 times
   smaller.
+
+## When a tool is missing
+
+World gives tools; a project makes its models with them. When a project
+cannot make a thing with the tools of World (a shape, a finish, a joint,
+a garment, an option that a rule does not let an order change), it asks
+for the tool, not for the model: the MCP tool `request_tool`, with
+
+- `project`: the name of the project;
+- `tool`: what the tool does in general, in one or two lines (for
+  example "a garment `swim_trunks` for the person blueprint, as the
+  other garments", not "a swimmer of Bãi Trước");
+- `order` or `drawing`: the smallest one of the project that needs the
+  tool;
+- `gap`: the error or the result that shows the gap.
+
+The factory checks the order or the drawing and keeps the request
+(`requests/HASH.json`) with that check; the answer gives its hash. World
+adds the tool in general, with its tests, for every project, and the
+project then makes its model with it. The owner reads a request with
+its hash (`World.Engineers.tool_request/1`).
 
 ## What to prepare for a thing
 

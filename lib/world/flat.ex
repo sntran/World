@@ -19,8 +19,11 @@ defmodule World.Flat do
   With `roles: true` the scene is the light look: one node with one
   primitive for each material of the model (its role), flat faces, no
   color at the points and no image. The materials of the scene stay, so
-  a project gives each role its own material. A budget keeps the border
-  of two roles: each face keeps its role.
+  a project gives each role its own material, each with the mean color
+  of the faces of its role: the color of the material, or the mean of
+  the colors at the points (a sculpture, the clothes of a person at mid
+  and far), so no color goes. A budget keeps the border of two roles:
+  each face keeps its role.
   """
 
   alias World.{Cast, Frame, GLB, Scene, Simplify, Vec}
@@ -58,15 +61,24 @@ defmodule World.Flat do
         }
       end
 
+    # The color of a role in the light look: the mean of the colors of its faces. (A role with a color
+    # at each point, the clothes of a person at mid and far, has a white material; a role with no color
+    # at its points has the color of its material at each face.)
+    means =
+      for {role, fs} <- Enum.group_by(faces, &elem(&1, 2), &elem(&1, 1)), into: %{} do
+        {r, g, b} = Enum.reduce(fs, fn {r, g, b}, {sr, sg, sb} -> {sr + r, sg + g, sb + b} end)
+        {role, {round(r / length(fs)), round(g / length(fs)), round(b / length(fs))}}
+      end
+
     materials =
       if roles?,
         do:
           for(
-            %{material: role} = p <- primitives,
+            %{material: role} <- primitives,
             spec = scene.materials[role],
             spec != nil,
             into: %{},
-            do: {role, plain(spec, color(scene, p))}
+            do: {role, plain(spec, means[role])}
           ),
         # (The color of each point is the color of the model: the material is white.)
         else: %{paint: %{"color" => [255, 255, 255], "roughness" => 0.9, "metalness" => 0.0}}
