@@ -592,12 +592,51 @@ item) is 12 MB of terms: lists of tuples of floats for each point. Less
 needs a packed format for the meshes (binaries of floats), a larger
 change.
 
-Still to do: a packed format for the meshes of a person; the data of
-MakeHuman in the memory of the VM (the targets are a
-binary of 14.6 MB, the base mesh 6 MB of terms, the assets 8 MB: a
-format that reads only the targets of a person); and the peak at the
-end of a build, where the person, the scene and the buffer of the GLB
-are all live.
+F4, part 3 (2026-11-17). At `8fbf36c` the factory gave 503 for the mid
+and the near level of a person, and for its receipt and its list of the
+parts (they come from the near level); Vũng Tàu found it. The causes:
+
+- A construction that was done kept its plan for its 5 minutes after the
+  end, and the plan had the item: a person is 13 MB of terms, and with
+  its garbage the process kept 28 MB. Its reply copied the item too.
+  Now the plan keeps its tasks with no items when the joiner starts, and
+  a full collection runs after that state is in place.
+- The targets of the body stayed in memory: 21 MB for those of an
+  adult (more than before: the sliders and the breasts), and 13 MB more
+  for those of a child, read for each person. Now they are one pack
+  (`priv/makehuman/targets.pack`): an index of the names, then each
+  target compressed alone, so a person reads only its targets.
+- The list of the assets made the cut of all 12 garments of the sewing
+  shop (8 MB kept, and its garbage) to find the points that drape. Now
+  those points are a file of each garment (`NAME.drape.json`).
+- The fit of the clothes wrote each moved point into the tuple of all
+  the points (19,000) with `put_elem`: one copy of the tuple for each
+  point and each step, about 5,000 copies for the nipples. Now the moved
+  points go in with one copy, and the near level makes the body of the
+  clothes one time, not one time for each item.
+- The faces round each point of the body (4.7 MB) stayed after the
+  refinement of the body at mid. Now they go after it.
+
+The linear memory of the VM in `wrangler dev` (it never shrinks: its
+peak), each level of a person (the defaults) in a new VM, after
+`POST /orders` in its own VM:
+
+| Step | `8d59a75` (built at the edge) | `8fbf36c` (503 at the edge) | Now |
+|---|---|---|---|
+| `POST /orders` | 40 MB | 148 MB | 84 MB |
+| far | 93 MB | 153 MB | 83 MB |
+| mid | 98 MB | 153 MB | 89 MB |
+| near | 131 MB | 184 MB | 122 MB |
+
+A child of 9 years in the clothes of a village: near 120 MB, its
+receipt 122 MB. (`POST /orders` of `8d59a75` did not build the item;
+now the check of a true model builds it at far.)
+
+Still to do: a packed format for the meshes of a person (the item is
+13 MB of terms); the check of a group of people (`exercise` with
+`fans`: 272 MB, so its order stops the VM); and the peak at the end of
+a build, where the person, the scene and the buffer of the GLB are all
+live.
 
 ## Realism
 

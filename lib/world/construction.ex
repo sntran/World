@@ -147,6 +147,13 @@ defmodule World.Construction do
   end
 
   @impl true
+  # A full collection when the joiner starts and when the construction starts to linger: the old state,
+  # with the model, is garbage now.
+  def handle_continue(:collect, s) do
+    :erlang.garbage_collect()
+    {:noreply, s}
+  end
+
   # The drafter makes the model and its plan in a process of its own, as
   # the engineer of a site draws the plan (plan 0007): the construction
   # takes a cancel or a deadline while it works, and other constructions
@@ -954,9 +961,13 @@ defmodule World.Construction do
         send(me, {:joined, self(), World.Detail.lean(true, fn -> GLB.encode(scene.()) end)})
       end)
 
-    s = %{s | item: nil, triangles: %{}, elements: %{}, made: %{}}
-    :erlang.garbage_collect()
-    {:noreply, Map.merge(s, %{joiner: joiner, deferred: []})}
+    # The plan keeps its tasks, their ids and their trades, with no items: each task is done, and a
+    # person is 13 MB of terms. (The memory of the edge is 128 MB. The result of the construction has
+    # this plan too, and a message copies it.)
+    plan = %{s.plan | tasks: for(task <- s.plan.tasks, do: %{task | work: nil, item: nil}), parts: %{}}
+    s = %{s | item: nil, triangles: %{}, elements: %{}, made: %{}, plan: plan}
+    # (The collection runs after this state is in place: then the old state is garbage.)
+    {:noreply, Map.merge(s, %{joiner: joiner, deferred: []}), {:continue, :collect}}
   end
 
   defp finish(s), do: {:noreply, s}
@@ -991,7 +1002,8 @@ defmodule World.Construction do
         Process.send_after(self(), :close, linger)
         # The messages that came while the joiner worked.
         for m <- Enum.reverse(s.deferred), do: send(self(), m)
-        {:noreply, %{s | deferred: [], over: true}}
+        # While it lingers it keeps the GLBs of its elements.
+        {:noreply, %{s | deferred: [], over: true}, {:continue, :collect}}
 
       {:error, {:already_registered, _}} ->
         {:stop, :normal, s}

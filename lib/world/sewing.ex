@@ -342,19 +342,26 @@ defmodule World.Sewing do
   """
   def layers, do: @layers
 
-  @doc "The files of the garments: a list of `{file name, binary}` in `priv/makehuman/clothes/`."
+  @doc """
+  The files of the garments: a list of `{file name, binary}` in
+  `priv/makehuman/clothes/`. A garment of a fabric with a span also has
+  the points of its mesh that drape (`NAME.drape.json`): a person reads
+  them, and does not cut the garment again.
+  """
   def files do
     Enum.flat_map(garments(), fn g ->
-      %{obj: obj, fit: fit} = sew(g)
-      [{g.name <> ".obj.gz", :zlib.gzip(obj)}, {g.name <> ".mhclo.gz", :zlib.gzip(fit)}, {g.name <> ".png", texture(g)}]
+      %{obj: obj, fit: fit, drape: drape} = sew(g)
+
+      [{g.name <> ".obj.gz", :zlib.gzip(obj)}, {g.name <> ".mhclo.gz", :zlib.gzip(fit)}, {g.name <> ".png", texture(g)}] ++
+        if Map.fetch!(@fabrics, g.fabric).span > 0, do: [{g.name <> ".drape.json", JSON.encode!(drape)}], else: []
     end)
   end
 
   @doc """
   The entries of the garments in `assets.json` (as the entries of
   `scripts/makehuman.py`), with the layer, the shape (`[[target, weight]]`)
-  and the drape (the points of the mesh that span the dips of the body,
-  and the steps of the span of the fabric).
+  and the drape (the file of the points of the mesh that span the dips
+  of the body, and the steps of the span of the fabric).
   """
   def entries do
     Map.new(garments(), fn g ->
@@ -372,7 +379,7 @@ defmodule World.Sewing do
          "layer" => g.layer,
          "fabric" => g.fabric,
          "shape" => Enum.map(g.shape, fn {t, w} -> [t, w] end),
-         "drape" => if(fabric.span > 0, do: %{"points" => sew(g).drape, "steps" => fabric.span}, else: nil)
+         "drape" => if(fabric.span > 0, do: %{"file" => g.name <> ".drape.json", "steps" => fabric.span}, else: nil)
        }}
     end)
   end

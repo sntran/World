@@ -37,6 +37,24 @@ defmodule World.ConstructionTest do
     most
   end
 
+  # The memory of the edge is 128 MB for all of the VM (docs/factory.md): a construction that is done,
+  # and the result that it sends, keep no model. (A person at near is 13 MB of terms; the construction
+  # kept them for its 5 minutes after its end, and its reply copied them.)
+  test "a construction that is done keeps no model: its result and the construction that lingers have the plan with no items" do
+    item = heavy()
+    id = "heavy-#{System.unique_integer([:positive])}"
+    {:ok, ^id} = World.build(%{id: id, item: fn _level -> item end})
+    assert {:ok, r} = World.await(id)
+    assert r.plan.tasks != [] and Enum.all?(r.plan.tasks, &(&1.work == nil and &1.item == nil))
+
+    # It lingers for the elements of a watcher that comes late, with its heap collected.
+    [{pid, _}] = Registry.lookup(World.Names, {:elements, id})
+    s = :sys.get_state(pid)
+    assert s.over and s.item == nil and Enum.all?(s.plan.tasks, &(&1.work == nil))
+    {:memory, bytes} = Process.info(pid, :memory)
+    assert bytes < 2_000_000, "#{bytes} B"
+  end
+
   test "the people build the wall of bricks element by element: the bytes of a build with no world, with one worker and with eight",
        %{tmp_dir: dir} do
     expected = glb("wall_brick_sample", :near)

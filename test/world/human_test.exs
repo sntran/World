@@ -818,6 +818,19 @@ defmodule World.HumanTest do
       assert map_size(Data.targets()) == 904
       [{i, {dx, _, _}} | _] = Data.target("asian-male-young")
       assert is_integer(i) and is_float(dx)
+      # The memory keeps the index of the pack, not the targets (21 MB): a person reads only its targets,
+      # those of a child too.
+      assert :erts_debug.flat_size(Data.targets()) * 8 < 300_000
+      assert Data.load_targets(["asian-male-child", "universal-female-baby-averagemuscle-averageweight"]) == :ok
+      assert [{_, {_, _, _}} | _] = Data.target("asian-male-child")
+
+      # The pack (scripts/targets.exs): its header, the index of each name (its place and its length), then
+      # each target compressed alone.
+      table = %{"b" => {<<1, 0>>, <<2, 0>>, <<3, 0>>, <<4, 0>>}, "a" => {<<5, 0>>, <<6, 0>>, <<7, 0>>, <<8, 0>>}}
+      pack = Data.pack_targets(table)
+      assert <<"XTP1", 2::little-32, 22::little-32, index::binary-size(22), _::binary>> = pack
+      <<1::little-16, "a", at::little-32, n::little-32, 1::little-16, "b", _::binary>> = index
+      assert :zlib.uncompress(binary_part(pack, at, n)) == <<5, 0, 6, 0, 7, 0, 8, 0>>
       assert Data.asset("eye_materials", "brown").mesh == nil
       assert Data.asset("skins", "young_asian_male").texture =~ ".jpg"
       assert_raise ArgumentError, ~r/no asset/, fn -> Data.asset("hair", "none") end

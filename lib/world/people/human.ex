@@ -599,13 +599,25 @@ defmodule World.People.Human do
   defp flat_nipples(points) do
     {area, normal} = nipples()
 
-    Enum.reduce(1..@nipple_steps, points, fn _, acc ->
-      Enum.reduce(area, acc, fn {v, side, ns}, a ->
-        p = elem(acc, v)
-        n = normal[side]
-        put_elem(a, v, Vec.add(p, Vec.scale(n, Vec.dot(Vec.sub(ns |> Enum.map(&elem(acc, &1)) |> Vec.mean(), p), n))))
+    # (The points that move are in a map, and they go into the tuple of the points one time: a put_elem
+    # copies the whole tuple.)
+    moved =
+      Enum.reduce(1..@nipple_steps, Map.new(area, fn {v, _, _} -> {v, elem(points, v)} end), fn _, m ->
+        at = fn v -> Map.get(m, v) || elem(points, v) end
+
+        Map.new(area, fn {v, side, ns} ->
+          p = m[v]
+          n = normal[side]
+          {v, Vec.add(p, Vec.scale(n, Vec.dot(Vec.sub(ns |> Enum.map(at) |> Vec.mean(), p), n)))}
+        end)
       end)
-    end)
+
+    put_all(points, moved)
+  end
+
+  # A tuple of points with the points of a map (an index to a point) in their places, in one copy.
+  defp put_all(points, moved) do
+    points |> Tuple.to_list() |> Enum.with_index(fn p, i -> Map.get(moved, i, p) end) |> List.to_tuple()
   end
 
   # The points of the nipples (that the target nipple-point-decr moves) and of the ring round them, each
@@ -664,7 +676,7 @@ defmodule World.People.Human do
         Map.new(chest, fn {v, ns} -> {v, Vec.lerp(at.(v), ns |> Enum.map(at) |> Vec.mean(), t)} end)
       end)
 
-    Enum.reduce(moved, points, fn {v, p}, acc -> put_elem(acc, v, p) end)
+    put_all(points, moved)
   end
 
   # The points of the breasts with their neighbors.
@@ -696,8 +708,7 @@ defmodule World.People.Human do
         points
 
       k ->
-        chest_membrane(points)
-        |> Enum.reduce(points, fn {v, p}, acc -> put_elem(acc, v, Vec.lerp(elem(acc, v), p, k)) end)
+        put_all(points, Map.new(chest_membrane(points), fn {v, p} -> {v, Vec.lerp(elem(points, v), p, k)} end))
     end
   end
 
@@ -723,6 +734,8 @@ defmodule World.People.Human do
   defp worn(points, clothes), do: add_targets(points, Enum.flat_map(clothes, & &1.shape))
 
   defp add_targets(points, weights) do
+    # (One read of the pack for all the targets that the cache does not have.)
+    Data.load_targets(Enum.map(weights, &elem(&1, 0)))
     arr = :array.from_list(Tuple.to_list(points))
 
     weights
@@ -886,6 +899,9 @@ defmodule World.People.Human do
         if(o.hair, do: [{:hair, Data.asset("hair", o.hair), nil}], else: []) ++
         for(c <- clothes, do: {String.to_atom("clothes_" <> c.name), c, nil})
 
+    # The body that the clothes fit to, one time for all of them (`cloth/1`).
+    dressed = if clothes == [], do: points, else: cloth(points)
+
     # A collection after each mesh (World.Detail.collect/1).
     prims =
       [Detail.collect(body)] ++
@@ -898,7 +914,7 @@ defmodule World.People.Human do
         ) ++
         for(
           {role, a, _} <- assets,
-          do: Detail.collect(fitted(role, a, on(role, points), weights, o.ground, face(role, shapes)))
+          do: Detail.collect(fitted(role, a, on(role, points, dressed), weights, o.ground, face(role, shapes)))
         )
 
     materials =
@@ -1262,7 +1278,14 @@ defmodule World.People.Human do
 
     halved = Enum.reduce(1..2, start, fn _, acc -> quarter(acc) end)
     n0 = tuple_size(p.mesh.points)
-    new_refs = for i <- n0..(map_size(halved.points) - 1)//1, do: on_body(halved.points[i], halved.offsets[i])
+    # (The faces round each point of the body: made here and not kept, since the refined proxy is kept.)
+    around =
+      for f <- Map.fetch!(Data.base().groups, "body"), vs = Enum.map(f, &elem(&1, 0)), v <- vs, reduce: %{} do
+        acc -> Map.update(acc, v, [vs], &[vs | &1])
+      end
+
+    new_refs =
+      for i <- n0..(map_size(halved.points) - 1)//1, do: on_body(halved.points[i], halved.offsets[i], around)
 
     # The faces around: the new points of their edges, in their order.
     split = fn split, {a, ta}, {b, tb} ->
@@ -1366,15 +1389,9 @@ defmodule World.People.Human do
   # The place on the surface of the body nearest to a point of the base
   # mesh: of the triangles of the faces around the nearest point of the
   # body, the nearest one, and the weights of its three corners there.
-  defp on_body(q, offset) do
-    %{points: base, groups: groups} = Data.base()
-
-    around =
-      Data.cached(:faces_around, fn ->
-        for f <- Map.fetch!(groups, "body"), vs = Enum.map(f, &elem(&1, 0)), v <- vs, reduce: %{} do
-          acc -> Map.update(acc, v, [vs], &[vs | &1])
-        end
-      end)
+  # `around`: the faces round each point of the body.
+  defp on_body(q, offset, around) do
+    %{points: base} = Data.base()
 
     v = Enum.min_by(0..13379, &Vec.len(Vec.sub(elem(base, &1), q)))
 
@@ -1530,7 +1547,8 @@ defmodule World.People.Human do
 
   # The points of the body that an asset fits to: a cloth fits to the body
   # with no nipples (`cloth/1`).
-  defp on(role, points), do: if(String.starts_with?(Atom.to_string(role), "clothes_"), do: cloth(points), else: points)
+  defp on(role, points, dressed),
+    do: if(String.starts_with?(Atom.to_string(role), "clothes_"), do: dressed, else: points)
 
   # The eyebrows and the eyelashes move with the skin of the face.
   defp face(role, shapes) when role in [:eyebrows, :eyelashes], do: shapes
