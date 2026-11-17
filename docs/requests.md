@@ -62,7 +62,12 @@ from rules", has all of them):
   square or round ends (`round`: `[left, right]`, the radius at each
   front corner);
 - a porch has a curved front (`round`: a quarter of a circle at a front
-  corner) and a `fascia` round it.
+  corner) and a `fascia` round it;
+- `blocks` are parts of the plan with their own `plan`, `storeys`,
+  `parapet` and `fronts`: a tower over the building, a lower wing, a
+  storey set back behind a terrace;
+- a front can be on some storeys only (`storeys`: `[first, last]`, 1 for
+  the ground storey), for example a glazed second storey.
 
 The MCP server has no tool for one kind of model. Its tools are for a
 model of any kind: `list_blueprints` and `get_blueprint` to find a

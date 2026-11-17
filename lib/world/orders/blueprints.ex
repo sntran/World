@@ -50,7 +50,7 @@ defmodule World.Orders.Blueprints do
     {"street_house", World.Town.House, :request,
      "A house of a street of Vũng Tàu that looks real, from a request of a few words: type (cap4, pho2_flat, pho2_tile, pho3), family (old, steel, modern), width, depth, road, use, wall, sign, seed and more. The rules of World.Town.House make each choice that the request does not make, and its drawing: one part from edits for each of its walls, its roof, its doors."},
     {"building", World.Town.Building, :spec,
-     "A building of a town that is not a house of a row (a hotel, an office, a villa), from a request: size or outline, storeys, floor, fronts (each with a style: plain, windows, loggias, glass; bays, a porch), roof (flat or tiles), colors, letters. The rules of World.Town.Building make its drawing."},
+     "A building of a town that is not a house of a row (a hotel, an office, a villa), from a request: size or outline, storeys, floor, fronts (each with a style: plain, windows, loggias, glass; bays, balconies, the storeys it is on), porches (straight or curved), blocks (parts of the plan with their own storeys), roof (flat or tiles), colors, letters. The rules of World.Town.Building make its drawing."},
     {"village_house", World.Village.House, :request,
      "A house of a village of old Việt Nam: a frame of round posts, bays in a row, a porch, a low base or stilts with a stair, and a large roof of thatch or tiles with four slopes that curve. The request: bays (1 to 7), bay (m), deep (m), porch (m), stilts (m), wall (wood, bamboo, earth), roof (thatch, tiles), curve (0 to 1), eaves (m), age (0 to 1)."},
     {"village_thing", World.Village.Yard, :request,

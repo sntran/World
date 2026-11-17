@@ -528,6 +528,134 @@ defmodule World.BuildingTest do
     end
   end
 
+  test "parts of the plan with their own storeys, and fronts of some storeys only" do
+    request = %{
+      "size" => [30, 12],
+      "storeys" => 3,
+      "fronts" => [
+        %{"bays" => 6, "storeys" => [2, 3], "band" => true},
+        %{"side" => 3, "style" => "loggias", "bays" => 4, "storeys" => [2, 3]},
+        %{"side" => 2, "style" => "glass", "storeys" => [1, 2]},
+        %{"side" => 4, "bays" => 2, "storeys" => [1, 1], "pilasters" => true}
+      ],
+      "blocks" => [
+        # (A tower over the block, a lower wing at its left end, and a storey set back behind a terrace.)
+        %{
+          "plan" => [[18, 0], [12, 0], [12, -12], [18, -12]],
+          "storeys" => 5,
+          "fronts" => [%{"bays" => 2, "storeys" => [4, 5]}]
+        },
+        %{
+          "plan" => [[0, 0], [-8, 0], [-8, -10], [0, -10]],
+          "storeys" => 2,
+          "parapet" => 0.6,
+          "fronts" => [%{"style" => "glass", "storeys" => [2, 2]}]
+        },
+        %{"plan" => [[29, -2], [20, -2], [20, -10], [29, -10]], "storeys" => 4}
+      ]
+    }
+
+    b = Building.spec(request)
+    assert Building.spec(b) == b
+    # A block takes the parapet of the flat roof by default; a front has all the storeys by default.
+    assert [
+             %{"storeys" => 5, "parapet" => 1.0, "fronts" => [%{"storeys" => [4, 5]}]},
+             %{"parapet" => 0.6},
+             %{"fronts" => []}
+           ] =
+             b["blocks"]
+
+    assert Building.spec(%{})["blocks"] == [] and hd(Building.spec(%{"fronts" => [%{}]})["fronts"])["storeys"] == [1, 3]
+    sq = [[4, 0], [0, 0], [0, -4], [4, -4]]
+    tiles = Building.spec(%{"roof" => %{"kind" => "tiles"}, "blocks" => [%{"plan" => sq, "storeys" => 4}]})
+    assert hd(tiles["blocks"])["parapet"] == 1.0
+
+    d = checked(request)
+    body = edits(d, "than")
+    # The masses from the lowest to the highest, each with its deck behind its parapet: the wing (2 storeys, to
+    # 7.3 m and a parapet of 0.6 m), the building (3 storeys), the storey set back (4) and the tower (5).
+    assert for(e <- Enum.take(body, 8), do: {e["size"]["depth"], List.last(e["at"]), e["mode"]}) == [
+             {7.9, 3.95, nil},
+             {1.2, 7.9, "subtract"},
+             {11.8, 5.9, nil},
+             {2.0, 11.8, "subtract"},
+             {15.3, 7.65, nil},
+             {2.0, 15.3, "subtract"},
+             {18.8, 9.4, nil},
+             {2.0, 18.8, "subtract"}
+           ]
+
+    assert Enum.at(body, 6)["size"]["outline"] == [[18.0, +0.0], [12.0, +0.0], [12.0, -12.0], [18.0, -12.0]]
+    assert Enum.at(body, 7)["size"]["outline"] == [[17.6, -0.4], [12.4, -0.4], [12.4, -11.6], [17.6, -11.6]]
+
+    # The glass of each window and of each front of glass: its height and the count at it.
+    glass = Enum.filter(body, &(&1["color"] == "#55707c"))
+
+    assert Enum.frequencies_by(glass, &{List.last(&1["at"]), Enum.at(&1["size"], 1)}) == %{
+             # (The windows of the front of 2 and 3 storeys: 6 bays at the floors of 4.1 m and 7.6 m.)
+             {5.8, 0.75} => 6,
+             {9.3, 0.75} => 6,
+             # (The windows of the tower at its storeys 4 and 5, over the floors of 11.1 m and 14.6 m.)
+             {12.8, 0.75} => 2,
+             {16.3, 0.75} => 2,
+             # (The ground storey of side 4 only.)
+             {1.7, 0.75} => 2,
+             # (The glass of storeys 1 and 2, up to 0.3 m under the floor of 7.6 m; of storey 2 of the wing.)
+             {3.8, 3.5} => 1,
+             {5.7, 1.3} => 1,
+             # (The doors of glass at the back of the loggias.)
+             {5.25, 1.05} => 4,
+             {8.75, 1.05} => 4
+           }
+
+    # The loggias of storeys 2 and 3 have no openings at the ground storey and no piers: their pilasters go from
+    # the floor of storey 2 to the eaves, and the band under the cornice from the top of the last loggia.
+    assert Enum.count(body, &(&1["mode"] == "subtract")) == 4 + 8
+    trim = for e <- body, e["color"] == "#e3aa6c", do: {e["at"], e["size"]}
+    assert Enum.count(trim, &match?({[_, -12.12, 7.45], [0.375, 3.35, 0.25]}, &1)) == 5
+    assert {[15.0, -12.0, 10.575], [15.0, 0.225, 0.25]} in trim
+    # The pilasters of the ground storey only, to the floor of storey 2; no band at a front over the ground storey.
+    assert Enum.count(trim, &match?({[30.12, _, 2.05], [0.375, 2.05, 0.25]}, &1)) == 3
+    refute Enum.any?(body, &(&1["color"] == "#a9694f" and Enum.at(&1["at"], 1) == 0.0))
+    assert Enum.count(body, &(&1["color"] == "#a9694f")) == 1
+
+    # The walls of the blocks count in the budget of the body.
+    small = %{"size" => [10, 8], "storeys" => 2}
+    budget = fn r -> hd(Building.drawing(r)["nodes"])["skill"]["sculpt"]["budget"]["mid"] end
+    assert budget.(small) == 1450
+    assert budget.(Map.put(small, "blocks", [%{"plan" => [[6, 0], [4, 0], [4, -2], [6, -2]], "storeys" => 6}])) == 2350
+
+    for {request, path, text} <- [
+          {%{"blocks" => %{}}, "blocks", "the blocks of a building are a list of maps"},
+          {%{"blocks" => [%{"storeys" => 4}]}, "blocks.0.plan", "a block has its own plan"},
+          {%{"blocks" => [%{"plan" => Enum.reverse(sq), "storeys" => 4}]}, "blocks.0.plan",
+           "the corners of the plan of a building go counterclockwise"},
+          {%{"blocks" => [%{"plan" => sq}]}, "blocks.0.storeys", "a block has from 1 to 12 storeys"},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 13}]}, "blocks.0.storeys", "a block has from 1 to 12 storeys"},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 4, "parapet" => 3}]}, "blocks.0.parapet",
+           "the value of parapet is a number from 0.3 to 2"},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 4, "roof" => %{}}]}, "blocks.0", ~s(a block has no key "roof")},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 2, "fronts" => [%{"side" => 5}]}]}, "blocks.0.fronts.0.side",
+           "the side of a front is a number from 1 to 4"},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 2, "fronts" => [%{"storeys" => [1, 3]}]}]},
+           "blocks.0.fronts.0.storeys", "the storeys of a front are [first, last], each from 1 to 2"},
+          {%{"fronts" => [%{"storeys" => [3, 2]}]}, "fronts.0.storeys", "the storeys of a front are [first, last]"},
+          {%{"fronts" => [%{"storeys" => 2}]}, "fronts.0.storeys", "the storeys of a front are [first, last]"},
+          {%{"fronts" => [%{"storeys" => [0, 2]}]}, "fronts.0.storeys", "the storeys of a front are [first, last]"},
+          {%{"fronts" => [%{"style" => "loggias", "storeys" => [1, 1]}]}, "fronts.0.style",
+           "a front of loggias is for 2 storeys or more"}
+        ] do
+      error = assert_raise ArgumentError, fn -> Building.spec(request) end
+      assert String.starts_with?(error.message, "#{path}: #{text}"), error.message
+    end
+
+    assert {:error, [%{"path" => "options.blocks.0.fronts.0.storeys"}]} =
+             World.Orders.check(%{
+               "blueprint" => "building",
+               "options" => %{"blocks" => [%{"plan" => sq, "storeys" => 2, "fronts" => [%{"storeys" => [2, 3]}]}]}
+             })
+  end
+
   test "a word that is not possible is an error with its message" do
     wrong = [
       {[], "the request of a building is a map"},

@@ -143,7 +143,8 @@ defmodule World.Town.Building do
       over the ground storey stands out by this, m; 0: none) and `round`
       (`[left, right]`: the radius of a quarter of a circle at each
       front corner of a balcony; `[balcony, balcony]` gives round
-      ends).
+      ends) and `storeys` (`[first, last]`: the front is on these storeys
+      only; 1 is the ground storey).
     * `cornice`: `high` (0: none) and `out`.
     * `roof`: `kind` (`flat` or `tiles`), `parapet` (of a flat roof),
       and for tiles on a plan of four square corners `high`, `inset`
@@ -164,6 +165,13 @@ defmodule World.Town.Building do
       it; from the edge of the cornice when it stands on its top). In
       place of `wide`, `long` gives the length of the line (m): the
       full request has the `wide` that it gives.
+    * `blocks`: a list of parts of the plan with their own storeys (a
+      tower over the building, a lower wing, a storey set back behind a
+      terrace). Each has `plan` (its corners, counterclockwise),
+      `storeys`, `parapet` (of its flat roof; the parapet of the roof of
+      the building by default) and `fronts` (on its own sides). Its
+      walls go from the ground to the top of its parapet, with its deck
+      behind it.
     * `apron` (the ground round the plan, m), `age` (0 to 1), and
       `more`: edits for a part (`than`: the body, `mai`: the roof,
       `chu`: the letters, `nen`: the ground), for a thing that the
@@ -174,7 +182,7 @@ defmodule World.Town.Building do
 
     keys(
       opts,
-      ~w(name sources plan size storeys ground band storey colors fronts cornice roof porches letters apron age more),
+      ~w(name sources plan size storeys ground band storey colors fronts cornice roof porches letters blocks apron age more),
       "building"
     )
 
@@ -236,8 +244,25 @@ defmodule World.Town.Building do
     Map.merge(b, %{
       "fronts" => each(opts, "fronts", &front(&1, walls, storeys)),
       "porches" => each(opts, "porches", &porch(&1, walls, b)),
-      "letters" => each(opts, "letters", &text(&1, walls))
+      "letters" => each(opts, "letters", &text(&1, walls)),
+      "blocks" => each(opts, "blocks", &block(&1, roof))
     })
+  end
+
+  # A part of the plan with its own storeys: its walls go from the ground to the top of its own parapet.
+  defp block(m, roof) do
+    keys(m, ~w(plan storeys parapet fronts), "block")
+    need(Map.has_key?(m, "plan"), "plan", "a block has its own plan: its corners [x, y], counterclockwise")
+    plan = plan(m)
+    storeys = Map.get(m, "storeys")
+    need(is_integer(storeys) and storeys in 1..12, "storeys", "a block has from 1 to 12 storeys")
+
+    %{
+      "plan" => plan,
+      "storeys" => storeys,
+      "parapet" => number(m, "parapet", Map.get(roof, "parapet", 1.0), 0.3, 2),
+      "fronts" => each(m, "fronts", &front(&1, walls(plan), storeys))
+    }
   end
 
   defp plan(%{"plan" => points}) do
@@ -339,14 +364,27 @@ defmodule World.Town.Building do
   defp front(f, walls, storeys) do
     keys(
       f,
-      ~w(side style from to inset bays ground out paint band window sill bars places ledges pilasters pilaster deep rail pitch balcony round),
+      ~w(side style from to inset bays ground out paint band window sill bars places ledges pilasters pilaster deep rail pitch balcony round storeys),
       "front"
     )
 
     {k, w} = side(f, walls, "front")
     style = Map.get(f, "style", "windows")
     need(style in @styles, "style", "the style of a front is one of #{Enum.join(@styles, ", ")}")
-    need(style != "loggias" or storeys >= 2, "style", "a front of loggias is for a building of 2 storeys or more")
+    range = Map.get(f, "storeys", [1, storeys])
+
+    need(
+      match?([a, z] when is_integer(a) and is_integer(z) and a >= 1 and a <= z and z <= storeys, range),
+      "storeys",
+      "the storeys of a front are [first, last], each from 1 to #{storeys} (1: the ground storey)"
+    )
+
+    need(
+      style != "loggias" or List.last(range) >= 2,
+      "style",
+      "a front of loggias is for 2 storeys or more: its last storey is 2 or more"
+    )
+
     long = r4(w.long)
     from = number(f, "from", 0.0, 0, long)
     to = number(f, "to", long, 0, long)
@@ -421,7 +459,8 @@ defmodule World.Town.Building do
       "rail" => rail,
       "pitch" => number(f, "pitch", 0.8, 0.3, 4),
       "balcony" => balcony,
-      "round" => round(f, balcony, run, "the balconies of a front")
+      "round" => round(f, balcony, run, "the balconies of a front"),
+      "storeys" => range
     })
   end
 
@@ -563,12 +602,18 @@ defmodule World.Town.Building do
   """
   def heights(request) do
     b = spec(request)
-    g = b["ground"]
-    floors = for k <- 1..(b["storeys"] - 1)//1, do: r4(g + b["band"] + (k - 1) * b["storey"])
-    eaves = if floors == [], do: r4(g + max(b["band"], 0.6)), else: r4(List.last(floors) + b["storey"] - 0.3)
 
     over =
       if b["roof"]["kind"] == "flat", do: max(b["cornice"]["high"], b["roof"]["parapet"]), else: b["cornice"]["high"]
+
+    levels(b, b["storeys"], over)
+  end
+
+  # The heights of a building or of a block of `storeys`, with `over` from the eaves to the top.
+  defp levels(b, storeys, over) do
+    g = b["ground"]
+    floors = for k <- 1..(storeys - 1)//1, do: r4(g + b["band"] + (k - 1) * b["storey"])
+    eaves = if floors == [], do: r4(g + max(b["band"], 0.6)), else: r4(List.last(floors) + b["storey"] - 0.3)
 
     %{
       "ground" => g,
@@ -594,11 +639,33 @@ defmodule World.Town.Building do
     walls = walls(b["plan"])
     c = b["colors"]
 
-    {fronts, rails} = pairs(for f <- b["fronts"], do: front_edits(f, Enum.at(walls, f["side"] - 1), h, c))
+    # Each block, with its heights and its walls.
+    blocks = for k <- b["blocks"], do: {k, levels(b, k["storeys"], k["parapet"]), walls(k["plan"])}
+
+    {fronts, rails} =
+      pairs(
+        for(f <- b["fronts"], do: front_edits(f, Enum.at(walls, f["side"] - 1), h, c)) ++
+          for({k, hk, wk} <- blocks, f <- k["fronts"], do: front_edits(f, Enum.at(wk, f["side"] - 1), hk, c))
+      )
+
     {porches, porch_rails} = pairs(for p <- b["porches"], do: porch_edits(p, Enum.at(walls, p["side"] - 1), c))
-    body = mass(b, h) ++ fronts ++ porches ++ cornice_edits(b, h) ++ b["more"]["than"]
+
+    # The masses from the lowest to the highest: a part that is higher fills the deck of a lower part under it.
+    # The fronts come after all of them, so that their paints are on each wall.
+    masses =
+      [{h["top"], mass(b, h)} | for({k, hk, _} <- blocks, do: {hk["top"], mass(block_body(b, k), hk)})]
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.flat_map(&elem(&1, 1))
+
+    body = masses ++ fronts ++ porches ++ cornice_edits(b, h) ++ b["more"]["than"]
     rails = rails ++ porch_rails
-    area = Enum.sum(for w <- walls, do: w.long) * h["top"]
+
+    area =
+      Enum.sum([
+        Enum.sum(for w <- walls, do: w.long) * h["top"]
+        | for({_, hk, wk} <- blocks, do: Enum.sum(for w <- wk, do: w.long) * hk["top"])
+      ])
+
     {long, deep} = extent(b["plan"])
     floor = long * deep
     letters = Enum.flat_map(b["letters"], &letter_edits(&1, Enum.at(walls, &1["side"] - 1), b, h)) ++ b["more"]["chu"]
@@ -695,6 +762,9 @@ defmodule World.Town.Building do
 
   defp mass(b, h), do: [Wall.outline(b["plan"], h["eaves"], [0, 0, h["eaves"] / 2], b["colors"]["wall"], @plaster)]
 
+  # A block as a building of its own plan, with a flat roof behind its parapet.
+  defp block_body(b, k), do: %{b | "plan" => k["plan"], "roof" => %{"kind" => "flat", "parapet" => k["parapet"]}}
+
   defp cornice_edits(%{"cornice" => %{"high" => high}}, _h) when high == 0.0, do: []
 
   defp cornice_edits(%{"cornice" => %{"high" => high, "out" => out}} = b, h) do
@@ -732,7 +802,8 @@ defmodule World.Town.Building do
 
   # The edits of a front, and the tubes of its rails.
   defp front_edits(f, wall, h, c) do
-    {s0, s1, eaves, g} = {f["from"], f["to"], h["eaves"], h["ground"]}
+    h = storeys(h, f["storeys"])
+    {s0, s1, foot, head, g} = {f["from"], f["to"], h["foot"], h["head"], h["ground"]}
     mid = (s0 + s1) / 2
     w = Wall.out(wall, f["out"])
 
@@ -742,8 +813,8 @@ defmodule World.Town.Building do
           Wall.box(
             wall,
             mid,
-            eaves / 2,
-            {s1 - s0, eaves, f["out"] + 0.5},
+            (foot + head) / 2,
+            {s1 - s0, head - foot, f["out"] + 0.5},
             c["wall"],
             Map.put(@plaster, "out", (f["out"] - 0.5) / 2)
           )
@@ -751,10 +822,14 @@ defmodule World.Town.Building do
         else: []
       ) ++
         if(f["paint"],
-          do: [Wall.paint(w, mid, (g + eaves) / 2, {s1 - s0, eaves - g}, f["paint"], %{"roughness" => 0.8})],
+          do: [
+            Wall.paint(w, mid, (max(g, foot) + head) / 2, {s1 - s0, head - max(g, foot)}, f["paint"], %{
+              "roughness" => 0.8
+            })
+          ],
           else: []
         ) ++
-        if(f["band"] and f["style"] != "loggias" and h["floors"] != [] and hd(h["floors"]) > g,
+        if(f["band"] and f["style"] != "loggias" and h["first"] == 1 and h["floors"] != [] and hd(h["floors"]) > g,
           do: [band(w, mid, s1 - s0, g, hd(h["floors"]), c["band"])],
           else: []
         )
@@ -762,6 +837,19 @@ defmodule World.Town.Building do
     {edits, rails} = style(f["style"], w, {s0 + f["inset"], s1 - f["inset"]}, f, h, c)
     {slabs, balcony_rails} = balconies(f, w, {s0 + f["inset"], s1 - f["inset"]}, h, c)
     {base ++ List.flatten(edits) ++ slabs, List.flatten(rails) ++ balcony_rails}
+  end
+
+  # The heights of a front of the storeys `first` to `last` (1: the ground storey): the floors in them, `foot`
+  # (the foot of the first storey) and `head` (the top of the last one: the eaves, or the next floor).
+  defp storeys(h, [first, last]) do
+    floors = h["floors"]
+
+    Map.merge(h, %{
+      "floors" => Enum.slice(floors, max(first, 2) - 2, max(last - max(first, 2) + 1, 0)),
+      "first" => first,
+      "foot" => if(first == 1, do: 0.0, else: Enum.at(floors, first - 2)),
+      "head" => if(last == length(floors) + 1, do: h["eaves"], else: Enum.at(floors, last - 1))
+    })
   end
 
   # A balcony at each floor over the ground storey, along the front between its insets: a slab 0.2 m thick with
@@ -813,7 +901,7 @@ defmodule World.Town.Building do
     pitch = (b - a) / f["bays"]
     places = f["places"] || for i <- 0..(f["bays"] - 1), do: a + pitch * (i + 0.5)
     [wide, high] = f["window"]
-    floors = if(f["ground"] == "blank", do: [], else: [0.0]) ++ h["floors"]
+    floors = if(f["ground"] == "blank" or h["first"] > 1, do: [], else: [0.0]) ++ h["floors"]
 
     windows =
       for s <- places,
@@ -838,8 +926,8 @@ defmodule World.Town.Building do
         Wall.box(
           w,
           a + pitch * i,
-          h["eaves"] / 2,
-          {f["pilaster"], h["eaves"], 0.5},
+          (h["foot"] + h["head"]) / 2,
+          {f["pilaster"], h["head"] - h["foot"], 0.5},
           c["trim"],
           Map.put(@plaster, "out", 0.12)
         )
@@ -849,8 +937,16 @@ defmodule World.Town.Building do
   end
 
   defp style("glass", w, {a, b}, f, h, c) do
-    z1 = h["eaves"] - 0.3
-    z0 = min(if(f["ground"] == "blank", do: h["ground"] + 0.5, else: 0.3), z1 - 0.5)
+    z1 = h["head"] - 0.3
+
+    z0 =
+      cond do
+        h["first"] > 1 -> h["foot"] + 0.3
+        f["ground"] == "blank" -> h["ground"] + 0.5
+        true -> 0.3
+      end
+
+    z0 = min(z0, z1 - 0.5)
     {wide, high, mid} = {b - a, z1 - z0, (z0 + z1) / 2}
     {ups, rows} = {max(1, round(wide / f["pitch"])), max(1, round(high / f["pitch"]))}
     bar = %{"blend" => 0.006, "roughness" => 0.6}
@@ -865,11 +961,14 @@ defmodule World.Town.Building do
   # A row of equal bays between pilasters: a loggia at each storey over
   # the ground storey, with a door of glass at its back and a rail.
   defp style("loggias", w, {a, b}, f, h, c) do
-    {count, g, eaves, open} = {f["bays"], h["ground"], h["eaves"], h["opening"]}
+    {count, g, eaves, open} = {f["bays"], h["ground"], h["head"], h["opening"]}
     {pitch, mid} = {(b - a) / count, (a + b) / 2}
     wide = pitch - f["pilaster"]
-    piers? = f["ground"] == "piers"
-    below = [g | Enum.map(h["floors"], &(&1 + open))]
+    # (A front over the ground storey has no openings and no piers at the ground storey, and no band under its
+    # first loggia: that band starts at its foot.)
+    ground? = h["first"] == 1
+    piers? = f["ground"] == "piers" and ground?
+    below = [if(ground?, do: g, else: h["foot"]) | Enum.map(h["floors"], &(&1 + open))]
 
     # The fronts of the balconies, and the band under the cornice.
     bands =
@@ -878,12 +977,15 @@ defmodule World.Town.Building do
 
     bays =
       for i <- 0..(count - 1), s = a + pitch * (i + 0.5) do
-        [for(floor <- h["floors"], do: loggia(w, s, floor, wide, f["deep"], open, c)), ground_bay(f, w, s, pitch, g, c)]
+        [
+          for(floor <- h["floors"], do: loggia(w, s, floor, wide, f["deep"], open, c)),
+          if(ground?, do: ground_bay(f, w, s, pitch, g, c), else: [])
+        ]
       end
 
     pilasters =
       for i <- 0..count, s = a + pitch * i do
-        foot = if piers?, do: g, else: 0.0
+        foot = if piers?, do: g, else: h["foot"]
 
         [
           Wall.box(

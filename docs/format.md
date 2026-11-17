@@ -435,7 +435,14 @@ houses.
     `round` (`[left, right]`, each from 0 to `balcony`) puts a quarter of
     a circle of that radius at the front corners of the slab: `[1.2,
     1.2]` with `balcony` 1.2 gives round ends, and a front as long as two
-    times the balcony gives a balcony of half a disc.
+    times the balcony gives a balcony of half a disc. `storeys`
+    (`[first, last]`, 1 for the ground storey; all the storeys by
+    default) puts a front on some storeys only: its windows, its
+    loggias, its glass, its balconies, its pilasters and its paint are
+    from the foot of storey `first` to the top of storey `last` (the
+    eaves, or the next floor). A front over the ground storey has no
+    openings, piers or band at the ground storey: a glazed second
+    storey is a front of `glass` with `storeys` `[2, 2]`.
   - `cornice` (`high`, `out`), and `roof`: `flat` behind a `parapet`, or
     `tiles` on a plan of four square corners (`high`, `inset`, and
     `gables`: the short sides with a gable; each other end has a
@@ -457,6 +464,19 @@ houses.
     length of the line (m): the full request keeps the `wide` that it
     gives. A line of n letters is `wide` (1.7 n - 0.7) long. So a sign
     with narrow letters needs no tubes of its own in `more`.
+  - `blocks`: parts of the plan with their own storeys: a tower over
+    the building, a lower wing, a storey set back behind a terrace.
+    Each block has its own `plan` (corners counterclockwise), `storeys`
+    (1 to 12), `parapet` (of its flat roof; by default the parapet of
+    the roof of the building, or 1 m) and `fronts` (on its own sides,
+    with the same words as a front of the building). Its walls go from
+    the ground to the top of its parapet, and its deck is behind the
+    parapet, as for the building. The masses go from the lowest to the
+    highest, so a block over a lower part fills the deck of that part:
+    a set-back storey is a block with a smaller plan and more storeys,
+    and the deck of the part under it is its terrace. The fronts come
+    after all the masses. A block has no cornice, porch or letters of
+    its own.
   - `more`: edits for a part (`than`: the body, `mai`: the roof, `chu`:
     the letters, `nen`: the ground), for a thing that the rules do not
     have.
