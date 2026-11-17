@@ -151,9 +151,12 @@ defmodule World.Town.Building do
       (`[wide, high]`, or nil), `board` (a color, or nil) and `terrace`
       (true: a rail of iron round its top).
     * `letters`: a list. Each has `side`, `at` (the middle of the text),
-      `z`, `high`, `text` (A to Z and spaces) and `out` (from the
-      wall or the cornice behind it; from the edge of the cornice
-      when it stands on its top).
+      `z`, `high`, `wide` (the width of a letter: 2/3 of `high` by
+      default, from a quarter of `high` to two times `high`), `text` (A
+      to Z and spaces) and `out` (from the wall or the cornice behind
+      it; from the edge of the cornice when it stands on its top). In
+      place of `wide`, `long` gives the length of the line (m): the
+      full request has the `wide` that it gives.
     * `apron` (the ground round the plan, m), `age` (0 to 1), and
       `more`: edits for a part (`than`: the body, `mai`: the roof,
       `chu`: the letters, `nen`: the ground), for a thing that the
@@ -441,7 +444,7 @@ defmodule World.Town.Building do
   end
 
   defp text(t, walls) do
-    keys(t, ~w(side at z high text out), "line of letters")
+    keys(t, ~w(side at z high wide long text out), "line of letters")
     {k, w} = side(t, walls, "line of letters")
     text = Map.get(t, "text", "")
 
@@ -451,11 +454,33 @@ defmodule World.Town.Building do
       "the text of a line of letters is from 1 to 40 letters from A to Z, with spaces"
     )
 
+    high = number(t, "high", 0.75, 0.3, 3)
+    {narrow, broad} = {r4(0.25 * high), r4(2 * high)}
+
+    # (A line of n letters is 1.7 n - 0.7 letters wide: after each letter, a space of 0.7 of its width.)
+    wide =
+      if Map.has_key?(t, "long") do
+        long = number(t, "long", 0, 0.1, 200)
+        wide = r4(long / (1.7 * String.length(text) - 0.7))
+
+        need(
+          wide >= narrow and wide <= broad,
+          "long",
+          "a line of #{String.length(text)} letters #{r4(long)} m long has letters #{wide} m wide: " <>
+            "a letter is from #{narrow} m to #{broad} m wide (a quarter of its height to two times its height)"
+        )
+
+        wide
+      else
+        number(t, "wide", r4(high / 1.5), narrow, broad)
+      end
+
     %{
       "side" => k,
       "at" => number(t, "at", r4(w.long / 2), 0, w.long),
       "z" => number(t, "z", 3.0, 0, 80),
-      "high" => number(t, "high", 0.75, 0.3, 3),
+      "high" => high,
+      "wide" => wide,
       "text" => text,
       "out" => number(t, "out", 0.12, 0, 5)
     }
@@ -968,6 +993,9 @@ defmodule World.Town.Building do
   # wall, in front of the cornice, or on the top of the cornice.
   defp letter_edits(t, w, b, h) do
     k = t["high"] / 0.75
+    # (The scale along the line: the width of a letter is 0.5 in the box of its strokes. A letter of the width
+    # by default keeps the scale of its height.)
+    along = if t["wide"] == r4(t["high"] / 1.5), do: k, else: t["wide"] / 0.5
 
     out =
       cond do
@@ -977,10 +1005,10 @@ defmodule World.Town.Building do
       end
 
     chars = String.graphemes(t["text"])
-    start = t["at"] - (0.85 * k * length(chars) - 0.35 * k) / 2
+    start = t["at"] - (0.85 * along * length(chars) - 0.35 * along) / 2
 
     for {ch, i} <- Enum.with_index(chars), line <- Map.get(@letters, ch, []) do
-      points = for [x, z] <- line, do: Wall.at(w, start + 0.85 * k * i + x * k, t["z"] + z * k, out)
+      points = for [x, z] <- line, do: Wall.at(w, start + 0.85 * along * i + x * along, t["z"] + z * k, out)
       Wall.tube(points, List.duplicate(0.08 * t["high"], length(points)), b["colors"]["letters"], %{"roughness" => 0.5})
     end
   end

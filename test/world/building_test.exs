@@ -342,6 +342,68 @@ defmodule World.BuildingTest do
     assert length(detail["edits"]) == 2 + 9 and detail["budget"] == %{"near" => 2000}
   end
 
+  test "a line of letters with its own width: narrow letters, or the length of the line" do
+    request = %{
+      "size" => [20, 10],
+      "letters" => [
+        %{"text" => "HAI AU", "z" => 4.0, "high" => 2.1, "long" => 5.8},
+        %{"side" => 3, "text" => "REX", "high" => 1.2, "wide" => 0.4},
+        %{"side" => 2, "text" => "I", "high" => 0.9}
+      ]
+    }
+
+    b = Building.spec(request)
+    # The full request has the width of a letter that the length gives, and not the length; the width by default
+    # is 2/3 of the height.
+    assert [%{"wide" => 0.6105, "high" => 2.1} = hai_au, %{"wide" => 0.4}, %{"wide" => 0.6}] = b["letters"]
+    refute Map.has_key?(hai_au, "long")
+    assert Building.spec(b) == b
+    # A length goes before a width.
+    assert hd(Building.spec(put_in(request, ["letters", Access.at(0), "wide"], 1.0))["letters"])["wide"] == 0.6105
+
+    letters = edits(checked(request), "chu")
+    {hai_au, rest} = Enum.split(letters, 9)
+    {rex, [i]} = Enum.split(rest, 6)
+    # H, A, I, A, U: 9 strokes; the line goes from x = 12.9 to x = 7.1 on the front, with letters 0.6105 m wide.
+    xs = for t <- hai_au, [x, _, _] <- t["size"]["points"], do: x
+    assert_in_delta Enum.max(xs) - Enum.min(xs), 5.8, 0.001
+    assert_in_delta Enum.max(xs), 12.9, 0.001
+    assert [[12.9, 0.12, 4.0], [12.9, 0.12, 6.1]] = Enum.map(hd(hai_au)["size"]["points"], &round_point/1)
+    assert [[x0, _, _], _] = hd(hai_au)["size"]["points"]
+    assert [[x1, _, _], _] = Enum.at(hai_au, 1)["size"]["points"]
+    assert_in_delta x0 - x1, 0.6105, 0.0001
+    # The height of the strokes stays: 2.1 m, with a radius of 0.08 of the height.
+    zs = for t <- hai_au, [_, _, z] <- t["size"]["points"], do: z
+    assert {Enum.min(zs), Enum.max(zs)} == {4.0, 6.1} and hd(hd(hai_au)["size"]["radii"]) == 0.168
+
+    # REX on the back (side 3, x from 0 to 20): the line is 0.4 (1.7 3 - 0.7) = 1.76 m long, about x = 10.
+    xs = for t <- rex, [x, _, _] <- t["size"]["points"], do: x
+    assert_in_delta Enum.max(xs) - Enum.min(xs), 1.76, 0.0001
+    assert_in_delta (Enum.max(xs) + Enum.min(xs)) / 2, 10.0, 0.0001
+    # One letter of the width by default, in the middle of its box: at the middle of side 2, 0.12 m out of it.
+    assert i["size"]["points"] == [[-0.12, -5.0, 3.0], [-0.12, -5.0, 3.9]]
+
+    for {letter, path, text} <- [
+          {%{"text" => "REX", "high" => 1.2, "wide" => 0.2}, "letters.0.wide",
+           "the value of wide is a number from 0.3 to 2.4"},
+          {%{"text" => "REX", "high" => 1.2, "wide" => "narrow"}, "letters.0.wide", "the value of wide"},
+          {%{"text" => "HOTEL", "high" => 2, "long" => 1}, "letters.0.long",
+           "a line of 5 letters 1.0 m long has letters 0.1282 m wide: a letter is from 0.5 m to 4.0 m wide"},
+          {%{"text" => "HOTEL", "high" => 0.3, "long" => 40}, "letters.0.long",
+           "a line of 5 letters 40.0 m long has letters 5.1282 m wide: a letter is from 0.075 m to 0.6 m wide"},
+          {%{"text" => "HOTEL", "long" => 0}, "letters.0.long", "the value of long is a number from 0.1 to 200"}
+        ] do
+      error = assert_raise ArgumentError, fn -> Building.spec(%{"letters" => [letter]}) end
+
+      assert String.starts_with?(error.message, "#{path}: #{text}"), error.message
+
+      assert {:error, [%{"path" => "options." <> ^path}]} =
+               World.Orders.check(%{"blueprint" => "building", "options" => %{"letters" => [letter]}})
+    end
+  end
+
+  defp round_point(point), do: Enum.map(point, &(Float.round(&1 * 1.0, 3) + 0.0))
+
   test "a word that is not possible is an error with its message" do
     wrong = [
       {[], "the request of a building is a map"},

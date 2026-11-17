@@ -435,7 +435,12 @@ houses.
     `board` on its front, or a rail round a `terrace` on it.
   - `letters`: a line of text (A to Z) from tubes, in front of a wall or
     of the cornice, or on the top of the cornice. The letters are a part
-    of their own, with small cells.
+    of their own, with small cells. `high` is the height of a letter,
+    and `wide` its width (2/3 of `high` by default; from a quarter of
+    `high` to two times `high`). In place of `wide`, give `long`, the
+    length of the line (m): the full request keeps the `wide` that it
+    gives. A line of n letters is `wide` (1.7 n - 0.7) long. So a sign
+    with narrow letters needs no tubes of its own in `more`.
   - `more`: edits for a part (`than`: the body, `mai`: the roof, `chu`:
     the letters, `nen`: the ground), for a thing that the rules do not
     have.

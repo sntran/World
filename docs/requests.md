@@ -52,6 +52,13 @@ made, so that you can change one of them later:
   aircraft, a ship, a vehicle, a wind turbine or a tree in about 220
   triangles). Ask for the file `flat` of its order.
 
+Some words of a `building` (`docs/format.md`, "A house and a street
+from rules", has all of them):
+
+- a line of `letters` has `wide`, the width of a letter (2/3 of its
+  height by default), or `long`, the length of the line: a sign with
+  narrow letters needs no tubes of its own in `more.chu`.
+
 The MCP server has no tool for one kind of model. Its tools are for a
 model of any kind: `list_blueprints` and `get_blueprint` to find a
 rule, `check_order` and `place_order` to ask, `edit_order` to change,
