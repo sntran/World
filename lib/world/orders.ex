@@ -27,7 +27,7 @@ defmodule World.Orders do
   alias World.Orders.{Blueprint, Blueprints, Store}
   @keys ~w(blueprint options colors joints targets)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
-  @files ~w(glb log replay parts receipt solids flat light drawing)
+  @files ~w(glb log replay parts receipt solids flat light drawing elements)
 
   @doc "The names of the levels of detail."
   def levels, do: Map.keys(@levels) |> Enum.sort()
@@ -174,7 +174,7 @@ defmodule World.Orders do
 
   # The URL of each file of a placed order: the suffix of /o/HASH (the
   # names that the Worker serves, handler.js), the level and the file.
-  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json drawing.json flat.glb mid.flat.glb far.flat.glb light.glb mid.light.glb far.light.glb)
+  @urls ~w(glb mid.glb far.glb parts.json receipt.json log.json replay.glb solids.json drawing.json flat.glb mid.flat.glb far.flat.glb light.glb mid.light.glb far.light.glb elements.json mid.elements.json far.elements.json)
 
   @doc """
   Place an order (`POST /orders`, and the tool `place_order` of
@@ -238,13 +238,24 @@ defmodule World.Orders do
     and then changes any shape of it (`World.Orders.Edits`). A model that
     the code of a rule makes (a plant, a person, an animal) is one node
     of its drawing: a project adds parts to it.
+  - `"elements"`: the parts list of the model at the level in JSON
+    (`World.Elements`): each part with its key, the URL of its GLB, its
+    node, its place and its roles, and the joints and the ports of the
+    model. The factory does not join the parts: a project puts them
+    together.
   - `"solids"`: the simple solids of the model in JSON (`World.Solids`):
     the shapes of a drawing from edits with no build, or one box for
     each node and material of another model.
 
   Gives `{:ok, binary}`, or `{:error, errors}` as `check/1`.
   """
-  def build(order, level, file, opts \\ []) do
+  def build(order, level, file, opts \\ [])
+
+  def build(order, level, "elements", _opts) do
+    with {:ok, list} <- World.Elements.list(order, level), do: {:ok, encode(list)}
+  end
+
+  def build(order, level, file, opts) do
     with {:ok, order} <- check(order),
          {:ok, lvl} <- level(level),
          :ok <- file(file),
@@ -255,9 +266,13 @@ defmodule World.Orders do
       # holds one item only (the edge has 128 MB).
       item = fn -> job.item.(lvl) end
 
-      with :ok <- known(order, fn opts -> job.scene.(item.(), opts) end) do
-        {:ok, make(file, order, lvl, item, job)}
-      end
+      # (In the guard of the memory: an order that needs more memory than
+      # the VM has gets an error, and the VM goes on.)
+      guarded(fn ->
+        with :ok <- known(order, fn opts -> job.scene.(item.(), opts) end) do
+          {:ok, make(file, order, lvl, item, job)}
+        end
+      end)
     end
   end
 
@@ -370,6 +385,7 @@ defmodule World.Orders do
       item: fn level -> Detail.with(level, fn -> blueprint.build.(order["options"]) end) end,
       scene: scene,
       pose: order["joints"],
+      colors: order["colors"],
       drawing: skilled(Blueprints.drawing(order))
     }
   end
@@ -447,8 +463,32 @@ defmodule World.Orders do
     {result.glb, Log.to_json(result.log)}
   end
 
-  # The checks of a true model, on the item at the level far.
+  # A function in the guard of the memory (`World.Guard`): its value, or the error of the memory.
+  defp guarded(fun) do
+    case World.Guard.run(fun) do
+      {:ok, value} -> value
+      {:error, :memory} -> {:error, World.Guard.errors()}
+    end
+  end
+
+  # The checks of a true model, on the item at the level far, in the guard of the memory. A model
+  # with a sculpture of more faces than a step of a part (W26: a large building) is not built for
+  # them: its build needs more memory than the edge has, and its parts are built one by one. The
+  # check of its data stays.
   defp sound(order) do
+    if large?(Blueprints.drawing(order)), do: :ok, else: guarded(fn -> sound_now(order) end)
+  end
+
+  defp large?(%{"nodes" => nodes}) do
+    Enum.any?(nodes, fn
+      %{"skill" => %{"sculpt" => data}} -> World.Skills.Sculpt.faces(data, :far) > World.Elements.most()
+      _ -> false
+    end)
+  end
+
+  defp large?(_drawing), do: false
+
+  defp sound_now(order) do
     {:ok, blueprint} = Blueprints.fetch(order["blueprint"])
     item = Detail.with(:far, fn -> blueprint.build.(order["options"]) end)
 

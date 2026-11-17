@@ -37,7 +37,14 @@ defmodule World.Service do
     when the log has none).
   - `GET /builds/ID/events`: the stream of a construction until its end,
     after the id of `Last-Event-ID` or of `?after=N`.
-  - `GET /builds/ID/elements/KEY.glb`: the GLB of an element.
+  - `GET /builds/ID/elements/KEY.glb`: the GLB of an element (from the
+    construction, else from the store of the parts).
+  - `GET /p/KEY.glb`: a part of a model by its key (`World.Elements`):
+    from the store of the parts, else built from its recipe in the line
+    and kept (404 for a key with neither, 422 for a part that needs
+    more memory than the VM has). A build that takes more than 45 s goes
+    on: the answer is 202 with `retry-after`, and a request after it
+    gets the part.
   - `GET /events`: the stream of the whole world, after the id of
     `Last-Event-ID` or of `?after=N`.
   - `GET /census`: the people of the node (`World.census/0`).
@@ -48,6 +55,7 @@ defmodule World.Service do
     now.
 
   - `GET /o/HASH.glb` (and `.mid.glb`, `.far.glb`, `.parts.json`,
+    `.elements.json`, `.mid.elements.json`, `.far.elements.json`,
     `.receipt.json`, `.solids.json`, `.drawing.json`, `.log.json`,
     `.replay.glb`, and
     `.flat.glb`, `.mid.flat.glb`, `.far.flat.glb`, `.light.glb`,
@@ -91,6 +99,9 @@ defmodule World.Service do
     {".mid.light.glb", "mid", "light"},
     {".far.light.glb", "far", "light"},
     {".light.glb", "near", "light"},
+    {".mid.elements.json", "mid", "elements"},
+    {".far.elements.json", "far", "elements"},
+    {".elements.json", "near", "elements"},
     {".mid.glb", "mid", "glb"},
     {".far.glb", "far", "glb"},
     {".parts.json", "near", "parts"},
@@ -108,6 +119,7 @@ defmodule World.Service do
     "replay" => "model/gltf-binary",
     "log" => "application/json",
     "parts" => "application/json",
+    "elements" => "application/json",
     "receipt" => "application/json",
     "solids" => "application/json",
     "drawing" => "application/json",
@@ -298,7 +310,7 @@ defmodule World.Service do
 
   get "/builds/:id/elements/:file" do
     with [key, "glb"] <- String.split(file, "."),
-         {:ok, glb} <- Construction.element(id, key) do
+         {:ok, glb} <- element(id, key) do
       conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
     else
       _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such element"}]})
@@ -366,6 +378,25 @@ defmodule World.Service do
     else
       :error -> json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
       _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such file"}]})
+    end
+  end
+
+  # A part of a model by its key (`World.Elements`): from the store, else
+  # built from its recipe in the line, and kept. The key is a hash of its
+  # data: the file does not change.
+  get "/p/:file" do
+    with [key, "glb"] <- String.split(file, "."),
+         true <- key =~ ~r/^[0-9a-f]{32}$/,
+         {:ok, glb} <- World.Elements.fetch(key) do
+      conn
+      |> put_resp_header("etag", ~s("#{key}"))
+      |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+      |> put_resp_content_type("model/gltf-binary", nil)
+      |> send_resp(200, glb)
+    else
+      :building -> conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
+      {:error, errors} -> json(conn, 422, %{"errors" => errors})
+      _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such part"}]})
     end
   end
 
@@ -587,6 +618,16 @@ defmodule World.Service do
 
       {:error, errors} ->
         json(conn, 422, %{"errors" => errors})
+    end
+  end
+
+  # The GLB of an element of a construction: from the construction while
+  # it keeps its elements, else from the store of the parts (W28: the key
+  # of an element is the key of its part).
+  defp element(id, key) do
+    case Construction.element(id, key) do
+      {:ok, glb} -> {:ok, glb}
+      :none -> if key =~ ~r/^[0-9a-f]{32}$/, do: World.Elements.Store.get(key), else: :none
     end
   end
 

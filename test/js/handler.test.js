@@ -127,6 +127,41 @@ test('GET /o/ builds a file one time, then serves it from R2, with an ETag', asy
   assert.equal(await receipt.text(), 'near receipt');
 });
 
+test('GET /o/ of a parts list goes to the VM at its level', async () => {
+  const env = { ORDERS: bucket() };
+  const v = vm();
+  v.orders.set(HASH, { blueprint: 'box' });
+  for (const [name, text] of [['elements.json', 'near elements'], ['mid.elements.json', 'mid elements'], ['far.elements.json', 'far elements']]) {
+    const r = await handler(req(`/o/${HASH}.${name}`), env, { vm: v, commit: 'c1' });
+    assert.equal(r.headers.get('content-type'), 'application/json');
+    assert.equal(await r.text(), text);
+  }
+});
+
+test('GET /p/ serves a part from R2 with no VM, else the VM builds it; a wrong key is 404', async () => {
+  const env = { ORDERS: bucket() };
+  const v = vm();
+  const key = HASH;
+  await env.ORDERS.put(`parts/${key}.glb`, 'glTF');
+  const kept = await handler(req(`/p/${key}.glb`), env, { vm: v, commit: 'c1' });
+  assert.equal(kept.status, 200);
+  assert.equal(await kept.text(), 'glTF');
+  assert.equal(kept.headers.get('content-type'), 'model/gltf-binary');
+  assert.match(kept.headers.get('cache-control'), /immutable/);
+  assert.equal(kept.headers.get('etag'), `"${key}"`);
+  assert.equal((await handler(req(`/p/${key}.glb`, { headers: { 'if-none-match': `"${key}"` } }), env, { vm: v, commit: 'c1' })).status, 304);
+  assert.deepEqual(v.calls, []);
+
+  // A part that R2 does not have: the VM builds it (its headers come too).
+  const other = 'f'.repeat(32);
+  const built = await handler(req(`/p/${other}.glb`), env, { vm: v, commit: 'c1' });
+  assert.equal(built.status, 200);
+  assert.equal(await built.text(), 'glTF built');
+  assert.equal(built.headers.get('retry-after'), '15');
+  assert.deepEqual(v.calls, [`/p/${other}.glb`]);
+  for (const path of ['/p/xyz.glb', `/p/${key}.png`]) assert.equal((await handler(req(path), env, { vm: v, commit: 'c1' })).status, 404);
+});
+
 test('GET /o/ of an order that the VM does not have, or of a wrong name, is 404', async () => {
   const env = { ORDERS: bucket() };
   assert.equal((await handler(req(`/o/${HASH}.glb`), env, { vm: vm(), commit: 'c1' })).status, 404);

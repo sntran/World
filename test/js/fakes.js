@@ -6,9 +6,10 @@ export const HASH = '0123456789abcdef0123456789abcdef';
 // The blueprints of the fake VM.
 export const BLUEPRINTS = [{ name: 'box', doc: 'A box.', options: [{ name: 'size', type: 'float', default: 1, unit: 'm' }] }];
 
-// A bucket in memory, with the API of R2 that handler.js uses.
+// A bucket in memory, with the API of R2 that handler.js and order_store.js use.
 export function bucket() {
   const items = new Map();
+  const types = new Map();
   return {
     items,
     async get(key) {
@@ -20,9 +21,14 @@ export function bucket() {
         async json() { return JSON.parse(new TextDecoder().decode(bytes)); },
       };
     },
-    async put(key, value) {
+    async put(key, value, options) {
       items.set(key, typeof value === 'string' ? new TextEncoder().encode(value) : new Uint8Array(value));
+      if (options) types.set(key, options.httpMetadata?.contentType);
     },
+    async head(key) {
+      return items.has(key) ? {} : null;
+    },
+    types,
   };
 }
 
@@ -46,6 +52,7 @@ export function vm() {
       return Response.json({ jsonrpc: '2.0', id: message.id, result: { version: request.headers.get('mcp-protocol-version') } });
     }
     // The constructions and the streams: a stream of one event.
+    if (url.pathname.startsWith('/p/')) return new Response('glTF built', { headers: { 'content-type': 'model/gltf-binary', 'retry-after': '15' } });
     if (url.pathname === '/events' || url.pathname === '/census' || url.pathname.startsWith('/builds')) {
       return new Response('id: 1\ndata: {"id":1}\n\n', { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' } });
     }

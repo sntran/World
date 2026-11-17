@@ -149,10 +149,22 @@ defmodule World.CensusTest do
     assert World.Supervisor.server(%{}) == []
     # The settings of the service from the environment: the builds at one time is a number.
     before = Application.get_env(:world, :builds)
+    memory = Application.get_env(:world, :memory_mb)
     files = Application.get_env(:world, :files)
-    assert World.Supervisor.settings(%{"WORLD_BUILDS" => "3", "WORLD_FILES" => files, "OTHER" => "x"}) == :ok
+
+    assert World.Supervisor.settings(%{
+             "WORLD_BUILDS" => "3",
+             "WORLD_FILES" => files,
+             "WORLD_MEMORY_MB" => "90000",
+             "OTHER" => "x"
+           }) ==
+             :ok
+
     assert Application.get_env(:world, :builds) == 3 and Application.get_env(:world, :files) == files
+    # (The most memory of a build, World.Guard: more than this computer has, so no test stops.)
+    assert Application.get_env(:world, :memory_mb) == 90_000
     if before, do: Application.put_env(:world, :builds, before), else: Application.delete_env(:world, :builds)
+    if memory, do: Application.put_env(:world, :memory_mb, memory), else: Application.delete_env(:world, :memory_mb)
     assert World.Supervisor.yard(%{}) == []
     assert World.Supervisor.yard(%{"WORLD_YARD" => "true"}) == [World.Haul, World.Yard]
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true", "PORT" => "4100"})

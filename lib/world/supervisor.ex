@@ -52,12 +52,15 @@ defmodule World.Supervisor do
   @doc """
   The settings of the service from the environment: `WORLD_FILES` (the
   folder of the files that the node built, `World.Files`), `WORLD_SITE`
-  (the folder of the site, `World.Service`) and `WORLD_BUILDS` (the
-  builds of a request at one time, `World.Line`).
+  (the folder of the site, `World.Service`), `WORLD_BUILDS` (the
+  builds of a request at one time, `World.Line`) and `WORLD_MEMORY_MB`
+  (the most memory of the VM for a build, `World.Guard`).
   """
   def settings(env) do
-    for {key, name} <- [{"WORLD_FILES", :files}, {"WORLD_SITE", :site}, {"WORLD_BUILDS", :builds}], text = env[key] do
-      Application.put_env(:world, name, if(name == :builds, do: String.to_integer(text), else: text))
+    keys = [{"WORLD_FILES", :files}, {"WORLD_SITE", :site}, {"WORLD_BUILDS", :builds}, {"WORLD_MEMORY_MB", :memory_mb}]
+
+    for {key, name} <- keys, text = env[key] do
+      Application.put_env(:world, name, if(name in [:builds, :memory_mb], do: String.to_integer(text), else: text))
     end
 
     :ok

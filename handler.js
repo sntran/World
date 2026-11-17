@@ -33,6 +33,12 @@
 //   .solids.json, .log.json, .replay.glb: the files of an order of POST /orders. The
 //   people of the node build the model (World.Construction): the log
 //   tells what each one did, and the replay GLB has a node for each part.
+// - GET /o/HASH.elements.json (and .mid.elements.json, .far.elements.json):
+//   the parts list of the model at a level (World.Elements): each part
+//   with its key and its place. The factory does not join the parts.
+// - GET /p/KEY.glb: a part by its key, from R2 (parts/KEY.glb) with no
+//   VM, else the VM builds it from its recipe and keeps it in R2 (202
+//   with retry-after while a large part is in work).
 // - GET /m/BLUEPRINT.glb (and the other files) ?OPTION=VALUE&color.ROLE=
 //   %23rrggbb&joint.NAME=DEGREES&target.LIMB=X,Y,Z: an order in the URL. A list is
 //   VALUE,VALUE, and OPTION.FIELD=VALUE is a field of an object.
@@ -52,6 +58,9 @@ const FILES = [
   ['.mid.light.glb', 'mid', 'light', 'model/gltf-binary'],
   ['.far.light.glb', 'far', 'light', 'model/gltf-binary'],
   ['.light.glb', 'near', 'light', 'model/gltf-binary'],
+  ['.mid.elements.json', 'mid', 'elements', 'application/json'],
+  ['.far.elements.json', 'far', 'elements', 'application/json'],
+  ['.elements.json', 'near', 'elements', 'application/json'],
   ['.mid.glb', 'mid', 'glb', 'model/gltf-binary'],
   ['.far.glb', 'far', 'glb', 'model/gltf-binary'],
   ['.parts.json', 'near', 'parts', 'application/json'],
@@ -64,6 +73,7 @@ const FILES = [
 ];
 
 const HASH = /^[0-9a-f]{32}$/;
+const PART = /^[0-9a-f]{32}$/;
 
 const headers = (extra = {}) => ({
   'access-control-allow-origin': '*',
@@ -113,8 +123,8 @@ async function forward(request, vm, origin, path) {
   ask.set('x-world-origin', origin);
   const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer();
   const r = await vm(new Request(`http://vm${path}`, { method: request.method, headers: ask, body }));
-  const extra = Object.fromEntries(['content-type', 'allow', 'cache-control'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
-  return new Response(r.status === 202 ? null : r.body, { status: r.status, headers: headers(extra) });
+  const extra = Object.fromEntries(['content-type', 'allow', 'cache-control', 'retry-after'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
+  return new Response(r.status === 202 && !path.startsWith('/p/') ? null : r.body, { status: r.status, headers: headers(extra) });
 }
 
 const buildKey = (commit, hash, level, kind) => `builds/${commit}/${hash}.${level}.${kind}`;
@@ -172,6 +182,13 @@ function send(request, object, commit, hash, type) {
   return new Response(object.body, { headers: headers({ 'content-type': type, ...extra }) });
 }
 
+// A part of R2: its key is a hash of its data, so it does not change.
+function part(request, object, key) {
+  const extra = { etag: `"${key}"`, 'cache-control': 'public, max-age=31536000, immutable' };
+  if (request.headers.get('if-none-match') === extra.etag) return new Response(null, { status: 304, headers: headers(extra) });
+  return new Response(object.body, { headers: headers({ 'content-type': 'model/gltf-binary', ...extra }) });
+}
+
 export async function handler(request, env, options) {
   try {
     return await route(request, env, options);
@@ -214,6 +231,16 @@ async function route(request, env, { vm, commit }) {
     const parts = split(path.slice(3));
     if (!parts || !HASH.test(parts[0])) return errors(404, 'no such file');
     return file(request, env, vm, commit, parts[0], parts[1]);
+  }
+
+  // A part of a model by its key: from R2 with no VM, else the VM builds
+  // it from its recipe and keeps it in R2 (World.Elements).
+  if (path.startsWith('/p/')) {
+    const key = path.slice(3).replace(/\.glb$/, '');
+    if (!PART.test(key) || !path.endsWith('.glb')) return errors(404, 'no such part');
+    const object = await env.ORDERS.get(`parts/${key}.glb`);
+    if (object) return part(request, object, key);
+    return forward(request, vm, url.origin, path);
   }
 
   if (path === '/events' || path === '/census' || path === '/places' || path.startsWith('/places/') || path.startsWith('/builds/')) return forward(request, vm, url.origin, path + url.search);

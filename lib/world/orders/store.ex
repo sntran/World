@@ -40,7 +40,7 @@ defmodule World.Orders.Store do
   @spec put(String.t(), binary()) :: :ok | :error
   def put(hash, json), do: put_key(key(hash), json)
 
-  @doc "Puts a JSON text in the store at a key."
+  @doc "Puts a JSON text (or the GLB of a part, `World.Elements.Store`) in the store at a key."
   @spec put_key(String.t(), binary()) :: :ok | :error
   def put_key(key, json) when byte_size(json) > 0 do
     case run(["put", key, "#{byte_size(json)}"], json) do
@@ -64,6 +64,10 @@ defmodule World.Orders.Store do
       other -> other
     end
   end
+
+  @doc "True when the store has a key (false also when the store failed)."
+  @spec has?(String.t()) :: boolean()
+  def has?(key), do: run(["has", key], "") == {:ok, "yes\n"}
 
   defp run(args, input),
     do: World.Program.run(config(:program), args, input, [{"WORLD_ORDER_DIR", config(:dir)}], config(:timeout))

@@ -8,15 +8,21 @@
 //   no order of the key (an order is never empty).
 // - put KEY LENGTH: the order comes on the input, with this length. The
 //   result is "ok".
+// - has KEY: the result is "yes" when the store has the key, else "no".
 //
 // An error ends the port with the exit status 1.
 
 // The keys of World.Orders.Store: orders/HASH.json, the history of the
 // edits of an order, history/HASH.json, the proposals of new
 // drawings, proposals/HASH.json, the requests of tools of the projects,
-// requests/HASH.json, and the blueprints in data of the projects,
-// blueprints/HASH.json.
-const KEY = /^(orders|history|proposals|requests|blueprints)\/[0-9a-f]{32}\.json$/;
+// requests/HASH.json, the blueprints in data of the projects,
+// blueprints/HASH.json, and the parts of the models (World.Elements):
+// parts/KEY.glb, and the recipe of a part that is not built yet,
+// parts/KEY.json.
+const KEY = /^((orders|history|proposals|requests|blueprints)\/[0-9a-f]{32}\.json|parts\/[0-9a-f]{32}\.(glb|json))$/;
+
+// The type of the content of a key.
+const type = (value) => (value.endsWith('.glb') ? 'model/gltf-binary' : 'application/json');
 
 const key = (value) => {
   if (!KEY.test(value ?? '')) throw new Error(`not a key of an order: ${value}`);
@@ -42,7 +48,7 @@ export async function read(stdin, total) {
   return bytes;
 }
 
-// bucket: an R2 bucket, or an object with the same get and put.
+// bucket: an R2 bucket, or an object with the same get, put and head.
 export const orderStore = (bucket) => ({
   async port(stdin, { argv: [op, ...args] }) {
     if (op === 'get' && args.length === 1) {
@@ -52,8 +58,11 @@ export const orderStore = (bucket) => ({
     if (op === 'put' && args.length === 2) {
       const length = Number(args[1]);
       if (!Number.isSafeInteger(length) || length <= 0) throw new Error(`not a length: ${args[1]}`);
-      await bucket.put(key(args[0]), await read(stdin, length), { httpMetadata: { contentType: 'application/json' } });
+      await bucket.put(key(args[0]), await read(stdin, length), { httpMetadata: { contentType: type(args[0]) } });
       return text('ok\n');
+    }
+    if (op === 'has' && args.length === 1) {
+      return text((await bucket.head(key(args[0]))) ? 'yes\n' : 'no\n');
     }
     throw new Error(`not an operation of the store: ${[op, ...args].join(' ')}`);
   },

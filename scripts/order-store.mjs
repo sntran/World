@@ -5,7 +5,7 @@
 // bucket: WORLD_ORDER_DIR.
 //
 //   WORLD_ORDER_DIR=tmp/orders scripts/order-store.mjs get orders/HASH.json
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { orderStore } from '../order_store.js';
@@ -18,6 +18,9 @@ const folder = {
   async get(key) {
     const bytes = await readFile(join(dir, key)).catch(() => null);
     return bytes && { body: new Response(bytes).body };
+  },
+  async head(key) {
+    return (await stat(join(dir, key)).catch(() => null)) && {};
   },
   async put(key, bytes) {
     await mkdir(dirname(join(dir, key)), { recursive: true });

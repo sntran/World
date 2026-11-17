@@ -14,7 +14,9 @@ defmodule World.Construction do
      another trade go to make room (`released`).
   4. The work of a task is real: the person makes the triangles of the
      meshes of its element and the GLB of the element alone
-     (`task_started`, `task_done`, `element`).
+     (`task_started`, `task_done`, `element`). The key of the GLB of an
+     element is the key of its part (`World.Elements.made_key/4`, W28),
+     and the GLB goes into the store of the parts (`/p/KEY.glb`).
   A job with a drawing (`drawing`, `World.Orders.Blueprints.drawing/1`)
   has one task for each node of the drawing (`World.Plan.of_drawing/1`):
   the person makes the node (the skill of the node, `World.Skill`, with
@@ -255,10 +257,6 @@ defmodule World.Construction do
     end)
   end
 
-  @doc "The key of the GLB of an element: a hash of the meshes that it shows."
-  def key(shown),
-    do: :crypto.hash(:sha256, :erlang.term_to_binary(shown)) |> binary_part(0, 8) |> Base.encode16(case: :lower)
-
   @doc "The triangles of the meshes of an item at a level: each face of n corners is n - 2."
   def estimate(item, level, pose \\ %{}) do
     for {_, _, _, {shapes, _}} <- Build.elements(item, level, pose), m <- shapes, f <- m.faces, reduce: 0 do
@@ -460,12 +458,27 @@ defmodule World.Construction do
   def handle_info({:age, days}, %{stage: %{work: "pause"}} = s), do: {:noreply, age(s, days)}
 
   defp elements(s, p, id, elements) do
+    {materials, colors} = {node_materials(s, id), Map.get(s.job, :colors) || %{}}
+
     datas =
-      for {frame, part, shown} <- elements,
-          do: %{"task" => id, "part" => part.name, "glb" => key(shown), "matrix" => Frame.matrix(GLB.gl_frame(frame))}
+      for {frame, part, _shown} <- elements,
+          do: %{
+            "task" => id,
+            "part" => part.name,
+            "glb" => World.Elements.made_key(part, s.level, materials, colors),
+            "matrix" => Frame.matrix(GLB.gl_frame(frame))
+          }
 
     s = Enum.reduce(datas, s, &record(&2, "element", p, &1))
     if datas == [], do: s, else: %{s | shown: Map.put(s.shown, id, datas)}
+  end
+
+  # The maps of a node of a drawing (the data `materials` of its skill: a sculpture), or none.
+  defp node_materials(s, id) do
+    case Map.get(s.made, id) do
+      {_, %{"materials" => materials}, _} -> materials
+      _ -> %{}
+    end
   end
 
   # A task is done: its person is free, the tasks after it can start, and
@@ -802,15 +815,14 @@ defmodule World.Construction do
   defp work(%{job: %{drawing: nil}} = s, task) do
     elements = Map.get(s.elements, task.id, [])
     meshes = for {_, _, {shapes, _}} <- elements, m <- shapes, not Map.has_key?(s.triangles, m), uniq: true, do: m
-    parts = for {_, part, shown} <- elements, not Map.has_key?(s.glbs, key(shown)), uniq: true, do: {key(shown), part}
-    known = Map.take(s.triangles, for({_, _, {shapes, _}} <- elements, m <- shapes, do: m))
-    {level, lean} = {s.level, lean?(s)}
+    {level, lean, colors} = {s.level, lean?(s), Map.get(s.job, :colors) || %{}}
+    keyed = for {_, part, _} <- elements, uniq: true, do: {World.Elements.made_key(part, level, %{}, colors), part}
+    parts = for {key, part} <- keyed, not Map.has_key?(s.glbs, key), do: {key, part}
 
     fn ->
       World.Detail.lean(lean, fn ->
         triangles = Map.new(meshes, &{&1, Mesh.triangles(&1)})
-        all = Map.merge(known, triangles)
-        glbs = Map.new(parts, fn {key, part} -> {key, Build.glb(part, level: level, triangles: all)} end)
+        glbs = Map.new(parts, fn {key, part} -> {key, stored(key, part, level, %{}, colors)} end)
         %{triangles: triangles, glbs: glbs}
       end)
     end
@@ -821,7 +833,7 @@ defmodule World.Construction do
     # each made node (plan 0007, D3): a crew gets its materials, not the
     # whole site.
     {node, inputs} = {World.Drawing.node(s.job.drawing, task.id), World.Drawing.inputs(s.job.drawing, task.id, s.made)}
-    {level, lean} = {s.level, lean?(s)}
+    {level, lean, colors} = {s.level, lean?(s), Map.get(s.job, :colors) || %{}}
 
     fn ->
       World.Detail.lean(lean, fn ->
@@ -831,13 +843,31 @@ defmodule World.Construction do
         meshes = for {_, _, _, {shapes, _}} <- elements, m <- shapes, uniq: true, do: m
         triangles = Map.new(meshes, &{&1, Mesh.triangles(&1)})
 
+        materials = Map.get(elem(result, 1), "materials", %{})
+
         glbs =
-          Map.new(elements, fn {_, _, part, shown} ->
-            {key(shown), Build.glb(part, level: level, triangles: triangles)}
+          Map.new(elements, fn {_, _, part, _} ->
+            key = World.Elements.made_key(part, level, materials, colors)
+            {key, stored(key, part, level, materials, colors)}
           end)
 
         %{triangles: triangles, glbs: glbs, made: result}
       end)
+    end
+  end
+
+  # The GLB of an element (`World.Elements.glb/4`), from the store of the
+  # parts or into it (W28: the key of an element is the key of its part,
+  # and `/p/KEY.glb` serves it after the construction).
+  defp stored(key, part, level, materials, colors) do
+    case World.Elements.Store.get(key) do
+      {:ok, glb} ->
+        glb
+
+      _ ->
+        glb = World.Elements.glb(part, level, materials, colors)
+        World.Elements.Store.put(key, glb)
+        glb
     end
   end
 

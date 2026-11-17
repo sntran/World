@@ -65,6 +65,22 @@ test('a blueprint in data of a project has a key of its own', async () => {
   assert.equal(await text(await store.port(input(), { argv: ['get', key] })), '{}');
 });
 
+test('a part of a model and its recipe have keys of their own, with their types, and has tells if the store has a key', async () => {
+  const b = bucket();
+  const store = orderStore(b);
+  const glb = 'parts/0123456789abcdef0123456789abcdef.glb';
+  const recipe = 'parts/0123456789abcdef0123456789abcdef.json';
+  assert.equal(await text(await store.port(input('glTF'), { argv: ['put', glb, '4'] })), 'ok\n');
+  assert.equal(await text(await store.port(input('{}'), { argv: ['put', recipe, '2'] })), 'ok\n');
+  assert.equal(b.types.get(glb), 'model/gltf-binary');
+  assert.equal(b.types.get(recipe), 'application/json');
+  assert.equal(await text(await store.port(input(), { argv: ['get', glb] })), 'glTF');
+  assert.equal(await text(await store.port(input(), { argv: ['has', glb] })), 'yes\n');
+  assert.equal(await text(await store.port(input(), { argv: ['has', glb.replace('0123', 'ffff')] })), 'no\n');
+  await assert.rejects(store.port(input(), { argv: ['has', 'parts/x.glb'] }));
+  await assert.rejects(store.port(input(), { argv: ['put', 'parts/0123456789abcdef0123456789abcdef.png', '2'] }));
+});
+
 test('get of an order that the store does not have gives nothing', async () => {
   const store = orderStore(bucket());
   assert.equal(await text(await store.port(input(), { argv: ['get', KEY] })), '');
@@ -90,6 +106,8 @@ test('the program on this computer keeps the orders in a folder', () => {
   assert.equal(execFileSync(program, ['put', KEY, '2'], { env, input: '{}' }).toString(), 'ok\n');
   assert.equal(execFileSync(program, ['get', KEY], { env }).toString(), '{}');
   assert.equal(execFileSync(program, ['get', KEY.replace('0123', 'ffff')], { env }).toString(), '');
+  assert.equal(execFileSync(program, ['has', KEY], { env }).toString(), 'yes\n');
+  assert.equal(execFileSync(program, ['has', KEY.replace('0123', 'ffff')], { env }).toString(), 'no\n');
   assert.equal(spawnSync(program, ['get', '../x'], { env }).status, 1);
   assert.equal(spawnSync(program, ['get', KEY], { env: { PATH: process.env.PATH } }).status, 1);
   rmSync(dir, { recursive: true });

@@ -25,8 +25,14 @@ defmodule Mix.Tasks.World.OrderTest do
     assert_received {:mix_shell, :info, ["Wrote the files of " <> _]}
 
     for ext <-
-          ~w(.glb .mid.glb .far.glb .log.json .replay.glb .parts.json .receipt.json .solids.json .drawing.json .flat.glb .mid.flat.glb .far.flat.glb .light.glb .mid.light.glb .far.light.glb),
+          ~w(.glb .mid.glb .far.glb .log.json .replay.glb .parts.json .receipt.json .solids.json .drawing.json .flat.glb .mid.flat.glb .far.flat.glb .light.glb .mid.light.glb .far.light.glb .elements.json .mid.elements.json .far.elements.json),
         do: assert(File.exists?(Path.join([@dir, "out", hash <> ext])), ext)
+
+    # The parts list of each level, and the GLB of each of its parts.
+    for ext <- ~w(.elements.json .mid.elements.json .far.elements.json),
+        part <- JSON.decode!(File.read!(Path.join([@dir, "out", hash <> ext])))["parts"] do
+      assert <<"glTF", _::binary>> = File.read!(Path.join([@dir, "out", "p", part["key"] <> ".glb"]))
+    end
   end
 
   test "a wrong order, and a wrong call, stop the task" do
