@@ -206,7 +206,8 @@ defmodule World.Skills.Sculpt do
   # The faces of each edit that adds, is 1 m or more long, and is thinner
   # than the cells of the estimate (a slab of a base, a pane): in those
   # cells its surface goes away. Its faces at the cells of the level (two
-  # sides of the two longest sides of its box) go to the bricks of the
+  # sides of the two longest sides of its box, two triangles for each
+  # cell) go to the bricks of the
   # estimate that its box crosses, in equal parts (a brick keeps its own
   # count when that is more: then its cells have the surface).
   defp thin_faces(counts, edits, step, k) do
@@ -221,7 +222,7 @@ defmodule World.Skills.Sculpt do
         index = fn {x, y, z} -> {floor(x / size), floor(y / size), floor(z / size)} end
         {{i0, j0, l0}, {i1, j1, l1}} = {index.(lo), index.(hi)}
         at = for i <- i0..i1, j <- j0..j1, l <- l0..l1, do: {i, j, l}
-        share = round(2 * b * c / (step * step) / length(at))
+        share = round(4 * b * c / (step * step) / length(at))
         Enum.reduce(at, counts, &Map.update(&2, &1, share, fn n -> max(n, share) end))
     end
   end

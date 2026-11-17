@@ -698,8 +698,8 @@ defmodule World.Skills.SculptTest do
 
     tiles = Detail.with(:far, fn -> Skill.tiles(slab, :far, 10_000, 1_000) end)
     assert length(tiles) >= 2
-    # (Its two faces at the cells of the level: 2 × 8 × 4 / 0.04² = 40,000.)
-    assert_in_delta Enum.sum(for t <- tiles, do: t.faces), 40_000, 4_000
+    # (Its two sides at the cells of the level, two triangles for each cell: 4 × 8 × 4 / 0.04² = 80,000.)
+    assert_in_delta Enum.sum(for t <- tiles, do: t.faces), 80_000, 8_000
     # A small slab is one part.
     assert Skill.tiles(put_in(slab, ["edits", Access.at(0), "size"], [0.4, 0.4, 0.004]), :far, 10_000) == nil
   end
