@@ -264,7 +264,7 @@ defmodule World.SculptTest do
 
     for {{x0, _, _}, {x1, _, _}} <- open_edges(left), do: assert(abs(x0) < 0.08 and abs(x1) < 0.08)
 
-    # With no budget: the collapses that cost almost nothing only.
+    # With no budget: the steps are not made smaller.
     free = Sculpt.model_in_steps(block(), step: 0.04, budget: nil, within: all, steps: steps)
     assert open_edges(free) == MapSet.new() and faces(free) > faces(part)
   end

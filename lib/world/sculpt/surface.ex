@@ -171,11 +171,6 @@ defmodule World.Sculpt.Surface do
   its own (the borders of the first regions are in the middle of these);
   then the band of faces at the borders that are left.
 
-  With the option `free_only: true`, only the first two rounds (the
-  collapses that cost almost nothing, and none that moves the surface by
-  more than half a cell): a step of a part, which is joined to the other
-  steps before the collapse to the budget.
-
   With the option `seam` (a function of a cell that is true for a cell at
   the border of a tile, `World.Sculpt.model/2`), each point of such a
   cell stays where it is: the next tile has the same point there, so the
@@ -212,11 +207,12 @@ defmodule World.Sculpt.Surface do
         |> Enum.map(&elem(&1, 1))
         |> join()
         |> between(budget, opts[:step])
-        |> rounds(budget, opts)
+        |> wider(budget, opts[:step])
+        |> last_pass(budget)
       else
         {_keys, pts, tris, pins} = triangles(pieces, pin, seam)
 
-        if budget != nil and length(tris) > budget and not Keyword.get(opts, :free_only, false) do
+        if budget != nil and length(tris) > budget do
           %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, pins: pins)
           {pts, tris}
         else
@@ -250,15 +246,6 @@ defmodule World.Sculpt.Surface do
     tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
     {keys, Enum.map(keys, &points[&1]), tris, seam_pins(pins(keys, colors, tris, pin), keys, seam)}
   end
-
-  # The rounds to the budget after the first two (`free_only: true`: none,
-  # the mesh after the collapses that cost almost nothing, for a step of
-  # a part, `World.Sculpt.model_in_steps/2`).
-  defp rounds(mesh, budget, opts) when is_list(opts),
-    do: rounds(mesh, budget, Keyword.get(opts, :free_only, false), opts[:step])
-
-  defp rounds({pts, tris, _, _}, _budget, true, _step), do: {pts, tris}
-  defp rounds(mesh, budget, false, step), do: mesh |> wider(budget, step) |> last_pass(budget)
 
   # The pins with a very large weight for each point at the border of a
   # tile: no collapse moves it (its cost is more than each other cost).

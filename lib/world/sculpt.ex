@@ -84,8 +84,7 @@ defmodule World.Sculpt do
           budget: opts[:budget],
           small: 2 * step,
           step: step,
-          seam: seam,
-          free_only: Keyword.get(opts, :free_only, false)
+          seam: seam
         )
 
       # (With `finish: false`, a step of a part: its points stay where the collapse put them.)
@@ -106,9 +105,8 @@ defmodule World.Sculpt do
   a process of its own, with its points at its borders held
   (`model/2`), to its share of #{20_000} faces (or of 3 times the budget,
   when that is more): enough faces for the points at its borders, and a
-  join that one process can hold. With no budget, a step does only the
-  collapses that cost almost nothing (no point moves by more than half a
-  cell). Then the steps are one mesh
+  join that one process can hold. With no budget, the steps are not
+  made smaller. Then the steps are one mesh
   (a point that two steps hold is one point), made smaller to the
   budget with the points at the borders of the part held (each point
   less than 2 cells from a side of the box: the next part has the same
@@ -122,11 +120,10 @@ defmodule World.Sculpt do
     parts =
       for {box, share} <- opts[:steps] do
         local = for e <- edits, e.mode == :crop or near_box?(e.box, box, limit(edits, step) + 2 * step + e.blend), do: e
-        # (With no budget, only the collapses that cost almost nothing.)
         b = if budget, do: max(round(max(3 * budget, @join) * share), 12)
 
         Detail.apart(fn ->
-          model(local, step: step, budget: b, within: box, finish: false, cache: false, free_only: budget == nil)
+          model(local, step: step, budget: b, within: box, finish: false, cache: false)
         end)
       end
 
