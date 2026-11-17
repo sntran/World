@@ -13,9 +13,10 @@
 
 // The keys of World.Orders.Store: orders/HASH.json, the history of the
 // edits of an order, history/HASH.json, the proposals of new
-// drawings, proposals/HASH.json, and the blueprints in data of the
-// projects, blueprints/HASH.json.
-const KEY = /^(orders|history|proposals|blueprints)\/[0-9a-f]{32}\.json$/;
+// drawings, proposals/HASH.json, the requests of tools of the projects,
+// requests/HASH.json, and the blueprints in data of the projects,
+// blueprints/HASH.json.
+const KEY = /^(orders|history|proposals|requests|blueprints)\/[0-9a-f]{32}\.json$/;
 
 const key = (value) => {
   if (!KEY.test(value ?? '')) throw new Error(`not a key of an order: ${value}`);

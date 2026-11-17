@@ -428,7 +428,7 @@ version of the blueprint (`van@2`): the old version stays.
 
 | Order | Where |
 |---|---|
-| A model of the catalog | `mix world.build` builds it natively, and the files are in the repository as a reference (no check builds them again). The Worker serves them as static files: no build at a request. |
+| A model of the catalog | `mix world.build` builds it natively, and the files are in the repository. CI checks at each commit that they are the build of the code. The Worker serves them as static files: no build at a request. |
 | An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 ## The server on a computer

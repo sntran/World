@@ -223,7 +223,14 @@ defmodule World.Orders.Blueprints do
               doc: "A prop in the right hand: the hand closes on it."
             ),
             option("left_hand", :choice, default: "none", values: ["none" | Props.hand()]),
-            option("hat", :choice, default: "none", values: ["none" | Props.head()])
+            option("hat", :choice, default: "none", values: ["none" | Props.head()]),
+            option("wear", :list,
+              default: [],
+              item: option("item", :choice, values: World.People.Parts.names()),
+              max: 3,
+              doc:
+                "Parts from edits on the head (World.People.Parts): the half helmet of a rider (mu_bao_hiem_edits), hair (toc_ngan_edits, toc_bui_edits, toc_dai_edits), a nón lá (non_la_edits). A helmet and hair take the size of the head of the person."
+            )
           ],
       build: fn o ->
         hold =
@@ -233,7 +240,7 @@ defmodule World.Orders.Blueprints do
 
         World.People.Human.person(
           "person",
-          person_opts(o) ++ [pose: o["pose"], animations: o["animations"], hold: hold]
+          person_opts(o) ++ [pose: o["pose"], animations: o["animations"], hold: hold, wear: o["wear"]]
         )
       end,
       check: &origin_check/1,

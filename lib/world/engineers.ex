@@ -16,6 +16,14 @@ defmodule World.Engineers do
      the next commit) or refuses it (nothing changes).
 
   A proposal is never a model of the catalog before the owner accepts it.
+
+  A project that cannot make a thing with the tools of World asks for the
+  tool, not for the model (`request_tool/1`, `docs/requests.md`, "When a
+  tool is missing"): what the tool does in general, the smallest order or
+  drawing that needs it, and the error or the result that shows the gap.
+  The request goes into the store (`requests/HASH.json`) with the check of
+  that order or drawing, and World adds the tool in general, with its
+  tests, for every project.
   """
   alias World.{Check, Drawing, Mass, Orders}
   alias World.Orders.Store
@@ -82,10 +90,69 @@ defmodule World.Engineers do
   def propose(_drawing, _request),
     do: {:error, %{"errors" => [%{"path" => "request", "message" => "must be a text of 1 to 2000 bytes"}]}}
 
+  @doc """
+  A request of a tool (the arguments of the MCP tool `request_tool`):
+  `project` (its name), `tool` (what the tool does in general), `gap` (the
+  error or the result that shows that the tool is missing), and one of
+  `order` and `drawing` (the smallest one that needs the tool). The factory
+  checks the order (`World.Orders.check/1`) or the drawing (`review/1`),
+  and the request goes into the store with that check. `{:ok, %{"hash",
+  "check"}}`, `{:error, %{"errors" => [...]}}` (the request is not
+  complete: nothing goes into the store), or `{:error, :store}`.
+  """
+  def request_tool(args) when is_map(args) do
+    text = fn key, max ->
+      v = args[key]
+
+      if is_binary(v) and byte_size(v) in 1..max,
+        do: [],
+        else: [%{"path" => key, "message" => "must be a text of 1 to #{max} bytes"}]
+    end
+
+    example =
+      case {args["order"], args["drawing"]} do
+        {o, nil} when is_map(o) -> []
+        {nil, d} when is_map(d) -> []
+        _ -> [%{"path" => "order", "message" => "give one of order and drawing: the smallest one that needs the tool"}]
+      end
+
+    case text.("project", 100) ++ text.("tool", 2000) ++ text.("gap", 2000) ++ example do
+      [] ->
+        request = Map.take(args, ~w(project tool gap order drawing)) |> Map.put("check", tool_check(args))
+        hash = Orders.hash(request)
+
+        case Store.put_key(Store.request(hash), Orders.encode(request)) do
+          :ok -> {:ok, %{"hash" => hash, "check" => request["check"]}}
+          :error -> {:error, :store}
+        end
+
+      errors ->
+        {:error, %{"errors" => errors}}
+    end
+  end
+
+  def request_tool(_args), do: {:error, %{"errors" => [%{"path" => "", "message" => "must be an object"}]}}
+
+  # The check of the example of a request of a tool: the errors of the order (none when World takes it),
+  # or the review of the drawing.
+  defp tool_check(%{"order" => order}) when is_map(order) do
+    case Orders.check(order) do
+      {:ok, _} -> %{"errors" => []}
+      {:error, errors} -> %{"errors" => errors}
+    end
+  end
+
+  defp tool_check(%{"drawing" => drawing}), do: drawing |> review() |> elem(1)
+
+  @doc "The request of a tool of a hash: `{:ok, request}`, `:none` or `:error`."
+  def tool_request(hash), do: read(Store.request(hash), hash)
+
   @doc "The proposal of a hash: `{:ok, proposal}`, `:none` or `:error`."
-  def proposal(hash) do
+  def proposal(hash), do: read(Store.proposal(hash), hash)
+
+  defp read(key, hash) do
     with true <- is_binary(hash) and hash =~ ~r/^[0-9a-f]{32}$/,
-         {:ok, json} <- Store.get_key(Store.proposal(hash)) do
+         {:ok, json} <- Store.get_key(key) do
       {:ok, JSON.decode!(json)}
     else
       :error -> :error

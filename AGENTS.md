@@ -45,6 +45,10 @@ about it.
     -c commit.gpgsign=false commit
   ```
 
+- When a project sends a tool request (`request_tool`,
+  `docs/requests.md`, "When a tool is missing") with an order or a
+  drawing that shows a gap, add the tool in general, with its tests, for
+  every project. Do not make the model of the project.
 - Look at each new or changed model on the review page
   (`scripts/shot.mjs`) before a commit, from the front, the side and
   three quarters. `FOCUS=x,y,z ZOOM=4` gives a close view of a point

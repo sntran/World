@@ -135,6 +135,55 @@ defmodule World.EngineersTest do
     assert %{"isError" => true} = call.("propose_drawing", %{"drawing" => stool()})
   end
 
+  # A project asks for a tool, not for a model (docs/requests.md, "When a tool is missing"): what the
+  # tool does in general, the smallest order or drawing that needs it, and the error or the result that
+  # shows the gap. The factory checks the example, and keeps the request for the owner.
+  test "the tool request_tool keeps a request of a tool with the check of its order or its drawing" do
+    call = fn args ->
+      body =
+        JSON.encode!(%{
+          "jsonrpc" => "2.0",
+          "id" => 1,
+          "method" => "tools/call",
+          "params" => %{"name" => "request_tool", "arguments" => args}
+        })
+
+      {200, %{"result" => r}} = MCP.answer(body, "2025-11-25", "https://world.mkfifo.com")
+      r
+    end
+
+    base = %{
+      "project" => "vung_tau",
+      "tool" => "A species of the plant blueprint: a tree of layers of flat branches on a straight trunk.",
+      "gap" => "araucaria is not a species of the plant blueprint."
+    }
+
+    order = %{"blueprint" => "plant", "options" => %{"species" => "araucaria"}}
+
+    assert %{"structuredContent" => %{"hash" => hash, "check" => %{"errors" => [error]}}} =
+             call.(Map.put(base, "order", order))
+
+    assert error["path"] == "options.species"
+    assert {:ok, %{"tool" => _, "gap" => _, "order" => ^order, "check" => _}} = Engineers.tool_request(hash)
+    # The same request is the same hash.
+    assert %{"structuredContent" => %{"hash" => ^hash}} = call.(Map.put(base, "order", order))
+
+    # An order that World takes: no errors, and the gap is the result that the project describes.
+    strut = %{"blueprint" => "strut", "options" => %{"length" => 0.3}}
+    assert %{"structuredContent" => %{"check" => %{"errors" => []}}} = call.(Map.put(base, "order", strut))
+
+    # With a drawing, the check is its review.
+    assert %{"structuredContent" => %{"check" => %{"checks" => [], "mass" => _}}} =
+             call.(Map.put(base, "drawing", stool()))
+
+    # A request needs each text, and one example.
+    assert %{"isError" => true, "structuredContent" => %{"errors" => errors}} = call.(Map.delete(base, "gap"))
+    assert Enum.map(errors, & &1["path"]) == ["gap", "order"]
+    assert %{"isError" => true} = call.(Map.merge(base, %{"order" => order, "drawing" => stool()}))
+    assert Engineers.request_tool("x") == {:error, %{"errors" => [%{"path" => "", "message" => "must be an object"}]}}
+    assert Engineers.tool_request("nope") == :none
+  end
+
   test "the store of the proposals fails" do
     old = Application.get_env(:world, World.Orders.Store, [])
     Application.put_env(:world, World.Orders.Store, program: "/no/such/program")
@@ -142,6 +191,10 @@ defmodule World.EngineersTest do
 
     assert Engineers.propose(stool(), "A stool.") == {:error, :store}
     assert Engineers.proposal(String.duplicate("0", 32)) == :error
+
+    request = %{"project" => "p", "tool" => "t", "gap" => "g", "order" => %{"blueprint" => "strut"}}
+    assert Engineers.request_tool(request) == {:error, :store}
+    assert Engineers.tool_request(String.duplicate("0", 32)) == :error
 
     body =
       JSON.encode!(%{
@@ -153,6 +206,17 @@ defmodule World.EngineersTest do
 
     {200, %{"result" => r}} = MCP.answer(body, "2025-11-25", "https://world.mkfifo.com")
     assert r["isError"] and hd(r["structuredContent"]["errors"])["message"] =~ "the store of the proposals failed"
+
+    body =
+      JSON.encode!(%{
+        "jsonrpc" => "2.0",
+        "id" => 1,
+        "method" => "tools/call",
+        "params" => %{"name" => "request_tool", "arguments" => request}
+      })
+
+    {200, %{"result" => r}} = MCP.answer(body, "2025-11-25", "https://world.mkfifo.com")
+    assert r["isError"] and hd(r["structuredContent"]["errors"])["message"] =~ "the store of the requests failed"
   end
 
   test "mix world.review: the sheet of a proposal, and the accept into the catalog" do
