@@ -202,6 +202,22 @@ defmodule World.ElementsTest do
     {:ok, strut} = Elements.list(%{"blueprint" => "strut", "options" => %{"length" => 0.3}}, "far")
     assert [%{"kind" => "part", "joint" => nil}] = strut["parts"]
     assert {:ok, ^list} = Elements.list(group, "far")
+
+    # A group in a node of a drawing: each person is a part of the node, at its place in the model.
+    group_node = %{
+      "name" => "group",
+      "item" => %{"blueprint" => "exercise", "options" => %{"count" => 1}},
+      "to" => "wall",
+      "at" => "top"
+    }
+
+    yard = update_in(drawing(0.3, "yard"), ["nodes"], &(&1 ++ [group_node]))
+    {:ok, drawn} = Elements.list(order(yard), "far")
+    people = Enum.filter(drawn["parts"], &(&1["node"] == "group"))
+    assert Enum.map(people, &{&1["kind"], &1["part"]}) == [{"figure", "leader"}, {"figure", "person_1"}]
+    # (The leader stands at the top of the wall: 1 m up, the y of glTF.)
+    assert_in_delta Enum.at(hd(people)["matrix"], 13), 1.0, 1.0e-6
+    for p <- people, do: assert(p["roles"] != [] and Store.has?(p["key"]))
   end
 
   test "the key of a part from its content, the keys of the nodes of a drawing, and the version of a rule" do
@@ -219,6 +235,10 @@ defmodule World.ElementsTest do
     assert Elements.node_keys(drawing(0.35), :far)["lid"] != keys["lid"]
     assert Elements.node_keys(drawing(), :mid)["wall"] != keys["wall"]
     assert Elements.node_keys(drawing(), :far) == keys
+
+    # A module with no file of code (made in memory) is its own version.
+    [{loose, _}] = Code.compile_string("defmodule World.ElementsTestLoose do def x, do: World.Frame.identity() end")
+    assert Elements.version(loose) =~ ~r/^[0-9a-f]{12}$/
 
     version = Elements.version(World.Skills.Sculpt)
     assert version =~ ~r/^[0-9a-f]{12}$/ and Elements.version(World.Skills.Sculpt) == version
@@ -279,6 +299,55 @@ defmodule World.ElementsTest do
     # The GLB of an element of a construction comes from the store of the parts after the construction (W28).
     assert get.("/builds/gone/elements/#{lid["key"]}.glb").status == 200
     assert get.("/builds/gone/elements/abc.glb").status == 404
+  end
+
+  test "a build that stops before its end: the part or the list of another build, else an error (no loop)" do
+    post = fn path, body -> Plug.Test.conn(:post, path, body) |> World.Service.call(World.Service.init([])) end
+    get = fn path -> Plug.Test.conn(:get, path) |> World.Service.call(World.Service.init([])) end
+
+    # A build of the key that runs now: it gets the wait of a request, does `last`, and stops with no answer.
+    stops = fn key, last ->
+      me = self()
+
+      spawn(fn ->
+        {:ok, _} = Registry.register(World.Names, {:build, key}, nil)
+        send(me, :registered)
+        receive do: ({:wait, _, _} -> last.())
+      end)
+
+      assert_receive :registered
+    end
+
+    tag = "stops-#{System.os_time()}"
+    {:ok, list} = Elements.list(order(drawing(0.3, tag)), "far")
+    [t, u | _] = list["parts"]
+    glb = Elements.glb(World.Part.new("p", :part, [World.Shape.box({0, 0, 0}, {1, 1, 1}, :wood)], []), :far)
+    stops.({:part, t["key"]}, fn -> Store.put(t["key"], glb) end)
+    assert Elements.fetch(t["key"]) == {:ok, glb}
+    stops.({:part, u["key"]}, fn -> :ok end)
+    assert {:error, [%{"message" => "the build stopped before its end" <> _}]} = Elements.fetch(u["key"])
+
+    # The parts list of POST /build: from the files after another build, else 422.
+    [one, two, three, four] =
+      for i <- 1..4 do
+        {:ok, placed} = Orders.place(order(drawing(0.3, "#{tag}-#{i}")), "o")
+        placed["hash"]
+      end
+
+    stops.({:file, one, "far"}, fn -> World.Files.put(one, "far", "elements", ~s({"parts":[]})) end)
+    conn = post.("/build?level=far&file=elements&hash=#{one}", nil)
+    assert conn.status == 200 and conn.resp_body == ~s({"parts":[]})
+    stops.({:file, two, "far"}, fn -> :ok end)
+    conn = post.("/build?level=far&file=elements&hash=#{two}", nil)
+    assert conn.status == 422 and conn.resp_body =~ "the build stopped"
+
+    # GET /o/: 500 when the build stops, and 422 with the errors of the build.
+    stops.({:file, three, "near", "elements"}, fn -> :ok end)
+    conn = get.("/o/#{three}.elements.json")
+    assert conn.status == 500 and conn.resp_body =~ "the build stopped"
+    Application.put_env(:world, :memory_mb, 1)
+    conn = get.("/o/#{four}.far.elements.json")
+    assert conn.status == 422 and conn.resp_body =~ "needs more memory"
   end
 
   test "a parts list that takes long builds on after the request: 202, then the list" do

@@ -120,8 +120,8 @@ defmodule World.Elements do
       case background({:part, key}, fn -> World.Line.run(:now, fn -> part(key) end) end, wait) do
         {:ok, result} -> result
         :building -> :building
-        # (The build ended before it got the message: its part is in the store.)
-        :gone -> with {:ok, glb} <- Store.get(key), do: {:ok, glb}, else: (_ -> :none)
+        # (Another build of the key ended before it got the message: its part is in the store, else it stopped.)
+        :gone -> with {:ok, glb} <- Store.get(key), do: {:ok, glb}, else: (_ -> {:error, stopped()})
       end
     else
       {:ok, glb} -> {:ok, glb}
@@ -176,7 +176,8 @@ defmodule World.Elements do
       case Registry.register(World.Names, {:build, key}, nil) do
         {:ok, _} ->
           send(me, {ref, self()})
-          answer(fun.())
+          # (The request that starts the build sends its wait at once.)
+          answer(fun.(), 1_000)
 
         {:error, {:already_registered, other}} ->
           send(me, {ref, other})
@@ -187,15 +188,18 @@ defmodule World.Elements do
   end
 
   # The result of a build to each request that waits for it.
-  defp answer(result) do
+  defp answer(result, grace) do
     receive do
       {:wait, pid, ref} ->
         send(pid, {ref, result})
-        answer(result)
+        answer(result, 0)
     after
-      0 -> :ok
+      grace -> :ok
     end
   end
+
+  @doc "The error of a build that stopped before its end, as the errors of `World.Orders.check/1`."
+  def stopped, do: [%{"path" => "", "message" => "the build stopped before its end: send the request again"}]
 
   @doc """
   The version of a rule: a hash of the code of its module and of each

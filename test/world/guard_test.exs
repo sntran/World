@@ -26,7 +26,13 @@ defmodule World.GuardTest do
     Application.put_env(:world, :memory_mb, 1)
     assert Guard.limit() == 1_000_000
     me = self()
-    assert {:error, :memory} = Guard.run(fn -> send(me, {:worker, self()}) && Process.sleep(:infinity) end)
+
+    assert {:error, :memory} =
+             Guard.run(fn ->
+               send(me, {:worker, self()})
+               Process.sleep(:infinity)
+             end)
+
     assert_received {:worker, worker}
     refute Process.alive?(worker)
     assert [%{"path" => "", "message" => "needs more memory than the factory has (1 MB): " <> _}] = Guard.errors()
@@ -49,6 +55,8 @@ defmodule World.GuardTest do
   test "a build in the guard keeps the level of detail of its caller, gives its errors, and stops when its process stops" do
     Application.put_env(:world, :memory_mb, 100_000)
     assert Detail.with(:far, fn -> Guard.run(&Detail.level/0) end) == {:ok, :far}
+    # (A build of more than one look of the guard, under the limit.)
+    assert Guard.run(fn -> Process.sleep(80) && :slow end) == {:ok, :slow}
     assert_raise ArgumentError, "no", fn -> Guard.run(fn -> raise ArgumentError, "no" end) end
     # (A process that its heap limit stops: killed, as by the guard.)
     me = self()

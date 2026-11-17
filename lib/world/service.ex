@@ -278,7 +278,7 @@ defmodule World.Service do
   # list builds in the background (`World.Elements.background/3`): a large
   # model at near takes more than the 60 s of a request at the edge.
   # (Its file goes into the files of the node: the request after a 202 gets it there.)
-  defp build(conn, order, level, "elements") do
+  defp build(_conn, order, level, "elements") do
     hash = with {:ok, full} <- Orders.check(order), do: Orders.hash(full), else: (_ -> nil)
 
     keep = fn ->
@@ -295,12 +295,21 @@ defmodule World.Service do
         case World.Elements.background({:file, hash, level}, keep) do
           {:ok, result} -> result
           :building -> :building
-          :gone -> build(conn, order, level, "elements")
+          :gone -> {0, listed(hash, level)}
         end
     end
   end
 
   defp build(conn, order, level, file), do: timed(class(conn), order, level, file)
+
+  # The parts list after another build of it, which ended before it got
+  # the message: in the files, else the error of a build that stopped.
+  defp listed(hash, level) do
+    case Files.get(hash, level, "elements") do
+      {:ok, entry} -> {:ok, entry.body}
+      :error -> {:error, World.Elements.stopped()}
+    end
+  end
 
   defp timed(class, order, level, file),
     do: Line.run(class, fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end)
@@ -561,7 +570,7 @@ defmodule World.Service do
               {:ok, {:ok, entry}} -> send_entry(conn, entry, hash, kind, false)
               {:ok, {:error, errors}} -> json(conn, 422, %{"errors" => errors})
               :building -> conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
-              :gone -> serve(conn, order, level, kind)
+              :gone -> json(conn, 500, %{"errors" => World.Elements.stopped()})
             end
 
           :error ->
