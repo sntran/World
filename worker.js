@@ -6,12 +6,14 @@
 // The VM is edge.com (scripts/edge.sh): the release of World for the
 // WebAssembly runtime of the npm package beam.com, with WORLD_SERVER=true
 // (wrangler.jsonc), so World.Service answers on port 4000. The VM runs
-// in the Durable Object Beam, one object for the node: its people build
-// a file one time, and the next request finds it in R2.
+// in the Durable Object Beam: one object for the node, whose people build
+// a file one time (the next request finds it in R2), and one object for
+// each part of a parts list that R2 does not have (objectOf, handler.js),
+// so that the parts of a list build at the same time in more than one VM.
 import app from './edge.com' with { type: 'bytes' };
 import { Beam as BeamObject, serve } from 'beam.com';
 import version from './site/version.json';
-import { handler } from './handler.js';
+import { handler, objectOf } from './handler.js';
 import { orderStore } from './order_store.js';
 import { logStore, sqlTable } from './log_store.js';
 
@@ -26,10 +28,11 @@ export class Beam extends BeamObject {
   }
 }
 
-// One object for each request: the node "world", with its people, its
-// constructions, its streams and its log (docs/plans/0001, D16). A file
-// that R2 has goes out with no VM (handler.js).
-const node = serve(app, { name: () => 'world' });
+// The object of each request: the node "world", with its people, its
+// constructions, its streams and its log (docs/plans/0001, D16), or the
+// object of a part (objectOf). A file that R2 has goes out with no VM
+// (handler.js).
+const node = serve(app, { name: objectOf });
 
 export default {
   fetch(request, env, ctx) {

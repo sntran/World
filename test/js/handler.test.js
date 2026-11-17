@@ -1,7 +1,7 @@
 // The tests of handler.js, with a fake VM and a fake R2 bucket.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { handler, orderOf, split, urlKey } from '../../handler.js';
+import { handler, objectOf, orderOf, split, urlKey } from '../../handler.js';
 import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
 
 const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
@@ -21,6 +21,15 @@ test('the name and the file of a path', () => {
   assert.deepEqual(split('van.replay.glb').map((x, i) => (i ? x[2] : x)), ['van', 'replay']);
   assert.equal(split('.glb'), null);
   assert.equal(split('van.txt'), null);
+});
+
+test('a part builds in a Durable Object of its own; each other request goes to the node', () => {
+  const key = '0123456789abcdef0123456789abcdef';
+  assert.equal(objectOf(new Request(`http://vm/p/${key}.glb`)), 'p-0123456789abcdef0123456789abcd');
+  assert.ok(objectOf(new Request(`http://vm/p/${key}.glb`)).length <= 32);
+  for (const path of ['/orders', '/build?level=far&file=elements', `/builds/b/elements/${key}.glb`, '/p/xyz.glb', `/p/${key}.png`]) {
+    assert.equal(objectOf(new Request(`http://vm${path}`)), 'world');
+  }
 });
 
 test('an order from a URL', () => {

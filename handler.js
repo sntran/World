@@ -75,6 +75,18 @@ const FILES = [
 const HASH = /^[0-9a-f]{32}$/;
 const PART = /^[0-9a-f]{32}$/;
 
+// The Durable Object of a request to the VM (worker.js). A part (GET
+// /p/KEY.glb) builds in an object of its own, named from its key: the
+// parts of one list build at the same time, each in the memory of its
+// own VM (128 MB), and a second request of the same part goes to the
+// same object, which builds it one time. Each other request goes to the
+// node "world" (its orders, its constructions, its streams and its log).
+// (The name of an object has at most 32 characters.)
+export function objectOf(request) {
+  const part = /^\/p\/([0-9a-f]{32})\.glb$/.exec(new URL(request.url).pathname);
+  return part ? `p-${part[1].slice(0, 30)}` : 'world';
+}
+
 const headers = (extra = {}) => ({
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
