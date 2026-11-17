@@ -163,32 +163,44 @@ defmodule World.ElementsTest do
     assert {:ok, _} = Elements.part(t["key"])
   end
 
-  test "a group of people: each person is a part, with its props, made one by one" do
+  test "a group of people: each person is a part, with its props, made alone at its first request" do
     group = %{"blueprint" => "exercise", "options" => %{"count" => 2, "fans" => true}}
     {:ok, list} = Elements.list(group, "far")
 
     assert Enum.map(list["parts"], &{&1["node"], &1["kind"]}) == [
-             {"leader", "figure"},
-             {"person_1", "figure"},
-             {"person_2", "figure"}
+             {"leader", "piece"},
+             {"person_1", "piece"},
+             {"person_2", "piece"}
            ]
 
-    assert list["parts"] |> Enum.map(& &1["key"]) |> Enum.uniq() |> length() == 3
-    for p <- list["parts"], do: assert(Store.has?(p["key"]) and "skin" in p["roles"])
-    # Each person is at its place in the group: the place of its figure in the whole model.
+    keys = Enum.map(list["parts"], & &1["key"])
+    assert length(Enum.uniq(keys)) == 3
+    # The list makes no person: each has a recipe.
+    for k <- keys, do: assert({:ok, _} = Store.recipe(k))
+    for p <- list["parts"], do: assert(p["matrix"] == Frame.matrix(World.GLB.gl_frame(Frame.identity())))
+
+    # Each person, made alone, is at its place in the group: the place of its figure in the whole model.
     {:ok, full} = Orders.check(group)
     {:ok, blueprint} = World.Orders.Blueprints.fetch("exercise")
     whole = World.Detail.with(:far, fn -> blueprint.build.(full["options"]) end)
 
     for {{:figure, path, frame, _, nil}, part} <- Enum.zip(World.Build.places(whole, :far), list["parts"]) do
       assert part["node"] == path
-      for {a, b} <- Enum.zip(part["matrix"], Frame.matrix(World.GLB.gl_frame(frame))), do: assert_in_delta(a, b, 1.0e-9)
+
+      {:ok, <<"glTF", _::32, _::32, size::little-32, "JSON", json::binary-size(size), _::binary>>} =
+        Elements.part(part["key"])
+
+      {x, y, z} = World.GLB.gl_frame(frame).at
+
+      assert Enum.any?(JSON.decode!(json)["nodes"], fn n ->
+               match?([_, _, _], n["translation"]) and
+                 Enum.zip(n["translation"], [x, y, z]) |> Enum.all?(fn {a, b} -> abs(a - b) < 1.0e-6 end)
+             end)
     end
 
     # A rule with no pieces: its model is made, and each part of it is a part of the list.
     {:ok, strut} = Elements.list(%{"blueprint" => "strut", "options" => %{"length" => 0.3}}, "far")
     assert [%{"kind" => "part", "joint" => nil}] = strut["parts"]
-    # The same group with an edit of one person only would keep the keys of the others: a key is the content.
     assert {:ok, ^list} = Elements.list(group, "far")
   end
 

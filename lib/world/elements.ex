@@ -278,23 +278,23 @@ defmodule World.Elements do
   defp make_list(full, job), do: drawing_list(full, job)
 
   # The pieces of a rule that gives them one by one (a group of people):
-  # each made alone, in a process of its own, at its place.
+  # each a recipe, made alone at its first request (`part/1`). Its GLB has
+  # the piece at its place in the model (its place comes from the piece:
+  # a person stands on its port `ground`), so its matrix is the identity.
   defp pieces_list(full, job, blueprint) do
-    colors = full["colors"] || %{}
+    hash = Orders.hash(full)
+    :ok = Orders.Store.put(hash, Orders.encode(full))
     pieces = Detail.with(job.level, fn -> blueprint.pieces.(full["options"]) end)
 
     parts =
-      for {name, make, place} <- pieces do
-        Detail.apart(fn ->
-          Detail.with(job.level, fn ->
-            thing = make.()
-            frame = if place, do: placed(thing, place), else: Frame.identity()
-            key = made_key(thing, job.level, %{}, colors)
-            keep(MapSet.new(), key, fn -> glb(thing, job.level, %{}, colors) end)
-            kind = if match?(%World.Figure{}, thing), do: "figure", else: "part"
-            entry(key, name, thing.name, roles(thing), nil) |> Map.merge(%{"matrix" => matrix(frame), "kind" => kind})
-          end)
-        end)
+      for {name, _make, _place} <- pieces do
+        key = hash({:piece, version(Blueprints), full, name, job.level})
+
+        unless Store.has?(key) do
+          Store.put_recipe(key, JSON.encode!(%{"order" => hash, "level" => Atom.to_string(job.level), "piece" => name}))
+        end
+
+        entry(key, name, name, [], nil) |> Map.merge(%{"matrix" => matrix(Frame.identity()), "kind" => "piece"})
       end
 
     result(full, job, parts, %{})
@@ -467,6 +467,20 @@ defmodule World.Elements do
   end
 
   defp boxlist({lo, hi}), do: [Tuple.to_list(lo), Tuple.to_list(hi)]
+
+  # A piece of a rule from its recipe (a person of a group), at its place.
+  defp from_recipe(order, %{"level" => l, "piece" => name}) do
+    level = String.to_existing_atom(l)
+    {:ok, full} = Orders.check(order)
+    {:ok, blueprint} = Blueprints.fetch(full["blueprint"])
+
+    Detail.with(level, fn ->
+      {^name, make, place} = Enum.find(blueprint.pieces.(full["options"]), &(elem(&1, 0) == name))
+      thing = make.()
+      frame = if place, do: placed(thing, place), else: Frame.identity()
+      glb(World.Assembly.new(name, thing, place: frame), level, %{}, full["colors"] || %{})
+    end)
+  end
 
   # A part of a sculpture from its recipe: the sculpture of the node, or one of its tiles.
   defp from_recipe(order, %{"level" => l, "node" => name, "tile" => tile}) do
