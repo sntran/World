@@ -656,6 +656,53 @@ defmodule World.BuildingTest do
              })
   end
 
+  # The plan of Khách sạn Hải Âu, Vũng Tàu (OpenStreetMap way 790529523, © OpenStreetMap contributors, ODbL).
+  @hai_au [
+    [35.7, -1.3],
+    [16.95, -1.44],
+    [13.8, -0.5],
+    [0.0, 0.0],
+    [0.0, -6.4],
+    [-24.2, -5.8],
+    [-22.8, -21.2],
+    [-14.2, -22.2],
+    [11.8, -20.5],
+    [11.8, -17.1],
+    [32.5, -17.0],
+    [47.5, -15.1],
+    [46.1, -7.4],
+    [35.4, -7.4]
+  ]
+
+  @tag timeout: 600_000
+  test "the ground: a slab deeper than the cells of each level, with the cells of a flat part" do
+    d = checked(%{"plan" => @hai_au, "apron" => 0.6})
+    nen = Enum.find(d["nodes"], &(&1["name"] == "toa_nha_nen"))["skill"]["sculpt"]
+    assert nen["cells"] == %{"near" => 0.25, "mid" => 0.3, "far" => 0.4}
+    # Its top at the ground; 1 m deep, so 2.5 cells at far (a slab of 0.3 m in cells of 0.3 m had no surface).
+    assert [%{"size" => %{"depth" => 1.0}, "at" => [0, 0, -0.5]}] = nen["edits"]
+
+    # The far part has a surface.
+    {far, _, _} =
+      World.Detail.with(:far, fn -> World.Skills.Sculpt.make(nen, %{}, %{level: :far, name: "toa_nha_nen"}) end)
+
+    assert Enum.sum(for s <- far.shapes, do: length(s.faces)) > 0
+
+    # The near part is one part of about 150,000 faces before its collapse (in cells of 6 cm: about
+    # 2 million faces, 266 steps, and 22 minutes at the edge).
+    assert [%{faces: faces}] =
+             World.Detail.with(:near, fn ->
+               World.Skills.Sculpt.tiles(nen, :near, World.Elements.most(), World.Elements.least())
+             end)
+
+    assert faces > 100_000 and faces < 200_000
+
+    # Edits of an order on the ground can be small (a kerb): they keep the cells of a small part.
+    kerb = Wall.box(Wall.new([0, 0], [10, 0]), 5, 0.05, {10, 0.15, 0.1}, "#cccccc")
+    more = checked(%{"plan" => @hai_au, "more" => %{"nen" => [kerb]}})
+    assert Enum.find(more["nodes"], &(&1["name"] == "toa_nha_nen"))["skill"]["sculpt"]["cells"]["near"] == 0.06
+  end
+
   test "a word that is not possible is an error with its message" do
     wrong = [
       {[], "the request of a building is a map"},

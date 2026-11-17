@@ -21997,14 +21997,14 @@
        "at": [
         0,
         0,
-        -0.15
+        -0.5
        ],
        "color": "#8d8a80",
        "material": "part_03",
        "roughness": 0.95,
        "shape": "extrude",
        "size": {
-        "depth": 0.3,
+        "depth": 1.0,
         "outline": [
          [
           40.3,

@@ -684,7 +684,7 @@ defmodule World.Town.Building do
         {"chu", letters, [], [r4(0.027 * fine), r4(0.04 * fine), r4(0.08 * fine)],
          [budget(150 * count, 1_000, 12_000), budget(40 * count, 400, 3_000), budget(12 * count, 100, 800)],
          [256, 128, 64]},
-        {"nen", ground(b) ++ b["more"]["nen"], [], [0.06, 0.12, 0.3], [2_500, 700, 150], [512, 256, 128]}
+        {"nen", ground(b) ++ b["more"]["nen"], [], ground_cells(b), [2_500, 700, 150], [512, 256, 128]}
       ]
       |> Enum.reject(fn {_, edits, _, _, _, _} -> edits == [] end)
 
@@ -776,14 +776,26 @@ defmodule World.Town.Building do
     ]
   end
 
+  # The ground: a slab with its top at the ground, deeper than the cells
+  # of each level (a slab thinner than its cells has no surface), so its
+  # far part is not empty. The part under the ground is not seen.
+  @ground 1.0
+
   defp ground(%{"apron" => apron} = b) do
     [
-      Wall.outline(offset(b["plan"], apron), 0.3, [0, 0, -0.15], b["colors"]["ground"], %{
+      Wall.outline(offset(b["plan"], apron), @ground, [0, 0, -@ground / 2], b["colors"]["ground"], %{
         "roughness" => 0.95,
         "surface" => %{"kind" => "concrete", "scale" => 0.06}
       })
     ]
   end
+
+  # The cells of the ground (near, mid, far). A flat slab has no relief
+  # smaller than 25 cm: its look (the concrete, the dirt) is in its maps.
+  # The edits of an order on the ground (`more.nen`) can be small (a
+  # step, a kerb): they keep the cells of a small part.
+  defp ground_cells(%{"more" => %{"nen" => []}}), do: [0.25, 0.3, 0.4]
+  defp ground_cells(_b), do: [0.06, 0.12, 0.3]
 
   # A plan with each side moved out by `d` (in, when `d` is less than 0).
   defp offset(plan, d) do

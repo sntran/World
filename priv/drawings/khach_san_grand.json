@@ -26775,9 +26775,9 @@
       "near": 2500
      },
      "cells": {
-      "far": 0.3,
-      "mid": 0.12,
-      "near": 0.06
+      "far": 0.4,
+      "mid": 0.3,
+      "near": 0.25
      },
      "dirt": 0.35,
      "edits": [
@@ -26785,14 +26785,14 @@
        "at": [
         0,
         0,
-        -0.15
+        -0.5
        ],
        "color": "#8d8a80",
        "material": "part_04",
        "roughness": 0.95,
        "shape": "extrude",
        "size": {
-        "depth": 0.3,
+        "depth": 1.0,
         "outline": [
          [
           37.8,
