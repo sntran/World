@@ -404,6 +404,130 @@ defmodule World.BuildingTest do
 
   defp round_point(point), do: Enum.map(point, &(Float.round(&1 * 1.0, 3) + 0.0))
 
+  test "a porch with a curved front and its fascia, and balconies with round ends" do
+    request = %{
+      "size" => [20, 12],
+      "storeys" => 3,
+      "fronts" => [
+        %{"from" => 2, "to" => 10, "bays" => 2, "balcony" => 1.2, "round" => [1.2, 1.2], "rail" => "bars"},
+        %{
+          "side" => 3,
+          "from" => 6,
+          "to" => 10.4,
+          "bays" => 1,
+          "balcony" => 2.2,
+          "round" => [2.2, 2.2],
+          "rail" => "none"
+        },
+        %{"side" => 2, "bays" => 2, "balcony" => 1.0, "rail" => "cross"}
+      ],
+      "porches" => [
+        %{"at" => 15, "wide" => 8, "deep" => 5, "round" => [0, 4], "fascia" => 1.2, "columns" => 4},
+        %{"side" => 3, "at" => 4, "wide" => 6, "deep" => 3, "round" => [3, 3], "terrace" => true, "columns" => 1}
+      ]
+    }
+
+    b = Building.spec(request)
+    assert Building.spec(b) == b
+
+    assert [%{"balcony" => 1.2, "round" => [1.2, 1.2]}, %{"round" => [2.2, 2.2]}, %{"round" => [+0.0, +0.0]}] =
+             b["fronts"]
+
+    assert [%{"round" => [+0.0, 4.0], "fascia" => 1.2}, %{"round" => [3.0, 3.0], "fascia" => +0.0}] = b["porches"]
+    # With no balcony and no round, a front and a porch are as before.
+    assert %{"fronts" => [%{"balcony" => +0.0, "round" => [+0.0, +0.0]}]} = Building.spec(%{"fronts" => [%{}]})
+    assert %{"porches" => [%{"round" => [+0.0, +0.0], "fascia" => +0.0}]} = Building.spec(%{"porches" => [%{}]})
+
+    d = checked(request)
+    body = edits(d, "than")
+    # A balcony at each floor over the ground storey (4.1 m and 7.6 m): a slab 0.2 m thick in the color of the trim,
+    # with its top at the floor.
+    slabs = Enum.filter(body, &(&1["shape"] == "extrude" and &1["size"]["depth"] == 0.2))
+    assert length(slabs) == 6 and Enum.all?(slabs, &(&1["color"] == "#e3aa6c"))
+    assert Enum.frequencies_by(slabs, &List.last(&1["at"])) == %{4.0 => 3, 7.5 => 3}
+    [round, half, square] = for k <- [0, 2, 4], do: Enum.at(slabs, k)["size"]["outline"]
+    # The front of side 1 from s = 2 to 10 (x = 18 to 10), 1.2 m out, with a quarter of a circle at each end.
+    assert {Enum.min_by(round, &hd/1), Enum.max_by(round, &hd/1)} == {[10.0, +0.0], [18.0, +0.0]}
+    assert Enum.max(Enum.map(round, &List.last/1)) == 1.2 and length(round) == 18
+    assert [16.8, 1.2] in round and [11.2, 1.2] in round
+
+    for [x, y] <- round, x > 16.8 or x < 11.2 do
+      centre = if x > 14, do: 16.8, else: 11.2
+      assert_in_delta :math.sqrt((x - centre) ** 2 + y ** 2), 1.2, 0.0002
+    end
+
+    # Two round ends of 2.2 m on a front of 4.4 m: half of a disc on side 3, about x = 8.2.
+    assert Enum.all?(half, fn [x, y] -> :math.sqrt((x - 8.2) ** 2 + (y + 12) ** 2) <= 2.2002 end)
+    assert Enum.min(Enum.map(half, &List.last/1)) == -14.2
+    # Square ends: a rectangle out of side 2.
+    assert square == [[+0.0, +0.0], [-1.0, +0.0], [-1.0, -12.0], [+0.0, -12.0]]
+
+    # The curved porch: its slab, the trim on it and the fascia of 1.2 m round its front, from 0.1 m over the top.
+    [porch, trim, fascia, back, _] =
+      Enum.filter(body, &(&1["shape"] == "extrude" and &1["size"]["depth"] != 0.2)) |> Enum.drop(2)
+
+    assert %{"at" => [0, 0, 3.35], "color" => "#f0e6c2"} = porch
+    # (Side 1 from s = 11 to 19, 5 m deep; a quarter of a circle of 4 m at the right corner, about s = 15, out 1.)
+    assert porch["size"]["outline"] == [
+             [9.0, +0.0],
+             [9.0, 5.0],
+             [5.0, 5.0],
+             [4.2196, 4.9231],
+             [3.4693, 4.6955],
+             [2.7777, 4.3259],
+             [2.1716, 3.8284],
+             [1.6741, 3.2223],
+             [1.3045, 2.5307],
+             [1.0769, 1.7804],
+             [1.0, 1.0],
+             [1.0, +0.0]
+           ]
+
+    assert %{"at" => [0, 0, 3.52], "color" => "#e3aa6c", "size" => %{"outline" => [[9.1, +0.0] | _]}} = trim
+    assert %{"at" => [0, 0, 3.0], "color" => "#e3aa6c", "size" => %{"depth" => 1.2, "outline" => outline}} = fascia
+    assert [9.1, +0.0] in outline and [8.9, +0.0] in outline and [1.1, +0.0] in outline and [0.9, +0.0] in outline
+    # The porch with two round corners of 3 m on side 3: half of a disc.
+    assert Enum.min(Enum.map(back["size"]["outline"], &List.last/1)) == -15.0
+    # The columns are at equal steps along a line 0.4 m in from the curved edge; one column is at the middle.
+    assert for(e <- body, e["shape"] == "cylinder", do: Enum.take(e["at"], 2)) ==
+             [[8.6, 4.6], [5.5181, 4.6], [2.6547, 3.7099], [1.4, 1.0], [4.0, -14.6]]
+
+    # The rails in the detail: upright bars each 12 cm along the edge of the round balconies, posts with crosses
+    # along the square ones, none on side 3, and the rail of the terrace round the curved porch.
+    [detail] = hd(d["nodes"])["skill"]["sculpt"]["details"]
+
+    assert Enum.frequencies_by(detail["edits"], &hd(&1["size"]["radii"])) == %{
+             0.012 => 154,
+             0.022 => 10,
+             0.02 => 24,
+             0.014 => 44,
+             0.016 => 11
+           }
+
+    # (A bar goes round the edge of the balcony, 6 cm in from it, and back to the wall.)
+    bar = Enum.find(detail["edits"], &(hd(&1["size"]["radii"]) == 0.022))
+    assert hd(bar["size"]["points"]) == [17.94, +0.0, 4.18] and length(bar["size"]["points"]) == 18
+    # The terrace on the porch: two bars along its curved edge (the two quarters meet at the middle), and 11 posts.
+    assert Enum.count(detail["edits"], &(hd(&1["size"]["radii"]) == 0.022 and length(&1["size"]["points"]) == 19)) == 2
+
+    for {request, path, text} <- [
+          {%{"porches" => [%{"deep" => 3, "round" => [4, 0]}]}, "porches.0.round",
+           "the round of a porch is [left, right], each from 0 to 3.0 m, the two 6.0 m at the most"},
+          {%{"porches" => [%{"wide" => 4, "deep" => 3, "round" => [3, 2]}]}, "porches.0.round",
+           "the round of a porch is [left, right], each from 0 to 3.0 m, the two 4.0 m at the most"},
+          {%{"porches" => [%{"round" => 1}]}, "porches.0.round", "the round of a porch is [left, right]"},
+          {%{"porches" => [%{"fascia" => 4}]}, "porches.0.fascia", "the value of fascia is a number from 0 to 3"},
+          {%{"fronts" => [%{"balcony" => 0.3}]}, "fronts.0.balcony", "a balcony is 0.5 m deep at the least"},
+          {%{"fronts" => [%{"balcony" => 5}]}, "fronts.0.balcony", "the value of balcony is a number from 0 to 4"},
+          {%{"fronts" => [%{"round" => [1, 1]}]}, "fronts.0.round", "the round ends are for a front with a balcony"},
+          {%{"fronts" => [%{"balcony" => 1, "round" => [2, 0]}]}, "fronts.0.round",
+           "the round of the balconies of a front is [left, right], each from 0 to 1.0 m"}
+        ] do
+      error = assert_raise ArgumentError, fn -> Building.spec(request) end
+      assert String.starts_with?(error.message, "#{path}: #{text}"), error.message
+    end
+  end
+
   test "a word that is not possible is an error with its message" do
     wrong = [
       {[], "the request of a building is a map"},

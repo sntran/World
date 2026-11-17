@@ -57,7 +57,12 @@ from rules", has all of them):
 
 - a line of `letters` has `wide`, the width of a letter (2/3 of its
   height by default), or `long`, the length of the line: a sign with
-  narrow letters needs no tubes of its own in `more.chu`.
+  narrow letters needs no tubes of its own in `more.chu`;
+- a front has a `balcony` at each floor over the ground storey, with
+  square or round ends (`round`: `[left, right]`, the radius at each
+  front corner);
+- a porch has a curved front (`round`: a quarter of a circle at a front
+  corner) and a `fascia` round it.
 
 The MCP server has no tool for one kind of model. Its tools are for a
 model of any kind: `list_blueprints` and `get_blueprint` to find a

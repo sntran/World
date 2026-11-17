@@ -427,12 +427,28 @@ houses.
     pilasters, the bands, and at the ground storey openings between
     `piers`, `windows` or a `blank` wall), `glass` (a grid of glass) or
     `plain`. A front can stand `out`, and have a `paint` and a `band`.
+    With `balcony` (m, 0.5 to 4), a front has a balcony at each floor
+    over the ground storey, along the front between its insets: a slab
+    0.2 m thick in the color `trim`, with its top at the floor, and the
+    `rail` of the front along its edge (posts with a cross about each
+    1.2 m, or upright bars each 12 cm, in the detail of the near level).
+    `round` (`[left, right]`, each from 0 to `balcony`) puts a quarter of
+    a circle of that radius at the front corners of the slab: `[1.2,
+    1.2]` with `balcony` 1.2 gives round ends, and a front as long as two
+    times the balcony gives a balcony of half a disc.
   - `cornice` (`high`, `out`), and `roof`: `flat` behind a `parapet`, or
     `tiles` on a plan of four square corners (`high`, `inset`, and
     `gables`: the short sides with a gable; each other end has a
     slope).
   - `porches`: a slab on columns with steps and a door of glass; a
-    `board` on its front, or a rail round a `terrace` on it.
+    `board` on its front, or a rail round a `terrace` on it. `round`
+    (`[left, right]`, each from 0 to `deep`, the two `wide` at the
+    most) puts a quarter of a circle of that radius at the front corners
+    of the slab: the slab and its trim are then the extrude of their
+    plan, and the columns and the rail of the terrace are at equal steps
+    along the curved edge. `fascia` (m, 0 to 3) adds a band 0.2 m thick
+    in the color `trim` round the front and the ends of the slab, from
+    0.1 m over its top down.
   - `letters`: a line of text (A to Z) from tubes, in front of a wall or
     of the cornice, or on the top of the cornice. The letters are a part
     of their own, with small cells. `high` is the height of a letter,

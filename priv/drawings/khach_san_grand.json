@@ -23,6 +23,7 @@
    },
    "fronts": [
     {
+     "balcony": 0.0,
      "band": false,
      "bars": 3,
      "bays": 8,
@@ -38,6 +39,10 @@
      "pitch": 0.8,
      "places": null,
      "rail": "bars",
+     "round": [
+      0.0,
+      0.0
+     ],
      "side": 1,
      "sill": 0.4,
      "style": "loggias",
@@ -48,6 +53,7 @@
      ]
     },
     {
+     "balcony": 0.0,
      "band": true,
      "bars": 1,
      "bays": 4,
@@ -63,6 +69,10 @@
      "pitch": 0.8,
      "places": null,
      "rail": "cross",
+     "round": [
+      0.0,
+      0.0
+     ],
      "side": 2,
      "sill": 0.95,
      "style": "windows",
@@ -73,6 +83,7 @@
      ]
     },
     {
+     "balcony": 0.0,
      "band": true,
      "bars": 1,
      "bays": 8,
@@ -88,6 +99,10 @@
      "pitch": 0.8,
      "places": null,
      "rail": "cross",
+     "round": [
+      0.0,
+      0.0
+     ],
      "side": 3,
      "sill": 0.95,
      "style": "windows",
@@ -98,6 +113,7 @@
      ]
     },
     {
+     "balcony": 0.0,
      "band": true,
      "bars": 1,
      "bays": 4,
@@ -113,6 +129,10 @@
      "pitch": 0.8,
      "places": null,
      "rail": "cross",
+     "round": [
+      0.0,
+      0.0
+     ],
      "side": 4,
      "sill": 0.95,
      "style": "windows",
@@ -331,7 +351,12 @@
       4.0,
       2.6
      ],
+     "fascia": 0.0,
      "high": 4.1,
+     "round": [
+      0.0,
+      0.0
+     ],
      "side": 1,
      "steps": 2,
      "terrace": true,
