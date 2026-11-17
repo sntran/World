@@ -440,8 +440,10 @@ houses.
     the letters, `nen`: the ground), for a thing that the rules do not
     have.
 
-  A value that is not possible is an error with its message.
-  `World.Town.Wall` has the tools: a wall with its own axes (the way
+  A value that is not possible is an error with its message. The error
+  of a check of the order is at the path of the value when the rule
+  knows it (for example `options.fronts.1.bays`), and else at
+  `options`. `World.Town.Wall` has the tools: a wall with its own axes (the way
   along it and the height), and on it a box, a paint and a window.
 
   ```text

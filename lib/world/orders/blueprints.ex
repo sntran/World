@@ -352,11 +352,16 @@ defmodule World.Orders.Blueprints do
   defp word(key), do: option(key, :data, default: nil, check: fn value, _path -> {:ok, value} end)
   defp given(o), do: Map.reject(o, fn {_, v} -> v == nil end)
 
-  # The full request of a rule, or its error (a rule raises an `ArgumentError` with the reason).
+  # The full request of a rule, or its error (a rule raises an `ArgumentError` with the reason). A reason can
+  # start with the path of the value in the request (`letters.0.wide: ...`): the error is at that path.
   defp resolved(fun) do
     {:ok, fun.()}
   rescue
-    e in ArgumentError -> {:error, [{"options", e.message}]}
+    e in ArgumentError ->
+      case Regex.run(~r/^([a-z0-9_]+(?:\.[a-z0-9_]+)*): (.+)$/s, e.message) do
+        [_, path, reason] -> {:error, [{"options.#{path}", reason}]}
+        nil -> {:error, [{"options", e.message}]}
+      end
   end
 
   # One side of a street: the plan of its lots from a seed (`World.Town.Street`), and the houses of some of

@@ -38,6 +38,8 @@ defmodule World.Town.Building do
   @grounds ~w(piers windows blank)
   @rails ~w(cross bars none)
   @parts ~w(than mai chu nen)
+  # (The path of a value at the start of the text of an error, as `fronts.2.bays: `.)
+  @path ~r/^[a-z0-9_]+(\.[a-z0-9_]+)*: /
 
   @plaster %{"roughness" => 0.85, "surface" => %{"kind" => "plaster", "scale" => 0.04}}
   @pane %{"roughness" => 0.1, "metal" => 0.2}
@@ -167,21 +169,43 @@ defmodule World.Town.Building do
     )
 
     name = Map.get(opts, "name", "toa_nha")
-    need(is_binary(name) and name =~ ~r/^[a-z][a-z0-9_]*$/, "the name of a building has small letters, digits and _")
+
+    need(
+      is_binary(name) and name =~ ~r/^[a-z][a-z0-9_]*$/,
+      "name",
+      "the name of a building has small letters, digits and _"
+    )
+
     sources = Map.get(opts, "sources", [])
-    need(is_list(sources) and Enum.all?(sources, &is_binary/1), "the sources of a building are lines of text")
+
+    need(
+      is_list(sources) and Enum.all?(sources, &is_binary/1),
+      "sources",
+      "the sources of a building are lines of text"
+    )
+
     plan = plan(opts)
     walls = walls(plan)
     storeys = Map.get(opts, "storeys", 3)
-    need(is_integer(storeys) and storeys in 1..12, "a building has from 1 to 12 storeys")
+    need(is_integer(storeys) and storeys in 1..12, "storeys", "a building has from 1 to 12 storeys")
     given = Map.get(opts, "colors", %{})
-    need(is_map(given), "the colors of a building are a map")
-    keys(given, Map.keys(@colors), "map of colors")
-    Enum.each(given, fn {key, v} -> color(v, key) end)
-    roof = roof(Map.get(opts, "roof", %{}), plan, walls)
+    need(is_map(given), "colors", "the colors of a building are a map")
+
+    within("colors", fn ->
+      keys(given, Map.keys(@colors), "map of colors")
+      Enum.each(given, fn {key, v} -> color(v, key) end)
+    end)
+
+    roof = within("roof", fn -> roof(Map.get(opts, "roof", %{}), plan, walls) end)
     more = Map.get(opts, "more", %{})
-    need(is_map(more) and Enum.all?(more, fn {_, v} -> is_list(v) end), "the key more is a map of lists of edits")
-    keys(more, @parts, "map of more edits")
+
+    need(
+      is_map(more) and Enum.all?(more, fn {_, v} -> is_list(v) end),
+      "more",
+      "the key more is a map of lists of edits"
+    )
+
+    within("more", fn -> keys(more, @parts, "map of more edits") end)
 
     b = %{
       "name" => name,
@@ -192,7 +216,7 @@ defmodule World.Town.Building do
       "band" => number(opts, "band", 1.1, 0, 3),
       "storey" => number(opts, "storey", 3.5, 2.6, 6),
       "colors" => Map.merge(@colors, given),
-      "cornice" => cornice(Map.get(opts, "cornice", %{}), roof),
+      "cornice" => within("cornice", fn -> cornice(Map.get(opts, "cornice", %{}), roof) end),
       "roof" => roof,
       "apron" => number(opts, "apron", 0.6, 0, 10),
       "age" => number(opts, "age", 0.5, 0, 1),
@@ -210,13 +234,20 @@ defmodule World.Town.Building do
     need(
       is_list(points) and length(points) in 3..64 and
         Enum.all?(points, &match?([x, y] when is_number(x) and is_number(y), &1)),
+      "plan",
       "the plan of a building is from 3 to 64 corners, each [x, y]"
     )
 
     plan = for [x, y] <- points, do: [r4(x * 1.0), r4(y * 1.0)]
     turns = for {[ax, ay], [bx, by]} <- sides(plan), do: ax * by - bx * ay
-    need(Enum.sum(turns) > 0, "the corners of the plan of a building go counterclockwise, seen from above")
-    need(Enum.all?(sides(plan), fn {a, b} -> a != b end), "two corners of the plan of a building are at the same place")
+    need(Enum.sum(turns) > 0, "plan", "the corners of the plan of a building go counterclockwise, seen from above")
+
+    need(
+      Enum.all?(sides(plan), fn {a, b} -> a != b end),
+      "plan",
+      "two corners of the plan of a building are at the same place"
+    )
+
     plan
   end
 
@@ -225,6 +256,7 @@ defmodule World.Town.Building do
 
     need(
       match?([l, d] when is_number(l) and is_number(d) and l >= 3 and d >= 3 and l <= 200 and d <= 200, size),
+      "size",
       "the size of a building is [long, deep], each from 3 m to 200 m"
     )
 
@@ -239,7 +271,7 @@ defmodule World.Town.Building do
     need(is_map(given), "the roof of a building is a map")
     keys(given, ~w(kind parapet high inset gables), "roof")
     kind = Map.get(given, "kind", "flat")
-    need(kind in ~w(flat tiles), "the roof of a building is flat or tiles")
+    need(kind in ~w(flat tiles), "kind", "the roof of a building is flat or tiles")
 
     if kind == "flat" do
       keys(given, ~w(kind parapet), "flat roof")
@@ -255,6 +287,7 @@ defmodule World.Town.Building do
 
       need(
         is_list(gables) and Enum.all?(gables, &(&1 in ends)),
+        "gables",
         "a gable of this roof is at a short side: #{Enum.join(ends, " or ")}"
       )
 
@@ -271,14 +304,14 @@ defmodule World.Town.Building do
     need(is_map(given), "the cornice of a building is a map")
     keys(given, ~w(high out), "cornice")
     high = number(given, "high", if(roof["kind"] == "tiles", do: 1.2, else: 0.0), 0, 3)
-    need(high == 0.0 or high >= 0.4, "a cornice is 0.4 m high at the least (0: no cornice)")
+    need(high == 0.0 or high >= 0.4, "high", "a cornice is 0.4 m high at the least (0: no cornice)")
     %{"high" => high, "out" => number(given, "out", 0.35, 0, 1)}
   end
 
   defp each(opts, key, f) do
     list = Map.get(opts, key, [])
-    need(is_list(list) and Enum.all?(list, &is_map/1), "the #{key} of a building are a list of maps")
-    Enum.map(list, f)
+    need(is_list(list) and Enum.all?(list, &is_map/1), key, "the #{key} of a building are a list of maps")
+    for {m, i} <- Enum.with_index(list), do: within("#{key}.#{i}", fn -> f.(m) end)
   end
 
   defp side(m, walls, what) do
@@ -286,6 +319,7 @@ defmodule World.Town.Building do
 
     need(
       is_integer(k) and k >= 1 and k <= length(walls),
+      "side",
       "the side of a #{what} is a number from 1 to #{length(walls)}"
     )
 
@@ -301,8 +335,8 @@ defmodule World.Town.Building do
 
     {k, w} = side(f, walls, "front")
     style = Map.get(f, "style", "windows")
-    need(style in @styles, "the style of a front is one of #{Enum.join(@styles, ", ")}")
-    need(style != "loggias" or storeys >= 2, "a front of loggias is for a building of 2 storeys or more")
+    need(style in @styles, "style", "the style of a front is one of #{Enum.join(@styles, ", ")}")
+    need(style != "loggias" or storeys >= 2, "style", "a front of loggias is for a building of 2 storeys or more")
     long = r4(w.long)
     from = number(f, "from", 0.0, 0, long)
     to = number(f, "to", long, 0, long)
@@ -313,17 +347,19 @@ defmodule World.Town.Building do
 
     need(
       is_integer(bays) and bays >= 1 and run / bays >= 1.5,
+      "bays",
       "a bay of a front is a whole count, each 1.5 m wide at the least"
     )
 
     ground = Map.get(f, "ground", if(style == "loggias", do: "piers", else: "windows"))
-    need(ground in @grounds, "the ground storey of a front is one of #{Enum.join(@grounds, ", ")}")
+    need(ground in @grounds, "ground", "the ground storey of a front is one of #{Enum.join(@grounds, ", ")}")
     rail = Map.get(f, "rail", "cross")
-    need(rail in @rails, "the rail of a front is one of #{Enum.join(@rails, ", ")}")
+    need(rail in @rails, "rail", "the rail of a front is one of #{Enum.join(@rails, ", ")}")
     window = Map.get(f, "window", [1.4, 1.5])
 
     need(
       match?([a, b] when is_number(a) and is_number(b) and a >= 0.3 and b >= 0.3, window),
+      "window",
       "a window is [wide, high], each 0.3 m or more"
     )
 
@@ -332,6 +368,7 @@ defmodule World.Town.Building do
     need(
       is_nil(places) or
         (is_list(places) and places != [] and Enum.all?(places, &(is_number(&1) and &1 >= from and &1 <= to))),
+      "places",
       "the places of the windows of a front are numbers between its two ends"
     )
 
@@ -345,7 +382,7 @@ defmodule World.Town.Building do
     )
 
     bars = Map.get(f, "bars", 1)
-    need(is_integer(bars) and bars in 0..8, "a window has from 0 to 8 bars")
+    need(is_integer(bars) and bars in 0..8, "bars", "a window has from 0 to 8 bars")
 
     Map.merge(flags, %{
       "side" => k,
@@ -373,20 +410,21 @@ defmodule World.Town.Building do
     {k, w} = side(p, walls, "porch")
     wide = number(p, "wide", 6.0, 1.5, 40)
     columns = Map.get(p, "columns", 2)
-    need(is_integer(columns) and columns in 0..12, "a porch has from 0 to 12 columns")
+    need(is_integer(columns) and columns in 0..12, "columns", "a porch has from 0 to 12 columns")
     steps = Map.get(p, "steps", 2)
-    need(is_integer(steps) and steps in 0..6, "a porch has from 0 to 6 steps")
+    need(is_integer(steps) and steps in 0..6, "steps", "a porch has from 0 to 6 steps")
     door = Map.get(p, "door", [2.6, 2.7])
 
     need(
       is_nil(door) or match?([a, c] when is_number(a) and is_number(c) and a >= 0.6 and c >= 1.8, door),
+      "door",
       "the door of a porch is [wide, high], or nil"
     )
 
     board = Map.get(p, "board")
     if board, do: color(board, "board")
     terrace = Map.get(p, "terrace", false)
-    need(is_boolean(terrace), "the key terrace of a porch is true or false")
+    need(is_boolean(terrace), "terrace", "the key terrace of a porch is true or false")
 
     %{
       "side" => k,
@@ -409,6 +447,7 @@ defmodule World.Town.Building do
 
     need(
       is_binary(text) and text =~ ~r/^[A-Z ]{1,40}$/ and String.trim(text) != "",
+      "text",
       "the text of a line of letters is from 1 to 40 letters from A to Z, with spaces"
     )
 
@@ -424,12 +463,12 @@ defmodule World.Town.Building do
 
   defp number(map, key, default, lo, hi) do
     v = Map.get(map, key, default)
-    need(is_number(v) and v >= lo and v <= hi, "the value of #{key} is a number from #{r4(lo)} to #{r4(hi)}")
+    need(is_number(v) and v >= lo and v <= hi, key, "the value of #{key} is a number from #{r4(lo)} to #{r4(hi)}")
     v * 1.0
   end
 
   defp color(v, key),
-    do: need(is_binary(v) and v =~ ~r/^#[0-9a-f]{6}$/, "the color #{key} is as #a1b2c3 (small letters)")
+    do: need(is_binary(v) and v =~ ~r/^#[0-9a-f]{6}$/, key, "the color #{key} is as #a1b2c3 (small letters)")
 
   defp keys(map, known, what) do
     case Map.keys(map) -- known do
@@ -440,6 +479,19 @@ defmodule World.Town.Building do
 
   defp need(true, _text), do: :ok
   defp need(false, text), do: raise(ArgumentError, text)
+
+  # A check of the value at the key `key`: its error starts with the path of the value.
+  defp need(true, _key, _text), do: :ok
+  defp need(false, key, text), do: raise(ArgumentError, "#{key}: #{text}")
+
+  # The checks of a part of the request at `path` (for example `fronts.2`): the path of an error starts with it.
+  defp within(path, fun) do
+    fun.()
+  rescue
+    e in ArgumentError ->
+      message = if e.message =~ @path, do: "#{path}.#{e.message}", else: "#{path}: #{e.message}"
+      reraise ArgumentError, [message: message], __STACKTRACE__
+  end
 
   # --- The heights ----------------------------------------------------------------
 

@@ -406,5 +406,28 @@ defmodule World.BuildingTest do
       error = assert_raise ArgumentError, fn -> Building.spec(request) end
       assert error.message =~ text, "#{inspect(request)}: #{error.message}"
     end
+
+    # An error starts with the path of the value in the request, when the rule knows it.
+    paths = [
+      {%{"name" => 1}, "name: the name of a building"},
+      {%{"storeys" => 13}, "storeys: a building has"},
+      {%{"plan" => [[0, 0], [1, 1]]}, "plan: the plan of a building"},
+      {%{"size" => [2, 10]}, "size: the size of a building"},
+      {%{"colors" => %{"wall" => "white"}}, "colors.wall: the color wall"},
+      {%{"colors" => %{"door" => "#ffffff"}}, "colors: a map of colors has no key"},
+      {%{"roof" => %{"kind" => "dome"}}, "roof.kind: the roof"},
+      {%{"roof" => "tiles"}, "roof: the roof of a building is a map"},
+      {%{"cornice" => %{"out" => 2}}, "cornice.out: the value of out"},
+      {%{"more" => %{"cua" => []}}, "more: a map of more edits"},
+      {%{"fronts" => [%{}, %{"side" => 2, "bars" => 9}]}, "fronts.1.bars: a window has"},
+      {%{"fronts" => [%{"stile" => "glass"}]}, "fronts.0: a front has no key"},
+      {%{"porches" => [%{"board" => "blue"}]}, "porches.0.board: the color board"},
+      {%{"letters" => [%{"text" => "REX", "high" => 9}]}, "letters.0.high: the value of high"}
+    ]
+
+    for {request, text} <- paths do
+      error = assert_raise ArgumentError, fn -> Building.spec(request) end
+      assert String.starts_with?(error.message, text), "#{inspect(request)}: #{error.message}"
+    end
   end
 end
