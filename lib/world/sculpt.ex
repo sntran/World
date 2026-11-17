@@ -249,6 +249,21 @@ defmodule World.Sculpt do
     out.(i, lx, hx) or out.(j, ly, hy) or out.(k, lz, hz)
   end
 
+  @doc """
+  The least thickness of the edits that add or take away and that are
+  `long` m or more long (the diagonal of their box): nil with none. A
+  surface in cells thicker than such an edit can lose it.
+  """
+  def thinnest(edits, long) do
+    thin =
+      for %{mode: mode, box: {lo, hi}} = e <- edits,
+          mode in [:add, :subtract],
+          Vec.len(Vec.sub(hi, lo)) >= long,
+          do: thickness(e.shape, e.size)
+
+    if thin == [], do: nil, else: Enum.min(thin)
+  end
+
   # The least thickness of a shape: twice its least size.
   defp thickness(:tube, {_, radii}), do: 2 * Enum.min(radii)
   defp thickness(:capsule, {_h, r}), do: 2 * r

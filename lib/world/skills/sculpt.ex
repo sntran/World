@@ -46,6 +46,8 @@ defmodule World.Skills.Sculpt do
   }
   @use ~w(shape group at axis up scale mirror repeat levels)
   @most 10_000
+  # The most texels on a side of the maps of a part of a large sculpture (`tiles/4`).
+  @tile_side 512
   @size 1_000
   # The atoms of the names of the shapes and of the modes.
   @atoms Map.new(SDF.shapes() ++ SDF.modes(), &{Atom.to_string(&1), &1})
@@ -114,7 +116,8 @@ defmodule World.Skills.Sculpt do
 
   The surface of the sculpture comes first, in bricks of larger cells
   (4 times the cells up to 12.5 cm, 2 times up to 25 cm; much less
-  work): the faces of each brick, an estimate of the faces at the cells
+  work): the faces of each brick, with the faces of each large edit
+  thinner than those cells (they lose its surface), an estimate of the faces at the cells
   of the level. A box of bricks is cut in two on its longest axis, again
   and again: into steps of at most `most` faces, and into tiles with a
   budget of `least` triangles or more (the budget of the level in the
@@ -133,14 +136,14 @@ defmodule World.Skills.Sculpt do
   box and its share of the faces of the tile). With no budget, each step
   is a tile. A sculpture with bones is one part.
   """
-  def tiles(data, level, most, least \\ 4000) do
+  def tiles(data, level, most, least \\ 1500) do
     with nil <- data["bones"],
          step = step(data, level),
          k = estimate_factor(step),
          edits = all(data, level),
-         %{bricks: [_, _ | _] = bricks} <-
-           World.Sculpt.bricks(edits, k * step, each: &brick_faces(&1, k * step), fields: false),
-         counts = Map.new(bricks, &{&1.at, k * k * &1.piece}),
+         %{bricks: bricks} <- World.Sculpt.bricks(edits, k * step, each: &brick_faces(&1, k * step), fields: false),
+         counts = bricks |> Map.new(&{&1.at, k * k * &1.piece}) |> thin_faces(edits, step, k),
+         true <- map_size(counts) >= 2,
          total when total > most <- counts |> Map.values() |> Enum.sum() do
       {lo, hi} = counts |> Map.keys() |> Vec.bounds()
       outer = {lo, Vec.add(hi, {1, 1, 1})}
@@ -199,6 +202,29 @@ defmodule World.Skills.Sculpt do
   defp estimate_factor(step) when step <= 0.125, do: 4
   defp estimate_factor(step) when step <= 0.25, do: 2
   defp estimate_factor(_step), do: 1
+
+  # The faces of each edit that adds, is 1 m or more long, and is thinner
+  # than the cells of the estimate (a slab of a base, a pane): in those
+  # cells its surface goes away. Its faces at the cells of the level (two
+  # sides of the two longest sides of its box) go to the bricks of the
+  # estimate that its box crosses, in equal parts (a brick keeps its own
+  # count when that is more: then its cells have the surface).
+  defp thin_faces(counts, edits, step, k) do
+    size = World.Sculpt.cells() * k * step
+
+    for %{mode: :add, box: {lo, hi}} = e <- edits,
+        Vec.len(Vec.sub(hi, lo)) >= 1.0,
+        World.Sculpt.thinnest([e], 0.0) < k * step,
+        reduce: counts do
+      counts ->
+        [_, b, c] = hi |> Vec.sub(lo) |> Tuple.to_list() |> Enum.sort()
+        index = fn {x, y, z} -> {floor(x / size), floor(y / size), floor(z / size)} end
+        {{i0, j0, l0}, {i1, j1, l1}} = {index.(lo), index.(hi)}
+        at = for i <- i0..i1, j <- j0..j1, l <- l0..l1, do: {i, j, l}
+        share = round(2 * b * c / (step * step) / length(at))
+        Enum.reduce(at, counts, &Map.update(&2, &1, share, fn n -> max(n, share) end))
+    end
+  end
 
   @doc """
   An estimate of the faces of a sculpture at a level before the
@@ -384,13 +410,14 @@ defmodule World.Skills.Sculpt do
     }
   end
 
-  # The side of the maps of a tile: the same texels on each m² as the
-  # maps of all of the sculpture (a power of 2, 64 or more).
+  # The side of the maps of a tile: at most the texels on each m² of the
+  # maps of all of the sculpture (a power of 2, from 64 to #{512}: the bake
+  # of 1,024 × 1,024 texels takes about 150 MB, more than the edge has).
   defp tile_side(side, nil), do: side
   defp tile_side(nil, _tile), do: nil
 
   defp tile_side(side, tile),
-    do: min(side, max(64, round(:math.pow(2, round(:math.log2(side * :math.sqrt(tile.share)))))))
+    do: min(min(side, @tile_side), max(64, round(:math.pow(2, floor(:math.log2(side * :math.sqrt(tile.share)))))))
 
   # With `bake` for the level: the meshes with their UVs, and the maps of
   # each of their materials (`World.Sculpt.Bake`) as the data of the node,

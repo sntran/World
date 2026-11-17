@@ -39,9 +39,9 @@ defmodule World.Elements do
   and `part/1` builds it at its first request. So the list needs little
   memory and time, and each part needs the memory of one part. A
   sculpture with more than `most` faces at its cells (an estimate; the
-  application environment `:tile_faces`, #{20_000} by default) is cut
+  application environment `:tile_faces`, #{12_000} by default) is cut
   into tiles, each with a budget of `least` triangles or more
-  (`:tile_least`, #{4000} by default), and each made in steps of at most
+  (`:tile_least`, #{1500} by default), and each made in steps of at most
   `most` faces: so a part fits the memory of the edge, and it has a good
   shape.
   """
@@ -51,8 +51,8 @@ defmodule World.Elements do
   alias World.Orders.Blueprints
   alias World.Skills.Sculpt
 
-  @most 20_000
-  @least 4000
+  @most 12_000
+  @least 1500
 
   @doc "The most faces of a step of a part of a sculpture (an estimate at its cells)."
   def most, do: Application.get_env(:world, :tile_faces, @most)

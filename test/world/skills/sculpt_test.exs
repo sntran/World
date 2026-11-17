@@ -687,4 +687,20 @@ defmodule World.Skills.SculptTest do
     assert Skill.faces(%{"edits" => [%{"shape" => "ball", "size" => [1], "mode" => "subtract"}]}, :far) == 0
     assert Skill.roles(wall(), :far) |> Enum.sort() == ["gray", "paint", "plaster"]
   end
+
+  test "a thin slab is in the estimate of the parts, also when the cells of the estimate are thicker than it" do
+    # A slab of 8 by 4 m, 8 mm thick: the cells of the estimate (16 cm) lose its surface, but not its faces.
+    slab = %{
+      "edits" => [%{"shape" => "box", "size" => [4, 2, 0.004], "at" => [0, 0, 0.07]}],
+      "cells" => %{"far" => 0.04},
+      "budget" => %{"far" => 6_000}
+    }
+
+    tiles = Detail.with(:far, fn -> Skill.tiles(slab, :far, 10_000, 1_000) end)
+    assert length(tiles) >= 2
+    # (Its two faces at the cells of the level: 2 × 8 × 4 / 0.04² = 40,000.)
+    assert_in_delta Enum.sum(for t <- tiles, do: t.faces), 40_000, 4_000
+    # A small slab is one part.
+    assert Skill.tiles(put_in(slab, ["edits", Access.at(0), "size"], [0.4, 0.4, 0.004]), :far, 10_000) == nil
+  end
 end
