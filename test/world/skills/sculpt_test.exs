@@ -682,6 +682,12 @@ defmodule World.Skills.SculptTest do
     assert Skill.tile_key(wall(), first, :far) == Skill.tile_key(moved, first, :far)
     refute Skill.tile_key(wall(), last, :far) == Skill.tile_key(moved, last, :far)
 
+    # A detail at the other end is not in the first tile.
+    ball = %{"shape" => "ball", "size" => [0.05], "at" => [3.5, 0, 1.3]}
+    detailed = Map.put(wall(), "details", [%{"edits" => [ball], "cells" => %{"far" => 0.02}}])
+    {same, _} = Detail.with(:far, fn -> Skill.tile(detailed, first, %{}, %{level: :far, name: "wall"}) end)
+    assert length(same.shapes) == length(part.shapes)
+
     # The faces before the collapse (an estimate from the box of the edits), and the roles.
     assert Skill.faces(wall(), :far) > 10_000
     assert Skill.faces(%{"edits" => [%{"shape" => "ball", "size" => [1], "mode" => "subtract"}]}, :far) == 0

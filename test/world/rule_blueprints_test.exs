@@ -98,6 +98,9 @@ defmodule World.RuleBlueprintsTest do
     assert [%{"use" => "bar", "number" => "4"}, %{"use" => "bar"}, %{"use" => "home"}] = part["options"]["lots"]
     assert Blueprints.drawing(part) == Street.drawing(Street.plan(street), only: 2..3)
     assert length(Blueprints.drawing(part)["nodes"]) == 7
+    # The model of the rule in code (an order builds from its drawing): the houses of the lots of the part.
+    {:ok, rule} = Blueprints.fetch("street")
+    assert %World.Assembly{} = World.Detail.with(:far, fn -> rule.build.(part["options"]) end)
 
     for only <- [[3, 2], [0, 1], "all", [7, 9], [1, 3.5]] do
       assert {:error, [%{"path" => "options.only", "message" => "must be [first, last]" <> _}]} =
