@@ -633,6 +633,29 @@ A child of 9 years in the clothes of a village: near 120 MB, its
 receipt 122 MB. (`POST /orders` of `8d59a75` did not build the item;
 now the check of a true model builds it at far.)
 
+F4, part 4 (2026-11-17). Vũng Tàu found that a person in four items
+(`world_t_shirt`, `world_rain_shell`, `mindfront_female_trousers_1`,
+`elvs_caesar_sandals1`) stopped the builder at the edge (503), also with
+the fixes of part 3. The cause is one asset: the sandals have 91,704
+triangles and 47,344 points (the next largest item has 30,768
+triangles). Their load alone took 94 MB at the peak, and the data of the
+asset (34 MB of terms) stays in `:persistent_term`. The number of items
+is not the cause. Now each asset has at most 17,000 triangles
+(`World.People.Thin`, `scripts/thin.exs`): the sandals load in 25 MB.
+
+The peak of `:erlang.memory(:total)` over the VM at rest, natively, for
+`World.Orders.build/3` (GLB; the data of MakeHuman loaded, not the
+sandals):
+
+| Order | Before | After |
+|---|---|---|
+| The four items, far | +164 MB | +69 MB |
+| The four items, mid | +164 MB | +87 MB |
+| The four items, near | +453 MB | +167 MB |
+| The same with no T-shirt, far | +163 MB | |
+| The sandals alone, far | +157 MB | |
+| The defaults, far, mid, near | +54, +57, +108 MB | |
+
 Still to do: a packed format for the meshes of a person (the item is
 13 MB of terms); the check of a group of people (`exercise` with
 `fans`: 272 MB, so its order stops the VM); and the peak at the end of

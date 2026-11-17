@@ -54,7 +54,7 @@ the MakeHuman community
 The author and the license of each item are from the table of its pack
 page. World changes them as the other assets of MakeHuman
 (`priv/makehuman/README.md`: the mesh and its fit in gzip, a smaller
-texture). An item with the license CC BY needs its author named where
+texture, and fewer triangles for an item of more than 17,000). An item with the license CC BY needs its author named where
 World or an app shows it.
 
 | Item | Author | Pack | License |
