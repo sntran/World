@@ -340,6 +340,11 @@ defmodule World.Sewing do
     }
   ]
 
+  # The hood up on the head of a jacket with a hood (the option `hood`): over the back, the top and the
+  # sides of the head, with room for the hair, and open at the face (the points more than `open` dm in
+  # front of the joint of the head are out).
+  @hood_up %{name: "hood", on: "body", bones: ["head", "neck_01"], y: {{:neck, -0.2}, nil}, open: 0.3, ease: 0.25}
+
   # The points of the body in the base mesh are the first ones (the
   # helpers come after them).
   @body 13380
@@ -370,37 +375,48 @@ defmodule World.Sewing do
     ankle (0.5 is the middle of the thigh). The pieces with the lowest
     hem of the garment take it: the legs of pants, the body of a jacket,
     the panels of an áo dài. nil keeps the hem as sewn.
+  - `hood`: `"down"` (as sewn: the hood folded at the back of the neck)
+    or `"up"`: the hood on the head. Only a garment with a hood.
 
   Raises an `ArgumentError` for a value that is not possible
   (`check/2` gives the errors).
   """
   def garment(name, opts) do
     case check(name, opts) do
-      [] -> name |> find() |> hem(opts[:hem])
+      [] -> name |> find() |> hem(opts[:hem]) |> hood(opts[:hood])
       [{_, message} | _] -> raise ArgumentError, message
     end
   end
 
   @doc """
   The errors of the options of an order for an item of the clothes
-  (`garment/2`): a list of `{option, message}`. The option `hem` is for
-  a garment of World; `print` is for any item.
+  (`garment/2`): a list of `{option, message}`. The options `hem` and
+  `hood` are for a garment of World; `print` is for any item.
 
       iex> World.Sewing.check("world_pants", %{hem: 1.0})
       []
       iex> World.Sewing.check("shoes01", %{hem: 1.0})
       [{:hem, "shoes01 is not a garment of World: it has no hem"}]
+      iex> World.Sewing.check("world_softshell", %{hood: "up"})
+      [{:hood, "world_softshell has no hood"}]
   """
   def check(name, opts) do
     g = Enum.find(garments(), &(&1.name == name))
     hem = opts[:hem]
+    hood = opts[:hood] == "up"
 
     cond do
       g == nil and hem != nil ->
         [{:hem, "#{name} is not a garment of World: it has no hem"}]
 
+      g == nil and hood ->
+        [{:hood, "#{name} is not a garment of World: it has no hood up"}]
+
       g == nil ->
         []
+
+      hood and not Enum.any?(g.pieces, &(Map.get(&1, :hood, 0) > 0)) ->
+        [{:hood, "#{name} has no hood"}]
 
       hem != nil and Enum.any?(hemmed(g), &(level(elem(&1.y, 1), 100.0) <= hem_level(hem))) ->
         [{:hem, "is over the top of #{name}"}]
@@ -413,7 +429,7 @@ defmodule World.Sewing do
   @doc """
   An item of the clothes of a person with the options of an order: the
   asset of `World.People.Data.asset/2`, or for a garment of World with a
-  `hem`, the garment sewn again (`garment/2`), with the
+  `hem` or a `hood` up, the garment sewn again (`garment/2`), with the
   same name, texture and color.
   """
   def asset(name, opts) do
@@ -485,6 +501,9 @@ defmodule World.Sewing do
 
     a + t * (b - a)
   end
+
+  defp hood(g, "up"), do: %{g | pieces: Enum.map(g.pieces, &Map.delete(&1, :hood)) ++ [@hood_up]}
+  defp hood(g, _down), do: g
 
   @doc """
   The fabrics, by name.
@@ -688,6 +707,7 @@ defmodule World.Sewing do
     {_, _, zs} = joint("joint-spine-2")
     arm = arm_axis()
     neck = joint("joint-neck")
+    {_, _, zh} = joint("joint-head")
 
     fn v ->
       {x, y, z} = p = elem(points, v)
@@ -700,7 +720,8 @@ defmodule World.Sewing do
         in_x?(piece[:x], x) and
         in_neck?(piece[:neck], p, neck) and
         in_angle?(piece[:angle], x, z - zc) and
-        in_arm?(piece[:arm], b, p, arm)
+        in_arm?(piece[:arm], b, p, arm) and
+        (piece[:open] == nil or z <= zh + piece[:open])
     end
   end
 

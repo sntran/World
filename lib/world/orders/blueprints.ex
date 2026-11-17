@@ -605,6 +605,12 @@ defmodule World.Orders.Blueprints do
                   doc:
                     "The height of the hem of a garment of World: -1 at the waist, 0 at the hip, 1 at the knee, 2 at the ankle (0.5 is the middle of the thigh). None: the hem as sewn."
                 ),
+                option("hood", :choice,
+                  default: "down",
+                  values: ["down", "up"],
+                  doc:
+                    "The hood of a jacket of World with a hood (world_rain_shell): down on the back, or up on the head."
+                ),
                 option("print", :choice,
                   default: "plain",
                   values: ["plain", "checks", "stripes"],
@@ -621,7 +627,7 @@ defmodule World.Orders.Blueprints do
               ]
             ),
           doc:
-            "The options of each item of the clothes, in their order (World.Sewing.garment/2): its hem and its print. An order with none has no key clothes_options in its full order."
+            "The options of each item of the clothes, in their order (World.Sewing.garment/2): its hem, its hood and its print. An order with none has no key clothes_options in its full order."
         ),
         option("face", :choice,
           default: "relaxed",
@@ -685,6 +691,7 @@ defmodule World.Orders.Blueprints do
   defp clothes_options(o),
     do: %{
       hem: o["hem"],
+      hood: o["hood"],
       print: o["print"],
       print_color: rgb(o["print_color"]),
       print_size: o["print_size"]

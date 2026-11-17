@@ -1210,11 +1210,13 @@ defmodule World.Furniture.Hanging do
     |> fixed(hooks)
     |> swing2("bench_#{name}", bench, h1, h2, cushions, role: :swing, limits: [-25, 25])
     # A person on the bench, who leans back to the slats of the back (or
-    # to the back cushion).
+    # to the back cushion). The hips are 17 cm in front of the back: the
+    # back of the person in its clothes (at each level) is free at the
+    # start of the lean.
     |> then(fn a ->
       if Keyword.get(opts, :person, false),
         do:
-          sit(a, "bench_#{name}", {0.0, -depth / 2 + sy * sink + 0.14, seat + sz * sink + 0.09},
+          sit(a, "bench_#{name}", {0.0, -depth / 2 + sy * sink + 0.17, seat + sz * sink + 0.09},
             lean: %{"spine.flex" => -30},
             obstacles:
               Enum.map(backs, &Contact.solid/1) ++ if(cushion?, do: [Cushion.solid(:box, back_cushion)], else: [])

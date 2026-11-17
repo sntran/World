@@ -86,9 +86,12 @@ items of `clothes`: `world_ao_canh` (a loose tunic with long sleeves),
 Swim shorts are `world_swim_trunks` (thin polyester, an elastic band
 with a cord, loose legs to the middle of the thigh). Each item has its
 options in `clothes_options` (`docs/format.md`, "A person"): `hem` (a
-garment of World: 0.5 is the middle of the thigh, 1 the knee) and `print`
+garment of World: 0.5 is the middle of the thigh, 1 the knee), `hood`
+(`up` or `down`, for a jacket of World with a hood: `world_rain_shell`;
+the hood of `elvs_hooded_sweat_jacket1` is down only), and `print`
 (`checks` or `stripes` in `print_color`, on any item). Change the length
-or the print with an edit of these options, not with a new garment.
+or the print with an edit of these options, not with a new garment. At
+mid and far a person keeps the form of a loose garment and of a hood.
 The option `wear` puts parts from edits on the head: the half helmet of
 a rider (`mu_bao_hiem_edits`), hair (`toc_ngan_edits`, `toc_bui_edits`,
 `toc_dai_edits`) and a nón lá (`non_la_edits`); a helmet and hair take

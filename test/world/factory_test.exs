@@ -387,7 +387,7 @@ defmodule World.FactoryTest do
                Orders.check(%{"blueprint" => "traveler", "options" => %{"vehicle" => "foot", "part" => "vehicle"}})
     end
 
-    test "a person with the options of each item of the clothes: a hem, a print" do
+    test "a person with the options of each item of the clothes: a hem, a hood, a print" do
       order = fn options ->
         %{
           "blueprint" => "person",
@@ -401,24 +401,22 @@ defmodule World.FactoryTest do
       assert {:ok, ^full} = Orders.check(full)
 
       {:ok, full} =
-        Orders.check(order.(%{"clothes_options" => [%{"hem" => 0.9, "print" => "checks"}, %{"print" => "stripes"}]}))
+        Orders.check(order.(%{"clothes_options" => [%{"hem" => 0.9, "print" => "checks"}, %{"hood" => "up"}]}))
 
-      assert [
-               %{"hem" => 0.9, "print" => "checks", "print_color" => "#ffffff", "print_size" => 0.03},
-               %{"print" => "stripes"}
-             ] =
+      assert [%{"hem" => 0.9, "print" => "checks", "print_color" => "#ffffff", "print_size" => 0.03}, %{"hood" => "up"}] =
                full["options"]["clothes_options"]
 
       assert {:ok, ^full} = Orders.check(full)
       assert {:ok, %{"hash" => _}} = Orders.place(order.(%{"clothes_options" => [%{"hem" => 0.9}]}), "http://x")
 
-      # A hem that an item does not have, more options than items, a hem out of its range.
+      # A hem or a hood that an item does not have, more options than items, a hem out of its range.
       errors = fn options ->
         {:error, errors} = Orders.check(order.(%{"clothes_options" => options}))
         Enum.map(errors, & &1["path"])
       end
 
       assert errors.([%{}, %{}, %{"hem" => 1.0}]) == ["options.clothes_options.2.hem"]
+      assert errors.([%{"hood" => "up"}]) == ["options.clothes_options.0.hood"]
       assert errors.([%{}, %{}, %{}, %{}]) == ["options.clothes_options"]
       assert errors.([%{"hem" => 3.0}]) == ["options.clothes_options.0.hem"]
     end

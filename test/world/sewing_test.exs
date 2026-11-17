@@ -325,7 +325,7 @@ defmodule World.SewingTest do
     assert cord.(0.0, 0.15) > cord.(0.4, 0.8) + 0.02
   end
 
-  test "the options of a garment: a hem for each garment" do
+  test "the options of a garment: a hem for each garment, a hood up for a jacket with a hood" do
     l = Sewing.landmarks()
     low = fn clothes, options -> under(clothes, options) |> Enum.map(fn {{_, y, _}, _, _} -> y end) |> Enum.min() end
 
@@ -346,7 +346,28 @@ defmodule World.SewingTest do
       Sewing.garment("world_swim_trunks", %{hem: -1.0})
     end
 
+    assert Sewing.check("shoes01", %{hood: "up"}) == [{:hood, "shoes01 is not a garment of World: it has no hood up"}]
     assert Sewing.check("shoes01", %{print: "checks"}) == []
+
+    # The hood up covers the back, the top and the sides of the head, with room for the hair, and not the
+    # face; down, it is folded at the back of the neck.
+    {_, _, zh} =
+      Data.base().groups
+      |> Map.fetch!("joint-head")
+      |> Enum.concat()
+      |> Enum.map(&elem(Data.base().points, elem(&1, 0)))
+      |> Vec.mean()
+
+    up = under(["world_rain_shell"], [%{hood: "up"}])
+    head = for {{_, y, z}, _, d} <- up, y > l.head, do: {z, d}
+    assert length(head) > 100
+    assert Enum.all?(head, fn {z, d} -> z <= zh + 0.3 and d > 0.3 end)
+    assert Enum.any?(head, fn {z, _} -> z < zh - 0.3 end)
+    refute Enum.any?(under(["world_rain_shell"]), fn {{_, y, _}, _, _} -> y > l.head end)
+
+    assert_raise ArgumentError, "world_softshell has no hood", fn ->
+      Sewing.garment("world_softshell", %{hood: "up"})
+    end
   end
 
   test "a print: checks and stripes of two colors, on the body at rest" do

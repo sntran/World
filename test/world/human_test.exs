@@ -650,6 +650,56 @@ defmodule World.HumanTest do
     assert materials[:clothes_world_swim_trunks]["color"] != [255, 255, 255]
   end
 
+  # A loose part of an item (2.5 cm or more out of the body) is its own mesh at mid and far, so the form of
+  # a tunic, of the legs of wide pants and of a hood shows, not only their colors.
+  test "the form of a loose garment and of a hood at mid and far" do
+    scene = fn opts, level ->
+      Build.scene(Detail.with(level, fn -> Human.person("p", [hair: nil, pose: "stand"] ++ opts) end), level: level)
+    end
+
+    # The depth (front to back) of the person at the hips and the thighs, under the hands.
+    depth = fn opts, level ->
+      ys = for n <- scene.(opts, level).nodes, p <- n.primitives, {_, y, z} <- p.positions, z > 0.6 and z < 0.8, do: y
+      Enum.max(ys) - Enum.min(ys)
+    end
+
+    tunic = [clothes: ["world_ao_canh", "world_quan_ong_rong"], clothes_options: [%{print: "checks", print_size: 0.05}]]
+    bare = depth.([clothes: []], :near)
+    near = depth.(tunic, :near)
+
+    for level <- [:mid, :far] do
+      s = scene.(tunic, level)
+      prims = Enum.flat_map(s.nodes, & &1.primitives)
+      # The tunic is a color on the body and a mesh of its own; the faces of the body under it go.
+      assert [_, part] = Enum.filter(prims, &(&1.material == :color_world_ao_canh))
+      # (The loose part has the colors of the print of the order.)
+      assert part.colors |> Enum.uniq() |> length() == 2
+      assert s.materials[:color_world_ao_canh]["double_sided"]
+      # The tunic hangs out of the body as at near (within 2 cm), and the person stays in its budget.
+      assert_in_delta depth.(tunic, level), near, 0.02
+      assert depth.(tunic, level) > bare + 0.04
+      assert Scene.triangles(s) < %{mid: 8_500, far: 2_000}[level]
+    end
+
+    # The hood up on the head: at mid and far the person is as high as at near, 3 to 5 cm over the head.
+    top = fn opts, level ->
+      {_, {_, _, z}} = Scene.bounds(scene.(opts, level))
+      z
+    end
+
+    up = [clothes: ["world_rain_shell"], clothes_options: [%{hood: "up"}]]
+    head = top.([clothes: []], :near)
+    assert top.(up, :near) - head > 0.03 and top.(up, :near) - head < 0.05
+
+    for level <- [:mid, :far] do
+      assert_in_delta top.(up, level), top.(up, :near), 0.01
+      # The hood down: a loose part at the back of the neck (with the hem of the shell at the hips).
+      s = scene.([clothes: ["world_rain_shell"]], level)
+      [_, loose] = s.nodes |> Enum.flat_map(& &1.primitives) |> Enum.filter(&(&1.material == :color_world_rain_shell))
+      assert Enum.count(loose.positions, fn {_, y, z} -> y < -0.05 and z > 0.8 * head end) > 4
+    end
+  end
+
   test "a child has a flat chest: the shirt over the nipples is not in front of the shirt over the sternum" do
     nipples =
       for {v, d} <- World.People.Data.target("breast/nipple-point-decr"),
@@ -927,9 +977,10 @@ defmodule World.HumanTest do
       end
     end
 
-    # A person at far is about 1 500 triangles: the eyes in 24, the hair in 80 at the most.
+    # A person at far is about 1 600 triangles: the eyes in 24, the hair in 80 at the most (and the loose
+    # parts of the clothes: 86 for the suit and the shoes of the defaults).
     far = scene.([gender: 0.0, hair: "long01"], :far)
-    assert Scene.triangles(far) < 1_600
+    assert Scene.triangles(far) < 1_700
     prims = Enum.flat_map(far.nodes, & &1.primitives)
     assert [eyes] = Enum.filter(prims, &(&1.material == :eyes))
     assert length(eyes.indices) == 72 and length(eyes.uvs) == length(eyes.positions)

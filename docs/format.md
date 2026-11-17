@@ -1724,7 +1724,18 @@ never nearer to the body than at the fit.
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair (with each face on the
 breasts cut in sixteen, on the surface of the body: about 1,900 faces);
-far is a body of 730 faces: a person at far is about 1,550 triangles.
+far is a body of 730 faces: a person at far is about 1,600 triangles.
+At mid and far, the clothes keep their form. The body wears the form of
+the clothes that are close to it: each point of the body under an item
+moves out to the item (the outermost item, where it is less than 2.5 cm
+out). The loose part of an item (its faces with each point 2.5 cm or
+more out of its place on the body: a tunic, the panels of an áo dài, the
+legs of wide pants under the knee, a hood up or down, shoes) is a mesh
+of its own: the fitted mesh made smaller (`World.Simplify`, with half as
+many triangles for each square meter as the body, the points of a hem
+pinned, each point that stays at its place), in the color of the item
+and seen from its two sides. The faces of the body under it go. A
+person in a tunic is as deep at the hips at mid and far as at near.
 At mid and far, the faces under clothes have the colors of the
 clothes: an item of MakeHuman with a texture of many colors (blue
 overalls over a white shirt) gives each point the color of the swatch of
@@ -1779,6 +1790,10 @@ its full order, so its hash is the same as before the option.
   shop sews the garment again at the build, with its ease at the new
   hem. null keeps the hem as sewn. A hem over the top of a piece is an
   error of the check.
+- `hood`: `down` (the hood folded at the back of the neck) or `up` (a
+  piece over the back, the top and the sides of the head, 2.5 cm out
+  for the hair, open at the face). Only a garment of World with a hood
+  (`world_rain_shell`).
 - `print`: `plain`, `checks` or `stripes`, with `print_color` (the color
   of the lines; white by default) and `print_size` (the width of a check
   or a stripe, m; 0.03 by default). The color of the item is the ground.
