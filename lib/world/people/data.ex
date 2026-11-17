@@ -229,6 +229,18 @@ defmodule World.People.Data do
   end
 
   @doc """
+  The swatch of the texture of an item of clothes of MakeHuman
+  (`scripts/swatches.py`: `NAME.swatch.png`, 64 by 64 texels), as
+  `World.PNG.decode/1` gives it, or nil (a garment of World has none).
+  """
+  def swatch(name) do
+    cached({:swatch, name}, fn ->
+      path = Path.join([dir(), "clothes", name <> ".swatch.png"])
+      if File.exists?(path), do: World.PNG.decode(File.read!(path))
+    end)
+  end
+
+  @doc """
   The point of the body under each point of the helpers "tights" and
   "skirt" of the base mesh: the nearest point of the group "body" at
   rest. A cloth that fits only to a helper (`elvs_hooded_sweat_jacket1`)

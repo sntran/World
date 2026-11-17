@@ -72,3 +72,7 @@ again.
   `targets_child.bin.gz`; then `mix run scripts/targets.exs` packs them
   and deletes them. (The two tables in memory were 34 MB, and the memory
   of the edge is 128 MB: `docs/factory.md`.)
+- Each item of clothes with a texture has a swatch,
+  `clothes/NAME.swatch.png`: the texture at 64 by 64 texels, for the
+  colors of the clothes of a person at mid and far
+  (`python3 -I scripts/swatches.py`, with Pillow).

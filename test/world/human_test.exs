@@ -587,6 +587,38 @@ defmodule World.HumanTest do
         do: assert(World.People.Data.target(name))
   end
 
+  # At mid and far a person has no texture on its clothes. An item of many colors (the work suit: blue
+  # overalls over a white shirt) gives each point the color of its swatch at the place of the item over
+  # it (scripts/swatches.py), not one mean color. An order with a color of the item tints them,
+  # as at near. A garment of World is of one fabric: one color, in its material.
+  test "at mid and far each item of clothes keeps its colors: the colors of its texture at the points under it" do
+    prims = fn level, opts ->
+      figure = Detail.with(level, fn -> Human.person("p", [hair: nil] ++ opts) end)
+      {figure.nodes |> List.last() |> Map.fetch!(:primitives), figure.materials}
+    end
+
+    luma = fn {r, g, b} -> 0.3 * r + 0.6 * g + 0.1 * b end
+
+    for level <- [:mid, :far] do
+      {ps, materials} = prims.(level, clothes: ["male_worksuit01", "world_t_shirt"])
+      suit = Enum.find(ps, &(&1.material == :color_male_worksuit01))
+      assert length(suit.colors) == length(suit.positions)
+      lights = Enum.map(suit.colors, luma)
+      # The blue overalls and the white shirt: a spread of the light of the points.
+      assert Enum.max(lights) - Enum.min(lights) > 80, "#{level}"
+      assert materials[:color_male_worksuit01]["color"] == [255, 255, 255]
+
+      # The garment of World has no colors at its points, and the color of its fabric in its material.
+      shirt = Enum.find(ps, &(&1.material == :color_world_t_shirt))
+      assert shirt == nil or shirt.colors == nil
+    end
+
+    # A color of the order tints the points (red: more red than green and blue at each point).
+    {ps, _} = prims.(:mid, clothes: ["male_worksuit01"], clothes_colors: [[192, 48, 32]])
+    red = Enum.find(ps, &(&1.material == :color_male_worksuit01))
+    assert Enum.all?(red.colors, fn {r, g, b} -> r >= g and r >= b end)
+  end
+
   test "a child has a flat chest: the shirt over the nipples is not in front of the shirt over the sternum" do
     nipples =
       for {v, d} <- World.People.Data.target("breast/nipple-point-decr"),

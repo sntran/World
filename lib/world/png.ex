@@ -4,7 +4,8 @@ defmodule World.PNG do
   an animal, the pores of the skin): 8 bits for each channel, the rows
   with no filter, so each build gives the same bytes. And a PNG file of
   16-bit gray values that World reads (the height tiles of a terrain,
-  `World.Terrain`).
+  `World.Terrain`), and a PNG file of 8 bits for each channel that World
+  reads (the swatch of the texture of an item of clothes, `World.People`).
   """
 
   @doc """
@@ -31,34 +32,54 @@ defmodule World.PNG do
     chunks = chunks(rest, [])
     <<w::32, h::32, 16, 0, _, _, 0>> = chunks |> List.keyfind("IHDR", 0) |> elem(1)
     data = :zlib.uncompress(for({"IDAT", d} <- chunks, into: <<>>, do: d))
-    {w, h, unfilter(data, w * 2, <<0::size(w * 2 * 8)>>, []) |> List.to_tuple()}
+    rows = unfilter(data, w * 2, 2, <<0::size(w * 2 * 8)>>, [])
+    {w, h, rows |> Enum.flat_map(fn row -> for <<v::16 <- row>>, do: v end) |> List.to_tuple()}
+  end
+
+  @doc """
+  The texels of a PNG file of 8 bits for each channel (no palette, no
+  interlace): `{width, height, channels, rows}`, the rows a tuple of
+  binaries from the top row of the image, each texel `channels` bytes (1
+  gray, 2 gray and alpha, 3 red, green and blue, 4 with the alpha).
+
+      iex> png = World.PNG.encode([<<1, 2, 3, 4, 5, 6>>, <<7, 8, 9, 10, 11, 12>>], 3)
+      iex> World.PNG.decode(png)
+      {2, 2, 3, {<<1, 2, 3, 4, 5, 6>>, <<7, 8, 9, 10, 11, 12>>}}
+  """
+  def decode(<<137, 80, 78, 71, 13, 10, 26, 10, rest::binary>>) do
+    chunks = chunks(rest, [])
+    <<w::32, h::32, 8, type, _, _, 0>> = chunks |> List.keyfind("IHDR", 0) |> elem(1)
+    channels = Map.fetch!(%{0 => 1, 4 => 2, 2 => 3, 6 => 4}, type)
+    data = :zlib.uncompress(for({"IDAT", d} <- chunks, into: <<>>, do: d))
+    {w, h, channels, data |> unfilter(w * channels, channels, <<0::size(w * channels * 8)>>, []) |> List.to_tuple()}
   end
 
   defp chunks(<<len::32, type::binary-4, data::binary-size(len), _crc::32, rest::binary>>, acc),
     do: if(type == "IEND", do: Enum.reverse(acc), else: chunks(rest, [{type, data} | acc]))
 
-  # The rows of the image with their filters undone (PNG, section 9), two
-  # bytes for each value.
-  defp unfilter(<<>>, _n, _prev, acc), do: acc |> Enum.reverse() |> List.flatten()
+  # The rows of the image with their filters undone (PNG, section 9): each
+  # row `n` bytes, `bpp` bytes for each texel.
+  defp unfilter(<<>>, _n, _bpp, _prev, acc), do: Enum.reverse(acc)
 
-  defp unfilter(data, n, prev, acc) do
+  defp unfilter(data, n, bpp, prev, acc) do
     <<filter, row::binary-size(^n), rest::binary>> = data
-    row = undo(filter, row, prev)
-    values = for <<v::16 <- row>>, do: v
-    unfilter(rest, n, row, [values | acc])
+    row = undo(filter, row, bpp, prev)
+    unfilter(rest, n, bpp, row, [row | acc])
   end
 
-  defp undo(0, row, _prev), do: row
-  defp undo(2, row, prev), do: add(row, prev)
+  defp undo(0, row, _bpp, _prev), do: row
+  defp undo(2, row, _bpp, prev), do: add(row, prev)
 
-  # The filters Sub, Average and Paeth: each byte with the byte two to its
-  # left (a value is two bytes), the byte over it, and the byte over that.
-  defp undo(f, row, prev) when f in [1, 3, 4] do
+  # The filters Sub, Average and Paeth: each byte with the byte of the
+  # texel to its left (`bpp` bytes before it), the byte over it, and the
+  # byte over that.
+  defp undo(f, row, bpp, prev) when f in [1, 3, 4] do
     {out, _} =
-      for {x, i} <- Enum.with_index(:binary.bin_to_list(row)), reduce: {[], {0, 0}} do
-        {acc, {last, before}} ->
+      for {x, i} <- Enum.with_index(:binary.bin_to_list(row)), reduce: {[], []} do
+        {acc, done} ->
           {a, b, c} =
-            {if(i >= 2, do: before, else: 0), :binary.at(prev, i), if(i >= 2, do: :binary.at(prev, i - 2), else: 0)}
+            {if(i >= bpp, do: Enum.at(done, bpp - 1), else: 0), :binary.at(prev, i),
+             if(i >= bpp, do: :binary.at(prev, i - bpp), else: 0)}
 
           v =
             case f do
@@ -68,7 +89,7 @@ defmodule World.PNG do
             end
             |> band()
 
-          {[v | acc], {v, last}}
+          {[v | acc], Enum.take([v | done], bpp)}
       end
 
     out |> Enum.reverse() |> :binary.list_to_bin()
