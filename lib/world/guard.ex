@@ -5,13 +5,20 @@ defmodule World.Guard do
   The VM at the edge has 128 MB, and the edge stops all of the VM when
   its memory is full: each order and each stream of the node stops with
   it. So a build of an order runs in a process of its own (`run/1`),
-  and the guard looks at the memory of the VM (`World.memory/0`) each
-  #{25} ms while it works. When the memory is more than the limit,
-  the guard stops the build (and the processes that it started and that
-  are linked to it): the order gets an error, and the VM and the other
-  orders go on. The heap of the process of the build has the same limit
-  (`max_heap_size`), so a process that grows fast stops before the next
-  look.
+  and the guard looks at the memory of the VM each #{25} ms while it
+  works. When the memory is more than the limit, the guard stops the
+  build (and the processes that it started and that are linked to it):
+  the order gets an error, and the VM and the other orders go on. The
+  heap of the process of the build has the same limit (`max_heap_size`),
+  so a process that grows fast stops before the next look.
+
+  In WebAssembly (the edge), the guard reads the memory of WebAssembly
+  (`World.wasm_memory/1`): the edge counts its size against the 128 MB,
+  and the size never gets smaller. The guard stops a build when the
+  memory that the VM uses is more than the limit, or when the size is
+  more than the limit and less than #{8} MB of it is free: the next
+  growth would go over the limit. On a native VM, it reads
+  `World.memory/0`.
 
   The limit is the key `:memory_mb` of the application environment of
   `:world` (from `WORLD_MEMORY_MB`), in MB. With no limit, `run/1` only
@@ -19,6 +26,8 @@ defmodule World.Guard do
   """
 
   @look 25
+  # The free memory of WebAssembly under which the next growth comes.
+  @reserve 8_000_000
 
   @doc "The limit of the memory of the VM, in bytes, or nil."
   def limit do
@@ -74,6 +83,11 @@ defmodule World.Guard do
     wait(pid, ref, bytes)
   end
 
+  @doc false
+  # Over the limit: the memory that the VM uses, or the next growth of the memory of WebAssembly.
+  def over?(bytes, {size, used}), do: used > bytes or (size > bytes and size - used < @reserve)
+  def over?(bytes, nil), do: elem(World.memory(), 1) > bytes
+
   defp wait(pid, ref, bytes) do
     receive do
       {:DOWN, ^ref, :process, ^pid, {:guard, {:ok, value}}} -> {:ok, value}
@@ -82,9 +96,7 @@ defmodule World.Guard do
       {:DOWN, ^ref, :process, ^pid, reason} -> exit(reason)
     after
       @look ->
-        {_, now} = World.memory()
-
-        if now > bytes do
+        if over?(bytes, World.wasm_memory()) do
           Process.exit(pid, :kill)
           receive do: ({:DOWN, ^ref, :process, ^pid, _} -> :ok)
           :erlang.garbage_collect()

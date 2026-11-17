@@ -130,6 +130,24 @@ defmodule World.CensusTest do
     assert total > 0 and bytes > 0
   end
 
+  # A host of WebAssembly (BEAM.com, `wasm_host:memory/1`), and a host with no function of the memory in it.
+  defmodule Host do
+    def memory(:size), do: 120_000_000
+    def memory(:used), do: 70_000_000
+  end
+
+  defmodule OldHost do
+    def memory(_kind), do: :erlang.nif_error(:not_loaded)
+  end
+
+  test "the memory of a VM in WebAssembly: the size of its memory and the part that it uses" do
+    assert World.wasm_memory() == nil
+    assert World.wasm_memory(Host) == {120_000_000, 70_000_000}
+    assert World.memory(&:erlang.memory/1, Host) == {"used", 70_000_000}
+    assert World.wasm_memory(OldHost) == nil
+    assert World.wasm_memory(String) == nil
+  end
+
   test "World.census/0 is the census of the node, where a process hires and lets go" do
     ref = Person.hire(:census_test)
     assert_receive {:hired, ^ref, p}

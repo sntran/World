@@ -76,6 +76,19 @@ defmodule World.GuardTest do
     assert catch_exit(Guard.run(fn -> exit(:normal) end)) == :normal
   end
 
+  test "in WebAssembly, the guard stops a build at the memory that the VM uses, or at a growth over the limit" do
+    mb = 1_000_000
+    # The memory that the VM uses.
+    refute Guard.over?(100 * mb, {90 * mb, 60 * mb})
+    assert Guard.over?(100 * mb, {120 * mb, 101 * mb})
+    # A size over the limit, with room in it; and with no room: the next growth.
+    refute Guard.over?(100 * mb, {120 * mb, 90 * mb})
+    assert Guard.over?(100 * mb, {120 * mb, 115 * mb})
+    # A native VM: the memory of the VM.
+    assert Guard.over?(1, nil)
+    refute Guard.over?(100_000 * mb, nil)
+  end
+
   test "a step apart: its value, its level, its error, its stop, and the stop of its caller" do
     assert Detail.with(:mid, fn -> Detail.apart(&Detail.level/0) end) == :mid
     assert Detail.lean(false, fn -> Detail.apart(fn -> Process.get(:world_lean) end) end) == false

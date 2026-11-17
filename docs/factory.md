@@ -705,6 +705,34 @@ request in a new VM:
 Two of the seven people at near go over about 128 MB: the memory of
 one person at near is still the open fault of F4, part 3.
 
+F4, part 6 (2026-11-17): the people at near, again. At the local edge,
+each person in a new VM (the VM is ready at 42 MB):
+
+- The seven people at near: 116 to 145 MB. One person changes by up to
+  18 MB from one run to the next (the leader: 128, 142 and 145 MB).
+- The make of the figure holds the peak, not its GLB: the leader with
+  no GLB takes 136 MB (142 MB with it), and person_5 105 MB (114 MB).
+- The live data of the make is the same for each person: at most 28 MB
+  on a computer (64-bit words), while it poses the figure, and the
+  figure is 13 MB. At the edge the VM grows by 60 to 100 MB for it. So
+  most of the growth is not the data: it is the copying collector (an
+  old and a new heap at one time) and the gaps between the blocks of
+  the C allocator, in a linear memory that never gets smaller. The gaps
+  change with the order of the blocks, so the peak changes from one run
+  to the next.
+- Each of these was worse: the make in a process of its own (145 MB),
+  each mesh of the person in a process of its own (+25% on a computer),
+  a first heap of 16 or 32 MB for the build (176 and 167 MB), and a full
+  sweep at each collection (148 MB).
+
+This fault is still open. The next steps: the size and the used part of the memory of
+WebAssembly ("The guard and the memory of WebAssembly") at each step,
+to see the gaps; the data of
+the people (the base mesh, the targets, the items) in the snapshot of
+the VM, so that it is low in the memory before a build; and a packed
+form (binaries) of a skinned mesh, so that a figure at near is about 3
+MB and not 13 MB.
+
 ## The parts of a model
 
 World works as Dreams (W24 to W28 of `TODO.md`, plan 0027 of Vũng
@@ -743,8 +771,9 @@ into one model, and it does not keep a whole model in its memory
   points at their border are the same points, and no collapse moves
   them.
 - **The guard of the memory.** A build runs in a process of its own,
-  and `World.Guard` stops it when the memory of the BEAM goes over
-  `WORLD_MEMORY_MB` (100 MB at the edge): the order gets an error, and
+  and `World.Guard` stops it when the memory of the VM goes over
+  `WORLD_MEMORY_MB` (118 MB at the edge, "The guard and the memory of
+  WebAssembly"): the order gets an error, and
   the VM and the other orders go on. The check of an order with a large
   sculpture does not build it at far.
 
@@ -770,44 +799,22 @@ the parts lists, the constructions) is a class of its own.
   from an edit of an order to its whole new level, as a project gets
   it: the edit, the parts list, then all its parts at one time.
 
-### What the guard needs from the runtime
+### The guard and the memory of WebAssembly
 
-The guard reads the wrong memory. At the edge the VM runs with `-Mea
-min` (no allocators of ERTS), so `:erlang.memory/1` is not supported,
-and `World.memory/0` adds the memory of each process and of each binary
-that a process holds. The edge stops the VM on another number: the
-linear memory of the WebAssembly instance of the VM (the log line
-`beam: memory N MB` of beam.com), in the 128 MB of its isolate. The two
-are not the same:
-
-- The linear memory has more: the code, the atoms, the ETS tables, the
-  persistent terms (the caches of the people), the stacks of the
-  threads, and the free blocks and the gaps of the C allocator.
-- The linear memory never gets smaller. A build that frees 40 MB leaves
-  the memory at its peak; the next build uses those 40 MB again, but the
-  memory grows when a block of the size that it asks for is not free.
-- A garbage collection of a large heap needs the old heap and the new
-  heap at one time, for a short time. The guard looks each 25 ms, and it
-  can miss that peak.
-- Cloudflare can run more than one VM in one isolate (the Durable Objects
-  of one class). Then the limit of one VM is 128 MB less the memories of
-  the other VMs, and the VM cannot see them.
-
-So the guard can stop a build that still fits, and it can miss a build
-that stops the VM. What the runtime must give to the VM (for BEAM.com),
-as a function that a process calls each 25 ms with no request to
-JavaScript that waits, or as a NIF of the runtime:
-
-| What | Why |
-|---|---|
-| The size of the linear memory of the VM now, in bytes (the size of its `WebAssembly.Memory`: `HEAPU8.length`). | The number on which the edge stops the VM. |
-| The bytes of the linear memory that the emulator uses now: the top of the heap of the C allocator, less its free blocks. | The room that the VM has before its memory must grow. |
-| The most memory of the VM: the limit of the isolate (128 MB), less the memory of the JavaScript of the isolate, less the linear memories of the other VMs of the isolate (the runtime knows them: `isolateMemory()` in `runtime/worker.js` of beam.com). | The limit of the guard. `WORLD_MEMORY_MB` is a guess of it now. |
-| A message to a process of the VM when the linear memory grows past a size that the process gives (and the size of the request to grow). | The guard then sees each growth, also a short one between two looks. |
-
-With these, `World.Guard` stops a build when the used bytes plus the
-growth that it asks for go over the most memory of the VM, before the
-edge stops the VM.
+The edge stops a VM on the size of its memory of WebAssembly (the log
+line `beam: memory N MB` of beam.com), in the 128 MB of its isolate.
+That size never gets smaller, and it has more than the memory of the
+processes: the code, the atoms, the ETS tables, the persistent terms,
+and the free blocks and the gaps of the C allocator. Since BEAM.com
+0.1.0-rc.7 the runtime gives it to the VM (BEAM.com `docs/WORKERS.md`):
+`wasm_host:memory(size)`, the size, and `wasm_host:memory(used)`, the
+bytes that the VM uses now (`malloc()`), which go down when the VM
+frees memory. `World.wasm_memory/1` reads both, and `World.Guard` uses
+them in WebAssembly in place of the memory of the processes: it stops a
+build when the VM uses more than `WORLD_MEMORY_MB`, or when the size is
+more than `WORLD_MEMORY_MB` and less than 8 MB of it is free (the next
+growth would go over the limit). On a native VM it reads
+`:erlang.memory/1`.
 
 ### Hải Âu
 
@@ -823,23 +830,27 @@ stops a VM at about 134 MB):
 | The parts list | 71 MB, 21 s: 3 parts | 85 MB, 25 s: 7 parts | 79 MB, 96 s (202, then the list): 33 parts |
 | The main node | 1 part, 1,200 triangles: 91 MB, 122 s | 5 parts: 86 to 113 MB, 111 to 336 s | 31 parts; the largest: 92 MB, 221 s, and 80 MB, 176 s |
 | The sign | 69 MB, 7 s | 76 MB, 20 s | |
-| The base | 52 MB, 5 s (empty: see below) | 82 MB, 241 s | 99 MB, 1,326 s (266 steps) |
+| The base, before (a slab of 0.3 m in cells of 0.06, 0.12 and 0.3 m) | 52 MB, 5 s (empty) | 82 MB, 241 s | 99 MB, 1,326 s (266 steps) |
+| The base now (1 m deep, in cells of 0.25, 0.3 and 0.4 m) | 61 MB, 21 s: 150 triangles | 67 MB, 37 s: 700 triangles | 90 MB, 44 s: 2,500 triangles |
 
 Each part fits: the highest peak is 113 MB (a part of the main node at
-mid), and the longest part is the base at near: 99 MB and 1,326 s (about
-22 minutes) for its 266 steps. The parts of the main node
-take 1 to 6 minutes each. The times are of one core shared with other
-work (the build of the catalog); an edit of an order builds only the
-parts that it changes.
+mid). The parts of the main node take 1 to 6 minutes each. The times
+are of one core shared with other work; an edit of an order builds only
+the parts that it changes.
 
 Before W26, the whole far level of Hải Âu took 210 MB at its check (the
 VM stopped), and its whole near level could not build at the edge.
 
-Two faults of the data of the order, for Vũng Tàu: the base is a slab
-thinner than the cells of its far level (0.3 m), so its far part is
-empty; and its near cells (6 cm) for a flat base make 2 million faces,
-so its part takes 22 minutes. Cells of 25 cm for the base at near give
-the same base in about a twentieth of the time.
+The base was a fault of the rule `building` (`World.Town.Building`),
+not of the data of the order: the order gives only `apron: 0.6`, and
+the rule made the ground (the part `_nen`) a slab of 0.3 m in cells of
+0.3 m at far, so its far part had no surface, and gave a flat slab the
+cells of 6 cm of a small part at near (2 million faces, 266 steps, 22
+minutes). Now the slab goes 1 m down from the ground (the part under the
+ground is not seen), deeper than the cells of each level, and a flat
+ground has cells of 25 cm at near, 30 cm at mid and 40 cm at far: its
+look (the concrete, the dirt) is in its maps. The edits of an order on
+the ground (`more.nen`: a step, a kerb) keep the cells of a small part.
 
 ### Two questions of plan 0027 of Vũng Tàu
 
