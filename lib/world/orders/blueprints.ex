@@ -479,6 +479,10 @@ defmodule World.Orders.Blueprints do
       build: fn o ->
         World.People.exercise(o["routine"], count: round(o["count"]), seed: round(o["seed"]), fans: o["fans"])
       end,
+      # (Each person is a part of the parts list, made alone.)
+      pieces: fn o ->
+        World.People.exercise_pieces(o["routine"], count: round(o["count"]), seed: round(o["seed"]), fans: o["fans"])
+      end,
       sources: ["People of World from the data of MakeHuman (CC0), and the routines of World.People.Pose."]
     }
   end

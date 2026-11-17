@@ -175,9 +175,19 @@ defmodule World.ElementsTest do
 
     assert list["parts"] |> Enum.map(& &1["key"]) |> Enum.uniq() |> length() == 3
     for p <- list["parts"], do: assert(Store.has?(p["key"]) and "skin" in p["roles"])
-    # A person stands at its place in the group (its place on x, in the axes of glTF).
-    xs = for p <- list["parts"], do: Enum.at(p["matrix"], 12)
-    assert length(Enum.uniq(xs)) == 3
+    # Each person is at its place in the group: the place of its figure in the whole model.
+    {:ok, full} = Orders.check(group)
+    {:ok, blueprint} = World.Orders.Blueprints.fetch("exercise")
+    whole = World.Detail.with(:far, fn -> blueprint.build.(full["options"]) end)
+
+    for {{:figure, path, frame, _, nil}, part} <- Enum.zip(World.Build.places(whole, :far), list["parts"]) do
+      assert part["node"] == path
+      for {a, b} <- Enum.zip(part["matrix"], Frame.matrix(World.GLB.gl_frame(frame))), do: assert_in_delta(a, b, 1.0e-9)
+    end
+
+    # A rule with no pieces: its model is made, and each part of it is a part of the list.
+    {:ok, strut} = Elements.list(%{"blueprint" => "strut", "options" => %{"length" => 0.3}}, "far")
+    assert [%{"kind" => "part", "joint" => nil}] = strut["parts"]
     # The same group with an edit of one person only would keep the keys of the others: a key is the content.
     assert {:ok, ^list} = Elements.list(group, "far")
   end

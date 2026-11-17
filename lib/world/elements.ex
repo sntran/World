@@ -271,6 +271,40 @@ defmodule World.Elements do
   # --- The list ---------------------------------------------------------
 
   defp make_list(full, %{drawing: nil} = job) do
+    {:ok, blueprint} = Blueprints.fetch(full["blueprint"])
+    if blueprint.pieces, do: pieces_list(full, job, blueprint), else: item_list(full, job)
+  end
+
+  defp make_list(full, job), do: drawing_list(full, job)
+
+  # The pieces of a rule that gives them one by one (a group of people):
+  # each made alone, in a process of its own, at its place.
+  defp pieces_list(full, job, blueprint) do
+    colors = full["colors"] || %{}
+    pieces = Detail.with(job.level, fn -> blueprint.pieces.(full["options"]) end)
+
+    parts =
+      for {name, make, place} <- pieces do
+        Detail.apart(fn ->
+          Detail.with(job.level, fn ->
+            thing = make.()
+            frame = if place, do: placed(thing, place), else: Frame.identity()
+            key = made_key(thing, job.level, %{}, colors)
+            keep(MapSet.new(), key, fn -> glb(thing, job.level, %{}, colors) end)
+            kind = if match?(%World.Figure{}, thing), do: "figure", else: "part"
+            entry(key, name, thing.name, roles(thing), nil) |> Map.merge(%{"matrix" => matrix(frame), "kind" => kind})
+          end)
+        end)
+      end
+
+    result(full, job, parts, %{})
+  end
+
+  # The frame of a piece with its port `own` at `port` (as `World.Assembly.add/4`, with no turn).
+  defp placed(thing, {port, own}),
+    do: Frame.compose(World.Port.frame(port), Frame.invert(World.Assembly.item_port_frame(thing, own)))
+
+  defp item_list(full, job) do
     item = job.item.(job.level)
     places = Build.places(item, job.level, job.pose || %{})
 
@@ -292,7 +326,7 @@ defmodule World.Elements do
     result(full, job, parts, extras)
   end
 
-  defp make_list(full, job) do
+  defp drawing_list(full, job) do
     raw = job.drawing
     level = job.level
     keys = node_keys(raw, level)

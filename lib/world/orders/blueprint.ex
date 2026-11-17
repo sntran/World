@@ -16,9 +16,14 @@ defmodule World.Orders.Blueprint do
     `{:error, errors}`: the options with each choice made, for a rule
     whose defaults come from its other options (the size of an appliance
     comes from its kind). The full order has these options.
+  - `pieces`: nil, or a function of the options to the pieces of the
+    model one by one (`World.People.exercise_pieces/2`): `{name, make,
+    place}`, `make` a function that makes the piece, and `place` nil for
+    the root or `{port, own}` (the port `own` of the piece at `port`). A
+    parts list makes each piece alone (`World.Elements`).
   - `sources`: where the data of the blueprint comes from.
   """
-  defstruct name: nil, doc: "", options: [], build: nil, check: nil, resolve: nil, sources: []
+  defstruct name: nil, doc: "", options: [], build: nil, check: nil, resolve: nil, pieces: nil, sources: []
 
   defmodule Option do
     @moduledoc """
