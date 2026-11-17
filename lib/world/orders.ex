@@ -471,12 +471,20 @@ defmodule World.Orders do
     end
   end
 
-  # The checks of a true model, on the item at the level far, in the guard of the memory. A model
-  # with a sculpture of more faces than a step of a part (W26: a large building) is not built for
-  # them: its build needs more memory than the edge has, and its parts are built one by one. The
-  # check of its data stays.
+  # The checks of a true model, on the item at the level far, in the guard of the memory: for the
+  # data of a project (a drawing) and for a pose (`joints`). A rule in code with no pose is checked
+  # by the tests of its rule (a group of people with fans took 150 MB at the edge for nothing). A
+  # model with a sculpture of more faces than a step of a part (W26: a large building) is not built
+  # for them: its build needs more memory than the edge has, and its parts are built one by one.
+  # The check of its data stays.
   defp sound(order) do
-    if large?(Blueprints.drawing(order)), do: :ok, else: guarded(fn -> sound_now(order) end)
+    drawing = Blueprints.drawing(order)
+
+    cond do
+      drawing == nil and Map.get(order, "joints", %{}) == %{} -> :ok
+      large?(drawing) -> :ok
+      true -> guarded(fn -> sound_now(order) end)
+    end
   end
 
   defp large?(%{"nodes" => nodes}) do

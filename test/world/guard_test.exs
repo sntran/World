@@ -31,10 +31,18 @@ defmodule World.GuardTest do
     refute Process.alive?(worker)
     assert [%{"path" => "", "message" => "needs more memory than the factory has (1 MB): " <> _}] = Guard.errors()
 
-    # The check of an order and the build of a file get the error.
-    order = %{"blueprint" => "exercise", "options" => %{"count" => 2, "fans" => true}}
-    assert {:error, [%{"message" => "needs more memory" <> _}]} = Orders.place(order, "o")
-    assert {:error, [%{"message" => "needs more memory" <> _}]} = Orders.build(order, "far", "glb")
+    # The check of an order (a pose: its model is built) and the build of a file get the error.
+    door = %{
+      "blueprint" => "catalog",
+      "options" => %{"name" => "door_prehung_36x80"},
+      "joints" => %{"slab_door_prehung_36x80" => 10}
+    }
+
+    assert {:error, [%{"message" => "needs more memory" <> _}]} = Orders.place(door, "o")
+    group = %{"blueprint" => "exercise", "options" => %{"count" => 2, "fans" => true}}
+    assert {:error, [%{"message" => "needs more memory" <> _}]} = Orders.build(group, "far", "glb")
+    # (A rule in code with no pose is checked by the tests of its rule: its order needs no build.)
+    assert {:ok, _} = Orders.place(group, "o")
     assert Process.alive?(self())
   end
 
