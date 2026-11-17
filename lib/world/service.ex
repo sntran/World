@@ -68,7 +68,8 @@ defmodule World.Service do
     header `x-world-class: batch` for a build that no person waits for)
     and keeps it. A file from an older version of World goes out at
     once, with the header `x-world-stale`, and the node builds it again
-    one time. The answer has an ETag (304 for the same one), and it is
+    one time. A parts list that takes more than 45 s builds on: 202 with
+    `retry-after`, and a request after it gets the file. The answer has an ETag (304 for the same one), and it is
     in gzip for a client that accepts gzip. A file of the flat look
     or of the light look takes `?triangles=N` (the most faces of its
     mesh) and `?wrap=1` (one closed skin round the model).
@@ -250,7 +251,10 @@ defmodule World.Service do
     level = Map.get(conn.query_params, "level", "near")
 
     with_order(conn, fn order ->
-      case Line.run(class(conn), fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end) do
+      case build(conn, order, level, file) do
+        :building ->
+          conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
+
         {ms, {:ok, out}} ->
           {:ok, full} = Orders.check(order)
 
@@ -269,6 +273,37 @@ defmodule World.Service do
   post "/builds" do
     with_order(conn, fn job -> builds(conn, job) end)
   end
+
+  # The build of a file of POST /build in the line, with its time. A parts
+  # list builds in the background (`World.Elements.background/3`): a large
+  # model at near takes more than the 60 s of a request at the edge.
+  # (Its file goes into the files of the node: the request after a 202 gets it there.)
+  defp build(conn, order, level, "elements") do
+    hash = with {:ok, full} <- Orders.check(order), do: Orders.hash(full), else: (_ -> nil)
+
+    keep = fn ->
+      result = timed(:now, order, level, "elements")
+      with {_, {:ok, body}} when hash != nil <- result, do: Files.put(hash, level, "elements", body)
+      result
+    end
+
+    with {:ok, entry} <- Files.get(hash, level, "elements"),
+         true <- Files.fresh?(entry) do
+      {0, {:ok, entry.body}}
+    else
+      _ ->
+        case World.Elements.background({:file, hash, level}, keep) do
+          {:ok, result} -> result
+          :building -> :building
+          :gone -> build(conn, order, level, "elements")
+        end
+    end
+  end
+
+  defp build(conn, order, level, file), do: timed(class(conn), order, level, file)
+
+  defp timed(class, order, level, file),
+    do: Line.run(class, fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end)
 
   get "/builds/:id" do
     case summary(id) do
@@ -512,6 +547,22 @@ defmodule World.Service do
             fresh? = Files.fresh?(entry)
             unless fresh?, do: refresh(full, hash, level, file, kind, opts)
             send_entry(conn, entry, hash, kind, not fresh?)
+
+          :error when kind == "elements" ->
+            # (The parts list of a large model can take more than the 60 s of
+            # a request at the edge: its build goes on, and keeps its file.)
+            build = fn ->
+              Line.run(:now, fn ->
+                with {:ok, body} <- Orders.build(full, level, kind, opts), do: {:ok, Files.put(hash, level, file, body)}
+              end)
+            end
+
+            case World.Elements.background({:file, hash, level, file}, build) do
+              {:ok, {:ok, entry}} -> send_entry(conn, entry, hash, kind, false)
+              {:ok, {:error, errors}} -> json(conn, 422, %{"errors" => errors})
+              :building -> conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
+              :gone -> serve(conn, order, level, kind)
+            end
 
           :error ->
             case Line.run(class(conn), fn -> Orders.build(full, level, kind, opts) end) do

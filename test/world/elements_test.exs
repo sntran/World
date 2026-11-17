@@ -258,4 +258,29 @@ defmodule World.ElementsTest do
     assert get.("/builds/gone/elements/#{lid["key"]}.glb").status == 200
     assert get.("/builds/gone/elements/abc.glb").status == 404
   end
+
+  test "a parts list that takes long builds on after the request: 202, then the list" do
+    post = fn path, body -> Plug.Test.conn(:post, path, body) |> World.Service.call(World.Service.init([])) end
+    get = fn path -> Plug.Test.conn(:get, path) |> World.Service.call(World.Service.init([])) end
+    order = order(drawing(0.3, "list-202"))
+    {:ok, placed} = Orders.place(order, "o")
+    Application.put_env(:world, :part_wait, 0)
+
+    # The build of the Worker (POST /build): 202 while the list builds, then the list from the files of the node.
+    conn = post.("/build?level=far&file=elements&hash=#{placed["hash"]}", nil)
+    assert conn.status == 202 and Plug.Conn.get_resp_header(conn, "retry-after") == ["15"]
+    Application.put_env(:world, :part_wait, 600_000)
+    conn = post.("/build?level=far&file=elements&hash=#{placed["hash"]}", nil)
+    assert conn.status == 200 and JSON.decode!(conn.resp_body)["order"] == placed["hash"]
+    assert post.("/build?level=far&file=elements&hash=#{placed["hash"]}", nil).status == 200
+
+    # The file of the server on a computer (GET /o/): the same.
+    Application.put_env(:world, :part_wait, 0)
+    conn = get.("/o/#{placed["hash"]}.mid.elements.json")
+    assert conn.status == 202
+    Application.put_env(:world, :part_wait, 600_000)
+    conn = get.("/o/#{placed["hash"]}.mid.elements.json")
+    assert conn.status == 200 and JSON.decode!(conn.resp_body)["level"] == "mid"
+    assert get.("/o/#{placed["hash"]}.mid.elements.json").status == 200
+  end
 end

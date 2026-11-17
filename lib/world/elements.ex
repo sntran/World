@@ -114,31 +114,51 @@ defmodule World.Elements do
   or `{:error, errors}` as `part/1`. The host of the VM at the edge ends a
   request after 60 s, and a large part takes more.
   """
-  def fetch(key, wait \\ Application.get_env(:world, :part_wait, 45_000)) do
+  def fetch(key, wait \\ wait()) do
     with :error <- stored(key),
          {:ok, _} <- Store.recipe(key) do
-      pid = builder(key)
-      ref = Process.monitor(pid)
-      send(pid, {:wait, self(), ref})
-
-      receive do
-        {^ref, result} ->
-          Process.demonitor(ref, [:flush])
-          result
-
-        {:DOWN, ^ref, :process, ^pid, _} ->
-          # (The build ended before it got the message: its part is in the store, or it has none.)
-          with {:ok, glb} <- Store.get(key), do: {:ok, glb}, else: (_ -> :none)
-      after
-        wait ->
-          Process.demonitor(ref, [:flush])
-          :building
+      case background({:part, key}, fn -> World.Line.run(:now, fn -> part(key) end) end, wait) do
+        {:ok, result} -> result
+        :building -> :building
+        # (The build ended before it got the message: its part is in the store.)
+        :gone -> with {:ok, glb} <- Store.get(key), do: {:ok, glb}, else: (_ -> :none)
       end
     else
       {:ok, glb} -> {:ok, glb}
       _ -> :none
     end
   end
+
+  @doc """
+  The value of `fun`, made in a process of its own, one for each `key`
+  (a second request of the same key waits for the same build), for at
+  most `wait` ms (`:part_wait` of the application environment, 45 s by
+  default): `{:ok, value}`, `:building` when the build goes on after the
+  wait, or `:gone` when the build ended before the request. The host of
+  the VM at the edge ends a request after 60 s: a long build (a large
+  part, the parts list of a large model at near) goes on, and a request
+  after it gets its value from the store.
+  """
+  def background(key, fun, wait \\ wait()) do
+    pid = builder(key, fun)
+    ref = Process.monitor(pid)
+    send(pid, {:wait, self(), ref})
+
+    receive do
+      {^ref, result} ->
+        Process.demonitor(ref, [:flush])
+        {:ok, result}
+
+      {:DOWN, ^ref, :process, ^pid, _} ->
+        :gone
+    after
+      wait ->
+        Process.demonitor(ref, [:flush])
+        :building
+    end
+  end
+
+  defp wait, do: Application.get_env(:world, :part_wait, 45_000)
 
   # A part from the store, or `:error`.
   defp stored(key) do
@@ -148,16 +168,15 @@ defmodule World.Elements do
     end
   end
 
-  # The process of the build of a part: the one that runs now, or a new one.
-  defp builder(key) do
+  # The process of a build: the one that runs now for the key, or a new one.
+  defp builder(key, fun) do
     {me, ref} = {self(), make_ref()}
 
     Task.start(fn ->
-      case Registry.register(World.Names, {:part, key}, nil) do
+      case Registry.register(World.Names, {:build, key}, nil) do
         {:ok, _} ->
           send(me, {ref, self()})
-          result = World.Line.run(:now, fn -> part(key) end)
-          answer(result)
+          answer(fun.())
 
         {:error, {:already_registered, other}} ->
           send(me, {ref, other})

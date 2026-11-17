@@ -138,6 +138,16 @@ test('GET /o/ of a parts list goes to the VM at its level', async () => {
   }
 });
 
+test('GET /o/ of a parts list that builds on gives 202 with retry-after, and keeps nothing in R2', async () => {
+  const env = { ORDERS: bucket() };
+  const v = async () => Response.json({ building: 'elements' }, { status: 202, headers: { 'retry-after': '15' } });
+  const r = await handler(req(`/o/${HASH}.far.elements.json`), env, { vm: v, commit: 'c1' });
+  assert.equal(r.status, 202);
+  assert.equal(r.headers.get('retry-after'), '15');
+  assert.deepEqual(await r.json(), { building: 'elements' });
+  assert.equal(env.ORDERS.items.size, 0);
+});
+
 test('GET /p/ serves a part from R2 with no VM, else the VM builds it; a wrong key is 404', async () => {
   const env = { ORDERS: bucket() };
   const v = vm();

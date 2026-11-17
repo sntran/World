@@ -145,6 +145,8 @@ async function file(request, env, vm, commit, hash, [, level, kind, type]) {
   let object = await env.ORDERS.get(key);
   if (!object) {
     const r = await vm(new Request(`http://vm/build?level=${level}&file=${kind}&hash=${hash}`, { method: 'POST' }), hash);
+    // (A parts list of a large model that builds on: ask again after retry-after.)
+    if (r.status === 202) return json(202, await r.json(), { 'retry-after': r.headers.get('retry-after') ?? '15' });
     if (r.status !== 200) return failure(r);
     await env.ORDERS.put(key, await r.arrayBuffer(), { httpMetadata: { contentType: type } });
     object = await env.ORDERS.get(key);
