@@ -146,7 +146,8 @@ with its joints and clips, the list of the parts, the log. Each error
 has its path.
 
 A `plant` is a plant of the nursery, from the rules of its species:
-`species` (`coconut`, `areca`, `banana`, `bamboo`, `frangipani`), `height` (m;
+`species` (`coconut`, `areca`, `banana`, `bamboo`, `frangipani`,
+`araucaria`), `height` (m;
 the common height of the species by default), `seed` (the small changes
 from plant to plant), `month` (the flowers of a frangipani) and
 `numbers`: the numbers of the plant over the numbers of its species
@@ -156,6 +157,20 @@ number of the species. A palm has `trunk` (its width, m), `base`,
 `leaflet`, `nuts`, `nut` and, for an areca palm, `crownshaft`. So a
 project asks for the palm that it wants, and corrects a number after it
 looks at the model.
+
+An `araucaria` is the Norfolk Island pine (Araucaria heterophylla,
+bách tán): a straight trunk to the top, and level tiers of branches in
+whorls on it. Each branch has two rows of branchlets with small leaves.
+The low branches are level, the high ones point up, and the crown is a
+narrow cone. Its numbers: `trunk` (its width at the chest, m), `clear`
+(the height of the lowest tier, m), `tiers` (their count, from `clear`
+to the top), `whorl` (the branches in a tier), `crown` (the width of the
+crown at the lowest tier, m) and `branchlet` (the length of a branchlet,
+m). The numbers do not change with the `height`: give them for the tree
+that you want. At near each branchlet is a thin tube of leaves; at mid
+the branchlets of a branch are one card; at far half the tiers have a
+card of each branch. A tree of 18 m has about 48,000 triangles at near,
+3,200 at mid and 1,100 at far.
 
 ## An edit of an order
 

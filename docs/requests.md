@@ -96,8 +96,10 @@ The option `wear` puts parts from edits on the head: the half helmet of
 a rider (`mu_bao_hiem_edits`), hair (`toc_ngan_edits`, `toc_bui_edits`,
 `toc_dai_edits`) and a nón lá (`non_la_edits`); a helmet and hair take
 the size of the head of the person.
-The animal `buffalo_calf` is the calf of a water buffalo, and the plant
-`areca` is the areca palm.
+The animal `buffalo_calf` is the calf of a water buffalo, the plant
+`areca` is the areca palm, and the plant `araucaria` is the Norfolk
+Island pine (bách tán), with the numbers `tiers`, `whorl` (the branches
+in a tier), `crown`, `clear` and `branchlet`.
 
 In a drawing of edits, an edit can be only at some levels (`levels`):
 an edit at the top, an edit in a group, or an edit of the shape `group`

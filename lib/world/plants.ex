@@ -16,6 +16,9 @@ defmodule World.Plants do
   - `frangipani/1`: the frangipani (hoa sứ): a trunk that forks again and
     again (the model of Leeuwenberg), with thick blunt branches, a rosette
     of leaves at each end, and flowers in their season (`month`).
+  - `araucaria/1`: the Norfolk Island pine (bách tán): a straight trunk,
+    level tiers of branches in whorls, branchlets with small leaves, a
+    narrow cone of a crown. It is not a model of the catalog.
 
   A plant is an assembly of the kind `:plant`. Its levels of detail come
   from the level of the build (`World.Detail`): fewer sides, fewer
@@ -544,6 +547,116 @@ defmodule World.Plants do
           ribbon(stations, 0.0, 0.002, :white)
       end
     end
+  end
+
+  # --- The araucaria -------------------------------------------------------------------------
+
+  @doc """
+  An araucaria (Araucaria heterophylla, the Norfolk Island pine): a
+  straight trunk to the top, and level tiers of branches in whorls on it,
+  from the height `clear` to the top. Each branch carries two rows of
+  branchlets with their small leaves. The branches of the low tiers are
+  as long as half the `crown`, and they get shorter to the top: a narrow
+  cone. The low branches are level, the high ones point up, and the tip
+  of each branch turns up. At the near level each branchlet is a thin
+  tube of leaves; at mid the branchlets of a branch are one card; at far
+  half the tiers have a card of each branch, a bit wider. The options:
+  `height`, `seed`.
+  """
+  def araucaria(opts \\ []) do
+    h = Keyword.get(opts, :height, number("araucaria", "height"))
+    seed = Keyword.get(opts, :seed, 1)
+    r = number("araucaria", "trunk") / 2
+    # The lowest tier, and the last one a bit under the top: the leader is above it.
+    first = min(number("araucaria", "clear"), 0.4 * h)
+    last = max(h - 0.6, first)
+    count = number("araucaria", "tiers")
+    whorl = number("araucaria", "whorl")
+
+    # The trunk: straight, thinner to the top, wider at its base.
+    n = steps(12)
+    spine = for i <- 0..n, do: {0.0, 0.0, h * i / n}
+    radii = for i <- 0..n, t = i / n, do: 0.03 + (r - 0.03) * (1 - t) + 0.5 * r * :math.exp(-t * h / 0.6)
+
+    # Far away, half the tiers from the lowest to the top, each a bit wider.
+    {here, wide} = if Detail.level() == :far, do: {div(count + 1, 2), 1.3}, else: {count, 1.0}
+
+    tiers =
+      for i <- 0..(here - 1) do
+        z = if here == 1, do: first, else: first + (last - first) * i / (here - 1)
+        {i, z}
+      end
+
+    branches =
+      for {i, z} <- tiers, j <- 0..(whorl - 1) do
+        # The place of the tier on the cone: 0 at the lowest tier, 1 at the top.
+        t = (z - first) / max(h - first, 0.001)
+        az = 360 * j / whorl + 180 / whorl * i + 30 * jitter(seed, {:tier, i})
+        len = max(number("araucaria", "crown") / 2 * (1 - t), 0.25) * (0.92 + 0.16 * jitter(seed, {:b, i, j}))
+        branch({0.0, 0.0, z}, az, -4 + 34 * :math.pow(t, 1.5), len, wide)
+      end
+
+    wood =
+      Part.new("trunk_araucaria", :trunk, [tube(spine, radii, :bark) | Enum.flat_map(branches, &elem(&1, 0))], [@o],
+        sources: sources("araucaria")
+      )
+
+    Assembly.new("araucaria_bach_tan", wood,
+      root: "trunk_araucaria",
+      kind: :plant,
+      sources: ["An araucaria, the Norfolk Island pine (#{Map.fetch!(@species, "araucaria")["name"]})."],
+      extras: %{"species" => "araucaria", "height" => h, "tiers" => count}
+    )
+    |> Assembly.add(
+      "leaves_araucaria",
+      Part.new("leaves_araucaria", :leaves, Enum.flat_map(branches, &elem(&1, 1)), [@o]),
+      at: "o",
+      port: "o"
+    )
+  end
+
+  # A branch of a tier from the trunk: its wood and its leaves. Its path
+  # starts at the elevation `e0` and turns up 15 degrees to its tip. A
+  # branchlet is shorter on a short branch and to the tip of a branch.
+  defp branch(base, az, e0, len, wide) do
+    reach = min(number("araucaria", "branchlet"), 0.45 * len)
+
+    if Detail.level() == :near do
+      path = path(base, az, e0, 15, len, 6)
+      # The wood of the branch near the trunk; out of it, leaves cover the branch too.
+      {inner, outer} = path |> Enum.map(&elem(&1, 0)) |> Enum.split(3)
+      wood = Shape.sweep(inner ++ [hd(outer)], 0.01 + 0.01 * len, :bark, sides: 5)
+      cover = Shape.sweep([List.last(inner) | outer], 0.02, :leaf, sides: 4)
+      every = max(round(0.86 * len / 0.075), 2)
+
+      leaves =
+        for k <- 0..(every - 1), side <- [-1, 1] do
+          s = 0.12 + 0.86 * k / max(every - 1, 1)
+          {c, d} = along(path, s)
+          across = Vec.norm(Vec.cross(d, @up) |> nonzero(d))
+          out = Vec.norm(Vec.add(Vec.add(Vec.scale(d, 0.57), Vec.scale(across, side * 0.82)), {0.0, 0.0, -0.3}))
+          Shape.sweep([c, Vec.add(c, Vec.scale(out, reach * (1 - 0.55 * s)))], 0.018, :leaf, sides: 4)
+        end
+
+      {[wood], [cover | leaves]}
+    else
+      m = if Detail.level() == :far, do: 2, else: 3
+
+      stations =
+        for {{c, d}, k} <- Enum.with_index(path(base, az, e0, 15, len, m)) do
+          s = k / m
+          {c, d, wide * max(reach * 0.9 * (1 - 0.6 * s) * min(s / 0.15, 1), 0.04)}
+        end
+
+      {[], [ribbon(stations, 0.15, 0.01, :leaf)]}
+    end
+  end
+
+  # The point and the direction of a path at a part `s` of its length.
+  defp along(path, s) do
+    k = s * (length(path) - 1)
+    {{a, d}, {b, _}} = {Enum.at(path, floor(k)), Enum.at(path, min(floor(k) + 1, length(path) - 1))}
+    {Vec.add(a, Vec.scale(Vec.sub(b, a), k - floor(k))), d}
   end
 
   # --- The shapes ----------------------------------------------------------------------------

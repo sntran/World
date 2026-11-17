@@ -54,5 +54,15 @@
     "crownshaft": [0.55, "A bright green crown shaft of about 55 by 15 cm (Staples and Bevacqua, 2006)."],
     "nuts": [24, "A bunch of many red-orange fruits under the crown shaft (Staples and Bevacqua, 2006); the count in the model is an estimate."],
     "nut": [0.025, "A fruit is about 5 cm long (an estimate)."]
+  },
+  "araucaria": {
+    "name": "Araucaria heterophylla (bách tán, thông Noel; the Norfolk Island pine)",
+    "height": [18.0, "60 to 80 ft (18 to 24 m) in the ground, with one straight trunk (Gilman and others, Araucaria heterophylla: Norfolk Island-pine, UF/IFAS ENH242, 2018); to 70 m on Norfolk Island (Earle, The Gymnosperm Database, Araucaria heterophylla). A tree of a town of 18 m is an estimate."],
+    "trunk": [0.45, "One straight trunk, often swollen at its base (Gilman and others, 2018); to 60 cm at the height of the chest on Norfolk Island (Earle, The Gymnosperm Database). The width of 45 cm for a tree of 18 m and the base of 1.5 times the trunk are estimates."],
+    "clear": [2.5, "The height of the lowest tier: the low branches of a tree of a town are cut. 2.5 m is a measure from photos of the Norfolk Island pines of Vũng Tàu (an estimate)."],
+    "tiers": [22, "The branches grow in level tiers on the trunk, the crown symmetrical (Gilman and others, 2018). About 0.7 m from one tier to the next, a measure from photos of the Norfolk Island pines of Vũng Tàu: 22 tiers from 2.5 m to the top of a tree of 18 m (an estimate)."],
+    "whorl": [5, "The branches in a tier: 4 to 7 in a whorl (Earle, The Gymnosperm Database), typically 5 (NC State Extension, Gardener Plant Toolbox, Araucaria heterophylla)."],
+    "crown": [5.0, "The width of the crown at its lowest tier: a spread of 12 to 20 ft (3.7 to 6.1 m), a narrow pyramidal or columnar crown (Gilman and others, 2018). The crown narrows to the top as a cone."],
+    "branchlet": [0.35, "The branches carry branchlets in two rows, with small leaves all round them: 10 to 12.5 mm on a young tree, 4 to 7 mm on an old one (Plants of South Eastern New South Wales, Araucaria heterophylla). A branchlet of 35 cm, 2.5 cm across its leaves, is an estimate from photos."]
   }
 }

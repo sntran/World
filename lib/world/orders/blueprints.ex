@@ -403,7 +403,7 @@ defmodule World.Orders.Blueprints do
     %Blueprint{
       name: "plant",
       doc:
-        "A plant of the nursery (World.Plants), from the rules of its species: coconut (the coconut palm), areca (the areca palm, cau), banana, bamboo (a clump of thorny bamboo) or frangipani. The levels come from the rules: far away a frond or a spray of leaves is one card. For a count of triangles of a project, ask for the file light with triangles.",
+        "A plant of the nursery (World.Plants), from the rules of its species: coconut (the coconut palm), areca (the areca palm, cau), banana, bamboo (a clump of thorny bamboo), frangipani or araucaria (the Norfolk Island pine, bách tán). The levels come from the rules: far away a frond or a spray of leaves is one card. For a count of triangles of a project, ask for the file light with triangles.",
       options: [
         option("species", :choice, default: "coconut", values: World.Plants.species()),
         option("height", :number,
@@ -423,7 +423,7 @@ defmodule World.Orders.Blueprints do
               do: option(key, :number, default: nil, min: if(whole?, do: max(1, lo), else: lo), max: hi)
             ),
           doc:
-            "Numbers of the plant over the numbers of its species (priv/plants/species.json), in meters and degrees: a project gives the numbers of the plant that it wants, and corrects them after it looks at the model. A palm: trunk (its width), base, lean, fronds (their count), frond (its length), leaflet, nuts, nut, crownshaft. Each species has its own keys."
+            "Numbers of the plant over the numbers of its species (priv/plants/species.json), in meters and degrees: a project gives the numbers of the plant that it wants, and corrects them after it looks at the model. A palm: trunk (its width), base, lean, fronds (their count), frond (its length), leaflet, nuts, nut, crownshaft. An araucaria: trunk, clear (the height of the lowest tier), tiers (their count), whorl (the branches in a tier), crown (the width of the lowest tier), branchlet (its length). Each species has its own keys."
         )
       ],
       build: fn o ->
@@ -437,6 +437,7 @@ defmodule World.Orders.Blueprints do
             "banana" -> World.Plants.banana(opts)
             "bamboo" -> World.Plants.bamboo(opts)
             "frangipani" -> World.Plants.frangipani(opts ++ [month: o["month"]])
+            "araucaria" -> World.Plants.araucaria(opts)
           end
         end)
       end,
@@ -452,8 +453,12 @@ defmodule World.Orders.Blueprints do
     for {key, v} <- Enum.sort(o["numbers"]),
         v != nil,
         key not in known,
-        do: {"options.numbers.#{key}", "a #{o["species"]} has no number #{key}: #{Enum.join(known, ", ")}"}
+        do:
+          {"options.numbers.#{key}",
+           "#{article(o["species"])} #{o["species"]} has no number #{key}: #{Enum.join(known, ", ")}"}
   end
+
+  defp article(word), do: if(word =~ ~r/^[aeiou]/, do: "an", else: "a")
 
   # --- A group at a morning of exercise ------------------------------------------------------
 
