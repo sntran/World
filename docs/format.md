@@ -1714,7 +1714,10 @@ other clothes are on layer 1), `shape` (a list of `[target, weight]`: the
 body and all the clothes take that shape when the item is worn; the cups
 of `world_bra` lift the bust and make it round) and `drape` (the points
 of the mesh that span the dips of the body, and the steps of the span of
-the fabric; or null). The drape runs when the item fits a body: each of
+the fabric; or null). The swim trunks (`world_swim_trunks`) are of a thin
+polyester, with an elastic band in small folds (`gather` of a piece), a
+cord at the front, and loose legs to the middle of the thigh (`loose`:
+the ease goes from the hip to the hem along a line, at each hem). The drape runs when the item fits a body: each of
 its points moves out along its offset to the mean of its neighbors, and
 never nearer to the body than at the fit.
 
@@ -1762,6 +1765,30 @@ The colors of a person (`hair_color`, `clothes_colors`):
 - At near, the color of an item is a tint of its texture: the factor is
   the color of the order over the mean color of the texture, at most 1.
   A tint can only make a texture darker.
+
+The options of each item of the clothes (`clothes_options`, a list in
+the order of `clothes`, as `clothes_colors`; `World.Sewing.garment/2`).
+An order with no options of the clothes has no key `clothes_options` in
+its full order, so its hash is the same as before the option.
+
+- `hem`: the height of the hem of a garment of World, on the scale of
+  the legs of the base mesh: -1 at the waist, 0 at the hip joint, 1 at
+  the knee, 2 at the ankle (0.5 is the middle of the thigh). The pieces
+  with the lowest hem of the garment take it (the legs of pants or of
+  shorts, the body of a jacket, the panels of an áo dài), and the sewing
+  shop sews the garment again at the build, with its ease at the new
+  hem. null keeps the hem as sewn. A hem over the top of a piece is an
+  error of the check.
+- `print`: `plain`, `checks` or `stripes`, with `print_color` (the color
+  of the lines; white by default) and `print_size` (the width of a check
+  or a stripe, m; 0.03 by default). The color of the item is the ground.
+  The print is on the base mesh at rest (`World.Sewing.print/2`): checks
+  of the size along the three axes, and stripes up and down the body.
+  So it is the same at each level and moves with the cloth. At near the
+  points of the item have the colors of the print over the mean color
+  of its texture, and the material is white; at mid and far the points
+  of the body under the item have the colors of the print. Any item
+  takes a print.
 
 A pose turns bones around their heads: a map of a bone to a list of
 `{axis, degrees}`, with the axes of World when the person stands at

@@ -244,6 +244,7 @@ defmodule World.Orders.Blueprints do
         )
       end,
       check: &origin_check/1,
+      resolve: &no_clothes_options/1,
       sources: ["MakeHuman 1.x, the data of the base mesh, the targets and the assets (CC0)."]
     }
   end
@@ -524,6 +525,7 @@ defmodule World.Orders.Blueprints do
 
         origin_check(o) ++ foot
       end,
+      resolve: &no_clothes_options/1,
       sources: ["The vehicles of World, and a person from the data of MakeHuman (CC0)."]
     }
   end
@@ -590,6 +592,37 @@ defmodule World.Orders.Blueprints do
           doc:
             "A color for each item of the clothes, in their order: at mid and far its color, at near a tint of its texture."
         ),
+        option("clothes_options", :list,
+          default: [],
+          max: 6,
+          item:
+            option("item", :object,
+              fields: [
+                option("hem", :number,
+                  default: nil,
+                  min: -1.0,
+                  max: 2.0,
+                  doc:
+                    "The height of the hem of a garment of World: -1 at the waist, 0 at the hip, 1 at the knee, 2 at the ankle (0.5 is the middle of the thigh). None: the hem as sewn."
+                ),
+                option("print", :choice,
+                  default: "plain",
+                  values: ["plain", "checks", "stripes"],
+                  doc: "A print on the item: checks, or stripes up and down. The color of the item is its ground."
+                ),
+                option("print_color", :color, default: "#ffffff", doc: "The color of the lines of the print."),
+                option("print_size", :number,
+                  default: 0.03,
+                  min: 0.005,
+                  max: 0.2,
+                  unit: "m",
+                  doc: "The width of a check or of a stripe."
+                )
+              ]
+            ),
+          doc:
+            "The options of each item of the clothes, in their order (World.Sewing.garment/2): its hem and its print. An order with none has no key clothes_options in its full order."
+        ),
         option("face", :choice,
           default: "relaxed",
           values: ["relaxed", "neutral"],
@@ -621,16 +654,46 @@ defmodule World.Orders.Blueprints do
         hair_color: o["hair_color"] && rgb(o["hair_color"]),
         clothes: o["clothes"],
         clothes_colors: Enum.map(o["clothes_colors"], &rgb/1),
+        clothes_options: Enum.map(Map.get(o, "clothes_options", []), &clothes_options/1),
         face: o["face"],
         blink: o["blink"]
       ]
   end
 
   defp origin_check(o) do
-    if Enum.all?(o["origin"], fn {_, w} -> w == 0 end),
-      do: [{"options.origin", "must have one weight more than 0"}],
-      else: []
+    origin =
+      if Enum.all?(o["origin"], fn {_, w} -> w == 0 end),
+        do: [{"options.origin", "must have one weight more than 0"}],
+        else: []
+
+    options = Map.get(o, "clothes_options", [])
+
+    more =
+      if length(options) > length(o["clothes"]),
+        do: [{"options.clothes_options", "must have at most one item for each item of the clothes"}],
+        else: []
+
+    items =
+      for {{name, opts}, i} <- Enum.with_index(Enum.zip(o["clothes"], options)),
+          {key, message} <- World.Sewing.check(name, clothes_options(opts)),
+          do: {"options.clothes_options.#{i}.#{key}", message}
+
+    origin ++ more ++ items
   end
+
+  # The options of an item of the clothes for World.People.Human.person/2.
+  defp clothes_options(o),
+    do: %{
+      hem: o["hem"],
+      print: o["print"],
+      print_color: rgb(o["print_color"]),
+      print_size: o["print_size"]
+    }
+
+  # An order with no options of the clothes has no key clothes_options: its hash stays the same as before
+  # the option.
+  defp no_clothes_options(%{"clothes_options" => []} = o), do: {:ok, Map.delete(o, "clothes_options")}
+  defp no_clothes_options(o), do: {:ok, o}
 
   # --- A house -----------------------------------------------------------------------------
 

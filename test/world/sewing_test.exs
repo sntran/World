@@ -283,4 +283,81 @@ defmodule World.SewingTest do
 
     assert length(front) > 50 and Enum.min(front) > 0.2
   end
+
+  # The points of a person under a garment (`World.People.Human.dressed/1`): the body point at rest (the
+  # base mesh, dm), its position in the cloth, and its distance out of the body.
+  defp under(clothes, options \\ []) do
+    base = Data.base().points
+    [{_, _, pts} | _] = Human.dressed(gender: 1.0, clothes: clothes, clothes_options: options) |> Enum.reverse()
+    for {v, q, out} <- pts, v < 13380, do: {elem(base, v), q, out}
+  end
+
+  defp mean(xs), do: Enum.sum(xs) / length(xs)
+
+  test "swim trunks: a thin synthetic cloth, an elastic band with folds and a cord, loose legs to the middle of the thigh" do
+    g = Enum.find(Sewing.garments(), &(&1.name == "world_swim_trunks"))
+    fabric = Sewing.fabrics()[g.fabric]
+    assert g.layer == 1 and g.fabric == "polyester" and fabric.span == 0
+    assert fabric.thick < Sewing.fabrics()["cotton_jersey"].thick
+    assert [{"band", "cord", _}, {"band", "legs", _}, {"cord", "legs", _}] = Sewing.seams("world_swim_trunks")
+
+    l = Sewing.landmarks()
+    pts = under(["world_swim_trunks"])
+    ys = Enum.map(pts, fn {{_, y, _}, _, _} -> y end)
+    # The hem at the middle of the thigh, and the top under the waist.
+    assert_in_delta Enum.min(ys), l.hip + 0.5 * (l.knee - l.hip), 0.25
+    assert Enum.max(ys) < l.waist and Enum.max(ys) > l.hip + 0.8
+
+    # The legs are loose at the hem (2 cm and more out of the thigh), and close at the hips.
+    out = fn keep -> mean(for {p, _, d} <- pts, keep.(p), do: d) end
+    assert out.(fn {_, y, _} -> y < Enum.min(ys) + 0.2 end) > 0.2
+    assert out.(fn {_, y, _} -> abs(y - l.hip) < 0.15 end) < 0.1
+
+    # The band: its folds go in and out round the body.
+    band = for {{_, y, _}, _, d} <- pts, y > l.waist - 0.7 and y < l.waist - 0.4, do: d
+    assert Enum.max(band) - Enum.min(band) > 0.03
+
+    # The cord at the middle of the front stands out of the cloth at the sides of the front.
+    cord = fn x0, x1 ->
+      out.(fn {x, y, z} -> abs(x) >= x0 and abs(x) <= x1 and z > 0 and y > l.waist - 1.3 and y < l.waist - 0.8 end)
+    end
+
+    assert cord.(0.0, 0.15) > cord.(0.4, 0.8) + 0.02
+  end
+
+  test "the options of a garment: a hem for each garment" do
+    l = Sewing.landmarks()
+    low = fn clothes, options -> under(clothes, options) |> Enum.map(fn {{_, y, _}, _, _} -> y end) |> Enum.min() end
+
+    # The hem on the scale of the legs: 1 is the knee; the legs of the trunks and of the pants take it.
+    assert_in_delta low.(["world_swim_trunks"], [%{hem: 0.9}]), l.hip + 0.9 * (l.knee - l.hip), 0.25
+    assert_in_delta low.(["world_pants"], [%{hem: 1.0}]), l.knee, 0.25
+    assert low.(["world_pants"], [%{hem: 1.5}]) < l.knee
+    # A jacket to the waist: -1 is the waist.
+    assert_in_delta low.(["world_softshell"], [%{hem: -0.5}]), l.hip + 0.5 * (l.waist - l.hip), 0.25
+    # With no option the garment is the garment of the files.
+    assert Sewing.garment("world_pants", %{}) == Enum.find(Sewing.garments(), &(&1.name == "world_pants"))
+    assert Sewing.asset("world_pants", %{hem: nil}) == Data.asset("clothes", "world_pants")
+    assert Sewing.asset("shoes01", %{print: "checks"}) == Data.asset("clothes", "shoes01")
+
+    assert Sewing.check("world_swim_trunks", %{hem: -1.0}) == [{:hem, "is over the top of world_swim_trunks"}]
+
+    assert_raise ArgumentError, "is over the top of world_swim_trunks", fn ->
+      Sewing.garment("world_swim_trunks", %{hem: -1.0})
+    end
+
+    assert Sewing.check("shoes01", %{print: "checks"}) == []
+  end
+
+  test "a print: checks and stripes of two colors, on the body at rest" do
+    p = %{kind: "checks", size: 0.05, colors: {:a, :b}}
+    # The color changes at each step of the size (0.5 dm) along each axis, and the stripes only across.
+    for {x, y, z} <- [{0.1, 0.2, 0.3}, {-1.3, 4.1, 0.7}, {2.2, -3.3, -0.9}],
+        d <- [{0.5, 0.0, 0.0}, {0.0, 0.5, 0.0}, {0.0, 0.0, 0.5}] do
+      q = Vec.add({x, y, z}, d)
+      assert Sewing.print(p, {x, y, z}) != Sewing.print(p, q)
+      stripes = %{p | kind: "stripes"}
+      assert Sewing.print(stripes, {x, y, z}) == Sewing.print(stripes, q) == elem(d, 1) > 0
+    end
+  end
 end

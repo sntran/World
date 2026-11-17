@@ -619,6 +619,37 @@ defmodule World.HumanTest do
     assert Enum.all?(red.colors, fn {r, g, b} -> r >= g and r >= b end)
   end
 
+  # A print of an order (`clothes_options`): the colors of the print at the points of the item at near (over
+  # the mean color of its texture, with a white material), and at the points of the body under it at mid
+  # and far. The color of the item is the ground of the print.
+  test "an item with a print of checks or stripes: two colors at each level" do
+    prims = fn level, opts ->
+      figure = Detail.with(level, fn -> Human.person("p", [hair: nil, clothes_colors: [[40, 40, 40]]] ++ opts) end)
+      {figure.nodes |> List.last() |> Map.fetch!(:primitives), figure.materials}
+    end
+
+    print = %{print: "stripes", print_size: 0.03, print_color: [230, 230, 230]}
+
+    # (At near over the mean color of the fabric, 230: 40 is 44, and 230 is 255.)
+    for {level, role, colors} <- [
+          {:near, :clothes_world_swim_trunks, [{44, 44, 44}, {255, 255, 255}]},
+          {:mid, :color_world_swim_trunks, [{40, 40, 40}, {230, 230, 230}]},
+          {:far, :color_world_swim_trunks, [{40, 40, 40}, {230, 230, 230}]}
+        ] do
+      {ps, materials} = prims.(level, clothes: ["world_swim_trunks"], clothes_options: [print])
+      trunks = Enum.find(ps, &(&1.material == role))
+      assert trunks.colors |> Enum.uniq() |> Enum.sort() == colors, "#{level}"
+      assert materials[role]["color"] == [255, 255, 255]
+    end
+
+    # An item of MakeHuman takes a print too; with no print, the item has its colors as before.
+    {ps, _} = prims.(:near, clothes: ["shoes01"], clothes_options: [%{print: "checks", print_size: 0.01}])
+    assert Enum.find(ps, &(&1.material == :clothes_shoes01)).colors |> Enum.uniq() |> length() == 2
+    {ps, materials} = prims.(:near, clothes: ["world_swim_trunks"], clothes_options: [%{print: "plain"}])
+    assert Enum.find(ps, &(&1.material == :clothes_world_swim_trunks)).colors == nil
+    assert materials[:clothes_world_swim_trunks]["color"] != [255, 255, 255]
+  end
+
   test "a child has a flat chest: the shirt over the nipples is not in front of the shirt over the sternum" do
     nipples =
       for {v, d} <- World.People.Data.target("breast/nipple-point-decr"),
