@@ -2604,10 +2604,12 @@ The build (`mix world.build`) writes:
 
 The build gives the same bytes for the same model.
 `mix world.build --check NAME` builds a model again and compares. The
-files of `priv/models` are a reference of what World made: no test and
-no check of CI builds them again. A project that needs a model asks
-World to build it (`docs/factory.md`). The tests of the rules use small
-models of their own (`test/support/fixtures.ex`).
+files of `priv/models` are always the build of the code: CI checks the
+whole catalog at each commit, in parts at the same time (`--part I/N`),
+and also fails on a file of a model that is not in the catalog. A
+project that needs a model asks World to build it (`docs/factory.md`).
+The tests of the rules use small models of their own
+(`test/support/fixtures.ex`).
 
 ## GLB
 

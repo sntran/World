@@ -329,6 +329,7 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 | `edit_order` | Makes the `edits` on the order of a `hash` and keeps the new order, as `POST /orders/HASH/edits`. |
 | `place_order` | Checks an `order` and keeps it, as `POST /orders`: the hash, the full order, the URLs of its files and of its replay page, or the errors. |
 | `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for the owner. |
+| `request_tool` | A project asks for a tool that World does not have (`docs/requests.md`, "When a tool is missing"): its `project`, what the `tool` does in general, the smallest `order` or `drawing` that needs it, and the `gap` (the error or the result). The factory checks the example and keeps the request (`requests/HASH.json`): its hash and the check. |
 | `plan_build` | The plan of the people for an `order` at a `level`, with no build: each task with its trade and its waits, the tasks of each trade, and the estimate of the triangles. |
 | `build` | Keeps an `order` and starts its construction in its `budget`, as `POST /builds`: the id of the build, the URL of the stream of its events, and the URLs of its files. |
 | `open_sculpture` | Opens a live sculpture from its `edits` (the skill `sculpt`, `docs/format.md`, "A sculpture") at a `level`, with a `name` or the hash of its edits: its id, its version, and the URLs of its stream and of its GLB. The node has at most 8 at one time. |
