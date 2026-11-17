@@ -569,4 +569,71 @@ defmodule World.Skills.SculptTest do
              })
            ) == []
   end
+
+  # A wall of 8 m with a soft ball in its middle (at x = 0.5) and a soft ball at each end.
+  defp wall(budget \\ %{"far" => 6_000}) do
+    %{
+      "edits" => [
+        %{"shape" => "box", "size" => [4, 0.15, 0.5], "at" => [0, 0, 0.5], "material" => "plaster"},
+        %{"shape" => "ball", "size" => [0.3], "at" => [0.5, 0, 1], "blend" => 0.3},
+        %{"shape" => "ball", "size" => [0.3], "at" => [-3.5, 0, 1], "blend" => 0.1},
+        %{"shape" => "ball", "size" => [0.3], "at" => [3.5, 0, 1], "blend" => 0.1, "material" => "gray"}
+      ],
+      "cells" => %{"far" => 0.04},
+      "budget" => budget,
+      "bake" => %{"far" => 256}
+    }
+  end
+
+  test "the parts of a large sculpture (W26): steps that fit, parts with a budget, cuts out of the soft blends" do
+    # A small sculpture is one part.
+    assert Skill.tiles(data(), :far, 1_000_000) == nil
+    tiles = Detail.with(:far, fn -> Skill.tiles(wall(), :far, 3_000, 1_000) end)
+    assert length(tiles) >= 2
+    assert Enum.map(tiles, & &1.index) == Enum.to_list(0..(length(tiles) - 1))
+
+    for t <- tiles do
+      # A part has a budget of about `least` or more, and steps of at most about `most` faces.
+      assert 6_000 * t.share >= 500
+      assert length(t.steps) >= 1
+      assert_in_delta Enum.sum(for {_, share} <- t.steps, do: share), 1.0, 1.0e-9
+      # The share is a power of 2^(1/4).
+      assert_in_delta 4 * :math.log2(t.share), round(4 * :math.log2(t.share)), 1.0e-9
+    end
+
+    # A cut misses the blend of the middle ball (from x = 0.2 - 0.3 to x = 0.8 + 0.3) when a plane can:
+    # the planes of the bricks of the estimate are 1.28 m apart, and the planes at -1.28 and 1.28 m
+    # leave a quarter of the faces or more on each side.
+    two = Detail.with(:far, fn -> Skill.tiles(wall(), :far, 15_000, 1) end)
+    sides = for %{box: {{x0, _, _}, {x1, _, _}}} <- two, x <- [x0, x1], abs(x) < 1.0e5, uniq: true, do: x
+    assert sides |> Enum.map(&Float.round(&1, 2)) |> Enum.sort() == [-1.28, 1.28]
+
+    # The outer sides of the outer tiles go to the end of the space.
+    assert Enum.any?(tiles, fn %{box: {{x0, _, _}, _}} -> x0 == -1.0e6 end)
+
+    # With no budget, each step is a part. A sculpture with bones is one part.
+    no_budget = Detail.with(:far, fn -> Skill.tiles(Map.delete(wall(), "budget"), :far, 3_000, 1_000) end)
+    assert Enum.all?(no_budget, &(length(&1.steps) == 1)) and length(no_budget) >= length(tiles)
+    assert Skill.tiles(Map.put(wall(), "bones", []), :far, 3_000) == nil
+  end
+
+  test "a tile is a part of its own; its key has only the edits near it (W27)" do
+    tiles = Detail.with(:far, fn -> Skill.tiles(wall(), :far, 3_000, 1_000) end)
+    [first | _] = tiles
+    {part, more} = Detail.with(:far, fn -> Skill.tile(wall(), first, %{}, %{level: :far, name: "wall"}) end)
+    assert part.name == "wall_0" and part.shapes != []
+    # (Its own maps: the wall has no colors, so its maps are the normals and the finish.)
+    assert more["materials"] |> Map.values() |> hd() |> Map.has_key?("normal_image")
+
+    # A change of the ball at the other end does not change the key of the first tile, and changes the last.
+    moved = put_in(wall(), ["edits", Access.at(3), "size"], [0.35])
+    last = List.last(tiles)
+    assert Skill.tile_key(wall(), first, :far) == Skill.tile_key(moved, first, :far)
+    refute Skill.tile_key(wall(), last, :far) == Skill.tile_key(moved, last, :far)
+
+    # The faces before the collapse (an estimate from the box of the edits), and the roles.
+    assert Skill.faces(wall(), :far) > 10_000
+    assert Skill.faces(%{"edits" => [%{"shape" => "ball", "size" => [1], "mode" => "subtract"}]}, :far) == 0
+    assert Skill.roles(wall(), :far) |> Enum.sort() == ["gray", "paint", "plaster"]
+  end
 end
