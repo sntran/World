@@ -15,7 +15,7 @@ defmodule World.People do
   traveler). `exercise/2` is a group at a morning of exercise (tai chi,
   yoga or aerobics), as on the beach of Vũng Tàu.
   """
-  alias World.{Assembly, Frame, GLB, Part}
+  alias World.{Assembly, Detail, Frame, GLB, Part}
   alias World.People.{Data, Human, Props}
   require Data
   alias World.Vehicles.{ChevyBolt, FordTransit, HondaVision, RoyalEnfieldHimalayan, TouringBicycle, Van}
@@ -316,18 +316,25 @@ defmodule World.People do
         at =
           {(rem(i - 1, 3) - 1) * 1.4 + (jitter_x - 0.5) * 0.2, 2.2 + div(i - 1, 3) * 1.5 + (jitter_y - 0.5) * 0.2, 0.0}
 
+        # (Each person in a process of its own: only the person comes
+        # back, and its garbage goes with the process. So the memory of a
+        # group is the people and the garbage of one person, not of all.)
         person =
-          Human.person(
-            "person_#{i}",
-            opts ++ fan.("r") ++ [pose: "stand", animations: [{routine, delay: Float.round(delay * 0.35, 2)}]]
-          )
+          Detail.apart(fn ->
+            Human.person(
+              "person_#{i}",
+              opts ++ fan.("r") ++ [pose: "stand", animations: [{routine, delay: Float.round(delay * 0.35, 2)}]]
+            )
+          end)
 
         {"person_#{i}", person, at: Part.port("place_#{i}", at, {0, 0, 1}, {0, -1, 0}), port: "ground"}
       end
 
     Assembly.new(
       "exercise_" <> routine,
-      Human.person("leader", leader ++ fan.("l") ++ [pose: "stand", animations: [{routine, mirror: true}]]),
+      Detail.apart(fn ->
+        Human.person("leader", leader ++ fan.("l") ++ [pose: "stand", animations: [{routine, mirror: true}]])
+      end),
       root: "leader",
       kind: :person,
       sources: ["People of World from the data of MakeHuman (CC0), with the routine #{routine} of World.People.Pose."]

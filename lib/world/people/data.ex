@@ -72,7 +72,10 @@ defmodule World.People.Data do
 
   @doc """
   Reads the targets of these names that the cache does not have, with one
-  open of `targets.pack`, and keeps each one decoded (`target/1`).
+  open of `targets.pack`, and keeps each one packed (`target/1` decodes
+  it at each call). A decoded target is about 1.7 MB of terms and a
+  packed one about 107 kB: a group of different people uses some tens of
+  targets, and the edge has 128 MB.
   """
   def load_targets(names) do
     missing = for name <- Enum.uniq(names), :persistent_term.get({__MODULE__, {:target, name}}, nil) == nil, do: name
@@ -88,7 +91,7 @@ defmodule World.People.Data do
           data = :zlib.uncompress(block)
           size = div(byte_size(data), 4)
           <<idx::binary-size(^size), dx::binary-size(^size), dy::binary-size(^size), dz::binary-size(^size)>> = data
-          decode(:target, name, fn -> {idx, dx, dy, dz} end)
+          :persistent_term.put({__MODULE__, {:target, name}}, {idx, dx, dy, dz})
         end
       after
         :file.close(file)
@@ -450,19 +453,17 @@ defmodule World.People.Data do
   @doc "A target by its name: a list of `{point, {dx, dy, dz}}`, in decimeters."
   def target(name) do
     load_targets([name])
-    :persistent_term.get({__MODULE__, {:target, name}})
+    decode(:persistent_term.get({__MODULE__, {:target, name}}))
   end
 
   @doc "A unit of an expression by its name (`units/ORIGIN/mouth-UNIT`), as `target/1`."
-  def expression(name), do: decode(:expression, name, fn -> Map.fetch!(expressions(), name) end)
+  def expression(name), do: decode(Map.fetch!(expressions(), name))
 
-  # (The table is read only when the cache does not have the name.)
-  defp decode(kind, name, entry) do
-    cached({kind, name}, fn ->
-      {idx, dx, dy, dz} = entry.()
-      indices = Enum.scan(for(<<d::little-16 <- idx>>, do: d), &(&1 + &2))
-      [xs, ys, zs] = for b <- [dx, dy, dz], do: for(<<v::little-signed-16 <- b>>, do: v * 0.0025)
-      Enum.zip_with([indices, xs, ys, zs], fn [i, x, y, z] -> {i, {x, y, z}} end)
-    end)
+  # The points and the moves of a packed target: the steps of the indices
+  # and the moves on each axis, each in 16 bits.
+  defp decode({idx, dx, dy, dz}) do
+    indices = Enum.scan(for(<<d::little-16 <- idx>>, do: d), &(&1 + &2))
+    [xs, ys, zs] = for b <- [dx, dy, dz], do: for(<<v::little-signed-16 <- b>>, do: v * 0.0025)
+    Enum.zip_with([indices, xs, ys, zs], fn [i, x, y, z] -> {i, {x, y, z}} end)
   end
 end
