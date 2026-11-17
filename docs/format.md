@@ -761,7 +761,13 @@ An edit can be only at some levels:
   edit is in the sculpture only at those levels. The inside of a large
   model (a room, a well for a stair, an opening for a window) is at
   `near` only: at `mid` and `far` the model is solid, and a paint is in
-  the place of the opening.
+  the place of the opening. An edit in a group (below) can have
+  `levels` too, and so can an edit of the shape `group`: then all the
+  edits of the group are only at those levels. An edit in a group is at
+  a level only when its `levels` and the `levels` of the edit of the
+  shape `group` both have that level. So the details
+  of a group (the joints of a course of blocks) stay out of `mid` and
+  `far`.
 
 An edit can have copies, so a few edits make much:
 
@@ -781,14 +787,15 @@ A group is a list of edits with a name, in `groups` of the data
 (`{"scale": [...edits...]}`; no group in a group). An edit of the shape
 `group` uses it: `{"shape": "group", "group": NAME}` with `at`, `axis`
 and `up` (the place of the origin of the group), a `scale` (its sizes,
-its places and its blends times the scale), and a `mirror` and a `repeat`
-(each copy is the whole group). A sculpture has at most 10,000 edits
-with their copies.
+its places and its blends times the scale), a `mirror` and a `repeat`
+(each copy is the whole group), and `levels`. A sculpture has at most
+10,000 edits with their copies.
 
 ```json
 {"groups": {"eye": [
    {"shape": "ball", "size": [0.012], "color": "#f4f0e6"},
-   {"shape": "ball", "size": [0.006], "at": [0.008, 0, 0], "color": "#101010"}]},
+   {"shape": "ball", "size": [0.006], "at": [0.008, 0, 0], "color": "#101010",
+    "levels": ["near", "mid"]}]},
  "edits": [
    {"shape": "ellipsoid", "size": [0.05, 0.12, 0.05], "color": "#a88840"},
    {"shape": "group", "group": "eye", "at": [0.04, 0.08, 0.015], "mirror": "x"},

@@ -151,6 +151,57 @@ defmodule World.Skills.SculptTest do
     assert Enum.map(Skill.check(bad, "s"), &elem(&1, 0)) == ["s.edits.1.levels", "s.edits.2.levels"]
   end
 
+  test "an edit in a group and an edit of the shape group have levels: the joints of a course stay out of mid and far" do
+    # A course of blocks: each block is a group of a box and a joint (a thin cut) at near only.
+    block = %{"shape" => "box", "size" => [0.15, 0.2, 0.1]}
+    joint = %{"shape" => "box", "size" => [0.02, 0.25, 0.11], "at" => [0.15, 0, 0], "mode" => "subtract"}
+    groups = %{"block" => [block, Map.put(joint, "levels", ["near"])]}
+    course = %{"shape" => "group", "group" => "block", "repeat" => %{"count" => 4, "move" => [0.3, 0, 0]}}
+    # A cap of the course as a group at near and mid only.
+    cap = %{"shape" => "group", "group" => "block", "at" => [0.45, 0, 0.2], "levels" => ["near", "mid"]}
+    data = %{"groups" => groups, "edits" => [course, cap], "cells" => %{"near" => 0.02, "mid" => 0.02, "far" => 0.02}}
+    assert Skill.check(data, "s") == []
+
+    # Near: 4 blocks and 4 joints, and the cap with its joint. Mid: 4 blocks and the cap. Far: 4 blocks.
+    count = fn level -> length(Skill.edits(data["edits"], groups, level)) end
+    assert {count.(:near), count.(:mid), count.(:far)} == {10, 5, 4}
+    # With no level, each edit: the solids of an order.
+    assert length(Skill.edits(data["edits"], groups)) == 10
+    # The field at a level is the field of the edits of that level by hand.
+    blocks = for i <- 0..3, do: Map.put(block, "at", [0.3 * i, 0, 0])
+    joints = for i <- 0..3, do: Map.put(joint, "at", [0.3 * i + 0.15, 0, 0])
+    top = [Map.put(block, "at", [0.45, 0, 0.2]), Map.put(joint, "at", [0.6, 0, 0.2])]
+    hand = Enum.zip(blocks, joints) |> Enum.flat_map(&Tuple.to_list/1)
+    assert same_field?(Skill.edits(data["edits"], groups, :near), Skill.edits(hand ++ top))
+    assert same_field?(Skill.edits(data["edits"], groups, :mid), Skill.edits(blocks ++ [hd(top)]))
+    assert same_field?(Skill.edits(data["edits"], groups, :far), Skill.edits(blocks))
+
+    # The people make each level: the joints cut the course at near only (faces in the course), and no cap at far.
+    top_of = fn level ->
+      model = Detail.with(level, fn -> Drawing.build(drawing(data)) end)
+      {"stone", part, _} = hd(model.nodes)
+      points = Enum.flat_map(part.shapes, & &1.points)
+      cut = Enum.count(points, fn {x, y, z} -> x > 0 and x < 1 and abs(y) < 0.15 and abs(z) < 0.05 end)
+      {points |> Enum.map(&elem(&1, 2)) |> Enum.max(), cut}
+    end
+
+    {near_top, near_cut} = top_of.(:near)
+    {mid_top, mid_cut} = top_of.(:mid)
+    {far_top, far_cut} = top_of.(:far)
+    assert near_top > 0.25 and mid_top > 0.25 and far_top < 0.15
+    assert near_cut > 0 and mid_cut == 0 and far_cut == 0
+    assert Skill.estimate(data, :far) > 0
+
+    # The errors: the levels of an edit of the shape group, and of an edit in a group.
+    bad = %{
+      data
+      | "groups" => %{"block" => [block, Map.put(joint, "levels", ["low"])]},
+        "edits" => [course, %{cap | "levels" => []}]
+    }
+
+    assert Enum.map(Skill.check(bad, "s"), &elem(&1, 0)) == ["s.groups.block.1.levels", "s.edits.1.levels"]
+  end
+
   test "an edit with no turn has the axes of the sculpture: the long side of an ellipsoid stays on its axis" do
     [long_y, along_y] =
       Skill.edits([

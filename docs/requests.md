@@ -99,6 +99,12 @@ the size of the head of the person.
 The animal `buffalo_calf` is the calf of a water buffalo, and the plant
 `areca` is the areca palm.
 
+In a drawing of edits, an edit can be only at some levels (`levels`):
+an edit at the top, an edit in a group, or an edit of the shape `group`
+(all the edits of the group). Put the small details of a group (the
+joints of a course of blocks) at `near` only, so that the mid and far
+levels stay simple.
+
 ## An order
 
 An order is JSON. Each key but `blueprint` is optional.

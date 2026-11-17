@@ -5,9 +5,10 @@ defmodule World.Skills.Sculpt do
 
   Its data: `edits` (a list of 1 to 10,000 edits: each with its `shape`
   and its `size`, and `at`, `axis`, `up`, `mode`, `blend`, `material`,
-  `color`, and its copies: `mirror` and `repeat`), `groups` (a name to
-  a list of edits, that an edit of the shape `group` uses at a place and
-  a `scale`),
+  `color`, its copies: `mirror` and `repeat`, and its `levels`), `groups`
+  (a name to a list of edits, that an edit of the shape `group` uses at a
+  place and a `scale`; an edit in a group and an edit of the shape
+  `group` can have `levels` too),
   and `ports`, `sources`, `budget` (the most triangles at `near`, `mid`
   and `far`) and `cells` (the size of the cells at `near`, `mid` and
   `far`, m). With no `cells` for a level and a budget, the cells fit the
@@ -43,7 +44,7 @@ defmodule World.Skills.Sculpt do
     "shiny_metal" => {0.15, 1.0},
     "rough_metal" => {0.8, 1.0}
   }
-  @use ~w(shape group at axis up scale mirror repeat)
+  @use ~w(shape group at axis up scale mirror repeat levels)
   @most 10_000
   @size 1_000
   # The atoms of the names of the shapes and of the modes.
@@ -77,7 +78,7 @@ defmodule World.Skills.Sculpt do
 
     World.Skill.keys(data, path, @keys, ~w(edits)) ++
       optional(data, "groups", path, &groups/2) ++
-      optional(data, "edits", path, &edits(&1, &2, groups)) ++
+      optional(data, "edits", path, &checked(&1, &2, groups)) ++
       optional(data, "ports", path, &Drawing.check_ports/2) ++
       optional(data, "sources", path, &sources/2) ++
       optional(data, "budget", path, &budget/2) ++
@@ -517,25 +518,35 @@ defmodule World.Skills.Sculpt do
 
   # The edits of a sculpture at a level: an edit with `levels` is only
   # in the list at those levels (the inside of a large model at near).
-  defp all(data, level) do
-    here = for e <- data["edits"], Atom.to_string(level) in Map.get(e, "levels", ~w(near mid far)), do: e
-    edits(here, Map.get(data, "groups", %{}))
-  end
+  defp all(data, level), do: edits(data["edits"], Map.get(data, "groups", %{}), level)
 
   @doc """
   The edits of a sculpture from its data (`World.SDF.edit/3`): each edit
   with its copies (`mirror`, `repeat`), and the edits of each group that
   an edit of the shape `group` uses, at its place and its scale.
+
+  With a level (`:near`, `:mid` or `:far`), only the edits at that
+  level: an edit with `levels` is only at those levels. This is true for
+  an edit at the top, for an edit in a group, and for an edit of the
+  shape `group` (all the edits of the group). With no level, all the
+  edits.
   """
-  def edits(list, groups \\ %{}), do: list |> Enum.flat_map(&specs(&1, groups)) |> Enum.map(&to_edit/1)
+  def edits(list, groups \\ %{}, level \\ nil),
+    do: list |> Enum.filter(&here?(&1, level)) |> Enum.flat_map(&specs(&1, groups, level)) |> Enum.map(&to_edit/1)
+
+  # True when an edit of the data is at the level (each edit with no level).
+  defp here?(_e, nil), do: true
+  defp here?(e, level), do: Atom.to_string(level) in Map.get(e, "levels", ~w(near mid far))
 
   # The plain edits of an edit of the data: a shape, its sizes, its frame.
-  defp specs(%{"shape" => "group"} = e, groups) do
+  # The edits of a group that are not at the level stay out.
+  defp specs(%{"shape" => "group"} = e, groups, level) do
     {place, k} = {frame(e), Map.get(e, "scale", 1) / 1}
 
     group =
       groups[e["group"]]
-      |> Enum.flat_map(&specs(&1, %{}))
+      |> Enum.filter(&here?(&1, level))
+      |> Enum.flat_map(&specs(&1, %{}, level))
       |> Enum.map(fn s ->
         at = %{s.frame | at: Vec.scale(s.frame.at, k)}
 
@@ -553,7 +564,7 @@ defmodule World.Skills.Sculpt do
     for copy <- copies(e), s <- group, do: copy.(s)
   end
 
-  defp specs(e, _groups) do
+  defp specs(e, _groups, _level) do
     spec = %{
       shape: @atoms[e["shape"]],
       size: size(e["shape"], e["size"]),
@@ -693,19 +704,20 @@ defmodule World.Skills.Sculpt do
         if is_integer(n) and n in 1..8, do: [], else: [{p, "must be a count of shells from 1 to 8"}]
       end) ++
       optional(v, "length", path, &number(&1, &2, 0.0005, 0.05)) ++
-      optional(v, "thin", path, &edits(&1, &2, groups))
+      optional(v, "thin", path, &checked(&1, &2, groups))
   end
 
   defp strands(_v, path, _groups), do: [{path, "must be {\"shells\": n, \"length\": m, \"thin\": [edits]}"}]
 
-  defp edits(v, path, groups) when is_list(v) and v != [] and length(v) <= @most do
+  # The check of a list of edits (each error with its path).
+  defp checked(v, path, groups) when is_list(v) and v != [] and length(v) <= @most do
     errors = v |> Enum.with_index() |> Enum.flat_map(fn {e, i} -> edit(e, "#{path}.#{i}", groups) end)
     # With no error, the count of the edits with their copies.
     total = if errors == [], do: v |> Enum.map(&count(&1, groups)) |> Enum.sum(), else: 0
     if total > @most, do: [{path, "has #{total} edits with their copies: at most #{@most}"}], else: errors
   end
 
-  defp edits(_v, path, _groups), do: [{path, "must be a list of 1 to #{@most} edits"}]
+  defp checked(_v, path, _groups), do: [{path, "must be a list of 1 to #{@most} edits"}]
 
   # The groups: a name to a list of edits (no group in a group).
   defp groups(v, path) when is_map(v) and map_size(v) <= 64 do
@@ -714,7 +726,7 @@ defmodule World.Skills.Sculpt do
 
       cond do
         not (name =~ ~r/^[a-z0-9_]{1,40}$/) -> [{p, "must have a name of 1 to 40 letters a-z, digits or _"}]
-        is_list(list) and list != [] and length(list) <= 1_000 -> edits(list, p, nil)
+        is_list(list) and list != [] and length(list) <= 1_000 -> checked(list, p, nil)
         true -> [{p, "must be a list of 1 to 1000 edits"}]
       end
     end)
@@ -727,6 +739,7 @@ defmodule World.Skills.Sculpt do
     World.Skill.keys(e, path, @use, ~w(group)) ++
       optional(e, "group", path, &choice(&1, &2, groups |> Map.keys() |> Enum.sort())) ++
       optional(e, "scale", path, &number(&1, &2, 0.001, 1_000)) ++
+      optional(e, "levels", path, &levels/2) ++
       placed(e, path)
   end
 
@@ -997,7 +1010,7 @@ defmodule World.Skills.Sculpt do
 
       if is_map(d) do
         World.Skill.keys(d, p, ~w(edits cells budget levels), ~w(edits)) ++
-          optional(d, "edits", p, &edits(&1, &2, groups)) ++
+          optional(d, "edits", p, &checked(&1, &2, groups)) ++
           optional(d, "cells", p, &cells/2) ++
           optional(d, "budget", p, &budget/2) ++
           optional(d, "levels", p, &levels/2)
