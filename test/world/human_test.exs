@@ -877,15 +877,22 @@ defmodule World.HumanTest do
           [clothes: ["mindfront_shoes_biker_boots_male"]],
           [gender: 0.0, hair: "bob01"],
           [hair: "afro01"],
-          [hair: nil, clothes: []]
+          [hair: nil, clothes: []],
+          [age: 8, gender: 0.0, pose: "stand"]
         ] do
-      [{_, near} | low] = for level <- [:near, :mid, :far], do: Scene.bounds(scene.(opts, level))
+      [{near_lo, near_hi} | low] = for level <- [:near, :mid, :far], do: Scene.bounds(scene.(opts, level))
+      height = elem(near_hi, 2) - elem(near_lo, 2)
 
-      # The feet are on the ground (the shoes are a color on the feet at mid and far: 2.9 cm for these boots),
-      # and the top is at most 3 cm lower (it was 1.2 % with no hair at far).
+      # The near level stands on the ground: the shoes, also where a heel of the body is under the sole of a
+      # shoe (2 mm for the shoes of the woman). The lowest point of mid and far is the lowest point of near
+      # within 2 mm (the shoes are a color on the feet at mid and far: 2.9 cm for these boots; a low-poly
+      # foot can go 3 mm under a bare foot), and the heights agree within 0.5 % (the top of the hair at far
+      # was 1.7 % lower for afro01).
+      assert_in_delta elem(near_lo, 2), 0.0, 0.001, inspect(opts)
+
       for {lo, hi} <- low do
-        assert_in_delta elem(lo, 2), 0.0, 0.004
-        assert elem(near, 2) - elem(hi, 2) < 0.03 and elem(hi, 2) <= elem(near, 2) + 0.001
+        assert_in_delta elem(lo, 2), elem(near_lo, 2), 0.002, inspect(opts)
+        assert_in_delta (elem(hi, 2) - elem(lo, 2)) / height, 1.0, 0.005, inspect(opts)
       end
     end
 

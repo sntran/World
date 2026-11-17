@@ -826,10 +826,14 @@ defmodule World.People.Human do
     %Frame{x: flip.(m.x), y: flip.(m.y), z: flip.(m.z), at: head}
   end
 
-  # The height of the ground (meters): under the lowest point of the body
-  # or of the clothes (the soles of the shoes).
+  # The height of the ground (meters): under the lowest point that shows
+  # at near, of the body or of the clothes (the soles of the shoes). A
+  # point of the body that an item hides does not count: the heel of a
+  # foot can be under the sole of a shoe, and the person then stands on
+  # the shoe.
   defp ground(base, points, clothes) do
-    body = for f <- Map.fetch!(base.groups, "body"), {v, _} <- f, do: elem(points, v)
+    hidden = clothes |> Enum.map(& &1.fit.delete) |> Enum.reduce(MapSet.new(), &MapSet.union/2)
+    body = for f <- Map.fetch!(base.groups, "body"), {v, _} <- f, not MapSet.member?(hidden, v), do: elem(points, v)
     worn = Enum.flat_map(clothes, &Tuple.to_list(fit_positions(&1, points)))
     (body ++ worn) |> Enum.map(&elem(&1, 1)) |> Enum.min() |> Kernel.*(0.1)
   end
@@ -1048,12 +1052,35 @@ defmodule World.People.Human do
   # The hair and the eyes at far, in few faces. The scalp has the color of
   # the hair, and the hair has its form, so a person is as high as at near
   # and long hair is long. The points of the mesh in one cell of a grid
-  # become the one of them nearest to their middle, and the cells are the
-  # smallest that give `most` triangles at the most.
+  # become the one of them farthest from the middle of the mesh, so the
+  # outline stays, and the cells are the smallest that give `most`
+  # triangles at the most. Then the points stretch to the box of the
+  # whole mesh (`boxed/2`): the top of the hair is the top of the person.
   defp few(role, a, most, uv, keep, points, weights, ground) do
     faces = Data.cached({:few, role, a.name}, fn -> few_faces(a, most, keep) end)
     {pts, wts} = fit_points(a, points, weights)
+    pts = boxed(pts, faces |> List.flatten() |> Enum.map(&elem(&1, 0)) |> Enum.uniq())
     mesh(role, faces, &elem(pts, &1), uv, &elem(wts, &1), ground, [])
+  end
+
+  # The points `used` of a mesh, stretched on each axis from the middle of
+  # their box to the box of all the points of the mesh. (A side of the box
+  # of the used points at the middle stays.)
+  defp boxed(pts, used) do
+    {lo, hi} = Vec.bounds(Tuple.to_list(pts))
+    {ulo, uhi} = Vec.bounds(Enum.map(used, &elem(pts, &1)))
+    mid = Vec.lerp(ulo, uhi, 0.5)
+
+    axis = fn p, k ->
+      {c, q} = {elem(mid, k), elem(p, k)}
+      {to, from} = if q > c, do: {elem(hi, k), elem(uhi, k)}, else: {elem(lo, k), elem(ulo, k)}
+      if abs(from - c) < 1.0e-9, do: q, else: c + (q - c) * (to - c) / (from - c)
+    end
+
+    Enum.reduce(used, pts, fn v, acc ->
+      p = elem(pts, v)
+      put_elem(acc, v, {axis.(p, 0), axis.(p, 1), axis.(p, 2)})
+    end)
   end
 
   defp few_faces(a, most, keep) do
@@ -1069,13 +1096,14 @@ defmodule World.People.Human do
   # The triangles of a mesh with the points of each cell of `size` as one point.
   defp clustered(at, tris, uvs, size) do
     cell = fn {x, y, z} -> {floor(x / size), floor(y / size), floor(z / size)} end
+    middle = at |> Tuple.to_list() |> Vec.mean()
 
     one =
       0..(tuple_size(at) - 1)
       |> Enum.group_by(&cell.(elem(at, &1)))
       |> Enum.flat_map(fn {_, list} ->
-        middle = list |> Enum.map(&elem(at, &1)) |> Vec.mean()
-        best = Enum.min_by(list, &Vec.len(Vec.sub(elem(at, &1), middle)))
+        out = list |> Enum.map(&elem(at, &1)) |> Vec.mean() |> Vec.sub(middle) |> Vec.norm()
+        best = Enum.max_by(list, &Vec.dot(Vec.sub(elem(at, &1), middle), out))
         for v <- list, do: {v, best}
       end)
       |> Map.new()
@@ -1089,14 +1117,22 @@ defmodule World.People.Human do
 
   # The soles of the shoes of a low-poly body: the shoes are only a color
   # on its feet, so each point of the sole of a foot (at most 1.5 cm above
-  # the lowest point of the body) goes down to the ground of the shoes.
+  # the lowest point of the body) goes to the ground of the shoes. With
+  # bare feet the soles stay. No point goes under the ground (the
+  # low-poly foot can be a little lower than the foot of the base mesh).
   # Then the person stands on the ground, as at near.
-  defp soles(pts, bare, ground) when bare - ground < 0.001, do: pts
-
   defp soles(pts, bare, ground) do
+    shoes = abs(bare - ground) >= 0.001
+
     pts
     |> Tuple.to_list()
-    |> Enum.map(fn {x, y, z} -> if y * 0.1 < bare + 0.015, do: {x, ground * 10, z}, else: {x, y, z} end)
+    |> Enum.map(fn {x, y, z} ->
+      cond do
+        shoes and y * 0.1 < bare + 0.015 -> {x, ground * 10, z}
+        y * 0.1 < ground -> {x, ground * 10, z}
+        true -> {x, y, z}
+      end
+    end)
     |> List.to_tuple()
   end
 

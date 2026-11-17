@@ -1728,11 +1728,15 @@ overalls over a white shirt) gives each point the color of the swatch of
 its texture (`NAME.swatch.png`, 64 by 64 texels, `scripts/swatches.py`)
 at the place of the item over that point, tinted by the color of the
 order as at near, and its material is white; a garment of World is of
-one fabric, and its material has its color. Each point of the sole of a foot goes down to the ground
-of the shoes: a person stands on z = 0 at each level. At far the scalp
+one fabric, and its material has its color. The ground is under the
+lowest point that shows at near (a heel of the body under the sole of a
+shoe does not count). Each point of the sole of a foot goes to the
+ground of the shoes, and no point goes under the ground: a person
+stands on z = 0 at each level, within 2 mm. At far the scalp
 has the color of the hair, and the hair has its form in 80 triangles at
-the most (the points of its mesh in one cell of a grid become one
-point), so a person is as high as at near (3 cm less at the most) and
+the most (the points of its mesh in one cell of a grid become the point
+of the cell farthest out, and they stretch to the box of the whole
+hair), so a person is as high as at near (within 0.5 %) and
 long hair is long. The eyes at far have 24 triangles. A face under
 two items has the color of the item on the outer layer, then of the
 item that covers the most of its points; with the same count, the item
