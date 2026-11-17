@@ -15,9 +15,28 @@
   "assets": { "directory": "./site" },
   // edge.com goes into the Worker as bytes.
   "rules": [{ "type": "Data", "globs": ["**/*.com"], "fallthrough": true }],
-  // The VM of World runs in the Durable Object Beam (worker.js).
-  "durable_objects": { "bindings": [{ "name": "BEAM", "class_name": "Beam" }] },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Beam"] }],
+  // The VM of World runs in the Durable Object Beam (worker.js): the
+  // node "world". A part of a parts list that R2 does not have builds in
+  // one of the classes Part0 to Part7 (objectOf, handler.js), each with
+  // one object: Cloudflare can run the objects of one class in one
+  // isolate, and they then share its 128 MB.
+  "durable_objects": {
+    "bindings": [
+      { "name": "BEAM", "class_name": "Beam" },
+      { "name": "PART0", "class_name": "Part0" },
+      { "name": "PART1", "class_name": "Part1" },
+      { "name": "PART2", "class_name": "Part2" },
+      { "name": "PART3", "class_name": "Part3" },
+      { "name": "PART4", "class_name": "Part4" },
+      { "name": "PART5", "class_name": "Part5" },
+      { "name": "PART6", "class_name": "Part6" },
+      { "name": "PART7", "class_name": "Part7" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Beam"] },
+    { "tag": "v2", "new_sqlite_classes": ["Part0", "Part1", "Part2", "Part3", "Part4", "Part5", "Part6", "Part7"] }
+  ],
   // The orders and the files that the VM built. Make the bucket before
   // the first deploy: npx wrangler r2 bucket create world
   "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world" }],

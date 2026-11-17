@@ -1,7 +1,7 @@
 // The tests of handler.js, with a fake VM and a fake R2 bucket.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { handler, objectOf, orderOf, split, urlKey } from '../../handler.js';
+import { PARTS, handler, objectOf, orderOf, split, urlKey } from '../../handler.js';
 import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
 
 const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
@@ -23,10 +23,14 @@ test('the name and the file of a path', () => {
   assert.equal(split('van.txt'), null);
 });
 
-test('a part builds in a Durable Object of its own; each other request goes to the node', () => {
+test('a part builds in one of the builders of the parts, from its key; each other request goes to the node', () => {
   const key = '0123456789abcdef0123456789abcdef';
-  assert.equal(objectOf(new Request(`http://vm/p/${key}.glb`)), 'p-0123456789abcdef0123456789abcd');
-  assert.ok(objectOf(new Request(`http://vm/p/${key}.glb`)).length <= 32);
+  // 0x01234567 = 19088743, and 19088743 mod 8 = 7.
+  assert.equal(objectOf(new Request(`http://vm/p/${key}.glb`)), 'part7');
+  assert.equal(objectOf(new Request(`http://vm/p/0000000a${key.slice(8)}.glb`)), 'part2');
+  const used = new Set();
+  for (let i = 0; i < 64; i++) used.add(objectOf(new Request(`http://vm/p/${i.toString(16).padStart(8, '0')}${key.slice(8)}.glb`)));
+  assert.deepEqual([...used].sort(), Array.from({ length: PARTS }, (_, i) => `part${i}`).sort());
   for (const path of ['/orders', '/build?level=far&file=elements', `/builds/b/elements/${key}.glb`, '/p/xyz.glb', `/p/${key}.png`]) {
     assert.equal(objectOf(new Request(`http://vm${path}`)), 'world');
   }

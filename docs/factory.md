@@ -56,7 +56,7 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
-| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the VM builds it from its recipe and keeps it. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. |
+| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else a builder of the parts builds it from its recipe and keeps it: one of 8 VMs, from its key, so a project that asks for all the parts of a list at one time gets them built at the same time ("The builders of the parts"). A large part that takes more than 45 s gives 202 with `retry-after`: ask again. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
@@ -447,7 +447,7 @@ version of the blueprint (`van@2`): the old version stays.
 | Order | Where |
 |---|---|
 | A model of the catalog | `mix world.build` builds it natively, and the files are in the repository. CI checks at each commit that they are the build of the code. The Worker serves them as static files: no build at a request. |
-| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
+| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. A part of a parts list builds in one of the 8 builders of the parts ("The builders of the parts"). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 ## The server on a computer
 
@@ -747,6 +747,67 @@ into one model, and it does not keep a whole model in its memory
   `WORLD_MEMORY_MB` (100 MB at the edge): the order gets an error, and
   the VM and the other orders go on. The check of an order with a large
   sculpture does not build it at far.
+
+### The builders of the parts
+
+One VM builds one part at a time (`World.Line`), because a large part
+takes most of its memory. So a part that R2 does not have builds in one
+of 8 builders of the parts: the Durable Object classes `Part0` to
+`Part7` (`wrangler.jsonc`), each with one object and its own VM, and
+the first 8 hex digits of the key of the part, modulo 8, choose the
+builder (`objectOf/1` of `handler.js`). The node `world` (the orders,
+the parts lists, the constructions) is a class of its own.
+
+- A project that asks for all the parts of a list at one time gets up
+  to 8 parts built at the same time; two parts with the same builder
+  build one after the other. A second request of a part goes to the same
+  builder, which builds it one time.
+- Each builder is a class of its own because Cloudflare can run the
+  objects of one class in one isolate, and they then share its 128 MB.
+  The log line `beam: memory N MB (… VMs in this isolate: M MB)` of
+  beam.com shows two VMs in one isolate.
+- `node scripts/edit-time.mjs BASE HASH LEVEL EDITS` measures the time
+  from an edit of an order to its whole new level, as a project gets
+  it: the edit, the parts list, then all its parts at one time.
+
+### What the guard needs from the runtime
+
+The guard reads the wrong memory. At the edge the VM runs with `-Mea
+min` (no allocators of ERTS), so `:erlang.memory/1` is not supported,
+and `World.memory/0` adds the memory of each process and of each binary
+that a process holds. The edge stops the VM on another number: the
+linear memory of the WebAssembly instance of the VM (the log line
+`beam: memory N MB` of beam.com), in the 128 MB of its isolate. The two
+are not the same:
+
+- The linear memory has more: the code, the atoms, the ETS tables, the
+  persistent terms (the caches of the people), the stacks of the
+  threads, and the free blocks and the gaps of the C allocator.
+- The linear memory never gets smaller. A build that frees 40 MB leaves
+  the memory at its peak; the next build uses those 40 MB again, but the
+  memory grows when a block of the size that it asks for is not free.
+- A garbage collection of a large heap needs the old heap and the new
+  heap at one time, for a short time. The guard looks each 25 ms, and it
+  can miss that peak.
+- Cloudflare can run more than one VM in one isolate (the Durable Objects
+  of one class). Then the limit of one VM is 128 MB less the memories of
+  the other VMs, and the VM cannot see them.
+
+So the guard can stop a build that still fits, and it can miss a build
+that stops the VM. What the runtime must give to the VM (for BEAM.com),
+as a function that a process calls each 25 ms with no request to
+JavaScript that waits, or as a NIF of the runtime:
+
+| What | Why |
+|---|---|
+| The size of the linear memory of the VM now, in bytes (the size of its `WebAssembly.Memory`: `HEAPU8.length`). | The number on which the edge stops the VM. |
+| The bytes of the linear memory that the emulator uses now: the top of the heap of the C allocator, less its free blocks. | The room that the VM has before its memory must grow. |
+| The most memory of the VM: the limit of the isolate (128 MB), less the memory of the JavaScript of the isolate, less the linear memories of the other VMs of the isolate (the runtime knows them: `isolateMemory()` in `runtime/worker.js` of beam.com). | The limit of the guard. `WORLD_MEMORY_MB` is a guess of it now. |
+| A message to a process of the VM when the linear memory grows past a size that the process gives (and the size of the request to grow). | The guard then sees each growth, also a short one between two looks. |
+
+With these, `World.Guard` stops a build when the used bytes plus the
+growth that it asks for go over the most memory of the VM, before the
+edge stops the VM.
 
 ### Hải Âu
 

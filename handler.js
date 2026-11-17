@@ -75,16 +75,21 @@ const FILES = [
 const HASH = /^[0-9a-f]{32}$/;
 const PART = /^[0-9a-f]{32}$/;
 
-// The Durable Object of a request to the VM (worker.js). A part (GET
-// /p/KEY.glb) builds in an object of its own, named from its key: the
-// parts of one list build at the same time, each in the memory of its
-// own VM (128 MB), and a second request of the same part goes to the
-// same object, which builds it one time. Each other request goes to the
-// node "world" (its orders, its constructions, its streams and its log).
-// (The name of an object has at most 32 characters.)
+// The builders of the parts: the Durable Object classes Part0 to Part7
+// (wrangler.jsonc, worker.js), each with one object and its own VM.
+export const PARTS = 8;
+
+// The VM of a request (worker.js): "world", the node with its orders, its
+// constructions, its streams and its log; or "partN" for a part (GET
+// /p/KEY.glb), from its key. So the parts of one list build at the same
+// time in up to PARTS VMs, each part in the memory of its own VM (128
+// MB), one part at a time in a VM (World.Line). A second request of the
+// same part goes to the same VM, which builds it one time. Each builder
+// is a class of its own: Cloudflare can run the objects of one class in
+// one isolate, and they then share its 128 MB.
 export function objectOf(request) {
   const part = /^\/p\/([0-9a-f]{32})\.glb$/.exec(new URL(request.url).pathname);
-  return part ? `p-${part[1].slice(0, 30)}` : 'world';
+  return part ? `part${parseInt(part[1].slice(0, 8), 16) % PARTS}` : 'world';
 }
 
 const headers = (extra = {}) => ({
