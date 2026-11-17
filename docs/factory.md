@@ -55,6 +55,8 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.light.glb`, `.mid.light.glb`, `.far.light.glb` | The model at a level with the light look (`World.Flat`, `roles: true`), for a project that gives each role its own material: one node with one mesh, a primitive for each role of the model, flat faces, the material of each role with its color (the mean of the colors at the points of a role that has them: a sculpture, the clothes of a person at mid and far) and no image, no skin. It takes `?triangles=N` and `?wrap=1` as the flat look: a budget keeps the border of two roles. A scooter at the far level: 4,120 triangles, and 500 with `?triangles=500&wrap=1` (50 KB, 15 KB in gzip, in 1.7 s). A coconut palm at the far level: 308 triangles, and 204 with `?triangles=204`. |
 | `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
+| `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
+| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the VM builds it from its recipe and keeps it. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
@@ -672,10 +674,140 @@ sandals):
 | The defaults, far, mid, near | +54, +57, +108 MB | |
 
 Still to do: a packed format for the meshes of a person (the item is
-13 MB of terms); the check of a group of people (`exercise` with
-`fans`: 272 MB, so its order stops the VM); and the peak at the end of
-a build, where the person, the scene and the buffer of the GLB are all
-live.
+13 MB of terms), and the peak at the end of a build, where the person,
+the scene and the buffer of the GLB are all live.
+
+F4, part 5 (2026-11-17): a group of people. The check of the order
+`exercise` with `fans` (a build of the group at far) took 272 MB at
+the edge, and the VM stopped. Two causes: the group made all its people
+in one process, so the garbage of each person stayed to the end; and
+the cache of the targets kept each target decoded (1.7 MB of terms each,
+47 targets for a group of different people: 79.5 MB). Now each person
+of a group is made in a process of its own (`World.Detail.apart/2`),
+and the cache keeps the packed targets (107 kB each). The check of an
+order builds its model only for the data of a project (a drawing) or
+for a pose (`joints`): a rule in code with no pose is checked by the
+tests of its rule. The parts list gives each person as a part of its
+own (the blueprint gives its `pieces`), made alone at its first
+request, at its place in the group. And no order stops the VM now:
+`World.Guard` stops a build that goes over `WORLD_MEMORY_MB`, and the
+order gets an error (below, "The parts of a model").
+
+The order `exercise` with `fans` (7 people) at the local edge, each
+request in a new VM:
+
+| Request | far | mid | near |
+|---|---|---|---|
+| `POST /orders` | 52 MB (before: 272 MB, the VM stopped) | | |
+| The parts list | 53 MB, 10 s | 53 MB, 11 s | 53 MB, 10 s |
+| A person | 88 to 99 MB, 8 to 10 s | 99 to 113 MB, 10 to 12 s | 112 to 142 MB, 8 to 9 s |
+
+Two of the seven people at near go over about 128 MB: the memory of
+one person at near is still the open fault of F4, part 3.
+
+## The parts of a model
+
+World works as Dreams (W24 to W28 of `TODO.md`, plan 0027 of Vũng
+Tàu): World gives the tools, the parts and the labour, and a project
+does the construction. The factory does not join the parts of a model
+into one model, and it does not keep a whole model in its memory
+(`World.Elements`).
+
+- **The parts list** (`/o/HASH.elements.json`, and `.mid.` and `.far.`;
+  `mix world.order` writes them too, with the GLB of each part in
+  `p/KEY.glb`). Each part has its `key`, its `url`, its `node` (the id
+  of its node in the plan), its `part`, its `matrix` (16 numbers by
+  columns: its place in the axes of the model, Y up as in glTF), its
+  `roles`, its `joint` (the joint that moves it, or null), its `kind`
+  (`part`, or `figure` for a person with its props) and, for a part of
+  a large sculpture, its `tile`. The list has the `joints`, `limbs`,
+  `ports` and `collision` of the model. `review/parts.html?list=URL`
+  puts the parts together as a project does.
+- **The key of a part** is a hash of its data and of the version of its
+  rule: the code of the rule and of each module of World that it calls
+  (`World.Elements.version/1`). A part that is made (a node of shapes, a
+  person, a vehicle) has its content as its data, with its level, its
+  maps and the colors of the order: a wall of 1,000 bricks of one shape
+  is one file. A part of a sculpture has its data: the edits near it,
+  its box, its share of the faces and the other data of the sculpture.
+  So an edit of an order changes the keys of the parts that it changes,
+  and the factory builds only those (W27). The same keys are in the
+  events `element` of `POST /builds` (W28), and the GLB of each element
+  goes into the store of the parts.
+- **A part fits the memory of the edge** (W26). A sculpture that has
+  more than 20,000 faces at its cells (an estimate) is cut into parts,
+  each with a budget of 4,000 triangles or more, and each part is made
+  in steps of at most 20,000 faces, each step in a process of its own.
+  The cuts are planes between bricks, where the fewest soft blends of
+  the edits cross. Two parts next to each other meet with no gap: the
+  points at their border are the same points, and no collapse moves
+  them.
+- **The guard of the memory.** A build runs in a process of its own,
+  and `World.Guard` stops it when the memory of the BEAM goes over
+  `WORLD_MEMORY_MB` (100 MB at the edge): the order gets an error, and
+  the VM and the other orders go on. The check of an order with a large
+  sculpture does not build it at far.
+
+### Hải Âu
+
+The order `khach_san_hai_au` of Vũng Tàu (`data/world/orders.json`; a
+hotel of the blueprint `building`: a sculpture of 755 edits, its sign
+and its base), at the local edge (`wrangler dev`, the linear memory of
+the VM, each request in a new VM; the VM starts at 25 MB, and the edge
+stops a VM at about 134 MB):
+
+| Request | far | mid | near |
+|---|---|---|---|
+| `POST /orders` (no build of the model for its check) | 52 MB | | |
+| The parts list | 71 MB, 21 s: 3 parts | 85 MB, 25 s: 7 parts | 79 MB, 96 s (202, then the list): 33 parts |
+| The main node | 1 part, 1,200 triangles: 91 MB, 122 s | 5 parts: 86 to 113 MB, 111 to 336 s | 31 parts; the largest: 92 MB, 221 s, and 80 MB, 176 s |
+| The sign | 69 MB, 7 s | 76 MB, 20 s | |
+| The base | 52 MB, 5 s (empty: see below) | 82 MB, 241 s | 99 MB, 1,326 s (266 steps) |
+
+Each part fits: the highest peak is 113 MB (a part of the main node at
+mid), and the longest part is the base at near: 99 MB and 1,326 s (about
+22 minutes) for its 266 steps. The parts of the main node
+take 1 to 6 minutes each. The times are of one core shared with other
+work (the build of the catalog); an edit of an order builds only the
+parts that it changes.
+
+Before W26, the whole far level of Hải Âu took 210 MB at its check (the
+VM stopped), and its whole near level could not build at the edge.
+
+Two faults of the data of the order, for Vũng Tàu: the base is a slab
+thinner than the cells of its far level (0.3 m), so its far part is
+empty; and its near cells (6 cm) for a flat base make 2 million faces,
+so its part takes 22 minutes. Cells of 25 cm for the base at near give
+the same base in about a twentieth of the time.
+
+### Two questions of plan 0027 of Vũng Tàu
+
+**Q1. A blend stays inside one part: is that enough for the buildings
+and the statues?** Yes, and it is not needed for a closed surface. Each
+part is made from the field of all the edits near it, so the field at
+the border of two parts is the same field on the two sides, also in a
+blend; the points at the border are the same points, and no collapse
+moves them. So a blend that crosses two parts has no gap and no step.
+World still cuts where the fewest soft blends cross (each plane between
+the bricks of the estimate, 1 to 4 m apart): in a building the blends are
+small (the round edges of a slab or of a column), and most cuts miss
+them. In a statue a blend can be larger than the space between two
+planes (a body of large soft blends); then the cut crosses it, and the
+surface is still closed. What a cut can change is the maps: each part
+has its own maps, so the color and the normal of a texel at the border
+can differ a little on the two sides. The game can hide it with the same
+material for the parts of one role (plan 0027, D3).
+
+**Q2. For the far level, is one small part for the whole model better
+than many parts?** Yes. Hải Âu at far: one part of 1,200 triangles for
+the main node (plus 100 for the sign) is 2 draw calls and 1,300
+triangles. Cut into 15 parts of about 15,000 faces each (the steps), the
+same model was 16 draw calls and 2,025 triangles, and it had a bad
+shape: a part of 80 triangles has most of its points at its borders,
+and its collapse made spikes. So a part has a budget of 1,500 triangles
+or more, and World makes a small far level as one part, in steps that
+fit the memory (`World.Sculpt.model_in_steps/2`). The game can also join
+the parts of one material (plan 0027, D3).
 
 ## Realism
 
