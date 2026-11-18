@@ -10,6 +10,8 @@ export const BLUEPRINTS = [{ name: 'box', doc: 'A box.', options: [{ name: 'size
 export function bucket() {
   const items = new Map();
   const types = new Map();
+  // The version of each key, its ETag for a put with onlyIf (as R2).
+  const versions = new Map();
   return {
     items,
     async get(key) {
@@ -17,13 +19,19 @@ export function bucket() {
       const bytes = items.get(key);
       return {
         httpEtag: `"${key.length}-${bytes.byteLength}"`,
+        etag: `v${versions.get(key)}`,
         body: bytes,
         async json() { return JSON.parse(new TextDecoder().decode(bytes)); },
       };
     },
     async put(key, value, options) {
+      const only = options?.onlyIf;
+      if (only?.etagMatches && `v${versions.get(key)}` !== only.etagMatches) return null;
+      if (only?.etagDoesNotMatch === '*' && items.has(key)) return null;
       items.set(key, typeof value === 'string' ? new TextEncoder().encode(value) : new Uint8Array(value));
+      versions.set(key, (versions.get(key) ?? 0) + 1);
       if (options) types.set(key, options.httpMetadata?.contentType);
+      return {};
     },
     async head(key) {
       return items.has(key) ? {} : null;

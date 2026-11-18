@@ -7,9 +7,9 @@
 // WebAssembly runtime of the npm package beam.com, with WORLD_SERVER=true
 // (wrangler.jsonc), so World.Service answers on port 4000. The VM runs
 // in the Durable Object Beam, one object for the node: its people build a
-// file one time, and the next request finds it in R2. Native nodes join
-// the node over the link (/.tcp/, handler.js) and build the large parts
-// (World.Labour).
+// file one time, and the next request finds it in R2. The node of a
+// construction shift joins the node over /.tcp/ (handler.js, shift.js)
+// and builds the parts that do not fit the edge (World.Labour).
 import app from './edge.com' with { type: 'bytes' };
 import { Beam as BeamObject, serve } from 'beam.com';
 import version from './site/version.json';
@@ -36,6 +36,6 @@ const node = serve(app, { name: () => 'world' });
 export default {
   fetch(request, env, ctx) {
     const vm = (r) => node.fetch(r, env, ctx);
-    return handler(request, env, { vm, commit: version.commit });
+    return handler(request, env, { vm, commit: version.commit, later: (p) => ctx.waitUntil(p) });
   },
 };

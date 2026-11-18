@@ -43,12 +43,20 @@
 //   %23rrggbb&joint.NAME=DEGREES&target.LIMB=X,Y,Z: an order in the URL. A list is
 //   VALUE,VALUE, and OPTION.FIELD=VALUE is a field of an object.
 //
+// - /.tcp/4370: distributed Erlang to the node of the edge (a WebSocket
+//   to the listener of DIST_PORT in the VM, BEAM.com docs/WORKERS.md),
+//   for the node of a construction shift (shift.js). The cookie of the
+//   nodes (the secret DIST_COOKIE, 32 random bytes or more) protects it,
+//   and BEAM_MAX_WEBSOCKETS limits the connections that are open.
+//
 // The Worker gives the VM the header x-world-origin (the start of the
-// URLs of an order). When the VM stops (an order that needs more memory
-// than the edge has), the answer is 503 with the errors in JSON, and the
-// next request starts the VM again.
+// URLs of an order), and x-world-project for a request with a project
+// token. When the VM stops (an order that needs more memory than the
+// edge has), the answer is 503 with the errors in JSON, and the next
+// request starts the VM again.
 
 import { KEY, type } from './order_store.js';
+import { startShift } from './shift.js';
 
 const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
@@ -77,12 +85,27 @@ const FILES = [
 const HASH = /^[0-9a-f]{32}$/;
 const PART = /^[0-9a-f]{32}$/;
 
-// The link of the native nodes (docs/factory.md, "The labour of native
-// nodes"): a request with the token of the link, the secret
-// WORLD_LINK_TOKEN of the Worker (32 characters or more), in
-// "authorization: Bearer TOKEN". With no secret, there is no link.
-export function linked(request, env) {
-  const token = env.WORLD_LINK_TOKEN;
+// The project of a request: the name of the project whose token is in
+// "authorization: Bearer TOKEN", or null. The secret
+// WORLD_PROJECT_TOKENS of the Worker has the projects of the owner, as
+// NAME=TOKEN, separated by commas; a token has 32 characters or more. A
+// part of an order of a project that does not fit the edge waits for a
+// construction shift (World.Labour); a public order gets an error.
+export function projectOf(request, env) {
+  const given = request.headers.get('authorization') ?? '';
+  for (const entry of String(env.WORLD_PROJECT_TOKENS ?? '').split(',')) {
+    const [name, token] = entry.trim().split('=', 2);
+    if (/^[a-z0-9_-]{1,40}$/.test(name ?? '') && (token ?? '').length >= 32 && same(given, `Bearer ${token}`)) return name;
+  }
+  return null;
+}
+
+// The store of the Worker for a node on a computer with no S3 token (a
+// test of a shift on one computer, docs/factory.md): the secret
+// WORLD_STORE_TOKEN (32 characters or more) in "authorization: Bearer
+// TOKEN". The site has no such secret, so the path is not there.
+export function storeToken(request, env) {
+  const token = env.WORLD_STORE_TOKEN;
   if (typeof token !== 'string' || token.length < 32) return false;
   return same(request.headers.get('authorization') ?? '', `Bearer ${token}`);
 }
@@ -95,7 +118,7 @@ function same(a, b) {
   return diff === 0;
 }
 
-// The store for a native node: it reads the orders and the recipes of
+// The store for a node of a test: it reads the orders and the recipes of
 // the parts, and puts the GLB of each part that it builds (the GLB goes
 // to R2 here, not through the VM of the edge).
 async function store(request, env, key) {
@@ -154,15 +177,17 @@ export function orderOf(blueprint, params) {
 }
 
 // A request of the client to the VM, with its method, its body, the
-// headers that the VM reads, and the origin of the URLs. A stream of
-// events (text/event-stream) goes back as it comes.
-async function forward(request, vm, origin, path) {
+// headers that the VM reads, the origin of the URLs, and the project of
+// a project token. A stream of events (text/event-stream) goes back as
+// it comes.
+async function forward(request, vm, origin, path, project = null) {
   const keep = ['content-type', 'accept', 'mcp-protocol-version', 'last-event-id'].filter((name) => request.headers.has(name));
   const ask = new Headers(keep.map((name) => [name, request.headers.get(name)]));
   ask.set('x-world-origin', origin);
+  if (project) ask.set('x-world-project', project);
   const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer();
   const r = await vm(new Request(`http://vm${path}`, { method: request.method, headers: ask, body }));
-  const extra = Object.fromEntries(['content-type', 'allow', 'cache-control', 'retry-after'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
+  const extra = Object.fromEntries(['content-type', 'allow', 'cache-control', 'retry-after', 'x-world-shift'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
   return new Response(r.status === 202 && !path.startsWith('/p/') ? null : r.body, { status: r.status, headers: headers(extra) });
 }
 
@@ -238,17 +263,18 @@ export async function handler(request, env, options) {
   }
 }
 
-async function route(request, env, { vm, commit }) {
+// The options: vm, commit, and later(promise), the work after the
+// answer (ctx.waitUntil of the Worker): the start of a shift.
+async function route(request, env, { vm, commit, later = () => {} }) {
   const url = new URL(request.url);
   const path = url.pathname;
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: headers({ 'access-control-max-age': '86400' }) });
 
-  // The link of a native node: distributed Erlang to the node of the
-  // edge (a WebSocket to the listener of DIST_PORT in the VM), and the
-  // store. With no token, the paths are not there.
-  if (path.startsWith('/.tcp/')) return linked(request, env) ? vm(request) : errors(404, 'no such page');
-  if (path.startsWith('/store/')) return linked(request, env) ? store(request, env, path.slice(7)) : errors(404, 'no such page');
+  // The node of a shift: distributed Erlang to the node of the edge (the
+  // cookie protects it). The store of a test: with its token only.
+  if (path.startsWith('/.tcp/')) return vm(request);
+  if (path.startsWith('/store/')) return storeToken(request, env) ? store(request, env, path.slice(7)) : errors(404, 'no such page');
 
   if (path === '/blueprints' && request.method === 'GET') {
     const r = await vm(new Request('http://vm/blueprints'));
@@ -287,9 +313,13 @@ async function route(request, env, { vm, commit }) {
     if (!PART.test(key) || !path.endsWith('.glb')) return errors(404, 'no such part');
     const object = await env.ORDERS.get(`parts/${key}.glb`);
     if (object) return part(request, object, key);
-    const r = await forward(request, vm, url.origin, path);
+    const project = projectOf(request, env);
+    const r = await forward(request, vm, url.origin, path, project);
+    // (A project can ask for a shorter shift: x-world-shift-hours.)
+    const hours = project ? request.headers.get('x-world-shift-hours') : null;
+    if (r.headers.get('x-world-shift') === 'wanted') later(startShift(env, commit, { hours }));
     if (r.status !== 204) return r;
-    // (A native node built the part and put it in R2: it goes out of R2, not through the VM.)
+    // (A node of a shift built the part and put it in R2: it goes out of R2, not through the VM.)
     const built = await env.ORDERS.get(`parts/${key}.glb`);
     return built ? part(request, built, key) : json(202, { building: key }, { 'retry-after': '1' });
   }
