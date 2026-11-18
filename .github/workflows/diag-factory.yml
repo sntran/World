@@ -1,0 +1,33 @@
+name: Diag factory
+
+# A probe of the factory from a runner of GitHub Actions: the status, the
+# headers of Cloudflare and the start of the body, with curl and with
+# the fetch of Node.js. (A temporary branch: it goes after the probe.)
+on:
+  push:
+    branches: [diag/factory]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Probe
+        run: |
+          U=https://world.mkfifo.com/o/42bab18a507afa6fb1acc46d052f0666.mid.elements.json
+          for ua in curl world-shift node; do
+            echo "== curl with the User-Agent $ua"
+            curl -sS -o body.txt -D headers.txt -A "$ua" "$U"
+            grep -iE '^(HTTP|server|cf-|content-type)' headers.txt
+            head -c 400 body.txt; echo
+          done
+          echo "== curl with no User-Agent"
+          curl -sS -o body.txt -D headers.txt -H 'User-Agent:' "$U"
+          grep -iE '^(HTTP|server|cf-)' headers.txt
+          head -c 200 body.txt; echo
+          echo "== the fetch of Node.js"
+          node -e "fetch(process.argv[1]).then(async (r) => { console.log(r.status, JSON.stringify([...r.headers].filter(([k]) => /^(server|cf-)/.test(k)))); console.log((await r.text()).slice(0, 400)); })" "$U"
+          echo "== /shift/join with no token (401 from the Worker)"
+          curl -sS -o /dev/null -w '%{http_code}\n' -X POST -A world-shift https://world.mkfifo.com/shift/join
