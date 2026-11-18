@@ -431,18 +431,31 @@ defmodule World.Service do
   get "/p/:file" do
     with [key, "glb"] <- String.split(file, "."),
          true <- key =~ ~r/^[0-9a-f]{32}$/,
-         {:ok, glb} <- World.Elements.fetch(key) do
+         {:ok, glb} <- part_of(conn, key, World.Elements.fetch(key)) do
       conn
       |> put_resp_header("etag", ~s("#{key}"))
       |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
       |> put_resp_content_type("model/gltf-binary", nil)
       |> send_resp(200, glb)
     else
+      # (A native node put the part in the store: the Worker reads it from R2, with no VM.)
+      :stored -> send_resp(conn, 204, "")
       :building -> conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
       {:error, errors} -> json(conn, 422, %{"errors" => errors})
       _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such part"}]})
     end
   end
+
+  # A part that another node put in the store: the Worker in front of the
+  # VM (its header x-world-origin) reads it from R2; a server with no
+  # Worker reads it from its store.
+  defp part_of(conn, key, :stored) do
+    if get_req_header(conn, "x-world-origin") == [],
+      do: with(:none <- World.Elements.Store.get(key), do: :stored),
+      else: :stored
+  end
+
+  defp part_of(_conn, _key, result), do: result
 
   get "/m/:name" do
     case split(name) do

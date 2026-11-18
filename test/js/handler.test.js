@@ -1,7 +1,7 @@
 // The tests of handler.js, with a fake VM and a fake R2 bucket.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { PARTS, handler, objectOf, orderOf, split, urlKey } from '../../handler.js';
+import { handler, linked, orderOf, split, urlKey } from '../../handler.js';
 import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
 
 const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
@@ -23,17 +23,64 @@ test('the name and the file of a path', () => {
   assert.equal(split('van.txt'), null);
 });
 
-test('a part builds in one of the builders of the parts, from its key; each other request goes to the node', () => {
-  const key = '0123456789abcdef0123456789abcdef';
-  // 0x01234567 = 19088743, and 19088743 mod 8 = 7.
-  assert.equal(objectOf(new Request(`http://vm/p/${key}.glb`)), 'part7');
-  assert.equal(objectOf(new Request(`http://vm/p/0000000a${key.slice(8)}.glb`)), 'part2');
-  const used = new Set();
-  for (let i = 0; i < 64; i++) used.add(objectOf(new Request(`http://vm/p/${i.toString(16).padStart(8, '0')}${key.slice(8)}.glb`)));
-  assert.deepEqual([...used].sort(), Array.from({ length: PARTS }, (_, i) => `part${i}`).sort());
-  for (const path of ['/orders', '/build?level=far&file=elements', `/builds/b/elements/${key}.glb`, '/p/xyz.glb', `/p/${key}.png`]) {
-    assert.equal(objectOf(new Request(`http://vm${path}`)), 'world');
-  }
+// The token of the link of the native nodes (32 characters or more).
+const TOKEN = 't'.repeat(40);
+const link = (path, init = {}) => req(path, { ...init, headers: { authorization: `Bearer ${TOKEN}`, ...(init.headers ?? {}) } });
+
+test('the link of a native node: the token of the secret, or no link', () => {
+  const env = { WORLD_LINK_TOKEN: TOKEN };
+  assert.equal(linked(link('/.tcp/4370'), env), true);
+  assert.equal(linked(req('/.tcp/4370'), env), false);
+  assert.equal(linked(link('/.tcp/4370', { headers: { authorization: `Bearer ${'t'.repeat(39)}u` } }), env), false);
+  assert.equal(linked(link('/.tcp/4370', { headers: { authorization: `Bearer ${TOKEN}x` } }), env), false);
+  // No secret, or a short one: no link.
+  assert.equal(linked(link('/.tcp/4370'), {}), false);
+  assert.equal(linked(req('/.tcp/4370', { headers: { authorization: 'Bearer short' } }), { WORLD_LINK_TOKEN: 'short' }), false);
+});
+
+test('/.tcp/ goes to the VM with the token (distributed Erlang); with no token it is not there', async () => {
+  const env = { ORDERS: bucket(), WORLD_LINK_TOKEN: TOKEN };
+  const v = async (request) => new Response(`to the VM: ${new URL(request.url).pathname}`, { status: 200 });
+  assert.equal(await (await handler(link('/.tcp/4370'), env, { vm: v, commit: 'c1' })).text(), 'to the VM: /.tcp/4370');
+  assert.equal((await handler(req('/.tcp/4370'), env, { vm: v, commit: 'c1' })).status, 404);
+  assert.equal((await handler(link('/.tcp/4370'), { ORDERS: bucket() }, { vm: v, commit: 'c1' })).status, 404);
+});
+
+test('/store/ of a native node: get, head and put of a key of the store, with the token', async () => {
+  const env = { ORDERS: bucket(), WORLD_LINK_TOKEN: TOKEN };
+  const call = (path, init) => handler(link(path, init), env, { vm: vm(), commit: 'c1' });
+  const key = `parts/${HASH}.glb`;
+  assert.equal((await call(`/store/${key}`)).status, 404);
+  assert.equal((await call(`/store/${key}`, { method: 'HEAD' })).status, 404);
+  assert.equal(await (await call(`/store/${key}`, { method: 'PUT', body: 'glTF' })).text(), 'ok\n');
+  assert.equal(env.ORDERS.types.get(key), 'model/gltf-binary');
+  const got = await call(`/store/${key}`);
+  assert.equal(got.status, 200);
+  assert.equal(got.headers.get('content-type'), 'model/gltf-binary');
+  assert.equal(await got.text(), 'glTF');
+  assert.equal((await call(`/store/${key}`, { method: 'HEAD' })).status, 200);
+  // An empty part, a key that is not a key of the store, another method, and no token.
+  assert.equal((await call(`/store/parts/${HASH}.json`, { method: 'PUT', body: '' })).status, 400);
+  assert.equal((await call('/store/secrets/x.json')).status, 404);
+  assert.equal((await call(`/store/${key}`, { method: 'DELETE' })).status, 405);
+  assert.equal((await handler(req(`/store/${key}`), env, { vm: vm(), commit: 'c1' })).status, 404);
+});
+
+test('a part that a native node built: the VM answers 204, and the part goes out of R2', async () => {
+  const env = { ORDERS: bucket() };
+  const key = 'e'.repeat(32);
+  // (The native node puts the part in R2 while the VM waits for it.)
+  const v = async () => {
+    await env.ORDERS.put(`parts/${key}.glb`, 'glTF of a node');
+    return new Response(null, { status: 204 });
+  };
+  const r = await handler(req(`/p/${key}.glb`), env, { vm: v, commit: 'c1' });
+  assert.equal(r.status, 200);
+  assert.equal(await r.text(), 'glTF of a node');
+  // (R2 does not have it yet: ask again.)
+  const none = await handler(req(`/p/${'d'.repeat(32)}.glb`), { ORDERS: bucket() }, { vm: async () => new Response(null, { status: 204 }), commit: 'c1' });
+  assert.equal(none.status, 202);
+  assert.equal(none.headers.get('retry-after'), '1');
 });
 
 test('an order from a URL', () => {

@@ -79,7 +79,7 @@ defmodule World.Supervisor do
       World.Sculpt.Gate,
       World.Line,
       {DynamicSupervisor, name: World.Sculptures, strategy: :one_for_one}
-    ] ++ World.Crew.children() ++ [{World.Crew, crews(env)}] ++ yard(env) ++ server(env)
+    ] ++ World.Crew.children() ++ World.Labour.children() ++ [{World.Crew, crews(env)}] ++ yard(env) ++ server(env)
   end
 
   @doc """
@@ -90,9 +90,13 @@ defmodule World.Supervisor do
   (`World.Crew`, `World.Epmd`).
   """
   def crews(env) do
-    for {key, option} <- [{"WORLD_NODE", :node}, {"WORLD_COOKIE", :cookie}, {"WORLD_JOIN", :join}],
-        value = env[key],
-        do: {option, String.to_atom(value)}
+    names =
+      for {key, option} <- [{"WORLD_NODE", :node}, {"WORLD_COOKIE", :cookie}, {"WORLD_JOIN", :join}],
+          value = env[key],
+          do: {option, String.to_atom(value)}
+
+    # (The edge: it gives whole parts to the native nodes, and shares no jobs, World.Labour.)
+    names ++ if env["WORLD_LABOUR"] == "parts", do: [lend: false, borrow: false], else: []
   end
 
   @doc "The haul and the yard for the environment `env`, or nothing."

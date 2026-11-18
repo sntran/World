@@ -7,15 +7,13 @@
 // WebAssembly runtime of the npm package beam.com, with WORLD_SERVER=true
 // (wrangler.jsonc), so World.Service answers on port 4000. The VM runs
 // in the Durable Object Beam, one object for the node: its people build a
-// file one time, and the next request finds it in R2. A part of a parts
-// list that R2 does not have builds in one of the builders of the parts
-// (objectOf and PARTS, handler.js): the classes Part0 to Part7, each with
-// one object and its own VM, so that the parts of a list build at the
-// same time in more than one VM.
+// file one time, and the next request finds it in R2. Native nodes join
+// the node over the link (/.tcp/, handler.js) and build the large parts
+// (World.Labour).
 import app from './edge.com' with { type: 'bytes' };
 import { Beam as BeamObject, serve } from 'beam.com';
 import version from './site/version.json';
-import { PARTS, handler, objectOf } from './handler.js';
+import { handler } from './handler.js';
 import { orderStore } from './order_store.js';
 import { logStore, sqlTable } from './log_store.js';
 
@@ -30,28 +28,14 @@ export class Beam extends BeamObject {
   }
 }
 
-// The builders of the parts: a class for each (wrangler.jsonc), the same VM.
-export class Part0 extends Beam {}
-export class Part1 extends Beam {}
-export class Part2 extends Beam {}
-export class Part3 extends Beam {}
-export class Part4 extends Beam {}
-export class Part5 extends Beam {}
-export class Part6 extends Beam {}
-export class Part7 extends Beam {}
-
-// The VM of each request (objectOf): the node "world", with its people,
-// its constructions, its streams and its log (docs/plans/0001, D16), or a
-// builder of the parts. A file that R2 has goes out with no VM
-// (handler.js).
-const vms = new Map([
-  ['world', serve(app, { name: () => 'world' })],
-  ...Array.from({ length: PARTS }, (_, i) => [`part${i}`, serve(app, { binding: `PART${i}`, name: () => 'part' })]),
-]);
+// One object for each request: the node "world", with its people, its
+// constructions, its streams and its log (docs/plans/0001, D16). A file
+// that R2 has goes out with no VM (handler.js).
+const node = serve(app, { name: () => 'world' });
 
 export default {
   fetch(request, env, ctx) {
-    const vm = (r) => vms.get(objectOf(r)).fetch(r, env, ctx);
+    const vm = (r) => node.fetch(r, env, ctx);
     return handler(request, env, { vm, commit: version.commit });
   },
 };

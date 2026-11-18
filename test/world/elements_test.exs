@@ -323,7 +323,17 @@ defmodule World.ElementsTest do
     [t, u | _] = list["parts"]
     glb = Elements.glb(World.Part.new("p", :part, [World.Shape.box({0, 0, 0}, {1, 1, 1}, :wood)], []), :far)
     stops.({:part, t["key"]}, fn -> Store.put(t["key"], glb) end)
-    assert Elements.fetch(t["key"]) == {:ok, glb}
+    # (The part of another build is in the store: the GLB does not come to this node.)
+    assert Elements.fetch(t["key"]) == :stored
+    # GET /p/ of a part that another node puts in the store: the Worker in front of the VM (x-world-origin)
+    # reads it from R2 (204); a server with no Worker sends it from its store.
+    {:ok, more} = Elements.list(order(drawing(0.3, tag <> "-more")), "far")
+    [v, w | _] = more["parts"]
+    stops.({:part, v["key"]}, fn -> Store.put(v["key"], glb) end)
+    assert get.("/p/#{v["key"]}.glb").status == 200
+    stops.({:part, w["key"]}, fn -> Store.put(w["key"], glb) end)
+    front = Plug.Test.conn(:get, "/p/#{w["key"]}.glb") |> Plug.Conn.put_req_header("x-world-origin", "https://w")
+    assert World.Service.call(front, World.Service.init([])).status == 204
     stops.({:part, u["key"]}, fn -> :ok end)
     assert {:error, [%{"message" => "the build stopped before its end" <> _}]} = Elements.fetch(u["key"])
 

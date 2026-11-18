@@ -48,6 +48,8 @@
 // than the edge has), the answer is 503 with the errors in JSON, and the
 // next request starts the VM again.
 
+import { KEY, type } from './order_store.js';
+
 const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
 // The suffix of each file: the level and the file of /build.
@@ -75,21 +77,41 @@ const FILES = [
 const HASH = /^[0-9a-f]{32}$/;
 const PART = /^[0-9a-f]{32}$/;
 
-// The builders of the parts: the Durable Object classes Part0 to Part7
-// (wrangler.jsonc, worker.js), each with one object and its own VM.
-export const PARTS = 8;
+// The link of the native nodes (docs/factory.md, "The labour of native
+// nodes"): a request with the token of the link, the secret
+// WORLD_LINK_TOKEN of the Worker (32 characters or more), in
+// "authorization: Bearer TOKEN". With no secret, there is no link.
+export function linked(request, env) {
+  const token = env.WORLD_LINK_TOKEN;
+  if (typeof token !== 'string' || token.length < 32) return false;
+  return same(request.headers.get('authorization') ?? '', `Bearer ${token}`);
+}
 
-// The VM of a request (worker.js): "world", the node with its orders, its
-// constructions, its streams and its log; or "partN" for a part (GET
-// /p/KEY.glb), from its key. So the parts of one list build at the same
-// time in up to PARTS VMs, each part in the memory of its own VM (128
-// MB), one part at a time in a VM (World.Line). A second request of the
-// same part goes to the same VM, which builds it one time. Each builder
-// is a class of its own: Cloudflare can run the objects of one class in
-// one isolate, and they then share its 128 MB.
-export function objectOf(request) {
-  const part = /^\/p\/([0-9a-f]{32})\.glb$/.exec(new URL(request.url).pathname);
-  return part ? `part${parseInt(part[1].slice(0, 8), 16) % PARTS}` : 'world';
+// Two texts, compared in a time that does not depend on where they differ.
+function same(a, b) {
+  const [x, y] = [new TextEncoder().encode(a), new TextEncoder().encode(b)];
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < y.length; i++) diff |= (x[i] ?? 0) ^ y[i];
+  return diff === 0;
+}
+
+// The store for a native node: it reads the orders and the recipes of
+// the parts, and puts the GLB of each part that it builds (the GLB goes
+// to R2 here, not through the VM of the edge).
+async function store(request, env, key) {
+  if (!KEY.test(key)) return errors(404, 'no such key');
+  if (request.method === 'GET') {
+    const object = await env.ORDERS.get(key);
+    return object ? new Response(object.body, { headers: { 'content-type': type(key) } }) : errors(404, 'no such key');
+  }
+  if (request.method === 'HEAD') return new Response(null, { status: (await env.ORDERS.head(key)) ? 200 : 404 });
+  if (request.method === 'PUT') {
+    const bytes = await request.arrayBuffer();
+    if (bytes.byteLength === 0) return errors(400, 'an empty body');
+    await env.ORDERS.put(key, bytes, { httpMetadata: { contentType: type(key) } });
+    return new Response('ok\n');
+  }
+  return errors(405, 'the method is not allowed');
 }
 
 const headers = (extra = {}) => ({
@@ -222,6 +244,12 @@ async function route(request, env, { vm, commit }) {
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: headers({ 'access-control-max-age': '86400' }) });
 
+  // The link of a native node: distributed Erlang to the node of the
+  // edge (a WebSocket to the listener of DIST_PORT in the VM), and the
+  // store. With no token, the paths are not there.
+  if (path.startsWith('/.tcp/')) return linked(request, env) ? vm(request) : errors(404, 'no such page');
+  if (path.startsWith('/store/')) return linked(request, env) ? store(request, env, path.slice(7)) : errors(404, 'no such page');
+
   if (path === '/blueprints' && request.method === 'GET') {
     const r = await vm(new Request('http://vm/blueprints'));
     return new Response(r.body, { status: r.status, headers: headers({ 'content-type': 'application/json', 'cache-control': CACHE }) });
@@ -259,7 +287,11 @@ async function route(request, env, { vm, commit }) {
     if (!PART.test(key) || !path.endsWith('.glb')) return errors(404, 'no such part');
     const object = await env.ORDERS.get(`parts/${key}.glb`);
     if (object) return part(request, object, key);
-    return forward(request, vm, url.origin, path);
+    const r = await forward(request, vm, url.origin, path);
+    if (r.status !== 204) return r;
+    // (A native node built the part and put it in R2: it goes out of R2, not through the VM.)
+    const built = await env.ORDERS.get(`parts/${key}.glb`);
+    return built ? part(request, built, key) : json(202, { building: key }, { 'retry-after': '1' });
   }
 
   if (path === '/events' || path === '/census' || path === '/places' || path.startsWith('/places/') || path.startsWith('/builds/')) return forward(request, vm, url.origin, path + url.search);

@@ -19,10 +19,10 @@
 // blueprints/HASH.json, and the parts of the models (World.Elements):
 // parts/KEY.glb, and the recipe of a part that is not built yet,
 // parts/KEY.json.
-const KEY = /^((orders|history|proposals|requests|blueprints)\/[0-9a-f]{32}\.json|parts\/[0-9a-f]{32}\.(glb|json))$/;
+export const KEY = /^((orders|history|proposals|requests|blueprints)\/[0-9a-f]{32}\.json|parts\/[0-9a-f]{32}\.(glb|json))$/;
 
 // The type of the content of a key.
-const type = (value) => (value.endsWith('.glb') ? 'model/gltf-binary' : 'application/json');
+export const type = (value) => (value.endsWith('.glb') ? 'model/gltf-binary' : 'application/json');
 
 const key = (value) => {
   if (!KEY.test(value ?? '')) throw new Error(`not a key of an order: ${value}`);
@@ -67,3 +67,29 @@ export const orderStore = (bucket) => ({
     throw new Error(`not an operation of the store: ${[op, ...args].join(' ')}`);
   },
 });
+
+// The R2 bucket of the edge for a native node (docs/factory.md, "The
+// labour of native nodes"): the store of the Worker, BASE/KEY (BASE is
+// https://world.mkfifo.com/store), with the token of the link. A native
+// node reads the orders and the recipes, and puts the GLB of each part
+// that it builds.
+export const remoteBucket = (base, token, fetcher = fetch) => {
+  const call = async (method, key, body) => {
+    const r = await fetcher(`${base}/${key}`, { method, body, headers: { authorization: `Bearer ${token}` } });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`the store of the edge: ${r.status}`);
+    return r;
+  };
+  return {
+    async get(key) {
+      const r = await call('GET', key);
+      return r && { body: r.body };
+    },
+    async head(key) {
+      return (await call('HEAD', key)) && {};
+    },
+    async put(key, bytes) {
+      await call('PUT', key, bytes);
+    },
+  };
+};

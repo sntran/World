@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { orderStore } from '../../order_store.js';
+import { orderStore, remoteBucket } from '../../order_store.js';
 import { bucket } from './fakes.js';
 
 const KEY = 'orders/0123456789abcdef0123456789abcdef.json';
@@ -26,6 +26,27 @@ const ended = (...parts) => new ReadableStream({
 });
 
 const text = (body) => new Response(body).text();
+
+test('the store of the edge for a native node: get, head and put with the token, over HTTP', async () => {
+  const calls = [];
+  const items = new Map();
+  const fetcher = async (url, { method, body, headers }) => {
+    calls.push([method, url, headers.authorization]);
+    const key = url.slice('https://edge/store/'.length);
+    if (method === 'PUT') items.set(key, body);
+    if (key.startsWith('fail')) return new Response('', { status: 500 });
+    if (!items.has(key)) return new Response('', { status: 404 });
+    return new Response(method === 'GET' ? items.get(key) : null);
+  };
+  const remote = remoteBucket('https://edge/store', 'T', fetcher);
+  assert.equal(await remote.get('orders/a.json'), null);
+  assert.equal(await remote.head('orders/a.json'), null);
+  await remote.put('orders/a.json', new TextEncoder().encode('{}'));
+  assert.equal(await new Response((await remote.get('orders/a.json')).body).text(), '{}');
+  assert.deepEqual(await remote.head('orders/a.json'), {});
+  assert.deepEqual(calls[0], ['GET', 'https://edge/store/orders/a.json', 'Bearer T']);
+  await assert.rejects(remote.get('fail/x'), /the store of the edge: 500/);
+});
 
 test('put keeps the order with its length, and get gives it back', async () => {
   const b = bucket();

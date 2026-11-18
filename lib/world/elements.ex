@@ -107,21 +107,23 @@ defmodule World.Elements do
 
   @doc """
   The GLB of a part by its key, for a request: from the store, else its
-  build in a process of its own (one for each key, in the line of the
-  builds, `World.Line`), for at most `wait` ms. `{:ok, glb}`, `:building`
+  build in a process of its own (one for each key), here in the line of
+  the builds (`World.Line`) or on a native node (`World.Labour`), for at
+  most `wait` ms. `{:ok, glb}`, `:stored` when another node built it and
+  put it in the store (the GLB does not come to this node), `:building`
   when the build goes on after `wait` (the next request gets it; the
-  application environment `:part_wait`, 45 s by default), `:none`
-  or `{:error, errors}` as `part/1`. The host of the VM at the edge ends a
+  application environment `:part_wait`, 45 s by default), `:none` or
+  `{:error, errors}` as `part/1`. The host of the VM at the edge ends a
   request after 60 s, and a large part takes more.
   """
   def fetch(key, wait \\ wait()) do
     with :error <- stored(key),
-         {:ok, _} <- Store.recipe(key) do
-      case background({:part, key}, fn -> World.Line.run(:now, fn -> part(key) end) end, wait) do
+         {:ok, json} <- Store.recipe(key) do
+      case background({:part, key}, fn -> World.Labour.build(key, JSON.decode!(json)) end, wait) do
         {:ok, result} -> result
         :building -> :building
         # (Another build of the key ended before it got the message: its part is in the store, else it stopped.)
-        :gone -> with {:ok, glb} <- Store.get(key), do: {:ok, glb}, else: (_ -> {:error, stopped()})
+        :gone -> if Store.has?(key), do: :stored, else: {:error, stopped()}
       end
     else
       {:ok, glb} -> {:ok, glb}
