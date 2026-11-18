@@ -56,7 +56,7 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
-| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge or a native node builds it from its recipe and keeps it ("The labour of native nodes"): a project that asks for all the parts of a list at one time gets them built at the same time on the native nodes. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. |
+| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge builds it from its recipe and keeps it, or, for a part that does not fit the edge, a construction shift builds it ("Construction shifts"): a project (a request with its token) that asks for all the parts of a list at one time gets them built at the same time. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. A part of a public order that does not fit the edge gives 422. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
@@ -447,7 +447,7 @@ version of the blueprint (`van@2`): the old version stays.
 | Order | Where |
 |---|---|
 | A model of the catalog | `mix world.build` builds it natively, and the files are in the repository. CI checks at each commit that they are the build of the code. The Worker serves them as static files: no build at a request. |
-| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. A large part of a parts list builds on a native node ("The labour of native nodes"). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
+| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. A large part of a parts list of a project builds in a construction shift ("Construction shifts"). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 ## The server on a computer
 
@@ -796,64 +796,129 @@ edge (below, "Hải Âu") tell which parts the edge cannot finish:
   the other in one VM.
 
 So the edge builds only the parts that fit it with room (a person at
-mid or far), and the native nodes build the others (below). These
+mid or far), and a construction shift builds the others (below). These
 times are of `wrangler dev` on a shared core; the times at the edge
 need a deploy (the next measure on world.mkfifo.com).
 
-### The labour of native nodes
+### Construction shifts
 
-A native node is a VM of World on a computer (`mix run --no-halt` of
-this repository, the same code as the edge): no limit of memory and no
-limit of CPU time. Each native node joins the node of the edge
-(`World.Crew`), and builds whole parts, by their key (`World.Labour`):
+A construction shift builds the parts that the edge cannot build: a
+workflow of this repository (`.github/workflows/shift.yml`) on a runner
+of GitHub Actions, for the projects of the owner only. It is like the
+custom builds of BEAM.com (an issue form, and `workflow_dispatch`). A
+shift starts on a request and ends. It is not a server that stays up,
+and it does not take the public orders.
 
-- The edge takes the orders, checks them, makes the parts lists, and
-  serves each part from R2. It builds a part only when it fits its
-  memory and its CPU limit (a person at mid or far), or when no native
-  node is there.
-- It gives each other part, by its key, to the native node with the
-  fewest parts in work for its workers. The native node reads the
-  recipe and the order from the store, builds the part with all its
-  cores (its crews), puts the GLB in R2, and gives back only the key:
-  the GLB does not go over the link, and the Worker serves it from R2.
-- A part whose node goes away (or that raises there) builds on the next
-  node, and on the edge when no node is left.
-- The edge lends no workers and takes no jobs (`WORLD_LABOUR=parts`):
-  the jobs of a stream stay on their node.
+**A request** starts a shift, or joins the shift that runs:
 
-The cluster is private. No node has an open port: a native node
-connects out to the edge, through a WebSocket (TLS) to `/.tcp/4370` of
-the Worker, with the token of the link (the secret `WORLD_LINK_TOKEN`
-of the Worker, 32 characters or more), and the node of the edge takes
-it as distributed Erlang (`DIST_NAME`, `DIST_LISTEN`, the secret
-`DIST_COOKIE`). It reads and puts the store through `/store/KEY` of the
-Worker with the same token. With no secret `WORLD_LINK_TOKEN`, the two
-paths are not there.
+- An issue of the form "A construction shift" (label `shift`): the
+  project, its orders (one link to its `orders.json` at a commit, or the
+  hashes of orders), the levels, and the hours. The job
+  `.github/workflows/shift-request.yml` starts at once only for an issue
+  of a member; another issue waits until the owner adds the label again.
+  The job puts no text of the issue in a shell command: the text goes to
+  `scripts/shift-issues.mjs` in the environment, and only checked values
+  go on (`scripts/shift-form.mjs`). The job gets the parts lists with
+  the token of the project, and asks once for each part.
+- An order of a project at the edge: a request with a project token
+  (`authorization: Bearer TOKEN`, the secret `WORLD_PROJECT_TOKENS` of
+  the Worker). A part that the edge cannot build (its memory, or its CPU
+  limit) waits in the queue of the edge (`World.Labour`). A part of a
+  public order that the edge cannot build gets 422.
+
+When a shift runs, the edge gives it the new parts at once. When no
+shift runs, the edge keeps the parts in its queue and starts a shift:
+the VM marks the answer 202 of a part with `x-world-shift: wanted`
+(`World.Shift.wanted?/1`), and the Worker starts the workflow
+(`shift.js`, `workflow_dispatch` with the commit of the deploy). When
+the shift has less than 15 minutes left, the edge starts the next shift
+for the new parts; it waits for the end of the shift that runs.
+
+**The limits:**
+
+| Limit | Value | Where |
+|---|---|---|
+| Shifts at one time | 1 (one more waits) | `concurrency` of `shift.yml` |
+| The time of a shift | 5.5 hours at most (`timeout-minutes: 330`); the shift stops 15 minutes before | `shift.yml`, `World.Shift` |
+| Shifts that the edge starts each day (UTC) | 6 (`WORLD_SHIFTS_A_DAY`) | `shift.js` |
+| A second start | not in the 20 minutes after a start (the runner, the cache and the start of the node) | `shift.js` |
+| No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
+| A part in the queue | 6 hours at most, then an error | `World.Labour` |
+| A part that fails | 3 tries on nodes of shifts, then an error | `World.Labour` |
+| WebSockets on `/.tcp/` | 4 open at most (`BEAM_MAX_WEBSOCKETS`) | `wrangler.jsonc` |
+
+**The node of the shift** joins the node of the edge. It dials out
+through the `tcp-proxy.mjs` of beam.com to
+`wss://world.mkfifo.com/.tcp/4370` (`scripts/shift.sh`). The edge has
+`DIST_NAME` and `DIST_LISTEN=true`, and the cookie of the nodes
+`DIST_COOKIE`: a random value of 32 bytes or more, the same in the
+secret of the Worker and in the secret of the repository. The runner
+checks out the commit that the edge runs (the crews refuse other code),
+with the deps and the build in the cache. The edge starts the
+distribution after the application, so `World.Crew` watches the nodes
+from its start (`:net_kernel.monitor_nodes/2` with `node_type: :all`: a
+node that only connects is hidden). The edge gives work and takes none
+(`WORLD_LABOUR=parts`): it builds only a person at mid or far.
+
+**Whole parts, not small jobs.** The edge gives the shift a whole part
+by its key (`World.Labour`). The node builds it, puts the GLB in R2
+itself (the S3 API of R2, with a token of the bucket `world` only: the
+secrets `WORLD_R2_*` of the repository, `scripts/order-store.mjs`), and
+gives back only the key. No GLB goes over the link. A part in R2 does
+not build again. A part whose node goes away goes back to the queue. An
+issue gets its comment (the parts lists and their URLs) when its parts
+are built, and closes: the job of the request closes it at once, else
+the shift does (`scripts/shift-issues.mjs check`, each 5 minutes and at
+its end).
+
+**The length of a shift.** A shift stays until its end, and waits for
+the next part between parts. It goes home early after 60 minutes with
+no work. It stops 15 minutes before the end of the time of its job, and
+its parts that are not done go back to the queue of the edge. It writes
+a summary in the summary of the job: each part, its time, the peak
+memory of the VM while it built, its result, and the failures and the
+stops.
+
+**SSH into a shift**, as `remote-ssh.yml` of BEAM.com: the input
+`ssh_key` of `shift.yml` (one line `ssh-ed25519 ...`) starts the SSH
+server of Erlang `:ssh` behind a quick tunnel of Cloudflare
+(`scripts/shift-ssh.sh`). The URL and the fingerprint of the host key
+are in the log and in the summary of the job. Then, with the private
+key: `beam.com -a ssh remote_ssh.erl -- exec wss://HOST/ KEY FINGERPRINT
+'tail -n 50 /home/runner/work/_temp/tcp-proxy.log'`.
+
+**The secrets**, once:
 
 ```sh
-# Once, for the Worker:
-npx wrangler secret put WORLD_LINK_TOKEN
-npx wrangler secret put DIST_COOKIE
-# On each native computer (the same commit as the deploy):
-WORLD_LINK_TOKEN=... node scripts/link.mjs 4370 wss://world.mkfifo.com/.tcp/4370 &
-WORLD_NODE=a4372@127.0.0.1 WORLD_COOKIE=... WORLD_JOIN=world@127.0.0.1 \
-WORLD_STORE_URL=https://world.mkfifo.com/store WORLD_STORE_TOKEN=... \
-ERL_FLAGS="-start_epmd false -epmd_module Elixir.World.Epmd -connect_all false -kernel inet_dist_use_interface {127,0,0,1}" \
-MIX_ENV=prod mix run --no-halt
+# The Worker:
+npx wrangler secret put DIST_COOKIE           # openssl rand -hex 32
+npx wrangler secret put WORLD_SHIFT_TOKEN     # fine-grained, actions: write on sntran/World only
+npx wrangler secret put WORLD_PROJECT_TOKENS  # vung_tau=TOKEN (32 characters or more)
+# The repository (Settings, Secrets and variables, Actions):
+#   DIST_COOKIE           the same value as the Worker
+#   WORLD_R2_ENDPOINT     https://ACCOUNT.r2.cloudflarestorage.com
+#   WORLD_R2_KEY_ID, WORLD_R2_SECRET
+#                         an R2 API token: Object Read & Write, the bucket world only
+#   WORLD_PROJECT_TOKENS  the same value as the Worker
 ```
 
-The name of a native node has its port (`World.Epmd`), and its port
-takes connections of this computer only. `-connect_all false`: the
-native nodes do not connect to each other. A second native node on one
-computer takes another name (`a4373@127.0.0.1`) and the same link.
-`node scripts/edit-time.mjs BASE HASH LEVEL EDITS` measures the time
-from an edit of an order to its whole new level, as a project gets it:
-the edit, the parts list, then all its parts at one time.
+**A shift on this computer** (a test, with no GitHub and no R2 token):
+`wrangler dev` with `--var WORLD_SHIFT_API:http://127.0.0.1:PORT` (a
+local server in the place of the API of GitHub, which runs
+`scripts/shift.sh` for each start), `--var WORLD_STORE_TOKEN:TOKEN`
+(the store of the local Worker on `/store/KEY`, for the node:
+`WORLD_STORE_URL`, `WORLD_STORE_TOKEN`), and the other secrets as
+`--var`. The site has no `WORLD_STORE_TOKEN`, so `/store/` is not there.
+`node scripts/edit-time.mjs BASE HASH LEVEL EDITS` (with `WORLD_TOKEN`,
+the token of the project) measures the time from an edit of an order to
+its whole new level, as a project gets it: the edit, the parts list,
+then all its parts at one time.
 
-#### Hải Âu with two native nodes
+#### Hải Âu with two nodes on one computer
 
-The measure: the local edge (`wrangler dev`), the link, and two native
-nodes (`a4372`, `a4373`), all on one computer with 4 cores. The order
+The first measure of the labour of the parts, before the shifts: the
+local edge (`wrangler dev`) and two native nodes (`a4372`, `a4373`)
+that joined it, all on one computer with 4 cores. The order
 is Hải Âu, and the level is mid (7 parts: the sign, the base, and the 5
 parts of the main node). Each time is from the edit to the last part:
 
@@ -872,8 +937,7 @@ parts of the main node). Each time is from the edit to the last part:
 - The parts list stays at the edge (about 26 s of CPU time). This is
   less than 5 minutes, but more than 30 s.
 - On computers with more cores, or with more nodes, the main parts
-  build with less waiting. The time at world.mkfifo.com needs a deploy
-  and the secrets of the link.
+  build with less waiting.
 
 ### The guard and the memory of WebAssembly
 

@@ -1,0 +1,39 @@
+name: A construction shift
+description: World builds the parts of the orders of a project of the owner that the edge cannot build (its memory, or its CPU limit), in a shift on a runner of GitHub Actions. The parts lists come in a comment, and the issue closes.
+title: "Construction shift"
+labels: [shift]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A shift starts at once for an issue of a member of the repository. The issue of another user waits until the owner adds the label shift again. The shift builds only the orders of the projects of the owner: a project has a token in the secret WORLD_PROJECT_TOKENS.
+
+        The limits (docs/factory.md, "Construction shifts"): one shift at a time, at most 5.5 hours each, and at most 6 shifts each day. A shift that runs takes the parts of a new request at once. A shift goes home after 60 minutes with no work.
+  - type: input
+    id: project
+    attributes:
+      label: Project
+      description: The name of the project in WORLD_PROJECT_TOKENS (letters a to z, digits, _ and -).
+      placeholder: vung_tau
+    validations:
+      required: true
+  - type: textarea
+    id: orders
+    attributes:
+      label: Orders
+      description: One link to the orders.json of the project at a commit (https://github.com/OWNER/REPOSITORY/blob/COMMIT/PATH.json, with the 40 digits of the commit), or the hashes of orders of POST /orders, one on each line (200 at most).
+    validations:
+      required: true
+  - type: checkboxes
+    id: levels
+    attributes:
+      label: Levels
+      options:
+        - label: near
+        - label: mid
+        - label: far
+  - type: input
+    id: hours
+    attributes:
+      label: Hours
+      description: The hours of the shift, from 0.5 to 5.5 (5.5 when empty). A shift that runs keeps its own hours.

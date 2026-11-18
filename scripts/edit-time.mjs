@@ -9,10 +9,12 @@
 // ('[{"set": "options.storey", "to": 3.4}]', or - for no edit: the level
 // of the order as it is). The script makes the edit
 // (POST /orders/HASH/edits), gets the parts list of the new order at the
-// level, then asks for each part at the same time (the native nodes build
-// the large parts at the same time, World.Labour), and asks again after
-// each 202. It prints the time of each step and of each part, and the
-// time to the last part.
+// level, then asks for each part at the same time (a construction shift
+// builds the large parts at the same time, World.Labour), and asks again
+// after each 202. It prints the time of each step and of each part, and
+// the time to the last part. WORLD_TOKEN: the token of a project, so
+// that the parts that do not fit the edge go to a construction shift;
+// WORLD_SHIFT_HOURS: the hours of a shift that the request starts.
 
 const [base, hash, level, edits] = process.argv.slice(2);
 if (!base || !hash || !level || !edits) {
@@ -20,6 +22,8 @@ if (!base || !hash || !level || !edits) {
   process.exit(2);
 }
 
+const auth = process.env.WORLD_TOKEN ? { authorization: `Bearer ${process.env.WORLD_TOKEN}` } : {};
+if (process.env.WORLD_SHIFT_HOURS) auth['x-world-shift-hours'] = process.env.WORLD_SHIFT_HOURS;
 const start = Date.now();
 const seconds = () => ((Date.now() - start) / 1000).toFixed(1);
 const wait = (s) => new Promise((done) => setTimeout(done, s * 1000));
@@ -27,7 +31,7 @@ const wait = (s) => new Promise((done) => setTimeout(done, s * 1000));
 // A GET until its answer is not 202 (the build goes on after a 202).
 async function get(url) {
   for (;;) {
-    const r = await fetch(url);
+    const r = await fetch(url, { headers: auth });
     if (r.status !== 202) return r;
     await r.arrayBuffer();
     await wait(Number(r.headers.get('retry-after') ?? 15));
@@ -38,7 +42,7 @@ let order = { hash };
 if (edits !== '-') {
   const edit = await fetch(`${base}/orders/${hash}/edits`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...auth },
     body: JSON.stringify({ edits: JSON.parse(edits) }),
   });
   order = await edit.json();

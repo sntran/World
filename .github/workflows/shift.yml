@@ -1,0 +1,171 @@
+name: Construction shift
+
+# A construction shift (docs/factory.md, "Construction shifts"): the node
+# of this runner joins the node of the edge (World.Crew) over
+# wss://world.mkfifo.com/.tcp/4370 (the tcp-proxy.mjs of beam.com), takes
+# whole parts by their key (World.Labour), puts each GLB in R2 itself,
+# and goes home: after 60 minutes with no work, or 15 minutes before the
+# end of the time of its job (World.Shift). It is not a server that stays
+# up, and it takes no public orders.
+#
+# The edge starts it (shift.js, workflow_dispatch with the fine-grained
+# token WORLD_SHIFT_TOKEN of the Worker), for the commit that the edge
+# runs: the crews refuse a node with other code. The owner can start it
+# by hand too.
+#
+# The secrets of the repository:
+#
+# - DIST_COOKIE: the cookie of the nodes, the same as the secret of the
+#   Worker (32 random bytes or more).
+# - WORLD_R2_ENDPOINT, WORLD_R2_KEY_ID, WORLD_R2_SECRET: the S3 API of
+#   R2 (https://ACCOUNT.r2.cloudflarestorage.com) and a token of the
+#   bucket world only (read and write of objects).
+# - WORLD_PROJECT_TOKENS: NAME=TOKEN of each project, as in the Worker,
+#   for the issues of the shifts (scripts/shift-issues.mjs).
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: The commit that the edge runs (its 40 digits, /version.json of the factory)
+        type: string
+        required: true
+      hours:
+        description: The hours of the shift (0.5 to 5.5)
+        type: string
+        default: "5.5"
+      idle:
+        description: The minutes with no work before the shift goes home (5 to 60)
+        type: string
+        default: "60"
+      ssh_key:
+        description: A public key (one line ssh-ed25519 ...) for SSH into the shift; empty for no SSH
+        type: string
+        default: ""
+
+run-name: Construction shift for ${{ inputs.commit }}
+
+permissions:
+  contents: read
+  # The comments on the issues of the shifts, and their close.
+  issues: write
+
+# One shift at a time. A start while a shift runs waits for its end
+# (GitHub keeps one run that waits).
+concurrency:
+  group: construction-shift
+  cancel-in-progress: false
+
+env:
+  BEAM_COM_VERSION: 0.1.0-rc.7
+  BEAM_COM_SHA256: 203f7395007698462fe18851b90865afac30f647c57eb12407c3e00109d30c54
+
+jobs:
+  shift:
+    runs-on: ubuntu-24.04
+    # At most 5.5 hours. The shift stops 15 minutes before this end.
+    timeout-minutes: 330
+    steps:
+      # The inputs are input of a person or of the edge: they go to the
+      # shell in the environment only, and only checked values go on.
+      - name: Check the inputs
+        env:
+          COMMIT: ${{ inputs.commit }}
+          HOURS: ${{ inputs.hours }}
+          IDLE: ${{ inputs.idle }}
+          KEY: ${{ inputs.ssh_key }}
+        run: |
+          echo "$COMMIT" | grep -Eqx '[0-9a-f]{40}' || { echo "The commit must have 40 hex digits" >&2; exit 1; }
+          echo "$HOURS" | grep -Eqx '[0-9]+(\.[0-9]+)?' || { echo "The hours must be a number" >&2; exit 1; }
+          echo "$IDLE" | grep -Eqx '[0-9]+' || { echo "The idle minutes must be a number" >&2; exit 1; }
+          case $KEY in "" | "ssh-ed25519 "*) ;; *) echo "The key must be one line ssh-ed25519 ..." >&2; exit 1 ;; esac
+          [ "$(printf '%s' "$KEY" | tr -d '\r' | wc -l)" -eq 0 ] && [ "$(printf '%s' "$KEY" | wc -c)" = "$(printf '%s' "$KEY" | tr -d '\r' | wc -c)" ] || { echo "The key must be one line" >&2; exit 1; }
+          # The end of the shift: the hours (at most 5.5), less 15 minutes.
+          minutes=$(awk -v h="$HOURS" 'BEGIN { m = h * 60; if (m > 330) m = 330; if (m < 30) m = 30; print int(m) - 15 }')
+          idle=$IDLE; [ "$idle" -gt 60 ] && idle=60; [ "$idle" -lt 5 ] && idle=5
+          echo "WORLD_SHIFT_UNTIL=$(( $(date +%s) + minutes * 60 ))" >> "$GITHUB_ENV"
+          echo "WORLD_SHIFT_IDLE=$idle" >> "$GITHUB_ENV"
+          echo "The shift: $minutes minutes at most, home after $idle minutes with no work."
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      # beam.com is an Actually Portable Executable: its first lines are a
+      # shell script. The runner can give a program that starts with MZ to
+      # WINE. This rule gives it to /bin/sh.
+      - name: Run APE programs with /bin/sh
+        run: sudo sh -c 'echo ":APE:M::MZqFpD::/bin/sh:" > /proc/sys/fs/binfmt_misc/register' || true
+
+      - name: Install beam.com
+        run: |
+          mkdir -p "$HOME/bin"
+          cd "$HOME/bin"
+          curl -fsSLO "https://github.com/sntran/BEAM.com/releases/download/v$BEAM_COM_VERSION/beam.com"
+          echo "$BEAM_COM_SHA256  beam.com" | sha256sum -c -
+          chmod +x beam.com
+          for tool in mix.com iex.com; do ln -s beam.com "$tool"; done
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      # The deps and the build of the release, from the cache: the node of
+      # the shift starts in some seconds.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            deps
+            _build
+            ~/.mix
+            ~/.hex
+          key: shift-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-${{ hashFiles('mix.lock') }}-${{ inputs.commit }}
+          restore-keys: |
+            shift-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-${{ hashFiles('mix.lock') }}-
+            shift-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-
+
+      - name: Build the node
+        env:
+          MIX_ENV: prod
+        run: |
+          npm ci --ignore-scripts
+          mix.com local.hex --force --if-missing
+          mix.com local.rebar --force --if-missing
+          mix.com deps.get --only prod
+          mix.com compile
+
+      # SSH into the shift, as remote-ssh.yml of BEAM.com: the URL and the
+      # fingerprint go to the log and to the summary of the job.
+      - name: SSH into the shift
+        if: inputs.ssh_key != ''
+        env:
+          KEY: ${{ inputs.ssh_key }}
+        run: |
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/authorized_keys"
+          KEYS="$RUNNER_TEMP/authorized_keys" nohup sh scripts/shift-ssh.sh > "$RUNNER_TEMP/ssh.log" 2>&1 &
+          for i in $(seq 1 150); do grep -q 'shift ssh: wss://' "$RUNNER_TEMP/ssh.log" && break; sleep 2; done
+          cat "$RUNNER_TEMP/ssh.log"
+
+      - name: The shift
+        env:
+          WORLD_URL: https://world.mkfifo.com
+          WORLD_COOKIE: ${{ secrets.DIST_COOKIE }}
+          WORLD_R2_ENDPOINT: ${{ secrets.WORLD_R2_ENDPOINT }}
+          WORLD_R2_KEY_ID: ${{ secrets.WORLD_R2_KEY_ID }}
+          WORLD_R2_SECRET: ${{ secrets.WORLD_R2_SECRET }}
+          WORLD_PROJECT_TOKENS: ${{ secrets.WORLD_PROJECT_TOKENS }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: sh scripts/shift.sh
+
+      # The issues whose parts are built get their parts lists and close.
+      - name: The issues of the shift
+        if: always()
+        env:
+          WORLD_URL: https://world.mkfifo.com
+          WORLD_PROJECT_TOKENS: ${{ secrets.WORLD_PROJECT_TOKENS }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/shift-issues.mjs check
