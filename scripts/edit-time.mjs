@@ -6,11 +6,13 @@
 //
 // BASE is the factory (https://world.mkfifo.com), HASH an order of POST
 // /orders, LEVEL near, mid or far, and EDITS the edits in JSON
-// ('[{"set": "options.storey", "to": 3.4}]'). The script makes the edit
+// ('[{"set": "options.storey", "to": 3.4}]', or - for no edit: the level
+// of the order as it is). The script makes the edit
 // (POST /orders/HASH/edits), gets the parts list of the new order at the
-// level, then asks for each part at the same time (a part builds in a
-// Durable Object of its own), and asks again after each 202. It prints the
-// time of each step and of each part, and the time to the last part.
+// level, then asks for each part at the same time (the native nodes build
+// the large parts at the same time, World.Labour), and asks again after
+// each 202. It prints the time of each step and of each part, and the
+// time to the last part.
 
 const [base, hash, level, edits] = process.argv.slice(2);
 if (!base || !hash || !level || !edits) {
@@ -32,17 +34,20 @@ async function get(url) {
   }
 }
 
-const edit = await fetch(`${base}/orders/${hash}/edits`, {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ edits: JSON.parse(edits) }),
-});
-const order = await edit.json();
-if (edit.status !== 200) {
-  console.error(`the edit: ${edit.status} ${JSON.stringify(order)}`);
-  process.exit(1);
+let order = { hash };
+if (edits !== '-') {
+  const edit = await fetch(`${base}/orders/${hash}/edits`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ edits: JSON.parse(edits) }),
+  });
+  order = await edit.json();
+  if (edit.status !== 200) {
+    console.error(`the edit: ${edit.status} ${JSON.stringify(order)}`);
+    process.exit(1);
+  }
+  console.log(`${seconds()} s: the edit, the new order ${order.hash}`);
 }
-console.log(`${seconds()} s: the edit, the new order ${order.hash}`);
 
 const suffix = level === 'near' ? 'elements.json' : `${level}.elements.json`;
 const answer = await get(`${base}/o/${order.hash}.${suffix}`);

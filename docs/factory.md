@@ -56,7 +56,7 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
-| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else a builder of the parts builds it from its recipe and keeps it: one of 8 VMs, from its key, so a project that asks for all the parts of a list at one time gets them built at the same time ("The builders of the parts"). A large part that takes more than 45 s gives 202 with `retry-after`: ask again. |
+| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge or a native node builds it from its recipe and keeps it ("The labour of native nodes"): a project that asks for all the parts of a list at one time gets them built at the same time on the native nodes. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
@@ -447,7 +447,7 @@ version of the blueprint (`van@2`): the old version stays.
 | Order | Where |
 |---|---|
 | A model of the catalog | `mix world.build` builds it natively, and the files are in the repository. CI checks at each commit that they are the build of the code. The Worker serves them as static files: no build at a request. |
-| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. A part of a parts list builds in one of the 8 builders of the parts ("The builders of the parts"). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
+| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. A large part of a parts list builds on a native node ("The labour of native nodes"). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 ## The server on a computer
 
@@ -777,27 +777,103 @@ into one model, and it does not keep a whole model in its memory
   the VM and the other orders go on. The check of an order with a large
   sculpture does not build it at far.
 
-### The builders of the parts
+### The CPU limit of the edge
 
-One VM builds one part at a time (`World.Line`), because a large part
-takes most of its memory. So a part that R2 does not have builds in one
-of 8 builders of the parts: the Durable Object classes `Part0` to
-`Part7` (`wrangler.jsonc`), each with one object and its own VM, and
-the first 8 hex digits of the key of the part, modulo 8, choose the
-builder (`objectOf/1` of `handler.js`). The node `world` (the orders,
-the parts lists, the constructions) is a class of its own.
+A request to a Durable Object has 30 s of CPU time by default, and 5
+minutes at most (`limits.cpu_ms`). `wrangler.jsonc` sets 5 minutes. A
+part takes about its time of build in CPU time (one VM is one thread),
+and `wrangler dev` does not apply the limit, so the times of the local
+edge (below, "Hải Âu") tell which parts the edge cannot finish:
 
-- A project that asks for all the parts of a list at one time gets up
-  to 8 parts built at the same time; two parts with the same builder
-  build one after the other. A second request of a part goes to the same
-  builder, which builds it one time.
-- Each builder is a class of its own because Cloudflare can run the
-  objects of one class in one isolate, and they then share its 128 MB.
-  The log line `beam: memory N MB (… VMs in this isolate: M MB)` of
-  beam.com shows two VMs in one isolate.
-- `node scripts/edit-time.mjs BASE HASH LEVEL EDITS` measures the time
-  from an edit of an order to its whole new level, as a project gets
-  it: the edit, the parts list, then all its parts at one time.
+- With 30 s (no `limits.cpu_ms`): no part of the main node of Hải Âu at
+  any level (far 122 s; mid 111 to 336 s; near up to 221 s), the base at
+  mid and near (37 and 44 s), and the parts lists of mid and near (25
+  and 67 to 96 s). Only the people of a group (8 to 12 s), the sign at
+  far (7 s) and the base at far (21 s) fit.
+- With 5 minutes: the edge cannot finish the largest part of the main
+  node at mid (336 s), and a part takes about 5 minutes or more at a
+  busy core. The rest fits, but each part takes some minutes, one after
+  the other in one VM.
+
+So the edge builds only the parts that fit it with room (a person at
+mid or far), and the native nodes build the others (below). These
+times are of `wrangler dev` on a shared core; the times at the edge
+need a deploy (the next measure on world.mkfifo.com).
+
+### The labour of native nodes
+
+A native node is a VM of World on a computer (`mix run --no-halt` of
+this repository, the same code as the edge): no limit of memory and no
+limit of CPU time. Each native node joins the node of the edge
+(`World.Crew`), and builds whole parts, by their key (`World.Labour`):
+
+- The edge takes the orders, checks them, makes the parts lists, and
+  serves each part from R2. It builds a part only when it fits its
+  memory and its CPU limit (a person at mid or far), or when no native
+  node is there.
+- It gives each other part, by its key, to the native node with the
+  fewest parts in work for its workers. The native node reads the
+  recipe and the order from the store, builds the part with all its
+  cores (its crews), puts the GLB in R2, and gives back only the key:
+  the GLB does not go over the link, and the Worker serves it from R2.
+- A part whose node goes away (or that raises there) builds on the next
+  node, and on the edge when no node is left.
+- The edge lends no workers and takes no jobs (`WORLD_LABOUR=parts`):
+  the jobs of a stream stay on their node.
+
+The cluster is private. No node has an open port: a native node
+connects out to the edge, through a WebSocket (TLS) to `/.tcp/4370` of
+the Worker, with the token of the link (the secret `WORLD_LINK_TOKEN`
+of the Worker, 32 characters or more), and the node of the edge takes
+it as distributed Erlang (`DIST_NAME`, `DIST_LISTEN`, the secret
+`DIST_COOKIE`). It reads and puts the store through `/store/KEY` of the
+Worker with the same token. With no secret `WORLD_LINK_TOKEN`, the two
+paths are not there.
+
+```sh
+# Once, for the Worker:
+npx wrangler secret put WORLD_LINK_TOKEN
+npx wrangler secret put DIST_COOKIE
+# On each native computer (the same commit as the deploy):
+WORLD_LINK_TOKEN=... node scripts/link.mjs 4370 wss://world.mkfifo.com/.tcp/4370 &
+WORLD_NODE=a4372@127.0.0.1 WORLD_COOKIE=... WORLD_JOIN=world@127.0.0.1 \
+WORLD_STORE_URL=https://world.mkfifo.com/store WORLD_STORE_TOKEN=... \
+ERL_FLAGS="-start_epmd false -epmd_module Elixir.World.Epmd -connect_all false -kernel inet_dist_use_interface {127,0,0,1}" \
+MIX_ENV=prod mix run --no-halt
+```
+
+The name of a native node has its port (`World.Epmd`), and its port
+takes connections of this computer only. `-connect_all false`: the
+native nodes do not connect to each other. A second native node on one
+computer takes another name (`a4373@127.0.0.1`) and the same link.
+`node scripts/edit-time.mjs BASE HASH LEVEL EDITS` measures the time
+from an edit of an order to its whole new level, as a project gets it:
+the edit, the parts list, then all its parts at one time.
+
+#### Hải Âu with two native nodes
+
+The measure: the local edge (`wrangler dev`), the link, and two native
+nodes (`a4372`, `a4373`), all on one computer with 4 cores. The order
+is Hải Âu, and the level is mid (7 parts: the sign, the base, and the 5
+parts of the main node). Each time is from the edit to the last part:
+
+| Edit | Parts list | Sign and base | Main parts | Whole mid level |
+|---|---|---|---|---|
+| None (the first order, cold) | 24.8 s | 20.9 s (built) | 81 to 120 s | 145.0 s |
+| One front (`options.fronts.0.bays` to 6) | 26.4 s | 0.1 s (R2) | 37 to 122 s | 148.7 s |
+| The height of a storey (`options.storey` to 3.4) | 26.4 s | 0.1 s (R2) | 41 to 120 s | 146.6 s |
+| A storey of 3.5, with `a4373` stopped 30 s after the list | 26.2 s | 0.1 s (R2) | 36 to 185 s | 210.9 s |
+
+- Each time is less than the target of 5 minutes.
+- An edit keeps the keys of the sign and the base, so they come from R2.
+  It changes all 5 parts of the main node.
+- When `a4373` stopped, its parts built again on `a4372`. All 7 parts
+  came, and the time went up by about 60 s.
+- The parts list stays at the edge (about 26 s of CPU time). This is
+  less than 5 minutes, but more than 30 s.
+- On computers with more cores, or with more nodes, the main parts
+  build with less waiting. The time at world.mkfifo.com needs a deploy
+  and the secrets of the link.
 
 ### The guard and the memory of WebAssembly
 
