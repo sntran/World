@@ -88,6 +88,16 @@ defmodule World.SimplifyTest do
 
     meshes = Surface.meshes(Enum.map(Sculpt.bricks(edits, 0.04).bricks, &Surface.piece(&1, 0.04)), budget: 400)
     assert meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() == length(fs)
+
+    # A budget smaller than the borders let: the collapse with the borders
+    # held stops above it; with `loose`, the borders move and the budget
+    # holds. The mesh stays closed, and a point of `fixed` stays.
+    held = Simplify.collapse(points, faces, 20, [])
+    assert length(held.faces) > 20
+    one = Enum.find_index(points, &(&1 == Enum.max_by(points, fn {x, _, _} -> x end)))
+    loose = Simplify.collapse(points, faces, 20, loose: true, fixed: [one])
+    assert length(loose.faces) <= 20 and closed?(loose.faces)
+    assert Enum.at(points, one) in loose.points
   end
 
   test "a face with no area (its points on a line) does not stop the collapse" do

@@ -213,7 +213,7 @@ defmodule World.Sculpt.Surface do
         {_keys, pts, tris, pins} = triangles(pieces, pin, seam)
 
         if budget != nil and length(tris) > budget do
-          %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, pins: pins)
+          %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, pins: pins, loose: true)
           {pts, tris}
         else
           {pts, tris}
@@ -669,7 +669,7 @@ defmodule World.Sculpt.Surface do
       join_band(pts, rest, used, r)
     else
       _ ->
-        %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, quadrics: quadrics)
+        %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, quadrics: quadrics, loose: true)
         {pts, tris}
     end
   end
