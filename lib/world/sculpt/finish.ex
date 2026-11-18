@@ -95,13 +95,36 @@ defmodule World.Sculpt.Finish do
     |> Enum.group_by(fn {{x, y, z}, _} -> {floor(x / size), floor(y / size), floor(z / size)} end)
     |> Enum.map(fn {at, ps} -> {Map.get(lists, at, edits), ps} end)
     |> Enum.chunk_every(@group)
+    |> Enum.map(&shared/1)
     # The list of a brick for the hot loop of the value too (`World.SDF.fast/1`).
-    |> World.Crew.map(fn group ->
-      for {list, ps} <- group, fast = SDF.fast(list), {p, i} <- ps, do: {i, f.(p, list, fast)}
+    |> World.Crew.map(fn {some, group} ->
+      some = List.to_tuple(some)
+
+      for {places, ps} <- group,
+          list = Enum.map(places, &elem(some, &1)),
+          fast = SDF.fast(list),
+          {p, i} <- ps,
+          do: {i, f.(p, list, fast)}
     end)
     |> Enum.concat()
     |> Enum.sort()
     |> Enum.map(&elem(&1, 1))
+  end
+
+  # The edits of the lists of some bricks, each one time, and each list as
+  # places in them. A message is a copy (with no sharing): a job gets each
+  # edit one time, not one time for each list that has it. (A tube of a
+  # list can have only its cones near the brick: its parts are in the key.)
+  defp shared(group) do
+    key = fn e -> {e.id, :erlang.phash2(e.parts)} end
+
+    {index, some} =
+      for {list, _} <- group, e <- list, reduce: {%{}, []} do
+        {index, some} ->
+          if is_map_key(index, key.(e)), do: {index, some}, else: {Map.put(index, key.(e), map_size(index)), [e | some]}
+      end
+
+    {Enum.reverse(some), for({list, ps} <- group, do: {Enum.map(list, &index[key.(&1)]), ps})}
   end
 
   defp point(p, list, fast, step, limit, colors?) do

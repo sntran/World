@@ -16,8 +16,10 @@ defmodule Mix.Tasks.World.Order do
   simple solids of the model, `World.Solids`), and the flat look of each
   level (`HASH.flat.glb`, `HASH.mid.flat.glb`, `HASH.far.flat.glb`,
   and the light look: `HASH.light.glb`, `HASH.mid.light.glb`, `HASH.far.light.glb`,
-  `World.Flat`). A wrong order stops the task
-  with each error.
+  `World.Flat`), and the parts list of each level
+  (`HASH.elements.json`, `HASH.mid.elements.json`,
+  `HASH.far.elements.json`, `World.Elements`) with the GLB of each of its
+  parts (`p/KEY.glb`). A wrong order stops the task with each error.
   """
   use Mix.Task
 
@@ -40,21 +42,29 @@ defmodule Mix.Tasks.World.Order do
 
     files =
       for {level, ext} <- [{"near", ""}, {"mid", ".mid"}, {"far", ".far"}],
-          file <- if(level == "near", do: World.Orders.files(), else: ["glb", "flat", "light"]) do
+          file <- if(level == "near", do: World.Orders.files(), else: ["glb", "flat", "light", "elements"]) do
         name =
           case file do
             "glb" -> "#{hash}#{ext}.glb"
             "flat" -> "#{hash}#{ext}.flat.glb"
             "light" -> "#{hash}#{ext}.light.glb"
             "replay" -> "#{hash}.replay.glb"
+            "elements" -> "#{hash}#{ext}.elements.json"
             _ -> "#{hash}.#{file}.json"
           end
 
         {name, ok!(World.Orders.build(order, level, file))}
       end
 
-    File.mkdir_p!(dir)
+    File.mkdir_p!(Path.join(dir, "p"))
     for {name, bin} <- files, do: File.write!(Path.join(dir, name), bin)
+
+    # The GLB of each part of each parts list.
+    for {name, bin} <- files, String.ends_with?(name, ".elements.json"), p <- JSON.decode!(bin)["parts"] do
+      {:ok, glb} = World.Elements.part(p["key"])
+      File.write!(Path.join([dir, "p", p["key"] <> ".glb"]), glb)
+    end
+
     Mix.shell().info("Wrote the files of #{hash} in #{dir}.")
   end
 

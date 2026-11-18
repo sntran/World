@@ -63,6 +63,12 @@ again.
   (`python3 scripts/makehuman.py MPFB_DATA PACKS_DIR eye_materials`).
 - The textures are smaller (1024, 512 or 256 pixels), with no color
   profile.
+- An asset has at most 17,000 triangles (`World.People.Thin`): `mix run
+  scripts/thin.exs` makes a larger one thin after the script. The
+  points that stay keep their places and their lines of the fit. These
+  are thin: `elvs_caesar_sandals1` (91,704 triangles before),
+  `culturalibre_male_boots` (30,768), `elvs_male_flip_flop_sandals1`
+  (23,408) and `elvs_hooded_sweat_jacket1` (19,574).
 - The textures of the hair are gray, made bright, so a hair can have
   any color (`docs/format.md`, "A person").
 - `assets.json` lists the assets, with the mean color of each texture.

@@ -105,17 +105,32 @@ defmodule World.SiteTest do
       ]
     }
 
-    id = "site-#{System.unique_integer([:positive])}"
-    job = %{id: id, item: fn level -> Detail.with(level, fn -> Drawing.build(d) end) end, drawing: d}
-    {:ok, ^id} = World.build(job)
-    assert {:ok, %{log: log}} = World.await(id, 30_000)
-    assert Log.check(log) == :ok
-    at = fn kind, task -> Enum.find(Log.events(log), &(&1.kind == kind and &1.data["task"] == task)) end
+    item = fn level -> Detail.with(level, fn -> Drawing.build(d) end) end
+
+    run = fn budget ->
+      id = "site-#{System.unique_integer([:positive])}"
+      {:ok, ^id} = World.build(%{id: id, item: item, drawing: d, budget: budget})
+      assert {:ok, %{log: log}} = World.await(id, 30_000)
+      assert Log.check(log) == :ok
+      at = fn kind, task -> Enum.find(Log.events(log), &(&1.kind == kind and &1.data["task"] == task)) end
+      {at, at.("task_done", "slab").at - at.("task_started", "slab").at}
+    end
+
     day = Clock.day()
+
+    # On the fast clock of a construction, the time of an event is the
+    # time of the world, not of the wall: the slab ends at its 10 days,
+    # and the wall starts at the end of the 7 days of the cure.
+    {at, slab} = run.(%{"clock" => "fast"})
     # 250 m3 of concrete: 10 days of a crew with a pump; then 7 days to set.
     assert at.("task_started", "slab").data["days"] == 10.0 and at.("task_started", "slab").data["wait"] == 7.0
-    slab = at.("task_done", "slab").at - at.("task_started", "slab").at
-    assert slab >= 10 * day and slab < 10 * day + 200 * Clock.world().scale
+    assert slab == 10 * day
+    assert at.("task_started", "wall").at - at.("task_done", "slab").at == 7 * day
+
+    # On the clock of the world, a task ends at its days or later (a busy
+    # computer makes it late, not early), and the wall waits for the cure.
+    {at, slab} = run.(%{})
+    assert slab >= 10 * day
     assert at.("task_started", "wall").at - at.("task_done", "slab").at >= 7 * day
     # The wall: no work and no takeoff, one hour.
     assert at.("task_started", "wall").data["days"] == 0.125

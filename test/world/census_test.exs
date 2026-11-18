@@ -130,6 +130,24 @@ defmodule World.CensusTest do
     assert total > 0 and bytes > 0
   end
 
+  # A host of WebAssembly (BEAM.com, `wasm_host:memory/1`), and a host with no function of the memory in it.
+  defmodule Host do
+    def memory(:size), do: 120_000_000
+    def memory(:used), do: 70_000_000
+  end
+
+  defmodule OldHost do
+    def memory(_kind), do: :erlang.nif_error(:not_loaded)
+  end
+
+  test "the memory of a VM in WebAssembly: the size of its memory and the part that it uses" do
+    assert World.wasm_memory() == nil
+    assert World.wasm_memory(Host) == {120_000_000, 70_000_000}
+    assert World.memory(&:erlang.memory/1, Host) == {"used", 70_000_000}
+    assert World.wasm_memory(OldHost) == nil
+    assert World.wasm_memory(String) == nil
+  end
+
   test "World.census/0 is the census of the node, where a process hires and lets go" do
     ref = Person.hire(:census_test)
     assert_receive {:hired, ^ref, p}
@@ -139,27 +157,39 @@ defmodule World.CensusTest do
     assert %{"by" => nil} = Enum.find(World.census()["people"], &(&1["name"] == Person.name(p)))
   end
 
-  test "the node has its registries, its people, its constructions, its census, the cache of bricks, the gate of the sculptures, the crews and the live sculptures; the server only with WORLD_SERVER" do
+  test "the node has its registries, its people, its constructions, its census, the cache of bricks, the gate of the sculptures, the crews, the live sculptures and the labour of the parts; the server only with WORLD_SERVER" do
     names = for {_, _, _, _} = c <- Supervisor.which_children(World.Supervisor), do: elem(c, 0)
     assert World.Census in names and World.Sculpt.Cache in names and World.Sculptures in names
 
     assert World.Sculpt.Gate in names and World.Crew in names and World.Crew.Tasks in names and
-             World.Crew.Sites in names
+             World.Crew.Sites in names and World.Labour in names
 
     assert World.Supervisor.server(%{}) == []
     # The settings of the service from the environment: the builds at one time is a number.
     before = Application.get_env(:world, :builds)
+    memory = Application.get_env(:world, :memory_mb)
     files = Application.get_env(:world, :files)
-    assert World.Supervisor.settings(%{"WORLD_BUILDS" => "3", "WORLD_FILES" => files, "OTHER" => "x"}) == :ok
+
+    assert World.Supervisor.settings(%{
+             "WORLD_BUILDS" => "3",
+             "WORLD_FILES" => files,
+             "WORLD_MEMORY_MB" => "90000",
+             "OTHER" => "x"
+           }) ==
+             :ok
+
     assert Application.get_env(:world, :builds) == 3 and Application.get_env(:world, :files) == files
+    # (The most memory of a build, World.Guard: more than this computer has, so no test stops.)
+    assert Application.get_env(:world, :memory_mb) == 90_000
     if before, do: Application.put_env(:world, :builds, before), else: Application.delete_env(:world, :builds)
+    if memory, do: Application.put_env(:world, :memory_mb, memory), else: Application.delete_env(:world, :memory_mb)
     assert World.Supervisor.yard(%{}) == []
     assert World.Supervisor.yard(%{"WORLD_YARD" => "true"}) == [World.Haul, World.Yard]
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true", "PORT" => "4100"})
     assert opts[:plug] == World.Service and opts[:port] == 4100
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true"})
     assert opts[:port] == 4000
-    assert length(World.Supervisor.children(%{})) == 13
+    assert length(World.Supervisor.children(%{})) == 15
   end
 
   property "two constructions never hold one person" do

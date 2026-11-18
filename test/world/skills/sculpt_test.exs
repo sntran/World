@@ -151,6 +151,57 @@ defmodule World.Skills.SculptTest do
     assert Enum.map(Skill.check(bad, "s"), &elem(&1, 0)) == ["s.edits.1.levels", "s.edits.2.levels"]
   end
 
+  test "an edit in a group and an edit of the shape group have levels: the joints of a course stay out of mid and far" do
+    # A course of blocks: each block is a group of a box and a joint (a thin cut) at near only.
+    block = %{"shape" => "box", "size" => [0.15, 0.2, 0.1]}
+    joint = %{"shape" => "box", "size" => [0.02, 0.25, 0.11], "at" => [0.15, 0, 0], "mode" => "subtract"}
+    groups = %{"block" => [block, Map.put(joint, "levels", ["near"])]}
+    course = %{"shape" => "group", "group" => "block", "repeat" => %{"count" => 4, "move" => [0.3, 0, 0]}}
+    # A cap of the course as a group at near and mid only.
+    cap = %{"shape" => "group", "group" => "block", "at" => [0.45, 0, 0.2], "levels" => ["near", "mid"]}
+    data = %{"groups" => groups, "edits" => [course, cap], "cells" => %{"near" => 0.02, "mid" => 0.02, "far" => 0.02}}
+    assert Skill.check(data, "s") == []
+
+    # Near: 4 blocks and 4 joints, and the cap with its joint. Mid: 4 blocks and the cap. Far: 4 blocks.
+    count = fn level -> length(Skill.edits(data["edits"], groups, level)) end
+    assert {count.(:near), count.(:mid), count.(:far)} == {10, 5, 4}
+    # With no level, each edit: the solids of an order.
+    assert length(Skill.edits(data["edits"], groups)) == 10
+    # The field at a level is the field of the edits of that level by hand.
+    blocks = for i <- 0..3, do: Map.put(block, "at", [0.3 * i, 0, 0])
+    joints = for i <- 0..3, do: Map.put(joint, "at", [0.3 * i + 0.15, 0, 0])
+    top = [Map.put(block, "at", [0.45, 0, 0.2]), Map.put(joint, "at", [0.6, 0, 0.2])]
+    hand = Enum.zip(blocks, joints) |> Enum.flat_map(&Tuple.to_list/1)
+    assert same_field?(Skill.edits(data["edits"], groups, :near), Skill.edits(hand ++ top))
+    assert same_field?(Skill.edits(data["edits"], groups, :mid), Skill.edits(blocks ++ [hd(top)]))
+    assert same_field?(Skill.edits(data["edits"], groups, :far), Skill.edits(blocks))
+
+    # The people make each level: the joints cut the course at near only (faces in the course), and no cap at far.
+    top_of = fn level ->
+      model = Detail.with(level, fn -> Drawing.build(drawing(data)) end)
+      {"stone", part, _} = hd(model.nodes)
+      points = Enum.flat_map(part.shapes, & &1.points)
+      cut = Enum.count(points, fn {x, y, z} -> x > 0 and x < 1 and abs(y) < 0.15 and abs(z) < 0.05 end)
+      {points |> Enum.map(&elem(&1, 2)) |> Enum.max(), cut}
+    end
+
+    {near_top, near_cut} = top_of.(:near)
+    {mid_top, mid_cut} = top_of.(:mid)
+    {far_top, far_cut} = top_of.(:far)
+    assert near_top > 0.25 and mid_top > 0.25 and far_top < 0.15
+    assert near_cut > 0 and mid_cut == 0 and far_cut == 0
+    assert Skill.estimate(data, :far) > 0
+
+    # The errors: the levels of an edit of the shape group, and of an edit in a group.
+    bad = %{
+      data
+      | "groups" => %{"block" => [block, Map.put(joint, "levels", ["low"])]},
+        "edits" => [course, %{cap | "levels" => []}]
+    }
+
+    assert Enum.map(Skill.check(bad, "s"), &elem(&1, 0)) == ["s.groups.block.1.levels", "s.edits.1.levels"]
+  end
+
   test "an edit with no turn has the axes of the sculpture: the long side of an ellipsoid stays on its axis" do
     [long_y, along_y] =
       Skill.edits([
@@ -568,5 +619,94 @@ defmodule World.Skills.SculptTest do
                ]
              })
            ) == []
+  end
+
+  # A wall of 8 m with a soft ball in its middle (at x = 0.5) and a soft ball at each end.
+  defp wall(budget \\ %{"far" => 6_000}) do
+    %{
+      "edits" => [
+        %{"shape" => "box", "size" => [4, 0.15, 0.5], "at" => [0, 0, 0.5], "material" => "plaster"},
+        %{"shape" => "ball", "size" => [0.3], "at" => [0.5, 0, 1], "blend" => 0.3},
+        %{"shape" => "ball", "size" => [0.3], "at" => [-3.5, 0, 1], "blend" => 0.1},
+        %{"shape" => "ball", "size" => [0.3], "at" => [3.5, 0, 1], "blend" => 0.1, "material" => "gray"}
+      ],
+      "cells" => %{"far" => 0.04},
+      "budget" => budget,
+      "bake" => %{"far" => 256}
+    }
+  end
+
+  test "the parts of a large sculpture (W26): steps that fit, parts with a budget, cuts out of the soft blends" do
+    # A small sculpture is one part.
+    assert Skill.tiles(data(), :far, 1_000_000) == nil
+    tiles = Detail.with(:far, fn -> Skill.tiles(wall(), :far, 3_000, 1_000) end)
+    assert length(tiles) >= 2
+    assert Enum.map(tiles, & &1.index) == Enum.to_list(0..(length(tiles) - 1))
+
+    for t <- tiles do
+      # A part has a budget of about `least` or more, and steps of at most about `most` faces.
+      assert 6_000 * t.share >= 500
+      assert length(t.steps) >= 1
+      assert_in_delta Enum.sum(for {_, share} <- t.steps, do: share), 1.0, 1.0e-9
+      # The share is a power of 2^(1/4).
+      assert_in_delta 4 * :math.log2(t.share), round(4 * :math.log2(t.share)), 1.0e-9
+    end
+
+    # A cut misses the blend of the middle ball (from x = 0.2 - 0.3 to x = 0.8 + 0.3) when a plane can:
+    # the planes of the bricks of the estimate are 1.28 m apart, and the planes at -1.28 and 1.28 m
+    # leave a quarter of the faces or more on each side.
+    two = Detail.with(:far, fn -> Skill.tiles(wall(), :far, 15_000, 1) end)
+    sides = for %{box: {{x0, _, _}, {x1, _, _}}} <- two, x <- [x0, x1], abs(x) < 1.0e5, uniq: true, do: x
+    assert sides |> Enum.map(&Float.round(&1, 2)) |> Enum.sort() == [-1.28, 1.28]
+
+    # The outer sides of the outer tiles go to the end of the space.
+    assert Enum.any?(tiles, fn %{box: {{x0, _, _}, _}} -> x0 == -1.0e6 end)
+
+    # With no budget, each step is a part. A sculpture with bones is one part.
+    no_budget = Detail.with(:far, fn -> Skill.tiles(Map.delete(wall(), "budget"), :far, 3_000, 1_000) end)
+    assert Enum.all?(no_budget, &(length(&1.steps) == 1)) and length(no_budget) >= length(tiles)
+    assert Skill.tiles(Map.put(wall(), "bones", []), :far, 3_000) == nil
+  end
+
+  test "a tile is a part of its own; its key has only the edits near it (W27)" do
+    tiles = Detail.with(:far, fn -> Skill.tiles(wall(), :far, 3_000, 1_000) end)
+    [first | _] = tiles
+    {part, more} = Detail.with(:far, fn -> Skill.tile(wall(), first, %{}, %{level: :far, name: "wall"}) end)
+    assert part.name == "wall_0" and part.shapes != []
+    # (Its own maps: the wall has no colors, so its maps are the normals and the finish.)
+    assert more["materials"] |> Map.values() |> hd() |> Map.has_key?("normal_image")
+
+    # A change of the ball at the other end does not change the key of the first tile, and changes the last.
+    moved = put_in(wall(), ["edits", Access.at(3), "size"], [0.35])
+    last = List.last(tiles)
+    assert Skill.tile_key(wall(), first, :far) == Skill.tile_key(moved, first, :far)
+    refute Skill.tile_key(wall(), last, :far) == Skill.tile_key(moved, last, :far)
+
+    # A detail at the other end is not in the first tile.
+    ball = %{"shape" => "ball", "size" => [0.05], "at" => [3.5, 0, 1.3]}
+    detailed = Map.put(wall(), "details", [%{"edits" => [ball], "cells" => %{"far" => 0.02}}])
+    {same, _} = Detail.with(:far, fn -> Skill.tile(detailed, first, %{}, %{level: :far, name: "wall"}) end)
+    assert length(same.shapes) == length(part.shapes)
+
+    # The faces before the collapse (an estimate from the box of the edits), and the roles.
+    assert Skill.faces(wall(), :far) > 10_000
+    assert Skill.faces(%{"edits" => [%{"shape" => "ball", "size" => [1], "mode" => "subtract"}]}, :far) == 0
+    assert Skill.roles(wall(), :far) |> Enum.sort() == ["gray", "paint", "plaster"]
+  end
+
+  test "a thin slab is in the estimate of the parts, also when the cells of the estimate are thicker than it" do
+    # A slab of 8 by 4 m, 8 mm thick: the cells of the estimate (16 cm) lose its surface, but not its faces.
+    slab = %{
+      "edits" => [%{"shape" => "box", "size" => [4, 2, 0.004], "at" => [0, 0, 0.07]}],
+      "cells" => %{"far" => 0.04},
+      "budget" => %{"far" => 6_000}
+    }
+
+    tiles = Detail.with(:far, fn -> Skill.tiles(slab, :far, 10_000, 1_000) end)
+    assert length(tiles) >= 2
+    # (Its two sides at the cells of the level, two triangles for each cell: 4 × 8 × 4 / 0.04² = 80,000.)
+    assert_in_delta Enum.sum(for t <- tiles, do: t.faces), 80_000, 8_000
+    # A small slab is one part.
+    assert Skill.tiles(put_in(slab, ["edits", Access.at(0), "size"], [0.4, 0.4, 0.004]), :far, 10_000) == nil
   end
 end

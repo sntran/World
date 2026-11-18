@@ -1,0 +1,59 @@
+name: Shift request
+
+# A request of a construction shift from an issue of the form "A
+# construction shift" (label shift, docs/factory.md, "Construction
+# shifts"). The job asks the factory for the parts of the orders of the
+# issue, for its project, with the ID token of the job (no secret): the
+# edge starts a shift, or gives
+# the parts to the shift that runs. When the parts are built already, the
+# issue gets the parts lists and closes; else the shift closes it
+# (.github/workflows/shift.yml, scripts/shift-issues.mjs check).
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: read
+  issues: write
+  # The ID token of the job for the factory: no secret (docs/factory.md,
+  # "The secrets").
+  id-token: write
+
+# One request for each issue (an issue of a member comes with "opened"
+# and with "labeled").
+concurrency:
+  group: shift-request-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  request:
+    # Only a member starts a shift: a member opens the issue, or adds the
+    # label to the issue of another user (only a user who can triage can
+    # label the issue of another user).
+    if: >-
+      contains(github.event.issue.labels.*.name, 'shift') &&
+      github.event.issue.state == 'open' && (
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association) || (
+          github.event.action == 'labeled' &&
+          github.event.label.name == 'shift' &&
+          github.event.sender.login != github.event.issue.user.login))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      # The text of the issue goes to the script in the environment only,
+      # never into a command: the script takes only checked values from it
+      # (scripts/shift-form.mjs).
+      - name: Ask the factory for the parts
+        env:
+          BODY: ${{ github.event.issue.body }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          WORLD_URL: https://world.mkfifo.com
+        run: node scripts/shift-issues.mjs request

@@ -5,9 +5,10 @@ defmodule World.Skills.Sculpt do
 
   Its data: `edits` (a list of 1 to 10,000 edits: each with its `shape`
   and its `size`, and `at`, `axis`, `up`, `mode`, `blend`, `material`,
-  `color`, and its copies: `mirror` and `repeat`), `groups` (a name to
-  a list of edits, that an edit of the shape `group` uses at a place and
-  a `scale`),
+  `color`, its copies: `mirror` and `repeat`, and its `levels`), `groups`
+  (a name to a list of edits, that an edit of the shape `group` uses at a
+  place and a `scale`; an edit in a group and an edit of the shape
+  `group` can have `levels` too),
   and `ports`, `sources`, `budget` (the most triangles at `near`, `mid`
   and `far`) and `cells` (the size of the cells at `near`, `mid` and
   `far`, m). With no `cells` for a level and a budget, the cells fit the
@@ -43,8 +44,10 @@ defmodule World.Skills.Sculpt do
     "shiny_metal" => {0.15, 1.0},
     "rough_metal" => {0.8, 1.0}
   }
-  @use ~w(shape group at axis up scale mirror repeat)
+  @use ~w(shape group at axis up scale mirror repeat levels)
   @most 10_000
+  # The most texels on a side of the maps of a part of a large sculpture (`tiles/4`).
+  @tile_side 512
   @size 1_000
   # The atoms of the names of the shapes and of the modes.
   @atoms Map.new(SDF.shapes() ++ SDF.modes(), &{Atom.to_string(&1), &1})
@@ -77,7 +80,7 @@ defmodule World.Skills.Sculpt do
 
     World.Skill.keys(data, path, @keys, ~w(edits)) ++
       optional(data, "groups", path, &groups/2) ++
-      optional(data, "edits", path, &edits(&1, &2, groups)) ++
+      optional(data, "edits", path, &checked(&1, &2, groups)) ++
       optional(data, "ports", path, &Drawing.check_ports/2) ++
       optional(data, "sources", path, &sources/2) ++
       optional(data, "budget", path, &budget/2) ++
@@ -104,21 +107,248 @@ defmodule World.Skills.Sculpt do
   @impl true
   def make(data, inputs, context), do: World.Sculpt.Gate.with(fn -> sculpture(data, inputs, context) end)
 
+  @doc """
+  The parts of a sculpture at a level (`World.Elements`, W26): nil when
+  the sculpture is one part made at one time, else a list of tiles. A
+  tile is a part of its own (`tile/4` makes it); it can be made in some
+  steps, each in a process of its own, so that no process holds more
+  than `most` faces (`World.Sculpt.model_in_steps/2`).
+
+  The surface of the sculpture comes first, in bricks of larger cells
+  (4 times the cells up to 12.5 cm, 2 times up to 25 cm; much less
+  work): the faces of each brick, with the faces of each large edit
+  thinner than those cells (they lose its surface), an estimate of the faces at the cells
+  of the level. A box of bricks is cut in two on its longest axis, again
+  and again: into steps of at most `most` faces, and into tiles with a
+  budget of `least` triangles or more (the budget of the level in the
+  share of the faces of the tile: a part with a small budget has most
+  of its points at its borders, and no good shape). A cut is a plane
+  between bricks that leaves a quarter of the faces or more on each
+  side, and that crosses the fewest soft blends of the edits (an edit
+  with a `blend`): a blend in one tile is the blend of one part. Of
+  those, the plane nearest to the middle of the faces (with no such
+  plane: the plane nearest to the middle of the faces).
+
+  Each tile has its box (m; an outer side of the box goes to the end of
+  the space), its share of the faces (a power of 2^(1/4): so an edit in
+  one tile changes the budget and the maps of the other tiles only
+  seldom, and their keys stay, W27), its faces, and its steps (each a
+  box and its share of the faces of the tile). With no budget, each step
+  is a tile. A sculpture with bones is one part.
+  """
+  def tiles(data, level, most, least \\ 1500) do
+    with nil <- data["bones"],
+         step = step(data, level),
+         k = estimate_factor(step),
+         edits = all(data, level),
+         %{bricks: bricks} <- World.Sculpt.bricks(edits, k * step, each: &brick_faces(&1, k * step), fields: false),
+         counts = bricks |> Map.new(&{&1.at, k * k * &1.piece}) |> thin_faces(edits, step, k),
+         true <- map_size(counts) >= 2,
+         total when total > most <- counts |> Map.values() |> Enum.sum() do
+      {lo, hi} = counts |> Map.keys() |> Vec.bounds()
+      outer = {lo, Vec.add(hi, {1, 1, 1})}
+      size = World.Sculpt.cells() * k * step
+      blends = for %{blend: b, box: {l, h}} <- edits, b > 0, do: {Vec.sub(l, {b, b, b}), Vec.add(h, {b, b, b})}
+      budget = get_in(data, ["budget", Atom.to_string(level)])
+      # The faces of a tile: twice the faces of `least` triangles of the budget, and not less than a step.
+      part = if budget, do: max(most, round(2 * least * total / budget)), else: most
+      share = fn n -> :math.pow(2, Float.round(4 * :math.log2(max(n, 1) / total)) / 4) end
+      box = fn {blo, bhi} -> {meters(blo, elem(outer, 0), size, -1), meters(bhi, elem(outer, 1), size, 1)} end
+
+      for {b, i} <- counts |> cut(outer, part, blends, size) |> Enum.with_index() do
+        n = in_box(counts, b)
+        steps = for s <- cut(counts, b, most, blends, size), do: {box.(s), in_box(counts, s) / max(n, 1)}
+        %{index: i, box: box.(b), share: share.(n), faces: n, steps: steps}
+      end
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Make one tile of a sculpture (`tiles/3`): `{part, data}` as `make/3`,
+  the part with the name `NAME_I` (I: the index of the tile) and the
+  meshes of the bricks in the box of the tile, whose points at the
+  border of the tile stay where they are (`World.Sculpt.model/2`). The
+  data has the maps of the tile.
+  """
+  def tile(data, tile, inputs, context) do
+    context = Map.merge(context, %{name: "#{context.name}_#{tile.index}", tile: tile})
+    {part, more, _} = make(data, inputs, context)
+    {part, more}
+  end
+
+  @doc """
+  The data of a tile for its key (`World.Elements`): its box, its share,
+  its steps, and the edits of the sculpture and of each detail that can change the
+  field in the box, with the data of the sculpture that is not edits.
+  An edit far from the tile is not in it: its change does not change
+  the key.
+  """
+  def tile_key(data, tile, level) do
+    rest = Map.drop(data, ~w(edits groups details))
+
+    lists =
+      for d <- [data | details(data, level)] do
+        {edits, step} = {all(d, level), step(d, level)}
+        {step, near_tile(edits, tile.box, step)}
+      end
+
+    {rest, tile.box, tile.share, tile.steps, lists}
+  end
+
+  # The cells of the estimate of the tiles: k times the cells of the
+  # level (a brick of the estimate is k³ bricks of the level).
+  defp estimate_factor(step) when step <= 0.125, do: 4
+  defp estimate_factor(step) when step <= 0.25, do: 2
+  defp estimate_factor(_step), do: 1
+
+  # The faces of each edit that adds, is 1 m or more long, and is thinner
+  # than the cells of the estimate (a slab of a base, a pane): in those
+  # cells its surface goes away. Its faces at the cells of the level (two
+  # sides of the two longest sides of its box, two triangles for each
+  # cell) go to the bricks of the
+  # estimate that its box crosses, in equal parts (a brick keeps its own
+  # count when that is more: then its cells have the surface).
+  defp thin_faces(counts, edits, step, k) do
+    size = World.Sculpt.cells() * k * step
+
+    for %{mode: :add, box: {lo, hi}} = e <- edits,
+        Vec.len(Vec.sub(hi, lo)) >= 1.0,
+        World.Sculpt.thinnest([e], 0.0) < k * step,
+        reduce: counts do
+      counts ->
+        [_, b, c] = hi |> Vec.sub(lo) |> Tuple.to_list() |> Enum.sort()
+        index = fn {x, y, z} -> {floor(x / size), floor(y / size), floor(z / size)} end
+        {{i0, j0, l0}, {i1, j1, l1}} = {index.(lo), index.(hi)}
+        at = for i <- i0..i1, j <- j0..j1, l <- l0..l1, do: {i, j, l}
+        share = round(4 * b * c / (step * step) / length(at))
+        Enum.reduce(at, counts, &Map.update(&2, &1, share, fn n -> max(n, share) end))
+    end
+  end
+
+  @doc """
+  An estimate of the faces of a sculpture at a level before the
+  collapse to its budget (two faces for each cell of the surface of the
+  box of its edits, a bit less for a round shape): the work and the
+  memory of one build.
+  """
+  def faces(data, level) do
+    case SDF.bounds(all(data, level)) do
+      {{x0, y0, z0}, {x1, y1, z1}} ->
+        {a, b, c} = {x1 - x0, y1 - y0, z1 - z0}
+        step = step(data, level)
+        round(1.4 * (a * b + b * c + c * a) / (step * step))
+
+      nil ->
+        0
+    end
+  end
+
+  @doc "The roles of the meshes of a sculpture at a level: the material of each edit (`paint` with none)."
+  def roles(data, level) do
+    for d <- [data | details(data, level)], e <- all(d, level), uniq: true, do: to_string(e.material || :paint)
+  end
+
+  # The faces of a brick at cells of `step` (the piece of the surface,
+  # two faces for each quad).
+  defp brick_faces(brick, step), do: div(byte_size(World.Sculpt.Surface.piece(brick, step).quads), 17) * 2
+
+  # The faces of the bricks in a box of bricks.
+  defp in_box(counts, {{lx, ly, lz}, {hx, hy, hz}}) do
+    for {{x, y, z}, n} <- counts, x >= lx and x < hx and y >= ly and y < hy and z >= lz and z < hz, reduce: 0 do
+      sum -> sum + n
+    end
+  end
+
+  # The boxes of bricks (from lo, up to hi) with at most `most` faces
+  # each. A cut is a plane between bricks on any axis: a plane that
+  # leaves a quarter of the faces or more on each side (the fewest blends
+  # that it crosses, then the nearest to the middle, then on the longest
+  # axis), else the plane nearest to the middle of the faces.
+  defp cut(counts, {lo, hi} = box, most, blends, size) do
+    total = in_box(counts, box)
+    axes = for a <- 0..2, elem(hi, a) - elem(lo, a) >= 2, do: a
+
+    if total <= most or axes == [] do
+      [box]
+    else
+      plans =
+        for a <- axes, at <- (elem(lo, a) + 1)..(elem(hi, a) - 1) do
+          left = in_box(counts, {lo, put_elem(hi, a, at)})
+          plane = at * size
+          crossed = Enum.count(blends, fn {l, h} -> elem(l, a) < plane and elem(h, a) > plane end)
+          {a, at, left / total, crossed, elem(lo, a) - elem(hi, a)}
+        end
+
+      {a, at, _, _, _} =
+        case Enum.filter(plans, fn {_, _, share, _, _} -> share >= 0.25 and share <= 0.75 end) do
+          [] -> Enum.min_by(plans, fn {_, _, share, _, long} -> {abs(share - 0.5), long} end)
+          fair -> Enum.min_by(fair, fn {_, _, share, n, long} -> {n, abs(share - 0.5), long} end)
+        end
+
+      cut(counts, {lo, put_elem(hi, a, at)}, most, blends, size) ++
+        cut(counts, {put_elem(lo, a, at), hi}, most, blends, size)
+    end
+  end
+
+  # The side of a box of bricks in m: an outer side goes to the end of the space.
+  defp meters(corner, outer, size, sign) do
+    corner
+    |> Tuple.to_list()
+    |> Enum.zip(Tuple.to_list(outer))
+    |> Enum.map(fn {c, o} -> if c == o, do: sign * 1.0e6, else: c * size end)
+    |> List.to_tuple()
+  end
+
+  # The edits that can change the field in the box of a tile: each edit
+  # whose box, grown by its blend, by the limit of the field and by two
+  # cells, meets the box of the tile; and each crop (it takes away all
+  # that is out of it). In their order.
+  defp near_tile(edits, {{lx, ly, lz}, {hx, hy, hz}}, step) do
+    reach = World.Sculpt.limit(edits, step) + 2 * step
+
+    for %{box: {{x0, y0, z0}, {x1, y1, z1}}} = e <- edits,
+        r = reach + e.blend,
+        e.mode == :crop or
+          (x0 - r < hx and x1 + r > lx and y0 - r < hy and y1 + r > ly and z0 - r < hz and z1 + r > lz),
+        do: e
+  end
+
   # (In the gate of the node: a sculpture gives its work to each
   # scheduler, so only some sculptures work at one time.)
-  defp sculpture(data, _inputs, %{level: level, name: name}) do
+  defp sculpture(data, _inputs, %{level: level, name: name} = context) do
+    tile = context[:tile]
     # The flat look has no maps: flat faces, each with one color.
     flat? = data["look"] == "flat"
-    side = if flat?, do: nil, else: get_in(data, ["bake", Atom.to_string(level)])
+    side = if flat?, do: nil, else: tile_side(get_in(data, ["bake", Atom.to_string(level)]), tile)
 
     # The sculpture, then each of its details at this level: each one is
     # a sculpture of its own, with its edits, its cells and its budget.
+    # A tile has the edits near its box, the bricks in its box and its
+    # part of each budget.
     built =
       for d <- [data | details(data, level)] do
         {edits, step} = {all(d, level), step(d, level)}
+        edits = if tile, do: near_tile(edits, tile.box, step), else: edits
+        budget = get_in(d, ["budget", Atom.to_string(level)])
+        budget = if tile && budget, do: max(round(budget * tile.share), 12), else: budget
         # With maps, the mesh has no relief smaller than its cells: the maps have it.
         from = if side, do: SDF.coarse(edits, step), else: edits
-        meshes = World.Sculpt.model(from, step: step, budget: get_in(d, ["budget", Atom.to_string(level)]))
+
+        meshes =
+          cond do
+            edits == [] ->
+              []
+
+            # (The sculpture of a tile in steps: the details are small, in one step.)
+            tile && d == data && length(tile.steps) > 1 ->
+              World.Sculpt.model_in_steps(from, step: step, budget: budget, within: tile.box, steps: tile.steps)
+
+            true ->
+              World.Sculpt.model(from, step: step, budget: budget, within: tile && tile.box)
+          end
+
         {if(flat?, do: Enum.map(meshes, &facets(&1, edits)), else: meshes), edits, step}
       end
 
@@ -181,6 +411,15 @@ defmodule World.Skills.Sculpt do
     }
   end
 
+  # The side of the maps of a tile: at most the texels on each m² of the
+  # maps of all of the sculpture (a power of 2, from 64 to #{512}: the bake
+  # of 1,024 × 1,024 texels takes about 150 MB, more than the edge has).
+  defp tile_side(side, nil), do: side
+  defp tile_side(nil, _tile), do: nil
+
+  defp tile_side(side, tile),
+    do: min(min(side, @tile_side), max(64, round(:math.pow(2, floor(:math.log2(side * :math.sqrt(tile.share)))))))
+
   # With `bake` for the level: the meshes with their UVs, and the maps of
   # each of their materials (`World.Sculpt.Bake`) as the data of the node,
   # for the materials of the model (`World.Drawing.assemble/3`). The
@@ -193,7 +432,9 @@ defmodule World.Skills.Sculpt do
     defaults =
       Map.new(GLB.palette(), fn {role, spec} -> {GLB.role(role), {spec["roughness"] / 1, spec["metalness"] / 1}} end)
 
-    {meshes, maps} = World.Sculpt.Bake.maps(built, side, defaults, look)
+    # (The bake in a process of its own, which sweeps its garbage often: a
+    # bake makes much garbage, and only its meshes and images come back.)
+    {meshes, maps} = World.Detail.apart(fn -> World.Sculpt.Bake.maps(built, side, defaults, look) end, sweep: 2)
     png = fn rows, channels -> {"image/png", World.PNG.encode(rows, channels)} end
 
     # Each image becomes a PNG file in a process of its own; the function
@@ -305,25 +546,35 @@ defmodule World.Skills.Sculpt do
 
   # The edits of a sculpture at a level: an edit with `levels` is only
   # in the list at those levels (the inside of a large model at near).
-  defp all(data, level) do
-    here = for e <- data["edits"], Atom.to_string(level) in Map.get(e, "levels", ~w(near mid far)), do: e
-    edits(here, Map.get(data, "groups", %{}))
-  end
+  defp all(data, level), do: edits(data["edits"], Map.get(data, "groups", %{}), level)
 
   @doc """
   The edits of a sculpture from its data (`World.SDF.edit/3`): each edit
   with its copies (`mirror`, `repeat`), and the edits of each group that
   an edit of the shape `group` uses, at its place and its scale.
+
+  With a level (`:near`, `:mid` or `:far`), only the edits at that
+  level: an edit with `levels` is only at those levels. This is true for
+  an edit at the top, for an edit in a group, and for an edit of the
+  shape `group` (all the edits of the group). With no level, all the
+  edits.
   """
-  def edits(list, groups \\ %{}), do: list |> Enum.flat_map(&specs(&1, groups)) |> Enum.map(&to_edit/1)
+  def edits(list, groups \\ %{}, level \\ nil),
+    do: list |> Enum.filter(&here?(&1, level)) |> Enum.flat_map(&specs(&1, groups, level)) |> Enum.map(&to_edit/1)
+
+  # True when an edit of the data is at the level (each edit with no level).
+  defp here?(_e, nil), do: true
+  defp here?(e, level), do: Atom.to_string(level) in Map.get(e, "levels", ~w(near mid far))
 
   # The plain edits of an edit of the data: a shape, its sizes, its frame.
-  defp specs(%{"shape" => "group"} = e, groups) do
+  # The edits of a group that are not at the level stay out.
+  defp specs(%{"shape" => "group"} = e, groups, level) do
     {place, k} = {frame(e), Map.get(e, "scale", 1) / 1}
 
     group =
       groups[e["group"]]
-      |> Enum.flat_map(&specs(&1, %{}))
+      |> Enum.filter(&here?(&1, level))
+      |> Enum.flat_map(&specs(&1, %{}, level))
       |> Enum.map(fn s ->
         at = %{s.frame | at: Vec.scale(s.frame.at, k)}
 
@@ -341,7 +592,7 @@ defmodule World.Skills.Sculpt do
     for copy <- copies(e), s <- group, do: copy.(s)
   end
 
-  defp specs(e, _groups) do
+  defp specs(e, _groups, _level) do
     spec = %{
       shape: @atoms[e["shape"]],
       size: size(e["shape"], e["size"]),
@@ -481,19 +732,20 @@ defmodule World.Skills.Sculpt do
         if is_integer(n) and n in 1..8, do: [], else: [{p, "must be a count of shells from 1 to 8"}]
       end) ++
       optional(v, "length", path, &number(&1, &2, 0.0005, 0.05)) ++
-      optional(v, "thin", path, &edits(&1, &2, groups))
+      optional(v, "thin", path, &checked(&1, &2, groups))
   end
 
   defp strands(_v, path, _groups), do: [{path, "must be {\"shells\": n, \"length\": m, \"thin\": [edits]}"}]
 
-  defp edits(v, path, groups) when is_list(v) and v != [] and length(v) <= @most do
+  # The check of a list of edits (each error with its path).
+  defp checked(v, path, groups) when is_list(v) and v != [] and length(v) <= @most do
     errors = v |> Enum.with_index() |> Enum.flat_map(fn {e, i} -> edit(e, "#{path}.#{i}", groups) end)
     # With no error, the count of the edits with their copies.
     total = if errors == [], do: v |> Enum.map(&count(&1, groups)) |> Enum.sum(), else: 0
     if total > @most, do: [{path, "has #{total} edits with their copies: at most #{@most}"}], else: errors
   end
 
-  defp edits(_v, path, _groups), do: [{path, "must be a list of 1 to #{@most} edits"}]
+  defp checked(_v, path, _groups), do: [{path, "must be a list of 1 to #{@most} edits"}]
 
   # The groups: a name to a list of edits (no group in a group).
   defp groups(v, path) when is_map(v) and map_size(v) <= 64 do
@@ -502,7 +754,7 @@ defmodule World.Skills.Sculpt do
 
       cond do
         not (name =~ ~r/^[a-z0-9_]{1,40}$/) -> [{p, "must have a name of 1 to 40 letters a-z, digits or _"}]
-        is_list(list) and list != [] and length(list) <= 1_000 -> edits(list, p, nil)
+        is_list(list) and list != [] and length(list) <= 1_000 -> checked(list, p, nil)
         true -> [{p, "must be a list of 1 to 1000 edits"}]
       end
     end)
@@ -515,6 +767,7 @@ defmodule World.Skills.Sculpt do
     World.Skill.keys(e, path, @use, ~w(group)) ++
       optional(e, "group", path, &choice(&1, &2, groups |> Map.keys() |> Enum.sort())) ++
       optional(e, "scale", path, &number(&1, &2, 0.001, 1_000)) ++
+      optional(e, "levels", path, &levels/2) ++
       placed(e, path)
   end
 
@@ -785,7 +1038,7 @@ defmodule World.Skills.Sculpt do
 
       if is_map(d) do
         World.Skill.keys(d, p, ~w(edits cells budget levels), ~w(edits)) ++
-          optional(d, "edits", p, &edits(&1, &2, groups)) ++
+          optional(d, "edits", p, &checked(&1, &2, groups)) ++
           optional(d, "cells", p, &cells/2) ++
           optional(d, "budget", p, &budget/2) ++
           optional(d, "levels", p, &levels/2)

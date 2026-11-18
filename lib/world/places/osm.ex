@@ -270,6 +270,7 @@ defmodule World.Places.OSM do
         genus =~ "cocos" -> &World.Plants.coconut/0
         genus =~ "musa" -> &World.Plants.banana/0
         genus =~ "bambus" -> &World.Plants.bamboo/0
+        genus =~ "araucaria" -> &World.Plants.araucaria/0
         true -> &World.Plants.frangipani/0
       end
 

@@ -4,15 +4,87 @@ defmodule World.NurseryTest do
   alias World.{Build, Detail, Plants, Scene}
 
   test "each plant of the nursery: its height, its levels, its checks, the nursery makes it" do
-    for {name, fun} <- Plants.models() do
-      near = Detail.with(:near, fun)
-      assert World.Check.model(near) == :ok, name
-      assert World.Plan.trade(near) == :gardener
-      tris = for l <- [:near, :mid, :far], do: Scene.triangles(Build.scene(Detail.with(l, fun), level: l))
-      assert tris == Enum.sort(tris, :desc), "#{name}: #{inspect(tris)}"
-      [_, _, h] = Build.scene(near, level: :near).extras["size"]
-      assert h > 0.8 * near.extras["height"] and h < 1.6 * near.extras["height"], "#{name}: #{h}"
+    # (The araucaria is not a model of the catalog.)
+    all =
+      for {name, fun} <- Plants.models() ++ [{"araucaria", &Plants.araucaria/0}] do
+        near = Detail.with(:near, fun)
+        assert World.Check.model(near) == :ok, name
+        assert World.Plan.trade(near) == :gardener
+        tris = for l <- [:near, :mid, :far], do: Scene.triangles(Build.scene(Detail.with(l, fun), level: l))
+        assert tris == Enum.sort(tris, :desc), "#{name}: #{inspect(tris)}"
+        [_, _, h] = Build.scene(near, level: :near).extras["size"]
+        assert h > 0.8 * near.extras["height"] and h < 1.6 * near.extras["height"], "#{name}: #{h}"
+        {name, tris}
+      end
+
+    # The araucaria is in the budgets of the other plants at each level.
+    {[{_, araucaria}], others} = Enum.split_with(all, &(elem(&1, 0) == "araucaria"))
+    most = others |> Enum.map(&elem(&1, 1)) |> Enum.zip_with(&Enum.max/1)
+    assert Enum.zip_with(araucaria, most, &<=/2) == [true, true, true], inspect({araucaria, most})
+  end
+
+  test "the araucaria: a straight trunk, level tiers of branches in whorls, branchlets, a narrow cone of a crown" do
+    tree = Detail.with(:near, &Plants.araucaria/0)
+    assert tree.name == "araucaria_bach_tan" and tree.kind == :plant
+    assert tree.extras == %{"species" => "araucaria", "height" => 18.0, "tiers" => 22}
+    assert Enum.map(tree.nodes, &elem(&1, 0)) == ~w(trunk_araucaria leaves_araucaria)
+    [{_, wood, _}, {_, leaves, _}] = tree.nodes
+    # The trunk and a branch for each of the 5 branches of each of the 22 tiers; its sources.
+    assert length(wood.shapes) == 1 + 22 * 5 and Enum.all?(wood.shapes, &(&1.material == :bark))
+    assert Enum.all?(leaves.shapes, &(&1.material == :leaf))
+    assert Enum.any?(wood.sources, &(&1 =~ "ENH242")) and Enum.any?(wood.sources, &(&1 =~ "4 to 7 in a whorl"))
+
+    # The crown: as wide as the number `crown` at its lowest tier (2.5 m), a cone to the top.
+    {{x0, y0, z0}, {x1, y1, z1}} = Scene.bounds(Build.scene(tree, level: :near))
+    assert_in_delta z1, 18.0, 0.01
+    assert z0 == 0.0 and x1 - x0 > 4.5 and x1 - x0 < 6.0 and y1 - y0 > 4.5 and y1 - y0 < 6.0
+    points = for m <- leaves.shapes, p <- m.points, do: p
+    {low, high} = {Enum.filter(points, fn {_, _, z} -> z < 4 end), Enum.filter(points, fn {_, _, z} -> z > 10 end)}
+    reach = fn ps -> ps |> Enum.map(fn {x, y, _} -> :math.sqrt(x * x + y * y) end) |> Enum.max() end
+    assert reach.(low) > 2.2 and reach.(high) < 0.6 * reach.(low)
+    assert points |> Enum.map(&elem(&1, 2)) |> Enum.min() > 2.0
+
+    # Mid: a card for each branch. Far: half the tiers, a card for each branch.
+    cards = fn level -> Detail.with(level, &Plants.araucaria/0).nodes |> Enum.at(1) |> elem(1) |> Map.get(:shapes) end
+    assert length(cards.(:mid)) == 22 * 5 and length(cards.(:far)) == 11 * 5
+    # A small tree: the lowest tier comes down; one tier is at its lowest height.
+    small = Detail.with(:mid, fn -> Plants.with_numbers(%{"tiers" => 1}, fn -> Plants.araucaria(height: 2) end) end)
+    [{_, _, _}, {_, %{shapes: [card | _] = one}, _}] = small.nodes
+    assert length(one) == 5 and Enum.all?(card.points, fn {_, _, z} -> z > 0.4 and z < 1.6 end)
+  end
+
+  test "the numbers of an araucaria come from the request: its tiers, the branches of a tier, its crown, its clear trunk" do
+    alias World.Orders
+    assert Plants.numbers("araucaria") == ~w(branchlet clear crown tiers trunk whorl)
+    assert Plants.numbers()["tiers"] == {5.5, 88, true} and Plants.numbers()["whorl"] == {1.25, 20, true}
+
+    tree = fn numbers ->
+      order = %{"blueprint" => "plant", "options" => %{"species" => "araucaria", "numbers" => numbers}}
+      {:ok, job} = Orders.job(order, "near")
+      job.item.(:near)
     end
+
+    [{_, wood, _}, {_, leaves, _}] = tree.(%{"tiers" => 10, "whorl" => 6.6, "crown" => 3, "clear" => 4}).nodes
+    assert length(wood.shapes) == 1 + 10 * 7
+    {{x0, _, z0}, {x1, _, _}} = World.Part.bounds(leaves)
+    assert x1 - x0 < 3.5 and z0 > 3.5
+    # A longer branchlet makes a wider branch.
+    width = fn numbers -> tree.(numbers).nodes |> Enum.at(1) |> elem(1) |> World.Part.bounds() end
+    {{_, _, _}, {short, _, _}} = width.(%{"tiers" => 6, "branchlet" => 0.1})
+    {{_, _, _}, {long, _, _}} = width.(%{"tiers" => 6, "branchlet" => 0.6})
+    assert long > short
+
+    assert {:error, [%{"path" => "options.numbers.fronds", "message" => "an araucaria has no number fronds" <> _}]} =
+             Orders.check(%{
+               "blueprint" => "plant",
+               "options" => %{"species" => "araucaria", "numbers" => %{"fronds" => 9}}
+             })
+
+    assert {:error, [%{"path" => "options.numbers.tiers"}]} =
+             Orders.check(%{
+               "blueprint" => "plant",
+               "options" => %{"species" => "araucaria", "numbers" => %{"tiers" => 2}}
+             })
   end
 
   test "the blueprint plant: an order of a species with its height, and the light file in the triangles of a project" do
@@ -66,7 +138,7 @@ defmodule World.NurseryTest do
     alias World.Orders
     numbers = Plants.numbers()
     # Each number of a species but its height, with its least and its most (a quarter and four times).
-    assert numbers["fronds"] == {9 / 4, 120, true} and numbers["trunk"] == {0.02, 1.32, false}
+    assert numbers["fronds"] == {9 / 4, 120, true} and numbers["trunk"] == {0.02, 1.8, false}
     refute Map.has_key?(numbers, "height") or Map.has_key?(numbers, "flowering")
     assert Plants.numbers("coconut") == ~w(base frond fronds leaflet lean nut nuts trunk)
     assert "crownshaft" in Plants.numbers("areca") and "culms" in Plants.numbers("bamboo")
@@ -126,7 +198,7 @@ defmodule World.NurseryTest do
   end
 
   test "the species and their numbers come with their sources" do
-    assert Plants.species() == ~w(areca bamboo banana coconut frangipani)
+    assert Plants.species() == ~w(araucaria areca bamboo banana coconut frangipani)
     assert Plants.number("coconut", "fronds") == 30
     assert Plants.bamboo(culms: 5).extras["culms"] == 5
     assert Plants.coconut(nuts: false).nodes |> Enum.map(&elem(&1, 0)) |> Enum.member?("nuts_coconut") == false

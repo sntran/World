@@ -37,19 +37,24 @@ defmodule World.RuleBlueprintsTest do
                Orders.check(%{"blueprint" => name, "options" => %{"no_such_word" => 1}})
     end
 
-    # A word that the rule refuses: the reason of the rule, at the path of the options.
-    for {name, options, text} <- [
-          {"street_house", %{"type" => "castle"}, "the type of a house"},
-          {"building", %{"storeys" => 0}, "from 1 to 12 storeys"},
-          {"village_house", %{"bays" => 0}, "from 1 to 7 bays"},
-          {"village_thing", %{"kind" => "pagoda"}, "the kind of a thing of a village"},
-          {"appliance", %{"kind" => "toaster"}, "the kind of an appliance"},
-          {"mini", %{"kind" => "dragon"}, "the kind of a small model"}
+    # A word that the rule refuses: the reason of the rule, at the path of the options, or at the path of the
+    # value when the rule gives it.
+    for {name, options, path, text} <- [
+          {"street_house", %{"type" => "castle"}, "options", "the type of a house"},
+          {"building", %{"storeys" => 0}, "options.storeys", "a building has from 1 to 12 storeys"},
+          {"building", %{"fronts" => [%{}, %{"bays" => 0}]}, "options.fronts.1.bays", "a bay of a front"},
+          {"building", %{"roof" => %{"kind" => "flat", "parapet" => 9}}, "options.roof.parapet", "the value of"},
+          {"building", %{"apron" => 20}, "options.apron", "the value of apron"},
+          {"building", %{"fronts" => [%{"from" => 6, "to" => 7}]}, "options.fronts.0", "a front is 1.5 m long"},
+          {"village_house", %{"bays" => 0}, "options", "from 1 to 7 bays"},
+          {"village_thing", %{"kind" => "pagoda"}, "options", "the kind of a thing of a village"},
+          {"appliance", %{"kind" => "toaster"}, "options", "the kind of an appliance"},
+          {"mini", %{"kind" => "dragon"}, "options", "the kind of a small model"}
         ] do
-      assert {:error, [%{"path" => "options", "message" => message}]} =
+      assert {:error, [%{"path" => ^path, "message" => message}]} =
                Orders.check(%{"blueprint" => name, "options" => options})
 
-      assert message =~ text
+      assert message =~ text, message
     end
   end
 
@@ -93,6 +98,9 @@ defmodule World.RuleBlueprintsTest do
     assert [%{"use" => "bar", "number" => "4"}, %{"use" => "bar"}, %{"use" => "home"}] = part["options"]["lots"]
     assert Blueprints.drawing(part) == Street.drawing(Street.plan(street), only: 2..3)
     assert length(Blueprints.drawing(part)["nodes"]) == 7
+    # The model of the rule in code (an order builds from its drawing): the houses of the lots of the part.
+    {:ok, rule} = Blueprints.fetch("street")
+    assert %World.Assembly{} = World.Detail.with(:far, fn -> rule.build.(part["options"]) end)
 
     for only <- [[3, 2], [0, 1], "all", [7, 9], [1, 3.5]] do
       assert {:error, [%{"path" => "options.only", "message" => "must be [first, last]" <> _}]} =

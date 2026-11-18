@@ -38,6 +38,7 @@ defmodule World.OSMTest do
     assert name.(%{"genus" => "Cocos"}) == "coconut_palm"
     assert name.(%{"species" => "Musa acuminata"}) == "banana_chuoi_su"
     assert name.(%{"genus" => "Bambusa"}) == "bamboo_tre_gai"
+    assert name.(%{"species" => "Araucaria heterophylla"}) == "araucaria_bach_tan"
     assert name.(%{}) == "frangipani_hoa_su"
   end
 

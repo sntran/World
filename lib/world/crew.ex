@@ -41,6 +41,21 @@ defmodule World.Crew do
   - `join`: the name of another node. The crews connect to it, try
     again each `retry` ms (3,000) while it does not answer, and connect
     again when it comes back.
+  - `lend` (true by default): false when this node takes no jobs of
+    other nodes (it answers that it has no workers for them), and
+    `borrow` (true by default): false when the streams of this node give
+    no jobs to other nodes. The edge has both false: it gives whole
+    parts to the nodes of the construction shifts that join it
+    (`World.Labour`, `parts/1`), and no jobs of a stream go over the
+    link.
+
+  A node learns of a node that greets it (`hello/3`), and of each node
+  that connects to it, also a hidden node and a node that comes after
+  the start of the distribution: the runtime of the edge starts its node
+  after the application, so the crews watch the nodes from their start
+  (`:net_kernel.monitor_nodes/2` with `node_type: :all`). So the edge,
+  which connects to no node, knows each node of a construction shift
+  that joins it (`World.Shift`).
   """
   use GenServer
 
@@ -85,10 +100,17 @@ defmodule World.Crew do
   with it, and the sites with a stream now.
   """
   def state(crews \\ __MODULE__) do
-    %{workers: workers, others: others} = shared(crews)
-    nodes = Enum.sort([node() | for({{_, node}, _} <- others, do: node)])
+    %{workers: workers, parts: parts} = shared(crews)
+    nodes = Enum.sort([node() | for({{_, node}, _} <- parts, do: node)])
     %{workers: workers, nodes: nodes, sites: Registry.count(@sites)}
   end
+
+  @doc """
+  The nodes that take whole parts of models (`World.Labour`): each
+  `{supervisor of the tasks, workers}`, as the `others` of `map/3`. A
+  node that lends no workers is not in it.
+  """
+  def parts(crews \\ __MODULE__), do: shared(crews).parts
 
   @doc "The crews for the census of the node (`World.census/0`), as data: `state/1` with the names of the nodes as text."
   def census(crews \\ __MODULE__) do
@@ -113,19 +135,27 @@ defmodule World.Crew do
   end
 
   @doc """
-  The answer of this node to a node that asks to share workers:
-  `{:ok, workers}` when the code is the same and the crews run here.
+  The answer of this node to a node (`from`) that asks to share workers:
+  `{:ok, workers}` (the workers that this node lends, 0 with `lend:
+  false`) when the code is the same and the crews run here. The crews of
+  this node then greet `from` too.
   """
-  def hello(version, crews \\ __MODULE__) do
+  def hello(version, from \\ nil, crews \\ __MODULE__) do
     case shared(crews) do
-      %{version: ^version, workers: workers} -> {:ok, workers}
-      _ -> {:error, :code}
+      %{version: ^version, lend: lend} ->
+        if from not in [nil, node()], do: send(crews, {:hello, from})
+        {:ok, lend}
+
+      _ ->
+        {:error, :code}
     end
   end
 
   # What a stream reads of its crews, with no message: the workers of
   # this node, the supervisors of the other nodes, and the hash of the code.
-  defp shared(crews), do: :persistent_term.get({__MODULE__, crews}, %{workers: workers(), others: [], version: nil})
+  defp shared(crews),
+    do: :persistent_term.get({__MODULE__, crews}, %{workers: workers(), others: [], parts: [], lend: 0, version: nil})
+
   defp workers, do: 2 * System.schedulers_online()
 
   # --- A stream of a site -----------------------------------------------------------
@@ -229,6 +259,8 @@ defmodule World.Crew do
     s = %{
       name: Keyword.get(opts, :name, __MODULE__),
       workers: Keyword.get(opts, :workers, workers()),
+      lend: Keyword.get(opts, :lend, true),
+      borrow: Keyword.get(opts, :borrow, true),
       # The hash of the code (an option for a test of two codes).
       version: Keyword.get_lazy(opts, :version, &version/0),
       # Each node that shares its workers, to the count of them.
@@ -236,9 +268,14 @@ defmodule World.Crew do
       # The node to connect to, the wait before the next try, and the connect of Erlang (an option for a test).
       join: opts[:join],
       retry: Keyword.get(opts, :retry, 3_000),
-      connect: Keyword.get(opts, :connect, &Node.connect/1)
+      connect: Keyword.get(opts, :connect, &Node.connect/1),
+      # The name of this node (an option for a test, where this node is also the other node).
+      me: Keyword.get(opts, :me, &node/0)
     }
 
+    # The nodes that come and go, hidden or not, from now on: also when
+    # this VM becomes a node later.
+    :ok = :net_kernel.monitor_nodes(true, node_type: :all)
     start = Keyword.get(opts, :distribution, &Node.start/2)
     {:ok, share(s), {:continue, {:node, opts[:node], opts[:cookie], start}}}
   end
@@ -248,8 +285,6 @@ defmodule World.Crew do
   def handle_continue({:node, name, cookie, start}, s) do
     if name, do: {:ok, _} = start.(name, :longnames)
     if cookie != nil and Node.alive?(), do: Node.set_cookie(cookie)
-    # (The nodes that come and go, from now on.)
-    if Node.alive?(), do: :net_kernel.monitor_nodes(true)
     if s.join, do: send(self(), :join)
     {:noreply, s}
   end
@@ -280,11 +315,17 @@ defmodule World.Crew do
 
   def handle_info(:join, s), do: {:noreply, s}
 
-  # A node comes: it shares its workers when it has the same code.
-  def handle_info({:nodeup, node}, s), do: {:noreply, elem(greet(s, node), 1)}
+  # A node comes (not this node, when it starts): it shares its workers
+  # when it has the same code.
+  def handle_info({:nodeup, node, _info}, s) when not is_map_key(s.nodes, node) do
+    if node == s.me.(), do: {:noreply, s}, else: {:noreply, elem(greet(s, node), 1)}
+  end
+
+  # A node greets this node (`hello/3`): its workers, when this node does not know it yet.
+  def handle_info({:hello, node}, s) when not is_map_key(s.nodes, node), do: {:noreply, elem(greet(s, node), 1)}
 
   # A node goes: no more of its workers. (The node of the options: the next try comes.)
-  def handle_info({:nodedown, node}, s) do
+  def handle_info({:nodedown, node, _info}, s) do
     if node == s.join, do: Process.send_after(self(), :join, s.retry)
     {:noreply, share(%{s | nodes: Map.delete(s.nodes, node)})}
   end
@@ -296,9 +337,11 @@ defmodule World.Crew do
 
   # Ask a node for its workers: `{:ok, state}` or `{{:error, reason}, state}`.
   defp greet(s, node) do
+    me = if Node.alive?(), do: node()
+
     answer =
       try do
-        :erpc.call(node, __MODULE__, :hello, [s.version], 5_000)
+        :erpc.call(node, __MODULE__, :hello, [s.version, me], 5_000)
       catch
         _, _ -> {:error, :down}
       end
@@ -310,9 +353,18 @@ defmodule World.Crew do
   end
 
   # The streams read the crews with no message.
+  # (A node that lends no workers takes no jobs and no parts.)
   defp share(s) do
-    others = for {node, workers} <- Enum.sort(s.nodes), do: {{@tasks, node}, workers}
-    :persistent_term.put({__MODULE__, s.name}, %{workers: s.workers, others: others, version: s.version})
+    parts = for {node, workers} <- Enum.sort(s.nodes), workers > 0, do: {{@tasks, node}, workers}
+
+    :persistent_term.put({__MODULE__, s.name}, %{
+      workers: s.workers,
+      others: if(s.borrow, do: parts, else: []),
+      parts: parts,
+      lend: if(s.lend, do: s.workers, else: 0),
+      version: s.version
+    })
+
     s
   end
 end

@@ -184,6 +184,7 @@ defmodule World.Build do
       moves: %{},
       clips: [],
       stretches: [],
+      figures: [],
       targets: targets,
       path: item.name,
       prefix: ""
@@ -213,6 +214,44 @@ defmodule World.Build do
     acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), level, pose)
     frames = frames(acc.nodes)
     for {i, f, p, path, shown} <- all_placed(acc.nodes, acc.parts), do: {path, Frame.compose(frames[i], f), p, shown}
+  end
+
+  @doc """
+  The places of the pieces of a model at a level, in a pose, for a list
+  of its parts (`World.Elements`): `{:part, path, frame, part, joint}`
+  for each part that the level keeps (also a part with no meshes: a part
+  of a light copy of a model has its ports only), and `{:figure, path,
+  frame, figure, joint}` for each figure (a person: one piece with its
+  props). The frame is in the axes of the model; the path is the id of
+  the node of the piece (`elements/3`); the joint is the name of the
+  joint that moves the piece (the nearest joint over its node), or nil.
+  A part of a figure (a prop) is in the piece of the figure.
+  """
+  def places(item, level, pose \\ %{}) do
+    acc = walk(keep_root(item), Frame.identity(), 0, start(item, %{}), level, pose)
+    frames = frames(acc.nodes)
+    joints = Map.new(acc.moves, fn {name, {id, _, _}} -> {id, name} end)
+    nodes = List.to_tuple(acc.nodes)
+
+    joint = fn i ->
+      i |> Stream.iterate(&elem(nodes, &1).parent) |> Stream.take_while(&(&1 != nil)) |> Enum.find_value(&joints[&1])
+    end
+
+    figures =
+      for {path, i, f, figure} <- Enum.reverse(acc.figures),
+          do: {:figure, path, Frame.compose(frames[i], f), figure, joint.(i)}
+
+    under? = fn path ->
+      Enum.any?(figures, fn {_, fp, _, _, _} -> path == fp or String.starts_with?(path, fp <> "/") end)
+    end
+
+    parts =
+      for {_, i} <- Enum.with_index(acc.nodes),
+          {f, p, path} <- Enum.reverse(acc.parts[i]),
+          not under?.(path),
+          do: {:part, path, Frame.compose(frames[i], f), p, joint.(i)}
+
+    figures ++ parts
   end
 
   # The frame of each node in the axes of the model.
@@ -282,6 +321,7 @@ defmodule World.Build do
     %{
       acc
       | nodes: acc.nodes ++ nodes,
+        figures: [{acc.path, node, frame, f} | acc.figures],
         parts: Map.merge(acc.parts, Map.new(offset..(offset + length(nodes) - 1), &{&1, []})),
         skins:
           acc.skins ++

@@ -67,7 +67,7 @@ defmodule World.ServiceTest do
     assert [
              %{
                "path" => "file",
-               "message" => "must be one of: glb, log, replay, parts, receipt, solids, flat, light, drawing"
+               "message" => "must be one of: glb, log, replay, parts, receipt, solids, flat, light, drawing, elements"
              }
            ] =
              json(call(:post, "/build?file=zip", @strut))["errors"]

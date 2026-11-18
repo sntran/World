@@ -18,16 +18,41 @@
   // The VM of World runs in the Durable Object Beam (worker.js).
   "durable_objects": { "bindings": [{ "name": "BEAM", "class_name": "Beam" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Beam"] }],
+  // The most CPU time of a request (5 minutes; 30 s by default; a plan
+  // of Workers Paid). A part that needs more builds in a construction
+  // shift (World.Labour).
+  "limits": { "cpu_ms": 300000 },
   // The orders and the files that the VM built. Make the bucket before
   // the first deploy: npx wrangler r2 bucket create world
   "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world" }],
+  // Construction shifts (docs/factory.md, "Construction shifts"):
+  // WORLD_SHIFTS=true: a part of a project that does not fit the edge
+  // waits for a shift, and the edge builds no such part itself.
+  // WORLD_LABOUR=parts: the node gives whole parts to the node of a
+  // shift, and shares no jobs (World.Labour). DIST_NAME and DIST_LISTEN:
+  // the node takes the distributed Erlang of the node of a shift, over
+  // /.tcp/4370 (handler.js). BEAM_MAX_WEBSOCKETS: at most 4 WebSockets
+  // open, so that strangers cannot keep many connections on /.tcp/.
+  // WORLD_SHIFTS_A_DAY: the most shifts that the edge starts each day
+  // (shift.js). WORLD_OWNER_ID: the number of the account of the owner
+  // on GitHub; a job of one of its repositories is a project (oidc.js).
+  // The two secrets are not here (npx wrangler secret put NAME, and
+  // docs/factory.md, "The secrets"): WORLD_SHIFT_TOKEN (a fine-grained
+  // token of GitHub with actions: write on this repository only) and
+  // WORLD_TOKEN (32 characters or more, for a project that is not a job
+  // of GitHub Actions). The edge has no cookie of the nodes to keep: it
+  // makes a random cookie for itself and for the node of each shift
+  // (World.Shift.Passes).
   // WORLD_SERVER starts the HTTP server of the VM (World.Application).
   // WORLD_LOG_STORE: the port of the log of the node (worker.js,
   // World.Log.Store).
   // WORLD_ORDER_STORE: the port of the store of the orders (worker.js,
   // World.Orders.Store). -Mea min: the smallest allocators, for the
-  // 128 MB of an isolate.
-  "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "BEAM_ERL_FLAGS": "-Mea min" },
+  // 128 MB of an isolate. WORLD_MEMORY_MB: the most memory of
+  // WebAssembly of the VM for a build (World.Guard, wasm_host:memory/1):
+  // a build that needs more stops with an error, and the VM stays under
+  // the 128 MB of its isolate.
+  "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_MEMORY_MB": "118", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206" },
   // The Preview of a branch that is not main (Workers Builds runs "npx
   // wrangler preview" for it). A Preview does not take the settings
   // above, and Wrangler refuses a Preview with no "previews" block. The
@@ -38,7 +63,7 @@
   // history of the edits of an order of the site.)
   "previews": {
     "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world" }],
-    "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "BEAM_ERL_FLAGS": "-Mea min" }
+    "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_MEMORY_MB": "118", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206" }
   },
   "observability": { "enabled": true }
 }

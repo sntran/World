@@ -57,7 +57,9 @@ defmodule World.Sewing do
     "softshell" => %{thick: 0.02, span: 12, grain: 10, shade: 225},
     "down" => %{thick: 0.1, span: 8, grain: 6, shade: 225},
     # (Cotton that a village weaves on a hand loom: a coarse weave.)
-    "homespun" => %{thick: 0.014, span: 90, grain: 3, shade: 216}
+    "homespun" => %{thick: 0.014, span: 90, grain: 3, shade: 216},
+    # (A thin synthetic cloth that dries fast: polyester of swim shorts and sportswear, a fine weave.)
+    "polyester" => %{thick: 0.004, span: 0, grain: 2, shade: 230}
   }
 
   # The bones of the parts of the body (the bone with the largest weight
@@ -301,8 +303,47 @@ defmodule World.Sewing do
           ease: {:flare, 0.04, 0.9}
         }
       ]
+    },
+    %{
+      name: "world_swim_trunks",
+      layer: 1,
+      fabric: "polyester",
+      pieces: [
+        # Loose legs to the middle of the thigh: 3 mm of ease at the hips, 2.5 cm at the hem (`:loose`), so
+        # the legs stand away from the thighs.
+        %{
+          name: "legs",
+          on: "body",
+          bones: ["spine_01", "pelvis"] ++ @legs,
+          y: {{:hip, :knee, 0.5}, {:waist, -0.7}},
+          ease: {:loose, 0.03, 0.25}
+        },
+        # The elastic band at the waist, low on the hips, gathered in 36 small folds (`gather`).
+        %{
+          name: "band",
+          on: "body",
+          bones: ["spine_01", "pelvis"],
+          y: {{:waist, -0.75}, {:waist, -0.35}},
+          gather: {0.04, 36}
+        },
+        # The cord: its knot and its two ends at the middle of the front, under the band.
+        %{
+          name: "cord",
+          on: "body",
+          bones: ["spine_01", "pelvis"],
+          y: {{:waist, -1.4}, {:waist, -0.65}},
+          x: {0.0, 0.2},
+          front: true,
+          ease: 0.1
+        }
+      ]
     }
   ]
+
+  # The hood up on the head of a jacket with a hood (the option `hood`): over the back, the top and the
+  # sides of the head, with room for the hair, and open at the face (the points more than `open` dm in
+  # front of the joint of the head are out).
+  @hood_up %{name: "hood", on: "body", bones: ["head", "neck_01"], y: {{:neck, -0.2}, nil}, open: 0.3, ease: 0.25}
 
   # The points of the body in the base mesh are the first ones (the
   # helpers come after them).
@@ -315,7 +356,7 @@ defmodule World.Sewing do
   The names of the garments.
 
       iex> World.Sewing.names()
-      ["world_bra", "world_ao_dai", "world_quan", "world_t_shirt", "world_pants", "world_rain_shell", "world_softshell", "world_down_jacket", "world_ao_canh", "world_ao_coc", "world_quan_ong_rong", "world_quan_dui"]
+      ["world_bra", "world_ao_dai", "world_quan", "world_t_shirt", "world_pants", "world_rain_shell", "world_softshell", "world_down_jacket", "world_ao_canh", "world_ao_coc", "world_quan_ong_rong", "world_quan_dui", "world_swim_trunks"]
   """
   def names, do: Enum.map(@garments, & &1.name)
 
@@ -324,6 +365,145 @@ defmodule World.Sewing do
   that it gives to the body (a list of `{target, weight}`).
   """
   def garments, do: Enum.map(@garments, &Map.put_new(&1, :shape, []))
+
+  @doc """
+  A garment with the options of an order for it (a map; each option is
+  for each garment that has the part it changes):
+
+  - `hem`: the height of the hem, on the scale of the legs of the base
+    mesh: -1 at the waist, 0 at the hip joint, 1 at the knee, 2 at the
+    ankle (0.5 is the middle of the thigh). The pieces with the lowest
+    hem of the garment take it: the legs of pants, the body of a jacket,
+    the panels of an áo dài. nil keeps the hem as sewn.
+  - `hood`: `"down"` (as sewn: the hood folded at the back of the neck)
+    or `"up"`: the hood on the head. Only a garment with a hood.
+
+  Raises an `ArgumentError` for a value that is not possible
+  (`check/2` gives the errors).
+  """
+  def garment(name, opts) do
+    case check(name, opts) do
+      [] -> name |> find() |> hem(opts[:hem]) |> hood(opts[:hood])
+      [{_, message} | _] -> raise ArgumentError, message
+    end
+  end
+
+  @doc """
+  The errors of the options of an order for an item of the clothes
+  (`garment/2`): a list of `{option, message}`. The options `hem` and
+  `hood` are for a garment of World; `print` is for any item.
+
+      iex> World.Sewing.check("world_pants", %{hem: 1.0})
+      []
+      iex> World.Sewing.check("shoes01", %{hem: 1.0})
+      [{:hem, "shoes01 is not a garment of World: it has no hem"}]
+      iex> World.Sewing.check("world_softshell", %{hood: "up"})
+      [{:hood, "world_softshell has no hood"}]
+  """
+  def check(name, opts) do
+    g = Enum.find(garments(), &(&1.name == name))
+    hem = opts[:hem]
+    hood = opts[:hood] == "up"
+
+    cond do
+      g == nil and hem != nil ->
+        [{:hem, "#{name} is not a garment of World: it has no hem"}]
+
+      g == nil and hood ->
+        [{:hood, "#{name} is not a garment of World: it has no hood up"}]
+
+      g == nil ->
+        []
+
+      hood and not Enum.any?(g.pieces, &(Map.get(&1, :hood, 0) > 0)) ->
+        [{:hood, "#{name} has no hood"}]
+
+      hem != nil and Enum.any?(hemmed(g), &(level(elem(&1.y, 1), 100.0) <= hem_level(hem))) ->
+        [{:hem, "is over the top of #{name}"}]
+
+      true ->
+        []
+    end
+  end
+
+  @doc """
+  An item of the clothes of a person with the options of an order: the
+  asset of `World.People.Data.asset/2`, or for a garment of World with a
+  `hem` or a `hood` up, the garment sewn again (`garment/2`), with the
+  same name, texture and color.
+  """
+  def asset(name, opts) do
+    a = Data.asset("clothes", name)
+
+    case Enum.find(garments(), &(&1.name == name)) do
+      nil ->
+        a
+
+      g ->
+        case garment(name, opts) do
+          ^g ->
+            a
+
+          v ->
+            %{obj: obj, fit: fit, drape: drape} = sewn(Map.put(v, :variant, true))
+
+            %{a | mesh: Data.parse_obj(obj), fit: Data.parse_fit(fit), drape: a.drape && %{a.drape | points: drape}}
+            |> Map.put(:variant, true)
+        end
+    end
+  end
+
+  @doc """
+  The color of a print of a cloth at a point of the base mesh (dm, at
+  rest): `%{kind: kind, size: m, colors: {ground, line}}`. `"checks"`:
+  squares of the size, of the two colors in turn along each axis;
+  `"stripes"`: stripes of the size up and down the body (the color
+  changes with x and z, not with the height). The print is on the body
+  at rest, so it is the same at each level and on each person.
+
+      iex> p = %{kind: "stripes", size: 0.02, colors: {[0, 0, 0], [255, 255, 255]}}
+      iex> {World.Sewing.print(p, {0.1, 0.0, 0.0}), World.Sewing.print(p, {0.1, 5.0, 0.0}), World.Sewing.print(p, {0.3, 0.0, 0.0})}
+      {[0, 0, 0], [0, 0, 0], [255, 255, 255]}
+  """
+  def print(%{kind: kind, size: size, colors: {ground, line}}, {x, y, z}) do
+    s = size * 10
+    cell = fn c -> floor(c / s) end
+    n = if kind == "checks", do: cell.(x) + cell.(y) + cell.(z), else: cell.(x) + cell.(z)
+    if Integer.mod(n, 2) == 0, do: ground, else: line
+  end
+
+  defp find(name), do: Enum.find(garments(), &(&1.name == name)) || raise(ArgumentError, "no garment #{name}")
+
+  # The pieces of a garment with the lowest hem.
+  defp hemmed(g) do
+    with_hem = Enum.filter(g.pieces, &(&1[:y] != nil and elem(&1.y, 0) != nil))
+    low = with_hem |> Enum.map(&level(elem(&1.y, 0), 0.0)) |> Enum.min()
+    Enum.filter(with_hem, &(level(elem(&1.y, 0), 0.0) == low))
+  end
+
+  defp hem(g, nil), do: g
+
+  defp hem(g, h) do
+    names = MapSet.new(hemmed(g), & &1.name)
+    %{g | pieces: for(p <- g.pieces, do: if(p.name in names, do: %{p | y: {{:hem, h}, elem(p.y, 1)}}, else: p))}
+  end
+
+  # The height of a hem on the scale of the legs: -1 the waist, 0 the hip, 1 the knee, 2 the ankle.
+  defp hem_level(h) do
+    l = landmarks()
+
+    [{a, b}, t] =
+      cond do
+        h < 0 -> [{l.hip, l.waist}, -h]
+        h < 1 -> [{l.hip, l.knee}, h]
+        true -> [{l.knee, l.ankle}, h - 1]
+      end
+
+    a + t * (b - a)
+  end
+
+  defp hood(g, "up"), do: %{g | pieces: Enum.map(g.pieces, &Map.delete(&1, :hood)) ++ [@hood_up]}
+  defp hood(g, _down), do: g
 
   @doc """
   The fabrics, by name.
@@ -419,7 +599,7 @@ defmodule World.Sewing do
   the number of the points of the seam.
   """
   def seams(name) do
-    g = Enum.find(garments(), &(&1.name == name)) || raise ArgumentError, "no garment #{name}"
+    g = find(name)
     %{faces: faces, pieces: pieces} = cut(g)
 
     for f <- faces,
@@ -440,76 +620,78 @@ defmodule World.Sewing do
 
   # A garment sewn: its mesh (OBJ), its fit (MHCLO), and the points of the
   # mesh that drape (indices from 0, in the order of the mesh).
-  defp sew(g) do
-    Data.cached({:sewing, g.name}, fn ->
-      %{points: points, uvs: uvs} = Data.base()
-      fabric = Map.fetch!(@fabrics, g.fabric)
-      %{faces: faces, pieces: of} = cut(g)
-      by_name = Map.new(g.pieces, &{&1.name, &1})
+  defp sew(g), do: Data.cached({:sewing, g.name}, fn -> sewn(g) end)
 
-      vs = points_of(faces) |> Enum.sort()
-      index = vs |> Enum.with_index(1) |> Map.new()
-      ts = faces |> Enum.flat_map(fn f -> Enum.map(f, &elem(&1, 1)) end) |> Enum.uniq() |> Enum.sort()
-      tindex = ts |> Enum.with_index(1) |> Map.new()
+  # (A garment with the options of an order, `variant`, is not kept: there can be many.)
+  defp sewn(g) do
+    %{points: points, uvs: uvs} = Data.base()
+    fabric = Map.fetch!(@fabrics, g.fabric)
+    %{faces: faces, pieces: of} = cut(g)
+    by_name = Map.new(g.pieces, &{&1.name, &1})
 
-      # The offset of each point: the mean over the pieces of the point
-      # (a seam), along the normal of its surface.
-      offsets = Map.new(vs, fn v -> {v, of[v] |> Enum.map(&offset(by_name[&1], v, g.layer, fabric)) |> Vec.mean()} end)
-      drape = for v <- vs, Enum.any?(of[v], &by_name[&1][:drape]), do: Map.fetch!(index, v) - 1
+    vs = points_of(faces) |> Enum.sort()
+    index = vs |> Enum.with_index(1) |> Map.new()
+    ts = faces |> Enum.flat_map(fn f -> Enum.map(f, &elem(&1, 1)) end) |> Enum.uniq() |> Enum.sort()
+    tindex = ts |> Enum.with_index(1) |> Map.new()
 
-      obj =
-        IO.iodata_to_binary([
-          "# The garment #{g.name} of World (World.Sewing).\n",
-          for v <- vs do
-            {x, y, z} = Vec.add(elem(points, v), Map.fetch!(offsets, v))
-            ["v ", num(x), " ", num(y), " ", num(z), "\n"]
-          end,
-          for t <- ts do
-            {u, w} = elem(uvs, t)
-            ["vt ", num(u), " ", num(w), "\n"]
-          end,
-          "g #{g.name}\n",
-          for f <- faces do
-            ["f", for({v, t} <- f, do: [" ", Integer.to_string(index[v]), "/", Integer.to_string(tindex[t])]), "\n"]
-          end
-        ])
+    # The offset of each point: the mean over the pieces of the point
+    # (a seam), along the normal of its surface.
+    offsets = Map.new(vs, fn v -> {v, of[v] |> Enum.map(&offset(by_name[&1], v, g.layer, fabric)) |> Vec.mean()} end)
+    drape = for v <- vs, Enum.any?(of[v], &by_name[&1][:drape]), do: Map.fetch!(index, v) - 1
 
-      fit =
-        IO.iodata_to_binary([
-          "# The fit of the garment #{g.name} of World to the base mesh hm08.\n",
-          "name #{g.name}\nobj_file #{g.name}.obj\n",
-          # The scales of male_casualsuit01 of MakeHuman: two points of the
-          # body and their distance in the base mesh, for each axis.
-          "x_scale 5399 11998 1.4340\nz_scale 962 5320 2.0001\ny_scale 791 881 2.4098\n",
-          "verts 0\n",
-          for v <- vs do
-            {dx, dy, dz} = Map.fetch!(offsets, v)
-            s = Integer.to_string(v)
-            [s, " ", s, " ", s, " 1.0 0.0 0.0 ", num(dx), " ", num(dy), " ", num(dz), "\n"]
-          end,
-          "delete_verts\n",
-          Enum.map(hidden(faces), &[Integer.to_string(&1), "\n"])
-        ])
+    obj =
+      IO.iodata_to_binary([
+        "# The garment #{g.name} of World (World.Sewing).\n",
+        for v <- vs do
+          {x, y, z} = Vec.add(elem(points, v), Map.fetch!(offsets, v))
+          ["v ", num(x), " ", num(y), " ", num(z), "\n"]
+        end,
+        for t <- ts do
+          {u, w} = elem(uvs, t)
+          ["vt ", num(u), " ", num(w), "\n"]
+        end,
+        "g #{g.name}\n",
+        for f <- faces do
+          ["f", for({v, t} <- f, do: [" ", Integer.to_string(index[v]), "/", Integer.to_string(tindex[t])]), "\n"]
+        end
+      ])
 
-      %{obj: obj, fit: fit, drape: drape}
-    end)
+    fit =
+      IO.iodata_to_binary([
+        "# The fit of the garment #{g.name} of World to the base mesh hm08.\n",
+        "name #{g.name}\nobj_file #{g.name}.obj\n",
+        # The scales of male_casualsuit01 of MakeHuman: two points of the
+        # body and their distance in the base mesh, for each axis.
+        "x_scale 5399 11998 1.4340\nz_scale 962 5320 2.0001\ny_scale 791 881 2.4098\n",
+        "verts 0\n",
+        for v <- vs do
+          {dx, dy, dz} = Map.fetch!(offsets, v)
+          s = Integer.to_string(v)
+          [s, " ", s, " ", s, " 1.0 0.0 0.0 ", num(dx), " ", num(dy), " ", num(dz), "\n"]
+        end,
+        "delete_verts\n",
+        Enum.map(hidden(faces), &[Integer.to_string(&1), "\n"])
+      ])
+
+    %{obj: obj, fit: fit, drape: drape}
   end
 
   # The cut of a garment: its faces (the faces of each surface with each
   # point in a piece on that surface), and the pieces of each point.
-  defp cut(g) do
-    Data.cached({:sewing_cut, g.name}, fn ->
-      %{groups: groups} = Data.base()
+  defp cut(%{variant: true} = g), do: pieces(g)
+  defp cut(g), do: Data.cached({:sewing_cut, g.name}, fn -> pieces(g) end)
 
-      g.pieces
-      |> Enum.group_by(& &1.on)
-      |> Enum.reduce(%{faces: [], pieces: %{}}, fn {on, pieces}, acc ->
-        tests = Enum.map(pieces, &{&1.name, pattern(&1)})
-        of = fn v -> for {name, inside?} <- tests, inside?.(v), do: name end
-        faces = groups |> Map.fetch!(on) |> Enum.filter(fn f -> Enum.all?(f, &(of.(elem(&1, 0)) != [])) end)
-        names = faces |> points_of() |> Map.new(&{&1, of.(&1)})
-        %{faces: acc.faces ++ faces, pieces: Map.merge(acc.pieces, names)}
-      end)
+  defp pieces(g) do
+    %{groups: groups} = Data.base()
+
+    g.pieces
+    |> Enum.group_by(& &1.on)
+    |> Enum.reduce(%{faces: [], pieces: %{}}, fn {on, pieces}, acc ->
+      tests = Enum.map(pieces, &{&1.name, pattern(&1)})
+      of = fn v -> for {name, inside?} <- tests, inside?.(v), do: name end
+      faces = groups |> Map.fetch!(on) |> Enum.filter(fn f -> Enum.all?(f, &(of.(elem(&1, 0)) != [])) end)
+      names = faces |> points_of() |> Map.new(&{&1, of.(&1)})
+      %{faces: acc.faces ++ faces, pieces: Map.merge(acc.pieces, names)}
     end)
   end
 
@@ -525,6 +707,7 @@ defmodule World.Sewing do
     {_, _, zs} = joint("joint-spine-2")
     arm = arm_axis()
     neck = joint("joint-neck")
+    {_, _, zh} = joint("joint-head")
 
     fn v ->
       {x, y, z} = p = elem(points, v)
@@ -537,7 +720,8 @@ defmodule World.Sewing do
         in_x?(piece[:x], x) and
         in_neck?(piece[:neck], p, neck) and
         in_angle?(piece[:angle], x, z - zc) and
-        in_arm?(piece[:arm], b, p, arm)
+        in_arm?(piece[:arm], b, p, arm) and
+        (piece[:open] == nil or z <= zh + piece[:open])
     end
   end
 
@@ -581,6 +765,7 @@ defmodule World.Sewing do
   end
 
   defp level(nil, default), do: default
+  defp level({:hem, h}, _), do: hem_level(h)
   defp level({name, d}, _) when is_number(d), do: Map.fetch!(landmarks(), name) + d
 
   defp level({a, b, t}, _) do
@@ -589,11 +774,12 @@ defmodule World.Sewing do
   end
 
   # The offset of a point of a piece: along the normal of its surface, the
-  # base of the layer, the ease (with the flare of pants, the room at the
-  # hem, the baffles and the folded hood) and the thickness.
+  # base of the layer, the ease (with the flare of pants, the loose legs of
+  # shorts, the room at the hem, the baffles, the folds of a gathered band
+  # and the folded hood) and the thickness.
   defp offset(piece, v, layer, fabric) do
     %{points: points} = Data.base()
-    {_, y, z} = elem(points, v)
+    {x, y, z} = elem(points, v)
     l = landmarks()
     {low, _} = Map.get(piece, :y, {nil, nil})
     hem = level(low, l.ankle)
@@ -604,6 +790,11 @@ defmodule World.Sewing do
           t = min(1.0, max(0.0, (l.hip - y) / (l.hip - l.ankle)))
           top + (bottom - top) * t * t
 
+        # (Loose legs: from `top` at the hip to `bottom` at the hem, along a line, at each hem.)
+        {:loose, top, bottom} ->
+          t = if hem < l.hip, do: min(1.0, max(0.0, (l.hip - y) / (l.hip - hem))), else: 1.0
+          top + (bottom - top) * t
+
         e ->
           e
       end
@@ -611,10 +802,15 @@ defmodule World.Sewing do
     room = Map.get(piece, :room, 0.0) * min(1.0, max(0.0, (hem + 1.0 - y) / 1.0))
     puff = Map.get(piece, :puff, 0.0) * (0.5 + 0.5 * :math.cos(2 * :math.pi() * y / @baffle))
     {_, _, nape} = joint("joint-neck")
+    {_, _, zc} = joint("joint-pelvis")
+
+    gather =
+      with {amp, n} <- Map.get(piece, :gather, {0.0, 0}), do: amp * (0.5 + 0.5 * :math.cos(n * :math.atan2(x, z - zc)))
+
     hood = Map.get(piece, :hood, 0.0)
     hood = if hood > 0 and y > l.neck - 0.4 and z < nape, do: hood * min(1.0, (y - l.neck + 0.4) / 0.6), else: 0.0
 
-    Vec.scale(normal(piece.on, v), Map.fetch!(@layers, layer) + ease + room + puff + hood + fabric.thick)
+    Vec.scale(normal(piece.on, v), Map.fetch!(@layers, layer) + ease + room + puff + gather + hood + fabric.thick)
   end
 
   # The points of the body inside a garment: each point under it with all

@@ -229,7 +229,8 @@ defmodule World.SkillTest do
     elements = for %{kind: "element", data: data} <- Log.events(r.log), do: data
     assert Enum.map(elements, & &1["task"]) == ["root", "upper"]
     assert Enum.all?(elements, &Map.has_key?(r.glbs, &1["glb"]))
-    assert Construction.key({[], nil}) =~ ~r/^[0-9a-f]{16}$/
+    # (The key of an element is the key of its part: W28.)
+    assert Enum.all?(elements, &(&1["glb"] =~ ~r/^[0-9a-f]{32}$/))
 
     # The budget of triangles: the estimate of the drawing, at each level.
     {:ok, small} = World.build(%{id: id <> "-small", item: item, drawing: d, budget: %{"triangles" => 10}})

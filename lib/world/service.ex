@@ -37,7 +37,14 @@ defmodule World.Service do
     when the log has none).
   - `GET /builds/ID/events`: the stream of a construction until its end,
     after the id of `Last-Event-ID` or of `?after=N`.
-  - `GET /builds/ID/elements/KEY.glb`: the GLB of an element.
+  - `GET /builds/ID/elements/KEY.glb`: the GLB of an element (from the
+    construction, else from the store of the parts).
+  - `GET /p/KEY.glb`: a part of a model by its key (`World.Elements`):
+    from the store of the parts, else built from its recipe in the line
+    and kept (404 for a key with neither, 422 for a part that needs
+    more memory than the VM has). A build that takes more than 45 s goes
+    on: the answer is 202 with `retry-after`, and a request after it
+    gets the part.
   - `GET /events`: the stream of the whole world, after the id of
     `Last-Event-ID` or of `?after=N`.
   - `GET /census`: the people of the node (`World.census/0`).
@@ -48,6 +55,7 @@ defmodule World.Service do
     now.
 
   - `GET /o/HASH.glb` (and `.mid.glb`, `.far.glb`, `.parts.json`,
+    `.elements.json`, `.mid.elements.json`, `.far.elements.json`,
     `.receipt.json`, `.solids.json`, `.drawing.json`, `.log.json`,
     `.replay.glb`, and
     `.flat.glb`, `.mid.flat.glb`, `.far.flat.glb`, `.light.glb`,
@@ -60,7 +68,8 @@ defmodule World.Service do
     header `x-world-class: batch` for a build that no person waits for)
     and keeps it. A file from an older version of World goes out at
     once, with the header `x-world-stale`, and the node builds it again
-    one time. The answer has an ETag (304 for the same one), and it is
+    one time. A parts list that takes more than 45 s builds on: 202 with
+    `retry-after`, and a request after it gets the file. The answer has an ETag (304 for the same one), and it is
     in gzip for a client that accepts gzip. A file of the flat look
     or of the light look takes `?triangles=N` (the most faces of its
     mesh) and `?wrap=1` (one closed skin round the model).
@@ -91,6 +100,9 @@ defmodule World.Service do
     {".mid.light.glb", "mid", "light"},
     {".far.light.glb", "far", "light"},
     {".light.glb", "near", "light"},
+    {".mid.elements.json", "mid", "elements"},
+    {".far.elements.json", "far", "elements"},
+    {".elements.json", "near", "elements"},
     {".mid.glb", "mid", "glb"},
     {".far.glb", "far", "glb"},
     {".parts.json", "near", "parts"},
@@ -108,6 +120,7 @@ defmodule World.Service do
     "replay" => "model/gltf-binary",
     "log" => "application/json",
     "parts" => "application/json",
+    "elements" => "application/json",
     "receipt" => "application/json",
     "solids" => "application/json",
     "drawing" => "application/json",
@@ -238,7 +251,10 @@ defmodule World.Service do
     level = Map.get(conn.query_params, "level", "near")
 
     with_order(conn, fn order ->
-      case Line.run(class(conn), fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end) do
+      case build(conn, order, level, file) do
+        :building ->
+          conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
+
         {ms, {:ok, out}} ->
           {:ok, full} = Orders.check(order)
 
@@ -257,6 +273,46 @@ defmodule World.Service do
   post "/builds" do
     with_order(conn, fn job -> builds(conn, job) end)
   end
+
+  # The build of a file of POST /build in the line, with its time. A parts
+  # list builds in the background (`World.Elements.background/3`): a large
+  # model at near takes more than the 60 s of a request at the edge.
+  # (Its file goes into the files of the node: the request after a 202 gets it there.)
+  defp build(_conn, order, level, "elements") do
+    hash = with {:ok, full} <- Orders.check(order), do: Orders.hash(full), else: (_ -> nil)
+
+    keep = fn ->
+      result = timed(:now, order, level, "elements")
+      with {_, {:ok, body}} when hash != nil <- result, do: Files.put(hash, level, "elements", body)
+      result
+    end
+
+    with {:ok, entry} <- Files.get(hash, level, "elements"),
+         true <- Files.fresh?(entry) do
+      {0, {:ok, entry.body}}
+    else
+      _ ->
+        case World.Elements.background({:file, hash, level}, keep) do
+          {:ok, result} -> result
+          :building -> :building
+          :gone -> {0, listed(hash, level)}
+        end
+    end
+  end
+
+  defp build(conn, order, level, file), do: timed(class(conn), order, level, file)
+
+  # The parts list after another build of it, which ended before it got
+  # the message: in the files, else the error of a build that stopped.
+  defp listed(hash, level) do
+    case Files.get(hash, level, "elements") do
+      {:ok, entry} -> {:ok, entry.body}
+      :error -> {:error, World.Elements.stopped()}
+    end
+  end
+
+  defp timed(class, order, level, file),
+    do: Line.run(class, fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end)
 
   get "/builds/:id" do
     case summary(id) do
@@ -298,7 +354,7 @@ defmodule World.Service do
 
   get "/builds/:id/elements/:file" do
     with [key, "glb"] <- String.split(file, "."),
-         {:ok, glb} <- Construction.element(id, key) do
+         {:ok, glb} <- element(id, key) do
       conn |> put_resp_content_type("model/gltf-binary", nil) |> send_resp(200, glb)
     else
       _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such element"}]})
@@ -368,6 +424,88 @@ defmodule World.Service do
       _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such file"}]})
     end
   end
+
+  # A part of a model by its key (`World.Elements`): from the store, else
+  # built from its recipe in the line, and kept. The key is a hash of its
+  # data: the file does not change. The Worker gives the header
+  # x-world-project for a request with a project token; the answer has
+  # x-world-shift: wanted when the edge needs a construction shift
+  # (`World.Shift.wanted?/1`), and the Worker starts one.
+  # A construction shift joins (`World.Shift.Passes`): the Worker checked
+  # the ID token of its job, and gives its run in x-world-shift-run. The
+  # answer: the name of its node, the cookie of that node, the pass of
+  # the store, and the name of the node of the edge.
+  post "/shift/join" do
+    with [run] <- get_req_header(conn, "x-world-shift-run"),
+         {:ok, answer} <- World.Shift.Passes.join(run) do
+      json(conn, 200, answer)
+    else
+      [] ->
+        json(conn, 403, %{"errors" => [%{"path" => "", "message" => "no shift"}]})
+
+      {:error, :no_shifts} ->
+        json(conn, 403, %{"errors" => [%{"path" => "", "message" => "no shifts on this VM"}]})
+
+      {:error, :no_distribution} ->
+        json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the edge is not a node yet"}]})
+    end
+  end
+
+  # The check of the Worker for /store/KEY with a pass: 204 when the
+  # shift of the pass can read (or write) the key, else 403.
+  get "/shift/allowed" do
+    conn = fetch_query_params(conn)
+    access = if conn.query_params["access"] == "write", do: :write, else: :read
+
+    case get_req_header(conn, "x-world-shift-pass") do
+      [pass] ->
+        if World.Shift.Passes.allowed?(pass, conn.query_params["key"] || "", access),
+          do: send_resp(conn, 204, ""),
+          else: send_resp(conn, 403, "")
+
+      _ ->
+        send_resp(conn, 403, "")
+    end
+  end
+
+  get "/p/:file" do
+    project = get_req_header(conn, "x-world-project") != []
+    # (A part that needs a shift when no shift takes parts: the answer comes at once, with
+    # the mark, so that the Worker starts the shift now, not after the wait.)
+    first = project and World.Labour.needs_shift?(file |> String.split(".") |> hd()) and World.Shift.wanted?(waiting: 1)
+    conn = if first, do: put_resp_header(conn, "x-world-shift", "wanted"), else: conn
+    wait = if first, do: 0, else: World.Elements.wait()
+
+    with [key, "glb"] <- String.split(file, "."),
+         true <- key =~ ~r/^[0-9a-f]{32}$/,
+         {:ok, glb} <- part_of(conn, key, World.Elements.fetch(key, wait, project)) do
+      conn
+      |> put_resp_header("etag", ~s("#{key}"))
+      |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+      |> put_resp_content_type("model/gltf-binary", nil)
+      |> send_resp(200, glb)
+    else
+      # (A node of a shift put the part in the store: the Worker reads it from R2, with no VM.)
+      :stored -> send_resp(conn, 204, "")
+      :building -> conn |> shift() |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
+      {:error, errors} -> json(conn, 422, %{"errors" => errors})
+      _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such part"}]})
+    end
+  end
+
+  # The mark of a construction shift that the edge needs, for the Worker.
+  defp shift(conn), do: if(World.Shift.wanted?(), do: put_resp_header(conn, "x-world-shift", "wanted"), else: conn)
+
+  # A part that another node put in the store: the Worker in front of the
+  # VM (its header x-world-origin) reads it from R2; a server with no
+  # Worker reads it from its store.
+  defp part_of(conn, key, :stored) do
+    if get_req_header(conn, "x-world-origin") == [],
+      do: with(:none <- World.Elements.Store.get(key), do: :stored),
+      else: :stored
+  end
+
+  defp part_of(_conn, _key, result), do: result
 
   get "/m/:name" do
     case split(name) do
@@ -482,6 +620,22 @@ defmodule World.Service do
             unless fresh?, do: refresh(full, hash, level, file, kind, opts)
             send_entry(conn, entry, hash, kind, not fresh?)
 
+          :error when kind == "elements" ->
+            # (The parts list of a large model can take more than the 60 s of
+            # a request at the edge: its build goes on, and keeps its file.)
+            build = fn ->
+              Line.run(:now, fn ->
+                with {:ok, body} <- Orders.build(full, level, kind, opts), do: {:ok, Files.put(hash, level, file, body)}
+              end)
+            end
+
+            case World.Elements.background({:file, hash, level, file}, build) do
+              {:ok, {:ok, entry}} -> send_entry(conn, entry, hash, kind, false)
+              {:ok, {:error, errors}} -> json(conn, 422, %{"errors" => errors})
+              :building -> conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
+              :gone -> json(conn, 500, %{"errors" => World.Elements.stopped()})
+            end
+
           :error ->
             case Line.run(class(conn), fn -> Orders.build(full, level, kind, opts) end) do
               {:ok, body} -> send_entry(conn, Files.put(hash, level, file, body), hash, kind, false)
@@ -587,6 +741,16 @@ defmodule World.Service do
 
       {:error, errors} ->
         json(conn, 422, %{"errors" => errors})
+    end
+  end
+
+  # The GLB of an element of a construction: from the construction while
+  # it keeps its elements, else from the store of the parts (W28: the key
+  # of an element is the key of its part).
+  defp element(id, key) do
+    case Construction.element(id, key) do
+      {:ok, glb} -> {:ok, glb}
+      :none -> if key =~ ~r/^[0-9a-f]{32}$/, do: World.Elements.Store.get(key), else: :none
     end
   end
 

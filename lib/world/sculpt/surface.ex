@@ -43,6 +43,10 @@ defmodule World.Sculpt.Surface do
   # The weight of the pin of a point for the collapse, for a change of
   # the color from black to white at the point.
   @pin 9.0
+  # The pin of a point at the border of a tile: a move of 0.1 mm costs
+  # 1, much more than a collapse of a surface. (A larger weight loses the
+  # precision of a quadric of 64 bits at a place of some tens of m.)
+  @held 1.0e8
 
   # A key of a point: its cell (18 bits for each axis, from -2^17) and its
   # part (3 bits), in one small integer.
@@ -166,9 +170,16 @@ defmodule World.Sculpt.Surface do
   each region of a second set, moved by half a region, in a process of
   its own (the borders of the first regions are in the middle of these);
   then the band of faces at the borders that are left.
+
+  With the option `seam` (a function of a cell that is true for a cell at
+  the border of a tile, `World.Sculpt.model/2`), each point of such a
+  cell stays where it is: the next tile has the same point there, so the
+  two meshes meet with no gap. A piece of the surface that touches the
+  border is not small: the rest of it is in the next tile.
   """
   def meshes(pieces, opts \\ []) do
     budget = opts[:budget]
+    seam = opts[:seam]
     groups = Enum.group_by(pieces, &region(&1.at))
     faces = fn ps -> ps |> Enum.map(&div(byte_size(&1.quads), 17)) |> Enum.sum() |> Kernel.*(2) end
     total = faces.(pieces)
@@ -188,7 +199,8 @@ defmodule World.Sculpt.Surface do
              ps,
              max(round(1.1 * budget * faces.(ps) / total), div(faces.(ps), 4)),
              pin,
-             free(opts[:step])
+             free(opts[:step]),
+             seam
            )}
         end)
         |> Enum.sort_by(&elem(&1, 0))
@@ -198,9 +210,9 @@ defmodule World.Sculpt.Surface do
         |> wider(budget, opts[:step])
         |> last_pass(budget)
       else
-        {_keys, pts, tris, pins} = triangles(pieces, pin)
+        {_keys, pts, tris, pins} = triangles(pieces, pin, seam)
 
-        if budget && length(tris) > budget do
+        if budget != nil and length(tris) > budget do
           %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, pins: pins)
           {pts, tris}
         else
@@ -208,7 +220,8 @@ defmodule World.Sculpt.Surface do
         end
       end
 
-    tris = if opts[:small], do: drop_small(List.to_tuple(pts), tris, opts[:small]), else: tris
+    held = if seam, do: held_places(pieces, seam), else: MapSet.new()
+    tris = if opts[:small], do: drop_small(List.to_tuple(pts), tris, opts[:small], held), else: tris
     all = List.to_tuple(pts)
 
     tris
@@ -223,7 +236,7 @@ defmodule World.Sculpt.Surface do
 
   # The triangles of some pieces, on their points (one point for each key):
   # `{keys, points, triangles, pins}`.
-  defp triangles(pieces, pin) do
+  defp triangles(pieces, pin, seam) do
     decoded = Enum.map(pieces, &decode/1)
     points = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.points))
     colors = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.colors))
@@ -231,7 +244,23 @@ defmodule World.Sculpt.Surface do
     keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
     ids = keys |> Enum.with_index() |> Map.new()
     tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
-    {keys, Enum.map(keys, &points[&1]), tris, pins(keys, colors, tris, pin)}
+    {keys, Enum.map(keys, &points[&1]), tris, seam_pins(pins(keys, colors, tris, pin), keys, seam)}
+  end
+
+  # The pins with a very large weight for each point at the border of a
+  # tile: no collapse moves it (its cost is more than each other cost).
+  defp seam_pins(pins, _keys, nil), do: pins
+
+  defp seam_pins(pins, keys, seam) do
+    pins = pins || List.duplicate(0.0, length(keys))
+    for {w, k} <- Enum.zip(pins, keys), do: if(seam.(cell(k)), do: @held, else: w)
+  end
+
+  # The places of the points at the border of a tile (a pin keeps each
+  # one at its place, so a piece of surface after the collapse touches
+  # the border when it has one of these places).
+  defp held_places(pieces, seam) do
+    for piece <- pieces, {k, p} <- decode(piece).points, seam.(cell(k)), into: MapSet.new(), do: Vec.float(p)
   end
 
   # The pin of each point for the collapse (`World.Simplify.collapse/4`):
@@ -266,10 +295,10 @@ defmodule World.Sculpt.Surface do
   # fewer than 500 faces for each region, one pass. A region gives back
   # only its fewer faces, and the last pass has only the band, so no
   # process has the whole mesh in a collapse.
-  defp region_collapse(r, pieces, budget, pin, free) do
-    {keys, pts, tris, pins} = triangles(pieces, pin)
+  defp region_collapse(r, pieces, budget, pin, free, seam) do
+    {keys, pts, tris, pins} = triangles(pieces, pin, seam)
     {lo, hi} = cells(r)
-    fixed = for {k, i} <- Enum.with_index(keys), border?(cell(k), lo, hi), do: i
+    fixed = for {k, i} <- Enum.with_index(keys), border?(cell(k), lo, hi) or (seam && seam.(cell(k))), do: i
     # (Past its budget, a region does each collapse that costs almost
     # nothing: a flat part needs few faces. And it does no collapse that
     # moves the surface by more than half a cell, also when it has more
@@ -711,7 +740,7 @@ defmodule World.Sculpt.Surface do
   # The faces of each piece of the surface (faces joined by their points)
   # whose box is at least `small` m across: a smaller piece is the noise of
   # a part thinner than the cells.
-  defp drop_small(pts, tris, small) do
+  defp drop_small(pts, tris, small, held) do
     near =
       Enum.reduce(tris, %{}, fn {[a, b, c], _}, acc -> acc |> link(a, [b, c]) |> link(b, [a, c]) |> link(c, [a, b]) end)
 
@@ -722,7 +751,7 @@ defmodule World.Sculpt.Surface do
         else
           piece = flood(near, [v], MapSet.new([v]))
           {{x0, y0, z0}, {x1, y1, z1}} = piece |> Enum.map(&elem(pts, &1)) |> Vec.bounds()
-          big = Vec.len({x1 - x0, y1 - y0, z1 - z0}) >= small
+          big = Vec.len({x1 - x0, y1 - y0, z1 - z0}) >= small or Enum.any?(piece, &MapSet.member?(held, elem(pts, &1)))
           {if(big, do: MapSet.union(keep, piece), else: keep), MapSet.union(seen, piece)}
         end
       end)

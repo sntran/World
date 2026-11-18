@@ -55,6 +55,8 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.light.glb`, `.mid.light.glb`, `.far.light.glb` | The model at a level with the light look (`World.Flat`, `roles: true`), for a project that gives each role its own material: one node with one mesh, a primitive for each role of the model, flat faces, the material of each role with its color (the mean of the colors at the points of a role that has them: a sculpture, the clothes of a person at mid and far) and no image, no skin. It takes `?triangles=N` and `?wrap=1` as the flat look: a budget keeps the border of two roles. A scooter at the far level: 4,120 triangles, and 500 with `?triangles=500&wrap=1` (50 KB, 15 KB in gzip, in 1.7 s). A coconut palm at the far level: 308 triangles, and 204 with `?triangles=204`. |
 | `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
+| `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
+| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge builds it from its recipe and keeps it, or, for a part that does not fit the edge, a construction shift builds it ("Construction shifts"): a project (a request with its token) that asks for all the parts of a list at one time gets them built at the same time. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. A part of a public order that does not fit the edge gives 422. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
@@ -146,7 +148,8 @@ with its joints and clips, the list of the parts, the log. Each error
 has its path.
 
 A `plant` is a plant of the nursery, from the rules of its species:
-`species` (`coconut`, `areca`, `banana`, `bamboo`, `frangipani`), `height` (m;
+`species` (`coconut`, `areca`, `banana`, `bamboo`, `frangipani`,
+`araucaria`), `height` (m;
 the common height of the species by default), `seed` (the small changes
 from plant to plant), `month` (the flowers of a frangipani) and
 `numbers`: the numbers of the plant over the numbers of its species
@@ -156,6 +159,20 @@ number of the species. A palm has `trunk` (its width, m), `base`,
 `leaflet`, `nuts`, `nut` and, for an areca palm, `crownshaft`. So a
 project asks for the palm that it wants, and corrects a number after it
 looks at the model.
+
+An `araucaria` is the Norfolk Island pine (Araucaria heterophylla,
+bách tán): a straight trunk to the top, and level tiers of branches in
+whorls on it. Each branch has two rows of branchlets with small leaves.
+The low branches are level, the high ones point up, and the crown is a
+narrow cone. Its numbers: `trunk` (its width at the chest, m), `clear`
+(the height of the lowest tier, m), `tiers` (their count, from `clear`
+to the top), `whorl` (the branches in a tier), `crown` (the width of the
+crown at the lowest tier, m) and `branchlet` (the length of a branchlet,
+m). The numbers do not change with the `height`: give them for the tree
+that you want. At near each branchlet is a thin tube of leaves; at mid
+the branchlets of a branch are one card; at far half the tiers have a
+card of each branch. A tree of 18 m has about 48,000 triangles at near,
+3,200 at mid and 1,100 at far.
 
 ## An edit of an order
 
@@ -430,7 +447,7 @@ version of the blueprint (`van@2`): the old version stays.
 | Order | Where |
 |---|---|
 | A model of the catalog | `mix world.build` builds it natively, and the files are in the repository. CI checks at each commit that they are the build of the code. The Worker serves them as static files: no build at a request. |
-| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
+| An order at a request | The VM of World (beam.com, WebAssembly) in the Durable Object `world` of the Worker builds it (`worker.js`, `handler.js`, `World.Service`): one object is the node, with one census of its people. A large part of a parts list of a project builds in a construction shift ("Construction shifts"). The file goes into R2 with a key of the commit of the deploy and the hash of the order, so the next request reads it from R2, and a new deploy builds it again. |
 
 ## The server on a computer
 
@@ -633,11 +650,458 @@ A child of 9 years in the clothes of a village: near 120 MB, its
 receipt 122 MB. (`POST /orders` of `8d59a75` did not build the item;
 now the check of a true model builds it at far.)
 
+F4, part 4 (2026-11-17). Vũng Tàu found that a person in four items
+(`world_t_shirt`, `world_rain_shell`, `mindfront_female_trousers_1`,
+`elvs_caesar_sandals1`) stopped the builder at the edge (503), also with
+the fixes of part 3. The cause is one asset: the sandals have 91,704
+triangles and 47,344 points (the next largest item has 30,768
+triangles). Their load alone took 94 MB at the peak, and the data of the
+asset (34 MB of terms) stays in `:persistent_term`. The number of items
+is not the cause. Now each asset has at most 17,000 triangles
+(`World.People.Thin`, `scripts/thin.exs`): the sandals load in 25 MB.
+
+The peak of `:erlang.memory(:total)` over the VM at rest, natively, for
+`World.Orders.build/3` (GLB; the data of MakeHuman loaded, not the
+sandals):
+
+| Order | Before | After |
+|---|---|---|
+| The four items, far | +164 MB | +69 MB |
+| The four items, mid | +164 MB | +87 MB |
+| The four items, near | +453 MB | +167 MB |
+| The same with no T-shirt, far | +163 MB | |
+| The sandals alone, far | +157 MB | |
+| The defaults, far, mid, near | +54, +57, +108 MB | |
+
 Still to do: a packed format for the meshes of a person (the item is
-13 MB of terms); the check of a group of people (`exercise` with
-`fans`: 272 MB, so its order stops the VM); and the peak at the end of
-a build, where the person, the scene and the buffer of the GLB are all
-live.
+13 MB of terms), and the peak at the end of a build, where the person,
+the scene and the buffer of the GLB are all live.
+
+F4, part 5 (2026-11-17): a group of people. The check of the order
+`exercise` with `fans` (a build of the group at far) took 272 MB at
+the edge, and the VM stopped. Two causes: the group made all its people
+in one process, so the garbage of each person stayed to the end; and
+the cache of the targets kept each target decoded (1.7 MB of terms each,
+47 targets for a group of different people: 79.5 MB). Now each person
+of a group is made in a process of its own (`World.Detail.apart/2`),
+and the cache keeps the packed targets (107 kB each). The check of an
+order builds its model only for the data of a project (a drawing) or
+for a pose (`joints`): a rule in code with no pose is checked by the
+tests of its rule. The parts list gives each person as a part of its
+own (the blueprint gives its `pieces`), made alone at its first
+request, at its place in the group. And no order stops the VM now:
+`World.Guard` stops a build that goes over `WORLD_MEMORY_MB`, and the
+order gets an error (below, "The parts of a model").
+
+The order `exercise` with `fans` (7 people) at the local edge, each
+request in a new VM:
+
+| Request | far | mid | near |
+|---|---|---|---|
+| `POST /orders` | 52 MB (before: 272 MB, the VM stopped) | | |
+| The parts list | 53 MB, 10 s | 53 MB, 11 s | 53 MB, 10 s |
+| A person | 88 to 99 MB, 8 to 10 s | 99 to 113 MB, 10 to 12 s | 112 to 142 MB, 8 to 9 s |
+
+Two of the seven people at near go over about 128 MB: the memory of
+one person at near is still the open fault of F4, part 3.
+
+F4, part 6 (2026-11-17): the people at near, again. At the local edge,
+each person in a new VM (the VM is ready at 42 MB):
+
+- The seven people at near: 116 to 145 MB. One person changes by up to
+  18 MB from one run to the next (the leader: 128, 142 and 145 MB).
+- The make of the figure holds the peak, not its GLB: the leader with
+  no GLB takes 136 MB (142 MB with it), and person_5 105 MB (114 MB).
+- The live data of the make is the same for each person: at most 28 MB
+  on a computer (64-bit words), while it poses the figure, and the
+  figure is 13 MB. At the edge the VM grows by 60 to 100 MB for it. So
+  most of the growth is not the data: it is the copying collector (an
+  old and a new heap at one time) and the gaps between the blocks of
+  the C allocator, in a linear memory that never gets smaller. The gaps
+  change with the order of the blocks, so the peak changes from one run
+  to the next.
+- Each of these was worse: the make in a process of its own (145 MB),
+  each mesh of the person in a process of its own (+25% on a computer),
+  a first heap of 16 or 32 MB for the build (176 and 167 MB), and a full
+  sweep at each collection (148 MB).
+
+This fault is still open. The next steps: the size and the used part of the memory of
+WebAssembly ("The guard and the memory of WebAssembly") at each step,
+to see the gaps; the data of
+the people (the base mesh, the targets, the items) in the snapshot of
+the VM, so that it is low in the memory before a build; and a packed
+form (binaries) of a skinned mesh, so that a figure at near is about 3
+MB and not 13 MB.
+
+## The parts of a model
+
+World works as Dreams (W24 to W28 of `TODO.md`, plan 0027 of Vũng
+Tàu): World gives the tools, the parts and the labour, and a project
+does the construction. The factory does not join the parts of a model
+into one model, and it does not keep a whole model in its memory
+(`World.Elements`).
+
+- **The parts list** (`/o/HASH.elements.json`, and `.mid.` and `.far.`;
+  `mix world.order` writes them too, with the GLB of each part in
+  `p/KEY.glb`). Each part has its `key`, its `url`, its `node` (the id
+  of its node in the plan), its `part`, its `matrix` (16 numbers by
+  columns: its place in the axes of the model, Y up as in glTF), its
+  `roles`, its `joint` (the joint that moves it, or null), its `kind`
+  (`part`, or `figure` for a person with its props) and, for a part of
+  a large sculpture, its `tile`. The list has the `joints`, `limbs`,
+  `ports` and `collision` of the model. `review/parts.html?list=URL`
+  puts the parts together as a project does.
+- **The key of a part** is a hash of its data and of the version of its
+  rule: the code of the rule and of each module of World that it calls
+  (`World.Elements.version/1`). A part that is made (a node of shapes, a
+  person, a vehicle) has its content as its data, with its level, its
+  maps and the colors of the order: a wall of 1,000 bricks of one shape
+  is one file. A part of a sculpture has its data: the edits near it,
+  its box, its share of the faces and the other data of the sculpture.
+  So an edit of an order changes the keys of the parts that it changes,
+  and the factory builds only those (W27). The same keys are in the
+  events `element` of `POST /builds` (W28), and the GLB of each element
+  goes into the store of the parts.
+- **A part fits the memory of the edge** (W26). A sculpture that has
+  more than 20,000 faces at its cells (an estimate) is cut into parts,
+  each with a budget of 4,000 triangles or more, and each part is made
+  in steps of at most 20,000 faces, each step in a process of its own.
+  The cuts are planes between bricks, where the fewest soft blends of
+  the edits cross. Two parts next to each other meet with no gap: the
+  points at their border are the same points, and no collapse moves
+  them.
+- **The guard of the memory.** A build runs in a process of its own,
+  and `World.Guard` stops it when the memory of the VM goes over
+  `WORLD_MEMORY_MB` (118 MB at the edge, "The guard and the memory of
+  WebAssembly"): the order gets an error, and
+  the VM and the other orders go on. The check of an order with a large
+  sculpture does not build it at far.
+
+### The CPU limit of the edge
+
+A request to a Durable Object has 30 s of CPU time by default, and 5
+minutes at most (`limits.cpu_ms`). `wrangler.jsonc` sets 5 minutes. A
+part takes about its time of build in CPU time (one VM is one thread),
+and `wrangler dev` does not apply the limit, so the times of the local
+edge (below, "Hải Âu") tell which parts the edge cannot finish:
+
+- With 30 s (no `limits.cpu_ms`): no part of the main node of Hải Âu at
+  any level (far 122 s; mid 111 to 336 s; near up to 221 s), the base at
+  mid and near (37 and 44 s), and the parts lists of mid and near (25
+  and 67 to 96 s). Only the people of a group (8 to 12 s), the sign at
+  far (7 s) and the base at far (21 s) fit.
+- With 5 minutes: the edge cannot finish the largest part of the main
+  node at mid (336 s), and a part takes about 5 minutes or more at a
+  busy core. The rest fits, but each part takes some minutes, one after
+  the other in one VM.
+
+So the edge builds only the parts that fit it with room (a person at
+mid or far), and a construction shift builds the others (below). These
+times are of `wrangler dev` on a shared core; the times at the edge
+need a deploy (the next measure on world.mkfifo.com).
+
+### Construction shifts
+
+A construction shift builds the parts that the edge cannot build: a
+workflow of this repository (`.github/workflows/shift.yml`) on a runner
+of GitHub Actions, for the projects of the owner only. It is like the
+custom builds of BEAM.com (an issue form, and `workflow_dispatch`). A
+shift starts on a request and ends. It is not a server that stays up,
+and it does not take the public orders.
+
+**A request** starts a shift, or joins the shift that runs:
+
+- Most requests come through the API of the factory: an order of a
+  project (below, "The secrets": how a project proves who it is). A part
+  that the edge cannot build (its memory, or its CPU limit) waits in the
+  queue of the edge (`World.Labour`). A part of a public order that the
+  edge cannot build gets 422.
+- An issue of the form "A construction shift" (label `shift`), for a
+  request by hand: the project, its orders (one link to its
+  `orders.json` at a commit, or the hashes of orders), the levels, and
+  the hours. The job `.github/workflows/shift-request.yml` starts at
+  once only for an issue of a member; another issue waits until the
+  owner adds the label again. The job puts no text of the issue in a
+  shell command: the text goes to `scripts/shift-issues.mjs` in the
+  environment, and only checked values go on (`scripts/shift-form.mjs`).
+  The job gets the parts lists with its ID token, for the project of the
+  form, and asks once for each part.
+
+When a shift runs, the edge gives it the new parts at once. When no
+shift runs, the edge keeps the parts in its queue and starts a shift:
+the VM marks the answer 202 of a part with `x-world-shift: wanted`
+(`World.Shift.wanted?/1`), and the Worker starts the workflow
+(`shift.js`, `workflow_dispatch` with the commit of the deploy). When
+the shift has less than 15 minutes left, the edge starts the next shift
+for the new parts; it waits for the end of the shift that runs.
+
+**The limits:**
+
+| Limit | Value | Where |
+|---|---|---|
+| Shifts at one time | 1 (one more waits) | `concurrency` of `shift.yml` |
+| The time of a shift | 5.5 hours at most (`timeout-minutes: 330`); the shift stops 15 minutes before | `shift.yml`, `World.Shift` |
+| Shifts that the edge starts each day (UTC) | 6 (`WORLD_SHIFTS_A_DAY`) | `shift.js` |
+| A second start | not in the 20 minutes after a start (the runner, the cache and the start of the node) | `shift.js` |
+| No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
+| A part in the queue | 6 hours at most, then an error | `World.Labour` |
+| A part that fails | 3 tries on nodes of shifts, then an error | `World.Labour` |
+| WebSockets on `/.tcp/` | 4 open at most (`BEAM_MAX_WEBSOCKETS`) | `wrangler.jsonc` |
+
+**The node of the shift** joins the node of the edge
+(`scripts/shift.sh`):
+
+1. The job asks GitHub for its ID token (`id-token: write`, the audience
+   `https://world.mkfifo.com`) and sends it to `POST /shift/join`
+   (`scripts/shift-join.mjs`). The Worker checks the token (`oidc.js`,
+   "The secrets").
+2. The edge (`World.Shift.Passes`) gives the runner a name for its node
+   (each runner its own), a cookie of 32 random bytes for that node only
+   (`:erlang.set_cookie/2`), the name of the node of the edge, and the
+   pass of the shift for the store of the Worker.
+3. The runner sets that cookie, dials out through the `tcp-proxy.mjs` of
+   beam.com to `wss://world.mkfifo.com/.tcp/4370`, and connects. The
+   edge (`DIST_NAME`, `DIST_LISTEN=true`) has a cookie of its own that
+   nobody knows: random, made at the start of its distribution. So only
+   the node of a join connects, with the cookie of its join.
+4. At the end of the shift (its node goes away), the edge forgets the
+   cookie of that node and its pass.
+
+The runner checks out the commit that the edge runs (the crews refuse
+other code), with the deps and the build in the cache. The edge starts the
+distribution after the application, so `World.Crew` watches the nodes
+from its start (`:net_kernel.monitor_nodes/2` with `node_type: :all`: a
+node that only connects is hidden). The edge gives work and takes none
+(`WORLD_LABOUR=parts`): it builds only a person at mid or far.
+
+**Whole parts, not small jobs.** The edge gives the shift a whole part
+by its key (`World.Labour`). The node builds it, puts the GLB in R2
+through the store of the Worker (`/store/KEY`, with the pass of its
+shift, `scripts/order-store.mjs`), and gives back only the key. The
+Worker writes R2 with its binding. It takes a key with a pass only when
+the edge gave that part to that shift (the GLB to write; the GLB, the
+recipe and the order of the part to read, and the blueprints in data),
+else 403. No GLB goes over the link. A part in R2 does
+not build again. A part whose node goes away goes back to the queue. An
+issue gets its comment (the parts lists and their URLs) when its parts
+are built, and closes: the job of the request closes it at once, else
+the shift does (`scripts/shift-issues.mjs check`, each 5 minutes and at
+its end).
+
+**The length of a shift.** A shift stays until its end, and waits for
+the next part between parts. It goes home early after 60 minutes with
+no work. It stops 15 minutes before the end of the time of its job, and
+its parts that are not done go back to the queue of the edge. It writes
+a summary in the summary of the job: each part, its time, the peak
+memory of the VM while it built, its result, and the failures and the
+stops.
+
+**SSH into a shift**, as `remote-ssh.yml` of BEAM.com: the input
+`ssh_key` of `shift.yml` (one line `ssh-ed25519 ...`) starts the SSH
+server of Erlang `:ssh` behind a quick tunnel of Cloudflare
+(`scripts/shift-ssh.sh`). The URL and the fingerprint of the host key
+are in the log and in the summary of the job. Then, with the private
+key: `beam.com -a ssh remote_ssh.erl -- exec wss://HOST/ KEY FINGERPRINT
+'tail -n 50 /home/runner/work/_temp/tcp-proxy.log'`.
+
+**A shift on this computer** (a test, with no GitHub):
+`wrangler dev` with `--var WORLD_SHIFT_API:http://127.0.0.1:PORT` (a
+local server in the place of the API of GitHub, which runs
+`scripts/shift.sh` for each start, `scripts/shift-local.mjs`), `--var
+WORLD_STORE_TOKEN:TOKEN` (with no ID token, the node joins with it, and
+it takes each key of the store of the local Worker), and the two secrets
+as `--var`. The site has no `WORLD_STORE_TOKEN`.
+`node scripts/edit-time.mjs BASE HASH LEVEL EDITS` (with `WORLD_TOKEN`
+and `WORLD_PROJECT`) measures the time from an edit of an order to its
+whole new level, as a project gets it: the edit, the parts list, then
+all its parts at one time.
+
+#### Hải Âu in a shift on this computer
+
+The measure (2026-11-18): the local edge (`wrangler dev`, with
+`WORLD_SHIFTS=true` and the token of a project), the local GitHub
+(`scripts/shift-local.mjs`), which runs `scripts/shift.sh` for each
+start, and one node of a shift, all on one computer with 4 cores. The
+order is Hải Âu at mid (7 parts: the sign, the base, and the 5 parts of
+the main node), with the token of the project, and each time is from
+the edit (`scripts/edit-time.mjs`):
+
+| Request | Parts list | First part of the shift | Whole mid level |
+|---|---|---|---|
+| A storey of 4.0, no shift running (the edge starts one) | 29.2 s | 104.4 s | 224.5 s |
+| One front, the shift runs | 29.3 s | 89.4 s | 220.8 s |
+| A storey of 3.4, the shift runs | 34.6 s | 68.5 s | 215.3 s |
+| A second order, 20 s after the storey of 3.4, the shift runs | 43.9 s | 224.0 s | 344.2 s |
+
+- The edge started the shift at the first request of a part that needs
+  one (29.3 s after the edit). The node of the shift joined in some
+  seconds: here the build of the node was ready. On a runner of GitHub,
+  add the queue of the runner, the checkout and the cache (about 1 to 3
+  minutes, not measured).
+- The sign and the base of an edit keep their keys, so they come from
+  R2 at once.
+- A second order joins the shift that runs: its parts wait in the
+  queue, and the node builds them after the parts of the first order.
+  With 10 parts at one time on 4 cores, the second order took 344 s.
+- A shift of 0.5 hours ended at its time (15 minutes), wrote its
+  summary (5 parts, 39 to 185 s each, a peak of 199 to 215 MB of the
+  VM), and left the edge.
+- The time at world.mkfifo.com needs the deploy, the secrets, and a
+  shift on a runner of GitHub.
+
+#### Hải Âu with two nodes on one computer
+
+The first measure of the labour of the parts, before the shifts: the
+local edge (`wrangler dev`) and two native nodes (`a4372`, `a4373`)
+that joined it, all on one computer with 4 cores. The order
+is Hải Âu, and the level is mid (7 parts: the sign, the base, and the 5
+parts of the main node). Each time is from the edit to the last part:
+
+| Edit | Parts list | Sign and base | Main parts | Whole mid level |
+|---|---|---|---|---|
+| None (the first order, cold) | 24.8 s | 20.9 s (built) | 81 to 120 s | 145.0 s |
+| One front (`options.fronts.0.bays` to 6) | 26.4 s | 0.1 s (R2) | 37 to 122 s | 148.7 s |
+| The height of a storey (`options.storey` to 3.4) | 26.4 s | 0.1 s (R2) | 41 to 120 s | 146.6 s |
+| A storey of 3.5, with `a4373` stopped 30 s after the list | 26.2 s | 0.1 s (R2) | 36 to 185 s | 210.9 s |
+
+- Each time is less than the target of 5 minutes.
+- An edit keeps the keys of the sign and the base, so they come from R2.
+  It changes all 5 parts of the main node.
+- When `a4373` stopped, its parts built again on `a4372`. All 7 parts
+  came, and the time went up by about 60 s.
+- The parts list stays at the edge (about 26 s of CPU time). This is
+  less than 5 minutes, but more than 30 s.
+- On computers with more cores, or with more nodes, the main parts
+  build with less waiting.
+
+### The secrets
+
+The factory has two secrets, both of the Worker. The repository has no
+secret.
+
+```sh
+npx wrangler secret put WORLD_SHIFT_TOKEN  # fine-grained token of GitHub: actions: write on sntran/World only
+npx wrangler secret put WORLD_TOKEN        # 32 characters or more, for a project outside of GitHub Actions
+```
+
+- `WORLD_SHIFT_TOKEN`: the Worker starts the workflow `shift.yml` with
+  it (`workflow_dispatch`, `shift.js`).
+- `WORLD_TOKEN`: one token for the projects of the owner, for a caller
+  that is not a job of GitHub Actions (for example the workspace of the
+  builder of Vũng Tàu).
+
+A caller proves who it is in `authorization: Bearer ...` (`callerOf` of
+`handler.js`):
+
+| Caller | Token | The project |
+|---|---|---|
+| A job of a repository of the owner (GitHub Actions) | its ID token: `permissions: id-token: write`, the audience `https://world.mkfifo.com` | the name of its repository, in small letters |
+| Another place (a workspace, a computer) | `WORLD_TOKEN` | the header `x-world-project` (letters a to z, digits, `_`, `.` and `-`) |
+| The job of an issue (`shift-request.yml`) | its ID token | the header `x-world-project` (the project of the form) |
+| A shift (`shift.yml`) | its ID token, to `POST /shift/join` | (the pass of its shift for the store) |
+
+The Worker checks an ID token (`oidc.js`): its signature (RS256) against
+the keys of GitHub (`https://token.actions.githubusercontent.com/.well-known/jwks`,
+kept for an hour), `iss`, `aud`, `exp` and `nbf`, and the claims. A shift
+has `repository` `sntran/World` and a `job_workflow_ref` that starts
+with `sntran/World/.github/workflows/shift.yml@refs/heads/main`; the job
+of an issue the same with `shift-request.yml`. A project is a job of a
+repository whose `repository_owner_id` is the number of the account of
+the owner (`WORLD_OWNER_ID` of `wrangler.jsonc`), not only its name.
+
+A project of GitHub Actions asks with no secret:
+
+```yaml
+permissions:
+  id-token: write
+steps:
+  - run: |
+      token=$(curl -sS -H "authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+        "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://world.mkfifo.com" | jq -r .value)
+      curl -sS -H "authorization: Bearer $token" https://world.mkfifo.com/p/KEY.glb
+```
+
+### The guard and the memory of WebAssembly
+
+The edge stops a VM on the size of its memory of WebAssembly (the log
+line `beam: memory N MB` of beam.com), in the 128 MB of its isolate.
+That size never gets smaller, and it has more than the memory of the
+processes: the code, the atoms, the ETS tables, the persistent terms,
+and the free blocks and the gaps of the C allocator. Since BEAM.com
+0.1.0-rc.7 the runtime gives it to the VM (BEAM.com `docs/WORKERS.md`):
+`wasm_host:memory(size)`, the size, and `wasm_host:memory(used)`, the
+bytes that the VM uses now (`malloc()`), which go down when the VM
+frees memory. `World.wasm_memory/1` reads both, and `World.Guard` uses
+them in WebAssembly in place of the memory of the processes: it stops a
+build when the VM uses more than `WORLD_MEMORY_MB`, or when the size is
+more than `WORLD_MEMORY_MB` and less than 8 MB of it is free (the next
+growth would go over the limit). On a native VM it reads
+`:erlang.memory/1`.
+
+### Hải Âu
+
+The order `khach_san_hai_au` of Vũng Tàu (`data/world/orders.json`; a
+hotel of the blueprint `building`: a sculpture of 755 edits, its sign
+and its base), at the local edge (`wrangler dev`, the linear memory of
+the VM, each request in a new VM; the VM starts at 25 MB, and the edge
+stops a VM at about 134 MB):
+
+| Request | far | mid | near |
+|---|---|---|---|
+| `POST /orders` (no build of the model for its check) | 52 MB | | |
+| The parts list | 71 MB, 21 s: 3 parts | 85 MB, 25 s: 7 parts | 79 MB, 96 s (202, then the list): 33 parts |
+| The main node | 1 part, 1,200 triangles: 91 MB, 122 s | 5 parts: 86 to 113 MB, 111 to 336 s | 31 parts; the largest: 92 MB, 221 s, and 80 MB, 176 s |
+| The sign | 69 MB, 7 s | 76 MB, 20 s | |
+| The base, before (a slab of 0.3 m in cells of 0.06, 0.12 and 0.3 m) | 52 MB, 5 s (empty) | 82 MB, 241 s | 99 MB, 1,326 s (266 steps) |
+| The base now (1 m deep, in cells of 0.25, 0.3 and 0.4 m) | 61 MB, 21 s: 150 triangles | 67 MB, 37 s: 700 triangles | 90 MB, 44 s: 2,500 triangles |
+
+Each part fits: the highest peak is 113 MB (a part of the main node at
+mid). The parts of the main node take 1 to 6 minutes each. The times
+are of one core shared with other work; an edit of an order builds only
+the parts that it changes.
+
+Before W26, the whole far level of Hải Âu took 210 MB at its check (the
+VM stopped), and its whole near level could not build at the edge.
+
+The base was a fault of the rule `building` (`World.Town.Building`),
+not of the data of the order: the order gives only `apron: 0.6`, and
+the rule made the ground (the part `_nen`) a slab of 0.3 m in cells of
+0.3 m at far, so its far part had no surface, and gave a flat slab the
+cells of 6 cm of a small part at near (2 million faces, 266 steps, 22
+minutes). Now the slab goes 1 m down from the ground (the part under the
+ground is not seen), deeper than the cells of each level, and a flat
+ground has cells of 25 cm at near, 30 cm at mid and 40 cm at far: its
+look (the concrete, the dirt) is in its maps. The edits of an order on
+the ground (`more.nen`: a step, a kerb) keep the cells of a small part.
+
+### Two questions of plan 0027 of Vũng Tàu
+
+**Q1. A blend stays inside one part: is that enough for the buildings
+and the statues?** Yes, and it is not needed for a closed surface. Each
+part is made from the field of all the edits near it, so the field at
+the border of two parts is the same field on the two sides, also in a
+blend; the points at the border are the same points, and no collapse
+moves them. So a blend that crosses two parts has no gap and no step.
+World still cuts where the fewest soft blends cross (each plane between
+the bricks of the estimate, 1 to 4 m apart): in a building the blends are
+small (the round edges of a slab or of a column), and most cuts miss
+them. In a statue a blend can be larger than the space between two
+planes (a body of large soft blends); then the cut crosses it, and the
+surface is still closed. What a cut can change is the maps: each part
+has its own maps, so the color and the normal of a texel at the border
+can differ a little on the two sides. The game can hide it with the same
+material for the parts of one role (plan 0027, D3).
+
+**Q2. For the far level, is one small part for the whole model better
+than many parts?** Yes. Hải Âu at far: one part of 1,200 triangles for
+the main node (plus 100 for the sign) is 2 draw calls and 1,300
+triangles. Cut into 15 parts of about 15,000 faces each (the steps), the
+same model was 16 draw calls and 2,025 triangles, and it had a bad
+shape: a part of 80 triangles has most of its points at its borders,
+and its collapse made spikes. So a part has a budget of 1,500 triangles
+or more, and World makes a small far level as one part, in steps that
+fit the memory (`World.Sculpt.model_in_steps/2`). The game can also join
+the parts of one material (plan 0027, D3).
 
 ## Realism
 

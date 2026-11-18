@@ -24,6 +24,11 @@ defmodule World.Supervisor do
     their workers).
   - `World.Sculptures`: the live sculptures (`World.Sculpt.Live`, a
     dynamic supervisor).
+  - `World.Labour`: the parts in work on other nodes, and in the queue.
+  - `World.Shift.Passes`: the cookies and the passes of the construction
+    shifts (on the edge, with a secret cookie of its own).
+  - `World.Shift`: on the runner of a construction shift only
+    (`WORLD_SHIFT_UNTIL`).
   """
   use Supervisor
 
@@ -52,14 +57,20 @@ defmodule World.Supervisor do
   @doc """
   The settings of the service from the environment: `WORLD_FILES` (the
   folder of the files that the node built, `World.Files`), `WORLD_SITE`
-  (the folder of the site, `World.Service`) and `WORLD_BUILDS` (the
-  builds of a request at one time, `World.Line`).
+  (the folder of the site, `World.Service`), `WORLD_BUILDS` (the
+  builds of a request at one time, `World.Line`) and `WORLD_MEMORY_MB`
+  (the most memory of the VM for a build, `World.Guard`). With
+  `WORLD_SHIFTS=true` (the edge), the parts that do not fit the edge
+  wait for a construction shift (`World.Labour`).
   """
   def settings(env) do
-    for {key, name} <- [{"WORLD_FILES", :files}, {"WORLD_SITE", :site}, {"WORLD_BUILDS", :builds}], text = env[key] do
-      Application.put_env(:world, name, if(name == :builds, do: String.to_integer(text), else: text))
+    keys = [{"WORLD_FILES", :files}, {"WORLD_SITE", :site}, {"WORLD_BUILDS", :builds}, {"WORLD_MEMORY_MB", :memory_mb}]
+
+    for {key, name} <- keys, text = env[key] do
+      Application.put_env(:world, name, if(name in [:builds, :memory_mb], do: String.to_integer(text), else: text))
     end
 
+    if env["WORLD_SHIFTS"] == "true", do: Application.put_env(:world, :shifts, true)
     :ok
   end
 
@@ -76,8 +87,25 @@ defmodule World.Supervisor do
       World.Sculpt.Gate,
       World.Line,
       {DynamicSupervisor, name: World.Sculptures, strategy: :one_for_one}
-    ] ++ World.Crew.children() ++ [{World.Crew, crews(env)}] ++ yard(env) ++ server(env)
+    ] ++
+      World.Crew.children() ++
+      World.Labour.children() ++
+      [{World.Crew, crews(env)}, {World.Shift.Passes, secret: env["WORLD_SHIFTS"] == "true"}] ++
+      shift(env) ++ yard(env) ++ server(env)
   end
+
+  @doc """
+  The construction shift on its runner, for the environment `env`
+  (`World.Shift`): `WORLD_SHIFT_UNTIL`, its end (seconds of the Unix
+  clock), `WORLD_SHIFT_IDLE`, the minutes with no work before it goes
+  home (60), and `WORLD_SHIFT_SUMMARY`, the file of its summary.
+  """
+  def shift(%{"WORLD_SHIFT_UNTIL" => until} = env) do
+    idle = String.to_integer(Map.get(env, "WORLD_SHIFT_IDLE", "60"))
+    [{World.Shift, until: String.to_integer(until) * 1000, idle: idle * 60_000, summary: env["WORLD_SHIFT_SUMMARY"]}]
+  end
+
+  def shift(_env), do: []
 
   @doc """
   The options of the crews for the environment `env`: with `WORLD_NODE`
@@ -87,9 +115,13 @@ defmodule World.Supervisor do
   (`World.Crew`, `World.Epmd`).
   """
   def crews(env) do
-    for {key, option} <- [{"WORLD_NODE", :node}, {"WORLD_COOKIE", :cookie}, {"WORLD_JOIN", :join}],
-        value = env[key],
-        do: {option, String.to_atom(value)}
+    names =
+      for {key, option} <- [{"WORLD_NODE", :node}, {"WORLD_COOKIE", :cookie}, {"WORLD_JOIN", :join}],
+          value = env[key],
+          do: {option, String.to_atom(value)}
+
+    # (The edge: it gives whole parts to the nodes of the shifts, and shares no jobs, World.Labour.)
+    names ++ if env["WORLD_LABOUR"] == "parts", do: [lend: false, borrow: false], else: []
   end
 
   @doc "The haul and the yard for the environment `env`, or nothing."

@@ -342,6 +342,367 @@ defmodule World.BuildingTest do
     assert length(detail["edits"]) == 2 + 9 and detail["budget"] == %{"near" => 2000}
   end
 
+  test "a line of letters with its own width: narrow letters, or the length of the line" do
+    request = %{
+      "size" => [20, 10],
+      "letters" => [
+        %{"text" => "HAI AU", "z" => 4.0, "high" => 2.1, "long" => 5.8},
+        %{"side" => 3, "text" => "REX", "high" => 1.2, "wide" => 0.4},
+        %{"side" => 2, "text" => "I", "high" => 0.9}
+      ]
+    }
+
+    b = Building.spec(request)
+    # The full request has the width of a letter that the length gives, and not the length; the width by default
+    # is 2/3 of the height.
+    assert [%{"wide" => 0.6105, "high" => 2.1} = hai_au, %{"wide" => 0.4}, %{"wide" => 0.6}] = b["letters"]
+    refute Map.has_key?(hai_au, "long")
+    assert Building.spec(b) == b
+    # A length goes before a width.
+    assert hd(Building.spec(put_in(request, ["letters", Access.at(0), "wide"], 1.0))["letters"])["wide"] == 0.6105
+
+    letters = edits(checked(request), "chu")
+    {hai_au, rest} = Enum.split(letters, 9)
+    {rex, [i]} = Enum.split(rest, 6)
+    # H, A, I, A, U: 9 strokes; the line goes from x = 12.9 to x = 7.1 on the front, with letters 0.6105 m wide.
+    xs = for t <- hai_au, [x, _, _] <- t["size"]["points"], do: x
+    assert_in_delta Enum.max(xs) - Enum.min(xs), 5.8, 0.001
+    assert_in_delta Enum.max(xs), 12.9, 0.001
+    assert [[12.9, 0.12, 4.0], [12.9, 0.12, 6.1]] = Enum.map(hd(hai_au)["size"]["points"], &round_point/1)
+    assert [[x0, _, _], _] = hd(hai_au)["size"]["points"]
+    assert [[x1, _, _], _] = Enum.at(hai_au, 1)["size"]["points"]
+    assert_in_delta x0 - x1, 0.6105, 0.0001
+    # The height of the strokes stays: 2.1 m, with a radius of 0.08 of the height.
+    zs = for t <- hai_au, [_, _, z] <- t["size"]["points"], do: z
+    assert {Enum.min(zs), Enum.max(zs)} == {4.0, 6.1} and hd(hd(hai_au)["size"]["radii"]) == 0.168
+
+    # REX on the back (side 3, x from 0 to 20): the line is 0.4 (1.7 3 - 0.7) = 1.76 m long, about x = 10.
+    xs = for t <- rex, [x, _, _] <- t["size"]["points"], do: x
+    assert_in_delta Enum.max(xs) - Enum.min(xs), 1.76, 0.0001
+    assert_in_delta (Enum.max(xs) + Enum.min(xs)) / 2, 10.0, 0.0001
+    # One letter of the width by default, in the middle of its box: at the middle of side 2, 0.12 m out of it.
+    assert i["size"]["points"] == [[-0.12, -5.0, 3.0], [-0.12, -5.0, 3.9]]
+
+    for {letter, path, text} <- [
+          {%{"text" => "REX", "high" => 1.2, "wide" => 0.2}, "letters.0.wide",
+           "the value of wide is a number from 0.3 to 2.4"},
+          {%{"text" => "REX", "high" => 1.2, "wide" => "narrow"}, "letters.0.wide", "the value of wide"},
+          {%{"text" => "HOTEL", "high" => 2, "long" => 1}, "letters.0.long",
+           "a line of 5 letters 1.0 m long has letters 0.1282 m wide: a letter is from 0.5 m to 4.0 m wide"},
+          {%{"text" => "HOTEL", "high" => 0.3, "long" => 40}, "letters.0.long",
+           "a line of 5 letters 40.0 m long has letters 5.1282 m wide: a letter is from 0.075 m to 0.6 m wide"},
+          {%{"text" => "HOTEL", "long" => 0}, "letters.0.long", "the value of long is a number from 0.1 to 200"}
+        ] do
+      error = assert_raise ArgumentError, fn -> Building.spec(%{"letters" => [letter]}) end
+
+      assert String.starts_with?(error.message, "#{path}: #{text}"), error.message
+
+      assert {:error, [%{"path" => "options." <> ^path}]} =
+               World.Orders.check(%{"blueprint" => "building", "options" => %{"letters" => [letter]}})
+    end
+  end
+
+  defp round_point(point), do: Enum.map(point, &(Float.round(&1 * 1.0, 3) + 0.0))
+
+  test "a porch with a curved front and its fascia, and balconies with round ends" do
+    request = %{
+      "size" => [20, 12],
+      "storeys" => 3,
+      "fronts" => [
+        %{"from" => 2, "to" => 10, "bays" => 2, "balcony" => 1.2, "round" => [1.2, 1.2], "rail" => "bars"},
+        %{
+          "side" => 3,
+          "from" => 6,
+          "to" => 10.4,
+          "bays" => 1,
+          "balcony" => 2.2,
+          "round" => [2.2, 2.2],
+          "rail" => "none"
+        },
+        %{"side" => 2, "bays" => 2, "balcony" => 1.0, "rail" => "cross"}
+      ],
+      "porches" => [
+        %{"at" => 15, "wide" => 8, "deep" => 5, "round" => [0, 4], "fascia" => 1.2, "columns" => 4},
+        %{"side" => 3, "at" => 4, "wide" => 6, "deep" => 3, "round" => [3, 3], "terrace" => true, "columns" => 1}
+      ]
+    }
+
+    b = Building.spec(request)
+    assert Building.spec(b) == b
+
+    assert [%{"balcony" => 1.2, "round" => [1.2, 1.2]}, %{"round" => [2.2, 2.2]}, %{"round" => [+0.0, +0.0]}] =
+             b["fronts"]
+
+    assert [%{"round" => [+0.0, 4.0], "fascia" => 1.2}, %{"round" => [3.0, 3.0], "fascia" => +0.0}] = b["porches"]
+    # With no balcony and no round, a front and a porch are as before.
+    assert %{"fronts" => [%{"balcony" => +0.0, "round" => [+0.0, +0.0]}]} = Building.spec(%{"fronts" => [%{}]})
+    assert %{"porches" => [%{"round" => [+0.0, +0.0], "fascia" => +0.0}]} = Building.spec(%{"porches" => [%{}]})
+
+    d = checked(request)
+    body = edits(d, "than")
+    # A balcony at each floor over the ground storey (4.1 m and 7.6 m): a slab 0.2 m thick in the color of the trim,
+    # with its top at the floor.
+    slabs = Enum.filter(body, &(&1["shape"] == "extrude" and &1["size"]["depth"] == 0.2))
+    assert length(slabs) == 6 and Enum.all?(slabs, &(&1["color"] == "#e3aa6c"))
+    assert Enum.frequencies_by(slabs, &List.last(&1["at"])) == %{4.0 => 3, 7.5 => 3}
+    [round, half, square] = for k <- [0, 2, 4], do: Enum.at(slabs, k)["size"]["outline"]
+    # The front of side 1 from s = 2 to 10 (x = 18 to 10), 1.2 m out, with a quarter of a circle at each end.
+    assert {Enum.min_by(round, &hd/1), Enum.max_by(round, &hd/1)} == {[10.0, +0.0], [18.0, +0.0]}
+    assert Enum.max(Enum.map(round, &List.last/1)) == 1.2 and length(round) == 18
+    assert [16.8, 1.2] in round and [11.2, 1.2] in round
+
+    for [x, y] <- round, x > 16.8 or x < 11.2 do
+      centre = if x > 14, do: 16.8, else: 11.2
+      assert_in_delta :math.sqrt((x - centre) ** 2 + y ** 2), 1.2, 0.0002
+    end
+
+    # Two round ends of 2.2 m on a front of 4.4 m: half of a disc on side 3, about x = 8.2.
+    assert Enum.all?(half, fn [x, y] -> :math.sqrt((x - 8.2) ** 2 + (y + 12) ** 2) <= 2.2002 end)
+    assert Enum.min(Enum.map(half, &List.last/1)) == -14.2
+    # Square ends: a rectangle out of side 2.
+    assert square == [[+0.0, +0.0], [-1.0, +0.0], [-1.0, -12.0], [+0.0, -12.0]]
+
+    # The curved porch: its slab, the trim on it and the fascia of 1.2 m round its front, from 0.1 m over the top.
+    [porch, trim, fascia, back, _] =
+      Enum.filter(body, &(&1["shape"] == "extrude" and &1["size"]["depth"] != 0.2)) |> Enum.drop(2)
+
+    assert %{"at" => [0, 0, 3.35], "color" => "#f0e6c2"} = porch
+    # (Side 1 from s = 11 to 19, 5 m deep; a quarter of a circle of 4 m at the right corner, about s = 15, out 1.)
+    assert porch["size"]["outline"] == [
+             [9.0, +0.0],
+             [9.0, 5.0],
+             [5.0, 5.0],
+             [4.2196, 4.9231],
+             [3.4693, 4.6955],
+             [2.7777, 4.3259],
+             [2.1716, 3.8284],
+             [1.6741, 3.2223],
+             [1.3045, 2.5307],
+             [1.0769, 1.7804],
+             [1.0, 1.0],
+             [1.0, +0.0]
+           ]
+
+    assert %{"at" => [0, 0, 3.52], "color" => "#e3aa6c", "size" => %{"outline" => [[9.1, +0.0] | _]}} = trim
+    assert %{"at" => [0, 0, 3.0], "color" => "#e3aa6c", "size" => %{"depth" => 1.2, "outline" => outline}} = fascia
+    assert [9.1, +0.0] in outline and [8.9, +0.0] in outline and [1.1, +0.0] in outline and [0.9, +0.0] in outline
+    # The porch with two round corners of 3 m on side 3: half of a disc.
+    assert Enum.min(Enum.map(back["size"]["outline"], &List.last/1)) == -15.0
+    # The columns are at equal steps along a line 0.4 m in from the curved edge; one column is at the middle.
+    assert for(e <- body, e["shape"] == "cylinder", do: Enum.take(e["at"], 2)) ==
+             [[8.6, 4.6], [5.5181, 4.6], [2.6547, 3.7099], [1.4, 1.0], [4.0, -14.6]]
+
+    # The rails in the detail: upright bars each 12 cm along the edge of the round balconies, posts with crosses
+    # along the square ones, none on side 3, and the rail of the terrace round the curved porch.
+    [detail] = hd(d["nodes"])["skill"]["sculpt"]["details"]
+
+    assert Enum.frequencies_by(detail["edits"], &hd(&1["size"]["radii"])) == %{
+             0.012 => 154,
+             0.022 => 10,
+             0.02 => 24,
+             0.014 => 44,
+             0.016 => 11
+           }
+
+    # (A bar goes round the edge of the balcony, 6 cm in from it, and back to the wall.)
+    bar = Enum.find(detail["edits"], &(hd(&1["size"]["radii"]) == 0.022))
+    assert hd(bar["size"]["points"]) == [17.94, +0.0, 4.18] and length(bar["size"]["points"]) == 18
+    # The terrace on the porch: two bars along its curved edge (the two quarters meet at the middle), and 11 posts.
+    assert Enum.count(detail["edits"], &(hd(&1["size"]["radii"]) == 0.022 and length(&1["size"]["points"]) == 19)) == 2
+
+    for {request, path, text} <- [
+          {%{"porches" => [%{"deep" => 3, "round" => [4, 0]}]}, "porches.0.round",
+           "the round of a porch is [left, right], each from 0 to 3.0 m, the two 6.0 m at the most"},
+          {%{"porches" => [%{"wide" => 4, "deep" => 3, "round" => [3, 2]}]}, "porches.0.round",
+           "the round of a porch is [left, right], each from 0 to 3.0 m, the two 4.0 m at the most"},
+          {%{"porches" => [%{"round" => 1}]}, "porches.0.round", "the round of a porch is [left, right]"},
+          {%{"porches" => [%{"fascia" => 4}]}, "porches.0.fascia", "the value of fascia is a number from 0 to 3"},
+          {%{"fronts" => [%{"balcony" => 0.3}]}, "fronts.0.balcony", "a balcony is 0.5 m deep at the least"},
+          {%{"fronts" => [%{"balcony" => 5}]}, "fronts.0.balcony", "the value of balcony is a number from 0 to 4"},
+          {%{"fronts" => [%{"round" => [1, 1]}]}, "fronts.0.round", "the round ends are for a front with a balcony"},
+          {%{"fronts" => [%{"balcony" => 1, "round" => [2, 0]}]}, "fronts.0.round",
+           "the round of the balconies of a front is [left, right], each from 0 to 1.0 m"}
+        ] do
+      error = assert_raise ArgumentError, fn -> Building.spec(request) end
+      assert String.starts_with?(error.message, "#{path}: #{text}"), error.message
+    end
+  end
+
+  test "parts of the plan with their own storeys, and fronts of some storeys only" do
+    request = %{
+      "size" => [30, 12],
+      "storeys" => 3,
+      "fronts" => [
+        %{"bays" => 6, "storeys" => [2, 3], "band" => true},
+        %{"side" => 3, "style" => "loggias", "bays" => 4, "storeys" => [2, 3]},
+        %{"side" => 2, "style" => "glass", "storeys" => [1, 2]},
+        %{"side" => 4, "bays" => 2, "storeys" => [1, 1], "pilasters" => true}
+      ],
+      "blocks" => [
+        # (A tower over the block, a lower wing at its left end, and a storey set back behind a terrace.)
+        %{
+          "plan" => [[18, 0], [12, 0], [12, -12], [18, -12]],
+          "storeys" => 5,
+          "fronts" => [%{"bays" => 2, "storeys" => [4, 5]}]
+        },
+        %{
+          "plan" => [[0, 0], [-8, 0], [-8, -10], [0, -10]],
+          "storeys" => 2,
+          "parapet" => 0.6,
+          "fronts" => [%{"style" => "glass", "storeys" => [2, 2]}]
+        },
+        %{"plan" => [[29, -2], [20, -2], [20, -10], [29, -10]], "storeys" => 4}
+      ]
+    }
+
+    b = Building.spec(request)
+    assert Building.spec(b) == b
+    # A block takes the parapet of the flat roof by default; a front has all the storeys by default.
+    assert [
+             %{"storeys" => 5, "parapet" => 1.0, "fronts" => [%{"storeys" => [4, 5]}]},
+             %{"parapet" => 0.6},
+             %{"fronts" => []}
+           ] =
+             b["blocks"]
+
+    assert Building.spec(%{})["blocks"] == [] and hd(Building.spec(%{"fronts" => [%{}]})["fronts"])["storeys"] == [1, 3]
+    sq = [[4, 0], [0, 0], [0, -4], [4, -4]]
+    tiles = Building.spec(%{"roof" => %{"kind" => "tiles"}, "blocks" => [%{"plan" => sq, "storeys" => 4}]})
+    assert hd(tiles["blocks"])["parapet"] == 1.0
+
+    d = checked(request)
+    body = edits(d, "than")
+    # The masses from the lowest to the highest, each with its deck behind its parapet: the wing (2 storeys, to
+    # 7.3 m and a parapet of 0.6 m), the building (3 storeys), the storey set back (4) and the tower (5).
+    assert for(e <- Enum.take(body, 8), do: {e["size"]["depth"], List.last(e["at"]), e["mode"]}) == [
+             {7.9, 3.95, nil},
+             {1.2, 7.9, "subtract"},
+             {11.8, 5.9, nil},
+             {2.0, 11.8, "subtract"},
+             {15.3, 7.65, nil},
+             {2.0, 15.3, "subtract"},
+             {18.8, 9.4, nil},
+             {2.0, 18.8, "subtract"}
+           ]
+
+    assert Enum.at(body, 6)["size"]["outline"] == [[18.0, +0.0], [12.0, +0.0], [12.0, -12.0], [18.0, -12.0]]
+    assert Enum.at(body, 7)["size"]["outline"] == [[17.6, -0.4], [12.4, -0.4], [12.4, -11.6], [17.6, -11.6]]
+
+    # The glass of each window and of each front of glass: its height and the count at it.
+    glass = Enum.filter(body, &(&1["color"] == "#55707c"))
+
+    assert Enum.frequencies_by(glass, &{List.last(&1["at"]), Enum.at(&1["size"], 1)}) == %{
+             # (The windows of the front of 2 and 3 storeys: 6 bays at the floors of 4.1 m and 7.6 m.)
+             {5.8, 0.75} => 6,
+             {9.3, 0.75} => 6,
+             # (The windows of the tower at its storeys 4 and 5, over the floors of 11.1 m and 14.6 m.)
+             {12.8, 0.75} => 2,
+             {16.3, 0.75} => 2,
+             # (The ground storey of side 4 only.)
+             {1.7, 0.75} => 2,
+             # (The glass of storeys 1 and 2, up to 0.3 m under the floor of 7.6 m; of storey 2 of the wing.)
+             {3.8, 3.5} => 1,
+             {5.7, 1.3} => 1,
+             # (The doors of glass at the back of the loggias.)
+             {5.25, 1.05} => 4,
+             {8.75, 1.05} => 4
+           }
+
+    # The loggias of storeys 2 and 3 have no openings at the ground storey and no piers: their pilasters go from
+    # the floor of storey 2 to the eaves, and the band under the cornice from the top of the last loggia.
+    assert Enum.count(body, &(&1["mode"] == "subtract")) == 4 + 8
+    trim = for e <- body, e["color"] == "#e3aa6c", do: {e["at"], e["size"]}
+    assert Enum.count(trim, &match?({[_, -12.12, 7.45], [0.375, 3.35, 0.25]}, &1)) == 5
+    assert {[15.0, -12.0, 10.575], [15.0, 0.225, 0.25]} in trim
+    # The pilasters of the ground storey only, to the floor of storey 2; no band at a front over the ground storey.
+    assert Enum.count(trim, &match?({[30.12, _, 2.05], [0.375, 2.05, 0.25]}, &1)) == 3
+    refute Enum.any?(body, &(&1["color"] == "#a9694f" and Enum.at(&1["at"], 1) == 0.0))
+    assert Enum.count(body, &(&1["color"] == "#a9694f")) == 1
+
+    # The walls of the blocks count in the budget of the body.
+    small = %{"size" => [10, 8], "storeys" => 2}
+    budget = fn r -> hd(Building.drawing(r)["nodes"])["skill"]["sculpt"]["budget"]["mid"] end
+    assert budget.(small) == 1450
+    assert budget.(Map.put(small, "blocks", [%{"plan" => [[6, 0], [4, 0], [4, -2], [6, -2]], "storeys" => 6}])) == 2350
+
+    for {request, path, text} <- [
+          {%{"blocks" => %{}}, "blocks", "the blocks of a building are a list of maps"},
+          {%{"blocks" => [%{"storeys" => 4}]}, "blocks.0.plan", "a block has its own plan"},
+          {%{"blocks" => [%{"plan" => Enum.reverse(sq), "storeys" => 4}]}, "blocks.0.plan",
+           "the corners of the plan of a building go counterclockwise"},
+          {%{"blocks" => [%{"plan" => sq}]}, "blocks.0.storeys", "a block has from 1 to 12 storeys"},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 13}]}, "blocks.0.storeys", "a block has from 1 to 12 storeys"},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 4, "parapet" => 3}]}, "blocks.0.parapet",
+           "the value of parapet is a number from 0.3 to 2"},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 4, "roof" => %{}}]}, "blocks.0", ~s(a block has no key "roof")},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 2, "fronts" => [%{"side" => 5}]}]}, "blocks.0.fronts.0.side",
+           "the side of a front is a number from 1 to 4"},
+          {%{"blocks" => [%{"plan" => sq, "storeys" => 2, "fronts" => [%{"storeys" => [1, 3]}]}]},
+           "blocks.0.fronts.0.storeys", "the storeys of a front are [first, last], each from 1 to 2"},
+          {%{"fronts" => [%{"storeys" => [3, 2]}]}, "fronts.0.storeys", "the storeys of a front are [first, last]"},
+          {%{"fronts" => [%{"storeys" => 2}]}, "fronts.0.storeys", "the storeys of a front are [first, last]"},
+          {%{"fronts" => [%{"storeys" => [0, 2]}]}, "fronts.0.storeys", "the storeys of a front are [first, last]"},
+          {%{"fronts" => [%{"style" => "loggias", "storeys" => [1, 1]}]}, "fronts.0.style",
+           "a front of loggias is for 2 storeys or more"}
+        ] do
+      error = assert_raise ArgumentError, fn -> Building.spec(request) end
+      assert String.starts_with?(error.message, "#{path}: #{text}"), error.message
+    end
+
+    assert {:error, [%{"path" => "options.blocks.0.fronts.0.storeys"}]} =
+             World.Orders.check(%{
+               "blueprint" => "building",
+               "options" => %{"blocks" => [%{"plan" => sq, "storeys" => 2, "fronts" => [%{"storeys" => [2, 3]}]}]}
+             })
+  end
+
+  # The plan of Khách sạn Hải Âu, Vũng Tàu (OpenStreetMap way 790529523, © OpenStreetMap contributors, ODbL).
+  @hai_au [
+    [35.7, -1.3],
+    [16.95, -1.44],
+    [13.8, -0.5],
+    [0.0, 0.0],
+    [0.0, -6.4],
+    [-24.2, -5.8],
+    [-22.8, -21.2],
+    [-14.2, -22.2],
+    [11.8, -20.5],
+    [11.8, -17.1],
+    [32.5, -17.0],
+    [47.5, -15.1],
+    [46.1, -7.4],
+    [35.4, -7.4]
+  ]
+
+  @tag timeout: 600_000
+  test "the ground: a slab deeper than the cells of each level, with the cells of a flat part" do
+    d = checked(%{"plan" => @hai_au, "apron" => 0.6})
+    nen = Enum.find(d["nodes"], &(&1["name"] == "toa_nha_nen"))["skill"]["sculpt"]
+    assert nen["cells"] == %{"near" => 0.25, "mid" => 0.3, "far" => 0.4}
+    # Its top at the ground; 1 m deep, so 2.5 cells at far (a slab of 0.3 m in cells of 0.3 m had no surface).
+    assert [%{"size" => %{"depth" => 1.0}, "at" => [0, 0, -0.5]}] = nen["edits"]
+
+    # The far part has a surface.
+    {far, _, _} =
+      World.Detail.with(:far, fn -> World.Skills.Sculpt.make(nen, %{}, %{level: :far, name: "toa_nha_nen"}) end)
+
+    assert Enum.sum(for s <- far.shapes, do: length(s.faces)) > 0
+
+    # The near part is one part of about 150,000 faces before its collapse (in cells of 6 cm: about
+    # 2 million faces, 266 steps, and 22 minutes at the edge).
+    assert [%{faces: faces}] =
+             World.Detail.with(:near, fn ->
+               World.Skills.Sculpt.tiles(nen, :near, World.Elements.most(), World.Elements.least())
+             end)
+
+    assert faces > 100_000 and faces < 200_000
+
+    # Edits of an order on the ground can be small (a kerb): they keep the cells of a small part.
+    kerb = Wall.box(Wall.new([0, 0], [10, 0]), 5, 0.05, {10, 0.15, 0.1}, "#cccccc")
+    more = checked(%{"plan" => @hai_au, "more" => %{"nen" => [kerb]}})
+    assert Enum.find(more["nodes"], &(&1["name"] == "toa_nha_nen"))["skill"]["sculpt"]["cells"]["near"] == 0.06
+  end
+
   test "a word that is not possible is an error with its message" do
     wrong = [
       {[], "the request of a building is a map"},
@@ -405,6 +766,29 @@ defmodule World.BuildingTest do
     for {request, text} <- wrong do
       error = assert_raise ArgumentError, fn -> Building.spec(request) end
       assert error.message =~ text, "#{inspect(request)}: #{error.message}"
+    end
+
+    # An error starts with the path of the value in the request, when the rule knows it.
+    paths = [
+      {%{"name" => 1}, "name: the name of a building"},
+      {%{"storeys" => 13}, "storeys: a building has"},
+      {%{"plan" => [[0, 0], [1, 1]]}, "plan: the plan of a building"},
+      {%{"size" => [2, 10]}, "size: the size of a building"},
+      {%{"colors" => %{"wall" => "white"}}, "colors.wall: the color wall"},
+      {%{"colors" => %{"door" => "#ffffff"}}, "colors: a map of colors has no key"},
+      {%{"roof" => %{"kind" => "dome"}}, "roof.kind: the roof"},
+      {%{"roof" => "tiles"}, "roof: the roof of a building is a map"},
+      {%{"cornice" => %{"out" => 2}}, "cornice.out: the value of out"},
+      {%{"more" => %{"cua" => []}}, "more: a map of more edits"},
+      {%{"fronts" => [%{}, %{"side" => 2, "bars" => 9}]}, "fronts.1.bars: a window has"},
+      {%{"fronts" => [%{"stile" => "glass"}]}, "fronts.0: a front has no key"},
+      {%{"porches" => [%{"board" => "blue"}]}, "porches.0.board: the color board"},
+      {%{"letters" => [%{"text" => "REX", "high" => 9}]}, "letters.0.high: the value of high"}
+    ]
+
+    for {request, text} <- paths do
+      error = assert_raise ArgumentError, fn -> Building.spec(request) end
+      assert String.starts_with?(error.message, text), "#{inspect(request)}: #{error.message}"
     end
   end
 end

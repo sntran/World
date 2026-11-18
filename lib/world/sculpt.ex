@@ -38,6 +38,8 @@ defmodule World.Sculpt do
   @points @cells + 3
   # The edits of a cell from which each of its eight parts has a process.
   @many 128
+  # The faces of the steps of a part together, before the collapse of the part (`model_in_steps/2`).
+  @join 20_000
   # The cells of each level of detail, in m (D8).
   @steps %{near: 0.02, mid: 0.08, far: 0.32}
 
@@ -65,22 +67,138 @@ defmodule World.Sculpt do
   """
   def model(edits, opts \\ []) do
     step = opts[:step] || step(opts[:level] || Detail.level())
+    within = opts[:within] && tile(opts[:within], step)
     opts = opts |> Keyword.put(:each, &Surface.piece(&1, step)) |> Keyword.put_new(:cache, true)
-    # The meshes of the same edits, cells and budget come from the cache.
-    key = if opts[:cache], do: Cache.key({:model, opts[:budget]}, step, SDF.ids(edits))
+    opts = opts |> Keyword.put(:within, within) |> Keyword.put(:fields, false)
+    # The meshes of the same edits, cells, budget and tile come from the cache.
+    key = if opts[:cache], do: Cache.key({:model, opts[:budget], within}, step, SDF.ids(edits))
 
     with nil <- key && Cache.get(key) do
       %{bricks: bricks} = bricks(edits, step, opts)
+      seam = if within, do: &seam?(&1, within)
 
       meshes =
         bricks
         |> Enum.map(& &1.piece)
-        |> Surface.meshes(budget: opts[:budget], small: 2 * step, step: step)
-        |> World.Sculpt.Finish.meshes(Map.new(bricks, &{&1.at, &1.edits}), edits, step)
+        |> Surface.meshes(
+          budget: opts[:budget],
+          small: 2 * step,
+          step: step,
+          seam: seam
+        )
+
+      # (With `finish: false`, a step of a part: its points stay where the collapse put them.)
+      meshes =
+        if Keyword.get(opts, :finish, true),
+          do: World.Sculpt.Finish.meshes(meshes, Map.new(bricks, &{&1.at, &1.edits}), edits, step),
+          else: meshes
 
       if key, do: Cache.put(key, meshes)
       meshes
     end
+  end
+
+  @doc """
+  The meshes of a part of a sculpture (the box `within`, m) in steps,
+  for a part with more faces than one process can hold (W26): each step
+  (a box in the part, with its share of the faces of the part) is made in
+  a process of its own, with its points at its borders held
+  (`model/2`), to its share of #{20_000} faces (or of 3 times the budget,
+  when that is more): enough faces for the points at its borders, and a
+  join that one process can hold. With no budget, the steps are not
+  made smaller. Then the steps are one mesh
+  (a point that two steps hold is one point), made smaller to the
+  budget with the points at the borders of the part held (each point
+  less than 2 cells from a side of the box: the next part has the same
+  points there), and each point goes back on the surface with its normal
+  and its color (`World.Sculpt.Finish`). The options: `step`, `budget`,
+  `within` and `steps` (a list of `{box, share}`).
+  """
+  def model_in_steps(edits, opts) do
+    {step, budget, within} = {opts[:step], opts[:budget], opts[:within]}
+
+    parts =
+      for {box, share} <- opts[:steps] do
+        local = for e <- edits, e.mode == :crop or near_box?(e.box, box, limit(edits, step) + 2 * step + e.blend), do: e
+        b = if budget, do: max(round(max(3 * budget, @join) * share), 12)
+
+        Detail.apart(fn ->
+          model(local, step: step, budget: b, within: box, finish: false, cache: false)
+        end)
+      end
+
+    # (The join, the collapse and the finish in a process of their own,
+    # which sweeps its garbage often: the collapse makes much garbage.)
+    Detail.apart(fn -> finish_steps(List.flatten(parts), edits, step, budget, within) end, sweep: 2)
+  end
+
+  defp finish_steps(parts, edits, step, budget, within) do
+    {points, faces} = join_meshes(parts)
+    {{lx, ly, lz}, {hx, hy, hz}} = within
+    held = 2 * step
+    side? = fn v, lo, hi -> abs(v - lo) < held or abs(v - hi) < held end
+
+    fixed =
+      for {{x, y, z}, i} <- Enum.with_index(points), side?.(x, lx, hx) or side?.(y, ly, hy) or side?.(z, lz, hz), do: i
+
+    %{points: points, faces: faces} =
+      if budget && length(faces) > budget,
+        do: World.Simplify.collapse(points, faces, budget, fixed: fixed),
+        else: %{points: points, faces: faces}
+
+    all = List.to_tuple(points)
+
+    faces
+    |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+    |> Enum.sort_by(fn {material, _} -> inspect(material) end)
+    |> Enum.map(fn {material, fs} ->
+      used = fs |> Enum.concat() |> Enum.uniq()
+      local = used |> Enum.with_index() |> Map.new()
+      World.Mesh.new(Enum.map(used, &elem(all, &1)), Enum.map(fs, fn f -> Enum.map(f, &local[&1]) end), material)
+    end)
+    |> World.Sculpt.Finish.meshes(lists(points, edits, step), edits, step)
+  end
+
+  # The short list of edits of each brick with a point (`World.SDF.cell/4`), for the finish.
+  defp lists(points, edits, step) do
+    size = @cells * step
+    limit = limit(edits, step)
+
+    for p <- points, uniq: true do
+      index(p, size)
+    end
+    |> Map.new(fn at ->
+      center = Vec.add(corner(at, step), {size / 2, size / 2, size / 2})
+      {kept, _} = SDF.cell(edits, center, size * :math.sqrt(3) / 2 + border(step), limit)
+      {at, kept}
+    end)
+  end
+
+  # True when a box grown by `r` meets another box.
+  defp near_box?({{x0, y0, z0}, {x1, y1, z1}}, {{lx, ly, lz}, {hx, hy, hz}}, r),
+    do: x0 - r < hx and x1 + r > lx and y0 - r < hy and y1 + r > ly and z0 - r < hz and z1 + r > lz
+
+  # The meshes of the steps as one list of points and of faces (each
+  # `{[a, b, c], material}`): a point at the same place is one point.
+  defp join_meshes(meshes) do
+    {index, points, faces} =
+      Enum.reduce(meshes, {%{}, [], []}, fn m, {index, points, faces} ->
+        {index, points, ids} =
+          Enum.reduce(m.points, {index, points, []}, fn p, {index, points, ids} ->
+            p = Vec.float(p)
+
+            case index do
+              %{^p => i} -> {index, points, [i | ids]}
+              _ -> {Map.put(index, p, map_size(index)), [p | points], [map_size(index) | ids]}
+            end
+          end)
+
+        ids = ids |> Enum.reverse() |> List.to_tuple()
+        {index, points, [for(f <- m.faces, do: {Enum.map(f, &elem(ids, &1)), m.material}) | faces]}
+      end)
+
+    _ = index
+    {Enum.reverse(points), faces |> Enum.reverse() |> Enum.concat()}
   end
 
   @doc """
@@ -107,6 +225,42 @@ defmodule World.Sculpt do
     end
   end
 
+  @doc """
+  The bricks of a box of a tile (`{{x0, y0, z0}, {x1, y1, z1}}`, m) with
+  cells of `step` m: `{lo, hi}`, the bricks from lo up to hi on each
+  axis. A brick is in the tile when its center is in the box (from its
+  low side, up to its high side): so the tiles of boxes next to each
+  other have no brick in common, also for other cells.
+  """
+  def tile({{x0, y0, z0}, {x1, y1, z1}}, step) do
+    size = @cells * step
+    first = fn v -> ceil(v / size - 0.5) end
+    {{first.(x0), first.(y0), first.(z0)}, {first.(x1), first.(y1), first.(z1)}}
+  end
+
+  # True for a cell (of `step`) at the border of a tile: a cell next to
+  # it (or itself) is in a brick out of the tile. The points of such a
+  # cell can be in the faces of the next tile too.
+  defp seam?({i, j, k}, {{lx, ly, lz}, {hx, hy, hz}}) do
+    out = fn c, lo, hi -> Integer.floor_div(c - 1, @cells) < lo or Integer.floor_div(c + 1, @cells) >= hi end
+    out.(i, lx, hx) or out.(j, ly, hy) or out.(k, lz, hz)
+  end
+
+  @doc """
+  The least thickness of the edits that add or take away and that are
+  `long` m or more long (the diagonal of their box): nil with none. A
+  surface in cells thicker than such an edit can lose it.
+  """
+  def thinnest(edits, long) do
+    thin =
+      for %{mode: mode, box: {lo, hi}} = e <- edits,
+          mode in [:add, :subtract],
+          Vec.len(Vec.sub(hi, lo)) >= long,
+          do: thickness(e.shape, e.size)
+
+    if thin == [], do: nil, else: Enum.min(thin)
+  end
+
   # The least thickness of a shape: twice its least size.
   defp thickness(:tube, {_, radii}), do: 2 * Enum.min(radii)
   defp thickness(:capsule, {_h, r}), do: 2 * r
@@ -130,7 +284,9 @@ defmodule World.Sculpt do
   its key (`World.Sculpt.Cache`), and its field is not made (`field:
   nil`); each brick has its `key`. With `cache: :keys`, a brick from the
   cache has the piece `:cached` (the piece stays in the cache). `cached`
-  counts the bricks from the cache. `sink`: a function of each brick that
+  counts the bricks from the cache. `fields: false`: a brick with a
+  piece does not keep its field (`field: nil`). `within`: the bricks of a
+  tile only (`tile/2`). `sink`: a function of each brick that
   is made (not from the cache), called in the process of the brick as
   soon as it is made (the stream of a live sculpture,
   `World.Sculpt.Live`).
@@ -155,7 +311,9 @@ defmodule World.Sculpt do
           parallel: Keyword.get(opts, :parallel, true),
           each: opts[:each],
           cache: opts[:each] && opts[:cache],
-          sink: opts[:sink]
+          sink: opts[:sink],
+          within: opts[:within],
+          fields: Keyword.get(opts, :fields, true)
         }
 
         {bricks, n} = cell(edits, {from, span}, how)
@@ -198,14 +356,7 @@ defmodule World.Sculpt do
   # of the brick by the hash of its own list: a brick whose list did not
   # change needs no lists of its eighths.
   defp cell(edits, {at, 1}, %{step: step, limit: limit} = how) do
-    ids = SDF.ids(edits)
-    record = if how.cache, do: Cache.key({:brick, at}, step, {limit, ids})
-    key = record && Cache.get(record)
-
-    case key && hit(key, how.cache) do
-      nil -> make(edits, ids, at, record, how)
-      piece -> {[%{at: at, ids: ids, limit: limit, field: nil, piece: piece, key: key}], 0}
-    end
+    if inside?({at, 1}, how.within), do: brick_cell(edits, at, step, limit, how), else: {[], 0}
   end
 
   # A cell of the tree. With the cache, the cell has a key (a hash of its
@@ -213,8 +364,9 @@ defmodule World.Sculpt do
   # by that key: the place and the key of each one, and the places of its
   # edits in the list of the cell. So a walk of a cell whose list did not
   # change takes its bricks from the cache, with no visit of its
-  # children (`docs/plans/0009-sculpture-finish.md`, D5).
-  defp cell(edits, {at, span} = c, %{cache: cache} = how) when cache not in [nil, false] do
+  # children (`docs/plans/0009-sculpture-finish.md`, D5). (Not for the
+  # bricks in a box only, a tile: the cell has other bricks then.)
+  defp cell(edits, {at, span} = c, %{cache: cache, within: nil} = how) when cache not in [nil, false] do
     ids = SDF.ids(edits)
     key = Cache.key({:cell, at, span}, how.step, {how.limit, ids})
 
@@ -231,6 +383,24 @@ defmodule World.Sculpt do
   end
 
   defp cell(edits, c, how), do: walk(edits, c, how)
+
+  # True when a cell of the tree has a brick in the box of bricks `{lo,
+  # hi}` (from lo, up to hi: a tile, `model/2`), or with no box.
+  defp inside?(_c, nil), do: true
+
+  defp inside?({{x, y, z}, span}, {{lx, ly, lz}, {hx, hy, hz}}),
+    do: x < hx and x + span > lx and y < hy and y + span > ly and z < hz and z + span > lz
+
+  defp brick_cell(edits, at, step, limit, how) do
+    ids = SDF.ids(edits)
+    record = if how.cache, do: Cache.key({:brick, at}, step, {limit, ids})
+    key = record && Cache.get(record)
+
+    case key && hit(key, how.cache) do
+      nil -> make(edits, ids, at, record, how)
+      piece -> {[%{at: at, ids: ids, limit: limit, field: nil, piece: piece, key: key}], 0}
+    end
+  end
 
   # The brick from its edits. Its key is the hash of the short lists of
   # its eighths: its field comes from them, and an edit of its own list
@@ -249,6 +419,8 @@ defmodule World.Sculpt do
           brick = if each, do: Map.put(brick, :piece, each.(Map.put(brick, :eighths, eighths))), else: brick
           if key, do: Cache.put(key, brick.piece)
           if how.sink, do: how.sink.(Map.put(brick, :key, key))
+          # (With `fields: false`, the brick does not keep its field after its piece.)
+          brick = if how.fields, do: brick, else: %{brick | field: nil}
           {brick |> Map.delete(:edits) |> Map.put(:ids, ids), n + 8 * length(edits)}
 
         piece ->
@@ -324,7 +496,7 @@ defmodule World.Sculpt do
       for x <- 0..1, y <- 0..1, z <- 0..1, reduce: {[], used} do
         {work, n} ->
           c = {{ox + x * child, oy + y * child, oz + z * child}, child}
-          {mine, m} = classify(kept, c, how)
+          {mine, m} = if inside?(c, how.within), do: classify(kept, c, how), else: {nil, 0}
           {if(mine, do: [{c, mine} | work], else: work), n + m}
       end
     end

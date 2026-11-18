@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World: parts</title>
+<style>
+  :root { --paper: #f4f1e6; --ink: #222; --line: #c9c2ad; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #1d1f22; --ink: #e8e6df; --line: #45484d; } }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: var(--paper); color: var(--ink); height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+  header { padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  canvas { display: block; width: 100%; height: 100%; }
+  main { position: relative; min-height: 0; }
+</style>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header id="info">World: the parts of a model</header>
+<main><canvas id="view"></canvas></main>
+<script type="module">
+// The parts of a model from its parts list (World.Elements, the file
+// elements of an order), put together as a project puts them together:
+// each part GLB at its matrix. The factory does not join them.
+//
+//   parts.html?list=URL-OF-THE-LIST[&parts=BASE][&yaw=35][&pitch=30][&tint=1]
+//
+// `parts` is the start of the URL of each part (the folder of the list
+// for the files of `mix world.order`, else the origin of the list).
+// `tint=1` gives each part a color of its own (the tiles of a sculpture).
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { light } from './scene.js';
+
+const params = new URLSearchParams(location.search);
+const canvas = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(devicePixelRatio);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(getComputedStyle(document.body).backgroundColor);
+const stage = light(renderer, scene);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 200);
+const controls = new OrbitControls(camera, canvas);
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = canvas.parentElement;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+const listURL = new URL(params.get('list'), location.href);
+const list = await (await fetch(listURL)).json();
+const base = new URL(params.get('parts') ?? '/', listURL);
+const loader = new GLTFLoader();
+const model = new THREE.Group();
+let tris = 0;
+
+const parts = await Promise.all(list.parts.map((p) => loader.loadAsync(new URL(p.url.replace(/^\//, ''), base).href)));
+parts.forEach((gltf, i) => {
+  const node = gltf.scene;
+  node.matrixAutoUpdate = false;
+  node.matrix.fromArray(list.parts[i].matrix);
+  node.traverse((o) => {
+    if (!o.isMesh) return;
+    tris += o.geometry.index ? o.geometry.index.count / 3 : o.geometry.attributes.position.count / 3;
+    if (params.get('tint') === '1') o.material = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL((i * 0.618) % 1, 0.55, 0.6) });
+  });
+  model.add(node);
+});
+scene.add(model);
+model.updateMatrixWorld(true);
+stage.shade(model);
+stage.fit(model);
+document.getElementById('info').textContent = `World: ${list.parts.length} parts of the order ${list.order} at ${list.level}, ${tris} triangles.`;
+
+const box = new THREE.Box3().setFromObject(model);
+const center = box.getCenter(new THREE.Vector3());
+const r = box.getSize(new THREE.Vector3()).length() / 2 || 1;
+const a = THREE.MathUtils.degToRad(Number(params.get('yaw') ?? 35));
+const p = THREE.MathUtils.degToRad(Number(params.get('pitch') ?? 25));
+camera.position.set(center.x + 3 * r * Math.cos(p) * Math.sin(a), center.y + 3 * r * Math.sin(p), center.z + 3 * r * Math.cos(p) * Math.cos(a));
+camera.far = Math.max(200, 10 * r);
+camera.updateProjectionMatrix();
+controls.target.copy(center);
+controls.update();
+
+// The state of the page, for a test.
+window.PARTS = { scene, model, triangles: () => tris };
+let drawn = false;
+renderer.setAnimationLoop(() => {
+  controls.update();
+  renderer.render(scene, camera);
+  if (!drawn) {
+    drawn = true;
+    window.READY = true;
+  }
+});
+</script>
+</body>
+</html>

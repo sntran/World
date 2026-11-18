@@ -134,19 +134,40 @@ defmodule World do
   defp wrong(_key, _), do: "is not a part of a budget: workers, seconds, triangles, memory_mb, clock"
 
   @doc """
-  The memory of the VM, in bytes: `{"total", bytes}` (`:erlang.memory/1`).
-  An emulator with no allocators of ERTS (`-Mea min`, at the edge) does
-  not have it: then `{"processes", bytes}`, the memory of each process
-  and of each binary that a process holds (one time each). `total` is
-  the function of the memory of all of the VM.
+  The memory of the VM, in bytes. In WebAssembly (BEAM.com):
+  `{"used", bytes}`, the bytes of its memory that the VM uses now
+  (`wasm_memory/1`). Else `{"total", bytes}` (`:erlang.memory/1`); an
+  emulator with no allocators of ERTS (`-Mea min`) does not have it:
+  then `{"processes", bytes}`, the memory of each process and of each
+  binary that a process holds (one time each). `total` is the function
+  of the memory of all of the VM, and `host` the module of the host.
   """
-  def memory(total \\ &:erlang.memory/1) do
-    {"total", total.(:total)}
+  def memory(total \\ &:erlang.memory/1, host \\ :wasm_host) do
+    case wasm_memory(host) do
+      {_size, used} -> {"used", used}
+      nil -> {"total", total.(:total)}
+    end
   rescue
     ErlangError ->
       infos = for p <- Process.list(), info = Process.info(p, [:memory, :binary]), do: info
       binaries = for info <- infos, {id, size, _} <- info[:binary], into: %{}, do: {id, size}
       {"processes", Enum.sum(for info <- infos, do: info[:memory]) + Enum.sum(Map.values(binaries))}
+  end
+
+  @doc """
+  The memory of the VM in WebAssembly (BEAM.com, `docs/WORKERS.md`):
+  `{size, used}` in bytes, or nil when the VM does not run in
+  WebAssembly. `size` is the size of the memory of WebAssembly, which
+  the edge counts against its 128 MB: it never gets smaller.
+  `used` is the part of it that the VM uses now (`malloc()`): the VM
+  uses the rest again before the size grows.
+  """
+  def wasm_memory(host \\ :wasm_host) do
+    if Code.ensure_loaded?(host) and function_exported?(host, :memory, 1),
+      do: {host.memory(:size), host.memory(:used)}
+  rescue
+    # (A runtime with the module of the host, and no function of the memory in it.)
+    ErlangError -> nil
   end
 
   @doc """

@@ -46,6 +46,42 @@ defmodule World.Detail do
     end
   end
 
+  @doc """
+  The value of `fun`, made in a new process with the level and the
+  collection of this process. The garbage of `fun` goes with its
+  process, and only the value comes back (as a copy). So a step that
+  makes much garbage for a small value (a person of a group) does not
+  add its garbage to the peak of the build. An error of `fun` is raised
+  here again. With `sweep: n`, the process does a full collection after
+  each n collections (less garbage, more time).
+  """
+  def apart(fun, opts \\ []) do
+    {level, lean, me, ref} = {Process.get(:world_detail), Process.get(:world_lean), self(), make_ref()}
+
+    # (A link: a stop of this process stops the work, and a stop of the work with no value stops this process.)
+    # (`sweep: n`: a full collection after each n collections, for a step whose garbage is most of its memory.)
+    spawn = fn f -> :erlang.spawn_opt(f, [:link | if(opts[:sweep], do: [fullsweep_after: opts[:sweep]], else: [])]) end
+
+    spawn.(fn ->
+      if level, do: Process.put(:world_detail, level)
+      if lean != nil, do: Process.put(:world_lean, lean)
+
+      result =
+        try do
+          {:ok, fun.()}
+        rescue
+          e -> {:raise, e, __STACKTRACE__}
+        end
+
+      send(me, {ref, result})
+    end)
+
+    receive do
+      {^ref, {:ok, value}} -> value
+      {^ref, {:raise, e, stack}} -> reraise e, stack
+    end
+  end
+
   @doc "The level now (`:near` by default)."
   def level, do: Process.get(:world_detail, :near)
 

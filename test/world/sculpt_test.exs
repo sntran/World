@@ -171,4 +171,101 @@ defmodule World.SculptTest do
     assert Sculpt.model(edits, step: 0.04, budget: 500, cache: false) == first
     assert Sculpt.model(edits, step: 0.04, budget: 400) != first
   end
+
+  # The open edges of some meshes (an edge of one face only), by the places of their points.
+  defp open_edges(meshes) do
+    for m <- meshes,
+        pts = List.to_tuple(m.points),
+        f <- m.faces,
+        [a, b] <- Enum.chunk_every(f ++ [hd(f)], 2, 1, :discard),
+        reduce: %{} do
+      acc -> Map.update(acc, Enum.sort([elem(pts, a), elem(pts, b)]), 1, &(&1 + 1))
+    end
+    |> Enum.filter(fn {_, n} -> n == 1 end)
+    |> MapSet.new(&elem(&1, 0))
+  end
+
+  defp faces(meshes), do: meshes |> Enum.map(&length(&1.faces)) |> Enum.sum()
+
+  # A block with a soft ball on it and a hole through it.
+  defp block do
+    [
+      SDF.edit(:box, {1.0, 0.3, 0.4}),
+      SDF.edit(:ball, {0.25}, frame: World.Frame.move({0.3, 0.1, 0.4}), blend: 0.1),
+      SDF.edit(:cylinder, {0.1, 0.6}, frame: World.Frame.move({-0.5, 0.0, 0.0}), mode: :subtract)
+    ]
+  end
+
+  test "a sculpture in tiles (W26): the bricks of each box, and the two tiles meet with no gap, also with a small budget" do
+    # A brick is in the tile of its center: two boxes next to each other have no brick in common.
+    assert Sculpt.tile({{0.0, 0.0, 0.0}, {0.64, 1.0e6, 1.0e6}}, 0.04) == {{0, 0, 0}, {2, 3_125_000, 3_125_000}}
+    # (The brick -1 has its center at -0.16 m.)
+    assert Sculpt.tile({{-0.17, 0.0, 0.0}, {0.0, 1.0, 1.0}}, 0.04) == {{-1, 0, 0}, {0, 3, 3}}
+    assert Sculpt.tile({{-0.15, 0.0, 0.0}, {0.0, 1.0, 1.0}}, 0.04) == {{0, 0, 0}, {0, 3, 3}}
+
+    for budget <- [nil, 1_000] do
+      left =
+        Sculpt.model(block(),
+          step: 0.04,
+          budget: budget && div(budget, 2),
+          cache: false,
+          within: {{-9.0, -9.0, -9.0}, {0.0, 9.0, 9.0}}
+        )
+
+      right =
+        Sculpt.model(block(),
+          step: 0.04,
+          budget: budget && div(budget, 2),
+          cache: false,
+          within: {{0.0, -9.0, -9.0}, {9.0, 9.0, 9.0}}
+        )
+
+      whole = Sculpt.model(block(), step: 0.04, budget: budget, cache: false)
+      # The whole is closed; each tile is open at its border, and its open edges are those of the other tile.
+      assert open_edges(whole) == MapSet.new()
+      assert MapSet.size(open_edges(left)) > 20
+      assert open_edges(left) == open_edges(right)
+      for {{x0, _, _}, {x1, _, _}} <- open_edges(left), do: assert(abs(x0) < 0.08 and abs(x1) < 0.08)
+      # (The faces of the tiles: about those of the whole; more with a budget, for the points held at the border.)
+      if budget,
+        do: assert(faces(left) + faces(right) <= 1.6 * budget),
+        else: assert(faces(left) + faces(right) == faces(whole))
+    end
+
+    # The cache keeps the meshes of a tile by its box.
+    box = {{-9.0, -9.0, -9.0}, {0.0, 9.0, 9.0}}
+    assert Sculpt.model(block(), step: 0.04, within: box) == Sculpt.model(block(), step: 0.04, within: box)
+  end
+
+  test "a part in steps: each step in a process, the steps joined, the part made smaller to its budget with its borders held" do
+    steps = [
+      {{{-9.0, -9.0, -9.0}, {-0.32, 9.0, 9.0}}, 0.3},
+      {{{-0.32, -9.0, -9.0}, {0.32, 9.0, 9.0}}, 0.4},
+      {{{0.32, -9.0, -9.0}, {9.0, 9.0, 9.0}}, 0.3}
+    ]
+
+    all = {{-9.0, -9.0, -9.0}, {9.0, 9.0, 9.0}}
+    part = Sculpt.model_in_steps(block(), step: 0.04, budget: 800, within: all, steps: steps)
+    # One closed part in its budget, with each point on the surface (the finish).
+    assert open_edges(part) == MapSet.new() and faces(part) <= 800 and faces(part) > 400
+    for m <- part, p <- m.points, do: assert(abs(SDF.value(block(), p, 1.0)) < 0.01)
+    assert Enum.all?(part, &(&1.normals != nil))
+
+    # A part of the left half: its points at its border (x = 0) stay, so it meets the right half.
+    half = {{-9.0, -9.0, -9.0}, {0.0, 9.0, 9.0}}
+
+    left =
+      Sculpt.model_in_steps(block(),
+        step: 0.04,
+        budget: 400,
+        within: half,
+        steps: [{{{-9.0, -9.0, -9.0}, {-0.32, 9.0, 9.0}}, 0.5}, {{{-0.32, -9.0, -9.0}, {0.0, 9.0, 9.0}}, 0.5}]
+      )
+
+    for {{x0, _, _}, {x1, _, _}} <- open_edges(left), do: assert(abs(x0) < 0.08 and abs(x1) < 0.08)
+
+    # With no budget: the steps are not made smaller.
+    free = Sculpt.model_in_steps(block(), step: 0.04, budget: nil, within: all, steps: steps)
+    assert open_edges(free) == MapSet.new() and faces(free) > faces(part)
+  end
 end

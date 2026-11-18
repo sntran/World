@@ -38,6 +38,8 @@ defmodule World.Town.Building do
   @grounds ~w(piers windows blank)
   @rails ~w(cross bars none)
   @parts ~w(than mai chu nen)
+  # (The path of a value at the start of the text of an error, as `fronts.2.bays: `.)
+  @path ~r/^[a-z0-9_]+(\.[a-z0-9_]+)*: /
 
   @plaster %{"roughness" => 0.85, "surface" => %{"kind" => "plaster", "scale" => 0.04}}
   @pane %{"roughness" => 0.1, "metal" => 0.2}
@@ -136,8 +138,13 @@ defmodule World.Town.Building do
       `window` (`[wide, high]`), `sill`, `bars`, `places` (the middle of
       each window, m along the side, in the place of equal bays),
       `ledges`, `pilasters`, `pilaster` (its width), `deep` (of a
-      loggia), `rail` (`cross`, `bars` or `none`) and `pitch` (of the
-      grid of a front of glass).
+      loggia), `rail` (`cross`, `bars` or `none`), `pitch` (of the
+      grid of a front of glass), `balcony` (a balcony at each floor
+      over the ground storey stands out by this, m; 0: none) and `round`
+      (`[left, right]`: the radius of a quarter of a circle at each
+      front corner of a balcony; `[balcony, balcony]` gives round
+      ends) and `storeys` (`[first, last]`: the front is on these storeys
+      only; 1 is the ground storey).
     * `cornice`: `high` (0: none) and `out`.
     * `roof`: `kind` (`flat` or `tiles`), `parapet` (of a flat roof),
       and for tiles on a plan of four square corners `high`, `inset`
@@ -146,12 +153,25 @@ defmodule World.Town.Building do
       slope).
     * `porches`: a list. Each has `side`, `at` (its middle, m along the
       side), `wide`, `deep`, `high`, `columns`, `steps`, `door`
-      (`[wide, high]`, or nil), `board` (a color, or nil) and `terrace`
-      (true: a rail of iron round its top).
+      (`[wide, high]`, or nil), `board` (a color, or nil), `terrace`
+      (true: a rail of iron round its top), `round` (`[left, right]`:
+      the radius of a quarter of a circle at each front corner of the
+      slab) and `fascia` (the height of a band round its front, m; 0:
+      none).
     * `letters`: a list. Each has `side`, `at` (the middle of the text),
-      `z`, `high`, `text` (A to Z and spaces) and `out` (from the
-      wall or the cornice behind it; from the edge of the cornice
-      when it stands on its top).
+      `z`, `high`, `wide` (the width of a letter: 2/3 of `high` by
+      default, from a quarter of `high` to two times `high`), `text` (A
+      to Z and spaces) and `out` (from the wall or the cornice behind
+      it; from the edge of the cornice when it stands on its top). In
+      place of `wide`, `long` gives the length of the line (m): the
+      full request has the `wide` that it gives.
+    * `blocks`: a list of parts of the plan with their own storeys (a
+      tower over the building, a lower wing, a storey set back behind a
+      terrace). Each has `plan` (its corners, counterclockwise),
+      `storeys`, `parapet` (of its flat roof; the parapet of the roof of
+      the building by default) and `fronts` (on its own sides). Its
+      walls go from the ground to the top of its parapet, with its deck
+      behind it.
     * `apron` (the ground round the plan, m), `age` (0 to 1), and
       `more`: edits for a part (`than`: the body, `mai`: the roof,
       `chu`: the letters, `nen`: the ground), for a thing that the
@@ -162,26 +182,48 @@ defmodule World.Town.Building do
 
     keys(
       opts,
-      ~w(name sources plan size storeys ground band storey colors fronts cornice roof porches letters apron age more),
+      ~w(name sources plan size storeys ground band storey colors fronts cornice roof porches letters blocks apron age more),
       "building"
     )
 
     name = Map.get(opts, "name", "toa_nha")
-    need(is_binary(name) and name =~ ~r/^[a-z][a-z0-9_]*$/, "the name of a building has small letters, digits and _")
+
+    need(
+      is_binary(name) and name =~ ~r/^[a-z][a-z0-9_]*$/,
+      "name",
+      "the name of a building has small letters, digits and _"
+    )
+
     sources = Map.get(opts, "sources", [])
-    need(is_list(sources) and Enum.all?(sources, &is_binary/1), "the sources of a building are lines of text")
+
+    need(
+      is_list(sources) and Enum.all?(sources, &is_binary/1),
+      "sources",
+      "the sources of a building are lines of text"
+    )
+
     plan = plan(opts)
     walls = walls(plan)
     storeys = Map.get(opts, "storeys", 3)
-    need(is_integer(storeys) and storeys in 1..12, "a building has from 1 to 12 storeys")
+    need(is_integer(storeys) and storeys in 1..12, "storeys", "a building has from 1 to 12 storeys")
     given = Map.get(opts, "colors", %{})
-    need(is_map(given), "the colors of a building are a map")
-    keys(given, Map.keys(@colors), "map of colors")
-    Enum.each(given, fn {key, v} -> color(v, key) end)
-    roof = roof(Map.get(opts, "roof", %{}), plan, walls)
+    need(is_map(given), "colors", "the colors of a building are a map")
+
+    within("colors", fn ->
+      keys(given, Map.keys(@colors), "map of colors")
+      Enum.each(given, fn {key, v} -> color(v, key) end)
+    end)
+
+    roof = within("roof", fn -> roof(Map.get(opts, "roof", %{}), plan, walls) end)
     more = Map.get(opts, "more", %{})
-    need(is_map(more) and Enum.all?(more, fn {_, v} -> is_list(v) end), "the key more is a map of lists of edits")
-    keys(more, @parts, "map of more edits")
+
+    need(
+      is_map(more) and Enum.all?(more, fn {_, v} -> is_list(v) end),
+      "more",
+      "the key more is a map of lists of edits"
+    )
+
+    within("more", fn -> keys(more, @parts, "map of more edits") end)
 
     b = %{
       "name" => name,
@@ -192,7 +234,7 @@ defmodule World.Town.Building do
       "band" => number(opts, "band", 1.1, 0, 3),
       "storey" => number(opts, "storey", 3.5, 2.6, 6),
       "colors" => Map.merge(@colors, given),
-      "cornice" => cornice(Map.get(opts, "cornice", %{}), roof),
+      "cornice" => within("cornice", fn -> cornice(Map.get(opts, "cornice", %{}), roof) end),
       "roof" => roof,
       "apron" => number(opts, "apron", 0.6, 0, 10),
       "age" => number(opts, "age", 0.5, 0, 1),
@@ -202,21 +244,45 @@ defmodule World.Town.Building do
     Map.merge(b, %{
       "fronts" => each(opts, "fronts", &front(&1, walls, storeys)),
       "porches" => each(opts, "porches", &porch(&1, walls, b)),
-      "letters" => each(opts, "letters", &text(&1, walls))
+      "letters" => each(opts, "letters", &text(&1, walls)),
+      "blocks" => each(opts, "blocks", &block(&1, roof))
     })
+  end
+
+  # A part of the plan with its own storeys: its walls go from the ground to the top of its own parapet.
+  defp block(m, roof) do
+    keys(m, ~w(plan storeys parapet fronts), "block")
+    need(Map.has_key?(m, "plan"), "plan", "a block has its own plan: its corners [x, y], counterclockwise")
+    plan = plan(m)
+    storeys = Map.get(m, "storeys")
+    need(is_integer(storeys) and storeys in 1..12, "storeys", "a block has from 1 to 12 storeys")
+
+    %{
+      "plan" => plan,
+      "storeys" => storeys,
+      "parapet" => number(m, "parapet", Map.get(roof, "parapet", 1.0), 0.3, 2),
+      "fronts" => each(m, "fronts", &front(&1, walls(plan), storeys))
+    }
   end
 
   defp plan(%{"plan" => points}) do
     need(
       is_list(points) and length(points) in 3..64 and
         Enum.all?(points, &match?([x, y] when is_number(x) and is_number(y), &1)),
+      "plan",
       "the plan of a building is from 3 to 64 corners, each [x, y]"
     )
 
     plan = for [x, y] <- points, do: [r4(x * 1.0), r4(y * 1.0)]
     turns = for {[ax, ay], [bx, by]} <- sides(plan), do: ax * by - bx * ay
-    need(Enum.sum(turns) > 0, "the corners of the plan of a building go counterclockwise, seen from above")
-    need(Enum.all?(sides(plan), fn {a, b} -> a != b end), "two corners of the plan of a building are at the same place")
+    need(Enum.sum(turns) > 0, "plan", "the corners of the plan of a building go counterclockwise, seen from above")
+
+    need(
+      Enum.all?(sides(plan), fn {a, b} -> a != b end),
+      "plan",
+      "two corners of the plan of a building are at the same place"
+    )
+
     plan
   end
 
@@ -225,6 +291,7 @@ defmodule World.Town.Building do
 
     need(
       match?([l, d] when is_number(l) and is_number(d) and l >= 3 and d >= 3 and l <= 200 and d <= 200, size),
+      "size",
       "the size of a building is [long, deep], each from 3 m to 200 m"
     )
 
@@ -239,7 +306,7 @@ defmodule World.Town.Building do
     need(is_map(given), "the roof of a building is a map")
     keys(given, ~w(kind parapet high inset gables), "roof")
     kind = Map.get(given, "kind", "flat")
-    need(kind in ~w(flat tiles), "the roof of a building is flat or tiles")
+    need(kind in ~w(flat tiles), "kind", "the roof of a building is flat or tiles")
 
     if kind == "flat" do
       keys(given, ~w(kind parapet), "flat roof")
@@ -255,6 +322,7 @@ defmodule World.Town.Building do
 
       need(
         is_list(gables) and Enum.all?(gables, &(&1 in ends)),
+        "gables",
         "a gable of this roof is at a short side: #{Enum.join(ends, " or ")}"
       )
 
@@ -271,14 +339,14 @@ defmodule World.Town.Building do
     need(is_map(given), "the cornice of a building is a map")
     keys(given, ~w(high out), "cornice")
     high = number(given, "high", if(roof["kind"] == "tiles", do: 1.2, else: 0.0), 0, 3)
-    need(high == 0.0 or high >= 0.4, "a cornice is 0.4 m high at the least (0: no cornice)")
+    need(high == 0.0 or high >= 0.4, "high", "a cornice is 0.4 m high at the least (0: no cornice)")
     %{"high" => high, "out" => number(given, "out", 0.35, 0, 1)}
   end
 
   defp each(opts, key, f) do
     list = Map.get(opts, key, [])
-    need(is_list(list) and Enum.all?(list, &is_map/1), "the #{key} of a building are a list of maps")
-    Enum.map(list, f)
+    need(is_list(list) and Enum.all?(list, &is_map/1), key, "the #{key} of a building are a list of maps")
+    for {m, i} <- Enum.with_index(list), do: within("#{key}.#{i}", fn -> f.(m) end)
   end
 
   defp side(m, walls, what) do
@@ -286,6 +354,7 @@ defmodule World.Town.Building do
 
     need(
       is_integer(k) and k >= 1 and k <= length(walls),
+      "side",
       "the side of a #{what} is a number from 1 to #{length(walls)}"
     )
 
@@ -295,14 +364,27 @@ defmodule World.Town.Building do
   defp front(f, walls, storeys) do
     keys(
       f,
-      ~w(side style from to inset bays ground out paint band window sill bars places ledges pilasters pilaster deep rail pitch),
+      ~w(side style from to inset bays ground out paint band window sill bars places ledges pilasters pilaster deep rail pitch balcony round storeys),
       "front"
     )
 
     {k, w} = side(f, walls, "front")
     style = Map.get(f, "style", "windows")
-    need(style in @styles, "the style of a front is one of #{Enum.join(@styles, ", ")}")
-    need(style != "loggias" or storeys >= 2, "a front of loggias is for a building of 2 storeys or more")
+    need(style in @styles, "style", "the style of a front is one of #{Enum.join(@styles, ", ")}")
+    range = Map.get(f, "storeys", [1, storeys])
+
+    need(
+      match?([a, z] when is_integer(a) and is_integer(z) and a >= 1 and a <= z and z <= storeys, range),
+      "storeys",
+      "the storeys of a front are [first, last], each from 1 to #{storeys} (1: the ground storey)"
+    )
+
+    need(
+      style != "loggias" or List.last(range) >= 2,
+      "style",
+      "a front of loggias is for 2 storeys or more: its last storey is 2 or more"
+    )
+
     long = r4(w.long)
     from = number(f, "from", 0.0, 0, long)
     to = number(f, "to", long, 0, long)
@@ -313,17 +395,19 @@ defmodule World.Town.Building do
 
     need(
       is_integer(bays) and bays >= 1 and run / bays >= 1.5,
+      "bays",
       "a bay of a front is a whole count, each 1.5 m wide at the least"
     )
 
     ground = Map.get(f, "ground", if(style == "loggias", do: "piers", else: "windows"))
-    need(ground in @grounds, "the ground storey of a front is one of #{Enum.join(@grounds, ", ")}")
+    need(ground in @grounds, "ground", "the ground storey of a front is one of #{Enum.join(@grounds, ", ")}")
     rail = Map.get(f, "rail", "cross")
-    need(rail in @rails, "the rail of a front is one of #{Enum.join(@rails, ", ")}")
+    need(rail in @rails, "rail", "the rail of a front is one of #{Enum.join(@rails, ", ")}")
     window = Map.get(f, "window", [1.4, 1.5])
 
     need(
       match?([a, b] when is_number(a) and is_number(b) and a >= 0.3 and b >= 0.3, window),
+      "window",
       "a window is [wide, high], each 0.3 m or more"
     )
 
@@ -332,6 +416,7 @@ defmodule World.Town.Building do
     need(
       is_nil(places) or
         (is_list(places) and places != [] and Enum.all?(places, &(is_number(&1) and &1 >= from and &1 <= to))),
+      "places",
       "the places of the windows of a front are numbers between its two ends"
     )
 
@@ -345,7 +430,15 @@ defmodule World.Town.Building do
     )
 
     bars = Map.get(f, "bars", 1)
-    need(is_integer(bars) and bars in 0..8, "a window has from 0 to 8 bars")
+    need(is_integer(bars) and bars in 0..8, "bars", "a window has from 0 to 8 bars")
+    balcony = number(f, "balcony", 0.0, 0, 4)
+    need(balcony == 0.0 or balcony >= 0.5, "balcony", "a balcony is 0.5 m deep at the least (0: no balcony)")
+
+    need(
+      balcony > 0 or Enum.all?(List.wrap(Map.get(f, "round", 0)), &(&1 == 0)),
+      "round",
+      "the round ends are for a front with a balcony"
+    )
 
     Map.merge(flags, %{
       "side" => k,
@@ -364,59 +457,104 @@ defmodule World.Town.Building do
       "pilaster" => number(f, "pilaster", 0.75, 0.2, 1.4),
       "deep" => number(f, "deep", 1.5, 0.3, 3),
       "rail" => rail,
-      "pitch" => number(f, "pitch", 0.8, 0.3, 4)
+      "pitch" => number(f, "pitch", 0.8, 0.3, 4),
+      "balcony" => balcony,
+      "round" => round(f, balcony, run, "the balconies of a front"),
+      "storeys" => range
     })
   end
 
   defp porch(p, walls, b) do
-    keys(p, ~w(side at wide deep high columns steps door board terrace), "porch")
+    keys(p, ~w(side at wide deep high columns steps door board terrace round fascia), "porch")
     {k, w} = side(p, walls, "porch")
     wide = number(p, "wide", 6.0, 1.5, 40)
     columns = Map.get(p, "columns", 2)
-    need(is_integer(columns) and columns in 0..12, "a porch has from 0 to 12 columns")
+    need(is_integer(columns) and columns in 0..12, "columns", "a porch has from 0 to 12 columns")
     steps = Map.get(p, "steps", 2)
-    need(is_integer(steps) and steps in 0..6, "a porch has from 0 to 6 steps")
+    need(is_integer(steps) and steps in 0..6, "steps", "a porch has from 0 to 6 steps")
     door = Map.get(p, "door", [2.6, 2.7])
 
     need(
       is_nil(door) or match?([a, c] when is_number(a) and is_number(c) and a >= 0.6 and c >= 1.8, door),
+      "door",
       "the door of a porch is [wide, high], or nil"
     )
 
     board = Map.get(p, "board")
     if board, do: color(board, "board")
     terrace = Map.get(p, "terrace", false)
-    need(is_boolean(terrace), "the key terrace of a porch is true or false")
+    need(is_boolean(terrace), "terrace", "the key terrace of a porch is true or false")
+
+    deep = number(p, "deep", 3.0, 1, 12)
 
     %{
       "side" => k,
       "at" => number(p, "at", r4(w.long / 2), wide / 2, w.long - wide / 2),
       "wide" => wide,
-      "deep" => number(p, "deep", 3.0, 1, 12),
+      "deep" => deep,
       "high" => number(p, "high", r4(b["ground"] + 0.5), 2.4, 12),
       "columns" => columns,
       "steps" => steps,
       "door" => door && Enum.map(door, &(&1 * 1.0)),
       "board" => board,
-      "terrace" => terrace
+      "terrace" => terrace,
+      "round" => round(p, deep, wide, "a porch"),
+      "fascia" => number(p, "fascia", 0.0, 0, 3)
     }
   end
 
+  # The radius of the quarter of a circle at the left and at the right front corner of a slab `deep` and `wide`.
+  defp round(map, deep, wide, what) do
+    v = Map.get(map, "round", [0, 0])
+
+    need(
+      match?([l, r] when is_number(l) and is_number(r) and l >= 0 and r >= 0 and l <= deep and r <= deep, v) and
+        Enum.sum(v) <= r4(wide),
+      "round",
+      "the round of #{what} is [left, right], each from 0 to #{r4(deep)} m, the two #{r4(wide)} m at the most"
+    )
+
+    Enum.map(v, &(&1 * 1.0))
+  end
+
   defp text(t, walls) do
-    keys(t, ~w(side at z high text out), "line of letters")
+    keys(t, ~w(side at z high wide long text out), "line of letters")
     {k, w} = side(t, walls, "line of letters")
     text = Map.get(t, "text", "")
 
     need(
       is_binary(text) and text =~ ~r/^[A-Z ]{1,40}$/ and String.trim(text) != "",
+      "text",
       "the text of a line of letters is from 1 to 40 letters from A to Z, with spaces"
     )
+
+    high = number(t, "high", 0.75, 0.3, 3)
+    {narrow, broad} = {r4(0.25 * high), r4(2 * high)}
+
+    # (A line of n letters is 1.7 n - 0.7 letters wide: after each letter, a space of 0.7 of its width.)
+    wide =
+      if Map.has_key?(t, "long") do
+        long = number(t, "long", 0, 0.1, 200)
+        wide = r4(long / (1.7 * String.length(text) - 0.7))
+
+        need(
+          wide >= narrow and wide <= broad,
+          "long",
+          "a line of #{String.length(text)} letters #{r4(long)} m long has letters #{wide} m wide: " <>
+            "a letter is from #{narrow} m to #{broad} m wide (a quarter of its height to two times its height)"
+        )
+
+        wide
+      else
+        number(t, "wide", r4(high / 1.5), narrow, broad)
+      end
 
     %{
       "side" => k,
       "at" => number(t, "at", r4(w.long / 2), 0, w.long),
       "z" => number(t, "z", 3.0, 0, 80),
-      "high" => number(t, "high", 0.75, 0.3, 3),
+      "high" => high,
+      "wide" => wide,
       "text" => text,
       "out" => number(t, "out", 0.12, 0, 5)
     }
@@ -424,12 +562,12 @@ defmodule World.Town.Building do
 
   defp number(map, key, default, lo, hi) do
     v = Map.get(map, key, default)
-    need(is_number(v) and v >= lo and v <= hi, "the value of #{key} is a number from #{r4(lo)} to #{r4(hi)}")
+    need(is_number(v) and v >= lo and v <= hi, key, "the value of #{key} is a number from #{r4(lo)} to #{r4(hi)}")
     v * 1.0
   end
 
   defp color(v, key),
-    do: need(is_binary(v) and v =~ ~r/^#[0-9a-f]{6}$/, "the color #{key} is as #a1b2c3 (small letters)")
+    do: need(is_binary(v) and v =~ ~r/^#[0-9a-f]{6}$/, key, "the color #{key} is as #a1b2c3 (small letters)")
 
   defp keys(map, known, what) do
     case Map.keys(map) -- known do
@@ -441,6 +579,19 @@ defmodule World.Town.Building do
   defp need(true, _text), do: :ok
   defp need(false, text), do: raise(ArgumentError, text)
 
+  # A check of the value at the key `key`: its error starts with the path of the value.
+  defp need(true, _key, _text), do: :ok
+  defp need(false, key, text), do: raise(ArgumentError, "#{key}: #{text}")
+
+  # The checks of a part of the request at `path` (for example `fronts.2`): the path of an error starts with it.
+  defp within(path, fun) do
+    fun.()
+  rescue
+    e in ArgumentError ->
+      message = if e.message =~ @path, do: "#{path}.#{e.message}", else: "#{path}: #{e.message}"
+      reraise ArgumentError, [message: message], __STACKTRACE__
+  end
+
   # --- The heights ----------------------------------------------------------------
 
   @doc """
@@ -451,12 +602,18 @@ defmodule World.Town.Building do
   """
   def heights(request) do
     b = spec(request)
-    g = b["ground"]
-    floors = for k <- 1..(b["storeys"] - 1)//1, do: r4(g + b["band"] + (k - 1) * b["storey"])
-    eaves = if floors == [], do: r4(g + max(b["band"], 0.6)), else: r4(List.last(floors) + b["storey"] - 0.3)
 
     over =
       if b["roof"]["kind"] == "flat", do: max(b["cornice"]["high"], b["roof"]["parapet"]), else: b["cornice"]["high"]
+
+    levels(b, b["storeys"], over)
+  end
+
+  # The heights of a building or of a block of `storeys`, with `over` from the eaves to the top.
+  defp levels(b, storeys, over) do
+    g = b["ground"]
+    floors = for k <- 1..(storeys - 1)//1, do: r4(g + b["band"] + (k - 1) * b["storey"])
+    eaves = if floors == [], do: r4(g + max(b["band"], 0.6)), else: r4(List.last(floors) + b["storey"] - 0.3)
 
     %{
       "ground" => g,
@@ -482,11 +639,33 @@ defmodule World.Town.Building do
     walls = walls(b["plan"])
     c = b["colors"]
 
-    {fronts, rails} = pairs(for f <- b["fronts"], do: front_edits(f, Enum.at(walls, f["side"] - 1), h, c))
+    # Each block, with its heights and its walls.
+    blocks = for k <- b["blocks"], do: {k, levels(b, k["storeys"], k["parapet"]), walls(k["plan"])}
+
+    {fronts, rails} =
+      pairs(
+        for(f <- b["fronts"], do: front_edits(f, Enum.at(walls, f["side"] - 1), h, c)) ++
+          for({k, hk, wk} <- blocks, f <- k["fronts"], do: front_edits(f, Enum.at(wk, f["side"] - 1), hk, c))
+      )
+
     {porches, porch_rails} = pairs(for p <- b["porches"], do: porch_edits(p, Enum.at(walls, p["side"] - 1), c))
-    body = mass(b, h) ++ fronts ++ porches ++ cornice_edits(b, h) ++ b["more"]["than"]
+
+    # The masses from the lowest to the highest: a part that is higher fills the deck of a lower part under it.
+    # The fronts come after all of them, so that their paints are on each wall.
+    masses =
+      [{h["top"], mass(b, h)} | for({k, hk, _} <- blocks, do: {hk["top"], mass(block_body(b, k), hk)})]
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.flat_map(&elem(&1, 1))
+
+    body = masses ++ fronts ++ porches ++ cornice_edits(b, h) ++ b["more"]["than"]
     rails = rails ++ porch_rails
-    area = Enum.sum(for w <- walls, do: w.long) * h["top"]
+
+    area =
+      Enum.sum([
+        Enum.sum(for w <- walls, do: w.long) * h["top"]
+        | for({_, hk, wk} <- blocks, do: Enum.sum(for w <- wk, do: w.long) * hk["top"])
+      ])
+
     {long, deep} = extent(b["plan"])
     floor = long * deep
     letters = Enum.flat_map(b["letters"], &letter_edits(&1, Enum.at(walls, &1["side"] - 1), b, h)) ++ b["more"]["chu"]
@@ -505,7 +684,7 @@ defmodule World.Town.Building do
         {"chu", letters, [], [r4(0.027 * fine), r4(0.04 * fine), r4(0.08 * fine)],
          [budget(150 * count, 1_000, 12_000), budget(40 * count, 400, 3_000), budget(12 * count, 100, 800)],
          [256, 128, 64]},
-        {"nen", ground(b) ++ b["more"]["nen"], [], [0.06, 0.12, 0.3], [2_500, 700, 150], [512, 256, 128]}
+        {"nen", ground(b) ++ b["more"]["nen"], [], ground_cells(b), [2_500, 700, 150], [512, 256, 128]}
       ]
       |> Enum.reject(fn {_, edits, _, _, _, _} -> edits == [] end)
 
@@ -583,6 +762,9 @@ defmodule World.Town.Building do
 
   defp mass(b, h), do: [Wall.outline(b["plan"], h["eaves"], [0, 0, h["eaves"] / 2], b["colors"]["wall"], @plaster)]
 
+  # A block as a building of its own plan, with a flat roof behind its parapet.
+  defp block_body(b, k), do: %{b | "plan" => k["plan"], "roof" => %{"kind" => "flat", "parapet" => k["parapet"]}}
+
   defp cornice_edits(%{"cornice" => %{"high" => high}}, _h) when high == 0.0, do: []
 
   defp cornice_edits(%{"cornice" => %{"high" => high, "out" => out}} = b, h) do
@@ -594,14 +776,26 @@ defmodule World.Town.Building do
     ]
   end
 
+  # The ground: a slab with its top at the ground, deeper than the cells
+  # of each level (a slab thinner than its cells has no surface), so its
+  # far part is not empty. The part under the ground is not seen.
+  @ground 1.0
+
   defp ground(%{"apron" => apron} = b) do
     [
-      Wall.outline(offset(b["plan"], apron), 0.3, [0, 0, -0.15], b["colors"]["ground"], %{
+      Wall.outline(offset(b["plan"], apron), @ground, [0, 0, -@ground / 2], b["colors"]["ground"], %{
         "roughness" => 0.95,
         "surface" => %{"kind" => "concrete", "scale" => 0.06}
       })
     ]
   end
+
+  # The cells of the ground (near, mid, far). A flat slab has no relief
+  # smaller than 25 cm: its look (the concrete, the dirt) is in its maps.
+  # The edits of an order on the ground (`more.nen`) can be small (a
+  # step, a kerb): they keep the cells of a small part.
+  defp ground_cells(%{"more" => %{"nen" => []}}), do: [0.25, 0.3, 0.4]
+  defp ground_cells(_b), do: [0.06, 0.12, 0.3]
 
   # A plan with each side moved out by `d` (in, when `d` is less than 0).
   defp offset(plan, d) do
@@ -620,7 +814,8 @@ defmodule World.Town.Building do
 
   # The edits of a front, and the tubes of its rails.
   defp front_edits(f, wall, h, c) do
-    {s0, s1, eaves, g} = {f["from"], f["to"], h["eaves"], h["ground"]}
+    h = storeys(h, f["storeys"])
+    {s0, s1, foot, head, g} = {f["from"], f["to"], h["foot"], h["head"], h["ground"]}
     mid = (s0 + s1) / 2
     w = Wall.out(wall, f["out"])
 
@@ -630,8 +825,8 @@ defmodule World.Town.Building do
           Wall.box(
             wall,
             mid,
-            eaves / 2,
-            {s1 - s0, eaves, f["out"] + 0.5},
+            (foot + head) / 2,
+            {s1 - s0, head - foot, f["out"] + 0.5},
             c["wall"],
             Map.put(@plaster, "out", (f["out"] - 0.5) / 2)
           )
@@ -639,16 +834,74 @@ defmodule World.Town.Building do
         else: []
       ) ++
         if(f["paint"],
-          do: [Wall.paint(w, mid, (g + eaves) / 2, {s1 - s0, eaves - g}, f["paint"], %{"roughness" => 0.8})],
+          do: [
+            Wall.paint(w, mid, (max(g, foot) + head) / 2, {s1 - s0, head - max(g, foot)}, f["paint"], %{
+              "roughness" => 0.8
+            })
+          ],
           else: []
         ) ++
-        if(f["band"] and f["style"] != "loggias" and h["floors"] != [] and hd(h["floors"]) > g,
+        if(f["band"] and f["style"] != "loggias" and h["first"] == 1 and h["floors"] != [] and hd(h["floors"]) > g,
           do: [band(w, mid, s1 - s0, g, hd(h["floors"]), c["band"])],
           else: []
         )
 
     {edits, rails} = style(f["style"], w, {s0 + f["inset"], s1 - f["inset"]}, f, h, c)
-    {base ++ List.flatten(edits), List.flatten(rails)}
+    {slabs, balcony_rails} = balconies(f, w, {s0 + f["inset"], s1 - f["inset"]}, h, c)
+    {base ++ List.flatten(edits) ++ slabs, List.flatten(rails) ++ balcony_rails}
+  end
+
+  # The heights of a front of the storeys `first` to `last` (1: the ground storey): the floors in them, `foot`
+  # (the foot of the first storey) and `head` (the top of the last one: the eaves, or the next floor).
+  defp storeys(h, [first, last]) do
+    floors = h["floors"]
+
+    Map.merge(h, %{
+      "floors" => Enum.slice(floors, max(first, 2) - 2, max(last - max(first, 2) + 1, 0)),
+      "first" => first,
+      "foot" => if(first == 1, do: 0.0, else: Enum.at(floors, first - 2)),
+      "head" => if(last == length(floors) + 1, do: h["eaves"], else: Enum.at(floors, last - 1))
+    })
+  end
+
+  # A balcony at each floor over the ground storey, along the front between its insets: a slab 0.2 m thick with
+  # its top at the floor, with square or round ends, and a rail of the front along its edge.
+  defp balconies(%{"balcony" => out}, _w, _run, _h, _c) when out == 0, do: {[], []}
+
+  defp balconies(f, w, {a, b}, h, c) do
+    slab = {a, b, f["balcony"]}
+    plan = slab_plan(w, slab, f["round"], 0.0)
+    line = [{a + 0.06, 0.0} | front_line(slab, f["round"], 0.06)] ++ [{b - 0.06, 0.0}]
+
+    {for(z <- h["floors"], do: Wall.outline(plan, 0.2, [0, 0, z - 0.1], c["trim"], @plaster)),
+     List.flatten(for z <- h["floors"], do: line_rail(f["rail"], w, line, z, c["rail"]))}
+  end
+
+  # A rail of iron along a line of points `{along, out}` on a floor: two bars, and posts with a cross between two
+  # posts (about each 1.2 m), or upright bars (each 12 cm).
+  defp line_rail("none", _w, _line, _floor, _color), do: []
+
+  defp line_rail(kind, w, line, floor, color) do
+    {lo, hi} = {floor + 0.08, floor + 0.95}
+    at = fn {s, o}, z -> Wall.at(w, s, z, o) end
+
+    bars =
+      for z <- [lo, hi], do: bar(Enum.map(line, &at.(&1, z)), color)
+
+    fill =
+      if kind == "cross" do
+        posts = spread(line, max(1, round(long(line) / 1.2)))
+
+        for(p <- posts, do: Wall.tube([at.(p, lo), at.(p, hi)], [0.02, 0.02], color, @iron)) ++
+          for {p, q} <- Enum.zip(posts, tl(posts)), {z0, z1} <- [{lo, hi}, {hi, lo}] do
+            Wall.tube([at.(p, z0), at.(q, z1)], [0.014, 0.014], color, @iron)
+          end
+      else
+        for p <- spread(line, max(2, round(long(line) / 0.12))),
+            do: Wall.tube([at.(p, lo), at.(p, hi)], [0.012, 0.012], color, @iron)
+      end
+
+    bars ++ fill
   end
 
   defp band(w, mid, wide, z0, z1, color),
@@ -660,7 +913,7 @@ defmodule World.Town.Building do
     pitch = (b - a) / f["bays"]
     places = f["places"] || for i <- 0..(f["bays"] - 1), do: a + pitch * (i + 0.5)
     [wide, high] = f["window"]
-    floors = if(f["ground"] == "blank", do: [], else: [0.0]) ++ h["floors"]
+    floors = if(f["ground"] == "blank" or h["first"] > 1, do: [], else: [0.0]) ++ h["floors"]
 
     windows =
       for s <- places,
@@ -685,8 +938,8 @@ defmodule World.Town.Building do
         Wall.box(
           w,
           a + pitch * i,
-          h["eaves"] / 2,
-          {f["pilaster"], h["eaves"], 0.5},
+          (h["foot"] + h["head"]) / 2,
+          {f["pilaster"], h["head"] - h["foot"], 0.5},
           c["trim"],
           Map.put(@plaster, "out", 0.12)
         )
@@ -696,8 +949,16 @@ defmodule World.Town.Building do
   end
 
   defp style("glass", w, {a, b}, f, h, c) do
-    z1 = h["eaves"] - 0.3
-    z0 = min(if(f["ground"] == "blank", do: h["ground"] + 0.5, else: 0.3), z1 - 0.5)
+    z1 = h["head"] - 0.3
+
+    z0 =
+      cond do
+        h["first"] > 1 -> h["foot"] + 0.3
+        f["ground"] == "blank" -> h["ground"] + 0.5
+        true -> 0.3
+      end
+
+    z0 = min(z0, z1 - 0.5)
     {wide, high, mid} = {b - a, z1 - z0, (z0 + z1) / 2}
     {ups, rows} = {max(1, round(wide / f["pitch"])), max(1, round(high / f["pitch"]))}
     bar = %{"blend" => 0.006, "roughness" => 0.6}
@@ -712,11 +973,14 @@ defmodule World.Town.Building do
   # A row of equal bays between pilasters: a loggia at each storey over
   # the ground storey, with a door of glass at its back and a rail.
   defp style("loggias", w, {a, b}, f, h, c) do
-    {count, g, eaves, open} = {f["bays"], h["ground"], h["eaves"], h["opening"]}
+    {count, g, eaves, open} = {f["bays"], h["ground"], h["head"], h["opening"]}
     {pitch, mid} = {(b - a) / count, (a + b) / 2}
     wide = pitch - f["pilaster"]
-    piers? = f["ground"] == "piers"
-    below = [g | Enum.map(h["floors"], &(&1 + open))]
+    # (A front over the ground storey has no openings and no piers at the ground storey, and no band under its
+    # first loggia: that band starts at its foot.)
+    ground? = h["first"] == 1
+    piers? = f["ground"] == "piers" and ground?
+    below = [if(ground?, do: g, else: h["foot"]) | Enum.map(h["floors"], &(&1 + open))]
 
     # The fronts of the balconies, and the band under the cornice.
     bands =
@@ -725,12 +989,15 @@ defmodule World.Town.Building do
 
     bays =
       for i <- 0..(count - 1), s = a + pitch * (i + 0.5) do
-        [for(floor <- h["floors"], do: loggia(w, s, floor, wide, f["deep"], open, c)), ground_bay(f, w, s, pitch, g, c)]
+        [
+          for(floor <- h["floors"], do: loggia(w, s, floor, wide, f["deep"], open, c)),
+          if(ground?, do: ground_bay(f, w, s, pitch, g, c), else: [])
+        ]
       end
 
     pilasters =
       for i <- 0..count, s = a + pitch * i do
-        foot = if piers?, do: g, else: 0.0
+        foot = if piers?, do: g, else: h["foot"]
 
         [
           Wall.box(
@@ -851,17 +1118,23 @@ defmodule World.Town.Building do
     {s, wide, deep, high} = {p["at"], p["wide"], p["deep"], p["high"]}
     stone = %{"roughness" => 0.9, "surface" => %{"kind" => "concrete", "scale" => 0.03}}
 
-    columns =
-      for i <- 0..(p["columns"] - 1)//1 do
-        along = if p["columns"] == 1, do: s, else: s - wide / 2 + 0.4 + (wide - 0.8) * i / (p["columns"] - 1)
+    {s0, s1} = {s - wide / 2, s + wide / 2}
+    curved? = p["round"] != [0.0, 0.0]
 
-        Wall.edit(
-          "cylinder",
-          [0.2, r4((high - 0.3) / 2)],
-          Wall.at(w, along, (high - 0.3) / 2, deep - 0.4),
-          c["frame"],
-          %{"roughness" => 0.7}
-        )
+    # (On a curved front, the columns are at equal steps along the line 0.4 m in from the edge.)
+    places =
+      cond do
+        p["columns"] == 0 -> []
+        p["columns"] == 1 -> [{s, deep - 0.4}]
+        curved? -> spread(front_line({s0, s1, deep}, p["round"], 0.4), p["columns"] - 1)
+        true -> for i <- 0..(p["columns"] - 1), do: {s0 + 0.4 + (wide - 0.8) * i / (p["columns"] - 1), deep - 0.4}
+      end
+
+    columns =
+      for {along, out} <- places do
+        Wall.edit("cylinder", [0.2, r4((high - 0.3) / 2)], Wall.at(w, along, (high - 0.3) / 2, out), c["frame"], %{
+          "roughness" => 0.7
+        })
       end
 
     steps =
@@ -884,30 +1157,118 @@ defmodule World.Town.Building do
         else: []
 
     rails =
-      if p["terrace"] do
-        {z0, z1, front} = {high + 0.2, high + 1.05, deep - 0.1}
+      cond do
+        not p["terrace"] ->
+          []
 
-        line = fn z ->
-          for {along, out} <- [{-1, 0.3}, {-1, front}, {1, front}, {1, 0.3}],
-              do: Wall.at(w, s + along * wide / 2, z, out)
-        end
+        curved? ->
+          line = [{s0 + 0.1, 0.3} | front_line({s0, s1, deep}, p["round"], 0.1)] ++ [{s1 - 0.1, 0.3}]
+          posts = spread(front_line({s0, s1, deep}, p["round"], 0.1), max(2, round(wide / 0.6)))
+          terrace_rail(w, line, posts, high, c["rail"])
 
-        count = max(2, round(wide / 0.6))
+        true ->
+          line =
+            for {along, out} <- [{-1, 0.3}, {-1, deep - 0.1}, {1, deep - 0.1}, {1, 0.3}],
+                do: {s + along * wide / 2, out}
 
-        for(z <- [z0, z1], do: Wall.tube(line.(z), [0.022, 0.022, 0.022, 0.022], c["rail"], @iron)) ++
-          for i <- 0..count, along = s - wide / 2 + wide * i / count do
-            Wall.tube([Wall.at(w, along, z0, front), Wall.at(w, along, z1, front)], [0.016, 0.016], c["rail"], @iron)
-          end
+          count = max(2, round(wide / 0.6))
+          terrace_rail(w, line, for(i <- 0..count, do: {s0 + wide * i / count, deep - 0.1}), high, c["rail"])
+      end
+
+    # A curved slab is the extrude of its plan; the trim on it reaches 0.1 m past its edge.
+    slab =
+      if curved? do
+        [
+          Wall.outline(slab_plan(w, {s0, s1, deep}, p["round"], 0.0), 0.3, [0, 0, high - 0.15], c["cornice"], @plaster),
+          Wall.outline(
+            slab_plan(w, {s0, s1, deep}, p["round"], -0.1),
+            0.12,
+            [0, 0, high + 0.02],
+            c["trim"],
+            @plaster
+          )
+        ]
+      else
+        [
+          Wall.box(w, s, high - 0.15, {wide, 0.3, deep}, c["cornice"], Map.put(@plaster, "out", deep / 2)),
+          Wall.box(w, s, high + 0.02, {wide + 0.2, 0.12, deep + 0.1}, c["trim"], Map.put(@plaster, "out", deep / 2))
+        ]
+      end
+
+    # The fascia: a band 0.2 m thick round the front and the ends of the slab, from 0.1 m over its top down.
+    fascia =
+      if p["fascia"] > 0 do
+        band = [{s0 - 0.1, 0.0} | front_line({s0, s1, deep}, p["round"], -0.1)] ++ [{s1 + 0.1, 0.0}]
+        inside = [{s0 + 0.1, 0.0} | front_line({s0, s1, deep}, p["round"], 0.1)] ++ [{s1 - 0.1, 0.0}]
+        plan = plan(w, band ++ Enum.reverse(inside))
+        [Wall.outline(plan, p["fascia"], [0, 0, high + 0.1 - p["fascia"] / 2], c["trim"], @plaster)]
       else
         []
       end
 
-    slab = [
-      Wall.box(w, s, high - 0.15, {wide, 0.3, deep}, c["cornice"], Map.put(@plaster, "out", deep / 2)),
-      Wall.box(w, s, high + 0.02, {wide + 0.2, 0.12, deep + 0.1}, c["trim"], Map.put(@plaster, "out", deep / 2))
-    ]
+    {slab ++ fascia ++ columns ++ steps ++ door ++ board, rails}
+  end
 
-    {slab ++ columns ++ steps ++ door ++ board, rails}
+  # The rail of iron round the terrace on a porch: two bars along the line (`{along, out}`), and a post at each
+  # place.
+  defp terrace_rail(w, line, posts, high, color) do
+    {z0, z1} = {high + 0.2, high + 1.05}
+
+    for(
+      z <- [z0, z1],
+      do: bar(for({s, o} <- line, do: Wall.at(w, s, z, o)), color)
+    ) ++
+      for {s, o} <- posts, do: Wall.tube([Wall.at(w, s, z0, o), Wall.at(w, s, z1, o)], [0.016, 0.016], color, @iron)
+  end
+
+  # A bar of iron through points (two points that are at the same place after their round are one).
+  defp bar(points, color) do
+    points = Enum.dedup(points)
+    Wall.tube(points, List.duplicate(0.022, length(points)), color, @iron)
+  end
+
+  # --- A slab with round corners ------------------------------------------------------
+
+  # The front of a slab out of a wall, from `s0` to `s1` along it and `deep` out of it, with a quarter of a circle
+  # of the radius `left` and `right` at its two front corners: the points `{along, out}` from its left end to its
+  # right end, `d` m in from the edge (out of it, when `d` is less than 0).
+  defp front_line({s0, s1, deep}, [left, right], d) do
+    {ml, mr} = {max(left, d), max(right, d)}
+
+    corner = fn {cs, co}, r, from ->
+      for i <- 0..8, a = from - :math.pi() / 16 * i, do: {cs + r * :math.cos(a), co + r * :math.sin(a)}
+    end
+
+    Enum.dedup(
+      corner.({s0 + ml, deep - ml}, ml - d, :math.pi()) ++ corner.({s1 - mr, deep - mr}, mr - d, :math.pi() / 2)
+    )
+  end
+
+  # The plan `[x, y]` of a slab with round corners, from the wall out, `d` m in from its edge.
+  defp slab_plan(w, {s0, s1, _deep} = slab, round, d),
+    do: plan(w, [{s0 + d, 0.0} | front_line(slab, round, d)] ++ [{s1 - d, 0.0}])
+
+  defp plan(w, points), do: Enum.dedup(for({s, o} <- points, do: Enum.take(Wall.at(w, s, 0, o), 2)))
+
+  # `count` + 1 places at equal steps along a line of points `{along, out}`, from its first point to its last.
+  defp spread(points, count) do
+    points = Enum.dedup(points)
+    steps = for {a, b} <- Enum.zip(points, tl(points)), do: {a, b, long([a, b])}
+    for i <- 0..count, do: place(steps, long(points) * i / count)
+  end
+
+  # The length of a line of points `{along, out}`.
+  defp long(points),
+    do:
+      Enum.sum(
+        for {{as, ao}, {bs, bo}} <- Enum.zip(points, tl(points)), do: :math.sqrt((bs - as) ** 2 + (bo - ao) ** 2)
+      )
+
+  defp place([{_, _, long} | [_ | _] = rest], at) when at > long, do: place(rest, at - long)
+
+  defp place([{{as, ao}, {bs, bo}, long} | _], at) do
+    k = min(at / long, 1.0)
+    {as + (bs - as) * k, ao + (bo - ao) * k}
   end
 
   # --- The letters --------------------------------------------------------------------
@@ -916,6 +1277,9 @@ defmodule World.Town.Building do
   # wall, in front of the cornice, or on the top of the cornice.
   defp letter_edits(t, w, b, h) do
     k = t["high"] / 0.75
+    # (The scale along the line: the width of a letter is 0.5 in the box of its strokes. A letter of the width
+    # by default keeps the scale of its height.)
+    along = if t["wide"] == r4(t["high"] / 1.5), do: k, else: t["wide"] / 0.5
 
     out =
       cond do
@@ -925,10 +1289,10 @@ defmodule World.Town.Building do
       end
 
     chars = String.graphemes(t["text"])
-    start = t["at"] - (0.85 * k * length(chars) - 0.35 * k) / 2
+    start = t["at"] - (0.85 * along * length(chars) - 0.35 * along) / 2
 
     for {ch, i} <- Enum.with_index(chars), line <- Map.get(@letters, ch, []) do
-      points = for [x, z] <- line, do: Wall.at(w, start + 0.85 * k * i + x * k, t["z"] + z * k, out)
+      points = for [x, z] <- line, do: Wall.at(w, start + 0.85 * along * i + x * along, t["z"] + z * k, out)
       Wall.tube(points, List.duplicate(0.08 * t["high"], length(points)), b["colors"]["letters"], %{"roughness" => 0.5})
     end
   end

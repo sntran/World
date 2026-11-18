@@ -427,21 +427,64 @@ houses.
     pilasters, the bands, and at the ground storey openings between
     `piers`, `windows` or a `blank` wall), `glass` (a grid of glass) or
     `plain`. A front can stand `out`, and have a `paint` and a `band`.
+    With `balcony` (m, 0.5 to 4), a front has a balcony at each floor
+    over the ground storey, along the front between its insets: a slab
+    0.2 m thick in the color `trim`, with its top at the floor, and the
+    `rail` of the front along its edge (posts with a cross about each
+    1.2 m, or upright bars each 12 cm, in the detail of the near level).
+    `round` (`[left, right]`, each from 0 to `balcony`) puts a quarter of
+    a circle of that radius at the front corners of the slab: `[1.2,
+    1.2]` with `balcony` 1.2 gives round ends, and a front as long as two
+    times the balcony gives a balcony of half a disc. `storeys`
+    (`[first, last]`, 1 for the ground storey; all the storeys by
+    default) puts a front on some storeys only: its windows, its
+    loggias, its glass, its balconies, its pilasters and its paint are
+    from the foot of storey `first` to the top of storey `last` (the
+    eaves, or the next floor). A front over the ground storey has no
+    openings, piers or band at the ground storey: a glazed second
+    storey is a front of `glass` with `storeys` `[2, 2]`.
   - `cornice` (`high`, `out`), and `roof`: `flat` behind a `parapet`, or
     `tiles` on a plan of four square corners (`high`, `inset`, and
     `gables`: the short sides with a gable; each other end has a
     slope).
   - `porches`: a slab on columns with steps and a door of glass; a
-    `board` on its front, or a rail round a `terrace` on it.
+    `board` on its front, or a rail round a `terrace` on it. `round`
+    (`[left, right]`, each from 0 to `deep`, the two `wide` at the
+    most) puts a quarter of a circle of that radius at the front corners
+    of the slab: the slab and its trim are then the extrude of their
+    plan, and the columns and the rail of the terrace are at equal steps
+    along the curved edge. `fascia` (m, 0 to 3) adds a band 0.2 m thick
+    in the color `trim` round the front and the ends of the slab, from
+    0.1 m over its top down.
   - `letters`: a line of text (A to Z) from tubes, in front of a wall or
     of the cornice, or on the top of the cornice. The letters are a part
-    of their own, with small cells.
+    of their own, with small cells. `high` is the height of a letter,
+    and `wide` its width (2/3 of `high` by default; from a quarter of
+    `high` to two times `high`). In place of `wide`, give `long`, the
+    length of the line (m): the full request keeps the `wide` that it
+    gives. A line of n letters is `wide` (1.7 n - 0.7) long. So a sign
+    with narrow letters needs no tubes of its own in `more`.
+  - `blocks`: parts of the plan with their own storeys: a tower over
+    the building, a lower wing, a storey set back behind a terrace.
+    Each block has its own `plan` (corners counterclockwise), `storeys`
+    (1 to 12), `parapet` (of its flat roof; by default the parapet of
+    the roof of the building, or 1 m) and `fronts` (on its own sides,
+    with the same words as a front of the building). Its walls go from
+    the ground to the top of its parapet, and its deck is behind the
+    parapet, as for the building. The masses go from the lowest to the
+    highest, so a block over a lower part fills the deck of that part:
+    a set-back storey is a block with a smaller plan and more storeys,
+    and the deck of the part under it is its terrace. The fronts come
+    after all the masses. A block has no cornice, porch or letters of
+    its own.
   - `more`: edits for a part (`than`: the body, `mai`: the roof, `chu`:
     the letters, `nen`: the ground), for a thing that the rules do not
     have.
 
-  A value that is not possible is an error with its message.
-  `World.Town.Wall` has the tools: a wall with its own axes (the way
+  A value that is not possible is an error with its message. The error
+  of a check of the order is at the path of the value when the rule
+  knows it (for example `options.fronts.1.bays`), and else at
+  `options`. `World.Town.Wall` has the tools: a wall with its own axes (the way
   along it and the height), and on it a box, a paint and a window.
 
   ```text
@@ -718,7 +761,13 @@ An edit can be only at some levels:
   edit is in the sculpture only at those levels. The inside of a large
   model (a room, a well for a stair, an opening for a window) is at
   `near` only: at `mid` and `far` the model is solid, and a paint is in
-  the place of the opening.
+  the place of the opening. An edit in a group (below) can have
+  `levels` too, and so can an edit of the shape `group`: then all the
+  edits of the group are only at those levels. An edit in a group is at
+  a level only when its `levels` and the `levels` of the edit of the
+  shape `group` both have that level. So the details
+  of a group (the joints of a course of blocks) stay out of `mid` and
+  `far`.
 
 An edit can have copies, so a few edits make much:
 
@@ -738,14 +787,15 @@ A group is a list of edits with a name, in `groups` of the data
 (`{"scale": [...edits...]}`; no group in a group). An edit of the shape
 `group` uses it: `{"shape": "group", "group": NAME}` with `at`, `axis`
 and `up` (the place of the origin of the group), a `scale` (its sizes,
-its places and its blends times the scale), and a `mirror` and a `repeat`
-(each copy is the whole group). A sculpture has at most 10,000 edits
-with their copies.
+its places and its blends times the scale), a `mirror` and a `repeat`
+(each copy is the whole group), and `levels`. A sculpture has at most
+10,000 edits with their copies.
 
 ```json
 {"groups": {"eye": [
    {"shape": "ball", "size": [0.012], "color": "#f4f0e6"},
-   {"shape": "ball", "size": [0.006], "at": [0.008, 0, 0], "color": "#101010"}]},
+   {"shape": "ball", "size": [0.006], "at": [0.008, 0, 0], "color": "#101010",
+    "levels": ["near", "mid"]}]},
  "edits": [
    {"shape": "ellipsoid", "size": [0.05, 0.12, 0.05], "color": "#a88840"},
    {"shape": "group", "group": "eye", "at": [0.04, 0.08, 0.015], "mirror": "x"},
@@ -1671,25 +1721,43 @@ other clothes are on layer 1), `shape` (a list of `[target, weight]`: the
 body and all the clothes take that shape when the item is worn; the cups
 of `world_bra` lift the bust and make it round) and `drape` (the points
 of the mesh that span the dips of the body, and the steps of the span of
-the fabric; or null). The drape runs when the item fits a body: each of
+the fabric; or null). The swim trunks (`world_swim_trunks`) are of a thin
+polyester, with an elastic band in small folds (`gather` of a piece), a
+cord at the front, and loose legs to the middle of the thigh (`loose`:
+the ease goes from the hip to the hem along a line, at each hem). The drape runs when the item fits a body: each of
 its points moves out along its offset to the mean of its neighbors, and
 never nearer to the body than at the fit.
 
 The levels: near is the full body with the clothes and the hair; mid is
 a body of about 1,600 faces with the hair (with each face on the
 breasts cut in sixteen, on the surface of the body: about 1,900 faces);
-far is a body of 730 faces: a person at far is about 1,550 triangles.
+far is a body of 730 faces: a person at far is about 1,600 triangles.
+At mid and far, the clothes keep their form. The body wears the form of
+the clothes that are close to it: each point of the body under an item
+moves out to the item (the outermost item, where it is less than 2.5 cm
+out). The loose part of an item (its faces with each point 2.5 cm or
+more out of its place on the body: a tunic, the panels of an áo dài, the
+legs of wide pants under the knee, a hood up or down, shoes) is a mesh
+of its own: the fitted mesh made smaller (`World.Simplify`, with half as
+many triangles for each square meter as the body, the points of a hem
+pinned, each point that stays at its place), in the color of the item
+and seen from its two sides. The faces of the body under it go. A
+person in a tunic is as deep at the hips at mid and far as at near.
 At mid and far, the faces under clothes have the colors of the
 clothes: an item of MakeHuman with a texture of many colors (blue
 overalls over a white shirt) gives each point the color of the swatch of
 its texture (`NAME.swatch.png`, 64 by 64 texels, `scripts/swatches.py`)
 at the place of the item over that point, tinted by the color of the
 order as at near, and its material is white; a garment of World is of
-one fabric, and its material has its color. Each point of the sole of a foot goes down to the ground
-of the shoes: a person stands on z = 0 at each level. At far the scalp
+one fabric, and its material has its color. The ground is under the
+lowest point that shows at near (a heel of the body under the sole of a
+shoe does not count). Each point of the sole of a foot goes to the
+ground of the shoes, and no point goes under the ground: a person
+stands on z = 0 at each level, within 2 mm. At far the scalp
 has the color of the hair, and the hair has its form in 80 triangles at
-the most (the points of its mesh in one cell of a grid become one
-point), so a person is as high as at near (3 cm less at the most) and
+the most (the points of its mesh in one cell of a grid become the point
+of the cell farthest out, and they stretch to the box of the whole
+hair), so a person is as high as at near (within 0.5 %) and
 long hair is long. The eyes at far have 24 triangles. A face under
 two items has the color of the item on the outer layer, then of the
 item that covers the most of its points; with the same count, the item
@@ -1715,6 +1783,34 @@ The colors of a person (`hair_color`, `clothes_colors`):
 - At near, the color of an item is a tint of its texture: the factor is
   the color of the order over the mean color of the texture, at most 1.
   A tint can only make a texture darker.
+
+The options of each item of the clothes (`clothes_options`, a list in
+the order of `clothes`, as `clothes_colors`; `World.Sewing.garment/2`).
+An order with no options of the clothes has no key `clothes_options` in
+its full order, so its hash is the same as before the option.
+
+- `hem`: the height of the hem of a garment of World, on the scale of
+  the legs of the base mesh: -1 at the waist, 0 at the hip joint, 1 at
+  the knee, 2 at the ankle (0.5 is the middle of the thigh). The pieces
+  with the lowest hem of the garment take it (the legs of pants or of
+  shorts, the body of a jacket, the panels of an áo dài), and the sewing
+  shop sews the garment again at the build, with its ease at the new
+  hem. null keeps the hem as sewn. A hem over the top of a piece is an
+  error of the check.
+- `hood`: `down` (the hood folded at the back of the neck) or `up` (a
+  piece over the back, the top and the sides of the head, 2.5 cm out
+  for the hair, open at the face). Only a garment of World with a hood
+  (`world_rain_shell`).
+- `print`: `plain`, `checks` or `stripes`, with `print_color` (the color
+  of the lines; white by default) and `print_size` (the width of a check
+  or a stripe, m; 0.03 by default). The color of the item is the ground.
+  The print is on the base mesh at rest (`World.Sewing.print/2`): checks
+  of the size along the three axes, and stripes up and down the body.
+  So it is the same at each level and moves with the cloth. At near the
+  points of the item have the colors of the print over the mean color
+  of its texture, and the material is white; at mid and far the points
+  of the body under the item have the colors of the print. Any item
+  takes a print.
 
 A pose turns bones around their heads: a map of a bone to a list of
 `{axis, degrees}`, with the axes of World when the person stands at

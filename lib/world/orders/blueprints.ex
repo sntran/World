@@ -50,7 +50,7 @@ defmodule World.Orders.Blueprints do
     {"street_house", World.Town.House, :request,
      "A house of a street of Vũng Tàu that looks real, from a request of a few words: type (cap4, pho2_flat, pho2_tile, pho3), family (old, steel, modern), width, depth, road, use, wall, sign, seed and more. The rules of World.Town.House make each choice that the request does not make, and its drawing: one part from edits for each of its walls, its roof, its doors."},
     {"building", World.Town.Building, :spec,
-     "A building of a town that is not a house of a row (a hotel, an office, a villa), from a request: size or outline, storeys, floor, fronts (each with a style: plain, windows, loggias, glass; bays, a porch), roof (flat or tiles), colors, letters. The rules of World.Town.Building make its drawing."},
+     "A building of a town that is not a house of a row (a hotel, an office, a villa), from a request: size or outline, storeys, floor, fronts (each with a style: plain, windows, loggias, glass; bays, balconies, the storeys it is on), porches (straight or curved), blocks (parts of the plan with their own storeys), roof (flat or tiles), colors, letters. The rules of World.Town.Building make its drawing."},
     {"village_house", World.Village.House, :request,
      "A house of a village of old Việt Nam: a frame of round posts, bays in a row, a porch, a low base or stilts with a stair, and a large roof of thatch or tiles with four slopes that curve. The request: bays (1 to 7), bay (m), deep (m), porch (m), stilts (m), wall (wood, bamboo, earth), roof (thatch, tiles), curve (0 to 1), eaves (m), age (0 to 1)."},
     {"village_thing", World.Village.Yard, :request,
@@ -244,6 +244,7 @@ defmodule World.Orders.Blueprints do
         )
       end,
       check: &origin_check/1,
+      resolve: &no_clothes_options/1,
       sources: ["MakeHuman 1.x, the data of the base mesh, the targets and the assets (CC0)."]
     }
   end
@@ -352,11 +353,16 @@ defmodule World.Orders.Blueprints do
   defp word(key), do: option(key, :data, default: nil, check: fn value, _path -> {:ok, value} end)
   defp given(o), do: Map.reject(o, fn {_, v} -> v == nil end)
 
-  # The full request of a rule, or its error (a rule raises an `ArgumentError` with the reason).
+  # The full request of a rule, or its error (a rule raises an `ArgumentError` with the reason). A reason can
+  # start with the path of the value in the request (`letters.0.wide: ...`): the error is at that path.
   defp resolved(fun) do
     {:ok, fun.()}
   rescue
-    e in ArgumentError -> {:error, [{"options", e.message}]}
+    e in ArgumentError ->
+      case Regex.run(~r/^([a-z0-9_]+(?:\.[a-z0-9_]+)*): (.+)$/s, e.message) do
+        [_, path, reason] -> {:error, [{"options.#{path}", reason}]}
+        nil -> {:error, [{"options", e.message}]}
+      end
   end
 
   # One side of a street: the plan of its lots from a seed (`World.Town.Street`), and the houses of some of
@@ -397,7 +403,7 @@ defmodule World.Orders.Blueprints do
     %Blueprint{
       name: "plant",
       doc:
-        "A plant of the nursery (World.Plants), from the rules of its species: coconut (the coconut palm), areca (the areca palm, cau), banana, bamboo (a clump of thorny bamboo) or frangipani. The levels come from the rules: far away a frond or a spray of leaves is one card. For a count of triangles of a project, ask for the file light with triangles.",
+        "A plant of the nursery (World.Plants), from the rules of its species: coconut (the coconut palm), areca (the areca palm, cau), banana, bamboo (a clump of thorny bamboo), frangipani or araucaria (the Norfolk Island pine, bách tán). The levels come from the rules: far away a frond or a spray of leaves is one card. For a count of triangles of a project, ask for the file light with triangles.",
       options: [
         option("species", :choice, default: "coconut", values: World.Plants.species()),
         option("height", :number,
@@ -417,7 +423,7 @@ defmodule World.Orders.Blueprints do
               do: option(key, :number, default: nil, min: if(whole?, do: max(1, lo), else: lo), max: hi)
             ),
           doc:
-            "Numbers of the plant over the numbers of its species (priv/plants/species.json), in meters and degrees: a project gives the numbers of the plant that it wants, and corrects them after it looks at the model. A palm: trunk (its width), base, lean, fronds (their count), frond (its length), leaflet, nuts, nut, crownshaft. Each species has its own keys."
+            "Numbers of the plant over the numbers of its species (priv/plants/species.json), in meters and degrees: a project gives the numbers of the plant that it wants, and corrects them after it looks at the model. A palm: trunk (its width), base, lean, fronds (their count), frond (its length), leaflet, nuts, nut, crownshaft. An araucaria: trunk, clear (the height of the lowest tier), tiers (their count), whorl (the branches in a tier), crown (the width of the lowest tier), branchlet (its length). Each species has its own keys."
         )
       ],
       build: fn o ->
@@ -431,6 +437,7 @@ defmodule World.Orders.Blueprints do
             "banana" -> World.Plants.banana(opts)
             "bamboo" -> World.Plants.bamboo(opts)
             "frangipani" -> World.Plants.frangipani(opts ++ [month: o["month"]])
+            "araucaria" -> World.Plants.araucaria(opts)
           end
         end)
       end,
@@ -446,8 +453,12 @@ defmodule World.Orders.Blueprints do
     for {key, v} <- Enum.sort(o["numbers"]),
         v != nil,
         key not in known,
-        do: {"options.numbers.#{key}", "a #{o["species"]} has no number #{key}: #{Enum.join(known, ", ")}"}
+        do:
+          {"options.numbers.#{key}",
+           "#{article(o["species"])} #{o["species"]} has no number #{key}: #{Enum.join(known, ", ")}"}
   end
+
+  defp article(word), do: if(word =~ ~r/^[aeiou]/, do: "an", else: "a")
 
   # --- A group at a morning of exercise ------------------------------------------------------
 
@@ -467,6 +478,10 @@ defmodule World.Orders.Blueprints do
       ],
       build: fn o ->
         World.People.exercise(o["routine"], count: round(o["count"]), seed: round(o["seed"]), fans: o["fans"])
+      end,
+      # (Each person is a part of the parts list, made alone.)
+      pieces: fn o ->
+        World.People.exercise_pieces(o["routine"], count: round(o["count"]), seed: round(o["seed"]), fans: o["fans"])
       end,
       sources: ["People of World from the data of MakeHuman (CC0), and the routines of World.People.Pose."]
     }
@@ -519,6 +534,7 @@ defmodule World.Orders.Blueprints do
 
         origin_check(o) ++ foot
       end,
+      resolve: &no_clothes_options/1,
       sources: ["The vehicles of World, and a person from the data of MakeHuman (CC0)."]
     }
   end
@@ -585,6 +601,43 @@ defmodule World.Orders.Blueprints do
           doc:
             "A color for each item of the clothes, in their order: at mid and far its color, at near a tint of its texture."
         ),
+        option("clothes_options", :list,
+          default: [],
+          max: 6,
+          item:
+            option("item", :object,
+              fields: [
+                option("hem", :number,
+                  default: nil,
+                  min: -1.0,
+                  max: 2.0,
+                  doc:
+                    "The height of the hem of a garment of World: -1 at the waist, 0 at the hip, 1 at the knee, 2 at the ankle (0.5 is the middle of the thigh). None: the hem as sewn."
+                ),
+                option("hood", :choice,
+                  default: "down",
+                  values: ["down", "up"],
+                  doc:
+                    "The hood of a jacket of World with a hood (world_rain_shell): down on the back, or up on the head."
+                ),
+                option("print", :choice,
+                  default: "plain",
+                  values: ["plain", "checks", "stripes"],
+                  doc: "A print on the item: checks, or stripes up and down. The color of the item is its ground."
+                ),
+                option("print_color", :color, default: "#ffffff", doc: "The color of the lines of the print."),
+                option("print_size", :number,
+                  default: 0.03,
+                  min: 0.005,
+                  max: 0.2,
+                  unit: "m",
+                  doc: "The width of a check or of a stripe."
+                )
+              ]
+            ),
+          doc:
+            "The options of each item of the clothes, in their order (World.Sewing.garment/2): its hem, its hood and its print. An order with none has no key clothes_options in its full order."
+        ),
         option("face", :choice,
           default: "relaxed",
           values: ["relaxed", "neutral"],
@@ -616,16 +669,47 @@ defmodule World.Orders.Blueprints do
         hair_color: o["hair_color"] && rgb(o["hair_color"]),
         clothes: o["clothes"],
         clothes_colors: Enum.map(o["clothes_colors"], &rgb/1),
+        clothes_options: Enum.map(Map.get(o, "clothes_options", []), &clothes_options/1),
         face: o["face"],
         blink: o["blink"]
       ]
   end
 
   defp origin_check(o) do
-    if Enum.all?(o["origin"], fn {_, w} -> w == 0 end),
-      do: [{"options.origin", "must have one weight more than 0"}],
-      else: []
+    origin =
+      if Enum.all?(o["origin"], fn {_, w} -> w == 0 end),
+        do: [{"options.origin", "must have one weight more than 0"}],
+        else: []
+
+    options = Map.get(o, "clothes_options", [])
+
+    more =
+      if length(options) > length(o["clothes"]),
+        do: [{"options.clothes_options", "must have at most one item for each item of the clothes"}],
+        else: []
+
+    items =
+      for {{name, opts}, i} <- Enum.with_index(Enum.zip(o["clothes"], options)),
+          {key, message} <- World.Sewing.check(name, clothes_options(opts)),
+          do: {"options.clothes_options.#{i}.#{key}", message}
+
+    origin ++ more ++ items
   end
+
+  # The options of an item of the clothes for World.People.Human.person/2.
+  defp clothes_options(o),
+    do: %{
+      hem: o["hem"],
+      hood: o["hood"],
+      print: o["print"],
+      print_color: rgb(o["print_color"]),
+      print_size: o["print_size"]
+    }
+
+  # An order with no options of the clothes has no key clothes_options: its hash stays the same as before
+  # the option.
+  defp no_clothes_options(%{"clothes_options" => []} = o), do: {:ok, Map.delete(o, "clothes_options")}
+  defp no_clothes_options(o), do: {:ok, o}
 
   # --- A house -----------------------------------------------------------------------------
 

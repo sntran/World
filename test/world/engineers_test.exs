@@ -154,11 +154,11 @@ defmodule World.EngineersTest do
 
     base = %{
       "project" => "vung_tau",
-      "tool" => "A species of the plant blueprint: a tree of layers of flat branches on a straight trunk.",
-      "gap" => "araucaria is not a species of the plant blueprint."
+      "tool" => "A species of the plant blueprint: a tree with a thick trunk that holds water and a small crown.",
+      "gap" => "baobab is not a species of the plant blueprint."
     }
 
-    order = %{"blueprint" => "plant", "options" => %{"species" => "araucaria"}}
+    order = %{"blueprint" => "plant", "options" => %{"species" => "baobab"}}
 
     assert %{"structuredContent" => %{"hash" => hash, "check" => %{"errors" => [error]}}} =
              call.(Map.put(base, "order", order))

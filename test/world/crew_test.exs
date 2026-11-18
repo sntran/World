@@ -185,8 +185,8 @@ defmodule World.CrewTest do
     assert byte_size(Crew.version()) == 16 and Crew.hello(Crew.version()) == {:ok, 2 * System.schedulers_online()}
     assert Crew.hello("another code") == {:error, :code}
 
-    # (In the place of the connect of Erlang: this node is the other node of the test.)
-    c = crews(:crew_test_a, workers: 3, connect: fn _ -> true end)
+    # (In the place of the connect of Erlang: this node is the other node of the test, and these crews have another name.)
+    c = crews(:crew_test_a, workers: 3, connect: fn _ -> true end, me: fn -> :this@host end)
     assert Crew.state(:crew_test_a) == %{workers: 3, nodes: [me], sites: 0}
     assert Crew.join(me, :crew_test_a) == :ok
     assert Crew.state(:crew_test_a).nodes == [me, me]
@@ -207,7 +207,7 @@ defmodule World.CrewTest do
     wait = fn wait, done? -> if done?.(), do: :ok, else: Process.sleep(5) && wait.(wait, done?) end
     wait.(wait, fn -> Crew.state(:crew_test_d).nodes == [me, me] end)
     assert Agent.get(tries, & &1) == 4
-    send(d, {:nodedown, me})
+    send(d, {:nodedown, me, node_type: :visible})
     wait.(wait, fn -> Agent.get(tries, & &1) == 5 end)
     wait.(wait, fn -> Crew.state(:crew_test_d).nodes == [me, me] end)
     # (A try when the node shares its workers already changes nothing; any other word too.)
@@ -215,17 +215,46 @@ defmodule World.CrewTest do
     send(d, :hello)
     assert Crew.state(:crew_test_d).nodes == [me, me]
     # Another node goes: nothing to try. A node comes by itself: it shares when it has the code.
-    send(c, {:nodedown, :other@host})
-    send(c, {:nodeup, me})
+    send(c, {:nodedown, :other@host, node_type: :visible})
+    send(c, {:nodeup, me, node_type: :hidden})
     wait.(wait, fn -> Crew.state(:crew_test_a).nodes == [me, me] end)
+    # (The start of the distribution of this node: it does not share with itself.)
+    h = crews(:crew_test_h, me: fn -> me end, connect: fn _ -> true end)
+    send(h, {:nodeup, me, node_type: :visible})
+    assert Crew.state(:crew_test_h).nodes == [me]
     # A leave of the node of the options: no more tries.
     assert Crew.leave(me, :crew_test_d) == :ok
     Process.sleep(40)
     assert Crew.state(:crew_test_d).nodes == [me]
 
+    # A node that greets these crews: they greet it too, and it shares its workers (once).
+    assert Crew.hello(Crew.version(), :other@host, :crew_test_d) == {:ok, 2 * System.schedulers_online()}
+    send(d, {:hello, me})
+    wait.(wait, fn -> Crew.state(:crew_test_d).nodes == [me, me] end)
+    send(d, {:hello, me})
+    assert Crew.state(:crew_test_d).nodes == [me, me]
+
     # At their end, the crews take away what their streams read: the crews by default.
     stop_supervised!(:crew_test_d)
     assert Crew.state(:crew_test_d) == %{workers: 2 * System.schedulers_online(), nodes: [me], sites: 0}
+  end
+
+  test "the crews of the edge lend no workers and give no jobs: the nodes that join take whole parts" do
+    me = node()
+    e = crews(:crew_test_f, lend: false, borrow: false, connect: fn _ -> true end)
+    # (This node answers for the crews by default, which lend their workers.)
+    assert Crew.join(me, :crew_test_f) == :ok
+    assert Crew.parts(:crew_test_f) == [{{World.Crew.Tasks, me}, 2 * System.schedulers_online()}]
+    assert Crew.state(:crew_test_f).nodes == [me, me]
+    # Its streams give no jobs to the other node: all are here.
+    assert Crew.map(1..10, &(&1 * 2), crews: :crew_test_f) == Enum.to_list(2..20//2)
+    # A node that joins these crews gets no workers: the edge takes no parts and no jobs.
+    assert Crew.hello(Crew.version(), nil, :crew_test_f) == {:ok, 0}
+    g = crews(:crew_test_g, connect: fn _ -> true end)
+    send(g, {:hello, me})
+    assert Crew.leave(me, :crew_test_g) == :ok
+    assert Crew.parts(:crew_test_g) == []
+    assert Process.alive?(e)
   end
 
   test "the options of the crews from the environment; the crews start the node with their name" do
@@ -233,6 +262,8 @@ defmodule World.CrewTest do
 
     assert World.Supervisor.crews(%{"WORLD_NODE" => "a4371@127.0.0.1", "WORLD_COOKIE" => "c", "WORLD_JOIN" => "b@h"}) ==
              [node: :"a4371@127.0.0.1", cookie: :c, join: :b@h]
+
+    assert World.Supervisor.crews(%{"WORLD_LABOUR" => "parts"}) == [lend: false, borrow: false]
 
     # (Here: a function in the place of the start of a node.)
     me = self()

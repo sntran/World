@@ -498,6 +498,35 @@ and no logo on them.
     Done: `World.Surface` (the UVs in meters, `TEXCOORD_1` and `COLOR_0`;
     `docs/format.md`, "GLB"). A house keeps all its roles: the game
     merges them into its 6 materials (the owner chose this).
+- **The construction is in the project (W24 to W28, plan 0027).** World
+  works as Dreams: World gives the tools, the parts and the labour, and
+  a project does the construction. The factory does not join the parts
+  of a model into one model, and it does not keep a whole model in its
+  memory (`World.Elements`, `docs/factory.md`, "The parts of a model").
+  - **A parts list (W24).** For an order at each level: each part with
+    its key, its node, its place (a matrix), its material roles and its
+    joint, and the joints, the ports and the collision boxes of the
+    model. No join. At the factory (`/o/HASH.elements.json`,
+    `.mid.elements.json`, `.far.elements.json`) and with `mix
+    world.order`. Done.
+  - **A URL for each part by its key (W25).** `/p/KEY.glb`, kept in the
+    store of the parts (R2, `parts/KEY.glb`) with no end. The key is a
+    hash of the data of the part and of the version of its rule. Done.
+  - **Each part fits the memory of the edge (W26).** A large sculpture is
+    cut into parts (each with a budget of 4,000 triangles or more) and
+    each part is made in steps of at most 20,000 faces, so that no soft
+    blend crosses two parts when a cut can miss it. Done: each part of
+    Hải Âu at far, mid and near fits the edge (`docs/factory.md`, "The
+    parts of a model"). Still to do: a part of a large flat surface at
+    fine cells takes long (22 minutes for the base of Hải Âu at near);
+    the guard measures the memory of the processes, which is less than
+    the memory of the VM at the edge.
+  - **An edit builds only the parts whose data changed (W27).** Done: a
+    part of a sculpture has the edits near it in its key; a part that is
+    made has its content as its key.
+  - **The events `element` of `POST /builds` give the keys of W25
+    (W28).** Done: the GLB of each element goes into the store of the
+    parts, and `/p/KEY.glb` serves it after the construction.
 - **Buildings and statues (W13, plan 0008).** The known places of Vũng
   Tàu, and the temples and statues of other projects (Tre), are one of
   a kind, but each one is an assembly of parts with a grammar, like a

@@ -52,6 +52,23 @@ made, so that you can change one of them later:
   aircraft, a ship, a vehicle, a wind turbine or a tree in about 220
   triangles). Ask for the file `flat` of its order.
 
+Some words of a `building` (`docs/format.md`, "A house and a street
+from rules", has all of them):
+
+- a line of `letters` has `wide`, the width of a letter (2/3 of its
+  height by default), or `long`, the length of the line: a sign with
+  narrow letters needs no tubes of its own in `more.chu`;
+- a front has a `balcony` at each floor over the ground storey, with
+  square or round ends (`round`: `[left, right]`, the radius at each
+  front corner);
+- a porch has a curved front (`round`: a quarter of a circle at a front
+  corner) and a `fascia` round it;
+- `blocks` are parts of the plan with their own `plan`, `storeys`,
+  `parapet` and `fronts`: a tower over the building, a lower wing, a
+  storey set back behind a terrace;
+- a front can be on some storeys only (`storeys`: `[first, last]`, 1 for
+  the ground storey), for example a glazed second storey.
+
 The MCP server has no tool for one kind of model. Its tools are for a
 model of any kind: `list_blueprints` and `get_blueprint` to find a
 rule, `check_order` and `place_order` to ask, `edit_order` to change,
@@ -66,12 +83,29 @@ items of `clothes`: `world_ao_canh` (a loose tunic with long sleeves),
 `world_ao_coc` (short sleeves), `world_quan_ong_rong` (wide pants) and
 `world_quan_dui` (short pants), each with its color in
 `clothes_colors`. With no shoes in `clothes`, the person has bare feet.
+Swim shorts are `world_swim_trunks` (thin polyester, an elastic band
+with a cord, loose legs to the middle of the thigh). Each item has its
+options in `clothes_options` (`docs/format.md`, "A person"): `hem` (a
+garment of World: 0.5 is the middle of the thigh, 1 the knee), `hood`
+(`up` or `down`, for a jacket of World with a hood: `world_rain_shell`;
+the hood of `elvs_hooded_sweat_jacket1` is down only), and `print`
+(`checks` or `stripes` in `print_color`, on any item). Change the length
+or the print with an edit of these options, not with a new garment. At
+mid and far a person keeps the form of a loose garment and of a hood.
 The option `wear` puts parts from edits on the head: the half helmet of
 a rider (`mu_bao_hiem_edits`), hair (`toc_ngan_edits`, `toc_bui_edits`,
 `toc_dai_edits`) and a nón lá (`non_la_edits`); a helmet and hair take
 the size of the head of the person.
-The animal `buffalo_calf` is the calf of a water buffalo, and the plant
-`areca` is the areca palm.
+The animal `buffalo_calf` is the calf of a water buffalo, the plant
+`areca` is the areca palm, and the plant `araucaria` is the Norfolk
+Island pine (bách tán), with the numbers `tiers`, `whorl` (the branches
+in a tier), `crown`, `clear` and `branchlet`.
+
+In a drawing of edits, an edit can be only at some levels (`levels`):
+an edit at the top, an edit in a group, or an edit of the shape `group`
+(all the edits of the group). Put the small details of a group (the
+joints of a course of blocks) at `near` only, so that the mid and far
+levels stay simple.
 
 ## An order
 
