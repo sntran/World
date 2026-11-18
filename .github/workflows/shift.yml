@@ -3,25 +3,25 @@ name: Construction shift
 # A construction shift (docs/factory.md, "Construction shifts"): the node
 # of this runner joins the node of the edge (World.Crew) over
 # wss://world.mkfifo.com/.tcp/4370 (the tcp-proxy.mjs of beam.com), takes
-# whole parts by their key (World.Labour), puts each GLB in R2 itself,
-# and goes home: after 60 minutes with no work, or 15 minutes before the
-# end of the time of its job (World.Shift). It is not a server that stays
-# up, and it takes no public orders.
+# whole parts by their key (World.Labour), puts each GLB in R2 through
+# the store of the Worker, and goes home: after 60 minutes with no work,
+# or 15 minutes before the end of the time of its job (World.Shift). It
+# is not a server that stays up, and it takes no public orders.
 #
 # The edge starts it (shift.js, workflow_dispatch with the fine-grained
 # token WORLD_SHIFT_TOKEN of the Worker), for the commit that the edge
 # runs: the crews refuse a node with other code. The owner can start it
 # by hand too.
 #
-# The secrets of the repository:
-#
-# - DIST_COOKIE: the cookie of the nodes, the same as the secret of the
-#   Worker (32 random bytes or more).
-# - WORLD_R2_ENDPOINT, WORLD_R2_KEY_ID, WORLD_R2_SECRET: the S3 API of
-#   R2 (https://ACCOUNT.r2.cloudflarestorage.com) and a token of the
-#   bucket world only (read and write of objects).
-# - WORLD_PROJECT_TOKENS: NAME=TOKEN of each project, as in the Worker,
-#   for the issues of the shifts (scripts/shift-issues.mjs).
+# The job uses no secret (docs/factory.md, "The secrets"). It asks
+# GitHub for its ID token (id-token: write), with the audience of the
+# factory, and sends it to the edge (POST /shift/join, scripts/
+# shift-join.mjs). The Worker checks that the token is of this workflow
+# on main of this repository. The edge gives the name of the node of the
+# runner, a cookie of 32 random bytes for that node only, and the pass of
+# the shift: the store of the Worker takes only the parts that the edge
+# gave to this shift. At the end of the shift, the edge forgets the
+# cookie and the pass.
 on:
   workflow_dispatch:
     inputs:
@@ -48,6 +48,8 @@ permissions:
   contents: read
   # The comments on the issues of the shifts, and their close.
   issues: write
+  # The ID token of the job, which proves the shift to the edge.
+  id-token: write
 
 # One shift at a time. A start while a shift runs waits for its end
 # (GitHub keeps one run that waits).
@@ -151,11 +153,6 @@ jobs:
       - name: The shift
         env:
           WORLD_URL: https://world.mkfifo.com
-          WORLD_COOKIE: ${{ secrets.DIST_COOKIE }}
-          WORLD_R2_ENDPOINT: ${{ secrets.WORLD_R2_ENDPOINT }}
-          WORLD_R2_KEY_ID: ${{ secrets.WORLD_R2_KEY_ID }}
-          WORLD_R2_SECRET: ${{ secrets.WORLD_R2_SECRET }}
-          WORLD_PROJECT_TOKENS: ${{ secrets.WORLD_PROJECT_TOKENS }}
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: sh scripts/shift.sh
@@ -165,7 +162,6 @@ jobs:
         if: always()
         env:
           WORLD_URL: https://world.mkfifo.com
-          WORLD_PROJECT_TOKENS: ${{ secrets.WORLD_PROJECT_TOKENS }}
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/shift-issues.mjs check

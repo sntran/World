@@ -68,68 +68,11 @@ export const orderStore = (bucket) => ({
   },
 });
 
-// The R2 bucket for the node of a construction shift (docs/factory.md,
-// "Construction shifts"), through the S3 API of R2, with a token of the
-// bucket only (an access key and its secret): the node reads the orders
-// and the recipes, and puts the GLB of each part that it builds. The GLB
-// does not go through the edge. s3 is { endpoint, bucket, keyId, secret,
-// region }: endpoint is https://ACCOUNT.r2.cloudflarestorage.com, and the
-// region of R2 is "auto".
-export const s3Bucket = (s3, fetcher = fetch, clock = () => new Date()) => {
-  const call = async (method, key, body) => {
-    const url = new URL(`${s3.endpoint}/${s3.bucket}/${key}`);
-    const bytes = body ? new Uint8Array(body) : new Uint8Array(0);
-    const headers = await sign({ method, url, headers: {}, payload: bytes, date: clock(), ...s3 });
-    const r = await fetcher(url, { method, headers, body: body ? bytes : undefined });
-    if (r.status === 404) return null;
-    if (!r.ok) throw new Error(`the S3 store: ${r.status}`);
-    return r;
-  };
-  return {
-    async get(key) {
-      const r = await call('GET', key);
-      return r && { body: r.body };
-    },
-    async head(key) {
-      return (await call('HEAD', key)) && {};
-    },
-    async put(key, bytes) {
-      await call('PUT', key, bytes);
-    },
-  };
-};
-
-const hex = (bytes) => [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
-const sha256 = async (data) => hex(await crypto.subtle.digest('SHA-256', typeof data === 'string' ? new TextEncoder().encode(data) : data));
-
-async function hmac(key, text) {
-  const k = await crypto.subtle.importKey('raw', typeof key === 'string' ? new TextEncoder().encode(key) : key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  return crypto.subtle.sign('HMAC', k, new TextEncoder().encode(text));
-}
-
-// The headers of a request with AWS Signature Version 4 (the S3 API):
-// host, x-amz-date, x-amz-content-sha256 and authorization, with the
-// other headers of the request. Each header of the request is signed.
-export async function sign({ method, url, headers, payload, date, keyId, secret, region = 'auto', service = 's3' }) {
-  const stamp = date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const day = stamp.slice(0, 8);
-  const all = { ...headers, host: url.host, 'x-amz-content-sha256': await sha256(payload), 'x-amz-date': stamp };
-  const names = Object.keys(all).map((n) => n.toLowerCase()).sort();
-  const value = (n) => String(Object.entries(all).find(([k]) => k.toLowerCase() === n)[1]).trim();
-  const path = url.pathname.split('/').map((p) => encodeURIComponent(decodeURIComponent(p))).join('/');
-  const query = [...url.searchParams].map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).sort().join('&');
-  const canonical = [method, path, query, ...names.map((n) => `${n}:${value(n)}`), '', names.join(';'), all['x-amz-content-sha256']].join('\n');
-  const scope = `${day}/${region}/${service}/aws4_request`;
-  const text = ['AWS4-HMAC-SHA256', stamp, scope, await sha256(canonical)].join('\n');
-  let key = await hmac(`AWS4${secret}`, day);
-  for (const part of [region, service, 'aws4_request']) key = await hmac(key, part);
-  const signature = hex(await hmac(key, text));
-  return { ...all, authorization: `AWS4-HMAC-SHA256 Credential=${keyId}/${scope}, SignedHeaders=${names.join(';')}, Signature=${signature}` };
-}
-
-// The store of the Worker, BASE/KEY (for a test on one computer, where
-// the local edge has no S3 API: docs/factory.md, "A shift on this
-// computer"), with the token WORLD_STORE_TOKEN.
+// The store of the Worker, BASE/KEY (https://world.mkfifo.com/store),
+// for the node of a construction shift: it reads the orders and the
+// recipes of its parts, and puts the GLB of each part that it builds,
+// with the pass of its shift (or the token of the store of a test on one
+// computer). The Worker writes R2 with its binding.
 export const remoteBucket = (base, token, fetcher = fetch) => {
   const call = async (method, key, body) => {
     const r = await fetcher(`${base}/${key}`, { method, body, headers: { authorization: `Bearer ${token}` } });

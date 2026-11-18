@@ -811,20 +811,21 @@ and it does not take the public orders.
 
 **A request** starts a shift, or joins the shift that runs:
 
-- An issue of the form "A construction shift" (label `shift`): the
-  project, its orders (one link to its `orders.json` at a commit, or the
-  hashes of orders), the levels, and the hours. The job
-  `.github/workflows/shift-request.yml` starts at once only for an issue
-  of a member; another issue waits until the owner adds the label again.
-  The job puts no text of the issue in a shell command: the text goes to
-  `scripts/shift-issues.mjs` in the environment, and only checked values
-  go on (`scripts/shift-form.mjs`). The job gets the parts lists with
-  the token of the project, and asks once for each part.
-- An order of a project at the edge: a request with a project token
-  (`authorization: Bearer TOKEN`, the secret `WORLD_PROJECT_TOKENS` of
-  the Worker). A part that the edge cannot build (its memory, or its CPU
-  limit) waits in the queue of the edge (`World.Labour`). A part of a
-  public order that the edge cannot build gets 422.
+- Most requests come through the API of the factory: an order of a
+  project (below, "The secrets": how a project proves who it is). A part
+  that the edge cannot build (its memory, or its CPU limit) waits in the
+  queue of the edge (`World.Labour`). A part of a public order that the
+  edge cannot build gets 422.
+- An issue of the form "A construction shift" (label `shift`), for a
+  request by hand: the project, its orders (one link to its
+  `orders.json` at a commit, or the hashes of orders), the levels, and
+  the hours. The job `.github/workflows/shift-request.yml` starts at
+  once only for an issue of a member; another issue waits until the
+  owner adds the label again. The job puts no text of the issue in a
+  shell command: the text goes to `scripts/shift-issues.mjs` in the
+  environment, and only checked values go on (`scripts/shift-form.mjs`).
+  The job gets the parts lists with its ID token, for the project of the
+  form, and asks once for each part.
 
 When a shift runs, the edge gives it the new parts at once. When no
 shift runs, the edge keeps the parts in its queue and starts a shift:
@@ -847,14 +848,27 @@ for the new parts; it waits for the end of the shift that runs.
 | A part that fails | 3 tries on nodes of shifts, then an error | `World.Labour` |
 | WebSockets on `/.tcp/` | 4 open at most (`BEAM_MAX_WEBSOCKETS`) | `wrangler.jsonc` |
 
-**The node of the shift** joins the node of the edge. It dials out
-through the `tcp-proxy.mjs` of beam.com to
-`wss://world.mkfifo.com/.tcp/4370` (`scripts/shift.sh`). The edge has
-`DIST_NAME` and `DIST_LISTEN=true`, and the cookie of the nodes
-`DIST_COOKIE`: a random value of 32 bytes or more, the same in the
-secret of the Worker and in the secret of the repository. The runner
-checks out the commit that the edge runs (the crews refuse other code),
-with the deps and the build in the cache. The edge starts the
+**The node of the shift** joins the node of the edge
+(`scripts/shift.sh`):
+
+1. The job asks GitHub for its ID token (`id-token: write`, the audience
+   `https://world.mkfifo.com`) and sends it to `POST /shift/join`
+   (`scripts/shift-join.mjs`). The Worker checks the token (`oidc.js`,
+   "The secrets").
+2. The edge (`World.Shift.Passes`) gives the runner a name for its node
+   (each runner its own), a cookie of 32 random bytes for that node only
+   (`:erlang.set_cookie/2`), the name of the node of the edge, and the
+   pass of the shift for the store of the Worker.
+3. The runner sets that cookie, dials out through the `tcp-proxy.mjs` of
+   beam.com to `wss://world.mkfifo.com/.tcp/4370`, and connects. The
+   edge (`DIST_NAME`, `DIST_LISTEN=true`) has a cookie of its own that
+   nobody knows: random, made at the start of its distribution. So only
+   the node of a join connects, with the cookie of its join.
+4. At the end of the shift (its node goes away), the edge forgets the
+   cookie of that node and its pass.
+
+The runner checks out the commit that the edge runs (the crews refuse
+other code), with the deps and the build in the cache. The edge starts the
 distribution after the application, so `World.Crew` watches the nodes
 from its start (`:net_kernel.monitor_nodes/2` with `node_type: :all`: a
 node that only connects is hidden). The edge gives work and takes none
@@ -862,9 +876,12 @@ node that only connects is hidden). The edge gives work and takes none
 
 **Whole parts, not small jobs.** The edge gives the shift a whole part
 by its key (`World.Labour`). The node builds it, puts the GLB in R2
-itself (the S3 API of R2, with a token of the bucket `world` only: the
-secrets `WORLD_R2_*` of the repository, `scripts/order-store.mjs`), and
-gives back only the key. No GLB goes over the link. A part in R2 does
+through the store of the Worker (`/store/KEY`, with the pass of its
+shift, `scripts/order-store.mjs`), and gives back only the key. The
+Worker writes R2 with its binding. It takes a key with a pass only when
+the edge gave that part to that shift (the GLB to write; the GLB, the
+recipe and the order of the part to read, and the blueprints in data),
+else 403. No GLB goes over the link. A part in R2 does
 not build again. A part whose node goes away goes back to the queue. An
 issue gets its comment (the parts lists and their URLs) when its parts
 are built, and closes: the job of the request closes it at once, else
@@ -887,37 +904,22 @@ are in the log and in the summary of the job. Then, with the private
 key: `beam.com -a ssh remote_ssh.erl -- exec wss://HOST/ KEY FINGERPRINT
 'tail -n 50 /home/runner/work/_temp/tcp-proxy.log'`.
 
-**The secrets**, once:
-
-```sh
-# The Worker:
-npx wrangler secret put DIST_COOKIE           # openssl rand -hex 32
-npx wrangler secret put WORLD_SHIFT_TOKEN     # fine-grained, actions: write on sntran/World only
-npx wrangler secret put WORLD_PROJECT_TOKENS  # vung_tau=TOKEN (32 characters or more)
-# The repository (Settings, Secrets and variables, Actions):
-#   DIST_COOKIE           the same value as the Worker
-#   WORLD_R2_ENDPOINT     https://ACCOUNT.r2.cloudflarestorage.com
-#   WORLD_R2_KEY_ID, WORLD_R2_SECRET
-#                         an R2 API token: Object Read & Write, the bucket world only
-#   WORLD_PROJECT_TOKENS  the same value as the Worker
-```
-
-**A shift on this computer** (a test, with no GitHub and no R2 token):
+**A shift on this computer** (a test, with no GitHub):
 `wrangler dev` with `--var WORLD_SHIFT_API:http://127.0.0.1:PORT` (a
 local server in the place of the API of GitHub, which runs
-`scripts/shift.sh` for each start), `--var WORLD_STORE_TOKEN:TOKEN`
-(the store of the local Worker on `/store/KEY`, for the node:
-`WORLD_STORE_URL`, `WORLD_STORE_TOKEN`), and the other secrets as
-`--var`. The site has no `WORLD_STORE_TOKEN`, so `/store/` is not there.
-`node scripts/edit-time.mjs BASE HASH LEVEL EDITS` (with `WORLD_TOKEN`,
-the token of the project) measures the time from an edit of an order to
-its whole new level, as a project gets it: the edit, the parts list,
-then all its parts at one time.
+`scripts/shift.sh` for each start, `scripts/shift-local.mjs`), `--var
+WORLD_STORE_TOKEN:TOKEN` (with no ID token, the node joins with it, and
+it takes each key of the store of the local Worker), and the two secrets
+as `--var`. The site has no `WORLD_STORE_TOKEN`.
+`node scripts/edit-time.mjs BASE HASH LEVEL EDITS` (with `WORLD_TOKEN`
+and `WORLD_PROJECT`) measures the time from an edit of an order to its
+whole new level, as a project gets it: the edit, the parts list, then
+all its parts at one time.
 
 #### Hải Âu in a shift on this computer
 
 The measure (2026-11-18): the local edge (`wrangler dev`, with
-`WORLD_SHIFTS=true` and a project token), the local GitHub
+`WORLD_SHIFTS=true` and the token of a project), the local GitHub
 (`scripts/shift-local.mjs`), which runs `scripts/shift.sh` for each
 start, and one node of a shift, all on one computer with 4 cores. The
 order is Hải Âu at mid (7 parts: the sign, the base, and the 5 parts of
@@ -971,6 +973,53 @@ parts of the main node). Each time is from the edit to the last part:
   less than 5 minutes, but more than 30 s.
 - On computers with more cores, or with more nodes, the main parts
   build with less waiting.
+
+### The secrets
+
+The factory has two secrets, both of the Worker. The repository has no
+secret.
+
+```sh
+npx wrangler secret put WORLD_SHIFT_TOKEN  # fine-grained token of GitHub: actions: write on sntran/World only
+npx wrangler secret put WORLD_TOKEN        # 32 characters or more, for a project outside of GitHub Actions
+```
+
+- `WORLD_SHIFT_TOKEN`: the Worker starts the workflow `shift.yml` with
+  it (`workflow_dispatch`, `shift.js`).
+- `WORLD_TOKEN`: one token for the projects of the owner, for a caller
+  that is not a job of GitHub Actions (for example the workspace of the
+  builder of Vũng Tàu).
+
+A caller proves who it is in `authorization: Bearer ...` (`callerOf` of
+`handler.js`):
+
+| Caller | Token | The project |
+|---|---|---|
+| A job of a repository of the owner (GitHub Actions) | its ID token: `permissions: id-token: write`, the audience `https://world.mkfifo.com` | the name of its repository, in small letters |
+| Another place (a workspace, a computer) | `WORLD_TOKEN` | the header `x-world-project` (letters a to z, digits, `_`, `.` and `-`) |
+| The job of an issue (`shift-request.yml`) | its ID token | the header `x-world-project` (the project of the form) |
+| A shift (`shift.yml`) | its ID token, to `POST /shift/join` | (the pass of its shift for the store) |
+
+The Worker checks an ID token (`oidc.js`): its signature (RS256) against
+the keys of GitHub (`https://token.actions.githubusercontent.com/.well-known/jwks`,
+kept for an hour), `iss`, `aud`, `exp` and `nbf`, and the claims. A shift
+has `repository` `sntran/World` and a `job_workflow_ref` that starts
+with `sntran/World/.github/workflows/shift.yml@refs/heads/main`; the job
+of an issue the same with `shift-request.yml`. A project is a job of a
+repository whose `repository_owner_id` is the number of the account of
+the owner (`WORLD_OWNER_ID` of `wrangler.jsonc`), not only its name.
+
+A project of GitHub Actions asks with no secret:
+
+```yaml
+permissions:
+  id-token: write
+steps:
+  - run: |
+      token=$(curl -sS -H "authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+        "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://world.mkfifo.com" | jq -r .value)
+      curl -sS -H "authorization: Bearer $token" https://world.mkfifo.com/p/KEY.glb
+```
 
 ### The guard and the memory of WebAssembly
 

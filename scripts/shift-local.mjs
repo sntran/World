@@ -7,8 +7,9 @@
 //
 //   node scripts/shift-local.mjs PORT
 //
-// The shift gets this environment, with WORLD_URL (the local edge),
-// WORLD_COOKIE, WORLD_STORE_URL and WORLD_STORE_TOKEN. Its files (the
+// The shift gets this environment, with WORLD_URL (the local edge) and
+// WORLD_STORE_TOKEN (the token of the store of the test, which also
+// joins the shift: there is no ID token here). Its files (the
 // log shift-N.log, the summary) go to RUNNER_TEMP (the current folder by
 // default).
 import { spawn } from 'node:child_process';

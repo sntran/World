@@ -3,7 +3,8 @@ name: Shift request
 # A request of a construction shift from an issue of the form "A
 # construction shift" (label shift, docs/factory.md, "Construction
 # shifts"). The job asks the factory for the parts of the orders of the
-# issue, with the token of its project: the edge starts a shift, or gives
+# issue, for its project, with the ID token of the job (no secret): the
+# edge starts a shift, or gives
 # the parts to the shift that runs. When the parts are built already, the
 # issue gets the parts lists and closes; else the shift closes it
 # (.github/workflows/shift.yml, scripts/shift-issues.mjs check).
@@ -14,6 +15,9 @@ on:
 permissions:
   contents: read
   issues: write
+  # The ID token of the job for the factory: no secret (docs/factory.md,
+  # "The secrets").
+  id-token: write
 
 # One request for each issue (an issue of a member comes with "opened"
 # and with "labeled").
@@ -52,5 +56,4 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           WORLD_URL: https://world.mkfifo.com
-          WORLD_PROJECT_TOKENS: ${{ secrets.WORLD_PROJECT_TOKENS }}
         run: node scripts/shift-issues.mjs request

@@ -4,7 +4,7 @@
 // an issue is input of a user: it gives only checked values, and no part
 // of it goes into a shell command.
 
-const PROJECT = /^[a-z0-9_-]{1,40}$/;
+const PROJECT = /^[a-z0-9_.-]{1,100}$/;
 const HASH = /^[0-9a-f]{32}$/;
 const ORDERS = /^https:\/\/github\.com\/([A-Za-z0-9_.-]{1,100})\/([A-Za-z0-9_.-]{1,100})\/blob\/([0-9a-f]{40})\/((?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\.json)$/;
 const LEVELS = ['near', 'mid', 'far'];
@@ -33,7 +33,7 @@ export function parse(body) {
   const none = (v) => v === undefined || v === '' || v === '_No response_';
 
   const project = s.Project;
-  if (none(project) || !PROJECT.test(project)) errors.push('The project: letters a to z, digits, _ and -, 40 at most.');
+  if (none(project) || !PROJECT.test(project)) errors.push('The project: the name of its repository in letters a to z, digits, _, . and -.');
 
   let orders = null;
   const lines = none(s.Orders) ? [] : s.Orders.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -70,16 +70,6 @@ export function ordersOf(json) {
     if (typeof order?.blueprint !== 'string') throw new Error('an entry of orders.json has no order with a blueprint');
     return order;
   });
-}
-
-// The token of a project in NAME=TOKEN,NAME=TOKEN (the secret
-// WORLD_PROJECT_TOKENS), or null.
-export function tokenOf(tokens, project) {
-  for (const entry of String(tokens ?? '').split(',')) {
-    const [name, token] = entry.trim().split('=', 2);
-    if (name === project && (token ?? '').length >= 32) return token;
-  }
-  return null;
 }
 
 // The comment of an issue whose parts are built: each parts list, with

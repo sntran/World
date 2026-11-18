@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { orderStore, remoteBucket, s3Bucket, sign } from '../../order_store.js';
+import { orderStore, remoteBucket } from '../../order_store.js';
 import { bucket } from './fakes.js';
 
 const KEY = 'orders/0123456789abcdef0123456789abcdef.json';
@@ -27,7 +27,7 @@ const ended = (...parts) => new ReadableStream({
 
 const text = (body) => new Response(body).text();
 
-test('the store of the local edge for a node of a test: get, head and put with the token, over HTTP', async () => {
+test('the store of the edge for the node of a shift: get, head and put with its pass, over HTTP', async () => {
   const calls = [];
   const items = new Map();
   const fetcher = async (url, { method, body, headers }) => {
@@ -132,50 +132,4 @@ test('the program on this computer keeps the orders in a folder', () => {
   assert.equal(spawnSync(program, ['get', '../x'], { env }).status, 1);
   assert.equal(spawnSync(program, ['get', KEY], { env: { PATH: process.env.PATH } }).status, 1);
   rmSync(dir, { recursive: true });
-});
-
-test('the signature of a request of the S3 API: the example of the documentation of AWS (GET with a range)', async () => {
-  const headers = await sign({
-    method: 'GET',
-    url: new URL('https://examplebucket.s3.amazonaws.com/test.txt'),
-    headers: { Range: 'bytes=0-9' },
-    payload: new Uint8Array(0),
-    date: new Date('2013-05-24T00:00:00Z'),
-    keyId: 'AKIAIOSFODNN7EXAMPLE',
-    secret: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-    region: 'us-east-1',
-  });
-  assert.equal(
-    headers.authorization,
-    'AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41',
-  );
-  assert.equal(headers['x-amz-date'], '20130524T000000Z');
-  // A query is in the signature, in its order of sort.
-  const q = await sign({ method: 'GET', url: new URL('https://h/b?list-type=2&a=1'), headers: {}, payload: new Uint8Array(0), date: new Date(0), keyId: 'k', secret: 's' });
-  assert.match(q.authorization, /Credential=k\/19700101\/auto\/s3\/aws4_request/);
-});
-
-test('the S3 bucket of a shift: get, head and put of R2, with a signed request; 404 is null; another error raises', async () => {
-  const calls = [];
-  const items = new Map();
-  const fetcher = async (url, init) => {
-    calls.push({ url: String(url), method: init.method, auth: init.headers.authorization });
-    const key = new URL(url).pathname;
-    if (init.method === 'PUT') items.set(key, new TextDecoder().decode(init.body));
-    if (key.endsWith('fail')) return new Response('', { status: 500 });
-    if (!items.has(key)) return new Response('', { status: 404 });
-    return new Response(init.method === 'HEAD' ? null : items.get(key));
-  };
-  const s3 = s3Bucket({ endpoint: 'https://acc.r2.cloudflarestorage.com', bucket: 'world', keyId: 'id', secret: 'sec' }, fetcher, () => new Date('2026-11-18T00:00:00Z'));
-  const key = `parts/${'a'.repeat(32)}.glb`;
-  assert.equal(await s3.get(key), null);
-  assert.equal(await s3.head(key), null);
-  await s3.put(key, new TextEncoder().encode('glTF'));
-  assert.equal(await new Response((await s3.get(key)).body).text(), 'glTF');
-  assert.deepEqual(await s3.head(key), {});
-  assert.equal(calls[2].url, `https://acc.r2.cloudflarestorage.com/world/${key}`);
-  assert.match(calls[2].auth, /^AWS4-HMAC-SHA256 Credential=id\/20261118\/auto\/s3\/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=[0-9a-f]{64}$/);
-  await assert.rejects(s3.get('fail'), /the S3 store: 500/);
-  // (The clock by default.)
-  assert.equal(await s3Bucket({ endpoint: 'https://h', bucket: 'b', keyId: 'k', secret: 's' }, fetcher).get('none'), null);
 });

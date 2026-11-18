@@ -12,9 +12,10 @@
 // level, then asks for each part at the same time (a construction shift
 // builds the large parts at the same time, World.Labour), and asks again
 // after each 202. It prints the time of each step and of each part, and
-// the time to the last part. WORLD_TOKEN: the token of a project, so
-// that the parts that do not fit the edge go to a construction shift;
-// WORLD_SHIFT_HOURS: the hours of a shift that the request starts.
+// the time to the last part. WORLD_TOKEN and WORLD_PROJECT: a project of
+// the owner, so that the parts that do not fit the edge go to a
+// construction shift; WORLD_SHIFT_HOURS: the hours of a shift that the
+// request starts.
 
 const [base, hash, level, edits] = process.argv.slice(2);
 if (!base || !hash || !level || !edits) {
@@ -22,7 +23,7 @@ if (!base || !hash || !level || !edits) {
   process.exit(2);
 }
 
-const auth = process.env.WORLD_TOKEN ? { authorization: `Bearer ${process.env.WORLD_TOKEN}` } : {};
+const auth = process.env.WORLD_TOKEN ? { authorization: `Bearer ${process.env.WORLD_TOKEN}`, 'x-world-project': process.env.WORLD_PROJECT ?? '' } : {};
 if (process.env.WORLD_SHIFT_HOURS) auth['x-world-shift-hours'] = process.env.WORLD_SHIFT_HOURS;
 const start = Date.now();
 const seconds = () => ((Date.now() - start) / 1000).toFixed(1);

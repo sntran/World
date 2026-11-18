@@ -6,14 +6,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        A shift starts at once for an issue of a member of the repository. The issue of another user waits until the owner adds the label shift again. The shift builds only the orders of the projects of the owner: a project has a token in the secret WORLD_PROJECT_TOKENS.
+        A shift starts at once for an issue of a member of the repository. The issue of another user waits until the owner adds the label shift again. The shift builds only the orders of the projects of the owner. Most requests come through the API of the factory (docs/factory.md, "Construction shifts"): this form is for a request by hand.
 
         The limits (docs/factory.md, "Construction shifts"): one shift at a time, at most 5.5 hours each, and at most 6 shifts each day. A shift that runs takes the parts of a new request at once. A shift goes home after 60 minutes with no work.
   - type: input
     id: project
     attributes:
       label: Project
-      description: The name of the project in WORLD_PROJECT_TOKENS (letters a to z, digits, _ and -).
+      description: The name of the repository of the project, in small letters (letters a to z, digits, _, . and -).
       placeholder: vung_tau
     validations:
       required: true

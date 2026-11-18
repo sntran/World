@@ -431,6 +431,43 @@ defmodule World.Service do
   # x-world-project for a request with a project token; the answer has
   # x-world-shift: wanted when the edge needs a construction shift
   # (`World.Shift.wanted?/1`), and the Worker starts one.
+  # A construction shift joins (`World.Shift.Passes`): the Worker checked
+  # the ID token of its job, and gives its run in x-world-shift-run. The
+  # answer: the name of its node, the cookie of that node, the pass of
+  # the store, and the name of the node of the edge.
+  post "/shift/join" do
+    with [run] <- get_req_header(conn, "x-world-shift-run"),
+         {:ok, answer} <- World.Shift.Passes.join(run) do
+      json(conn, 200, answer)
+    else
+      [] ->
+        json(conn, 403, %{"errors" => [%{"path" => "", "message" => "no shift"}]})
+
+      {:error, :no_shifts} ->
+        json(conn, 403, %{"errors" => [%{"path" => "", "message" => "no shifts on this VM"}]})
+
+      {:error, :no_distribution} ->
+        json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the edge is not a node yet"}]})
+    end
+  end
+
+  # The check of the Worker for /store/KEY with a pass: 204 when the
+  # shift of the pass can read (or write) the key, else 403.
+  get "/shift/allowed" do
+    conn = fetch_query_params(conn)
+    access = if conn.query_params["access"] == "write", do: :write, else: :read
+
+    case get_req_header(conn, "x-world-shift-pass") do
+      [pass] ->
+        if World.Shift.Passes.allowed?(pass, conn.query_params["key"] || "", access),
+          do: send_resp(conn, 204, ""),
+          else: send_resp(conn, 403, "")
+
+      _ ->
+        send_resp(conn, 403, "")
+    end
+  end
+
   get "/p/:file" do
     project = get_req_header(conn, "x-world-project") != []
     # (A part that needs a shift when no shift takes parts: the answer comes at once, with

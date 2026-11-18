@@ -1,7 +1,7 @@
 // The tests of handler.js, with a fake VM and a fake R2 bucket.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { handler, orderOf, projectOf, split, storeToken, urlKey } from '../../handler.js';
+import { callerOf, handler, orderOf, split, storeToken, urlKey } from '../../handler.js';
 import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
 
 const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
@@ -27,17 +27,77 @@ test('the name and the file of a path', () => {
 const TOKEN = 't'.repeat(40);
 const auth = (path, init = {}, token = TOKEN) => req(path, { ...init, headers: { authorization: `Bearer ${token}`, ...(init.headers ?? {}) } });
 
-test('the project of a request: the name of its token in the secret, or none', () => {
-  const env = { WORLD_PROJECT_TOKENS: `vung_tau=${TOKEN}, other=${'o'.repeat(32)},short=abc,Bad Name=${'b'.repeat(40)}` };
-  assert.equal(projectOf(auth('/p/x.glb'), env), 'vung_tau');
-  assert.equal(projectOf(auth('/p/x.glb', {}, 'o'.repeat(32)), env), 'other');
-  assert.equal(projectOf(req('/p/x.glb'), env), null);
-  assert.equal(projectOf(auth('/p/x.glb', {}, `${TOKEN}x`), env), null);
-  assert.equal(projectOf(auth('/p/x.glb', {}, `${'t'.repeat(39)}u`), env), null);
-  // A short token, or a name that is not a name, is never a project; no secret: no project.
-  assert.equal(projectOf(auth('/p/x.glb', {}, 'abc'), env), null);
-  assert.equal(projectOf(auth('/p/x.glb', {}, 'b'.repeat(40)), env), null);
-  assert.equal(projectOf(auth('/p/x.glb'), {}), null);
+// The check of an ID token in the tests: a token "jwt.of.NAME" has the claims of FAKES[NAME].
+const FAKES = {
+  shift: { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/shift.yml@refs/heads/main', run_id: '1900', run_attempt: '2' },
+  request: { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/shift-request.yml@refs/heads/main' },
+  project: { repository: 'sntran/Vung_Tau', repository_owner_id: '973206', job_workflow_ref: 'sntran/Vung_Tau/.github/workflows/w.yml@refs/heads/main' },
+  stranger: { repository: 'someone/Vung_Tau', repository_owner_id: '42' },
+};
+const check = async (token) => FAKES[token.split('.')[2]] ?? null;
+const OWNER = { WORLD_OWNER_ID: '973206' };
+const jwt = (name, headers = {}) => ({ authorization: `Bearer jwt.of.${name}`, ...headers });
+
+test('the caller of a request: a job of GitHub Actions by its ID token, or WORLD_TOKEN with the name of the project', async () => {
+  const caller = (headers, env = {}) => callerOf(req('/p/x.glb', { headers }), { ...OWNER, ...env }, check);
+  assert.deepEqual(await caller(jwt('project')), { kind: 'project', project: 'vung_tau', claims: FAKES.project });
+  // (A project of a job has the name of its repository, not the name of the header.)
+  assert.equal((await caller(jwt('project', { 'x-world-project': 'other' }))).project, 'vung_tau');
+  assert.equal((await caller(jwt('request', { 'x-world-project': 'vung_tau' }))).project, 'vung_tau');
+  assert.equal((await caller(jwt('shift'))).kind, 'shift');
+  assert.equal(await caller(jwt('stranger')), null);
+  assert.equal(await caller(jwt('nobody')), null);
+  // WORLD_TOKEN: with a project in the header, and a name that is a name.
+  const env = { WORLD_TOKEN: TOKEN };
+  assert.deepEqual(await caller({ authorization: `Bearer ${TOKEN}`, 'x-world-project': 'vung_tau' }, env), { kind: 'token', project: 'vung_tau' });
+  assert.equal(await caller({ authorization: `Bearer ${TOKEN}` }, env), null);
+  assert.equal(await caller({ authorization: `Bearer ${TOKEN}`, 'x-world-project': 'Vung Tau; x' }, env), null);
+  assert.equal(await caller({ authorization: `Bearer ${TOKEN}x`, 'x-world-project': 'vung_tau' }, env), null);
+  assert.equal(await caller({ authorization: 'Bearer short', 'x-world-project': 'vung_tau' }, { WORLD_TOKEN: 'short' }), null);
+  assert.equal(await caller({ 'x-world-project': 'vung_tau' }, env), null);
+  // (The real check of oidc.js: a token that is not signed by GitHub is no caller.)
+  assert.equal(await callerOf(req('/p/x.glb', { headers: { authorization: 'Bearer a.b.c' } }), OWNER), null);
+});
+
+test('the join of a shift: the ID token of shift.yml, or the token of the store of a test; another caller gets 401', async () => {
+  const runs = [];
+  const v = async (request) => {
+    runs.push(request.headers.get('x-world-shift-run'));
+    return Response.json({ node: 'shift_19002_1_4372@127.0.0.1', cookie: 'c', pass: 'p', edge: 'world@127.0.0.1' });
+  };
+  const call = (headers, env = {}) => handler(req('/shift/join', { method: 'POST', headers }), { ORDERS: bucket(), ...OWNER, ...env }, { vm: v, commit: 'c1', verify: check });
+  const joined = await call(jwt('shift'));
+  assert.equal(joined.status, 200);
+  assert.equal(joined.headers.get('cache-control'), 'no-store');
+  assert.equal((await joined.json()).node, 'shift_19002_1_4372@127.0.0.1');
+  assert.equal((await call({ authorization: `Bearer ${TOKEN}` }, { WORLD_STORE_TOKEN: TOKEN })).status, 200);
+  assert.deepEqual(runs, ['1900-2', 'test']);
+  assert.equal((await call(jwt('project'))).status, 401);
+  assert.equal((await call(jwt('request'))).status, 401);
+  assert.equal((await call({})).status, 401);
+});
+
+test('/store/ with the pass of a shift: only a key that the edge gave to that shift, else 403', async () => {
+  const env = { ORDERS: bucket() };
+  const pass = 'a'.repeat(64);
+  const given = `parts/${HASH}.glb`;
+  const asked = [];
+  const v = async (request) => {
+    const u = new URL(request.url);
+    asked.push(`${u.searchParams.get('access')} ${u.searchParams.get('key')} ${request.headers.get('x-world-shift-pass') === pass}`);
+    return new Response(null, { status: u.searchParams.get('key') === given && request.headers.get('x-world-shift-pass') === pass ? 204 : 403 });
+  };
+  const call = (path, init = {}, token = pass) => handler(auth(path, init, token), env, { vm: v, commit: 'c1' });
+  assert.equal(await (await call(`/store/${given}`, { method: 'PUT', body: 'glTF' })).text(), 'ok\n');
+  assert.equal(await (await call(`/store/${given}`)).text(), 'glTF');
+  assert.deepEqual(asked, [`write ${given} true`, `read ${given} true`]);
+  // A part that the edge did not give to the shift, another pass, a pass that is not a pass, no pass, and a key that is not a key.
+  assert.equal((await call(`/store/parts/${'b'.repeat(32)}.glb`, { method: 'PUT', body: 'glTF' })).status, 403);
+  assert.equal((await call(`/store/${given}`, {}, 'b'.repeat(64))).status, 403);
+  assert.equal((await call(`/store/${given}`, {}, 'short')).status, 403);
+  assert.equal((await handler(req(`/store/${given}`), env, { vm: v, commit: 'c1' })).status, 403);
+  assert.equal((await call('/store/secrets/x.json')).status, 403);
+  assert.equal(asked.length, 4);
 });
 
 test('the token of the store of a test: the secret, or no store', () => {
@@ -71,8 +131,7 @@ test('/store/ of a test: get, head and put of a key of the store, with the token
   assert.equal((await call(`/store/parts/${HASH}.json`, { method: 'PUT', body: '' })).status, 400);
   assert.equal((await call('/store/secrets/x.json')).status, 404);
   assert.equal((await call(`/store/${key}`, { method: 'DELETE' })).status, 405);
-  assert.equal((await handler(req(`/store/${key}`), env, { vm: vm(), commit: 'c1' })).status, 404);
-  assert.equal((await handler(auth(`/store/${key}`), { ORDERS: bucket() }, { vm: vm(), commit: 'c1' })).status, 404);
+  assert.equal((await handler(req(`/store/${key}`), env, { vm: vm(), commit: 'c1' })).status, 403);
 });
 
 test('a part that a node of a shift built: the VM answers 204, and the part goes out of R2', async () => {
@@ -95,13 +154,13 @@ test('a part that a node of a shift built: the VM answers 204, and the part goes
 test('a part of a project: the VM gets the project; when it wants a shift, the Worker starts one after the answer', async () => {
   const later = [];
   const seen = [];
-  const env = { ORDERS: bucket(), WORLD_PROJECT_TOKENS: `vung_tau=${TOKEN}` };
+  const env = { ORDERS: bucket(), WORLD_TOKEN: TOKEN };
   const v = async (request) => {
     seen.push(request.headers.get('x-world-project'));
     return Response.json({ building: 'x' }, { status: 202, headers: { 'retry-after': '15', 'x-world-shift': 'wanted' } });
   };
   const key = 'c'.repeat(32);
-  const r = await handler(auth(`/p/${key}.glb`), env, { vm: v, commit: 'c1', later: (p) => later.push(p) });
+  const r = await handler(auth(`/p/${key}.glb`, { headers: { 'x-world-project': 'vung_tau', 'x-world-shift-hours': '2' } }), env, { vm: v, commit: 'c1', later: (p) => later.push(p) });
   assert.equal(r.status, 202);
   assert.equal(r.headers.get('x-world-shift'), 'wanted');
   // (No WORLD_SHIFT_TOKEN in this env: the start says so.)

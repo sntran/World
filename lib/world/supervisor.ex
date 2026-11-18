@@ -25,6 +25,8 @@ defmodule World.Supervisor do
   - `World.Sculptures`: the live sculptures (`World.Sculpt.Live`, a
     dynamic supervisor).
   - `World.Labour`: the parts in work on other nodes, and in the queue.
+  - `World.Shift.Passes`: the cookies and the passes of the construction
+    shifts (on the edge, with a secret cookie of its own).
   - `World.Shift`: on the runner of a construction shift only
     (`WORLD_SHIFT_UNTIL`).
   """
@@ -87,7 +89,9 @@ defmodule World.Supervisor do
       {DynamicSupervisor, name: World.Sculptures, strategy: :one_for_one}
     ] ++
       World.Crew.children() ++
-      World.Labour.children() ++ [{World.Crew, crews(env)}] ++ shift(env) ++ yard(env) ++ server(env)
+      World.Labour.children() ++
+      [{World.Crew, crews(env)}, {World.Shift.Passes, secret: env["WORLD_SHIFTS"] == "true"}] ++
+      shift(env) ++ yard(env) ++ server(env)
   end
 
   @doc """

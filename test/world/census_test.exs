@@ -189,7 +189,7 @@ defmodule World.CensusTest do
     assert opts[:plug] == World.Service and opts[:port] == 4100
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true"})
     assert opts[:port] == 4000
-    assert length(World.Supervisor.children(%{})) == 14
+    assert length(World.Supervisor.children(%{})) == 15
   end
 
   property "two constructions never hold one person" do
