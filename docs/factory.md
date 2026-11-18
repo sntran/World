@@ -860,7 +860,8 @@ for the new parts; it waits for the end of the shift that runs.
    (`:erlang.set_cookie/2`), the name of the node of the edge, and the
    pass of the shift for the store of the Worker.
 3. The runner sets that cookie, dials out through the `tcp-proxy.mjs` of
-   beam.com to `wss://world.mkfifo.com/.tcp/4370`, and connects. The
+   beam.com to `wss://world.mkfifo.workers.dev/.tcp/4370` (below, "The
+   address of the jobs"), and connects. The
    edge (`DIST_NAME`, `DIST_LISTEN=true`) has a cookie of its own that
    nobody knows: random, made at the start of its distribution. So only
    the node of a join connects, with the cookie of its join.
@@ -1009,6 +1010,16 @@ of an issue the same with `shift-request.yml`. A project is a job of a
 repository whose `repository_owner_id` is the number of the account of
 the owner (`WORLD_OWNER_ID` of `wrangler.jsonc`), not only its name.
 
+**The address of the jobs.** The zone mkfifo.com gives the addresses of
+the runners of GitHub a challenge of Cloudflare (403, `cf-mitigated:
+challenge`, with each User-Agent), and a job cannot answer a challenge.
+So the jobs of GitHub Actions (the shifts, the job of an issue, and the
+jobs of the projects) ask the same Worker at its address on workers.dev,
+`https://world.mkfifo.workers.dev`, which is not in the zone
+(`workers_dev` of `wrangler.jsonc`). The audience of their ID tokens
+stays `https://world.mkfifo.com`, and the URLs in the comments of the
+issues are of world.mkfifo.com.
+
 A project of GitHub Actions asks with no secret:
 
 ```yaml
@@ -1018,7 +1029,7 @@ steps:
   - run: |
       token=$(curl -sS -H "authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
         "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://world.mkfifo.com" | jq -r .value)
-      curl -sS -H "authorization: Bearer $token" https://world.mkfifo.com/p/KEY.glb
+      curl -sS -H "authorization: Bearer $token" https://world.mkfifo.workers.dev/p/KEY.glb
 ```
 
 ### The guard and the memory of WebAssembly

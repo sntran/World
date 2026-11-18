@@ -55,5 +55,5 @@ jobs:
           ISSUE: ${{ github.event.issue.number }}
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
-          WORLD_URL: https://world.mkfifo.com
+          WORLD_URL: https://world.mkfifo.workers.dev
         run: node scripts/shift-issues.mjs request
