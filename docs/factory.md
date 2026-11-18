@@ -914,6 +914,39 @@ the token of the project) measures the time from an edit of an order to
 its whole new level, as a project gets it: the edit, the parts list,
 then all its parts at one time.
 
+#### Hải Âu in a shift on this computer
+
+The measure (2026-11-18): the local edge (`wrangler dev`, with
+`WORLD_SHIFTS=true` and a project token), the local GitHub
+(`scripts/shift-local.mjs`), which runs `scripts/shift.sh` for each
+start, and one node of a shift, all on one computer with 4 cores. The
+order is Hải Âu at mid (7 parts: the sign, the base, and the 5 parts of
+the main node), with the token of the project, and each time is from
+the edit (`scripts/edit-time.mjs`):
+
+| Request | Parts list | First part of the shift | Whole mid level |
+|---|---|---|---|
+| A storey of 4.0, no shift running (the edge starts one) | 29.2 s | 104.4 s | 224.5 s |
+| One front, the shift runs | 29.3 s | 89.4 s | 220.8 s |
+| A storey of 3.4, the shift runs | 34.6 s | 68.5 s | 215.3 s |
+| A second order, 20 s after the storey of 3.4, the shift runs | 43.9 s | 224.0 s | 344.2 s |
+
+- The edge started the shift at the first request of a part that needs
+  one (29.3 s after the edit). The node of the shift joined in some
+  seconds: here the build of the node was ready. On a runner of GitHub,
+  add the queue of the runner, the checkout and the cache (about 1 to 3
+  minutes, not measured).
+- The sign and the base of an edit keep their keys, so they come from
+  R2 at once.
+- A second order joins the shift that runs: its parts wait in the
+  queue, and the node builds them after the parts of the first order.
+  With 10 parts at one time on 4 cores, the second order took 344 s.
+- A shift of 0.5 hours ended at its time (15 minutes), wrote its
+  summary (5 parts, 39 to 185 s each, a peak of 199 to 215 MB of the
+  VM), and left the edge.
+- The time at world.mkfifo.com needs the deploy, the secrets, and a
+  shift on a runner of GitHub.
+
 #### Hải Âu with two nodes on one computer
 
 The first measure of the labour of the parts, before the shifts: the
