@@ -1019,14 +1019,16 @@ defmodule World.Construction do
         "reductions" => elem(Process.info(self(), :reductions), 1)
       })
 
-    reply(s, {:built, s.id, %{glb: glb, log: s.log, level: s.level, plan: s.plan, glbs: s.glbs}})
-
     # The construction keeps the GLBs of its elements for a while, under
     # a name of its own, so a new build of the same id can start. When an
     # earlier build of the id keeps them now, it has the same elements.
+    # (The name comes before the answer: a caller that has the answer
+    # finds the elements.)
     Registry.unregister(World.Names, s.id)
+    named = Registry.register(World.Names, {:elements, s.id}, nil)
+    reply(s, {:built, s.id, %{glb: glb, log: s.log, level: s.level, plan: s.plan, glbs: s.glbs}})
 
-    case Registry.register(World.Names, {:elements, s.id}, nil) do
+    case named do
       {:ok, _} ->
         linger = Keyword.get(Application.get_env(:world, __MODULE__, []), :linger, 300_000)
         Process.send_after(self(), :close, linger)
