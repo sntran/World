@@ -45,11 +45,17 @@ defmodule World.Crew do
     other nodes (it answers that it has no workers for them), and
     `borrow` (true by default): false when the streams of this node give
     no jobs to other nodes. The edge has both false: it gives whole
-    parts to the native nodes that join it (`World.Labour`, `parts/1`),
-    and no jobs of a stream go over the link.
+    parts to the nodes of the construction shifts that join it
+    (`World.Labour`, `parts/1`), and no jobs of a stream go over the
+    link.
 
-  A node learns of a node that greets it (`hello/3`), so the edge, which
-  connects to no node, knows each native node that joins it.
+  A node learns of a node that greets it (`hello/3`), and of each node
+  that connects to it, also a hidden node and a node that comes after
+  the start of the distribution: the runtime of the edge starts its node
+  after the application, so the crews watch the nodes from their start
+  (`:net_kernel.monitor_nodes/2` with `node_type: :all`). So the edge,
+  which connects to no node, knows each node of a construction shift
+  that joins it (`World.Shift`).
   """
   use GenServer
 
@@ -255,8 +261,6 @@ defmodule World.Crew do
       workers: Keyword.get(opts, :workers, workers()),
       lend: Keyword.get(opts, :lend, true),
       borrow: Keyword.get(opts, :borrow, true),
-      # (The messages of the nodes that come and go: once.)
-      monitor: false,
       # The hash of the code (an option for a test of two codes).
       version: Keyword.get_lazy(opts, :version, &version/0),
       # Each node that shares its workers, to the count of them.
@@ -264,9 +268,14 @@ defmodule World.Crew do
       # The node to connect to, the wait before the next try, and the connect of Erlang (an option for a test).
       join: opts[:join],
       retry: Keyword.get(opts, :retry, 3_000),
-      connect: Keyword.get(opts, :connect, &Node.connect/1)
+      connect: Keyword.get(opts, :connect, &Node.connect/1),
+      # The name of this node (an option for a test, where this node is also the other node).
+      me: Keyword.get(opts, :me, &node/0)
     }
 
+    # The nodes that come and go, hidden or not, from now on: also when
+    # this VM becomes a node later.
+    :ok = :net_kernel.monitor_nodes(true, node_type: :all)
     start = Keyword.get(opts, :distribution, &Node.start/2)
     {:ok, share(s), {:continue, {:node, opts[:node], opts[:cookie], start}}}
   end
@@ -277,7 +286,7 @@ defmodule World.Crew do
     if name, do: {:ok, _} = start.(name, :longnames)
     if cookie != nil and Node.alive?(), do: Node.set_cookie(cookie)
     if s.join, do: send(self(), :join)
-    {:noreply, monitor(s)}
+    {:noreply, s}
   end
 
   @impl true
@@ -306,15 +315,17 @@ defmodule World.Crew do
 
   def handle_info(:join, s), do: {:noreply, s}
 
-  # A node comes: it shares its workers when it has the same code.
-  def handle_info({:nodeup, node}, s), do: {:noreply, elem(greet(s, node), 1)}
+  # A node comes (not this node, when it starts): it shares its workers
+  # when it has the same code.
+  def handle_info({:nodeup, node, _info}, s) when not is_map_key(s.nodes, node) do
+    if node == s.me.(), do: {:noreply, s}, else: {:noreply, elem(greet(s, node), 1)}
+  end
 
   # A node greets this node (`hello/3`): its workers, when this node does not know it yet.
-  def handle_info({:hello, node}, s) when not is_map_key(s.nodes, node),
-    do: {:noreply, s |> monitor() |> greet(node) |> elem(1)}
+  def handle_info({:hello, node}, s) when not is_map_key(s.nodes, node), do: {:noreply, elem(greet(s, node), 1)}
 
   # A node goes: no more of its workers. (The node of the options: the next try comes.)
-  def handle_info({:nodedown, node}, s) do
+  def handle_info({:nodedown, node, _info}, s) do
     if node == s.join, do: Process.send_after(self(), :join, s.retry)
     {:noreply, share(%{s | nodes: Map.delete(s.nodes, node)})}
   end
@@ -323,13 +334,6 @@ defmodule World.Crew do
 
   @impl true
   def terminate(_reason, s), do: :persistent_term.erase({__MODULE__, s.name})
-
-  # The nodes that come and go, from now on (when this VM is a node: the
-  # runtime of the edge starts its node after the crews).
-  defp monitor(s) do
-    if Node.alive?() and not s.monitor, do: :net_kernel.monitor_nodes(true)
-    %{s | monitor: s.monitor or Node.alive?()}
-  end
 
   # Ask a node for its workers: `{:ok, state}` or `{{:error, reason}, state}`.
   defp greet(s, node) do
