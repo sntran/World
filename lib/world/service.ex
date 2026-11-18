@@ -427,24 +427,37 @@ defmodule World.Service do
 
   # A part of a model by its key (`World.Elements`): from the store, else
   # built from its recipe in the line, and kept. The key is a hash of its
-  # data: the file does not change.
+  # data: the file does not change. The Worker gives the header
+  # x-world-project for a request with a project token; the answer has
+  # x-world-shift: wanted when the edge needs a construction shift
+  # (`World.Shift.wanted?/1`), and the Worker starts one.
   get "/p/:file" do
+    project = get_req_header(conn, "x-world-project") != []
+    # (A part that needs a shift when no shift takes parts: the answer comes at once, with
+    # the mark, so that the Worker starts the shift now, not after the wait.)
+    first = project and World.Labour.needs_shift?(file |> String.split(".") |> hd()) and World.Shift.wanted?(waiting: 1)
+    conn = if first, do: put_resp_header(conn, "x-world-shift", "wanted"), else: conn
+    wait = if first, do: 0, else: World.Elements.wait()
+
     with [key, "glb"] <- String.split(file, "."),
          true <- key =~ ~r/^[0-9a-f]{32}$/,
-         {:ok, glb} <- part_of(conn, key, World.Elements.fetch(key)) do
+         {:ok, glb} <- part_of(conn, key, World.Elements.fetch(key, wait, project)) do
       conn
       |> put_resp_header("etag", ~s("#{key}"))
       |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
       |> put_resp_content_type("model/gltf-binary", nil)
       |> send_resp(200, glb)
     else
-      # (A native node put the part in the store: the Worker reads it from R2, with no VM.)
+      # (A node of a shift put the part in the store: the Worker reads it from R2, with no VM.)
       :stored -> send_resp(conn, 204, "")
-      :building -> conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
+      :building -> conn |> shift() |> put_resp_header("retry-after", "15") |> json(202, %{"building" => file})
       {:error, errors} -> json(conn, 422, %{"errors" => errors})
       _ -> json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such part"}]})
     end
   end
+
+  # The mark of a construction shift that the edge needs, for the Worker.
+  defp shift(conn), do: if(World.Shift.wanted?(), do: put_resp_header(conn, "x-world-shift", "wanted"), else: conn)
 
   # A part that another node put in the store: the Worker in front of the
   # VM (its header x-world-origin) reads it from R2; a server with no

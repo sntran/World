@@ -108,18 +108,20 @@ defmodule World.Elements do
   @doc """
   The GLB of a part by its key, for a request: from the store, else its
   build in a process of its own (one for each key), here in the line of
-  the builds (`World.Line`) or on a native node (`World.Labour`), for at
+  the builds (`World.Line`) or on another node (`World.Labour`), for at
   most `wait` ms. `{:ok, glb}`, `:stored` when another node built it and
   put it in the store (the GLB does not come to this node), `:building`
   when the build goes on after `wait` (the next request gets it; the
   application environment `:part_wait`, 45 s by default), `:none` or
   `{:error, errors}` as `part/1`. The host of the VM at the edge ends a
-  request after 60 s, and a large part takes more.
+  request after 60 s, and a large part takes more. With `project` (a
+  request with a project token), a part that does not fit the edge waits
+  for a construction shift (`World.Labour`).
   """
-  def fetch(key, wait \\ wait()) do
+  def fetch(key, wait \\ wait(), project \\ false) do
     with :error <- stored(key),
          {:ok, json} <- Store.recipe(key) do
-      case background({:part, key}, fn -> World.Labour.build(key, JSON.decode!(json)) end, wait) do
+      case background({:part, key}, fn -> World.Labour.build(key, JSON.decode!(json), project: project) end, wait) do
         {:ok, result} -> result
         :building -> :building
         # (Another build of the key ended before it got the message: its part is in the store, else it stopped.)
@@ -160,7 +162,8 @@ defmodule World.Elements do
     end
   end
 
-  defp wait, do: Application.get_env(:world, :part_wait, 45_000)
+  @doc false
+  def wait, do: Application.get_env(:world, :part_wait, 45_000)
 
   # A part from the store, or `:error`.
   defp stored(key) do

@@ -384,4 +384,39 @@ defmodule World.ElementsTest do
     assert conn.status == 200 and JSON.decode!(conn.resp_body)["level"] == "mid"
     assert get.("/o/#{placed["hash"]}.mid.elements.json").status == 200
   end
+
+  test "with construction shifts: a part of a project waits for a shift, and the answer tells the Worker to start one; a public part gets 422" do
+    get = fn path, headers ->
+      headers
+      |> Enum.reduce(Plug.Test.conn(:get, path), fn {k, v}, conn -> Plug.Conn.put_req_header(conn, k, v) end)
+      |> World.Service.call(World.Service.init([]))
+    end
+
+    {:ok, list} = Elements.list(%{"blueprint" => "exercise", "options" => %{"count" => 5}}, "near")
+    key = hd(list["parts"])["key"]
+    Application.put_env(:world, :shifts, true)
+    Application.put_env(:world, :part_wait, 50)
+
+    try do
+      # (Before any part waits: the first request of a project marks its answer.)
+      Application.put_env(:world, :part_wait, 0)
+      first = get.("/p/#{key}.glb", [{"x-world-project", "vung_tau"}])
+      assert first.status == 202 and Plug.Conn.get_resp_header(first, "x-world-shift") == ["wanted"]
+      for {pid, _} <- Registry.lookup(World.Names, {:build, {:part, key}}), do: Process.exit(pid, :kill)
+      Process.sleep(20)
+      Application.put_env(:world, :part_wait, 50)
+      public = get.("/p/#{key}.glb", [])
+      assert public.status == 422 and public.resp_body =~ "does not fit the memory and the CPU time of the edge"
+      # (No node of a shift here: the part waits in the queue.)
+      project = get.("/p/#{key}.glb", [{"x-world-project", "vung_tau"}])
+      assert project.status == 202
+      assert Plug.Conn.get_resp_header(project, "x-world-shift") == ["wanted"]
+      assert World.Labour.waiting() == 1
+    after
+      Application.delete_env(:world, :shifts)
+      Application.delete_env(:world, :part_wait)
+      # (The part waits no more.)
+      for {pid, _} <- Registry.lookup(World.Names, {:build, {:part, key}}), do: Process.exit(pid, :kill)
+    end
+  end
 end
