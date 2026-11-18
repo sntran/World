@@ -18,7 +18,9 @@
 // the issue, which its author can change), asks again, and closes the
 // issue when its parts are built.
 //
-// The environment: WORLD_URL (https://world.mkfifo.com), the ID token of
+// The environment: WORLD_URL (the factory for the requests of the job:
+// https://world.mkfifo.workers.dev in the workflows), WORLD_PUBLIC_URL
+// (the factory in the comments, https://world.mkfifo.com), the ID token of
 // the job (permissions: id-token: write; else WORLD_TOKEN, outside of
 // GitHub Actions), GH_TOKEN, REPOSITORY (OWNER/NAME), ISSUE and BODY
 // (request).
@@ -27,6 +29,7 @@ import { idToken } from './shift-join.mjs';
 
 const env = process.env;
 const base = env.WORLD_URL ?? 'https://world.mkfifo.com';
+const shown = env.WORLD_PUBLIC_URL ?? 'https://world.mkfifo.com';
 const api = env.GITHUB_API_URL ?? 'https://api.github.com';
 const MARK = 'shift-request';
 const sleep = (s) => new Promise((done) => setTimeout(done, s * 1000));
@@ -81,11 +84,11 @@ export async function listsOf(request, auth) {
   const lists = [];
   for (const hash of hashes) {
     for (const level of request.levels) {
-      const url = `${base}/o/${hash}.${level === 'near' ? '' : `${level}.`}elements.json`;
-      const r = await get(url, auth);
-      if (r.status !== 200) throw new Error(`the parts list ${url}: ${r.status}`);
+      const file = `/o/${hash}.${level === 'near' ? '' : `${level}.`}elements.json`;
+      const r = await get(`${base}${file}`, auth);
+      if (r.status !== 200) throw new Error(`the parts list ${base}${file}: ${r.status}`);
       const { parts } = await r.json();
-      lists.push({ hash, level, url, parts: parts.map((p) => ({ part: p.part, key: p.key, url: `${base}/p/${p.key}.glb` })) });
+      lists.push({ hash, level, url: `${shown}${file}`, parts: parts.map((p) => ({ part: p.part, key: p.key, url: `${shown}/p/${p.key}.glb` })) });
     }
   }
   return lists;

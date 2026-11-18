@@ -2,7 +2,8 @@ name: Construction shift
 
 # A construction shift (docs/factory.md, "Construction shifts"): the node
 # of this runner joins the node of the edge (World.Crew) over
-# wss://world.mkfifo.com/.tcp/4370 (the tcp-proxy.mjs of beam.com), takes
+# wss://world.mkfifo.workers.dev/.tcp/4370 (the tcp-proxy.mjs of
+# beam.com; the zone mkfifo.com challenges the runners), takes
 # whole parts by their key (World.Labour), puts each GLB in R2 through
 # the store of the Worker, and goes home: after 60 minutes with no work,
 # or 15 minutes before the end of the time of its job (World.Shift). It
@@ -152,7 +153,7 @@ jobs:
 
       - name: The shift
         env:
-          WORLD_URL: https://world.mkfifo.com
+          WORLD_URL: https://world.mkfifo.workers.dev
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: sh scripts/shift.sh
@@ -161,7 +162,7 @@ jobs:
       - name: The issues of the shift
         if: always()
         env:
-          WORLD_URL: https://world.mkfifo.com
+          WORLD_URL: https://world.mkfifo.workers.dev
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/shift-issues.mjs check

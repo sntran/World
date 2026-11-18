@@ -9,7 +9,10 @@
   // The domain of the site: a custom domain of the Worker (Cloudflare
   // makes its DNS record and its certificate in the zone mkfifo.com).
   "routes": [{ "pattern": "world.mkfifo.com", "custom_domain": true }],
-  "workers_dev": false,
+  // The address of the Worker on workers.dev, for the jobs of GitHub
+  // Actions (the construction shifts): the zone mkfifo.com challenges the
+  // addresses of the runners, and workers.dev is not in the zone.
+  "workers_dev": true,
   // The static files: the review page and the catalog. They go out
   // before the Worker runs. site/_headers gives CORS and the cache.
   "assets": { "directory": "./site" },
