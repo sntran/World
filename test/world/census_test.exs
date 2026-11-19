@@ -162,7 +162,7 @@ defmodule World.CensusTest do
     assert World.Census in names and World.Sculpt.Cache in names and World.Sculptures in names
 
     assert World.Sculpt.Gate in names and World.Crew in names and World.Crew.Tasks in names and
-             World.Crew.Sites in names and World.Labour in names
+             World.Crew.Sites in names and World.Labour in names and World.Labour.Kept in names
 
     assert World.Supervisor.server(%{}) == []
     # The settings of the service from the environment: the builds at one time is a number.
@@ -189,7 +189,7 @@ defmodule World.CensusTest do
     assert opts[:plug] == World.Service and opts[:port] == 4100
     [{Bandit, opts}] = World.Supervisor.server(%{"WORLD_SERVER" => "true"})
     assert opts[:port] == 4000
-    assert length(World.Supervisor.children(%{})) == 15
+    assert length(World.Supervisor.children(%{})) == 16
   end
 
   property "two constructions never hold one person" do
