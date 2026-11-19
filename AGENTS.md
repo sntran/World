@@ -47,8 +47,12 @@ about it.
 
 - The files of `priv/models` are the build of the code at each commit:
   a commit that changes a model builds its files again (`mix world.build
-  NAME`, or `mix world.build`). CI fails when a file is not the same as
-  the build (`mix world.build --check --part I/8`).
+  NAME`, or `mix world.build`). The check of the catalog (`mix
+  world.build --check --part I/8`, `.github/workflows/catalog.yml`)
+  runs on request only: give the label `catalog` to a pull request that
+  can change a model (a change of a skill, of the sculpture, of a
+  drawing or a blueprint). It also runs for a pull request that changes
+  `priv/models`, and by hand.
 - When a project sends a tool request (`request_tool`,
   `docs/requests.md`, "When a tool is missing") with an order or a
   drawing that shows a gap, add the tool in general, with its tests, for

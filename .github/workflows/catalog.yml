@@ -1,0 +1,116 @@
+# The check of the catalog, on request only: each file of priv/models is
+# the build of the code, and no file is of a model that is not in the
+# catalog (mix world.build --check, in 8 parts at the same time).
+#
+# It runs for:
+#
+# - a pull request with the label catalog (when the label comes, and at
+#   each push after it);
+# - a pull request that changes a file of priv/models;
+# - a run by hand (workflow_dispatch).
+#
+# Else its jobs are skipped. A change of the code can change a model, so
+# a pull request that does that gets the label (AGENTS.md).
+name: Catalog
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LANG: C.UTF-8
+  BEAM_COM_VERSION: 0.1.0-rc.7
+  BEAM_COM_SHA256: 203f7395007698462fe18851b90865afac30f647c57eb12407c3e00109d30c54
+
+jobs:
+  # Is the check wanted: a run by hand, the label catalog, or a file of
+  # priv/models in the pull request. (A label that is not catalog starts
+  # no check.)
+  wanted:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.why.outputs.run }}
+    steps:
+      - id: why
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          LABEL: ${{ github.event.label.name }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          PR: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          run=false
+          if [ "$EVENT" = workflow_dispatch ]; then
+            run=true
+          elif [ "$ACTION" = labeled ]; then
+            [ "$LABEL" = catalog ] && run=true
+          elif printf '%s' "$LABELS" | grep -q '"catalog"'; then
+            run=true
+          elif gh api "repos/$REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename' | grep -q '^priv/models/'; then
+            run=true
+          fi
+          echo "The check of the catalog: $run"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  # The files of priv/models are the build of the code. The catalog takes
+  # about an hour on one core, so 8 jobs each build an eighth of it.
+  catalog:
+    needs: wanted
+    if: needs.wanted.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v7
+
+      # beam.com is an Actually Portable Executable: its first lines are a
+      # shell script. The runner can give a program that starts with MZ to
+      # WINE. This rule gives it to /bin/sh.
+      - name: Run APE programs with /bin/sh
+        run: sudo sh -c 'echo ":APE:M::MZqFpD::/bin/sh:" > /proc/sys/fs/binfmt_misc/register' || true
+
+      - name: Install beam.com
+        run: |
+          mkdir -p "$HOME/bin"
+          cd "$HOME/bin"
+          curl -fsSLO "https://github.com/sntran/BEAM.com/releases/download/v$BEAM_COM_VERSION/beam.com"
+          echo "$BEAM_COM_SHA256  beam.com" | sha256sum -c -
+          chmod +x beam.com
+          for tool in mix.com iex.com; do ln -s beam.com "$tool"; done
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            deps
+            _build
+            ~/.mix
+            ~/.hex
+          key: mix-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-
+
+      - name: Hex and rebar
+        run: |
+          mix.com local.hex --force
+          mix.com local.rebar --force
+
+      - run: mix.com deps.get
+      - name: The files of priv/models are the build of the code (part ${{ matrix.part }} of 8)
+        run: MIX_ENV=test mix.com world.build --check --part ${{ matrix.part }}/8
