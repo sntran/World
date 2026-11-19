@@ -1024,9 +1024,10 @@ A caller proves who it is in `authorization: Bearer ...` (`callerOf` of
 The Worker checks an ID token (`oidc.js`): its signature (RS256) against
 the keys of GitHub (`https://token.actions.githubusercontent.com/.well-known/jwks`,
 kept for an hour), `iss`, `aud`, `exp` and `nbf`, and the claims. A shift
-has `repository` `sntran/World` and a `job_workflow_ref` that starts
-with `sntran/World/.github/workflows/shift.yml@refs/heads/main`; the job
-of an issue the same with `shift-request.yml`. A project is a job of a
+has `repository` `sntran/World` and the `job_workflow_ref`
+`sntran/World/.github/workflows/shift.yml@refs/heads/main` (the whole
+text: a branch `main-test` is not `main`); the job of an issue the same
+with `shift-request.yml`. A project is a job of a
 repository whose `repository_owner_id` is the number of the account of
 the owner (`WORLD_OWNER_ID` of `wrangler.jsonc`), not only its name.
 
