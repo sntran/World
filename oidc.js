@@ -73,9 +73,10 @@ export function who(claims, env) {
   if (!claims || String(claims.repository_owner_id ?? '') !== String(env.WORLD_OWNER_ID ?? '-')) return null;
   const repository = env.WORLD_SHIFT_REPOSITORY ?? 'sntran/World';
   const ref = String(claims.job_workflow_ref ?? '');
+  // (The whole ref: a branch main-test is not main.)
   if (claims.repository === repository) {
-    if (ref.startsWith(`${repository}/.github/workflows/shift.yml@refs/heads/main`)) return { kind: 'shift' };
-    if (ref.startsWith(`${repository}/.github/workflows/shift-request.yml@refs/heads/main`)) return { kind: 'request' };
+    if (ref === `${repository}/.github/workflows/shift.yml@refs/heads/main`) return { kind: 'shift' };
+    if (ref === `${repository}/.github/workflows/shift-request.yml@refs/heads/main`) return { kind: 'request' };
   }
   const name = String(claims.repository ?? '').split('/')[1]?.toLowerCase() ?? '';
   return /^[a-z0-9_.-]{1,100}$/.test(name) ? { kind: 'project', project: name } : null;
