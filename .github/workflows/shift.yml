@@ -12,7 +12,7 @@ name: Construction shift
 # The edge starts it (shift.js, workflow_dispatch with the fine-grained
 # token WORLD_SHIFT_TOKEN of the Worker), for the commit that the edge
 # runs: the crews refuse a node with other code. The owner can start it
-# by hand too.
+# by hand too. The commit must be on main.
 #
 # The job uses no secret (docs/factory.md, "The secrets"). It asks
 # GitHub for its ID token (id-token: write), with the audience of the
@@ -91,10 +91,22 @@ jobs:
           echo "WORLD_SHIFT_IDLE=$idle" >> "$GITHUB_ENV"
           echo "The shift: $minutes minutes at most, home after $idle minutes with no work."
 
+      # All the commits (with no files of the other commits): the next step
+      # checks that the commit is on main.
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit }}
           persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+
+      # Only a commit of main: the code of the commit runs in this job, with
+      # its ID token. No code of the commit runs before this step.
+      - name: Check that the commit is on main
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          git merge-base --is-ancestor "$COMMIT" origin/main || { echo "The commit $COMMIT is not on main" >&2; exit 1; }
 
       - uses: actions/setup-node@v7
         with:

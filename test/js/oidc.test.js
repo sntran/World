@@ -77,6 +77,10 @@ test('another repository, another workflow, or another branch is not a shift', a
   // A workflow of World that is not shift.yml, or shift.yml of a branch: a project "world", not a shift.
   assert.equal((await check({ job_workflow_ref: 'sntran/World/.github/workflows/ci.yml@refs/heads/main' })).kind, 'project');
   assert.equal((await check({ job_workflow_ref: 'sntran/World/.github/workflows/shift.yml@refs/heads/feature' })).kind, 'project');
+  // The whole ref: a branch whose name starts with main is not main.
+  for (const ref of ['shift.yml@refs/heads/main-test', 'shift.yml@refs/heads/main/x', 'shift-request.yml@refs/heads/main2', 'shift.yml@refs/heads/mainx']) {
+    assert.equal((await check({ job_workflow_ref: `sntran/World/.github/workflows/${ref}` })).kind, 'project', ref);
+  }
   // A fork with another owner: nobody.
   assert.equal(await check({ repository: 'someone/World', repository_owner_id: '42', job_workflow_ref: 'someone/World/.github/workflows/shift.yml@refs/heads/main' }), null);
 });

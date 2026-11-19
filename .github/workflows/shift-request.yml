@@ -8,9 +8,13 @@ name: Shift request
 # the parts to the shift that runs. When the parts are built already, the
 # issue gets the parts lists and closes; else the shift closes it
 # (.github/workflows/shift.yml, scripts/shift-issues.mjs check).
+#
+# The job starts on "labeled" only: an issue of the form gets its label
+# when it opens (the form gives it), and the owner can add the label
+# again. (With "opened" too, each new issue started two runs.)
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
 
 permissions:
   contents: read
@@ -19,24 +23,22 @@ permissions:
   # "The secrets").
   id-token: write
 
-# One request for each issue (an issue of a member comes with "opened"
-# and with "labeled").
+# One request for each issue at a time: a new label stops the request
+# that runs.
 concurrency:
   group: shift-request-${{ github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:
   request:
-    # Only a member starts a shift: a member opens the issue, or adds the
-    # label to the issue of another user (only a user who can triage can
-    # label the issue of another user).
+    # Only the label shift, and only a member starts a shift: a member
+    # opens the issue, or adds the label to the issue of another user (only
+    # a user who can triage can label the issue of another user).
     if: >-
-      contains(github.event.issue.labels.*.name, 'shift') &&
+      github.event.label.name == 'shift' &&
       github.event.issue.state == 'open' && (
-        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association) || (
-          github.event.action == 'labeled' &&
-          github.event.label.name == 'shift' &&
-          github.event.sender.login != github.event.issue.user.login))
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association) ||
+        github.event.sender.login != github.event.issue.user.login)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
