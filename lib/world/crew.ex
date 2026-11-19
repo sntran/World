@@ -58,6 +58,7 @@ defmodule World.Crew do
   that joins it (`World.Shift`).
   """
   use GenServer
+  require Logger
 
   @tasks World.Crew.Tasks
   @sites World.Crew.Sites
@@ -274,7 +275,9 @@ defmodule World.Crew do
       retry: Keyword.get(opts, :retry, 3_000),
       connect: Keyword.get(opts, :connect, &Node.connect/1),
       # The name of this node (an option for a test, where this node is also the other node).
-      me: Keyword.get(opts, :me, &node/0)
+      me: Keyword.get(opts, :me, &node/0),
+      # The reason of the last join that failed (the log says it once).
+      why: nil
     }
 
     # The nodes that come and go, hidden or not, from now on: also when
@@ -289,8 +292,24 @@ defmodule World.Crew do
   def handle_continue({:node, name, cookie, start}, s) do
     if name, do: {:ok, _} = start.(name, :longnames)
     if cookie != nil and Node.alive?(), do: Node.set_cookie(cookie)
-    if s.join, do: send(self(), :join)
+
+    if s.join do
+      load()
+      send(self(), :join)
+    end
+
     {:noreply, s}
+  end
+
+  # A node that joins another node takes its work (a construction shift, a
+  # native node): each module of World is loaded first. `mix run` loads a
+  # module only at its first call, and a recipe names a level, a material
+  # or a role that the code makes into an atom of the code
+  # (`String.to_existing_atom/1`): with no module that has that atom, the
+  # part fails.
+  defp load do
+    {:ok, modules} = :application.get_key(:world, :modules)
+    Enum.each(modules, &Code.ensure_loaded!/1)
   end
 
   @impl true
@@ -309,11 +328,19 @@ defmodule World.Crew do
   def handle_info(:join, %{join: node} = s) when node != nil and not is_map_key(s.nodes, node) do
     case s.connect.(node) == true && greet(s, node) do
       {:ok, s} ->
-        {:noreply, s}
+        Logger.info("crews: #{node()} joined #{node}")
+        {:noreply, %{s | why: nil}}
 
-      _ ->
+      failed ->
+        # (The reason goes to the log once, and again when it changes: a node of
+        # a shift has no other way to say why it takes no work.)
+        why = if failed, do: elem(elem(failed, 0), 1), else: :connect
+
+        if why != s.why,
+          do: Logger.warning("crews: #{node()} did not join #{node}: #{reason(why)}; the next try in #{s.retry} ms")
+
         Process.send_after(self(), :join, s.retry)
-        {:noreply, s}
+        {:noreply, %{s | why: why}}
     end
   end
 
@@ -338,6 +365,11 @@ defmodule World.Crew do
 
   @impl true
   def terminate(_reason, s), do: :persistent_term.erase({__MODULE__, s.name})
+
+  # The reason of a join that failed, for the log.
+  defp reason(:connect), do: "no connection (the distribution, the port or the cookie)"
+  defp reason(:code), do: "the other node has other code (World.Crew.version/0)"
+  defp reason(:down), do: "the other node did not answer"
 
   # Ask a node for its workers: `{:ok, state}` or `{{:error, reason}, state}`.
   defp greet(s, node) do
