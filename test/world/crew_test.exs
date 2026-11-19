@@ -185,9 +185,16 @@ defmodule World.CrewTest do
 
     log =
       ExUnit.CaptureLog.capture_log(fn ->
-        crews(:crew_test_g, join: me, retry: 10, version: "another code", connect: fn _ -> true end)
-        crews(:crew_test_h, join: :nobody@nowhere, retry: 10, connect: fn _ -> true end)
-        Process.sleep(100)
+        g = crews(:crew_test_g, join: me, retry: 10, version: "another code", connect: fn _ -> true end)
+        h = crews(:crew_test_h, join: :nobody@nowhere, retry: 10, connect: fn _ -> true end)
+        # (A crew that joins loads the code first: a wait until each try has its reason.)
+        wait = fn wait ->
+          if :sys.get_state(g).why == :code and :sys.get_state(h).why == :down,
+            do: :ok,
+            else: Process.sleep(5) && wait.(wait)
+        end
+
+        wait.(wait)
       end)
 
     assert log =~ "did not join #{me}: the other node has other code"

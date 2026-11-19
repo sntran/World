@@ -21,8 +21,10 @@ name: Construction shift
 # on main of this repository. The edge gives the name of the node of the
 # runner, a cookie of 32 random bytes for that node only, and the pass of
 # the shift: the store of the Worker takes only the parts that the edge
-# gave to this shift. At the end of the shift, the edge forgets the
-# cookie and the pass.
+# gave to this shift. The edge keeps the passes in its store, so a VM of
+# the edge that starts again knows the node; a node that goes away keeps
+# its pass for 10 minutes. With no connection to the edge for 2 minutes,
+# the node joins again (scripts/shift.sh).
 on:
   workflow_dispatch:
     inputs:
