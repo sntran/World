@@ -946,6 +946,119 @@ ID token) measures the time from an edit of an order to its
 whole new level, as a project gets it: the edit, the parts list, then
 all its parts at one time.
 
+#### Hải Âu in a shift at world.mkfifo.com
+
+The measure (2026-11-19, `main` at 456c42c): the edge at
+world.mkfifo.com and one shift on a runner of GitHub. The owner started
+the shift by hand (`shift.yml`, 1.5 hours). Its node joined the edge 71
+s after the start: the queue of the runner, the checkout, the cache and
+the start of the node. The order is Hải Âu at mid (7 parts: the sign,
+the base, and the 5 parts of the main node).
+
+Each request is an issue of the form "A construction shift" (a project
+with no token), for an order that an edit made before the issue
+(`POST /orders/HASH/edits`). Each time of B, C and D is from the issue.
+The time of A is from the new label of issue 6, not from the issue: the
+owner opened issue 6 on 2026-11-18, and it got the label `shift` again
+for this measure. A script looked at the parts with no token:
+
+| Request | Parts list | Sign and base | Main parts | Whole mid level |
+|---|---|---|---|---|
+| A: a storey of 4.2 (a new order) | 35.8 s | 65.7 and 117.8 s (built) | 116.8 to 203.1 s | 203.1 s |
+| B: one front (`options.fronts.0.bays` to 6) | 37.2 s | 39.6 and 39.8 s (R2) | 75.1 to 185.5 s | 185.5 s |
+| C: the height of a storey (`options.storey` to 3.4) | 48.4 s | 54.0 and 54.3 s (R2) | 309.2 to 375.4 s | 375.4 s |
+| D: a second order (`options.storey` to 3.6), 20 s after C | 57.9 s | 67.2 and 67.5 s (R2) | 387.1 to 510.2 s | 510.2 s |
+
+- One order in the shift (A, B) takes 185 to 203 s. This is less than
+  the target of 5 minutes.
+- The issue adds time before the parts list: the workflow "Shift
+  request" starts, then it sends the request to the edge (36 to 58 s).
+  Each issue started two runs of "Shift request" (the issue opens and
+  gets its label), and the second run stopped the first. Since 1398b04,
+  the workflow starts on the label only: one run for each issue.
+- The issues did not start a second shift: the edge sent the parts of
+  B, C and D to the shift that ran.
+- An edit keeps the keys of the sign and the base, so they come from R2
+  at once. An edit of one front or of a storey changes all 5 parts of
+  the main node.
+- Two orders at one time (C and D, 10 parts) take more than 5 minutes.
+  The main parts of C came first (309 to 375 s), then those of D (387
+  to 510 s from D, 407 to 530 s from C). The first main part of C came
+  at 309 s, and that of B at 75 s. Thus the parts of C waited for the
+  node much longer than one order waits. The cause is not measured
+  yet: the summary of the shift gives the time of each part.
+
+What this measure does not show:
+
+- **The start of a shift by the edge on the site.** The owner started
+  the shift by hand before the requests, so each request found a shift
+  that ran. The time from a request to the start of the workflow
+  (`shift.js`) and to the join of its node is not measured on the site.
+- **A request of a project with its ID token.** Each request came
+  through an issue (the job of `shift-request.yml`). A job of a project
+  that asks for `/p/KEY.glb` with its own ID token is not measured.
+
+#### Two orders at one time, after the limit of the parts
+
+The summary of the shift of A to D (run 44599229778) shows the cause of
+the slow C and D only in part: 27 parts in 48 minutes. The 10 main parts
+of C and D took 67 to 263 s each, and each ended later than the one
+before (they built at one time on the node). 5 keys built two times, and
+the node joined the edge again at 19:43:12, 19:44:20 and 20:02:52.
+
+The corrections: a node builds one part for each of its cores at a time,
+first come first served (4ba9ad4), a node does not build a key two times
+(f7c2cb3), and a node keeps the GLB that the store did not take (01362aa).
+The same measure again, each time with a shift started by hand, and two
+new orders 20 s apart (each with 7 new parts: a deploy gives new keys to
+all the parts, also the sign and the base):
+
+| Measure | Commit | Parts list | First part | Whole mid level |
+|---|---|---|---|---|
+| C2: a storey of 3.45 | a9b781f | 39.2 s | 376.2 s | 535.2 s |
+| D2: a storey of 3.65, 20 s after C2 | a9b781f | 51.6 s | 342.7 s | not done: 5 main parts did not come in 20 minutes |
+| C3: a storey of 3.42 | 01362aa | 39.6 s | 434.5 s | 723.7 s |
+| D3: a storey of 3.62, 20 s after C3 | 01362aa | 92.2 s | 348.7 s | 664.7 s |
+
+The target (the first order in about the time of one order) is not met.
+The main cause is the edge, not the node:
+
+- **The VM of the edge started again** (the events `started` of
+  `/events`): at 21:07:57 and 21:09:21 (during C2 and D2), and at
+  21:45:50 (just before the third shift joined). A new VM has no queue
+  and does not know the parts in work. The store then refuses the GLB of
+  a part in work, and a part waits until a request asks for it again:
+  the job of an issue asks one time, and the shift asks each 5 minutes
+  (`shift-issues.mjs check`). That is the wait of about 5 minutes before
+  the first part.
+- **The edge did not answer in time, with no start of its VM.** At
+  21:53:45 the store refused the GLBs of 8 parts at one time, and the
+  node joined the edge again at 21:53:50, 21:54:36 and 22:12:50. Most
+  likely the VM did not answer the check of the store (`/shift/allowed`)
+  in time, and the distribution broke. The logs of the Worker are not
+  read yet.
+- The summary of the second shift (run 44615136474): 22 parts in 26
+  minutes, 8 keys built two times, 2 parts with no recipe at first. The
+  store did not take the GLBs of the 5 main parts of D2, so they never
+  came.
+- The summary of the third shift (run 44621247964): 29 parts in 31
+  minutes, 13 makes that the store refused. Each GLB that the store
+  refused went to the store at a later make of its key in 1.1 to 3.3 s,
+  with no new build.
+- The order of the queue holds only in one VM: after a start of the VM,
+  the parts of D3 came before those of C3.
+- The time from the start of a shift by hand to the join of its node:
+  71 s at 456c42c (the build in the cache), 3 minutes 7 s at a9b781f and
+  4 minutes 43 s at 01362aa (a new commit: the node compiles at its
+  start).
+
+**One run for each issue (1398b04).** Before, each issue started two runs
+of "Shift request", and the time from the issue to the parts list was
+35.8 to 57.9 s (A to D). After, one run for each issue, and the time was
+39.2 to 92.2 s (C2 to D3): no gain that a measure can see. The run that
+the second one stopped cost about 3 s, and the parts list itself (a build
+at the edge) takes most of the time.
+
 #### Hải Âu in a shift on this computer
 
 The measure (2026-11-18): the local edge (`wrangler dev`, with
@@ -976,8 +1089,8 @@ the edit (`scripts/edit-time.mjs`):
 - A shift of 0.5 hours ended at its time (15 minutes), wrote its
   summary (5 parts, 39 to 185 s each, a peak of 199 to 215 MB of the
   VM), and left the edge.
-- The time at world.mkfifo.com needs the deploy, the secrets, and a
-  shift on a runner of GitHub.
+- For the time at world.mkfifo.com, with a shift on a runner of
+  GitHub, see "Hải Âu in a shift at world.mkfifo.com".
 
 #### Hải Âu with two nodes on one computer
 
