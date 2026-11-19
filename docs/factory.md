@@ -850,6 +850,7 @@ for the new parts; it waits for the end of the shift that runs.
 | No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
 | A part in the queue | 6 hours at most, then an error | `World.Labour` |
 | A part that fails | 3 tries on nodes of shifts, then an error | `World.Labour` |
+| Parts in work on a node | one for each core of the node (`World.Crew` gives 2 workers for each core), at least one; the parts take the free cores in the order that they came to the queue | `World.Labour` |
 | WebSockets on `/.tcp/` | 4 open at most (`BEAM_MAX_WEBSOCKETS`) | `wrangler.jsonc` |
 
 **The node of the shift** joins the node of the edge
@@ -904,7 +905,8 @@ Worker writes R2 with its binding. It takes a key with a pass only when
 the edge gave that part to that shift (the GLB to write; the GLB, the
 recipe and the order of the part to read, and the blueprints in data),
 else 403. No GLB goes over the link. A part in R2 does
-not build again. A part whose node goes away goes back to the queue. An
+not build again. A part whose node goes away goes back to the queue, at
+its place. An
 issue gets its comment (the parts lists and their URLs) when its parts
 are built, and closes: the job of the request closes it at once, else
 the shift does (`scripts/shift-issues.mjs check`, each 5 minutes and at

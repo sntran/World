@@ -141,6 +141,54 @@ defmodule World.LabourTest do
     assert Task.await(waiter, 600_000) == :stored
   end
 
+  test "with shifts: a node builds one part for each of its cores at a time, and the parts take the free cores in the order of the queue" do
+    {:ok, n} = Task.Supervisor.start_link()
+    {:ok, open} = Agent.start_link(fn -> false end)
+    # (The node comes when the three parts wait: 4 workers, so 2 cores.)
+    nodes = fn -> if Agent.get(open, & &1), do: [{n, 4}], else: [] end
+    me = self()
+
+    # The most parts in work on the node at one time.
+    {:ok, most} = Agent.start_link(fn -> 0 end)
+    watch = spawn_link(fn -> watch(most, n) end)
+
+    waiters =
+      for {count, i} <- Enum.with_index([4, 5, 6], 1) do
+        {key, recipe} = fresh(count)
+
+        waiter =
+          Task.async(fn ->
+            result = Labour.build(key, recipe, shifts: true, project: true, poll: 5, nodes: nodes)
+            send(me, {:done, count, Labour.busy(n)})
+            result
+          end)
+
+        wait_for(fn -> Labour.waiting() == i end)
+        waiter
+      end
+
+    Agent.update(open, fn _ -> true end)
+    assert Enum.map(waiters, &Task.await(&1, 600_000)) == [:stored, :stored, :stored]
+    Process.unlink(watch)
+    Process.exit(watch, :kill)
+    assert Agent.get(most, & &1) == 2
+
+    # The third part waited for a free core: the first two ended before it.
+    assert_receive {:done, first, _}
+    assert_receive {:done, second, _}
+    assert_receive {:done, 6, 0}
+    assert Enum.sort([first, second]) == [4, 5]
+    assert Labour.waiting() == 0 and Labour.busy(n) == 0
+  end
+
+  defp watch(most, tasks) do
+    Agent.update(most, &max(&1, Labour.busy(tasks)))
+    Process.sleep(1)
+    watch(most, tasks)
+  end
+
+  defp wait_for(fun), do: if(fun.(), do: :ok, else: Process.sleep(5) && wait_for(fun))
+
   test "with shifts: a part of a public order that does not fit the edge gives an error; a part that fits builds here" do
     [{key, recipe} | _] = parts("near")
     assert {:error, [%{"message" => "this part does not fit" <> _}]} = Labour.build(key, recipe, shifts: true)
