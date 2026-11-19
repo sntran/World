@@ -5,9 +5,7 @@
 # - mix world.build of four models into a new directory, and the Khronos
 #   glTF validator on each GLB of it (a part, an assembly with joints, a
 #   person with a skin, a sculpture with maps and bones).
-# - mix world.build --check (the job catalog, in 8 parts at the same
-#   time): each file of priv/models is the build of the code, and no file
-#   is of a model that is not in the catalog.
+# - mix world.build --check runs on request only: the workflow catalog.yml.
 # - npm test: the tests of the pages.
 # - npm run build and wrangler deploy --dry-run: the site of
 #   https://world.mkfifo.com (docs/factory.md) and edge.com (the VM of the
@@ -90,50 +88,3 @@ jobs:
       - run: npx wrangler deploy --dry-run
       - name: wings/ is the copy of the core of Wings 3D
         run: sh scripts/wings.sh && git diff --exit-code wings
-
-  # The files of priv/models are the build of the code. The catalog takes
-  # about an hour on one core, so 8 jobs each build an eighth of it.
-  catalog:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        part: [1, 2, 3, 4, 5, 6, 7, 8]
-    steps:
-      - uses: actions/checkout@v7
-
-      # beam.com is an Actually Portable Executable: its first lines are a
-      # shell script. The runner can give a program that starts with MZ to
-      # WINE. This rule gives it to /bin/sh.
-      - name: Run APE programs with /bin/sh
-        run: sudo sh -c 'echo ":APE:M::MZqFpD::/bin/sh:" > /proc/sys/fs/binfmt_misc/register' || true
-
-      - name: Install beam.com
-        run: |
-          mkdir -p "$HOME/bin"
-          cd "$HOME/bin"
-          curl -fsSLO "https://github.com/sntran/BEAM.com/releases/download/v$BEAM_COM_VERSION/beam.com"
-          echo "$BEAM_COM_SHA256  beam.com" | sha256sum -c -
-          chmod +x beam.com
-          for tool in mix.com iex.com; do ln -s beam.com "$tool"; done
-          echo "$HOME/bin" >> "$GITHUB_PATH"
-
-      - uses: actions/cache@v6
-        with:
-          path: |
-            deps
-            _build
-            ~/.mix
-            ~/.hex
-          key: mix-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-${{ hashFiles('mix.lock') }}
-          restore-keys: mix-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-
-
-      - name: Hex and rebar
-        run: |
-          mix.com local.hex --force
-          mix.com local.rebar --force
-
-      - run: mix.com deps.get
-      - name: The files of priv/models are the build of the code (part ${{ matrix.part }} of 8)
-        run: MIX_ENV=test mix.com world.build --check --part ${{ matrix.part }}/8

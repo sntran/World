@@ -98,11 +98,18 @@ defmodule World.Supervisor do
   The construction shift on its runner, for the environment `env`
   (`World.Shift`): `WORLD_SHIFT_UNTIL`, its end (seconds of the Unix
   clock), `WORLD_SHIFT_IDLE`, the minutes with no work before it goes
-  home (60), and `WORLD_SHIFT_SUMMARY`, the file of its summary.
+  home (60), `WORLD_SHIFT_SUMMARY`, the file of its summary, and
+  `WORLD_JOIN`, the node of the edge (with no connection to it for 2
+  minutes, the shift joins again).
   """
   def shift(%{"WORLD_SHIFT_UNTIL" => until} = env) do
     idle = String.to_integer(Map.get(env, "WORLD_SHIFT_IDLE", "60"))
-    [{World.Shift, until: String.to_integer(until) * 1000, idle: idle * 60_000, summary: env["WORLD_SHIFT_SUMMARY"]}]
+    edge = env["WORLD_JOIN"] && String.to_atom(env["WORLD_JOIN"])
+
+    [
+      {World.Shift,
+       until: String.to_integer(until) * 1000, idle: idle * 60_000, summary: env["WORLD_SHIFT_SUMMARY"], edge: edge}
+    ]
   end
 
   def shift(_env), do: []

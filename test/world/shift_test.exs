@@ -37,7 +37,9 @@ defmodule World.ShiftTest do
     until = System.system_time(:millisecond) + 3_600_000
 
     shift =
-      start_supervised!({Shift, until: until, idle: 50, tick: 10, summary: summary, stop: fn -> send(me, :stop) end})
+      start_supervised!(
+        {Shift, until: until, idle: 50, tick: 10, summary: summary, stop: fn status -> send(me, {:stop, status}) end}
+      )
 
     assert Shift.left() in 3_500_000..3_600_000
 
@@ -50,7 +52,7 @@ defmodule World.ShiftTest do
     assert_raise RuntimeError, fn -> Shift.work(key, fn -> raise "a fault" end) end
 
     ref = Process.monitor(shift)
-    assert_receive :stop, 2_000
+    assert_receive {:stop, 0}, 2_000
     assert_receive {:DOWN, ^ref, :process, _, :normal}
     text = File.read!(summary)
     assert text =~ "4 parts in 0 minutes. The end: no work."
@@ -66,7 +68,12 @@ defmodule World.ShiftTest do
 
     # A part in work, in a task of the crews.
     until = System.system_time(:millisecond) + 300
-    shift = start_supervised!({Shift, until: until, tick: 10, summary: summary, stop: fn -> send(me, :stop) end})
+
+    shift =
+      start_supervised!(
+        {Shift, until: until, tick: 10, summary: summary, stop: fn status -> send(me, {:stop, status}) end}
+      )
+
     ref = Process.monitor(shift)
 
     task =
@@ -75,19 +82,46 @@ defmodule World.ShiftTest do
       end)
 
     assert Task.yield(task, 5_000) == {:exit, :shutdown}
-    assert_receive :stop, 2_000
+    assert_receive {:stop, 0}, 2_000
     text = File.read!(summary)
     assert text =~ "0 parts" and text =~ "The end: the end of the time of the shift."
     assert text =~ "stopped at the end; it goes back to the queue"
     assert_receive {:DOWN, ^ref, :process, _, :normal}
 
     # A shift with no summary file, and no part: it ends too.
-    start_supervised!({Shift, until: System.system_time(:millisecond), tick: 10, stop: fn -> send(me, :stop) end},
+    start_supervised!(
+      {Shift, until: System.system_time(:millisecond), tick: 10, stop: fn status -> send(me, {:stop, status}) end},
       id: :again
     )
 
-    assert_receive :stop, 2_000
+    assert_receive {:stop, 0}, 2_000
     refute Store.has?("a" <> String.duplicate("0", 31))
+  end
+
+  test "with no connection to the edge for its time, a shift stops with the exit status of a new join", %{tmp_dir: dir} do
+    me = self()
+    summary = Path.join(dir, "summary.md")
+    {:ok, here} = Agent.start_link(fn -> [:edge@h] end)
+
+    shift =
+      start_supervised!(
+        {Shift,
+         until: System.system_time(:millisecond) + 3_600_000,
+         tick: 10,
+         lost: 100,
+         edge: :edge@h,
+         connected: fn -> Agent.get(here, & &1) end,
+         summary: summary,
+         stop: fn status -> send(me, {:stop, status}) end}
+      )
+
+    # (While the edge is connected, the shift goes on.)
+    refute_receive _, 200
+    ref = Process.monitor(shift)
+    Agent.update(here, fn _ -> [] end)
+    assert_receive {:stop, 75}, 2_000
+    assert_receive {:DOWN, ^ref, :process, _, :normal}
+    assert File.read!(summary) =~ "The end: no connection to the edge for 0 s; a new join."
   end
 
   test "the shift of a runner from the environment" do
@@ -96,9 +130,11 @@ defmodule World.ShiftTest do
     assert [{Shift, opts}] =
              World.Supervisor.shift(%{"WORLD_SHIFT_UNTIL" => "1700000000", "WORLD_SHIFT_SUMMARY" => "s.md"})
 
-    assert opts == [until: 1_700_000_000_000, idle: 3_600_000, summary: "s.md"]
+    assert opts == [until: 1_700_000_000_000, idle: 3_600_000, summary: "s.md", edge: nil]
     assert [{Shift, opts}] = World.Supervisor.shift(%{"WORLD_SHIFT_UNTIL" => "1", "WORLD_SHIFT_IDLE" => "5"})
     assert opts[:idle] == 300_000
+    assert [{Shift, opts}] = World.Supervisor.shift(%{"WORLD_SHIFT_UNTIL" => "1", "WORLD_JOIN" => "world@127.0.0.1"})
+    assert opts[:edge] == :"world@127.0.0.1"
 
     # The edge with shifts.
     before = Application.get_env(:world, :shifts)

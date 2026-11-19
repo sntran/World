@@ -22,7 +22,14 @@ defmodule World.Shift do
   - `summary`: the file of the summary (markdown, `$GITHUB_STEP_SUMMARY`
     for the job): each part, its time, the peak memory of the VM while
     it built, its result, and the failures.
-  - `stop`: the function that stops the VM at the end (`System.stop/0`).
+  - `stop`: the function that stops the VM at the end, with its exit
+    status (`System.stop/1`): 0, or 75 for a new join.
+  - `edge` (the node of `WORLD_JOIN`) and `lost` (2 minutes): when the
+    node of the edge is not connected for this time (its VM started
+    again, and it had no pass of this node), the shift stops with the
+    exit status 75, and
+    `scripts/shift.sh` joins again: a new name, cookie and pass. The
+    parts in work go back to the queue of the edge.
   """
   # (A shift that ended does not start again: the VM stops.)
   use GenServer, restart: :temporary
@@ -32,6 +39,12 @@ defmodule World.Shift do
 
   # The edge starts the next shift when the shift has less time left.
   @next 15 * 60_000
+
+  # The time with no connection to the edge before a new join.
+  @lost 2 * 60_000
+
+  # The exit status of a shift that joins again (scripts/shift.sh).
+  @again 75
 
   # --- On the edge -----------------------------------------------------------------------
 
@@ -115,7 +128,11 @@ defmodule World.Shift do
        until: until,
        idle: Keyword.get(opts, :idle, 60 * 60_000),
        summary: opts[:summary],
-       stop: Keyword.get(opts, :stop, &System.stop/0),
+       stop: Keyword.get(opts, :stop, &System.stop/1),
+       edge: opts[:edge],
+       lost: Keyword.get(opts, :lost, @lost),
+       connected: Keyword.get(opts, :connected, fn -> Node.list(:connected) end),
+       seen: System.monotonic_time(:millisecond),
        tick: tick,
        start: System.system_time(:millisecond),
        last: System.monotonic_time(:millisecond),
@@ -139,10 +156,21 @@ defmodule World.Shift do
 
   @impl true
   def handle_info(:tick, s) do
+    now = System.monotonic_time(:millisecond)
+    s = if s.edge in s.connected.(), do: %{s | seen: now}, else: s
+
     cond do
-      System.system_time(:millisecond) >= s.until -> finish(s, "the end of the time of the shift")
-      s.busy == %{} and System.monotonic_time(:millisecond) - s.last >= s.idle -> finish(s, "no work")
-      true -> Process.send_after(self(), :tick, s.tick) && {:noreply, s}
+      System.system_time(:millisecond) >= s.until ->
+        finish(s, "the end of the time of the shift", 0)
+
+      s.edge != nil and now - s.seen >= s.lost ->
+        finish(s, "no connection to the edge for #{div(s.lost, 1000)} s; a new join", @again)
+
+      s.busy == %{} and now - s.last >= s.idle ->
+        finish(s, "no work", 0)
+
+      true ->
+        Process.send_after(self(), :tick, s.tick) && {:noreply, s}
     end
   end
 
@@ -151,10 +179,10 @@ defmodule World.Shift do
 
   # The end of the shift: the parts in work stop (and go back to the
   # queue of the edge), the summary, and the stop of the VM.
-  defp finish(s, why) do
+  defp finish(s, why, status) do
     for {_, pid, _, _} <- Supervisor.which_children(Crew.Tasks), is_pid(pid), do: Process.exit(pid, :shutdown)
     if s.summary, do: File.write!(s.summary, summary(s, why))
-    s.stop.()
+    s.stop.(status)
     {:stop, :normal, s}
   end
 

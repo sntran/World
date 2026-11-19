@@ -46,6 +46,9 @@ defmodule World.Skills.Sculpt do
   }
   @use ~w(shape group at axis up scale mirror repeat levels)
   @most 10_000
+  # The most times that a sculpture over its budget is made again with larger cells (`in_budget/4`).
+  @tries 6
+
   # The most texels on a side of the maps of a part of a large sculpture (`tiles/4`).
   @tile_side 512
   @size 1_000
@@ -334,19 +337,28 @@ defmodule World.Skills.Sculpt do
         budget = get_in(d, ["budget", Atom.to_string(level)])
         budget = if tile && budget, do: max(round(budget * tile.share), 12), else: budget
         # With maps, the mesh has no relief smaller than its cells: the maps have it.
-        from = if side, do: SDF.coarse(edits, step), else: edits
+        from = fn step -> if side, do: SDF.coarse(edits, step), else: edits end
 
-        meshes =
+        {meshes, step} =
           cond do
             edits == [] ->
-              []
+              {[], step}
 
             # (The sculpture of a tile in steps: the details are small, in one step.)
             tile && d == data && length(tile.steps) > 1 ->
-              World.Sculpt.model_in_steps(from, step: step, budget: budget, within: tile.box, steps: tile.steps)
+              {World.Sculpt.model_in_steps(from.(step),
+                 step: step,
+                 budget: budget,
+                 within: tile.box,
+                 steps: tile.steps
+               ), step}
+
+            # (A tile keeps its cells: its borders meet the cells of the next tiles.)
+            tile ->
+              {World.Sculpt.model(from.(step), step: step, budget: budget, within: tile.box), step}
 
             true ->
-              World.Sculpt.model(from, step: step, budget: budget, within: tile && tile.box)
+              in_budget(&World.Sculpt.model(from.(&1), step: &1, budget: budget), step, budget)
           end
 
         {if(flat?, do: Enum.map(meshes, &facets(&1, edits)), else: meshes), edits, step}
@@ -382,6 +394,18 @@ defmodule World.Skills.Sculpt do
       end
 
     {made, materials.(), %{}}
+  end
+
+  # The meshes of a sculpture in its budget, and their cells: the
+  # collapse stops above the budget when no collapse keeps the mesh closed
+  # (a thin ring, a small part of many materials). Then the meshes again,
+  # with cells 1.5 times as large, at most #{@tries} times.
+  defp in_budget(model, step, budget, n \\ 0) do
+    meshes = model.(step)
+
+    if budget && n < @tries && meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() > budget,
+      do: in_budget(model, 1.5 * step, budget, n + 1),
+      else: {meshes, step}
   end
 
   # A mesh for the flat look (`"look": "flat"`; plan 0012, D5): each face

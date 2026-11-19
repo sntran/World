@@ -3,7 +3,9 @@
 // on a runner of GitHub Actions. The VM of the edge marks an answer of a
 // part with "x-world-shift: wanted" (World.Shift.wanted?/1): parts of
 // projects wait, and no node of a shift takes them, or the shift ends in
-// less than 15 minutes. handler.js then calls startShift().
+// less than 15 minutes. handler.js then calls startShift(), for a request
+// of a project only: a request with no token does not use the starts of
+// the day.
 //
 // The limits:
 //

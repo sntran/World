@@ -18,11 +18,12 @@ defmodule Mix.Tasks.World.Build do
   With `--check`, the task stops with an error when a file is not the
   same as the build. With no names it also stops when the directory has
   a file of a model that is not in the catalog. CI runs the check of the
-  catalog at each commit, in parts at the same time (`--part I/N`: the
+  catalog on request (`.github/workflows/catalog.yml`: a pull request
+  with the label `catalog`, a pull request that changes `priv/models`,
+  or a run by hand), in parts at the same time (`--part I/N`: the
   models with the indices I, I + N, I + 2N... of the catalog; the list
-  and the kit are in part 1). So the files of `priv/models` are always
-  the build of the code: a commit that changes a model builds its files
-  again (`mix world.build NAME`).
+  and the kit are in part 1). A commit that changes a model builds its
+  files again (`mix world.build NAME`).
 
   The models build at the same time, one on each core (`--jobs` sets
   the count).

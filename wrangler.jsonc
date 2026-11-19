@@ -9,7 +9,10 @@
   // The domain of the site: a custom domain of the Worker (Cloudflare
   // makes its DNS record and its certificate in the zone mkfifo.com).
   "routes": [{ "pattern": "world.mkfifo.com", "custom_domain": true }],
-  "workers_dev": false,
+  // The address of the Worker on workers.dev, for the jobs of GitHub
+  // Actions (the construction shifts): the zone mkfifo.com challenges the
+  // addresses of the runners, and workers.dev is not in the zone.
+  "workers_dev": true,
   // The static files: the review page and the catalog. They go out
   // before the Worker runs. site/_headers gives CORS and the cache.
   "assets": { "directory": "./site" },
@@ -45,14 +48,15 @@
   // (World.Shift.Passes).
   // WORLD_SERVER starts the HTTP server of the VM (World.Application).
   // WORLD_LOG_STORE: the port of the log of the node (worker.js,
-  // World.Log.Store).
+  // World.Log.Store). WORLD_SHIFT_STORE: the port of the passes of the
+  // shifts (worker.js, World.Shift.Store).
   // WORLD_ORDER_STORE: the port of the store of the orders (worker.js,
   // World.Orders.Store). -Mea min: the smallest allocators, for the
   // 128 MB of an isolate. WORLD_MEMORY_MB: the most memory of
   // WebAssembly of the VM for a build (World.Guard, wasm_host:memory/1):
   // a build that needs more stops with an error, and the VM stays under
   // the 128 MB of its isolate.
-  "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_MEMORY_MB": "118", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206" },
+  "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_MEMORY_MB": "118", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206" },
   // The Preview of a branch that is not main (Workers Builds runs "npx
   // wrangler preview" for it). A Preview does not take the settings
   // above, and Wrangler refuses a Preview with no "previews" block. The
@@ -63,7 +67,7 @@
   // history of the edits of an order of the site.)
   "previews": {
     "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world" }],
-    "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_MEMORY_MB": "118", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206" }
+    "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_MEMORY_MB": "118", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206" }
   },
   "observability": { "enabled": true }
 }

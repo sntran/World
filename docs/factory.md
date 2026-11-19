@@ -831,7 +831,10 @@ When a shift runs, the edge gives it the new parts at once. When no
 shift runs, the edge keeps the parts in its queue and starts a shift:
 the VM marks the answer 202 of a part with `x-world-shift: wanted`
 (`World.Shift.wanted?/1`), and the Worker starts the workflow
-(`shift.js`, `workflow_dispatch` with the commit of the deploy). When
+(`shift.js`, `workflow_dispatch` with the commit of the deploy). Only a
+request of a project starts a shift (its ID token of GitHub Actions or
+`WORLD_TOKEN`): a request with no token gets the same answer, and does
+not use the starts of the day. When
 the shift has less than 15 minutes left, the edge starts the next shift
 for the new parts; it waits for the end of the shift that runs.
 
@@ -860,15 +863,33 @@ for the new parts; it waits for the end of the shift that runs.
    (`:erlang.set_cookie/2`), the name of the node of the edge, and the
    pass of the shift for the store of the Worker.
 3. The runner sets that cookie, dials out through the `tcp-proxy.mjs` of
-   beam.com to `wss://world.mkfifo.com/.tcp/4370`, and connects. The
+   beam.com to `wss://world.mkfifo.workers.dev/.tcp/4370` (below, "The
+   address of the jobs"), and connects. The
    edge (`DIST_NAME`, `DIST_LISTEN=true`) has a cookie of its own that
    nobody knows: random, made at the start of its distribution. So only
    the node of a join connects, with the cookie of its join.
-4. At the end of the shift (its node goes away), the edge forgets the
-   cookie of that node and its pass.
+4. The edge keeps each pass in the SQLite of its Durable Object
+   (`World.Shift.Store`, `shift_store.js`). The VM of the edge can start
+   again (a deploy, the limit of its memory). The runtime starts each
+   new VM from a memory image of the first VM of its deploy, so
+   `World.Shift.Passes` reads the store each 10 seconds and takes each
+   pass that it does not have, with the cookie of its node. The node of
+   a shift that runs connects again (`World.Crew` tries each 3 s); in a
+   test, about 10 s after the start of a new VM.
+5. A node that goes away (the end of its shift, or a break of its
+   connection) keeps its pass and its cookie for 10 minutes. Then the
+   edge forgets them.
+6. A node with no connection to the edge for 2 minutes stops with the
+   exit status 75 (`World.Shift`), and `scripts/shift.sh` joins again:
+   a new ID token, name, cookie and pass. The parts in work go back to
+   the queue of the edge.
 
 The runner checks out the commit that the edge runs (the crews refuse
-other code), with the deps and the build in the cache. The edge starts the
+other code), with the deps and the build in the cache. The crews compare
+a hash of the source (`World.Crew.Source`), not of the compiled modules:
+the edge is built in Workers Builds and the shift on a runner, in two
+folders, and the code of some modules has the path of the folder of the
+build. The edge starts the
 distribution after the application, so `World.Crew` watches the nodes
 from its start (`:net_kernel.monitor_nodes/2` with `node_type: :all`: a
 node that only connects is hidden). The edge gives work and takes none
@@ -1009,6 +1030,16 @@ of an issue the same with `shift-request.yml`. A project is a job of a
 repository whose `repository_owner_id` is the number of the account of
 the owner (`WORLD_OWNER_ID` of `wrangler.jsonc`), not only its name.
 
+**The address of the jobs.** The zone mkfifo.com gives the addresses of
+the runners of GitHub a challenge of Cloudflare (403, `cf-mitigated:
+challenge`, with each User-Agent), and a job cannot answer a challenge.
+So the jobs of GitHub Actions (the shifts, the job of an issue, and the
+jobs of the projects) ask the same Worker at its address on workers.dev,
+`https://world.mkfifo.workers.dev`, which is not in the zone
+(`workers_dev` of `wrangler.jsonc`). The audience of their ID tokens
+stays `https://world.mkfifo.com`, and the URLs in the comments of the
+issues are of world.mkfifo.com.
+
 A project of GitHub Actions asks with no secret:
 
 ```yaml
@@ -1018,7 +1049,7 @@ steps:
   - run: |
       token=$(curl -sS -H "authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
         "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://world.mkfifo.com" | jq -r .value)
-      curl -sS -H "authorization: Bearer $token" https://world.mkfifo.com/p/KEY.glb
+      curl -sS -H "authorization: Bearer $token" https://world.mkfifo.workers.dev/p/KEY.glb
 ```
 
 ### The guard and the memory of WebAssembly

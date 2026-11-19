@@ -225,6 +225,58 @@ defmodule World.Skills.SculptTest do
     assert [%{colors: [{168, 136, 64} | _], normals: [_ | _]}] = part.shapes
   end
 
+  test "thin rings of two materials in a small budget: the collapse stops above it, so the cells become larger" do
+    ring = %{
+      "shape" => "revolve",
+      "at" => [-0.105, 0.158, -0.196],
+      "axis" => [0, 1, 0],
+      "material" => "stone_wash",
+      "repeat" => %{"count" => 3},
+      "size" => %{"profile" => [[0.063, 0], [0.103, 0], [0.153, 0.04], [0.063, 0.04]]}
+    }
+
+    stone = %{
+      "shape" => "extrude",
+      "at" => [0.111, -0.095, -0.038],
+      "blend" => 0.066,
+      "material" => "gray",
+      "repeat" => %{"count" => 3},
+      "size" => %{
+        "depth" => 0.068,
+        "outline" => [
+          [0.048, 0.0],
+          [0.025, 0.031],
+          [-0.011, 0.047],
+          [-0.036, 0.017],
+          [-0.043, -0.021],
+          [-0.009, -0.039],
+          [0.03, -0.038]
+        ],
+        "smooth" => 1
+      }
+    }
+
+    slab = %{
+      "shape" => "round_box",
+      "at" => [-0.036, -0.113, -0.154],
+      "blend" => 0.062,
+      "blend_type" => "hard",
+      "material" => "gray",
+      "size" => [0.25, 0.161, 0.041, 0.004]
+    }
+
+    data = %{"budget" => %{"mid" => 300}, "cells" => %{"mid" => 0.022}, "edits" => [ring, stone, slab]}
+    edits = Skill.edits(data["edits"])
+    # The cells of the data: more faces than the budget after the collapse.
+    over = Detail.with(:mid, fn -> Sculpt.model(edits, step: 0.022, budget: 300, cache: false) end)
+    assert over |> Enum.map(&length(&1.faces)) |> Enum.sum() > 300
+
+    model = Detail.with(:mid, fn -> Drawing.build(drawing(data)) end)
+    [{_, part, _}] = model.nodes
+    assert part.shapes |> Enum.map(&length(&1.faces)) |> Enum.sum() <= 300
+    assert part.shapes |> Enum.map(& &1.material) |> Enum.sort() == [:gray, :stone_wash]
+  end
+
   test "the estimate of the triangles: in the budget, and none for data with errors" do
     near = Skill.estimate(data(), :near)
     assert near > 2_000 and near <= 20_000

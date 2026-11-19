@@ -57,6 +57,14 @@ defmodule World.Simplify do
   collapse goes on past the budget while a collapse costs no more than
   it (a flat part needs few faces).
 
+  With the option `loose: true`, when the collapse with the borders of
+  the materials held stops with more faces than the budget (a small
+  budget on a mesh of many materials: the points where three materials
+  meet, and the lines of the borders, leave too many faces), it goes on
+  with the points of the borders free as the other points. Each face
+  keeps its material, and the mesh stays closed: only the line of a
+  border changes. The points of `fixed` still stay.
+
   With the option `costs: true`, it gives only the cost of each collapse
   in its turn and the faces after it (`[{cost, faces}]`): the collapse
   to a smaller budget does the same collapses first, so a caller with
@@ -89,7 +97,7 @@ defmodule World.Simplify do
         list -> list |> Enum.with_index() |> Map.new(fn {q, i} -> {i, q} end)
       end
 
-    s = %{pts: pts, fs: fs, vf: vfaces, q: q, locked: locked, fixed: fixed, ver: %{}, count: map_size(fs)}
+    s = %{pts: pts, fs: fs, vf: vfaces, q: q, locked: locked, fixed: fixed, stay: stay, ver: %{}, count: map_size(fs)}
     heap = edges |> Map.keys() |> Enum.flat_map(&List.wrap(entry(s, &1))) |> :gb_sets.from_list()
 
     # (With `limit`: no collapse that costs more. With `free`: past the
@@ -101,8 +109,21 @@ defmodule World.Simplify do
       run(Map.put(s, :costs, []), heap, budget).costs |> Enum.reverse()
     else
       s = run(s, heap, budget)
+      s = if opts[:loose] && s.limit == nil && s.count > budget, do: loose(s, budget), else: s
       pack(s)
     end
+  end
+
+  # The collapse again with the borders of the materials free: only the
+  # points of the option `fixed` stay.
+  defp loose(s, budget) do
+    s = %{s | locked: s.stay, fixed: s.stay}
+
+    edges =
+      for {_, {a, b, c, _}} <- s.fs, {x, y} <- [{a, b}, {b, c}, {c, a}], into: MapSet.new(), do: {min(x, y), max(x, y)}
+
+    heap = edges |> Enum.flat_map(&List.wrap(entry(s, &1))) |> :gb_sets.from_list()
+    run(s, heap, budget)
   end
 
   defp run(%{count: n, free: nil} = s, _heap, budget) when n <= budget, do: s
@@ -262,10 +283,22 @@ defmodule World.Simplify do
       # The point a is at the place of b when b stays: it stays too.
       locked = if MapSet.member?(s.locked, b), do: MapSet.put(s.locked, a), else: s.locked
       fixed = if MapSet.member?(s.fixed, b), do: MapSet.put(s.fixed, a), else: s.fixed
+      stay = if MapSet.member?(s.stay, b), do: MapSet.put(s.stay, a), else: s.stay
       pts = s.pts |> Map.put(a, place) |> Map.delete(b)
 
       {:ok,
-       %{s | pts: pts, fs: fs, vf: vf, q: q, ver: ver, locked: locked, fixed: fixed, count: s.count - length(shared)}}
+       %{
+         s
+         | pts: pts,
+           fs: fs,
+           vf: vf,
+           q: q,
+           ver: ver,
+           locked: locked,
+           fixed: fixed,
+           stay: stay,
+           count: s.count - length(shared)
+       }}
     end
   end
 
