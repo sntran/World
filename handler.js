@@ -370,9 +370,11 @@ async function route(request, env, { vm, commit, later = () => {}, verify: check
     if (object) return part(request, object, key);
     const project = (await callerOf(request, env, check))?.project ?? null;
     const r = await forward(request, vm, url.origin, path, project);
-    // (A project can ask for a shorter shift: x-world-shift-hours.)
+    // (Only a project starts a shift: a request with no token does not use
+    // the starts of the day. A project can ask for a shorter shift:
+    // x-world-shift-hours.)
     const hours = project ? request.headers.get('x-world-shift-hours') : null;
-    if (r.headers.get('x-world-shift') === 'wanted') later(startShift(env, commit, { hours }));
+    if (project && r.headers.get('x-world-shift') === 'wanted') later(startShift(env, commit, { hours }));
     if (r.status !== 204) return r;
     // (A node of a shift built the part and put it in R2: it goes out of R2, not through the VM.)
     const built = await env.ORDERS.get(`parts/${key}.glb`);
