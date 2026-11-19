@@ -998,6 +998,67 @@ What this measure does not show:
   through an issue (the job of `shift-request.yml`). A job of a project
   that asks for `/p/KEY.glb` with its own ID token is not measured.
 
+#### Two orders at one time, after the limit of the parts
+
+The summary of the shift of A to D (run 44599229778) shows the cause of
+the slow C and D only in part: 27 parts in 48 minutes. The 10 main parts
+of C and D took 67 to 263 s each, and each ended later than the one
+before (they built at one time on the node). 5 keys built two times, and
+the node joined the edge again at 19:43:12, 19:44:20 and 20:02:52.
+
+The corrections: a node builds one part for each of its cores at a time,
+first come first served (4ba9ad4), a node does not build a key two times
+(f7c2cb3), and a node keeps the GLB that the store did not take (01362aa).
+The same measure again, each time with a shift started by hand, and two
+new orders 20 s apart (each with 7 new parts: a deploy gives new keys to
+all the parts, also the sign and the base):
+
+| Measure | Commit | Parts list | First part | Whole mid level |
+|---|---|---|---|---|
+| C2: a storey of 3.45 | a9b781f | 39.2 s | 376.2 s | 535.2 s |
+| D2: a storey of 3.65, 20 s after C2 | a9b781f | 51.6 s | 342.7 s | not done: 5 main parts did not come in 20 minutes |
+| C3: a storey of 3.42 | 01362aa | 39.6 s | 434.5 s | 723.7 s |
+| D3: a storey of 3.62, 20 s after C3 | 01362aa | 92.2 s | 348.7 s | 664.7 s |
+
+The target (the first order in about the time of one order) is not met.
+The main cause is the edge, not the node:
+
+- **The VM of the edge started again** (the events `started` of
+  `/events`): at 21:07:57 and 21:09:21 (during C2 and D2), and at
+  21:45:50 (just before the third shift joined). A new VM has no queue
+  and does not know the parts in work. The store then refuses the GLB of
+  a part in work, and a part waits until a request asks for it again:
+  the job of an issue asks one time, and the shift asks each 5 minutes
+  (`shift-issues.mjs check`). That is the wait of about 5 minutes before
+  the first part.
+- **The edge did not answer in time, with no start of its VM.** At
+  21:53:45 the store refused the GLBs of 8 parts at one time, and the
+  node joined the edge again at 21:53:50, 21:54:36 and 22:12:50. Most
+  likely the VM did not answer the check of the store (`/shift/allowed`)
+  in time, and the distribution broke. The logs of the Worker are not
+  read yet.
+- The summary of the second shift (run 44615136474): 22 parts in 26
+  minutes, 8 keys built two times, 2 parts with no recipe at first. The
+  store did not take the GLBs of the 5 main parts of D2, so they never
+  came.
+- The summary of the third shift (run 44621247964): 29 parts in 31
+  minutes, 13 makes that the store refused. Each GLB that the store
+  refused went to the store at a later make of its key in 1.1 to 3.3 s,
+  with no new build.
+- The order of the queue holds only in one VM: after a start of the VM,
+  the parts of D3 came before those of C3.
+- The time from the start of a shift by hand to the join of its node:
+  71 s at 456c42c (the build in the cache), 3 minutes 7 s at a9b781f and
+  4 minutes 43 s at 01362aa (a new commit: the node compiles at its
+  start).
+
+**One run for each issue (1398b04).** Before, each issue started two runs
+of "Shift request", and the time from the issue to the parts list was
+35.8 to 57.9 s (A to D). After, one run for each issue, and the time was
+39.2 to 92.2 s (C2 to D3): no gain that a measure can see. The run that
+the second one stopped cost about 3 s, and the parts list itself (a build
+at the edge) takes most of the time.
+
 #### Hải Âu in a shift on this computer
 
 The measure (2026-11-18): the local edge (`wrangler dev`, with
