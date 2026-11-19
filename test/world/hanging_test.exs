@@ -69,10 +69,15 @@ defmodule World.HangingTest do
   end
 
   # Each model at near, with its people: the lean of a person looks for
-  # the first touch on the full skin.
-  @tag timeout: 180_000
-  test "the models: true models of the hammock shop, a mass for each part, in their limits" do
-    for {name, fun} <- Hanging.models() do
+  # the first touch on the full skin. One test for each model, each with
+  # a long limit: the models take from 0.1 to about 10 s each on a
+  # computer with 4 cores, and a runner with the coverage and the other
+  # modules at the same time is slower, so only a hang reaches the limit.
+  for {name, _} <- Hanging.models() do
+    @tag timeout: 600_000
+    test "the models: #{name} is a true model of the hammock shop, a mass for each part, in its limits" do
+      name = unquote(name)
+      fun = Map.fetch!(Map.new(Hanging.models()), name)
       item = fun.()
       assert World.Check.model(item) == :ok, name
       assert %{unknown: []} = Mass.of(item)
