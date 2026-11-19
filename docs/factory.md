@@ -938,7 +938,8 @@ WORLD_STORE_TOKEN:TOKEN` (with no ID token, the node joins with it, and
 it takes each key of the store of the local Worker), and the two secrets
 as `--var`. The site has no `WORLD_STORE_TOKEN`.
 `node scripts/edit-time.mjs BASE HASH LEVEL EDITS` (with `WORLD_TOKEN`
-and `WORLD_PROJECT`) measures the time from an edit of an order to its
+and `WORLD_PROJECT`, or in a job of a repository of the owner with its
+ID token) measures the time from an edit of an order to its
 whole new level, as a project gets it: the edit, the parts list, then
 all its parts at one time.
 
