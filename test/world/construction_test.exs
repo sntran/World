@@ -273,9 +273,12 @@ defmodule World.ConstructionTest do
   end
 
   test "after its end, a construction keeps its elements for a time, and a deadline then changes nothing" do
-    Application.put_env(:world, Construction, linger: 1_500)
+    # (The test sends the deadline, the cancel and the end of the time
+    # itself, in this order, so the speed of the computer changes nothing:
+    # the timers of the budget and of the time are long.)
+    Application.put_env(:world, Construction, linger: 3_600_000)
     on_exit(fn -> Application.delete_env(:world, Construction) end)
-    {:ok, id} = World.build(job("wall_brick_sample", level: :far, budget: %{"seconds" => 1}))
+    {:ok, id} = World.build(job("wall_brick_sample", level: :far, budget: %{"seconds" => 3_600}))
     assert {:ok, %{glbs: glbs}} = World.await(id)
     [{pid, _}] = Registry.lookup(World.Names, {:elements, id})
     [key | _] = Map.keys(glbs)
@@ -283,12 +286,17 @@ defmodule World.ConstructionTest do
     assert Construction.element(id, 999) == :none
 
     # The deadline and a cancel come after the end: the construction keeps
-    # going until its time.
+    # its elements until its time.
+    send(pid, :deadline)
     send(pid, :cancel)
-    ref = Process.monitor(pid)
-    Process.sleep(1_100)
+    _ = :sys.get_state(pid)
     assert Process.alive?(pid)
-    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 2_000
+    assert Construction.element(id, key) == {:ok, glbs[key]}
+
+    # The end of its time (the message of its timer).
+    ref = Process.monitor(pid)
+    send(pid, :close)
+    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
     assert Construction.element(id, 0) == :none
   end
 
