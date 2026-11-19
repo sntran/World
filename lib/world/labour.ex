@@ -92,18 +92,48 @@ defmodule World.Labour do
   the store has it already (a part in R2 does not build again), else
   built from its recipe and put in the store (in the record of the shift,
   `World.Shift.work/2`). `:stored`, or the error of
-  `World.Elements.part/1`. The GLB stays on this node.
+  `World.Elements.part/1`. The GLB stays on this node. When this node
+  builds the key already (the edge gave it again: a VM of the edge that
+  started again asks again), the make waits for that build and does not
+  build the part a second time.
   """
   def make(key) do
     if Store.has?(key) do
       :stored
     else
-      Shift.work(key, fn ->
-        case Elements.part(key) do
-          {:ok, _glb} -> :stored
-          other -> other
-        end
-      end)
+      case :global.trans({__MODULE__, {:make, key}}, fn -> claim(key) end, [node()]) do
+        :mine ->
+          try do
+            Shift.work(key, fn ->
+              case Elements.part(key) do
+                {:ok, _glb} -> :stored
+                other -> other
+              end
+            end)
+          after
+            Registry.unregister(__MODULE__, {:make, key})
+          end
+
+        maker ->
+          ref = Process.monitor(maker)
+
+          receive do
+            {:DOWN, ^ref, :process, _, _} -> make(key)
+          end
+      end
+    end
+  end
+
+  # The process that builds the key on this node, or :mine (this process
+  # builds it now).
+  defp claim(key) do
+    case Registry.lookup(__MODULE__, {:make, key}) do
+      [{maker, _} | _] ->
+        maker
+
+      [] ->
+        {:ok, _} = Registry.register(__MODULE__, {:make, key}, nil)
+        :mine
     end
   end
 

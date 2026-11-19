@@ -905,7 +905,9 @@ Worker writes R2 with its binding. It takes a key with a pass only when
 the edge gave that part to that shift (the GLB to write; the GLB, the
 recipe and the order of the part to read, and the blueprints in data),
 else 403. No GLB goes over the link. A part in R2 does
-not build again. A part whose node goes away goes back to the queue, at
+not build again, and a node that builds a part already does not build it
+a second time when the edge gives it again (a VM of the edge that starts
+again asks again). A part whose node goes away goes back to the queue, at
 its place. An
 issue gets its comment (the parts lists and their URLs) when its parts
 are built, and closes: the job of the request closes it at once, else

@@ -189,6 +189,20 @@ defmodule World.LabourTest do
 
   defp wait_for(fun), do: if(fun.(), do: :ok, else: Process.sleep(5) && wait_for(fun))
 
+  test "a node builds a key one time: a second make of the key waits for the first one" do
+    {key, _recipe} = fresh(7)
+    first = Task.async(fn -> Labour.make(key) end)
+    wait_for(fn -> Registry.lookup(Labour, {:make, key}) != [] end)
+    second = Task.async(fn -> Labour.make(key) end)
+    wait_for(fn -> {:process, first.pid} in elem(Process.info(second.pid, :monitors), 1) end)
+    # (One make builds the key; the other waits for it.)
+    assert [{pid, _}] = Registry.lookup(Labour, {:make, key})
+    assert pid == first.pid
+    assert Task.await(first, 600_000) == :stored
+    assert Task.await(second, 600_000) == :stored
+    assert Registry.lookup(Labour, {:make, key}) == []
+  end
+
   test "with shifts: a part of a public order that does not fit the edge gives an error; a part that fits builds here" do
     [{key, recipe} | _] = parts("near")
     assert {:error, [%{"message" => "this part does not fit" <> _}]} = Labour.build(key, recipe, shifts: true)
