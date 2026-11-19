@@ -831,7 +831,10 @@ When a shift runs, the edge gives it the new parts at once. When no
 shift runs, the edge keeps the parts in its queue and starts a shift:
 the VM marks the answer 202 of a part with `x-world-shift: wanted`
 (`World.Shift.wanted?/1`), and the Worker starts the workflow
-(`shift.js`, `workflow_dispatch` with the commit of the deploy). When
+(`shift.js`, `workflow_dispatch` with the commit of the deploy). Only a
+request of a project starts a shift (its ID token of GitHub Actions or
+`WORLD_TOKEN`): a request with no token gets the same answer, and does
+not use the starts of the day. When
 the shift has less than 15 minutes left, the edge starts the next shift
 for the new parts; it waits for the end of the shift that runs.
 

@@ -151,7 +151,7 @@ test('a part that a node of a shift built: the VM answers 204, and the part goes
   assert.equal(none.headers.get('retry-after'), '1');
 });
 
-test('a part of a project: the VM gets the project; when it wants a shift, the Worker starts one after the answer', async () => {
+test('a part of a project: the VM gets the project; when it wants a shift, the Worker starts one after the answer, for a project only', async () => {
   const later = [];
   const seen = [];
   const env = { ORDERS: bucket(), WORLD_TOKEN: TOKEN };
@@ -165,9 +165,13 @@ test('a part of a project: the VM gets the project; when it wants a shift, the W
   assert.equal(r.headers.get('x-world-shift'), 'wanted');
   // (No WORLD_SHIFT_TOKEN in this env: the start says so.)
   assert.deepEqual(await Promise.all(later), ['no token']);
-  // A request with no token: no project; with no later(), nothing breaks.
+  // A request with no token: no project, and no shift starts (the starts of the day are for the projects).
+  const anyone = await handler(req(`/p/${key}.glb`), env, { vm: v, commit: 'c1', later: (p) => later.push(p) });
+  assert.equal(anyone.status, 202);
+  assert.equal(later.length, 1);
+  // With no later(), nothing breaks.
   await handler(req(`/p/${key}.glb`), env, { vm: v, commit: 'c1' });
-  assert.deepEqual(seen, ['vung_tau', null]);
+  assert.deepEqual(seen, ['vung_tau', null, null]);
 });
 
 test('an order from a URL', () => {
