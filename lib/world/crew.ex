@@ -128,11 +128,15 @@ defmodule World.Crew do
   @doc "Share no more workers with a node (and connect no more to it, when it is the node of the options)."
   def leave(node, crews \\ __MODULE__), do: GenServer.call(crews, {:leave, node})
 
-  @doc "A hash of the code of World on this node: two nodes with the same hash can share their workers."
-  def version do
-    {:ok, modules} = :application.get_key(:world, :modules)
-    :erlang.md5(for m <- Enum.sort(modules), do: m.module_info(:md5))
-  end
+  @doc """
+  A hash of the code of World on this node: two nodes with the same
+  hash can share their workers. It is the hash of the source
+  (`World.Crew.Source`), not of the compiled modules: two builds of one
+  commit in two folders have the same hash (the edge and a construction
+  shift). A job of a stream that the other node cannot run (a function
+  of a module that is not the same there) is done on this node.
+  """
+  def version, do: World.Crew.Version.get()
 
   @doc """
   The answer of this node to a node (`from`) that asks to share workers:

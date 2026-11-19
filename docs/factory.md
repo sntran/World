@@ -869,7 +869,11 @@ for the new parts; it waits for the end of the shift that runs.
    cookie of that node and its pass.
 
 The runner checks out the commit that the edge runs (the crews refuse
-other code), with the deps and the build in the cache. The edge starts the
+other code), with the deps and the build in the cache. The crews compare
+a hash of the source (`World.Crew.Source`), not of the compiled modules:
+the edge is built in Workers Builds and the shift on a runner, in two
+folders, and the code of some modules has the path of the folder of the
+build. The edge starts the
 distribution after the application, so `World.Crew` watches the nodes
 from its start (`:net_kernel.monitor_nodes/2` with `node_type: :all`: a
 node that only connects is hidden). The edge gives work and takes none
