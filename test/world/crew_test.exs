@@ -180,6 +180,20 @@ defmodule World.CrewTest do
   # Crews with a name of their own (the streams read the crews of a name).
   defp crews(name, opts), do: start_supervised!({Crew, [name: name] ++ opts}, id: name)
 
+  test "the log of a join that fails says why: other code, or no answer" do
+    me = node()
+
+    log =
+      ExUnit.CaptureLog.capture_log(fn ->
+        crews(:crew_test_g, join: me, retry: 10, version: "another code", connect: fn _ -> true end)
+        crews(:crew_test_h, join: :nobody@nowhere, retry: 10, connect: fn _ -> true end)
+        Process.sleep(100)
+      end)
+
+    assert log =~ "did not join #{me}: the other node has other code"
+    assert log =~ "did not join nobody@nowhere: the other node did not answer"
+  end
+
   test "the nodes that share their workers: a node with the same code, a try again, a node that goes and comes back" do
     me = node()
     assert byte_size(Crew.version()) == 16 and Crew.hello(Crew.version()) == {:ok, 2 * System.schedulers_online()}
@@ -203,10 +217,21 @@ defmodule World.CrewTest do
     # A node of the options: no connect at first, then it comes; it goes away, and comes back.
     {:ok, tries} = Agent.start_link(fn -> 0 end)
     connect = fn _ -> Agent.get_and_update(tries, &{&1 >= 3, &1 + 1}) end
-    d = crews(:crew_test_d, join: me, retry: 10, connect: connect)
     wait = fn wait, done? -> if done?.(), do: :ok, else: Process.sleep(5) && wait.(wait, done?) end
-    wait.(wait, fn -> Crew.state(:crew_test_d).nodes == [me, me] end)
+
+    {d, log} =
+      ExUnit.CaptureLog.with_log(fn ->
+        d = crews(:crew_test_d, join: me, retry: 10, connect: connect)
+        wait.(wait, fn -> Crew.state(:crew_test_d).nodes == [me, me] end)
+        d
+      end)
+
     assert Agent.get(tries, & &1) == 4
+    # (The log says the reason of the tries that failed once, and the join.)
+    assert length(String.split(log, "did not join")) == 2 and log =~ "no connection" and log =~ "joined #{me}"
+    # (A node that joins has each module of World loaded before its first try: the atoms of the code exist.)
+    {:ok, modules} = :application.get_key(:world, :modules)
+    assert Enum.all?(modules, &:code.is_loaded/1)
     send(d, {:nodedown, me, node_type: :visible})
     wait.(wait, fn -> Agent.get(tries, & &1) == 5 end)
     wait.(wait, fn -> Crew.state(:crew_test_d).nodes == [me, me] end)
