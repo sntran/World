@@ -937,6 +937,45 @@ and `WORLD_PROJECT`) measures the time from an edit of an order to its
 whole new level, as a project gets it: the edit, the parts list, then
 all its parts at one time.
 
+#### Hải Âu in a shift at world.mkfifo.com
+
+The measure (2026-11-19, `main` at 456c42c): the edge at
+world.mkfifo.com and one shift on a runner of GitHub. The owner started
+the shift by hand (`shift.yml`, 1.5 hours). Its node joined the edge 71
+s after the start: the queue of the runner, the checkout, the cache and
+the start of the node. The order is Hải Âu at mid (7 parts: the sign,
+the base, and the 5 parts of the main node).
+
+Each request is an issue of the form "A construction shift" (a project
+with no token), for an order that an edit made before the issue
+(`POST /orders/HASH/edits`). Each time is from the issue, and a script
+looked at the parts with no token:
+
+| Request | Parts list | Sign and base | Main parts | Whole mid level |
+|---|---|---|---|---|
+| A: a storey of 4.2 (a new order) | 35.8 s | 65.7 and 117.8 s (built) | 116.8 to 203.1 s | 203.1 s |
+| B: one front (`options.fronts.0.bays` to 6) | 37.2 s | 39.6 and 39.8 s (R2) | 75.1 to 185.5 s | 185.5 s |
+| C: the height of a storey (`options.storey` to 3.4) | 48.4 s | 54.0 and 54.3 s (R2) | 309.2 to 375.4 s | 375.4 s |
+| D: a second order (`options.storey` to 3.6), 20 s after C | 57.9 s | 67.2 and 67.5 s (R2) | 387.1 to 510.2 s | 510.2 s |
+
+- One order in the shift (A, B) takes 185 to 203 s. This is less than
+  the target of 5 minutes.
+- The issue adds time before the parts list: the workflow "Shift
+  request" starts, then it sends the request to the edge (36 to 58 s).
+  Each issue starts two runs of "Shift request" (the issue opens and
+  gets its label), and the second run stops the first.
+- The issues did not start a second shift: the edge sent the parts of
+  B, C and D to the shift that ran.
+- An edit keeps the keys of the sign and the base, so they come from R2
+  at once. An edit of one front or of a storey changes all 5 parts of
+  the main node.
+- Two orders at one time (C and D, 10 parts) take more than 5 minutes.
+  The main parts of C came first (309 to 375 s), then those of D (387
+  to 510 s from D, 407 to 530 s from C). The first main part of C came
+  at 309 s, and that of B at 75 s. Thus the parts of C waited for the
+  node much longer than one order waits. The cause is not measured
+  yet: the summary of the shift gives the time of each part.
+
 #### Hải Âu in a shift on this computer
 
 The measure (2026-11-18): the local edge (`wrangler dev`, with
@@ -967,8 +1006,8 @@ the edit (`scripts/edit-time.mjs`):
 - A shift of 0.5 hours ended at its time (15 minutes), wrote its
   summary (5 parts, 39 to 185 s each, a peak of 199 to 215 MB of the
   VM), and left the edge.
-- The time at world.mkfifo.com needs the deploy, the secrets, and a
-  shift on a runner of GitHub.
+- For the time at world.mkfifo.com, with a shift on a runner of
+  GitHub, see "Hải Âu in a shift at world.mkfifo.com".
 
 #### Hải Âu with two nodes on one computer
 
