@@ -16,15 +16,23 @@ import version from './site/version.json';
 import { handler } from './handler.js';
 import { orderStore } from './order_store.js';
 import { logStore, sqlTable } from './log_store.js';
+import { shiftStore, shiftTable } from './shift_store.js';
 
-// The VM gets two ports, plain objects with port(), so it needs no other
+// The VM gets three ports, plain objects with port(), so it needs no other
 // Worker: /env/ORDER_STORE, the store of the orders with the R2 bucket
-// ORDERS (order_store.js, World.Orders.Store), and /env/LOG_STORE, the
-// log of the node in the SQLite of the object (log_store.js,
-// World.Log.Store).
+// ORDERS (order_store.js, World.Orders.Store), /env/LOG_STORE, the log of
+// the node in the SQLite of the object (log_store.js, World.Log.Store),
+// and /env/SHIFT_STORE, the passes of the construction shifts in the same
+// SQLite (shift_store.js, World.Shift.Store): a VM that starts again
+// reads them back, so the shifts that run connect again.
 export class Beam extends BeamObject {
   constructor(ctx, env) {
-    super(ctx, { ...env, ORDER_STORE: orderStore(env.ORDERS), LOG_STORE: logStore(sqlTable(ctx.storage.sql)) });
+    super(ctx, {
+      ...env,
+      ORDER_STORE: orderStore(env.ORDERS),
+      LOG_STORE: logStore(sqlTable(ctx.storage.sql)),
+      SHIFT_STORE: shiftStore(shiftTable(ctx.storage.sql)),
+    });
   }
 }
 

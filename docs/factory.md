@@ -865,8 +865,21 @@ for the new parts; it waits for the end of the shift that runs.
    edge (`DIST_NAME`, `DIST_LISTEN=true`) has a cookie of its own that
    nobody knows: random, made at the start of its distribution. So only
    the node of a join connects, with the cookie of its join.
-4. At the end of the shift (its node goes away), the edge forgets the
-   cookie of that node and its pass.
+4. The edge keeps each pass in the SQLite of its Durable Object
+   (`World.Shift.Store`, `shift_store.js`). The VM of the edge can start
+   again (a deploy, the limit of its memory). The runtime starts each
+   new VM from a memory image of the first VM of its deploy, so
+   `World.Shift.Passes` reads the store each 10 seconds and takes each
+   pass that it does not have, with the cookie of its node. The node of
+   a shift that runs connects again (`World.Crew` tries each 3 s); in a
+   test, about 10 s after the start of a new VM.
+5. A node that goes away (the end of its shift, or a break of its
+   connection) keeps its pass and its cookie for 10 minutes. Then the
+   edge forgets them.
+6. A node with no connection to the edge for 2 minutes stops with the
+   exit status 75 (`World.Shift`), and `scripts/shift.sh` joins again:
+   a new ID token, name, cookie and pass. The parts in work go back to
+   the queue of the edge.
 
 The runner checks out the commit that the edge runs (the crews refuse
 other code), with the deps and the build in the cache. The crews compare
