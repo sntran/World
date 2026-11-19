@@ -13,7 +13,7 @@
 import app from './edge.com' with { type: 'bytes' };
 import { Beam as BeamObject, serve } from 'beam.com';
 import version from './site/version.json';
-import { handler } from './handler.js';
+import { distribution, handler } from './handler.js';
 import { orderStore } from './order_store.js';
 import { logStore, sqlTable } from './log_store.js';
 import { shiftStore, shiftTable } from './shift_store.js';
@@ -26,7 +26,9 @@ import { vmEnv } from './vm_env.js';
 // and /env/SHIFT_STORE, the passes of the construction shifts in the same
 // SQLite (shift_store.js, World.Shift.Store): a VM that starts again
 // reads them back, so the shifts that run connect again. The VM gets no
-// secret of the Worker (vm_env.js).
+// secret of the Worker (vm_env.js). The object also takes only the
+// WebSocket of the distribution on /.tcp/ (handler.js, distribution()),
+// whatever version of the Worker sends the request.
 export class Beam extends BeamObject {
   constructor(ctx, env) {
     super(ctx, vmEnv(env, {
@@ -34,6 +36,11 @@ export class Beam extends BeamObject {
       LOG_STORE: logStore(sqlTable(ctx.storage.sql)),
       SHIFT_STORE: shiftStore(shiftTable(ctx.storage.sql)),
     }));
+  }
+
+  fetch(request) {
+    if (new URL(request.url).pathname.startsWith('/.tcp/') && !distribution(request, this.env)) return new Response('no such page\n', { status: 404 });
+    return super.fetch(request);
   }
 }
 

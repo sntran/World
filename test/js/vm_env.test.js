@@ -30,3 +30,8 @@ test('the class Beam of worker.js gives the VM the env of vmEnv', () => {
   assert.match(source, /super\(ctx, vmEnv\(env, \{/);
   assert.doesNotMatch(source, /\.\.\.env/);
 });
+
+test('the object of the VM takes only the WebSocket of the distribution on /.tcp/, from any version of the Worker', () => {
+  const source = readFileSync(new URL('../../worker.js', import.meta.url), 'utf8');
+  assert.match(source, /fetch\(request\) \{\n    if \(new URL\(request\.url\)\.pathname\.startsWith\('\/\.tcp\/'\) && !distribution\(request, this\.env\)\) return new Response\('no such page\\n', \{ status: 404 \}\);\n    return super\.fetch\(request\);/);
+});
