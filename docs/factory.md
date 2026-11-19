@@ -948,8 +948,10 @@ the base, and the 5 parts of the main node).
 
 Each request is an issue of the form "A construction shift" (a project
 with no token), for an order that an edit made before the issue
-(`POST /orders/HASH/edits`). Each time is from the issue, and a script
-looked at the parts with no token:
+(`POST /orders/HASH/edits`). Each time of B, C and D is from the issue.
+The time of A is from the new label of issue 6, not from the issue: the
+owner opened issue 6 on 2026-11-18, and it got the label `shift` again
+for this measure. A script looked at the parts with no token:
 
 | Request | Parts list | Sign and base | Main parts | Whole mid level |
 |---|---|---|---|---|
@@ -962,8 +964,9 @@ looked at the parts with no token:
   the target of 5 minutes.
 - The issue adds time before the parts list: the workflow "Shift
   request" starts, then it sends the request to the edge (36 to 58 s).
-  Each issue starts two runs of "Shift request" (the issue opens and
-  gets its label), and the second run stops the first.
+  Each issue started two runs of "Shift request" (the issue opens and
+  gets its label), and the second run stopped the first. Since 1398b04,
+  the workflow starts on the label only: one run for each issue.
 - The issues did not start a second shift: the edge sent the parts of
   B, C and D to the shift that ran.
 - An edit keeps the keys of the sign and the base, so they come from R2
@@ -975,6 +978,16 @@ looked at the parts with no token:
   at 309 s, and that of B at 75 s. Thus the parts of C waited for the
   node much longer than one order waits. The cause is not measured
   yet: the summary of the shift gives the time of each part.
+
+What this measure does not show:
+
+- **The start of a shift by the edge on the site.** The owner started
+  the shift by hand before the requests, so each request found a shift
+  that ran. The time from a request to the start of the workflow
+  (`shift.js`) and to the join of its node is not measured on the site.
+- **A request of a project with its ID token.** Each request came
+  through an issue (the job of `shift-request.yml`). A job of a project
+  that asks for `/p/KEY.glb` with its own ID token is not measured.
 
 #### Hải Âu in a shift on this computer
 
