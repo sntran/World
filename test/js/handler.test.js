@@ -109,9 +109,28 @@ test('the token of the store of a test: the secret, or no store', () => {
   assert.equal(storeToken(auth('/store/x', {}, 'short'), { WORLD_STORE_TOKEN: 'short' }), false);
 });
 
-test('/.tcp/ goes to the VM (distributed Erlang: the cookie of the nodes protects it)', async () => {
-  const v = async (request) => new Response(`to the VM: ${new URL(request.url).pathname}`, { status: 200 });
-  assert.equal(await (await handler(req('/.tcp/4370'), { ORDERS: bucket() }, { vm: v, commit: 'c1' })).text(), 'to the VM: /.tcp/4370');
+test('/.tcp/: only a WebSocket to the port of the distribution goes to the VM; each other path gets 404', async () => {
+  const reached = [];
+  const v = async (request) => {
+    reached.push(new URL(request.url).pathname);
+    return new Response(`to the VM: ${new URL(request.url).pathname}`, { status: 200 });
+  };
+  const ws = (path, env = {}, upgrade = 'websocket') => handler(req(path, { headers: { upgrade } }), { ORDERS: bucket(), ...env }, { vm: v, commit: 'c1' });
+  assert.equal(await (await ws('/.tcp/4370')).text(), 'to the VM: /.tcp/4370');
+  assert.equal((await ws('/.tcp/4370', {}, 'WebSocket')).status, 200);
+  for (const path of ['/.tcp/4000', '/.tcp/1', '/.tcp/4370x', '/.tcp/04370', '/.tcp/4370/', '/.tcp/', '/.tcp/4370/x']) {
+    const r = await ws(path);
+    assert.equal(r.status, 404, path);
+    assert.deepEqual(await r.json(), { errors: [{ path: '', message: 'no such page' }] });
+  }
+  // Not a WebSocket, or a WebSocket of another kind.
+  assert.equal((await handler(req('/.tcp/4370'), { ORDERS: bucket() }, { vm: v, commit: 'c1' })).status, 404);
+  assert.equal((await handler(req('/.tcp/4370', { method: 'POST', body: 'x' }), { ORDERS: bucket() }, { vm: v, commit: 'c1' })).status, 404);
+  assert.equal((await ws('/.tcp/4370', {}, 'h2c')).status, 404);
+  // DIST_PORT gives the port: then 4370 is another port.
+  assert.equal((await ws('/.tcp/4371', { DIST_PORT: '4371' })).status, 200);
+  assert.equal((await ws('/.tcp/4370', { DIST_PORT: '4371' })).status, 404);
+  assert.deepEqual(reached, ['/.tcp/4370', '/.tcp/4370', '/.tcp/4371']);
 });
 
 test('/store/ of a test: get, head and put of a key of the store, with the token', async () => {

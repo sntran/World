@@ -51,10 +51,11 @@
 //   random bytes for that node only, and the pass of its shift
 //   (World.Shift.Passes).
 // - /.tcp/4370: distributed Erlang to the node of the edge (a WebSocket
-//   to the listener of DIST_PORT in the VM, BEAM.com docs/WORKERS.md).
-//   Only a node with the cookie of a join connects (the edge has a secret
-//   cookie of its own), and BEAM_MAX_WEBSOCKETS limits the connections
-//   that are open.
+//   to the listener of DIST_PORT in the VM, 4370 by default, BEAM.com
+//   docs/WORKERS.md). Only a node with the cookie of a join connects (the
+//   edge has a secret cookie of its own), and BEAM_MAX_WEBSOCKETS limits
+//   the connections that are open. Each other path of /.tcp/, and a
+//   request that is not a WebSocket, gets 404 at the Worker.
 // - /store/KEY: the store for the node of a shift, with its pass. The
 //   Worker reads and writes R2 itself, only for a key that the edge gave
 //   to that shift (the VM says so), else 403.
@@ -308,6 +309,15 @@ async function shiftStore(request, env, vm, key) {
   return r.status === 204 ? store(request, env, key) : errors(403, 'the edge did not give this key to this shift');
 }
 
+// A WebSocket to the port of the distribution of the VM (DIST_PORT, 4370
+// by default), with the same digits as the port: the only path of /.tcp/
+// that goes to the VM.
+export function distribution(request, env) {
+  const port = String(env.DIST_PORT ?? '4370');
+  const upgrade = request.headers.get('upgrade')?.toLowerCase() === 'websocket';
+  return upgrade && new URL(request.url).pathname === `/.tcp/${port}`;
+}
+
 export async function handler(request, env, options) {
   try {
     return await route(request, env, options);
@@ -327,7 +337,7 @@ async function route(request, env, { vm, commit, later = () => {}, verify: check
 
   // The node of a shift: distributed Erlang to the node of the edge (the
   // cookie of its join protects it), its join, and the store.
-  if (path.startsWith('/.tcp/')) return vm(request);
+  if (path.startsWith('/.tcp/')) return distribution(request, env) ? vm(request) : errors(404, 'no such page');
   if (path === '/shift/join' && request.method === 'POST') return join(request, env, vm, check);
   if (path.startsWith('/store/')) return shiftStore(request, env, vm, path.slice(7));
 
