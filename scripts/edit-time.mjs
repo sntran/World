@@ -14,8 +14,13 @@
 // after each 202. It prints the time of each step and of each part, and
 // the time to the last part. WORLD_TOKEN and WORLD_PROJECT: a project of
 // the owner, so that the parts that do not fit the edge go to a
-// construction shift; WORLD_SHIFT_HOURS: the hours of a shift that the
+// construction shift. In a job of GitHub Actions of a repository of the
+// owner (permissions: id-token: write) with no WORLD_TOKEN, the ID token
+// of the job proves the project (the name of its repository), a new one
+// for each request. WORLD_SHIFT_HOURS: the hours of a shift that the
 // request starts.
+
+import { idToken } from './shift-join.mjs';
 
 const [base, hash, level, edits] = process.argv.slice(2);
 if (!base || !hash || !level || !edits) {
@@ -23,8 +28,15 @@ if (!base || !hash || !level || !edits) {
   process.exit(2);
 }
 
-const auth = process.env.WORLD_TOKEN ? { authorization: `Bearer ${process.env.WORLD_TOKEN}`, 'x-world-project': process.env.WORLD_PROJECT ?? '' } : {};
-if (process.env.WORLD_SHIFT_HOURS) auth['x-world-shift-hours'] = process.env.WORLD_SHIFT_HOURS;
+const extra = process.env.WORLD_SHIFT_HOURS ? { 'x-world-shift-hours': process.env.WORLD_SHIFT_HOURS } : {};
+
+// The headers of a request: WORLD_TOKEN, else the ID token of the job,
+// else none (a public order).
+async function headers() {
+  if (process.env.WORLD_TOKEN) return { authorization: `Bearer ${process.env.WORLD_TOKEN}`, 'x-world-project': process.env.WORLD_PROJECT ?? '', ...extra };
+  const jwt = await idToken();
+  return jwt ? { authorization: `Bearer ${jwt}`, ...extra } : extra;
+}
 const start = Date.now();
 const seconds = () => ((Date.now() - start) / 1000).toFixed(1);
 const wait = (s) => new Promise((done) => setTimeout(done, s * 1000));
@@ -32,7 +44,7 @@ const wait = (s) => new Promise((done) => setTimeout(done, s * 1000));
 // A GET until its answer is not 202 (the build goes on after a 202).
 async function get(url) {
   for (;;) {
-    const r = await fetch(url, { headers: auth });
+    const r = await fetch(url, { headers: await headers() });
     if (r.status !== 202) return r;
     await r.arrayBuffer();
     await wait(Number(r.headers.get('retry-after') ?? 15));
@@ -43,7 +55,7 @@ let order = { hash };
 if (edits !== '-') {
   const edit = await fetch(`${base}/orders/${hash}/edits`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...auth },
+    headers: { 'content-type': 'application/json', ...(await headers()) },
     body: JSON.stringify({ edits: JSON.parse(edits) }),
   });
   order = await edit.json();

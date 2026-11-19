@@ -846,9 +846,11 @@ for the new parts; it waits for the end of the shift that runs.
 | The time of a shift | 5.5 hours at most (`timeout-minutes: 330`); the shift stops 15 minutes before | `shift.yml`, `World.Shift` |
 | Shifts that the edge starts each day (UTC) | 6 (`WORLD_SHIFTS_A_DAY`) | `shift.js` |
 | A second start | not in the 20 minutes after a start (the runner, the cache and the start of the node) | `shift.js` |
+| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until the owner corrects the cause | `shift.js` |
 | No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
 | A part in the queue | 6 hours at most, then an error | `World.Labour` |
 | A part that fails | 3 tries on nodes of shifts, then an error | `World.Labour` |
+| Parts in work on a node | one for each core of the node (`World.Crew` gives 2 workers for each core), at least one; the parts take the free cores in the order that they came to the queue | `World.Labour` |
 | WebSockets on `/.tcp/` | 4 open at most (`BEAM_MAX_WEBSOCKETS`) | `wrangler.jsonc` |
 
 **The node of the shift** joins the node of the edge
@@ -903,7 +905,13 @@ Worker writes R2 with its binding. It takes a key with a pass only when
 the edge gave that part to that shift (the GLB to write; the GLB, the
 recipe and the order of the part to read, and the blueprints in data),
 else 403. No GLB goes over the link. A part in R2 does
-not build again. A part whose node goes away goes back to the queue. An
+not build again, and a node that builds a part already does not build it
+a second time when the edge gives it again (a VM of the edge that starts
+again asks again). When the store does not take the GLB of a part (a VM
+of the edge that started again does not know that it gave the key to
+that node), the GLB stays on the node, and the node puts it at the next
+make of its key, with no new build. A part whose node goes away goes
+back to the queue, at its place. An
 issue gets its comment (the parts lists and their URLs) when its parts
 are built, and closes: the job of the request closes it at once, else
 the shift does (`scripts/shift-issues.mjs check`, each 5 minutes and at
@@ -933,7 +941,8 @@ WORLD_STORE_TOKEN:TOKEN` (with no ID token, the node joins with it, and
 it takes each key of the store of the local Worker), and the two secrets
 as `--var`. The site has no `WORLD_STORE_TOKEN`.
 `node scripts/edit-time.mjs BASE HASH LEVEL EDITS` (with `WORLD_TOKEN`
-and `WORLD_PROJECT`) measures the time from an edit of an order to its
+and `WORLD_PROJECT`, or in a job of a repository of the owner with its
+ID token) measures the time from an edit of an order to its
 whole new level, as a project gets it: the edit, the parts list, then
 all its parts at one time.
 

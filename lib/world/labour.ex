@@ -16,7 +16,10 @@ defmodule World.Labour do
     project (a request with a project token: the option `project`) waits
     in the queue for a node of a shift (`waiting/0`). Then the edge gives
     it, by its key, to the node with the fewest parts in work for its
-    workers. The node builds it from its recipe (`World.Elements.part/1`),
+    workers, when that node has a free core: a node builds at most one
+    part for each of its cores at a time (`World.Crew` gives a node 2
+    workers for each core), and the parts take the free cores in the
+    order that they came to the queue. The node builds it from its recipe (`World.Elements.part/1`),
     puts its GLB in the store itself (R2), and gives back only the key
     (`make/1`): the GLB does not go over the link. A part whose node goes
     away goes back to the queue. A part that fails on 3 tries gives
@@ -32,8 +35,16 @@ defmodule World.Labour do
 
   @tries 3
 
-  @doc "The list of the parts in work on each node and of the parts in the queue, which `build/3` reads (`World.Supervisor`)."
-  def children, do: [{Registry, keys: :duplicate, name: __MODULE__}]
+  @doc """
+  The list of the parts in work on each node and of the parts in the
+  queue, which `build/3` reads, and the GLBs that this node built and the
+  store did not take yet (`make/1`) (`World.Supervisor`).
+  """
+  def children,
+    do: [
+      {Registry, keys: :duplicate, name: __MODULE__},
+      %{id: __MODULE__.Kept, start: {Agent, :start_link, [fn -> %{} end, [name: __MODULE__.Kept]]}}
+    ]
 
   @doc """
   Build the part `key` with its recipe (a map): here, or on another node.
@@ -89,25 +100,79 @@ defmodule World.Labour do
   the store has it already (a part in R2 does not build again), else
   built from its recipe and put in the store (in the record of the shift,
   `World.Shift.work/2`). `:stored`, or the error of
-  `World.Elements.part/1`. The GLB stays on this node.
+  `World.Elements.part/1`. The GLB stays on this node. When this node
+  builds the key already (the edge gave it again: a VM of the edge that
+  started again asks again), the make waits for that build and does not
+  build the part a second time. When the store does not take the GLB (a
+  VM of the edge that started again does not know that it gave the key
+  to this node), the GLB stays on this node and the make raises: the
+  edge gives the key again, and the next make puts that GLB, with no new
+  build.
   """
   def make(key) do
     if Store.has?(key) do
       :stored
     else
-      Shift.work(key, fn ->
-        case Elements.part(key) do
-          {:ok, _glb} -> :stored
-          other -> other
+      case :global.trans({__MODULE__, {:make, key}}, fn -> claim(key) end, [node()]) do
+        :mine ->
+          try do
+            Shift.work(key, fn -> built(key) end)
+          after
+            Registry.unregister(__MODULE__, {:make, key})
+          end
+
+        maker ->
+          ref = Process.monitor(maker)
+
+          receive do
+            {:DOWN, ^ref, :process, _, _} -> make(key)
+          end
+      end
+    end
+  end
+
+  # The part of a key in the store: the GLB that this node kept, else a
+  # new build. `:stored`, or the error of `World.Elements.part/1`.
+  defp built(key) do
+    case kept(key) || Elements.part(key) do
+      {:ok, glb} ->
+        if Store.has?(key) or Store.put(key, glb) == :ok do
+          Agent.update(__MODULE__.Kept, &Map.delete(&1, key))
+          :stored
+        else
+          Agent.update(__MODULE__.Kept, &Map.put(&1, key, glb))
+          raise "the store did not take the part #{key}: its GLB stays on this node for the next try"
         end
-      end)
+
+      other ->
+        other
+    end
+  end
+
+  defp kept(key) do
+    case Agent.get(__MODULE__.Kept, &Map.get(&1, key)) do
+      nil -> nil
+      glb -> {:ok, glb}
+    end
+  end
+
+  # The process that builds the key on this node, or :mine (this process
+  # builds it now).
+  defp claim(key) do
+    case Registry.lookup(__MODULE__, {:make, key}) do
+      [{maker, _} | _] ->
+        maker
+
+      [] ->
+        {:ok, _} = Registry.register(__MODULE__, {:make, key}, nil)
+        :mine
     end
   end
 
   @doc "The count of the parts in work on a node (its supervisor of the tasks)."
   def busy(tasks), do: length(Registry.lookup(__MODULE__, tasks))
 
-  @doc "The count of the parts that wait in the queue for a node of a shift."
+  @doc "The count of the parts that wait in the queue for a node of a shift (not the parts in work on a node)."
   def waiting, do: length(Registry.lookup(__MODULE__, :queue))
 
   @doc "The error of a part of a public order that does not fit the edge."
@@ -143,59 +208,94 @@ defmodule World.Labour do
   end
 
   # A part of a project at the edge with shifts: in the queue until a
-  # node of a shift builds it.
+  # node of a shift has a free core for it, and until that node builds
+  # it. Its ticket keeps its place in the queue: first come, first served.
   defp queue(key, opts) do
-    {:ok, _} = Registry.register(__MODULE__, :queue, key)
+    ticket = System.unique_integer([:monotonic])
+    wait(key, ticket)
     until = System.monotonic_time(:millisecond) + Keyword.get(opts, :most, 6 * 3_600_000)
 
     try do
-      turn(key, opts, 0, until)
+      turn(key, opts, 0, until, ticket)
     after
       Registry.unregister(__MODULE__, :queue)
     end
   end
 
-  defp turn(key, opts, tries, until) do
+  defp wait(key, ticket), do: {:ok, _} = Registry.register(__MODULE__, :queue, {ticket, key})
+
+  defp turn(key, opts, tries, until, ticket) do
     poll = Keyword.get(opts, :poll, 1_000)
 
-    case nodes(opts) do
-      [] ->
+    case take(nodes(opts), key, ticket) do
+      nil ->
         if System.monotonic_time(:millisecond) > until do
           {:error, [%{"path" => "", "message" => "no construction shift came for this part: send the request again"}]}
         else
           Process.sleep(poll)
-          turn(key, opts, tries, until)
+          turn(key, opts, tries, until, ticket)
         end
 
-      nodes ->
-        {tasks, _} = pick(nodes)
-
-        case try_on(key, tasks) do
+      tasks ->
+        case run_on(key, tasks) do
           {:ok, done} ->
             done
 
-          # (The node went away, or its shift ended: the part goes back to the queue.)
+          # (The node went away, or its shift ended: the part goes back to
+          # the queue, at its place.)
           :gone ->
+            wait(key, ticket)
             Process.sleep(poll)
-            turn(key, opts, tries, until)
+            turn(key, opts, tries, until, ticket)
 
           {:failed, _} when tries + 1 >= @tries ->
             {:error, [%{"path" => "", "message" => "the part failed on #{@tries} nodes of a construction shift"}]}
 
           {:failed, _} ->
-            turn(key, opts, tries + 1, until)
+            wait(key, ticket)
+            turn(key, opts, tries + 1, until, ticket)
         end
     end
   end
 
+  # A free core of a node for the part of `ticket`, or nil: the parts
+  # that came to the queue before it take the free cores first. The part
+  # goes into the work of the node in the lock, so two parts do not take
+  # one core.
+  defp take(nodes, key, ticket) do
+    :global.trans(
+      {__MODULE__, :take},
+      fn ->
+        free = for {tasks, workers} <- nodes, room(tasks, workers) > 0, do: {tasks, workers}
+        before = Enum.count(Registry.lookup(__MODULE__, :queue), fn {_, {t, _}} -> t < ticket end)
+
+        if before < Enum.sum(for {tasks, workers} <- free, do: room(tasks, workers)) do
+          {tasks, _} = pick(free)
+          Registry.unregister(__MODULE__, :queue)
+          {:ok, _} = Registry.register(__MODULE__, tasks, key)
+          tasks
+        end
+      end,
+      [node()]
+    )
+  end
+
+  # The parts that a node can take now: one for each of its cores (2
+  # workers of `World.Crew`), at least one, less its parts in work.
+  defp room(tasks, workers), do: max(div(workers, 2), 1) - busy(tasks)
+
   defp pick(nodes), do: Enum.min_by(nodes, fn {tasks, workers} -> busy(tasks) / workers end)
 
-  # The make of a part on a node: `{:ok, result}`, `:gone` when the node
-  # went away or stopped its tasks (the end of a shift), or `{:failed,
-  # reason}` when the make raised there.
   defp try_on(key, tasks) do
     {:ok, _} = Registry.register(__MODULE__, tasks, key)
+    run_on(key, tasks)
+  end
 
+  # The make of a part on a node, which has the part in its work (its
+  # registration): `{:ok, result}`, `:gone` when the node went away or
+  # stopped its tasks (the end of a shift), or `{:failed, reason}` when
+  # the make raised there.
+  defp run_on(key, tasks) do
     try do
       task = Task.Supervisor.async_nolink(tasks, __MODULE__, :make, [key])
 

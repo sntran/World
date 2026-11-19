@@ -16,6 +16,13 @@
 // - At most WORLD_SHIFTS_A_DAY starts each day (UTC), 6 by default.
 // - One shift at a time: the concurrency group of the workflow. A start
 //   while a shift runs waits for its end, and takes the new parts then.
+// - A start that fails for a cause that goes away (no answer, 429, or 5xx:
+//   GitHub is down or busy) gives its start of the day back, and the next
+//   start can come after RETRY ms. A start that GitHub refuses (401 or
+//   403: the token; 404 or 422: the workflow or its inputs; any other
+//   answer) keeps its start and the wait of START: a new try fails in the
+//   same way until the owner corrects it, so it does not use the starts
+//   of the day or the API of GitHub.
 //
 // The state is one object of R2, shifts/state.json ({ day, count, last }),
 // written only if no other request wrote it first (its ETag).
@@ -29,10 +36,16 @@ export function hoursOf(text) {
 }
 
 export const START = 20 * 60_000;
+export const RETRY = 60_000;
+
+// An answer of GitHub (or null: no answer) for which the start is given
+// back.
+const passing = (r) => r === null || r.status === 429 || r.status >= 500;
 
 // The result: 'started', or why no shift starts ('no token', 'starting',
-// 'limit', 'raced', 'failed'). hours: the length of the shift that a
-// project asks for (0.5 to 5.5; 5.5 by default).
+// 'limit', 'raced', 'failed': GitHub refused the start, 'unavailable':
+// GitHub did not start it, and the start is given back). hours: the length
+// of the shift that a project asks for (0.5 to 5.5; 5.5 by default).
 export async function startShift(env, commit, { hours = null, fetch = globalThis.fetch, now = Date.now(), log = console.log } = {}) {
   const token = env.WORLD_SHIFT_TOKEN;
   if (typeof token !== 'string' || token === '') return 'no token';
@@ -63,7 +76,18 @@ export async function startShift(env, commit, { hours = null, fetch = globalThis
       'x-github-api-version': '2022-11-28',
     },
     body: JSON.stringify({ ref: env.WORLD_SHIFT_REF ?? 'main', inputs: { commit, hours: hoursOf(hours) } }),
-  });
+  }).catch(() => null);
+  if (passing(r)) {
+    // (The state before this start, if no other request wrote it since:
+    // the count of the day, and a time so that the next start can come
+    // after RETRY.)
+    const back = await env.ORDERS.put(STATE, JSON.stringify({ day, count, last: now - START + RETRY }), {
+      onlyIf: { etagMatches: put.etag },
+      httpMetadata: { contentType: 'application/json' },
+    });
+    log(`shift: the start of the workflow answered ${r ? r.status : 'nothing'}; ${back ? 'the start is given back' : 'another request wrote the state'}`);
+    return 'unavailable';
+  }
   if (r.status !== 204) {
     log(`shift: the start of the workflow answered ${r.status}`);
     return 'failed';

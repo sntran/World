@@ -31,7 +31,7 @@ export function bucket() {
       items.set(key, typeof value === 'string' ? new TextEncoder().encode(value) : new Uint8Array(value));
       versions.set(key, (versions.get(key) ?? 0) + 1);
       if (options) types.set(key, options.httpMetadata?.contentType);
-      return {};
+      return { etag: `v${versions.get(key)}` };
     },
     async head(key) {
       return items.has(key) ? {} : null;

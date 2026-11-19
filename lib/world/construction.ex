@@ -1160,7 +1160,8 @@ defmodule World.Construction do
   # A pause: the built model gets old with the days (plan 0006, D8): each
   # year of the pause and at its end. The concrete gets darker and weeds
   # grow on the base (an estimate of a rate); in the year of the middle
-  # of the pause a part can go (`lost`).
+  # of the pause a part can go (`lost`), one time: a pause that starts
+  # late is shorter, so its end can also be in that year.
   defp age(s, days) do
     s = take(s)
     st = s.stage
@@ -1168,7 +1169,7 @@ defmodule World.Construction do
     lost = if days >= half and days - 365 < half, do: st.lost, else: []
     years = (s.age + days) / 365
 
-    record(s, "aged", nil, %{
+    record(%{s | stage: %{st | lost: st.lost -- lost}}, "aged", nil, %{
       "days" => s.age + days,
       "dirt" => Float.round(1 - :math.exp(-years / 8), 3),
       "weeds" => Float.round(min(years / 5, 1.0), 3),
