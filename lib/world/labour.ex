@@ -35,8 +35,16 @@ defmodule World.Labour do
 
   @tries 3
 
-  @doc "The list of the parts in work on each node and of the parts in the queue, which `build/3` reads (`World.Supervisor`)."
-  def children, do: [{Registry, keys: :duplicate, name: __MODULE__}]
+  @doc """
+  The list of the parts in work on each node and of the parts in the
+  queue, which `build/3` reads, and the GLBs that this node built and the
+  store did not take yet (`make/1`) (`World.Supervisor`).
+  """
+  def children,
+    do: [
+      {Registry, keys: :duplicate, name: __MODULE__},
+      %{id: __MODULE__.Kept, start: {Agent, :start_link, [fn -> %{} end, [name: __MODULE__.Kept]]}}
+    ]
 
   @doc """
   Build the part `key` with its recipe (a map): here, or on another node.
@@ -95,7 +103,11 @@ defmodule World.Labour do
   `World.Elements.part/1`. The GLB stays on this node. When this node
   builds the key already (the edge gave it again: a VM of the edge that
   started again asks again), the make waits for that build and does not
-  build the part a second time.
+  build the part a second time. When the store does not take the GLB (a
+  VM of the edge that started again does not know that it gave the key
+  to this node), the GLB stays on this node and the make raises: the
+  edge gives the key again, and the next make puts that GLB, with no new
+  build.
   """
   def make(key) do
     if Store.has?(key) do
@@ -104,12 +116,7 @@ defmodule World.Labour do
       case :global.trans({__MODULE__, {:make, key}}, fn -> claim(key) end, [node()]) do
         :mine ->
           try do
-            Shift.work(key, fn ->
-              case Elements.part(key) do
-                {:ok, _glb} -> :stored
-                other -> other
-              end
-            end)
+            Shift.work(key, fn -> built(key) end)
           after
             Registry.unregister(__MODULE__, {:make, key})
           end
@@ -121,6 +128,31 @@ defmodule World.Labour do
             {:DOWN, ^ref, :process, _, _} -> make(key)
           end
       end
+    end
+  end
+
+  # The part of a key in the store: the GLB that this node kept, else a
+  # new build. `:stored`, or the error of `World.Elements.part/1`.
+  defp built(key) do
+    case kept(key) || Elements.part(key) do
+      {:ok, glb} ->
+        if Store.has?(key) or Store.put(key, glb) == :ok do
+          Agent.update(__MODULE__.Kept, &Map.delete(&1, key))
+          :stored
+        else
+          Agent.update(__MODULE__.Kept, &Map.put(&1, key, glb))
+          raise "the store did not take the part #{key}: its GLB stays on this node for the next try"
+        end
+
+      other ->
+        other
+    end
+  end
+
+  defp kept(key) do
+    case Agent.get(__MODULE__.Kept, &Map.get(&1, key)) do
+      nil -> nil
+      glb -> {:ok, glb}
     end
   end
 

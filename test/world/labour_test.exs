@@ -203,6 +203,49 @@ defmodule World.LabourTest do
     assert Registry.lookup(Labour, {:make, key}) == []
   end
 
+  test "a GLB that the store does not take stays on the node, and the next make puts it with no new build" do
+    {key, _recipe} = fresh(8)
+    config = Application.get_env(:world, World.Orders.Store, [])
+    dir = Keyword.get(config, :dir, System.get_env("WORLD_ORDER_DIR", "tmp/orders"))
+    tmp = Path.join(System.tmp_dir!(), "labour-refuse-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(tmp)
+    flag = Path.join(tmp, "refuse")
+    File.write!(flag, "")
+    # (A store that refuses the GLB of this key while the flag is there, as
+    # the edge refuses a key that its VM did not give: the other keys go to
+    # the store of the tests.)
+    script = Path.join(tmp, "store.sh")
+    real = Path.expand("../../scripts/order-store.mjs", __DIR__)
+
+    File.write!(script, """
+    #!/bin/sh
+    if [ "$1" = put ] && [ "$2" = "parts/#{key}.glb" ] && [ -f "#{flag}" ]; then exit 1; fi
+    exec node "#{real}" "$@"
+    """)
+
+    File.chmod!(script, 0o755)
+    Application.put_env(:world, World.Orders.Store, Keyword.put(config, :program, script))
+
+    on_exit(fn ->
+      Application.put_env(:world, World.Orders.Store, config)
+      File.rm_rf!(tmp)
+    end)
+
+    capture_log(fn ->
+      assert_raise RuntimeError, ~r/the store did not take the part/, fn -> Labour.make(key) end
+    end)
+
+    refute Store.has?(key)
+    assert %{^key => <<"glTF", _::binary>>} = Agent.get(Labour.Kept, & &1)
+
+    # The next make puts the kept GLB: with no recipe, a new build would give :none.
+    File.rm!(flag)
+    File.rm!(Path.join([dir, "parts", "#{key}.json"]))
+    assert Labour.make(key) == :stored
+    assert Store.has?(key)
+    refute Map.has_key?(Agent.get(Labour.Kept, & &1), key)
+  end
+
   test "with shifts: a part of a public order that does not fit the edge gives an error; a part that fits builds here" do
     [{key, recipe} | _] = parts("near")
     assert {:error, [%{"message" => "this part does not fit" <> _}]} = Labour.build(key, recipe, shifts: true)

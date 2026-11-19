@@ -907,8 +907,11 @@ recipe and the order of the part to read, and the blueprints in data),
 else 403. No GLB goes over the link. A part in R2 does
 not build again, and a node that builds a part already does not build it
 a second time when the edge gives it again (a VM of the edge that starts
-again asks again). A part whose node goes away goes back to the queue, at
-its place. An
+again asks again). When the store does not take the GLB of a part (a VM
+of the edge that started again does not know that it gave the key to
+that node), the GLB stays on the node, and the node puts it at the next
+make of its key, with no new build. A part whose node goes away goes
+back to the queue, at its place. An
 issue gets its comment (the parts lists and their URLs) when its parts
 are built, and closes: the job of the request closes it at once, else
 the shift does (`scripts/shift-issues.mjs check`, each 5 minutes and at
