@@ -1023,23 +1023,37 @@ all the parts, also the sign and the base):
 | C3: a storey of 3.42 | 01362aa | 39.6 s | 434.5 s | 723.7 s |
 | D3: a storey of 3.62, 20 s after C3 | 01362aa | 92.2 s | 348.7 s | 664.7 s |
 
-The target (the first order in about the time of one order) is not met.
-The main cause is the edge, not the node:
+**These four values do not count.** The deploys of the corrections came
+during the shifts, and each deploy starts the Durable Object and its VM
+again, about 5 minutes after the deploy. The events `started` of
+`/events` and the times of the deploys (the checks "Workers Builds" and
+`/version.json`):
 
-- **The VM of the edge started again** (the events `started` of
-  `/events`): at 21:07:57 and 21:09:21 (during C2 and D2), and at
-  21:45:50 (just before the third shift joined). A new VM has no queue
-  and does not know the parts in work. The store then refuses the GLB of
-  a part in work, and a part waits until a request asks for it again:
-  the job of an issue asks one time, and the shift asks each 5 minutes
-  (`shift-issues.mjs check`). That is the wait of about 5 minutes before
-  the first part.
-- **The edge did not answer in time, with no start of its VM.** At
-  21:53:45 the store refused the GLBs of 8 parts at one time, and the
-  node joined the edge again at 21:53:50, 21:54:36 and 22:12:50. Most
-  likely the VM did not answer the check of the store (`/shift/allowed`)
-  in time, and the distribution broke. The logs of the Worker are not
-  read yet.
+| Start of the VM | The deploy before it |
+|---|---|
+| 21:07:57 | f7c2cb3 at 21:03:03 (4 minutes 54 s before) |
+| 21:09:21 | a9b781f at 21:04:50 (4 minutes 31 s before) |
+| 21:45:50 | 01362aa at 21:40:51 (4 minutes 59 s before) |
+| 21:47:13 | none |
+| 00:29:57 (2026-11-20, during the measure of a request with an ID token) | none |
+
+So the VM started again two times during C2 and D2, and one time just
+after the start of the shift of C3 and D3. A new VM has no queue and does
+not know the parts in work. The store then refuses the GLB of a part in
+work, and a part waits until a request asks for it again: the job of an
+issue asks one time, and the shift asks each 5 minutes
+(`shift-issues.mjs check`). That is the wait of about 5 minutes before
+the first part. The rule since then: no deploy of the site from the start
+of a shift to its end, while a measure runs (a branch and a pull request,
+merged between the measures).
+
+Two starts had no deploy (21:47:13, during the parts list of D3, and
+00:29:57). Also with no start of the VM, at 21:53:45 the store refused
+the GLBs of 8 parts at one time, and the node joined the edge again at
+21:53:50, 21:54:36 and 22:12:50: most likely the VM did not answer the
+check of the store (`/shift/allowed`) in time, and the distribution
+broke. The logs of the Worker give the cause.
+
 - The summary of the second shift (run 44615136474): 22 parts in 26
   minutes, 8 keys built two times, 2 parts with no recipe at first. The
   store did not take the GLBs of the 5 main parts of D2, so they never
