@@ -17,12 +17,17 @@
 // - One shift at a time: the concurrency group of the workflow. A start
 //   while a shift runs waits for its end, and takes the new parts then.
 // - A start that fails for a cause that goes away (no answer, 429, or 5xx:
-//   GitHub is down or busy) gives its start of the day back, and the next
-//   start can come after RETRY ms. A start that GitHub refuses (401 or
-//   403: the token; 404 or 422: the workflow or its inputs; any other
-//   answer) keeps its start and the wait of START: a new try fails in the
-//   same way until the owner corrects it, so it does not use the starts
-//   of the day or the API of GitHub.
+//   GitHub is down or busy) can still start the workflow. So the start
+//   looks at the runs of shift.yml that GitHub made since the start
+//   (workflow_dispatch, with the commit in their name), after SEEN ms. A
+//   run is there: the start stays used (a second start would wait in the
+//   queue for a whole shift). No run: the start of the day goes back, and
+//   the next start can come after RETRY ms. The runs do not answer: the
+//   start stays used, as a refused start. A start that GitHub refuses
+//   (401 or 403: the token; 404 or 422: the workflow or its inputs; any
+//   other answer) keeps its start and the wait of START: a new try fails
+//   in the same way until the owner corrects it, so it does not use the
+//   starts of the day or the API of GitHub.
 //
 // The state is one object of R2, shifts/state.json ({ day, count, last }),
 // written only if no other request wrote it first (its ETag).
@@ -37,16 +42,31 @@ export function hoursOf(text) {
 
 export const START = 20 * 60_000;
 export const RETRY = 60_000;
+export const SEEN = 5_000;
 
 // An answer of GitHub (or null: no answer) for which the start is given
 // back.
 const passing = (r) => r === null || r.status === 429 || r.status >= 500;
 
+// True when GitHub made a run of shift.yml (workflow_dispatch) for the
+// commit since `since` (ms), false when it made none, null when the runs
+// do not answer.
+async function dispatched(api, repository, headers, commit, since, fetch) {
+  const created = encodeURIComponent(`>=${new Date(since).toISOString()}`);
+  const r = await fetch(`${api}/repos/${repository}/actions/workflows/shift.yml/runs?event=workflow_dispatch&created=${created}&per_page=100`, { headers }).catch(() => null);
+  if (!r || r.status !== 200) return null;
+  const body = await r.json().catch(() => null);
+  if (!Array.isArray(body?.workflow_runs)) return null;
+  return body.workflow_runs.some((run) => String(run.display_title ?? '').includes(commit));
+}
+
 // The result: 'started', or why no shift starts ('no token', 'starting',
-// 'limit', 'raced', 'failed': GitHub refused the start, 'unavailable':
-// GitHub did not start it, and the start is given back). hours: the length
-// of the shift that a project asks for (0.5 to 5.5; 5.5 by default).
-export async function startShift(env, commit, { hours = null, fetch = globalThis.fetch, now = Date.now(), log = console.log } = {}) {
+// 'limit', 'raced', 'failed': GitHub refused the start, or did not answer
+// and its runs did not answer, 'unavailable': GitHub did not start it, and
+// the start is given back). hours: the length of the shift that a project
+// asks for (0.5 to 5.5; 5.5 by default). wait(ms): the wait before the
+// look at the runs (a timer by default).
+export async function startShift(env, commit, { hours = null, fetch = globalThis.fetch, now = Date.now(), log = console.log, wait = (ms) => new Promise((done) => setTimeout(done, ms)) } = {}) {
   const token = env.WORLD_SHIFT_TOKEN;
   if (typeof token !== 'string' || token === '') return 'no token';
   const limit = Number(env.WORLD_SHIFTS_A_DAY ?? '6');
@@ -66,18 +86,32 @@ export async function startShift(env, commit, { hours = null, fetch = globalThis
 
   const api = env.WORLD_SHIFT_API ?? 'https://api.github.com';
   const repository = env.WORLD_SHIFT_REPOSITORY ?? 'sntran/World';
+  const headers = {
+    authorization: `Bearer ${token}`,
+    accept: 'application/vnd.github+json',
+    'user-agent': 'world-factory',
+    'x-github-api-version': '2022-11-28',
+  };
   const r = await fetch(`${api}/repos/${repository}/actions/workflows/shift.yml/dispatches`, {
     method: 'POST',
-    headers: {
-      authorization: `Bearer ${token}`,
-      accept: 'application/vnd.github+json',
-      'content-type': 'application/json',
-      'user-agent': 'world-factory',
-      'x-github-api-version': '2022-11-28',
-    },
+    headers: { ...headers, 'content-type': 'application/json' },
     body: JSON.stringify({ ref: env.WORLD_SHIFT_REF ?? 'main', inputs: { commit, hours: hoursOf(hours) } }),
   }).catch(() => null);
+  const answer = r ? r.status : 'nothing';
   if (passing(r)) {
+    // (GitHub can take a start and still give no answer or a 5xx: its run
+    // comes some seconds later. A minute of the clocks of GitHub and of
+    // the Worker.)
+    await wait(SEEN);
+    const seen = await dispatched(api, repository, headers, commit, now - 60_000, fetch);
+    if (seen === true) {
+      log(`shift: the start of the workflow answered ${answer}, but GitHub made its run (${count + 1} of ${limit} today)`);
+      return 'started';
+    }
+    if (seen === null) {
+      log(`shift: the start of the workflow answered ${answer}, and the runs of the workflow did not answer: the start stays used`);
+      return 'failed';
+    }
     // (The state before this start, if no other request wrote it since:
     // the count of the day, and a time so that the next start can come
     // after RETRY.)
@@ -85,7 +119,7 @@ export async function startShift(env, commit, { hours = null, fetch = globalThis
       onlyIf: { etagMatches: put.etag },
       httpMetadata: { contentType: 'application/json' },
     });
-    log(`shift: the start of the workflow answered ${r ? r.status : 'nothing'}; ${back ? 'the start is given back' : 'another request wrote the state'}`);
+    log(`shift: the start of the workflow answered ${answer}, and GitHub made no run; ${back ? 'the start is given back' : 'another request wrote the state'}`);
     return 'unavailable';
   }
   if (r.status !== 204) {
