@@ -1094,6 +1094,26 @@ apart, each with 7 new parts:
   the store refused went to the store at the next make of their key in
   1.0 to 1.5 s, with no new build (01362aa).
 
+#### Two orders at one time, with a deploy during the shift
+
+The measure of the queue in the SQLite of the object (`World.Labour.Store`,
+"The queue after a start of the VM"): as the measure before, with one
+deploy during the shift, so that the VM of the edge starts again while
+the parts of the two orders wait or are in work.
+
+1. A shift started by hand, at the commit that the edge runs.
+2. When the node of the shift joined: the merge of a change of the
+   documents only (this text), so the source and the build of the node
+   stay the same.
+3. When the edge runs that deploy: two new orders 20 s apart (C, then D),
+   each with 7 new parts, by issues of the form.
+4. After: the times of each order, the starts of the VM (the events
+   `started`), the order of the parts (the parts of C before the parts of
+   D), and the summary of the shift (each part stored, the GLBs that the
+   store refused).
+
+The results come in a later change of this section.
+
 **One run for each issue (1398b04).** Before, each issue started two runs
 of "Shift request", and the time from the issue to the parts list was
 35.8 to 57.9 s (A to D). After, one run for each issue, and the time was
