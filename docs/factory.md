@@ -929,7 +929,11 @@ place, so the order stays: the parts of the first order before the
 parts of the second.
 
 - A part in work on a node is in the work of that node again at once,
-  so the store of the Worker takes its GLB (`/shift/allowed`).
+  so the store of the Worker takes its GLB (`/shift/allowed`). Before
+  the new VM reads its store, `/shift/allowed` also takes each part that
+  the store of the queue gives to that node: in the first second of a
+  new VM, the node of a shift can read its recipes and put its GLBs
+  (2026-11-20: 4 makes of a shift ended with "no recipe" in that time).
 - When that node connects again, the edge gives it the part again: the
   node waits for the build that runs, or puts the GLB that it kept,
   with no new build.

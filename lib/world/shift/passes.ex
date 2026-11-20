@@ -62,24 +62,34 @@ defmodule World.Shift.Passes do
   @doc """
   True when the shift of `pass` can read (`:read`) or put (`:write`) the
   key `key` of the store. It puts only the GLB of a part that the edge
-  gave to its node now (`World.Labour`). It reads that GLB, the recipe of
-  the part, its order, and the blueprints in data of the projects (an
-  order can name one).
+  gave to its node (`World.Labour`): in work on the node now, or, in the
+  store of the queue, given to that node (`World.Labour.Store`: a new VM
+  before it puts its queue back). It reads that GLB, the recipe of the
+  part, its order, and the blueprints in data of the projects (an order
+  can name one).
   """
   def allowed?(pass, key, access, passes \\ __MODULE__) do
     with node when node != nil <- node_of(pass, passes) do
-      parts = for {_, part} <- Registry.lookup(World.Labour, {World.Crew.Tasks, node}), do: part
-
-      case access do
-        :write ->
-          Enum.any?(parts, &(key == "parts/#{&1}.glb"))
-
-        :read ->
-          String.starts_with?(key, "blueprints/") or
-            Enum.any?(parts, &(key in ["parts/#{&1}.glb", "parts/#{&1}.json", order_key(&1)]))
-      end
+      in_work = for {_, part} <- Registry.lookup(World.Labour, {World.Crew.Tasks, node}), do: part
+      # (The store of the queue only when the parts in work do not allow it: a port call.)
+      allows?(in_work, key, access) or allows?(given(node), key, access)
     else
       nil -> false
+    end
+  end
+
+  defp allows?(parts, key, :write), do: Enum.any?(parts, &(key == "parts/#{&1}.glb"))
+
+  defp allows?(parts, key, :read),
+    do:
+      String.starts_with?(key, "blueprints/") or
+        Enum.any?(parts, &(key in ["parts/#{&1}.glb", "parts/#{&1}.json", order_key(&1)]))
+
+  # The parts that the store of the queue gives to `node`.
+  defp given(node) do
+    case World.Labour.Store.all() do
+      {:ok, rows} -> for %{node: ^node, key: key} <- rows, do: key
+      :error -> []
     end
   end
 
