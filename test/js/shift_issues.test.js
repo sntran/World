@@ -145,9 +145,48 @@ test('the errors of a request: the form, no token, a refusal of the factory, and
   assert.match(fake.github.at(-1).body.body, /The factory refused the request: the parts list .*: 422/);
   assert.equal(await handle(9, parse(form()), 'check'), null);
   assert.equal(requestOf([{ user: { login: 'github-actions[bot]' }, body: 'no mark' }]), null);
-  // A part that does not answer in time counts as not built.
-  globalThis.fetch = () => Promise.reject(new Error('down'));
-  assert.deepEqual(await ask([{ parts: [{ key: 'a' }] }], { authorization: `Bearer ${TOKEN}` }, 5.5), { keys: 1, left: 1 });
+  // A part that does not answer counts as not built, after 3 tries.
+  let tries = 0;
+  globalThis.fetch = () => (tries++, Promise.reject(new Error('down')));
+  assert.deepEqual(await ask([{ parts: [{ key: 'a' }] }], { authorization: `Bearer ${TOKEN}` }, 5.5, { wait: async () => {} }), { keys: 1, left: 1 });
+  assert.equal(tries, 3);
+});
+
+test('a part request that does not reach the edge, or gets a 5xx, goes again; one that the edge holds or answers does not', async () => {
+  const { ask } = await load(world());
+  const waits = [];
+  const wait = async (s) => waits.push(s);
+  const run = async (answers) => {
+    const asked = [];
+    globalThis.fetch = (url, { signal }) => {
+      asked.push(url);
+      const a = answers[Math.min(asked.length, answers.length) - 1];
+      if (a === 'down') return Promise.reject(new Error('fetch failed'));
+      if (a === 'hold') return new Promise((_, no) => signal.addEventListener('abort', () => no(new Error('aborted'))));
+      return Promise.resolve(new Response('', { status: a }));
+    };
+    const result = await ask([{ parts: [{ key: 'a' }] }], {}, 1, { wait });
+    return { ...result, asked: asked.length };
+  };
+  // No answer two times, then the part: built, after waits of 2 s and 4 s.
+  assert.deepEqual(await run(['down', 'down', 200]), { keys: 1, left: 0, asked: 3 });
+  assert.deepEqual(waits, [2, 4]);
+  // A 5xx, then 202: the part waits at the edge.
+  assert.deepEqual(await run([503, 202]), { keys: 1, left: 1, asked: 2 });
+  // 202 or 422 at once: no new try.
+  assert.deepEqual(await run([202]), { keys: 1, left: 1, asked: 1 });
+  assert.deepEqual(await run([422]), { keys: 1, left: 1, asked: 1 });
+});
+
+test('a part request that the edge holds for 10 s is in its queue: no new try', { timeout: 30_000 }, async () => {
+  const { ask } = await load(world());
+  let asked = 0;
+  globalThis.fetch = (_url, { signal }) => {
+    asked++;
+    return new Promise((_, no) => signal.addEventListener('abort', () => no(new Error('aborted'))));
+  };
+  assert.deepEqual(await ask([{ parts: [{ key: 'a' }] }], {}, 1, { wait: async () => {} }), { keys: 1, left: 1 });
+  assert.equal(asked, 1);
 });
 
 test('the join of a shift: the ID token of the job to the edge, and the checked values for sh', async () => {
