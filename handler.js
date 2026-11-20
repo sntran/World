@@ -140,6 +140,73 @@ export function storeToken(request, env) {
   return same(request.headers.get('authorization') ?? '', `Bearer ${token}`);
 }
 
+// The control key of a construction (docs/factory.md, "The control key"):
+// POST /builds gives it only to the caller that opened the construction
+// (the VM says so in x-world-started), in the body of its answer, not in
+// a header, so no log of the requests has it. It is 32 random bytes in
+// hex. R2 keeps only its SHA-256 at controls/ID: no key of the VM can
+// read it or write it (order_store.js, KEY). The key does not go to the
+// VM, so it is not in /events, /census, GET /builds/ID, or the log of the
+// node.
+const BUILD = /^[A-Za-z0-9_.-]{1,200}$/;
+const CONTROL = /^[0-9a-f]{64}$/;
+const controlKey = (id) => `controls/${id}`;
+
+async function sha256(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// A pause, a resume, a cancel or a change of the construction ID: its
+// control key, or the secret WORLD_TOKEN (32 characters or more), in
+// "authorization: Bearer ...".
+export async function controls(request, env, id) {
+  const auth = request.headers.get('authorization') ?? '';
+  const secret = env.WORLD_TOKEN;
+  if (typeof secret === 'string' && secret.length >= 32 && same(auth, `Bearer ${secret}`)) return true;
+  const key = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!CONTROL.test(key) || !BUILD.test(id)) return false;
+  const stored = await env.ORDERS.get(controlKey(id));
+  return stored ? same(await stored.text(), await sha256(key)) : false;
+}
+
+// POST /builds: the answer of the VM, and the control key of a new
+// construction: "control" in the JSON of a 202, or a first event
+// "control" in a stream. When R2 does not keep its hash, the answer has
+// no key (only WORLD_TOKEN controls that construction).
+async function builds(request, env, vm, origin) {
+  const r = await ask(request, vm, origin, '/builds');
+  const out = answer(r, '/builds');
+  const id = r.headers.get('x-world-started');
+  if (!id || !BUILD.test(id) || r.status >= 300) return out;
+  const key = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  try {
+    await env.ORDERS.put(controlKey(id), await sha256(key));
+  } catch {
+    return out;
+  }
+  const extra = { ...Object.fromEntries(out.headers), 'cache-control': 'no-store' };
+  if ((out.headers.get('content-type') ?? '').startsWith('text/event-stream')) {
+    return new Response(prepend(`event: control\ndata: ${JSON.stringify({ build: id, control: key })}\n\n`, out.body), { status: out.status, headers: extra });
+  }
+  const body = await out.json().catch(() => ({ build: id }));
+  return new Response(JSON.stringify({ ...body, control: key }), { status: out.status, headers: extra });
+}
+
+// A stream with `text` before the body.
+function prepend(text, body) {
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  writer
+    .write(new TextEncoder().encode(text))
+    .then(() => {
+      writer.releaseLock();
+      return body ? body.pipeTo(writable) : writable.close();
+    })
+    .catch(() => {});
+  return readable;
+}
+
 // Two texts, compared in a time that does not depend on where they differ.
 function same(a, b) {
   const [x, y] = [new TextEncoder().encode(a), new TextEncoder().encode(b)];
@@ -170,7 +237,7 @@ async function store(request, env, key) {
 const headers = (extra = {}) => ({
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
-  'access-control-allow-headers': 'content-type, accept, mcp-protocol-version, mcp-session-id, last-event-id',
+  'access-control-allow-headers': 'content-type, accept, authorization, mcp-protocol-version, mcp-session-id, last-event-id',
   ...extra,
 });
 
@@ -211,14 +278,27 @@ export function orderOf(blueprint, params) {
 // a project token. A stream of events (text/event-stream) goes back as
 // it comes.
 async function forward(request, vm, origin, path, project = null) {
+  return answer(await ask(request, vm, origin, path, project), path);
+}
+
+// The request to the VM: only some headers of the caller (no
+// authorization: no token and no control key goes to the VM).
+async function ask(request, vm, origin, path, project = null) {
   const keep = ['content-type', 'accept', 'mcp-protocol-version', 'last-event-id'].filter((name) => request.headers.has(name));
-  const ask = new Headers(keep.map((name) => [name, request.headers.get(name)]));
-  ask.set('x-world-origin', origin);
-  if (project) ask.set('x-world-project', project);
+  const asked = new Headers(keep.map((name) => [name, request.headers.get(name)]));
+  asked.set('x-world-origin', origin);
+  if (project) asked.set('x-world-project', project);
   const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer();
-  const r = await vm(new Request(`http://vm${path}`, { method: request.method, headers: ask, body }));
+  return vm(new Request(`http://vm${path}`, { method: request.method, headers: asked, body }));
+}
+
+// The answer of the VM to the caller, with only some of its headers. A
+// 202 of a file has no body; a 202 of a part or of POST /builds has its
+// body (the id of the construction, the URL of its events).
+function answer(r, path) {
   const extra = Object.fromEntries(['content-type', 'allow', 'cache-control', 'retry-after', 'x-world-shift'].filter((name) => r.headers.has(name)).map((name) => [name, r.headers.get(name)]));
-  return new Response(r.status === 202 && !path.startsWith('/p/') ? null : r.body, { status: r.status, headers: headers(extra) });
+  const body = r.status === 202 && !path.startsWith('/p/') && path !== '/builds' ? null : r.body;
+  return new Response(body, { status: r.status, headers: headers(extra) });
 }
 
 const buildKey = (commit, hash, level, kind) => `builds/${commit}/${hash}.${level}.${kind}`;
@@ -358,10 +438,15 @@ async function route(request, env, { vm, commit, later = () => {}, verify: check
   if (path === '/mcp') return forward(request, vm, url.origin, '/mcp');
 
   // The constructions of the people of the node, and the streams.
-  if (path === '/builds' && request.method === 'POST') return forward(request, vm, url.origin, '/builds');
+  if (path === '/builds' && request.method === 'POST') return builds(request, env, vm, url.origin);
 
-  // A pause, a resume, a cancel or a change of a construction.
-  if (/^\/builds\/[^/]+\/(pause|resume|cancel|change)$/.test(path) && request.method === 'POST') return forward(request, vm, url.origin, path);
+  // A pause, a resume, a cancel or a change of a construction: with its
+  // control key or WORLD_TOKEN, else 403.
+  const act = path.match(/^\/builds\/([^/]+)\/(pause|resume|cancel|change)$/);
+  if (act && request.method === 'POST') {
+    if (!(await controls(request, env, act[1]))) return errors(403, 'a pause, a resume, a cancel or a change needs the control key of the construction');
+    return forward(request, vm, url.origin, path);
+  }
 
   if (request.method !== 'GET' && request.method !== 'HEAD') return errors(405, 'the method is not allowed');
 

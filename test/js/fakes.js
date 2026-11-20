@@ -22,6 +22,7 @@ export function bucket() {
         etag: `v${versions.get(key)}`,
         body: bytes,
         async json() { return JSON.parse(new TextDecoder().decode(bytes)); },
+        async text() { return new TextDecoder().decode(bytes); },
       };
     },
     async put(key, value, options) {

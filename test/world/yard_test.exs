@@ -126,4 +126,16 @@ defmodule World.YardTest do
     assert {:error, %{kind: :invariant, property: "AtOpen"}, _} =
              Checker.check(@model, config: Path.rootname(@model) <> "Early.cfg")
   end
+
+  test "a second job of an id that the yard holds is held again: it joins the first job" do
+    # (The state of a yard before it raises its places: the factory of the vehicles is closed.)
+    {:ok, s, {:continue, :raise}} = Yard.init([])
+    job = %{id: "held-far"}
+    assert {:reply, {:held, "held-far", :new}, s} = Yard.handle_call({:place, job, "vehicles"}, {self(), make_ref()}, s)
+
+    assert {:reply, {:held, "held-far", :joined}, s} =
+             Yard.handle_call({:place, job, "vehicles"}, {self(), make_ref()}, s)
+
+    assert length(s.held) == 2
+  end
 end

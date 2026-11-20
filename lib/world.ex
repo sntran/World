@@ -21,20 +21,35 @@ defmodule World do
   waits until the place is open.
   """
   def build(job) do
+    {_, id} = open(job)
+    {:ok, id}
+  end
+
+  @doc """
+  As `build/1`, and who opened the construction: `{:new, id}` when this
+  job opened it (or the yard holds it as the first job of its id), or
+  `{:joined, id}` when a construction of the same id runs or waits
+  already. Only the caller of a new construction gets its control key
+  (`POST /builds`, the Worker).
+  """
+  def open(job) do
     case World.Yard.place(Map.put_new(job, :reply, self())) do
-      {:held, id} -> {:ok, id}
+      {:held, id, who} -> {who, id}
       {:start, job} -> start(job)
     end
   end
 
   defp start(job) do
-    with {:error, {:already_started, _}} <- Construction.start(job),
-         :ok <- join(job) do
-      {:ok, job.id}
-    else
-      {:ok, _} -> {:ok, job.id}
-      # The construction ended before the join: a new one builds again.
-      :gone -> start(job)
+    case Construction.start(job) do
+      {:ok, _} ->
+        {:new, job.id}
+
+      {:error, {:already_started, _}} ->
+        case join(job) do
+          :ok -> {:joined, job.id}
+          # The construction ended before the join: a new one builds again.
+          :gone -> start(job)
+        end
     end
   end
 

@@ -31,7 +31,10 @@ defmodule World.Service do
     (`World.build/1`). With `accept: text/event-stream`, the response is
     the stream of the construction until its end; else 202 with
     `{"build", "hash", "after", "events", "files"}`. 422 with
-    `{"errors"}`, or 503 when the store failed.
+    `{"errors"}`, or 503 when the store failed. The header
+    `x-world-started` (the id) marks the answer to the caller that opened
+    the construction (`World.open/1`): the Worker gives that caller the
+    control key (`docs/factory.md`, "The control key").
   - `GET /builds/ID`: the state of a construction from the log of the
     node: its status, its tasks, the tasks done and its elements (404
     when the log has none).
@@ -727,12 +730,14 @@ defmodule World.Service do
       {:ok, job, placed} ->
         after_id = World.Log.Server.last()
 
+        # (The stream reads the log after `after_id`: the events from the
+        # start of the construction to the open of the stream come too.)
+        {who, id} = World.open(job)
+        conn = if who == :new, do: put_resp_header(conn, "x-world-started", id), else: conn
+
         if "text/event-stream" in get_req_header(conn, "accept") do
-          conn = Stream.open(conn, job.id)
-          {:ok, id} = World.build(job)
-          Stream.follow(conn, id, after_id, &over?/1)
+          conn |> Stream.open(id) |> Stream.follow(id, after_id, &over?/1)
         else
-          {:ok, id} = World.build(job)
           json(conn, 202, Orders.started(id, placed, after_id))
         end
 

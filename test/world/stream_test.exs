@@ -28,6 +28,8 @@ defmodule World.StreamTest do
     assert conn.status == 202
     %{"build" => id, "hash" => hash, "after" => after_id, "events" => events_url, "files" => files} = json(conn)
     assert id == "#{hash}-mid" and events_url == "/builds/#{id}/events?after=#{after_id}"
+    # (The Worker gives the control key to the caller that opened the construction.)
+    assert Plug.Conn.get_resp_header(conn, "x-world-started") == [id]
     assert files["glb"] =~ "/o/#{hash}.glb"
 
     # The stream of the construction ends with its end.
@@ -69,11 +71,16 @@ defmodule World.StreamTest do
       JSON.encode!(%{"order" => %{"blueprint" => "drawing", "options" => %{"drawing" => %{"nodes" => nodes}}}})
     end
 
-    %{"build" => id} = json(call(:post, "/builds", blocks.(1.0)))
+    first = call(:post, "/builds", blocks.(1.0))
+    %{"build" => id} = json(first)
+    assert Plug.Conn.get_resp_header(first, "x-world-started") == [id]
     World.watch(id)
     assert json(call(:post, "/builds/#{id}/pause")) == %{"build" => id, "asked" => "pause"}
     assert_receive {:world, %{"kind" => "paused"}}, 5_000
     assert json(call(:get, "/builds/#{id}"))["status"] == "paused"
+    # The same order while its construction is there (in a pause): the same construction, not opened by this caller.
+    again = call(:post, "/builds", blocks.(1.0))
+    assert json(again)["build"] == id and Plug.Conn.get_resp_header(again, "x-world-started") == []
 
     changed = call(:post, "/builds/#{id}/change", blocks.(2.0))
     assert changed.status == 200 and json(changed)["build"] == id
@@ -104,9 +111,22 @@ defmodule World.StreamTest do
     assert call(:post, "/builds/nothing/change", blocks.(2.0)).status == 404
   end
 
+  test "a stream sends an event one time: an event of the past that comes again live goes" do
+    last = World.Log.Server.last()
+    the_end = "end_#{System.unique_integer([:positive])}"
+    conn = World.Stream.open(conn(:get, "/events"), :world)
+    # (An event that the stream has already, and then its end, come live.)
+    send(self(), {:world, %{"id" => last, "kind" => "old"}})
+    send(self(), {:world, %{"id" => last + 1_000_000_000, "kind" => the_end}})
+    conn = World.Stream.follow(conn, :world, last, &(&1["kind"] == the_end))
+    kinds = Enum.map(events(conn.resp_body), & &1["kind"])
+    assert List.last(kinds) == the_end and "old" not in kinds
+  end
+
   test "POST /builds with accept: text/event-stream gives the stream of the construction at once" do
     conn = call(:post, "/builds", job("far"), [{"accept", "text/event-stream"}])
     assert conn.status == 200
+    assert [_] = Plug.Conn.get_resp_header(conn, "x-world-started")
     kinds = Enum.map(events(conn.resp_body), & &1["kind"])
     assert hd(kinds) == "requested" and "element" in kinds and List.last(kinds) == "done"
   end

@@ -57,11 +57,11 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
 | `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge builds it from its recipe and keeps it, or, for a part that does not fit the edge, a construction shift builds it ("Construction shifts"): a project (a request with its token) that asks for all the parts of a list at one time gets them built at the same time. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. A part of a public order that does not fit the edge gives 422. |
-| `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. |
+| `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. The caller that opens the construction gets its control key: `control` in the JSON, or the first event `control` of the stream (below, "The control key"). |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
-| `POST /builds/ID/pause`, `/resume`, `/cancel` | A pause (the people end the tasks in hand, and no task starts), a resume, or a cancel (the event `stopped` with the reason `cancelled`): 202, or 404. |
-| `POST /builds/ID/change` | In a pause, a new order of the same blueprint in data (the same nodes): each node whose data is the same stays made, and the people make the others again at the resume (the event `changed`, with `redo` and `keep`). 200, 409 when the build is not in a pause or has other nodes, 422, or 404. |
+| `POST /builds/ID/pause`, `/resume`, `/cancel` | A pause (the people end the tasks in hand, and no task starts), a resume, or a cancel (the event `stopped` with the reason `cancelled`): 202, or 404. With the control key of the build or `WORLD_TOKEN`, else 403. |
+| `POST /builds/ID/change` | In a pause, a new order of the same blueprint in data (the same nodes): each node whose data is the same stays made, and the people make the others again at the resume (the event `changed`, with `redo` and `keep`). 200, 409 when the build is not in a pause or has other nodes, 422, or 404. With the control key of the build or `WORLD_TOKEN`, else 403. |
 | `/builds/ID/elements/KEY.glb` | The GLB of one element of a build, while the build goes on and for 5 minutes after its end. |
 | `/events` | The events of the whole node as a stream: each construction, each hire, each element. |
 | `/census` | The people of the node by trade, free and busy, and the constructions that wait for a person. And the crews (`crews`): the workers of the node, the nodes that share their workers, and the count of the sites with a stream of tasks now (`World.Crew`). |
@@ -1417,6 +1417,36 @@ of a site: its days, the dirt, the weeds, the parts that go),
 `done` (the model is complete), `stopped`, `failed` and `run_done` (the
 time and the memory). A comment line
 (`: ping`) comes each 15 s when there is no event.
+
+### The control key
+
+Anyone can watch a construction, but only its caller can change it. A
+pause, a resume, a cancel and a change need the control key of the
+construction, or `WORLD_TOKEN` (the owner), in `authorization: Bearer
+...`. Each other caller gets 403, and the request does not go to the
+VM.
+
+- `POST /builds` gives the control key to the caller that opens the
+  construction, in the body of the answer, with `cache-control:
+  no-store`: `control` in the JSON of the 202, or, with `accept:
+  text/event-stream`, a first event `event: control` with `data:
+  {"build", "control"}` (no `id`), before the events of the
+  construction. No header has the key, so no log of the requests has
+  it. The key is 32 random bytes in hex (256 bits).
+- A caller that sends the order of a construction that runs (the same
+  order at the same level: the same id) joins it, and gets no key. When
+  the construction ends, the next caller of that order opens a new
+  construction and gets a new key; the old key stops.
+- The Worker keeps only the SHA-256 of the key, in R2 at
+  `controls/ID`. The store of the orders and the store of the shifts
+  cannot read or write these keys (`KEY` of `order_store.js`).
+- The key does not go to the VM (the Worker sends no `authorization` to
+  the VM), so it is not in `/events`, `/census`, `GET /builds/ID`, or
+  the log of the node. The logs of the Worker hide the header
+  `authorization`.
+- When R2 does not keep the hash, the construction opens with no key:
+  only `WORLD_TOKEN` controls it. A construction of the MCP tool `build`
+  has no key either.
 
 The construction keeps the model and the elements of its tasks; the
 people make the shapes; a joiner (a process of its own) joins the model
