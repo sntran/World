@@ -1102,8 +1102,9 @@ in the job (the job started 19 s after the push of its branch):
 - The summary of the shift of the issue (run 44643134162): 7 parts, 16.4
   to 130.8 s each, all stored, no failures. The summary of the shift of
   the job (run 44646094215): 7 parts, 20.9 to 175.5 s each, all stored,
-  no failures. Neither node joined the edge again: with one order at a
-  time, the edge did not start again and did not stop to answer.
+  no failures. During the measure of the job, the VM of the edge started
+  again at 00:29:57 with no deploy (an event `started`), and all 7 parts
+  still came.
 
 #### Hải Âu in a shift on this computer
 
