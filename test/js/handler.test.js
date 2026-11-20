@@ -431,11 +431,124 @@ test('the constructions and the streams go to the VM, with Last-Event-ID, and co
   }
   assert.deepEqual(v.calls.slice(-8), ['/builds', '/events?after=4', '/census', '/places', '/places/nui_nho/ground.glb', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']);
   assert.equal((await handler(req('/builds', { method: 'PUT' }), env, { vm: v, commit: 'c1' })).status, 405);
-  for (const act of ['pause', 'resume', 'cancel', 'change']) {
-    await handler(req(`/builds/abc-far/${act}`, { method: 'POST', body: '{}' }), env, { vm: v, commit: 'c1' });
-  }
-  assert.deepEqual(v.calls.slice(-4), ['/builds/abc-far/pause', '/builds/abc-far/resume', '/builds/abc-far/cancel', '/builds/abc-far/change']);
   assert.equal((await handler(req('/builds/abc-far/stop', { method: 'POST' }), env, { vm: v, commit: 'c1' })).status, 405);
+});
+
+// A VM of constructions: POST /builds opens the construction of the
+// "id" of the body (x-world-started) or joins it ("joined": true), and
+// each other request answers 202.
+function builder() {
+  const seen = [];
+  const fn = async (request) => {
+    const url = new URL(request.url);
+    seen.push({ path: url.pathname, headers: [...request.headers], body: request.body ? await request.text() : '' });
+    if (url.pathname === '/builds') {
+      const job = JSON.parse(seen.at(-1).body);
+      if (job.bad) return Response.json({ errors: [{ path: 'order', message: 'no' }] }, { status: 422, headers: { 'x-world-started': job.id } });
+      const extra = job.joined ? {} : { 'x-world-started': job.id };
+      if (job.stream) return new Response('id: 1\ndata: {"id":1}\n\n', { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', ...extra } });
+      return Response.json({ build: job.id, events: `/builds/${job.id}/events?after=0` }, { status: 202, headers: extra });
+    }
+    return Response.json({ build: url.pathname.split('/')[2], asked: url.pathname.split('/')[3] }, { status: 202 });
+  };
+  fn.seen = seen;
+  return fn;
+}
+
+const open = (env, v, job, headers = {}) =>
+  handler(req('/builds', { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(job) }), env, { vm: v, commit: 'c1' });
+
+test('POST /builds gives a control key only to the caller that opens the construction, in the body; R2 keeps only its hash', async () => {
+  const env = { ORDERS: bucket() };
+  const v = builder();
+  const r = await open(env, v, { id: 'a-far' });
+  assert.equal(r.status, 202);
+  assert.equal(r.headers.get('cache-control'), 'no-store');
+  assert.equal(r.headers.get('content-type'), 'application/json');
+  const body = await r.json();
+  const key = body.control;
+  assert.match(key, /^[0-9a-f]{64}$/);
+  assert.deepEqual(body, { build: 'a-far', events: '/builds/a-far/events?after=0', control: key });
+  // (No header has the key, nor the mark of the VM.)
+  for (const [name, value] of r.headers) assert.ok(!value.includes(key) && name !== 'x-world-started', name);
+  const stored = new TextDecoder().decode(env.ORDERS.items.get('controls/a-far'));
+  assert.match(stored, /^[0-9a-f]{64}$/);
+  assert.notEqual(stored, key);
+  // A stream of a new construction: its first event is the key, then the events of the VM.
+  const stream = await open(env, v, { id: 'b-far', stream: true }, { accept: 'text/event-stream' });
+  assert.equal(stream.headers.get('content-type'), 'text/event-stream');
+  assert.equal(stream.headers.get('cache-control'), 'no-store');
+  const text = await stream.text();
+  const [first, rest] = [text.split('\n\n')[0], text.split('\n\n').slice(1).join('\n\n')];
+  assert.match(first, /^event: control\ndata: \{"build":"b-far","control":"[0-9a-f]{64}"\}$/);
+  assert.notEqual(JSON.parse(first.split('data: ')[1]).control, key);
+  assert.equal(rest, 'id: 1\ndata: {"id":1}\n\n');
+  // A caller that joins a construction gets no key, and the key of the first caller stays.
+  const joined = await open(env, v, { id: 'a-far', joined: true });
+  assert.equal(joined.status, 202);
+  assert.equal((await joined.json()).control, undefined);
+  assert.equal(new TextDecoder().decode(env.ORDERS.items.get('controls/a-far')), stored);
+  // An error, or an id that is not an id: no key.
+  const bad = await open(env, v, { id: 'c-far', bad: true });
+  assert.equal(bad.status, 422);
+  assert.equal((await bad.json()).control, undefined);
+  assert.equal((await (await open(env, v, { id: 'a/b' })).json()).control, undefined);
+  assert.ok(!env.ORDERS.items.has('controls/c-far'));
+  // R2 does not keep the hash: the construction opens, with no key.
+  const failing = { ORDERS: { ...bucket(), put: async () => { throw new Error('R2'); } } };
+  const lost = await open(failing, v, { id: 'd-far' });
+  assert.equal(lost.status, 202);
+  assert.equal((await lost.json()).control, undefined);
+  // A 202 with a body that is not JSON (not from World): the key with the id.
+  const odd = async () => new Response('?', { status: 202, headers: { 'x-world-started': 'e-far' } });
+  const plain = await open(env, odd, {});
+  assert.deepEqual(Object.keys(await plain.json()), ['build', 'control']);
+  // A stream with no body: only the key.
+  const empty = async () => new Response(null, { headers: { 'content-type': 'text/event-stream', 'x-world-started': 'f-far' } });
+  assert.match(await (await open(env, empty, {})).text(), /^event: control\ndata: .*\n\n$/);
+  // No key of the store of the shifts is a key of a control.
+  const shift = await handler(req('/store/controls/a-far', { headers: { authorization: 'Bearer x' } }), env, { vm: v, commit: 'c1' });
+  assert.notEqual(shift.status, 200);
+});
+
+test('a pause, a resume, a cancel and a change need the control key of the construction or WORLD_TOKEN; each other caller gets 403', async () => {
+  const token = 'w'.repeat(40);
+  const env = { ORDERS: bucket(), WORLD_TOKEN: token };
+  const v = builder();
+  const a = (await (await open(env, v, { id: 'a-far' })).json()).control;
+  const b = (await (await open(env, v, { id: 'b-far' })).json()).control;
+  const act = (name, auth) =>
+    handler(req(`/builds/a-far/${name}`, { method: 'POST', headers: { 'content-type': 'application/json', ...(auth ? { authorization: auth } : {}) }, body: '{}' }), env, { vm: v, commit: 'c1' });
+  for (const name of ['pause', 'resume', 'cancel', 'change']) {
+    const before = v.seen.length;
+    // With the key of the construction, and with WORLD_TOKEN: to the VM.
+    const keyed = await act(name, `Bearer ${a}`);
+    assert.equal(keyed.status, 202, name);
+    assert.equal(v.seen.at(-1).path, `/builds/a-far/${name}`);
+    assert.equal((await act(name, `Bearer ${token}`)).status, 202, name);
+    assert.equal(v.seen.length, before + 2);
+    // With no key, a wrong key, another token, or the key of another construction: 403, and nothing goes to the VM.
+    for (const auth of [null, 'Bearer ', `Bearer ${'0'.repeat(64)}`, `Bearer ${a.toUpperCase()}`, `Bearer ${'w'.repeat(39)}`, a, `Bearer ${b}`]) {
+      const r = await act(name, auth);
+      assert.equal(r.status, 403, `${name} ${auth}`);
+      assert.match((await r.json()).errors[0].message, /needs the control key/);
+    }
+    assert.equal(v.seen.length, before + 2);
+  }
+  // A construction with no key in R2 (another id, or an id that is not an id): 403.
+  const other = await handler(req('/builds/z-far/pause', { method: 'POST', headers: { authorization: `Bearer ${a}` } }), env, { vm: v, commit: 'c1' });
+  assert.equal(other.status, 403);
+  const odd = await handler(req(`/builds/${'x'.repeat(201)}/pause`, { method: 'POST', headers: { authorization: `Bearer ${a}` } }), env, { vm: v, commit: 'c1' });
+  assert.equal(odd.status, 403);
+  // A short WORLD_TOKEN is not a token.
+  const short = { ORDERS: env.ORDERS, WORLD_TOKEN: 'short' };
+  assert.equal((await handler(req('/builds/a-far/pause', { method: 'POST', headers: { authorization: 'Bearer short' } }), short, { vm: v, commit: 'c1' })).status, 403);
+  // The key and the token do not go to the VM: no request to the VM has them.
+  for (const r of v.seen) {
+    const text = JSON.stringify(r);
+    assert.ok(!text.includes(a) && !text.includes(b) && !text.includes(token), r.path);
+    assert.ok(!r.headers.some(([name]) => name === 'authorization'), r.path);
+  }
 });
 
 test('the other routes', async () => {

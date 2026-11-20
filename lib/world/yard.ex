@@ -33,9 +33,10 @@ defmodule World.Yard do
 
   @doc """
   The job at its place, for `World.build/1`: `{:start, job}` with its
-  `place` and its `haul` when the place is open, `{:held, id}` when the
-  yard holds it, or `{:start, job}` as it is (no yard, a job with a place,
-  or a job with no drawing or no place for its kind).
+  `place` and its `haul` when the place is open, `{:held, id, who}` when
+  the yard holds it (`who` is `:new`, or `:joined` when the yard holds a
+  job of the same id already), or `{:start, job}` as it is (no yard, a
+  job with a place, or a job with no drawing or no place for its kind).
   """
   def place(job, yard \\ __MODULE__) do
     kind = job[:drawing] && Map.get(job.drawing, "kind", "item")
@@ -86,8 +87,9 @@ defmodule World.Yard do
     if open?(s, place) do
       {:reply, {:start, job}, record(s, "place_started", at)}
     else
+      again = Enum.any?(s.held, &(&1.id == job.id))
       s = record(%{s | held: s.held ++ [job]}, "place_held", at)
-      {:reply, {:held, job.id}, s}
+      {:reply, {:held, job.id, if(again, do: :joined, else: :new)}, s}
     end
   end
 
