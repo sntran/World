@@ -849,6 +849,7 @@ for the new parts; it waits for the end of the shift that runs.
 | A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): GitHub can still start the workflow, so after 5 s the Worker looks at the runs of `shift.yml` (`workflow_dispatch`, since a minute before the start, with the commit in the name). A run is there, or the runs do not answer: the start stays used. No run: the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until the owner corrects the cause | `shift.js` |
 | No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
 | A part in the queue | 6 hours at most, then an error | `World.Labour` |
+| The queue after a start of the VM | kept in the SQLite of the object; a new VM reads it in 10 s at most; a part in work waits 2.5 minutes for its node, then goes back to the queue | `World.Labour.Store`, `World.Labour.Restore` |
 | A part that fails | 3 tries on nodes of shifts, then an error | `World.Labour` |
 | Parts in work on a node | one for each core of the node (`World.Crew` gives 2 workers for each core), at least one; the parts take the free cores in the order that they came to the queue | `World.Labour` |
 | WebSockets on `/.tcp/` | 4 open at most (`BEAM_MAX_WEBSOCKETS`) | `wrangler.jsonc` |
@@ -907,15 +908,35 @@ recipe and the order of the part to read, and the blueprints in data),
 else 403. No GLB goes over the link. A part in R2 does
 not build again, and a node that builds a part already does not build it
 a second time when the edge gives it again (a VM of the edge that starts
-again asks again). When the store does not take the GLB of a part (a VM
-of the edge that started again does not know that it gave the key to
-that node), the GLB stays on the node, and the node puts it at the next
+again asks again). When the store does not take the GLB of a part (the
+edge did not answer in time, or a new VM of the edge did not read its
+queue yet), the GLB stays on the node, and the node puts it at the next
 make of its key, with no new build. A part whose node goes away goes
 back to the queue, at its place. An
 issue gets its comment (the parts lists and their URLs) when its parts
 are built, and closes: the job of the request closes it at once, else
 the shift does (`scripts/shift-issues.mjs check`, each 5 minutes and at
 its end).
+
+**The queue after a start of the VM.** The edge keeps its queue in the
+SQLite of its Durable Object too (`World.Labour.Store`,
+`labour_store.js`): each part that waits, with its ticket (its place in
+the queue: the time of the clock when it came), and the node of each
+part in work. A new VM of the edge (a deploy, the limit of its memory)
+reads the store each 10 seconds (`World.Labour.Restore`, as the passes
+above), and each part with no process goes back to the queue at its
+place, so the order stays: the parts of the first order before the
+parts of the second.
+
+- A part in work on a node is in the work of that node again at once,
+  so the store of the Worker takes its GLB (`/shift/allowed`).
+- When that node connects again, the edge gives it the part again: the
+  node waits for the build that runs, or puts the GLB that it kept,
+  with no new build.
+- When that node does not come back in 2.5 minutes (a node with no
+  connection for 2 minutes joins again with a new name), the part goes
+  back to the queue at its place.
+- A part that R2 has is done, and leaves the store.
 
 **The length of a shift.** A shift stays until its end, and waits for
 the next part between parts. It goes home early after 60 minutes with
@@ -1062,8 +1083,9 @@ broke. The logs of the Worker give the cause.
   minutes, 13 makes that the store refused. Each GLB that the store
   refused went to the store at a later make of its key in 1.1 to 3.3 s,
   with no new build.
-- The order of the queue holds only in one VM: after a start of the VM,
-  the parts of D3 came before those of C3.
+- The order of the queue held only in one VM: after a start of the VM,
+  the parts of D3 came before those of C3. (Now the queue is in the
+  SQLite of the object: "The queue after a start of the VM".)
 - The time from the start of a shift by hand to the join of its node:
   71 s at 456c42c (the build in the cache), 3 minutes 7 s at a9b781f and
   4 minutes 43 s at 01362aa (a new commit: the node compiles at its

@@ -23,8 +23,12 @@ defmodule World.Labour do
     puts its GLB in the store itself (R2), and gives back only the key
     (`make/1`): the GLB does not go over the link. A part whose node goes
     away goes back to the queue. A part that fails on 3 tries gives
-    the error. A part of a public order (no project) gives an error: the
-    shifts are for the projects of the owner only.
+    the error. The queue, its order and the node of each part in work
+    are also in a store (`World.Labour.Store`, the SQLite of the Durable
+    Object): a new VM (a deploy, the limit of the memory) takes them
+    back (`restore/1`), so no part goes and the order stays. A part of a
+    public order (no project) gives an error: the shifts are for the
+    projects of the owner only.
   - With no shifts (a server on a computer, or native nodes that join
     it), a part goes to the nodes that take parts (on the next node when
     its node goes away), and builds here when no node is left.
@@ -32,6 +36,7 @@ defmodule World.Labour do
 
   alias World.{Crew, Elements, Line, Shift}
   alias World.Elements.Store
+  alias World.Labour.Store, as: Queue
 
   @tries 3
 
@@ -43,7 +48,8 @@ defmodule World.Labour do
   def children,
     do: [
       {Registry, keys: :duplicate, name: __MODULE__},
-      %{id: __MODULE__.Kept, start: {Agent, :start_link, [fn -> %{} end, [name: __MODULE__.Kept]]}}
+      %{id: __MODULE__.Kept, start: {Agent, :start_link, [fn -> %{} end, [name: __MODULE__.Kept]]}},
+      World.Labour.Restore
     ]
 
   @doc """
@@ -211,7 +217,7 @@ defmodule World.Labour do
   # node of a shift has a free core for it, and until that node builds
   # it. Its ticket keeps its place in the queue: first come, first served.
   defp queue(key, opts) do
-    ticket = System.unique_integer([:monotonic])
+    ticket = Queue.wait(key, ticket())
     wait(key, ticket)
     until = System.monotonic_time(:millisecond) + Keyword.get(opts, :most, 6 * 3_600_000)
 
@@ -219,8 +225,116 @@ defmodule World.Labour do
       turn(key, opts, 0, until, ticket)
     after
       Registry.unregister(__MODULE__, :queue)
+      Queue.done(key)
     end
   end
+
+  # A ticket of the queue: the time of the clock (µs) and a count, so the
+  # tickets of a VM that starts again come after the tickets before it.
+  defp ticket, do: System.os_time(:microsecond) * 1000 + rem(System.unique_integer([:positive, :monotonic]), 1000)
+
+  @doc """
+  The parts of the store (`World.Labour.Store`) that have no process
+  now, after a start of the VM: each part goes back to the queue at its
+  place, in the process of its key (`World.Elements.start/2`: a request
+  of the key joins it), one part after the other. A part that a VM before gave to a node is
+  in the work of that node at once, so the store takes its GLB, and goes
+  to that node again when the node is there: the node waits for its build,
+  or puts the GLB that it kept (`make/1`). The options are those of
+  `build/3`. `:ok`, or `:error` when the store fails.
+  """
+  def restore(opts \\ []) do
+    with {:ok, rows} <- Queue.all(), do: Enum.each(rows, &restart(&1, opts))
+  end
+
+  # A part of the store in a process of its key, one part after the
+  # other: each part is in the queue (or in the work of its node) before
+  # the next part starts, so no part takes a core before a part of an
+  # older ticket. A part that has its process now is not touched.
+  defp restart(row, opts) do
+    {me, ref} = {self(), make_ref()}
+
+    case Elements.start({:part, row.key}, fn -> resume(row, opts, fn -> send(me, {ref, :ready}) end) end) do
+      {:new, pid} ->
+        watch = Process.monitor(pid)
+
+        receive do
+          {^ref, :ready} -> Process.demonitor(watch, [:flush])
+          # (A part that the store has ends at once.)
+          {:DOWN, ^watch, :process, ^pid, _} -> true
+        end
+
+      {:joined, _} ->
+        true
+    end
+  end
+
+  # A part of the store, in the queue again; `ready` when it is there.
+  defp resume(%{key: key, ticket: ticket, node: node}, opts, ready) do
+    until = System.monotonic_time(:millisecond) + Keyword.get(opts, :most, 6 * 3_600_000)
+
+    try do
+      cond do
+        # (A VM before put it in the store and had no time to say so.)
+        Store.has?(key) ->
+          :stored
+
+        node == nil ->
+          wait(key, ticket)
+          ready.()
+          turn(key, opts, 0, until, ticket)
+
+        true ->
+          again(key, node, opts, until, ticket, ready)
+      end
+    after
+      Registry.unregister(__MODULE__, :queue)
+      Queue.done(key)
+    end
+  end
+
+  # A part in work on `node` when the VM before stopped: in the work of
+  # that node at once, and to that node when it is there; else, after
+  # `back` ms (2.5 minutes: a node with no connection for 2 minutes joins
+  # again with a new name), back to the queue at its place.
+  defp again(key, node, opts, until, ticket, ready) do
+    away = {Crew.Tasks, node}
+    {:ok, _} = Registry.register(__MODULE__, away, key)
+    ready.()
+    there = there(node, opts, System.monotonic_time(:millisecond) + Keyword.get(opts, :back, 150_000))
+    Registry.unregister(__MODULE__, away)
+
+    case there do
+      {tasks, _} ->
+        {:ok, _} = Registry.register(__MODULE__, tasks, key)
+        after_run(key, run_on(key, tasks), opts, 0, until, ticket)
+
+      :none ->
+        wait(key, ticket)
+        Queue.back(key)
+        turn(key, opts, 0, until, ticket)
+    end
+  end
+
+  # The node that takes parts with the name `node`, when it is there
+  # before `stop`; else :none.
+  defp there(node, opts, stop) do
+    case Enum.find(nodes(opts), fn {tasks, _} -> node_of(tasks) == node end) do
+      nil ->
+        if System.monotonic_time(:millisecond) > stop do
+          :none
+        else
+          Process.sleep(Keyword.get(opts, :poll, 1_000))
+          there(node, opts, stop)
+        end
+
+      found ->
+        found
+    end
+  end
+
+  defp node_of({_, node}) when is_atom(node), do: node
+  defp node_of(pid) when is_pid(pid), do: node(pid)
 
   defp wait(key, ticket), do: {:ok, _} = Registry.register(__MODULE__, :queue, {ticket, key})
 
@@ -237,24 +351,33 @@ defmodule World.Labour do
         end
 
       tasks ->
-        case run_on(key, tasks) do
-          {:ok, done} ->
-            done
+        Queue.give(key, node_of(tasks))
+        after_run(key, run_on(key, tasks), opts, tries, until, ticket)
+    end
+  end
 
-          # (The node went away, or its shift ended: the part goes back to
-          # the queue, at its place.)
-          :gone ->
-            wait(key, ticket)
-            Process.sleep(poll)
-            turn(key, opts, tries, until, ticket)
+  defp after_run(key, result, opts, tries, until, ticket) do
+    case result do
+      {:ok, done} ->
+        done
 
-          {:failed, _} when tries + 1 >= @tries ->
-            {:error, [%{"path" => "", "message" => "the part failed on #{@tries} nodes of a construction shift"}]}
+      # (The node went away, or its shift ended: the part goes back to
+      # the queue, at its place. It is in the queue again before the
+      # store hears of it: no part of a later ticket takes its core in
+      # that time.)
+      :gone ->
+        wait(key, ticket)
+        Queue.back(key)
+        Process.sleep(Keyword.get(opts, :poll, 1_000))
+        turn(key, opts, tries, until, ticket)
 
-          {:failed, _} ->
-            wait(key, ticket)
-            turn(key, opts, tries + 1, until, ticket)
-        end
+      {:failed, _} when tries + 1 >= @tries ->
+        {:error, [%{"path" => "", "message" => "the part failed on #{@tries} nodes of a construction shift"}]}
+
+      {:failed, _} ->
+        wait(key, ticket)
+        Queue.back(key)
+        turn(key, opts, tries + 1, until, ticket)
     end
   end
 

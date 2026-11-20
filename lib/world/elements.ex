@@ -144,7 +144,7 @@ defmodule World.Elements do
   after it gets its value from the store.
   """
   def background(key, fun, wait \\ wait()) do
-    pid = builder(key, fun)
+    {_, pid} = builder(key, fun)
     ref = Process.monitor(pid)
     send(pid, {:wait, self(), ref})
 
@@ -165,6 +165,14 @@ defmodule World.Elements do
   @doc false
   def wait, do: Application.get_env(:world, :part_wait, 45_000)
 
+  @doc """
+  The build of `fun` in a process of its own for `key`, as
+  `background/3`, with no wait: `{:new, pid}` when `fun` runs in the new
+  process `pid`, or `{:joined, pid}` when a build of `key` runs already
+  in `pid` (`fun` does not run).
+  """
+  def start(key, fun), do: builder(key, fun)
+
   # A part from the store, or `:error`.
   defp stored(key) do
     case Store.get(key) do
@@ -173,23 +181,24 @@ defmodule World.Elements do
     end
   end
 
-  # The process of a build: the one that runs now for the key, or a new one.
+  # The process of a build: the one that runs now for the key
+  # (`{:joined, pid}`), or a new one (`{:new, pid}`).
   defp builder(key, fun) do
     {me, ref} = {self(), make_ref()}
 
     Task.start(fn ->
       case Registry.register(World.Names, {:build, key}, nil) do
         {:ok, _} ->
-          send(me, {ref, self()})
+          send(me, {ref, {:new, self()}})
           # (The request that starts the build sends its wait at once.)
           answer(fun.(), 1_000)
 
         {:error, {:already_registered, other}} ->
-          send(me, {ref, other})
+          send(me, {ref, {:joined, other}})
       end
     end)
 
-    receive do: ({^ref, pid} -> pid)
+    receive do: ({^ref, found} -> found)
   end
 
   # The result of a build to each request that waits for it.
