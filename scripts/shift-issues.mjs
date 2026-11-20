@@ -96,21 +96,38 @@ export async function listsOf(request, auth) {
 
 // One request for each part, 8 at a time, each for at most 10 s (the
 // part goes on in the queue of the edge): the parts, and those that are
-// not built yet. The hours of the request go to the start of a shift.
-export async function ask(lists, auth, hours) {
+// not built yet. The hours of the request go to the start of a shift. A
+// request that gets no answer from the network, or a 5xx, did not reach
+// the queue of the edge (2026-11-20: the 7 requests of an issue never
+// reached the Worker, and the job counted them as parts that wait): it
+// goes again after 2 s and 4 s, 3 times at most. A request that the edge
+// holds for 10 s is in its queue, and does not go again. The job log has
+// a line for each try: the part, and its status or its error.
+export async function ask(lists, auth, hours, { wait = sleep } = {}) {
   const keys = [...new Set(lists.flatMap((l) => l.parts.map((p) => p.key)))];
   let left = 0;
   const one = async (key) => {
-    const stop = new AbortController();
-    const timer = setTimeout(() => stop.abort(), 10_000);
-    try {
-      const r = await fetch(`${base}/p/${key}.glb`, { headers: { ...auth, 'x-world-shift-hours': String(hours) }, signal: stop.signal });
-      await r.arrayBuffer();
-      if (r.status !== 200) left++;
-    } catch {
-      left++;
-    } finally {
-      clearTimeout(timer);
+    for (let n = 1; ; n++) {
+      const stop = new AbortController();
+      const timer = setTimeout(() => stop.abort(), 10_000);
+      let status = null;
+      let error = null;
+      try {
+        const r = await fetch(`${base}/p/${key}.glb`, { headers: { ...auth, 'x-world-shift-hours': String(hours) }, signal: stop.signal });
+        await r.arrayBuffer();
+        status = r.status;
+      } catch (e) {
+        error = stop.signal.aborted ? 'no answer in 10 s (the part waits at the edge)' : `no answer: ${e.message}`;
+      } finally {
+        clearTimeout(timer);
+      }
+      console.log(`shift-issues: part ${key}: ${status ?? error}${n > 1 ? ` (try ${n})` : ''}`);
+      const again = (status === null && !stop.signal.aborted) || status >= 500;
+      if (!again || n >= 3) {
+        if (status !== 200) left++;
+        return;
+      }
+      await wait(2 * n);
     }
   };
   for (let i = 0; i < keys.length; i += 8) await Promise.all(keys.slice(i, i + 8).map(one));
