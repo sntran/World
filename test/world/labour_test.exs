@@ -33,9 +33,11 @@ defmodule World.LabourTest do
   end
 
   # A part at near that is not in the store: a person of a group of `n`
-  # (the key of a part has the hash of its order).
+  # (the key of a part has the hash of its order). A group has 12 people
+  # at most, so `n` above 12 is a group of `n - 12` with another seed.
   defp fresh(n) do
-    [{key, recipe} | _] = parts("near", put_in(@group, ["options", "count"], n))
+    options = if n > 12, do: %{"count" => n - 12, "seed" => 2}, else: %{"count" => n}
+    [{key, recipe} | _] = parts("near", %{@group | "options" => options})
     refute Store.has?(key)
     {key, recipe}
   end
@@ -244,6 +246,166 @@ defmodule World.LabourTest do
     assert Labour.make(key) == :stored
     assert Store.has?(key)
     refute Map.has_key?(Agent.get(Labour.Kept, & &1), key)
+  end
+
+  # The store of the queue on this computer (scripts/labour-store.mjs),
+  # with no restore of the application while the test runs: the test
+  # starts the restore itself.
+  defp use_store(program \\ Path.expand("../../scripts/labour-store.mjs", __DIR__)) do
+    file = Path.join(System.tmp_dir!(), "labour-#{System.unique_integer([:positive])}.json")
+    Application.put_env(:world, World.Labour.Store, program: program, file: file)
+    :ok = Supervisor.terminate_child(World.Supervisor, World.Labour.Restore)
+
+    on_exit(fn ->
+      Application.delete_env(:world, World.Labour.Store)
+      Supervisor.restart_child(World.Supervisor, World.Labour.Restore)
+      File.rm(file)
+    end)
+  end
+
+  # The keys in work on a node, in the order that they came to it.
+  defp record(order, tasks) do
+    for {_, key} <- Registry.lookup(Labour, tasks), do: Agent.update(order, &if(key in &1, do: &1, else: &1 ++ [key]))
+    Process.sleep(1)
+    record(order, tasks)
+  end
+
+  test "a start of the VM in the middle of a shift loses no part, and the order of the queue stays: the parts of C before the parts of D" do
+    use_store()
+    # C: two parts, then D: two parts, in the queue with no node.
+    parts = for n <- [9, 10, 11, 12], do: fresh(n)
+    keys = Enum.map(parts, &elem(&1, 0))
+    nobody = fn -> [] end
+
+    waiters =
+      for {{key, recipe}, i} <- Enum.with_index(parts, 1) do
+        pid = spawn(fn -> Labour.build(key, recipe, shifts: true, project: true, poll: 5, nodes: nobody) end)
+        wait_for(fn -> Labour.waiting() == i end)
+        pid
+      end
+
+    {:ok, rows} = World.Labour.Store.all()
+    assert Enum.map(rows, & &1.key) == keys and Enum.all?(rows, &(&1.node == nil))
+    # (The VM stops: its processes go, and the store stays.)
+    for pid <- waiters, do: Process.exit(pid, :kill)
+    wait_for(fn -> Labour.waiting() == 0 end)
+
+    # A new VM, and a node with one core: the parts build one at a time.
+    {:ok, n} = Task.Supervisor.start_link()
+    {:ok, order} = Agent.start_link(fn -> [] end)
+    watcher = spawn_link(fn -> record(order, n) end)
+    assert Labour.restore(nodes: fn -> [{n, 2}] end, poll: 5) == :ok
+    # (A second look while the parts are in the queue starts nothing more.)
+    assert Labour.restore(nodes: fn -> [{n, 2}] end, poll: 5) == :ok
+    wait_for(fn -> Enum.all?(keys, &Store.has?/1) end)
+    wait_for(fn -> World.Labour.Store.all() == {:ok, []} end)
+    Process.unlink(watcher)
+    Process.exit(watcher, :kill)
+    assert Agent.get(order, & &1) == keys
+  end
+
+  test "a part whose node goes away is in the queue again before the store hears of it: a later part does not take its core" do
+    # (A store that is slow to hear that a part waits again.)
+    dir = Path.join(System.tmp_dir!(), "labour-slow-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(dir)
+    slow = Path.join(dir, "slow-store")
+    real = Path.expand("../../scripts/labour-store.mjs", __DIR__)
+    File.write!(slow, "#!/bin/sh\n[ \"$1\" = back ] && sleep 1\nexec node #{real} \"$@\"\n")
+    File.chmod!(slow, 0o755)
+    on_exit(fn -> File.rm_rf(dir) end)
+    use_store(slow)
+
+    {a, a_recipe} = fresh(16)
+    {b, b_recipe} = fresh(17)
+    {:ok, n} = Task.Supervisor.start_link()
+    {:ok, order} = Agent.start_link(fn -> [] end)
+    watcher = spawn_link(fn -> record(order, n) end)
+    gone = spawn(fn -> :ok end)
+    me = node()
+
+    # A first, on a node that goes away at once; then only n, with one core.
+    first =
+      Task.async(fn ->
+        Labour.build(a, a_recipe, shifts: true, project: true, poll: 5, nodes: turns([[{gone, 2}], [{n, 2}]]))
+      end)
+
+    wait_for(fn -> match?({:ok, [%{key: ^a, node: ^me}]}, World.Labour.Store.all()) end)
+    # B comes while the store hears that A waits again.
+    second =
+      Task.async(fn -> Labour.build(b, b_recipe, shifts: true, project: true, poll: 5, nodes: fn -> [{n, 2}] end) end)
+
+    assert Task.await(first, 600_000) == :stored
+    assert Task.await(second, 600_000) == :stored
+    Process.unlink(watcher)
+    Process.exit(watcher, :kill)
+    assert Agent.get(order, & &1) == [a, b]
+  end
+
+  test "after a start of the VM, a part in work stays in the work of its node, and goes to that node when it is there" do
+    use_store()
+    {key, _recipe} = fresh(13)
+    me = node()
+    _ = World.Labour.Store.wait(key, 1)
+    :ok = World.Labour.Store.give(key, me)
+    # (The tasks of the node by their name, as World.Crew gives them.)
+    n = {World.Crew.Tasks, me}
+    {:ok, there} = Agent.start_link(fn -> [] end)
+    assert Labour.restore(nodes: fn -> Agent.get(there, & &1) end, poll: 5) == :ok
+    # In the work of its node at once (the store of the Worker takes its GLB, World.Shift.Passes.allowed?/4).
+    wait_for(fn -> Registry.lookup(Labour, {World.Crew.Tasks, me}) != [] end)
+    assert [{_, ^key}] = Registry.lookup(Labour, {World.Crew.Tasks, me})
+    Agent.update(there, fn _ -> [{n, 2}] end)
+    wait_for(fn -> Store.has?(key) end)
+    wait_for(fn -> World.Labour.Store.all() == {:ok, []} end)
+    assert Registry.lookup(Labour, {World.Crew.Tasks, me}) == []
+  end
+
+  test "after a start of the VM, a part whose node does not come back goes back to the queue at its place; a part in the store is done" do
+    use_store()
+    {key, _recipe} = fresh(14)
+    _ = World.Labour.Store.wait(key, 1)
+    :ok = World.Labour.Store.give(key, :gone@nowhere)
+    {:ok, n} = Task.Supervisor.start_link()
+    {:ok, there} = Agent.start_link(fn -> [] end)
+    assert Labour.restore(nodes: fn -> Agent.get(there, & &1) end, poll: 5, back: 20) == :ok
+    wait_for(fn -> World.Labour.Store.all() == {:ok, [%{key: key, ticket: 1, node: nil}]} end)
+    wait_for(fn -> Labour.waiting() == 1 end)
+    Agent.update(there, fn _ -> [{n, 2}] end)
+    wait_for(fn -> Store.has?(key) end)
+    wait_for(fn -> World.Labour.Store.all() == {:ok, []} end)
+
+    # A part that a VM before put in the store, with its row still there
+    # (after the end of the process of the key: a process that ends waits
+    # 1 s for late requests, and a restore joins it; the next look takes the row).
+    wait_for(fn -> Registry.lookup(World.Names, {:build, {:part, key}}) == [] end)
+    _ = World.Labour.Store.wait(key, 2)
+    assert Labour.restore(nodes: fn -> [] end) == :ok
+    wait_for(fn -> World.Labour.Store.all() == {:ok, []} end)
+  end
+
+  test "the store of the queue: no program, and a program that fails" do
+    key = String.duplicate("e", 32)
+    assert World.Labour.Store.wait(key, 7) == 7 and World.Labour.Store.give(key, :a@b) == :ok
+    assert World.Labour.Store.back(key) == :ok and World.Labour.Store.done(key) == :ok
+    assert World.Labour.Store.all() == {:ok, []} and not World.Labour.Store.on?()
+    use_store("/bin/false")
+    assert World.Labour.Store.wait(key, 7) == 7 and World.Labour.Store.give(key, :a@b) == :error
+    assert World.Labour.Store.all() == :error and Labour.restore() == :error
+  end
+
+  test "the restore looks at the store each time of its look" do
+    use_store()
+    {:ok, pid} = World.Labour.Restore.start_link(name: :labour_restore_test, look: 5, labour: [nodes: fn -> [] end])
+    {key, _} = fresh(15)
+
+    on_exit(fn ->
+      for {builder, _} <- Registry.lookup(World.Names, {:build, {:part, key}}), do: Process.exit(builder, :kill)
+    end)
+
+    _ = World.Labour.Store.wait(key, 3)
+    wait_for(fn -> Labour.waiting() == 1 end)
+    GenServer.stop(pid)
+    assert [_] = Registry.lookup(World.Names, {:build, {:part, key}})
   end
 
   test "with shifts: a part of a public order that does not fit the edge gives an error; a part that fits builds here" do
