@@ -221,6 +221,34 @@ defmodule World.Shift.PassesTest do
     Process.exit(holder, :kill)
     Process.sleep(20)
     refute Passes.allowed?(pass, "parts/#{given}.glb", :write, p)
+
+    # A new VM before it puts its queue back: the store of the queue gives the part to that node.
+    file = Path.join(System.tmp_dir!(), "labour-#{System.unique_integer([:positive])}.json")
+
+    Application.put_env(:world, World.Labour.Store,
+      program: Path.expand("../../../scripts/labour-store.mjs", __DIR__),
+      file: file
+    )
+
+    :ok = Supervisor.terminate_child(World.Supervisor, World.Labour.Restore)
+
+    on_exit(fn ->
+      Application.delete_env(:world, World.Labour.Store)
+      Supervisor.restart_child(World.Supervisor, World.Labour.Restore)
+      File.rm(file)
+    end)
+
+    _ = World.Labour.Store.wait(given, 1)
+    :ok = World.Labour.Store.give(given, String.to_atom(node))
+    _ = World.Labour.Store.wait(not_given, 2)
+    :ok = World.Labour.Store.give(not_given, :other@node)
+    assert Passes.allowed?(pass, "parts/#{given}.glb", :write, p)
+    assert Passes.allowed?(pass, "orders/#{String.duplicate("a", 32)}.json", :read, p)
+    refute Passes.allowed?(pass, "parts/#{not_given}.glb", :write, p)
+    refute Passes.allowed?(other, "parts/#{given}.glb", :write, p)
+    # A store that fails gives nothing.
+    Application.put_env(:world, World.Labour.Store, program: "/bin/false", file: file)
+    refute Passes.allowed?(pass, "parts/#{given}.glb", :write, p)
   end
 
   test "the routes of the Worker: a join and a check of a pass" do
