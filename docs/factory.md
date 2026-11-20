@@ -846,7 +846,7 @@ for the new parts; it waits for the end of the shift that runs.
 | The time of a shift | 5.5 hours at most (`timeout-minutes: 330`); the shift stops 15 minutes before | `shift.yml`, `World.Shift` |
 | Shifts that the edge starts each day (UTC) | 6 (`WORLD_SHIFTS_A_DAY`) | `shift.js` |
 | A second start | not in the 20 minutes after a start (the runner, the cache and the start of the node) | `shift.js` |
-| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until the owner corrects the cause | `shift.js` |
+| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): GitHub can still start the workflow, so after 5 s the Worker looks at the runs of `shift.yml` (`workflow_dispatch`, since a minute before the start, with the commit in the name). A run is there, or the runs do not answer: the start stays used. No run: the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until the owner corrects the cause | `shift.js` |
 | No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
 | A part in the queue | 6 hours at most, then an error | `World.Labour` |
 | A part that fails | 3 tries on nodes of shifts, then an error | `World.Labour` |
@@ -1023,23 +1023,37 @@ all the parts, also the sign and the base):
 | C3: a storey of 3.42 | 01362aa | 39.6 s | 434.5 s | 723.7 s |
 | D3: a storey of 3.62, 20 s after C3 | 01362aa | 92.2 s | 348.7 s | 664.7 s |
 
-The target (the first order in about the time of one order) is not met.
-The main cause is the edge, not the node:
+**These four values do not count.** The deploys of the corrections came
+during the shifts, and each deploy starts the Durable Object and its VM
+again, about 5 minutes after the deploy. The events `started` of
+`/events` and the times of the deploys (the checks "Workers Builds" and
+`/version.json`):
 
-- **The VM of the edge started again** (the events `started` of
-  `/events`): at 21:07:57 and 21:09:21 (during C2 and D2), and at
-  21:45:50 (just before the third shift joined). A new VM has no queue
-  and does not know the parts in work. The store then refuses the GLB of
-  a part in work, and a part waits until a request asks for it again:
-  the job of an issue asks one time, and the shift asks each 5 minutes
-  (`shift-issues.mjs check`). That is the wait of about 5 minutes before
-  the first part.
-- **The edge did not answer in time, with no start of its VM.** At
-  21:53:45 the store refused the GLBs of 8 parts at one time, and the
-  node joined the edge again at 21:53:50, 21:54:36 and 22:12:50. Most
-  likely the VM did not answer the check of the store (`/shift/allowed`)
-  in time, and the distribution broke. The logs of the Worker are not
-  read yet.
+| Start of the VM | The deploy before it |
+|---|---|
+| 21:07:57 | f7c2cb3 at 21:03:03 (4 minutes 54 s before) |
+| 21:09:21 | a9b781f at 21:04:50 (4 minutes 31 s before) |
+| 21:45:50 | 01362aa at 21:40:51 (4 minutes 59 s before) |
+| 21:47:13 | none |
+| 00:29:57 (2026-11-20, during the measure of a request with an ID token) | none |
+
+So the VM started again two times during C2 and D2, and one time just
+after the start of the shift of C3 and D3. A new VM has no queue and does
+not know the parts in work. The store then refuses the GLB of a part in
+work, and a part waits until a request asks for it again: the job of an
+issue asks one time, and the shift asks each 5 minutes
+(`shift-issues.mjs check`). That is the wait of about 5 minutes before
+the first part. The rule since then: no deploy of the site from the start
+of a shift to its end, while a measure runs (a branch and a pull request,
+merged between the measures).
+
+Two starts had no deploy (21:47:13, during the parts list of D3, and
+00:29:57). Also with no start of the VM, at 21:53:45 the store refused
+the GLBs of 8 parts at one time, and the node joined the edge again at
+21:53:50, 21:54:36 and 22:12:50: most likely the VM did not answer the
+check of the store (`/shift/allowed`) in time, and the distribution
+broke. The logs of the Worker give the cause.
+
 - The summary of the second shift (run 44615136474): 22 parts in 26
   minutes, 8 keys built two times, 2 parts with no recipe at first. The
   store did not take the GLBs of the 5 main parts of D2, so they never
@@ -1054,6 +1068,31 @@ The main cause is the edge, not the node:
   71 s at 456c42c (the build in the cache), 3 minutes 7 s at a9b781f and
   4 minutes 43 s at 01362aa (a new commit: the node compiles at its
   start).
+
+#### Two orders at one time, with no deploy
+
+The same measure (2026-11-20, `main` at 34118e0), with no deploy from the
+start of the shift to its end: a shift started by hand at 01:19:04 (run
+44652694952, its node joined at 01:19:58), and two new orders 20 s
+apart, each with 7 new parts:
+
+| Measure | Parts list | First part | Whole mid level |
+|---|---|---|---|
+| C: a storey of 3.38 (issue #24, 01:20:09) | 36.8 s | 71.7 s | 432.8 s |
+| D: a storey of 3.58, 20 s after C (issue #25) | 55.3 s | 68.4 s | 398.9 s |
+
+- The VM did not start again: the last event `started` before the
+  measure is at 00:48:30 (a deploy), and there is none during it.
+- The target is not met, and D ended before C. The distribution broke
+  with no start of the VM: at 01:22:31 the store refused 4 parts in work
+  (the edge lost them when the node went away), and the node lost its
+  connection at 01:23:23 and 01:24:30 and joined again at 01:23:28 and
+  01:24:38. These breaks come while the edge builds the parts lists of
+  the two orders and answers the requests of their 14 parts. The logs of
+  the Worker give the cause.
+- The summary of the shift: 16 parts in 22 minutes. The 4 parts that
+  the store refused went to the store at the next make of their key in
+  1.0 to 1.5 s, with no new build (01362aa).
 
 **One run for each issue (1398b04).** Before, each issue started two runs
 of "Shift request", and the time from the issue to the parts list was
@@ -1088,8 +1127,9 @@ in the job (the job started 19 s after the push of its branch):
 - The summary of the shift of the issue (run 44643134162): 7 parts, 16.4
   to 130.8 s each, all stored, no failures. The summary of the shift of
   the job (run 44646094215): 7 parts, 20.9 to 175.5 s each, all stored,
-  no failures. Neither node joined the edge again: with one order at a
-  time, the edge did not start again and did not stop to answer.
+  no failures. During the measure of the job, the VM of the edge started
+  again at 00:29:57 with no deploy (an event `started`), and all 7 parts
+  still came.
 
 #### Hải Âu in a shift on this computer
 
