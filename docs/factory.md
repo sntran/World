@@ -846,7 +846,7 @@ for the new parts; it waits for the end of the shift that runs.
 | The time of a shift | 5.5 hours at most (`timeout-minutes: 330`); the shift stops 15 minutes before | `shift.yml`, `World.Shift` |
 | Shifts that the edge starts each day (UTC) | 6 (`WORLD_SHIFTS_A_DAY`) | `shift.js` |
 | A second start | not in the 20 minutes after a start (the runner, the cache and the start of the node) | `shift.js` |
-| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until the owner corrects the cause | `shift.js` |
+| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): GitHub can still start the workflow, so after 5 s the Worker looks at the runs of `shift.yml` (`workflow_dispatch`, since a minute before the start, with the commit in the name). A run is there, or the runs do not answer: the start stays used. No run: the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until the owner corrects the cause | `shift.js` |
 | No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
 | A part in the queue | 6 hours at most, then an error | `World.Labour` |
 | A part that fails | 3 tries on nodes of shifts, then an error | `World.Labour` |
