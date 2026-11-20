@@ -1069,6 +1069,31 @@ broke. The logs of the Worker give the cause.
   4 minutes 43 s at 01362aa (a new commit: the node compiles at its
   start).
 
+#### Two orders at one time, with no deploy
+
+The same measure (2026-11-20, `main` at 34118e0), with no deploy from the
+start of the shift to its end: a shift started by hand at 01:19:04 (run
+44652694952, its node joined at 01:19:58), and two new orders 20 s
+apart, each with 7 new parts:
+
+| Measure | Parts list | First part | Whole mid level |
+|---|---|---|---|
+| C: a storey of 3.38 (issue #24, 01:20:09) | 36.8 s | 71.7 s | 432.8 s |
+| D: a storey of 3.58, 20 s after C (issue #25) | 55.3 s | 68.4 s | 398.9 s |
+
+- The VM did not start again: the last event `started` before the
+  measure is at 00:48:30 (a deploy), and there is none during it.
+- The target is not met, and D ended before C. The distribution broke
+  with no start of the VM: at 01:22:31 the store refused 4 parts in work
+  (the edge lost them when the node went away), and the node lost its
+  connection at 01:23:23 and 01:24:30 and joined again at 01:23:28 and
+  01:24:38. These breaks come while the edge builds the parts lists of
+  the two orders and answers the requests of their 14 parts. The logs of
+  the Worker give the cause.
+- The summary of the shift: 16 parts in 22 minutes. The 4 parts that
+  the store refused went to the store at the next make of their key in
+  1.0 to 1.5 s, with no new build (01362aa).
+
 **One run for each issue (1398b04).** Before, each issue started two runs
 of "Shift request", and the time from the issue to the parts list was
 35.8 to 57.9 s (A to D). After, one run for each issue, and the time was
