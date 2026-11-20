@@ -998,6 +998,9 @@ What this measure does not show:
   through an issue (the job of `shift-request.yml`). A job of a project
   that asks for `/p/KEY.glb` with its own ID token is not measured.
 
+Both are measured later: see "The start of a shift by the edge, and a
+request with an ID token".
+
 #### Two orders at one time, after the limit of the parts
 
 The summary of the shift of A to D (run 44599229778) shows the cause of
@@ -1058,6 +1061,35 @@ of "Shift request", and the time from the issue to the parts list was
 39.2 to 92.2 s (C2 to D3): no gain that a measure can see. The run that
 the second one stopped cost about 3 s, and the parts list itself (a build
 at the edge) takes most of the time.
+
+#### The start of a shift by the edge, and a request with an ID token
+
+The measure (2026-11-20, `main` at cbbd7e2): no shift ran before each
+request, so the edge started the shift. The order is a new edit of Hải
+Âu at mid (7 new parts), and the request asks for a shift of 0.5 hours.
+Each time is from the request: the issue, or the start of the request
+in the job (the job started 19 s after the push of its branch):
+
+| Request | Parts list | Start of `shift.yml` | Join of the node | First part | Whole mid level |
+|---|---|---|---|---|---|
+| An issue of the form (the job of `shift-request.yml`, with its ID token) | 38.2 s | 44 s | 109 s | 141.0 s | 279.2 s |
+| A job of `sntran/Vung_Tau` with its own ID token (`world-request.yml`, `scripts/edit-time.mjs`) | 36.2 s | 39 s | 103 s | 131.9 s | 306.5 s |
+
+- The edge starts the workflow some seconds after the parts list: at the
+  first request of a part that waits (`x-world-shift: wanted`).
+- The node joins about 65 s after the start of the workflow, when the
+  build of its commit is in the cache (the source did not change since
+  51a4525). A new source adds the compile at the start of the node (3 to
+  5 minutes in the measures of the evening before).
+- One new order of 7 parts takes about 5 minutes from the request, with
+  a shift that the request starts.
+- A job of a repository of the owner gets its parts with its own ID
+  token and no secret: the project is the name of its repository.
+- The summary of the shift of the issue (run 44643134162): 7 parts, 16.4
+  to 130.8 s each, all stored, no failures. The summary of the shift of
+  the job (run 44646094215): 7 parts, 20.9 to 175.5 s each, all stored,
+  no failures. Neither node joined the edge again: with one order at a
+  time, the edge did not start again and did not stop to answer.
 
 #### Hải Âu in a shift on this computer
 
