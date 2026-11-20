@@ -1468,9 +1468,21 @@ The owner does this one time:
    makes its DNS record and its certificate in the zone `mkfifo.com`.
 3. Make the R2 bucket of the orders before the first deploy:
    `npx wrangler r2 bucket create world`. It needs no public access:
-   the Worker reads it. A Preview uses the same bucket (the key of an
-   order is the hash of its text).
-4. The Worker needs the Workers Paid plan: `edge.com` is about 44 MB (with no files of the catalog and of the kit: the site serves them), and
+   the Worker reads it.
+4. The Previews. A Preview uses the bucket `world-previews`, not the
+   bucket of the site, so a Preview cannot change the orders and the
+   parts of the site. The site has no such bucket now: on purpose, each
+   Preview build fails, so no Preview runs. To have Previews again, make
+   the bucket: `npx wrangler r2 bucket create world-previews`.
+   A Preview has no secret of the site: do not put `WORLD_SHIFT_TOKEN`,
+   `WORLD_TOKEN` or `WORLD_STORE_TOKEN` in the Base configuration of the
+   Previews (`npx wrangler preview base-config secret ...`) or in a
+   Preview. With no secret, a Preview starts no shift and takes no
+   project token. A Preview keeps the code of its branch: delete the
+   Preview of a branch that the site does not need any more (`npx
+   wrangler preview delete --name NAME`, the name of the branch with
+   `-` in place of `/` and `.`).
+5. The Worker needs the Workers Paid plan: `edge.com` is about 44 MB (with no files of the catalog and of the kit: the site serves them), and
    a build takes more CPU time than the Free plan gives. Cloudflare
    refuses a Worker of more than 64 MiB (before compression), and then
    the deploy does not reach the site with no error in CI:
