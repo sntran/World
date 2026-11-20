@@ -1469,9 +1469,11 @@ The owner does this one time:
 3. Make the R2 bucket of the orders before the first deploy:
    `npx wrangler r2 bucket create world`. It needs no public access:
    the Worker reads it.
-4. Make the R2 bucket of the Previews: `npx wrangler r2 bucket create
-   world-previews`. A Preview uses this bucket, not the bucket of the
-   site, so a Preview cannot change the orders and the parts of the site.
+4. The Previews. A Preview uses the bucket `world-previews`, not the
+   bucket of the site, so a Preview cannot change the orders and the
+   parts of the site. The site has no such bucket now: on purpose, each
+   Preview build fails, so no Preview runs. To have Previews again, make
+   the bucket: `npx wrangler r2 bucket create world-previews`.
    A Preview has no secret of the site: do not put `WORLD_SHIFT_TOKEN`,
    `WORLD_TOKEN` or `WORLD_STORE_TOKEN` in the Base configuration of the
    Previews (`npx wrangler preview base-config secret ...`) or in a
