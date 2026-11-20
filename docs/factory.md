@@ -1107,15 +1107,19 @@ apart, each with 7 new parts:
 | C: a storey of 3.38 (issue #24, 01:20:09) | 36.8 s | 71.7 s | 432.8 s |
 | D: a storey of 3.58, 20 s after C (issue #25) | 55.3 s | 68.4 s | 398.9 s |
 
-- The VM did not start again: the last event `started` before the
-  measure is at 00:48:30 (a deploy), and there is none during it.
+- No event `started` during the measure (the last one before it is at
+  00:48:30, a deploy). This does not show that the VM did not start
+  again: a VM that starts from its memory image (a reset for the memory
+  limit) writes no event `started` ("Two orders at one time, with a
+  deploy during the shift").
 - The target is not met, and D ended before C. The distribution broke
   with no start of the VM: at 01:22:31 the store refused 4 parts in work
   (the edge lost them when the node went away), and the node lost its
   connection at 01:23:23 and 01:24:30 and joined again at 01:23:28 and
   01:24:38. These breaks come while the edge builds the parts lists of
-  the two orders and answers the requests of their 14 parts. The logs of
-  the Worker give the cause.
+  the two orders and answers the requests of their 14 parts. Most likely
+  each was a reset of the isolate for its memory limit (seen in the logs
+  of the Worker in the next measure).
 - The summary of the shift: 16 parts in 22 minutes. The 4 parts that
   the store refused went to the store at the next make of their key in
   1.0 to 1.5 s, with no new build (01362aa).
@@ -1139,13 +1143,47 @@ the parts of the two orders wait or are in work.
    request. So the new VM starts while the parts of C and D wait or are
    in work.
 4. A record of `/events` with the clock of the computer that measures: a
-   start of the VM breaks the stream. (The time in the event `started`
-   can be the time of the memory image of the VM, not of the start.)
+   start of the VM breaks the stream. The logs of the Worker give each
+   start (`beam: ready in ...`) and each reset for the memory limit.
 5. After: the times of each order, the starts of the VM, the order of
    the parts (the parts of C before the parts of D), and the summary of
    the shift (each part stored, the GLBs that the store refused).
 
-The results come in a later change of this section.
+**The first run (2026-11-20, `main` at 4032e09, the deploy of d8da052).**
+A shift started by hand at 18:11:36 (run 44790421771, its node joined at
+18:12:51); the deploy was live at 18:15:11:
+
+| Measure | Parts list | First part | Whole mid level |
+|---|---|---|---|
+| C: a storey of 3.36 (issue #29, 18:17:18) | 37.5 s | 192.3 s (the sign, the same part as in D); the first main part 384.9 s | 543.0 s |
+| D: a storey of 3.56, 20 s after C (issue #30) | 43.3 s | 95.8 s | 250.3 s |
+
+- The new VM started at 18:18:28.8 (the code update: `beam: ready in 26
+  ms`, and the event `started`). The isolate of the old VM ended the
+  requests that it had open, and gave "exceeded its memory limit" at
+  18:19:00.
+- The 7 part requests of the job of C never reached the Worker (the logs
+  of the Worker have only its parts list, at 18:18:06.9). The job counted
+  them as parts that wait, so C was in no queue: its main parts came only
+  at the next check of the shift (18:22:43). This run does not test the
+  order of C and D. Now the job asks again for a request that does not
+  reach the edge, and writes each answer (`scripts/shift-issues.mjs`).
+- The parts of D were in work on the node at the start of the new VM,
+  and the new VM took them back: all were stored. In its first 1.5 s,
+  before it read its queue, it refused the store reads of the node
+  (`/shift/allowed` 403), and 4 makes ended with "no recipe". Now
+  `/shift/allowed` also takes the parts that the store of the queue gives
+  to the node.
+- At 18:36:08 the isolate went over its memory limit and the VM started
+  again from its memory image, with no event `started`: a VM from the
+  memory image does not run the `init` of the log of the node. So the
+  events `started` do not give each start of the VM. The breaks of the
+  distribution of the measure before ("Two orders at one time, with no
+  deploy") were most likely such resets.
+- The summary of the shift: 16 parts in 28 minutes, the 4 makes with "no
+  recipe", and no failure after them.
+
+The second run comes in a later change of this section.
 
 **One run for each issue (1398b04).** Before, each issue started two runs
 of "Shift request", and the time from the issue to the parts list was
