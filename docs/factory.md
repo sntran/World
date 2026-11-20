@@ -1102,11 +1102,14 @@ deploy during the shift, so that the VM of the edge starts again while
 the parts of the two orders wait or are in work.
 
 1. A shift started by hand, at the commit that the edge runs.
-2. When the node of the shift joined: the merge of a change of the
-   documents only (this text), so the source and the build of the node
-   stay the same.
-3. When the edge runs that deploy: two new orders 20 s apart (C, then D),
-   each with 7 new parts, by issues of the form.
+2. When the node of the shift joined: two new orders 20 s apart (C,
+   then D), each with 7 new parts, by issues of the form.
+3. About 60 s after C: the merge of a change of the documents only (this
+   text), so the source and the build of the node stay the same. The
+   deploy goes live about 2 minutes after the merge, and a new VM starts
+   at the first request after the deploy (2026-11-20: the deploy at
+   17:57:50, the event `started` at 17:58:17), while the parts of C and
+   D wait or are in work.
 4. After: the times of each order, the starts of the VM (the events
    `started`), the order of the parts (the parts of C before the parts of
    D), and the summary of the shift (each part stored, the GLBs that the
