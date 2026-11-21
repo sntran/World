@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { WINDOW, handler } from '../../handler.js';
-import { BUILT, NEAR, bare, client, compare, deployed, fetchAll, kindOf, merge, named, plan, summary, tasks, verdicts } from '../../scripts/bucket-check.mjs';
+import { BUILT, NEAR, bare, client, compare, deployed, fetchAll, keyless, kindOf, merge, named, plan, siteLists, summary, tasks, verdicts } from '../../scripts/bucket-check.mjs';
 import { bucket, vm } from './fakes.js';
 
 const H = 'a'.repeat(32);
@@ -154,7 +154,7 @@ test('the plan, the tasks of each group and the compare: a part that agrees, a p
   assert.deepEqual(work.preview, [`builds/${P}/${H}.far.glb`]);
   assert.equal(await readFile(join(dir, 'store', `parts/${A}.json`), 'utf8'), JSON.stringify({ order: H, level: 'mid', node: 'm' }));
   await assert.rejects(readFile(join(dir, 'store', `parts/${R}.json`)));
-  assert.deepEqual(await tasks(dir, '1'), { files: one.files, lists: one.lists, parts: [A, Z], hashes: work.hashes });
+  assert.deepEqual(await tasks(dir, '1'), { files: one.files, lists: one.lists, parts: [A, Z], maps: [], hashes: work.hashes });
 
   // Group 1 builds A again with the same bytes, Z with other bytes, the file of C1, and no recipe R.
   const out = async (id, key, value) => {
@@ -253,4 +253,51 @@ test('the command line: fetch and quarantine with the ID token of the job, again
   } finally {
     server.close();
   }
+});
+
+test('the parts lists of the site: the lists of the orders and the recipes of the window, at each commit; a list with no keys', async () => {
+  const orders = bucket({ clock: () => WINDOW.from - 5 });
+  const [C1, C2] = ['1'.repeat(40), '2'.repeat(40)];
+  await orders.put(`builds/${C2}/${H}.near.elements`, '{"parts":[]}');
+  await orders.put(`builds/${C1}/${B}.far.elements`, '{"parts":[]}');
+  const claims = { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/bucket-check.yml@refs/heads/main' };
+  const env = { ORDERS: orders, WORLD_OWNER_ID: '973206' };
+  const worker = (url, init) => handler(new Request(url, init), env, { vm: vm(), commit: 'c1', verify: async () => claims });
+  const api = client('https://world.example', async () => 'a.b.c', worker);
+  const dir = await mkdtemp(join(tmpdir(), 'lists-'));
+  await mkdir(join(dir, 'bucket', 'parts'), { recursive: true });
+  await writeFile(join(dir, 'bucket', `parts/${K}.json`), JSON.stringify({ order: B, level: 'far', node: 'n' }));
+  await writeFile(join(dir, 'list.json'), JSON.stringify([{ key: `parts/${K}.json`, kind: 'recipe' }, { key: `orders/${H}.json`, kind: 'order' }]));
+  const logs = [];
+  assert.equal(await siteLists(api, dir, [C1, C2], (l) => logs.push(l)), 2);
+  // (The recipe: B far; the order: H at each level; at two commits.)
+  assert.deepEqual(logs, ['bucket: 2 parts lists of the site of before the window, of 8 looks']);
+  assert.equal(await readFile(join(dir, 'bucket', `builds/${C2}/${H}.near.elements`), 'utf8'), '{"parts":[]}');
+  const list = (key) => new TextEncoder().encode(JSON.stringify({ order: H, parts: [{ key, url: `/p/${key}.glb`, node: 'n' }] }));
+  assert.equal(keyless(list('a')), keyless(list('b')));
+  assert.notEqual(keyless(list('a')), keyless(new TextEncoder().encode(JSON.stringify({ order: B, parts: [{ key: 'a', node: 'n' }] }))));
+  assert.equal(keyless(new TextEncoder().encode('{"x":1}')), null);
+});
+
+test('a parts list of the site with other keys agrees when it is the same list; each group gets the lists of its commits', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'keys-'));
+  const C1 = '1'.repeat(40);
+  const key = `builds/${C1}/${H}.mid.elements`;
+  const site = JSON.stringify({ order: H, parts: [{ key: '7'.repeat(32), url: '/p/7.glb', node: 'n' }] });
+  await mkdir(join(dir, 'bucket', 'builds', C1), { recursive: true });
+  await mkdir(join(dir, 'bucket', 'orders'), { recursive: true });
+  await writeFile(join(dir, 'bucket', key), site);
+  await writeFile(join(dir, 'bucket', `orders/${H}.json`), '{}');
+  await writeFile(join(dir, 'list.json'), JSON.stringify([{ key, kind: 'file', uploaded: new Date(WINDOW.from).toISOString(), size: 1, etag: 'e' }]));
+  const git = (args) => (args[0] === 'log' ? `${C1} ${new Date(WINDOW.from - 1).toISOString()}\n` : args[0] === 'rev-parse' ? 'code\n' : '');
+  const work = await plan(dir, git);
+  assert.deepEqual(work.groups[0].maps, [{ key, hash: H, level: 'mid' }]);
+  assert.deepEqual((await tasks(dir, '1')).maps, work.groups[0].maps);
+  await mkdir(join(dir, 'out', '1', 'builds', C1), { recursive: true });
+  await writeFile(join(dir, 'out', '1', key), site.replaceAll('7'.repeat(32), '8'.repeat(32)).replace('/p/7.glb', '/p/8.glb'));
+  const [o] = await compare(dir);
+  assert.deepEqual([o.verdict, o.note], ['agrees', 'the same list with the keys of the build of the site']);
+  // (Another list: it differs.)
+  await writeFile(join(dir, 'out', '1', key), site.replace('"node":"n"', '"node":"m"'));
+  assert.equal((await compare(dir))[0].verdict, 'differs');
 });

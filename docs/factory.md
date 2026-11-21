@@ -1501,6 +1501,30 @@ The check of each kind:
 - An order and a blueprint in data have a key that is the hash of their
   content (`World.Orders.hash/1`): the check also says if the content
   gives its key again.
+- **The keys of the parts depend on the folder of the build.** The key of
+  a part has the version of its rule (`World.Elements.version/1`: the MD5
+  of the code of the rule and of each module of World that it calls),
+  and some modules keep the absolute path of the folder of their build
+  in their code (`World.Drawing`, `World.Standards`, `World.Textures`,
+  `World.Terrain`, `World.Animals`, `World.References`, a `__DIR__` in a
+  module attribute). So a build of the same commit in another folder
+  gives other keys: the site (the folder of Workers Builds), this
+  computer and the jobs of CI each have their own keys, and the GLB of
+  each part is the same. The edge in WebAssembly and a VM here give the
+  same key from the same folder.
+- So the check does not make the keys again. Only the Worker of the site
+  writes `builds/` under a commit of `main` (a Preview writes under the
+  commit of its branch, and the store of the VM takes no key of
+  `builds/`), so the parts lists of the site
+  (`builds/COMMIT/HASH.LEVEL.elements`) give the true key of each part of
+  an order at a level. The fetch also gets the list of the site for the
+  order and the level of each recipe of the window, and for each order
+  of the window at each level, at each commit that the site ran. The job
+  of a group makes each list of its commits again; when the two lists
+  are the same with no keys, the recipe and the GLB of each part here
+  have the key of the site at the same place of the list, and the check
+  compares their bytes. A parts list of the site agrees when it is the
+  same list with no keys.
 - World does not build an order, a blueprint in data, an entry of the
   history of the edits, the hash of the order of a URL (`urls/`), the
   hash of a control key (`controls/`) or the state of the shifts. For
