@@ -162,10 +162,11 @@ jobs:
           mix.com local.rebar --force --if-missing
           (cd "$RUNNER_TEMP/at" && mix.com deps.get --only prod && mix.com compile)
           node scripts/bucket-check.mjs tasks "$D" "$GROUP" > "$D/tasks.json"
-          (cd "$RUNNER_TEMP/at" && WORLD_ORDER_DIR="$D/store" WORLD_CHECK_WIDTH=2 mix.com run "$GITHUB_WORKSPACE/scripts/bucket-rebuild.exs" "$D/tasks.json" "$D/out/$GROUP")
+          (cd "$RUNNER_TEMP/at" && WORLD_ORDER_DIR="$D/store" WORLD_CHECK_BUCKET="$D/bucket" WORLD_CHECK_WIDTH=2 mix.com run "$GITHUB_WORKSPACE/scripts/bucket-rebuild.exs" "$D/tasks.json" "$D/out/$GROUP")
           node scripts/bucket-check.mjs compare "$D" "$GROUP"
           mkdir -p "$RUNNER_TEMP/report" && cp "$D/report.json" "$RUNNER_TEMP/report/report-$GROUP.json"
           cp "$D/out/$GROUP/errors.json" "$RUNNER_TEMP/report/errors-$GROUP.json"
+          cp "$D/out/$GROUP/maps.json" "$RUNNER_TEMP/report/maps-$GROUP.json"
 
       - uses: actions/upload-artifact@v7
         if: always()

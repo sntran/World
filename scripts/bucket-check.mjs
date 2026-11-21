@@ -127,6 +127,34 @@ async function each(items, width, fn) {
 }
 
 // The objects of the window, and each object that they name, into DIR.
+// The parts lists of the site that can give the key of a part or a
+// recipe of the window: for the order and the level of each recipe of the
+// window, and for each order of the window at each level, the list
+// builds/COMMIT/HASH.LEVEL.elements of each commit that the site ran
+// (most of them are not there: 404).
+export async function siteLists(api, dir, commits, log = console.log) {
+  const list = JSON.parse(await readFile(join(dir, 'list.json'), 'utf8'));
+  const pairs = new Set();
+  for (const o of list) {
+    if (o.kind === 'recipe') {
+      const recipe = parse(await readFile(join(dir, 'bucket', o.key)).catch(() => null));
+      if (/^[0-9a-f]{32}$/.test(recipe?.order ?? '') && ['near', 'mid', 'far'].includes(recipe?.level)) pairs.add(`${recipe.order}.${recipe.level}`);
+    }
+    if (o.kind === 'order') for (const level of ['near', 'mid', 'far']) pairs.add(`${o.key.slice(7, 39)}.${level}`);
+  }
+  const keys = [...pairs].flatMap((pair) => commits.map((c) => `builds/${c}/${pair}.elements`)).filter((key) => !list.some((o) => o.key === key));
+  let found = 0;
+  await each(keys, 8, async (key) => {
+    const object = await api.get(key);
+    if (!object) return;
+    found++;
+    await mkdir(dirname(join(dir, 'bucket', key)), { recursive: true });
+    await writeFile(join(dir, 'bucket', key), object.bytes);
+  });
+  log(`bucket: ${found} parts lists of the site of before the window, of ${keys.length} looks`);
+  return found;
+}
+
 export async function fetchAll(api, dir, log = console.log) {
   const { objects, seen } = await api.list();
   log(`bucket: ${seen} objects, ${objects.length} with an upload time in the window`);
@@ -235,7 +263,7 @@ export async function plan(dir, git) {
   const join_ = (commit) => {
     const tree = code(git, commit);
     let group = groups.find((g) => g.code === tree);
-    if (!group) groups.push((group = { id: String(groups.length + 1), commit, commits: [], code: tree, files: [], lists: [], parts: [], recipes: [] }));
+    if (!group) groups.push((group = { id: String(groups.length + 1), commit, commits: [], code: tree, files: [], lists: [], parts: [], recipes: [], maps: [] }));
     if (!group.commits.includes(commit)) group.commits.push(commit);
     return group.id;
   };
@@ -283,6 +311,17 @@ export async function plan(dir, git) {
       for (const r of list.filter((r) => r.kind === 'order' && at(times, time(r)).includes(id))) for (const level of ['near', 'mid', 'far']) await add(g, r.key.slice(7, 39), level);
     }
   }
+  // The parts lists of the site of the commits of each group: the job
+  // makes each one again, and gives each native part and recipe the key
+  // of the site at the same place of the list.
+  for (const commit of await readdir(join(dir, 'bucket', 'builds')).catch(() => [])) {
+    const g = groups.find((g) => g.commits.includes(commit));
+    if (!g) continue;
+    for (const name of await readdir(join(dir, 'bucket', 'builds', commit))) {
+      const [hash, level, file] = name.split('.');
+      if (file === 'elements' && (await exists(join(store, `orders/${hash}.json`)))) g.maps.push({ key: `builds/${commit}/${name}`, hash, level });
+    }
+  }
   const work = {
     groups: groups.map(({ code: _, ...g }) => g),
     hashes: list.filter((o) => o.kind === 'order' || o.kind === 'blueprint').map((o) => o.key),
@@ -303,13 +342,23 @@ export function bare(bytes) {
   }).sort().join('\n');
 }
 
-const same = (key, a, b) => (key.endsWith('.log') ? bare(a) === bare(b) : Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0);
+// A parts list with no keys and no URLs of its parts: the keys of a build
+// of World depend on the folder of the build (World.Elements.version/1,
+// docs/factory.md, "The check of the bucket").
+export function keyless(bytes) {
+  const list = parse(bytes);
+  if (!list || !Array.isArray(list.parts)) return null;
+  return JSON.stringify({ ...list, parts: list.parts.map(({ key: _k, url: _u, ...p }) => p) });
+}
+
+const exact = (a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0;
+const same = (key, a, b) => (key.endsWith('.log') ? bare(a) === bare(b) : exact(a, b));
 
 // The tasks of a group for scripts/bucket-rebuild.exs.
 export async function tasks(dir, id) {
   const work = await json(join(dir, 'groups.json'));
   const g = work.groups.find((g) => g.id === id);
-  return { files: g.files, lists: g.lists, parts: g.parts, hashes: work.hashes };
+  return { files: g.files, lists: g.lists, parts: g.parts, maps: g.maps, hashes: work.hashes };
 }
 
 // The verdicts of the groups in DIR/out/GROUP: each object of the window
@@ -336,6 +385,10 @@ export async function compare(dir, ids = null) {
       const from = o.kind === 'file' ? groups.filter((g) => g.commits.includes(o.key.split('/')[1])) : groups;
       const out = (await Promise.all(from.map((g) => read(g, o.key)))).flat();
       verdict = out.some((b) => same(o.key, b, mine)) ? 'agrees' : out.length ? 'differs' : 'none';
+      if (verdict === 'differs' && o.key.endsWith('.elements') && out.some((b) => keyless(b) !== null && keyless(b) === keyless(mine))) {
+        verdict = 'agrees';
+        note = 'the same list with the keys of the build of the site';
+      }
       if (work.preview.includes(o.key)) note = 'a commit that is not on main';
     } else if (o.kind === 'order' || o.kind === 'blueprint') {
       note = hashes[o.key] ? 'its content gives its hash' : 'its content does not give its hash';
@@ -381,6 +434,14 @@ async function main([command, ...args], env = process.env) {
   const api = client(env.WORLD_URL ?? 'https://world.mkfifo.workers.dev', tokens(env, fetch));
   if (command === 'fetch' && args.length === 1) {
     const result = await fetchAll(api, args[0]);
+    // (With no main in git, as in a checkout of one commit: no lists of the site.)
+    let commits = [];
+    try {
+      commits = deployed(git).map((c) => c.commit);
+    } catch {
+      console.log('bucket: no commits of main in git, so no parts lists of the site');
+    }
+    await siteLists(api, args[0], commits);
     const text = summary(result);
     console.log(text);
     if (env.GITHUB_STEP_SUMMARY) await writeFile(env.GITHUB_STEP_SUMMARY, text, { flag: 'a' });
