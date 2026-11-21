@@ -164,7 +164,12 @@ const gltf = await new GLTFLoader().loadAsync('https://world.mkfifo.com/models/f
 | `/m/BLUEPRINT.glb?OPTION=VALUE` | An order in the URL, for example `/m/strut.glb?length=0.6&kind=solid`. |
 | `/mcp` | The MCP server (Streamable HTTP): the tools `list_blueprints`, `get_blueprint`, `check_order` and `place_order`. |
 
-`docs/factory.md` tells the details. An Elixir app can also add the package and call its functions:
+`docs/factory.md` tells the details. A new project of mine starts with
+`docs/projects.md`: who can ask, the workflow of GitHub Actions with no
+secret, the parts of a list at one time, the requests again, the pin of a
+commit of World, and the limits of the construction shifts.
+
+An Elixir app can also add the package and call its functions:
 
 ```elixir
 {:world, github: "sntran/World", ref: "COMMIT"}
