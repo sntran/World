@@ -4,7 +4,7 @@
 #   WORLD_ORDER_DIR=STORE MIX_ENV=prod mix.com run PATH/bucket-rebuild.exs TASKS OUT
 #
 # STORE is a folder store (scripts/order-store.mjs) with the orders, the
-# blueprints in data, and the recipes of before the window, and no part.
+# blueprints in data, and the recipes of the site, and no part.
 # TASKS (JSON) has:
 #
 # - "files": [{"key", "hash", "level", "file"}]: the file of an order at
@@ -13,7 +13,7 @@
 #   It puts its parts and the recipes of its parts into STORE.
 # - "parts": [KEY]: each part with a recipe in STORE and no GLB there is
 #   built from its recipe (World.Elements.part/1), WORLD_CHECK_WIDTH (2)
-#   parts at the same time.
+#   parts at the same time, and goes to OUT/from-recipe/KEY.glb.
 # - "maps": [{"key", "hash", "level"}]: a parts list of the site
 #   (builds/COMMIT/HASH.LEVEL.elements, in BUCKET) and the same list here.
 #   The key of a part depends on the folder of the build
@@ -25,7 +25,8 @@
 #   blueprints/HASH.json) whose content gives its hash (World.Orders.hash/1)
 #   and its bytes again.
 #
-# Then each part and recipe of STORE goes to OUT/parts/, the result of the
+# Then each part and recipe that the rebuild made in STORE (not a recipe
+# of the site, nor a part from one) goes to OUT/parts/, the result of the
 # hashes to OUT/hashes.json, and each error or time out of a task to
 # OUT/errors.json. The script goes on after an error.
 [tasks_path, out] = System.argv()
@@ -96,6 +97,10 @@ end
 
 parts = Path.join(store, "parts")
 File.mkdir_p!(parts)
+# (The recipes of the site: not a result of the rebuild.)
+site = MapSet.new(File.ls!(parts))
+from_recipe = Path.join(out, "from-recipe")
+File.mkdir_p!(from_recipe)
 
 # (The parts at the same time: WORLD_CHECK_WIDTH of them, 2 by default.)
 width = String.to_integer(System.get_env("WORLD_CHECK_WIDTH", "2"))
@@ -107,7 +112,7 @@ width = String.to_integer(System.get_env("WORLD_CHECK_WIDTH", "2"))
   fn key ->
     BucketRebuild.timed("part #{key}", fn ->
       case BucketRebuild.run(limit, fn -> World.Elements.part(key) end) do
-        {:ok, {:ok, _}} -> :ok
+        {:ok, {:ok, _}} -> File.cp!(Path.join(parts, "#{key}.glb"), Path.join(from_recipe, "#{key}.glb"))
         {:ok, other} -> note.("parts/#{key}.glb", inspect(other))
         {:error, e} -> note.("parts/#{key}.glb", e)
       end
@@ -134,7 +139,9 @@ hashes =
   end)
 
 File.mkdir_p!(Path.join(out, "parts"))
-for name <- File.ls!(parts), do: File.cp!(Path.join(parts, name), Path.join([out, "parts", name]))
+for name <- File.ls!(parts),
+    not MapSet.member?(site, name) and not MapSet.member?(site, Path.rootname(name) <> ".json"),
+    do: File.cp!(Path.join(parts, name), Path.join([out, "parts", name]))
 
 keyless = fn list -> Map.update!(list, "parts", fn ps -> Enum.map(ps, &Map.drop(&1, ["key", "url"])) end) end
 

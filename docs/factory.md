@@ -1508,10 +1508,14 @@ The check of each kind:
   when the time is less than 10 minutes after a deploy.
 - A job for each group checks out the commit of the group, and
   `scripts/bucket-rebuild.exs` builds there, with a store of its own
-  (the orders, the blueprints in data, and the recipes of before the
-  window; no part): each file of its commits, the parts list of the order
-  and the level of each recipe (for a part with no recipe, also the parts
-  lists of its time), and each part from its recipe, two at a time. The
+  (the orders, the blueprints in data, and the recipes of the site; no
+  part): each file of its commits, the parts list of the order and the
+  level of each recipe (for a part with no recipe, also the parts lists
+  of its time), and each part from the recipe of the site, two at a time.
+  A part agrees when the part from its recipe has the same bytes. A recipe
+  agrees when the rebuild makes a recipe with the same JSON values at its
+  key, or when the two differ only in the order (two orders with the same
+  part) and the part from the recipe of the site agrees. The
   last job joins the verdicts of the groups: for each object, the best
   verdict of a group.
 - An order and a blueprint in data have a key that is the hash of their
@@ -1544,7 +1548,9 @@ The check of each kind:
 - The report gives a note for each object that does not agree: for a
   JSON object that differs, the first paths that differ, with the value
   of the site and the value of the rebuild; for a part, a part of the
-  rebuild with the same bytes under another key, if there is one.
+  rebuild with the same bytes under another key, if there is one, else
+  the first paths where its GLB data (with no buffers) differs from a part
+  of the rebuild with the same name and level.
 - World does not build an order, a blueprint in data, an entry of the
   history of the edits, the hash of the order of a URL (`urls/`), the
   hash of a control key (`controls/`) or the state of the shifts. For

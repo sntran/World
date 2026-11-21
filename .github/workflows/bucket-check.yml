@@ -91,7 +91,7 @@ jobs:
   # A job for each group of commits with the same code. It gets the
   # objects again (each job has its own runner) and builds them again at
   # the commit of the group, with a store of its own: the orders, the
-  # blueprints, and the recipes of before the window; no part.
+  # blueprints, and the recipes of the site; no part.
   rebuild:
     needs: plan
     if: inputs.rebuild && inputs.quarantine == ''
