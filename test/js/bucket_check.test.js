@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { WINDOW, handler } from '../../handler.js';
-import { BUILT, NEAR, bare, client, compare, deployed, fetchAll, keyless, kindOf, merge, named, plan, siteLists, summary, tasks, verdicts } from '../../scripts/bucket-check.mjs';
+import { BUILT, NEAR, bare, client, compare, deployed, fetchAll, keyless, kindOf, merge, named, names, plan, siteLists, summary, tasks, verdicts } from '../../scripts/bucket-check.mjs';
 import { bucket, vm } from './fakes.js';
 
 const H = 'a'.repeat(32);
@@ -384,4 +384,17 @@ test('the part from the recipe of the site; a recipe of another order with the s
   // (The part from the recipe of M has other bytes than the GLB of the site: the recipe differs.)
   assert.deepEqual(of(`parts/${M}.json`), ['differs', `/order: "${o1}" at the site, "${o2}" in the rebuild`]);
   assert.deepEqual(of(`parts/${N}.glb`), ['none', `the part ${'9'.repeat(32)} of the rebuild has the same name: /scenes/0/extras/size/1: 2 at the site, 3 in the rebuild`]);
+
+  // The names of the parts of the group: of the site, and of the rebuild (a part that is not a GLB has no name).
+  const work = JSON.parse(await readFile(join(dir, 'groups.json'), 'utf8'));
+  work.groups[0].parts = [K, N];
+  await writeFile(join(dir, 'groups.json'), JSON.stringify(work));
+  assert.deepEqual(await names(dir, '1'), {
+    site: [{ key: K, name: null }, { key: N, name: 'lamp (mid)' }],
+    built: [
+      { key: '9'.repeat(32), from: 'parts', name: 'lamp (mid)' },
+      { key: K, from: 'from-recipe', name: null },
+      { key: M, from: 'from-recipe', name: null },
+    ],
+  });
 });

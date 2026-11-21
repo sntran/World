@@ -18,6 +18,9 @@
 //   node scripts/bucket-check.mjs compare DIR [GROUP...]
 //     Each object of the window against its rebuild (DIR/out/GROUP/), in
 //     DIR/report.json.
+//   node scripts/bucket-check.mjs names DIR GROUP
+//     The name and the level of each part of the site in a group and of
+//     each part of its rebuild (no content).
 //   node scripts/bucket-check.mjs merge OUT REPORT...
 //     The reports of the groups in one report, and the summary of the job.
 //   node scripts/bucket-check.mjs quarantine KEY...
@@ -397,6 +400,24 @@ const nameOf = (json) => (json?.scenes?.[0] ? `${json.scenes[0].name} (${json.sc
 const exact = (a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0;
 const same = (key, a, b) => (key.endsWith('.log') ? bare(a) === bare(b) : exact(a, b));
 
+// The name and the level of each part of a group: of the site (its parts
+// of the window) and of the rebuild (DIR/out/GROUP/parts and from-recipe),
+// with no content, to find a part of the site that the rebuild did not make.
+export async function names(dir, id) {
+  const work = await json(join(dir, 'groups.json'));
+  const g = work.groups.find((g) => g.id === id);
+  const of = async (path) => nameOf(glbJson(await readFile(path).catch(() => Buffer.alloc(0))));
+  const site = [];
+  for (const key of g.parts) site.push({ key, name: await of(join(dir, 'bucket', 'parts', `${key}.glb`)) });
+  const built = [];
+  for (const sub of ['parts', 'from-recipe']) {
+    for (const name of (await readdir(join(dir, 'out', id, sub)).catch(() => [])).filter((n) => n.endsWith('.glb')).sort()) {
+      built.push({ key: name.slice(0, 32), from: sub, name: await of(join(dir, 'out', id, sub, name)) });
+    }
+  }
+  return { site, built };
+}
+
 // The tasks of a group for scripts/bucket-rebuild.exs.
 export async function tasks(dir, id) {
   const work = await json(join(dir, 'groups.json'));
@@ -541,6 +562,10 @@ async function main([command, ...args], env = process.env) {
     const report = await compare(args[0], args.length > 1 ? args.slice(1) : null);
     await writeFile(join(args[0], 'report.json'), JSON.stringify(report, null, 1));
     console.log(verdicts(report));
+    return 0;
+  }
+  if (command === 'names' && args.length === 2) {
+    console.log(JSON.stringify(await names(args[0], args[1]), null, 1));
     return 0;
   }
   if (command === 'merge' && args.length >= 2) {

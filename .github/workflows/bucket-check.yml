@@ -167,6 +167,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/report" && cp "$D/report.json" "$RUNNER_TEMP/report/report-$GROUP.json"
           cp "$D/out/$GROUP/errors.json" "$RUNNER_TEMP/report/errors-$GROUP.json"
           cp "$D/out/$GROUP/maps.json" "$RUNNER_TEMP/report/maps-$GROUP.json"
+          node scripts/bucket-check.mjs names "$D" "$GROUP" > "$RUNNER_TEMP/report/names-$GROUP.json"
 
       - uses: actions/upload-artifact@v7
         if: always()
