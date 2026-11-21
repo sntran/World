@@ -158,3 +158,11 @@ jobs:
             check(same(one.versions, two.versions), `the same versions in two folders: ${JSON.stringify(one.versions)}`);
             process.exit(failed ? 1 : 0);
           ' "$one" "$two" "$van"
+          cp "$one/keys.json" "$RUNNER_TEMP/keys.json"
+
+      # (The keys of the first folder, to compare with the keys of the site
+      # at the same commit: the keys of parts, no content.)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: keys
+          path: ${{ runner.temp }}/keys.json
