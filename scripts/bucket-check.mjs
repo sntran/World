@@ -378,6 +378,14 @@ export function verdicts(report) {
 
 async function main([command, ...args], env = process.env) {
   const git = (a) => execFileSync('git', a, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  const api = client(env.WORLD_URL ?? 'https://world.mkfifo.workers.dev', tokens(env, fetch));
+  if (command === 'fetch' && args.length === 1) {
+    const result = await fetchAll(api, args[0]);
+    const text = summary(result);
+    console.log(text);
+    if (env.GITHUB_STEP_SUMMARY) await writeFile(env.GITHUB_STEP_SUMMARY, text, { flag: 'a' });
+    return 0;
+  }
   if (command === 'plan' && args.length === 1) {
     const work = await plan(args[0], git);
     for (const g of work.groups) console.log(`group ${g.id}: ${g.commits.length} commits, ${g.files.length} files, ${g.parts.length} parts, ${g.lists.length} lists`);

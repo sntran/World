@@ -1,7 +1,9 @@
 // The script of the check of the bucket (scripts/bucket-check.mjs), with
 // the routes /bucket/ of handler.js and a fake bucket.
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -209,4 +211,46 @@ test('the group of a part near a deploy: the commit of its time, and the commit 
   const git = (args) => (args[0] === 'log' ? `${'b'.repeat(40)} ${new Date(t0).toISOString()}\n${'a'.repeat(40)} ${new Date(WINDOW.from - 1).toISOString()}\n` : args[0] === 'rev-parse' ? `${args[1].slice(0, 1)}\n` : '');
   const work = await plan(dir, git);
   assert.deepEqual(work.groups.map((g) => g.parts), [[K1], [K1, K2]]);
+});
+
+test('the command line: fetch and quarantine with the ID token of the job, against a Worker on this computer', async () => {
+  const orders = bucket({ clock: () => WINDOW.from + 1 });
+  await orders.put(`parts/${K}.glb`, 'glTF');
+  const claims = { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/bucket-check.yml@refs/heads/main' };
+  const env = { ORDERS: orders, WORLD_OWNER_ID: '973206' };
+  const tokens = [];
+  const server = createServer(async (req, res) => {
+    const url = `http://${req.headers.host}${req.url}`;
+    if (req.url.startsWith('/token')) {
+      tokens.push(req.headers.authorization);
+      return res.end(JSON.stringify({ value: 'a.b.c' }));
+    }
+    const r = await handler(new Request(url, { method: req.method, headers: req.headers }), env, { vm: vm(), commit: 'c1', verify: async (t) => (t === 'a.b.c' ? claims : null) });
+    res.writeHead(r.status, Object.fromEntries(r.headers));
+    res.end(Buffer.from(await r.arrayBuffer()));
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const dir = await mkdtemp(join(tmpdir(), 'cli-'));
+  const run = (...args) => new Promise((done) => {
+    const child = spawn('node', ['scripts/bucket-check.mjs', ...args], { env: { ...process.env, WORLD_URL: base, ACTIONS_ID_TOKEN_REQUEST_URL: `${base}/token?x=1`, ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'req', GITHUB_STEP_SUMMARY: join(dir, 'summary.md') } });
+    let out = '';
+    child.stdout.on('data', (d) => (out += d));
+    child.on('close', (code) => done({ code, out }));
+  });
+  try {
+    const fetched = await run('fetch', join(dir, 'b'));
+    assert.equal(fetched.code, 0);
+    assert.match(fetched.out, /The bucket has 1 objects; 1 have an upload time in the window/);
+    assert.equal(await readFile(join(dir, 'b', 'bucket', `parts/${K}.glb`), 'utf8'), 'glTF');
+    assert.match(await readFile(join(dir, 'summary.md'), 'utf8'), /\| part \| 1 \| build again \|/);
+    assert.deepEqual([...new Set(tokens)], ['bearer req']);
+    const moved = await run('quarantine', `parts/${K}.glb`, 'orders/none.json');
+    assert.equal(moved.code, 1);
+    assert.match(moved.out, new RegExp(`200 parts/${K}.glb`));
+    assert.match(moved.out, /404 orders\/none.json/);
+    assert.equal((await run('other')).code, 2);
+  } finally {
+    server.close();
+  }
 });
