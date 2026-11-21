@@ -233,7 +233,8 @@ test('the command line: fetch and quarantine with the ID token of the job, again
   const base = `http://127.0.0.1:${server.address().port}`;
   const dir = await mkdtemp(join(tmpdir(), 'cli-'));
   const run = (...args) => new Promise((done) => {
-    const child = spawn('node', ['scripts/bucket-check.mjs', ...args], { env: { ...process.env, WORLD_URL: base, ACTIONS_ID_TOKEN_REQUEST_URL: `${base}/token?x=1`, ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'req', GITHUB_STEP_SUMMARY: join(dir, 'summary.md') } });
+    // (A folder with no git: the fetch goes on with no commits of main.)
+    const child = spawn('node', [join(process.cwd(), 'scripts/bucket-check.mjs'), ...args], { cwd: dir, env: { ...process.env, WORLD_URL: base, ACTIONS_ID_TOKEN_REQUEST_URL: `${base}/token?x=1`, ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'req', GITHUB_STEP_SUMMARY: join(dir, 'summary.md') } });
     let out = '';
     child.stdout.on('data', (d) => (out += d));
     child.on('close', (code) => done({ code, out }));
@@ -242,6 +243,7 @@ test('the command line: fetch and quarantine with the ID token of the job, again
     const fetched = await run('fetch', join(dir, 'b'));
     assert.equal(fetched.code, 0);
     assert.match(fetched.out, /The bucket has 1 objects; 1 have an upload time in the window/);
+    assert.match(fetched.out, /no commits of main in git, so no parts lists of the site/);
     assert.equal(await readFile(join(dir, 'b', 'bucket', `parts/${K}.glb`), 'utf8'), 'glTF');
     assert.match(await readFile(join(dir, 'summary.md'), 'utf8'), /\| part \| 1 \| build again \|/);
     assert.deepEqual([...new Set(tokens)], ['bearer req']);

@@ -434,7 +434,14 @@ async function main([command, ...args], env = process.env) {
   const api = client(env.WORLD_URL ?? 'https://world.mkfifo.workers.dev', tokens(env, fetch));
   if (command === 'fetch' && args.length === 1) {
     const result = await fetchAll(api, args[0]);
-    await siteLists(api, args[0], deployed(git).map((c) => c.commit));
+    // (With no main in git, as in a checkout of one commit: no lists of the site.)
+    let commits = [];
+    try {
+      commits = deployed(git).map((c) => c.commit);
+    } catch {
+      console.log('bucket: no commits of main in git, so no parts lists of the site');
+    }
+    await siteLists(api, args[0], commits);
     const text = summary(result);
     console.log(text);
     if (env.GITHUB_STEP_SUMMARY) await writeFile(env.GITHUB_STEP_SUMMARY, text, { flag: 'a' });
