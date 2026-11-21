@@ -1541,6 +1541,10 @@ The check of each kind:
   have the key of the site at the same place of the list, and the check
   compares their bytes. A parts list of the site agrees when it is the
   same list with no keys.
+- The report gives a note for each object that does not agree: for a
+  JSON object that differs, the first paths that differ, with the value
+  of the site and the value of the rebuild; for a part, a part of the
+  rebuild with the same bytes under another key, if there is one.
 - World does not build an order, a blueprint in data, an entry of the
   history of the edits, the hash of the order of a URL (`urls/`), the
   hash of a control key (`controls/`) or the state of the shifts. For

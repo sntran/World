@@ -25,6 +25,7 @@
 //
 // WORLD_URL: the address of the Worker (https://world.mkfifo.workers.dev).
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -351,6 +352,26 @@ export function keyless(bytes) {
   return JSON.stringify({ ...list, parts: list.parts.map(({ key: _k, url: _u, ...p }) => p) });
 }
 
+const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+// Where two JSON objects differ: the first paths, with the value of the
+// site and the value of the rebuild (at most 3 paths). Empty for bytes
+// that are not JSON.
+export function where(rebuilt, mine) {
+  const [a, b] = [parse(mine), parse(rebuilt)];
+  if (a === null || b === null) return '';
+  const out = [];
+  const text = (v) => (v === undefined ? 'none' : JSON.stringify(v).slice(0, 60));
+  const walk = (x, y, path) => {
+    if (out.length >= 3) return;
+    if (x && y && typeof x === 'object' && typeof y === 'object' && Array.isArray(x) === Array.isArray(y)) {
+      for (const k of [...new Set([...Object.keys(x), ...Object.keys(y)])]) walk(x[k], y[k], `${path}/${k}`);
+    } else if (JSON.stringify(x) !== JSON.stringify(y)) out.push(`${path || '/'}: ${text(x)} at the site, ${text(y)} in the rebuild`);
+  };
+  walk(a, b, '');
+  return out.length ? out.join('; ') : 'the same JSON values with other bytes';
+}
+
 const exact = (a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0;
 const same = (key, a, b) => (key.endsWith('.log') ? bare(a) === bare(b) : exact(a, b));
 
@@ -375,6 +396,14 @@ export async function compare(dir, ids = null) {
     for (const [key, agrees] of Object.entries(await json(join(dir, 'out', g.id, 'hashes.json')).catch(() => ({})))) hashes[key] = hashes[key] === true || agrees;
   }
   const read = (g, key) => readFile(join(dir, 'out', g.id, key)).then((b) => [b], () => []);
+  // (The SHA-256 of each part of the rebuilds, with its key: a part of the
+  // site with the same bytes under another key.)
+  const built = new Map();
+  for (const g of groups) {
+    for (const name of await readdir(join(dir, 'out', g.id, 'parts')).catch(() => [])) {
+      if (name.endsWith('.glb')) built.set(sha(await readFile(join(dir, 'out', g.id, 'parts', name))), name.slice(0, 32));
+    }
+  }
   const report = [];
   for (const o of list) {
     let verdict = 'request';
@@ -389,6 +418,9 @@ export async function compare(dir, ids = null) {
         verdict = 'agrees';
         note = 'the same list with the keys of the build of the site';
       }
+      const twin = o.kind === 'part' && verdict !== 'agrees' ? built.get(sha(mine)) : null;
+      if (twin) note = `the same bytes as the part ${twin} of the rebuild`;
+      if (verdict === 'differs' && note === '') note = where(out[0], mine);
       if (work.preview.includes(o.key)) note = 'a commit that is not on main';
     } else if (o.kind === 'order' || o.kind === 'blueprint') {
       note = hashes[o.key] ? 'its content gives its hash' : 'its content does not give its hash';

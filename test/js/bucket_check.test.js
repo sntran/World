@@ -301,5 +301,37 @@ test('a parts list of the site with other keys agrees when it is the same list; 
   assert.deepEqual([o.verdict, o.note], ['agrees', 'the same list with the keys of the build of the site']);
   // (Another list: it differs.)
   await writeFile(join(dir, 'out', '1', key), site.replace('"node":"n"', '"node":"m"'));
-  assert.equal((await compare(dir))[0].verdict, 'differs');
+  assert.deepEqual(await compare(dir).then(([o]) => [o.verdict, o.note]), ['differs', '/parts/0/node: "n" at the site, "m" in the rebuild']);
+});
+
+test('the notes of the compare: where a recipe differs, and a part with the bytes of a part of the rebuild under another key', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'notes-'));
+  const C1 = '1'.repeat(40);
+  const [R, S, T, P, Q] = ['1', '2', '3', '4', '5'].map((c) => c.repeat(32));
+  const files = {
+    [`parts/${R}.json`]: '{"order":"h","tile":{"box":[[0.1,2]]}}',
+    [`parts/${S}.json`]: '{"order":"h","tile":{"box":[[0.1,2]]}}',
+    [`parts/${T}.json`]: '{"a":1}',
+    [`parts/${P}.glb`]: 'glTF P',
+    [`parts/${Q}.glb`]: 'glTF Q',
+  };
+  for (const [key, value] of Object.entries(files)) {
+    await mkdir(join(dir, 'bucket', 'parts'), { recursive: true });
+    await writeFile(join(dir, 'bucket', key), value);
+  }
+  await writeFile(join(dir, 'list.json'), JSON.stringify(Object.keys(files).map((key) => ({ key, kind: kindOf(key), uploaded: new Date(WINDOW.from).toISOString(), size: 1, etag: 'e' }))));
+  await writeFile(join(dir, 'groups.json'), JSON.stringify({ groups: [{ id: '1', commits: [C1] }], hashes: [], preview: [] }));
+  await mkdir(join(dir, 'out', '1', 'parts'), { recursive: true });
+  // (The rebuild: other numbers in R, the same values with other bytes in S, P under the key 9…, no Q.)
+  await writeFile(join(dir, 'out', '1', `parts/${R}.json`), '{"order":"h","tile":{"box":[[0.10000000000000002,2,3]]}}');
+  await writeFile(join(dir, 'out', '1', `parts/${S}.json`), '{"tile":{"box":[[0.1,2]]},"order":"h"}');
+  await writeFile(join(dir, 'out', '1', `parts/${T}.json`), 'no JSON');
+  await writeFile(join(dir, 'out', '1', `parts/${'9'.repeat(32)}.glb`), 'glTF P');
+  const report = await compare(dir);
+  const of = (key) => report.find((o) => o.key === key);
+  assert.deepEqual([of(`parts/${R}.json`).verdict, of(`parts/${R}.json`).note], ['differs', '/tile/box/0/0: 0.1 at the site, 0.10000000000000002 in the rebuild; /tile/box/0/2: none at the site, 3 in the rebuild']);
+  assert.equal(of(`parts/${S}.json`).note, 'the same JSON values with other bytes');
+  assert.deepEqual([of(`parts/${T}.json`).verdict, of(`parts/${T}.json`).note], ['differs', '']);
+  assert.deepEqual([of(`parts/${P}.glb`).verdict, of(`parts/${P}.glb`).note], ['none', `the same bytes as the part ${'9'.repeat(32)} of the rebuild`]);
+  assert.deepEqual([of(`parts/${Q}.glb`).verdict, of(`parts/${Q}.glb`).note], ['none', '']);
 });
