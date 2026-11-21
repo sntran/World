@@ -1728,11 +1728,34 @@ The memory of the VM (a look each 10 s):
   same time: an order and its edits do not go through the line of the
   builds (`World.Line`), so they add up.
 - The Workers Logs give the cause of the end of an isolate (`outcome`);
-  I did not read them for this measure.
+  I did not read them for this measure. Since then the Worker keeps its
+  own record of the ends (below, "The record of the starts and the ends
+  of the VM").
 - The next changes to keep the peak low: the orders and their edits
   through the line of the builds; a guard (`WORLD_MEMORY_MB`) at the room
   that the isolate really has; and the code of World loaded before the
   memory image, so that a build does not load it again in each new VM.
+
+### The record of the starts and the ends of the VM
+
+The Worker keeps the time and the cause of each end of the isolate of
+the VM, with no dashboard (`isolates.js`). Each event is a key of R2
+with no content:
+
+- `isolates/TIME.start.COMMIT`: a new VM (the constructor of the Durable
+  Object `Beam`, `worker.js`), with the commit of its Worker;
+- `isolates/TIME.end.CAUSE`: a request to the VM that failed because its
+  isolate ended (`handler.js`), with one word for the cause from the
+  message of the runtime: `memory`, `cpu`, `deploy`, `reset`,
+  `connection` or `other`.
+
+`GET /census` gives `isolates`: the starts of the last 7 days, and for
+each start after the first, the end of the VM before it with its cause:
+the cause of the last failed request between the two starts; else
+`deploy` when the commit changed; else `idle` (the isolate ended with no
+request in flight). `failed` has the failed requests after the last
+start. No header, no body, no IP address and no token goes into the
+record.
 
 ### The guard and the memory of WebAssembly
 
