@@ -70,6 +70,9 @@
 // - GET /bucket/object?key=KEY: the bytes of an object (any time).
 // - POST /bucket/quarantine?key=KEY: an object of the window goes to
 //   quarantine/KEY. No route of the site gives quarantine/.
+// - With held=1, /bucket/list and /bucket/object are for the objects in
+//   quarantine/ (read only): each with its key and its upload time from
+//   before the move, to check it again.
 //
 // Only the job of .github/workflows/bucket-check.yml on main calls them
 // (its ID token, oidc.js), else 403.
@@ -393,15 +396,29 @@ async function bucket(request, env, check, url) {
   const caller = await callerOf(request, env, check);
   if (caller?.kind !== 'check') return errors(403, 'only the job of bucket-check.yml on main checks the bucket');
   const path = url.pathname;
+  const held = url.searchParams.get('held') === '1';
   if (path === '/bucket/list' && request.method === 'GET') {
-    const page = await env.ORDERS.list({ limit: 1000, cursor: url.searchParams.get('cursor') || undefined });
+    const cursor = url.searchParams.get('cursor') || undefined;
+    if (held) {
+      // (The objects in quarantine/, with the upload time and the ETag that they had before the move.)
+      const page = await env.ORDERS.list({ limit: 1000, cursor, prefix: QUARANTINE, include: ['customMetadata'] });
+      const objects = page.objects.map((o) => ({ key: o.key.slice(QUARANTINE.length), size: o.size, uploaded: o.customMetadata?.uploaded ?? o.uploaded.toISOString(), etag: o.customMetadata?.etag ?? o.etag }));
+      return json(200, { objects, seen: page.objects.length, cursor: page.truncated ? page.cursor : null }, noStore);
+    }
+    const page = await env.ORDERS.list({ limit: 1000, cursor });
     const objects = page.objects.filter((o) => inWindow(o.uploaded)).map((o) => ({ key: o.key, size: o.size, uploaded: o.uploaded.toISOString(), etag: o.etag }));
     return json(200, { objects, seen: page.objects.length, cursor: page.truncated ? page.cursor : null }, noStore);
   }
   const read = path === '/bucket/object' && request.method === 'GET';
-  if (!read && !(path === '/bucket/quarantine' && request.method === 'POST')) return errors(404, 'no such page');
+  if (!read && !(path === '/bucket/quarantine' && request.method === 'POST' && !held)) return errors(404, 'no such page');
   const key = url.searchParams.get('key') ?? '';
   if (!OBJECT.test(key)) return errors(400, 'not a key of the bucket');
+  if (held) {
+    const object = await env.ORDERS.get(QUARANTINE + key);
+    if (!object) return errors(404, 'no such key in quarantine/');
+    const uploaded = object.customMetadata?.uploaded ?? object.uploaded.toISOString();
+    return new Response(object.body, { headers: headers({ 'content-type': 'application/octet-stream', 'x-world-uploaded': uploaded, ...noStore }) });
+  }
   const object = await env.ORDERS.get(key);
   if (!object) return errors(404, 'no such key');
   if (read) return new Response(object.body, { headers: headers({ 'content-type': 'application/octet-stream', 'x-world-uploaded': object.uploaded.toISOString(), ...noStore }) });

@@ -25,6 +25,9 @@
 //     The reports of the groups in one report, and the summary of the job.
 //   node scripts/bucket-check.mjs quarantine KEY...
 //     Each key goes to quarantine/KEY (only an object of the window).
+//   node scripts/bucket-check.mjs fetch DIR held
+//     As fetch, for the objects in quarantine/ (read only, with their
+//     upload time from before the move): the check of them again.
 //
 // WORLD_URL: the address of the Worker (https://world.mkfifo.workers.dev).
 import { execFileSync } from 'node:child_process';
@@ -94,13 +97,15 @@ export function client(base, token, fetcher = fetch, wait = (ms) => new Promise(
       await wait(2000 * attempt);
     }
   };
+  // (`held`: the objects in quarantine/, read only, with their upload time from before the move.)
+  const more = (held) => (held ? '&held=1' : '');
   return {
-    async list() {
+    async list(held = false) {
       const objects = [];
       let seen = 0;
       let cursor = '';
       do {
-        const r = await call(`/bucket/list?cursor=${encodeURIComponent(cursor)}`);
+        const r = await call(`/bucket/list?cursor=${encodeURIComponent(cursor)}${more(held)}`);
         if (r.status !== 200) throw new Error(`the list of the bucket: ${r.status} ${await r.text()}`);
         const page = await r.json();
         objects.push(...page.objects);
@@ -109,8 +114,8 @@ export function client(base, token, fetcher = fetch, wait = (ms) => new Promise(
       } while (cursor);
       return { objects, seen };
     },
-    async get(key) {
-      const r = await call(`/bucket/object?key=${encodeURIComponent(key)}`);
+    async get(key, held = false) {
+      const r = await call(`/bucket/object?key=${encodeURIComponent(key)}${more(held)}`);
       if (r.status === 404) return null;
       if (r.status !== 200) throw new Error(`the object ${key}: ${r.status}`);
       return { bytes: new Uint8Array(await r.arrayBuffer()), uploaded: r.headers.get('x-world-uploaded') };
@@ -159,24 +164,24 @@ export async function siteLists(api, dir, commits, log = console.log) {
   return found;
 }
 
-export async function fetchAll(api, dir, log = console.log) {
-  const { objects, seen } = await api.list();
-  log(`bucket: ${seen} objects, ${objects.length} with an upload time in the window`);
+export async function fetchAll(api, dir, log = console.log, held = false) {
+  const { objects, seen } = await api.list(held);
+  log(held ? `bucket: ${objects.length} objects in quarantine/` : `bucket: ${seen} objects, ${objects.length} with an upload time in the window`);
   const done = new Set();
   const keep = async (key, bytes) => {
     await mkdir(dirname(join(dir, 'bucket', key)), { recursive: true });
     await writeFile(join(dir, 'bucket', key), bytes);
   };
-  // (An object of the window, then the objects that it names, of any time.)
-  const visit = async (key) => {
+  // (An object of the window, or of quarantine/, then the objects that it names, of any time.)
+  const visit = async (key, top = false) => {
     if (done.has(key)) return;
     done.add(key);
-    const object = await api.get(key);
+    const object = await api.get(key, held && top);
     if (!object) return;
     await keep(key, object.bytes);
     for (const more of named(key, object.bytes)) await visit(more);
   };
-  await each(objects.map((o) => o.key), 8, visit);
+  await each(objects.map((o) => o.key), 8, (key) => visit(key, true));
   const kinds = {};
   for (const o of objects) kinds[kindOf(o.key)] = (kinds[kindOf(o.key)] ?? 0) + 1;
   const list = objects.map((o) => ({ ...o, kind: kindOf(o.key) }));
@@ -537,8 +542,8 @@ export function verdicts(report) {
 async function main([command, ...args], env = process.env) {
   const git = (a) => execFileSync('git', a, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
   const api = client(env.WORLD_URL ?? 'https://world.mkfifo.workers.dev', tokens(env, fetch));
-  if (command === 'fetch' && args.length === 1) {
-    const result = await fetchAll(api, args[0]);
+  if (command === 'fetch' && (args.length === 1 || (args.length === 2 && args[1] === 'held'))) {
+    const result = await fetchAll(api, args[0], console.log, args[1] === 'held');
     // (With no main in git, as in a checkout of one commit: no lists of the site.)
     let commits = [];
     try {

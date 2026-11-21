@@ -1607,6 +1607,11 @@ The check of each kind:
   Workers Logs. An object with no such request came from a Preview.
 - Each object that does not agree, and each object with no request,
   goes to `quarantine/`.
+- With the input `held`, the check reads the objects of `quarantine/`
+  again (`/bucket/list?held=1` and `/bucket/object?key=KEY&held=1`: read
+  only, each with its key and its upload time from before the move) and
+  makes the same rebuild and the same notes for them: so the cause of an
+  object that went to `quarantine/` can be found after the move.
 
 **The result (2026-11-21).** Run 44924224179 of `bucket-check.yml`, at
 `main` 7512a47, after the changes of #61 to #65. The window has 741
