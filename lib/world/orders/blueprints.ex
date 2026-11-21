@@ -74,7 +74,7 @@ defmodule World.Orders.Blueprints do
   def drawing(%{"blueprint" => "drawing", "options" => %{"drawing" => d}}), do: d
 
   def drawing(%{"blueprint" => "catalog", "options" => %{"name" => name}}) do
-    case World.Drawing.raw(name) do
+    case World.Drawing.Catalog.raw(name) do
       %{"blueprint" => _} = order ->
         {:ok, full} = World.Orders.check(order)
         drawing(full)
@@ -479,7 +479,9 @@ defmodule World.Orders.Blueprints do
       build: fn o ->
         World.People.exercise(o["routine"], count: round(o["count"]), seed: round(o["seed"]), fans: o["fans"])
       end,
-      # (Each person is a part of the parts list, made alone.)
+      # (Each person is a part of the parts list, made alone; the version
+      # of World.People is in the key of each piece.)
+      rule: World.People,
       pieces: fn o ->
         World.People.exercise_pieces(o["routine"], count: round(o["count"]), seed: round(o["seed"]), fans: o["fans"])
       end,

@@ -32,7 +32,7 @@ defmodule World.Sculpt.Cache do
   def start_link(_opts), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
 
   @doc "The key of the brick `at` with cells of `step` m and its edits."
-  def key(at, step, edits), do: :crypto.hash(:sha256, :erlang.term_to_binary({at, step / 1, edits}))
+  def key(at, step, edits), do: :crypto.hash(:sha256, :erlang.term_to_binary({at, step / 1, edits}, [:deterministic]))
 
   @doc "The piece of the brick of a key, or nil (also with no table)."
   def get(key) do

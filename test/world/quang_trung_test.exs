@@ -33,7 +33,7 @@ defmodule World.QuangTrungTest do
     assert Enum.map(drawings, &elem(&1, 0)) == ~w(quang_trung_4_10 quang_trung_12_18 quang_trung_20_26)
 
     for {{name, drawing}, numbers} <- Enum.zip(drawings, [~w(4 6 8-10 8-10), ~w(12 14 16 18), ~w(20 22 24-26 24-26)]) do
-      assert file(name) == drawing and name in World.Drawing.names()
+      assert file(name) == drawing and name in World.Drawing.Catalog.names()
       assert {:ok, _} = World.Drawing.check(drawing, "d")
       assert Enum.map(drawing["extras"]["street"]["lots"], & &1["number"]) == numbers
       # Four houses of three parts, and the ground with a parasol in front of each bar.
@@ -49,7 +49,7 @@ defmodule World.QuangTrungTest do
   test "the office of the port at number 2: its footprint, its storeys and its corner tower" do
     d = file("cang_vu_vung_tau")
     assert {:ok, _} = World.Drawing.check(d, "d")
-    assert d["kind"] == "house" and "cang_vu_vung_tau" in World.Drawing.names()
+    assert d["kind"] == "house" and "cang_vu_vung_tau" in World.Drawing.Catalog.names()
     assert [%{"name" => "cang_vu_vung_tau_than"} = body, %{"name" => "cang_vu_vung_tau_mai"} = roof] = d["nodes"]
     [mass, hollow | rest] = body["skill"]["sculpt"]["edits"]
     # The mass is the footprint of OpenStreetMap, up to the top of the parapet: a ground storey of 4.4 m and
@@ -84,7 +84,7 @@ defmodule World.QuangTrungTest do
     for {name, request} <- QuangTrung.buildings() do
       drawing = QuangTrung.building(name)
       assert drawing == World.Town.Building.drawing(Map.put(request, "name", name))
-      assert file(name) == drawing and name in World.Drawing.names()
+      assert file(name) == drawing and name in World.Drawing.Catalog.names()
       assert {:ok, _} = World.Drawing.check(drawing, "d")
       # Each source says what it is: the footprint, the photos, and what is a guess.
       assert [osm, photo, guess] = drawing["sources"]

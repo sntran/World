@@ -11,7 +11,7 @@ defmodule World.BenchTest do
     all = Bench.orders()
     assert length(all) == length(World.Catalog.models()) + length(World.Orders.Blueprints.data())
     assert length(all) == length(Enum.uniq_by(all, &elem(&1, 0)))
-    assert Enum.all?(World.Drawing.names(), fn d -> Enum.any?(all, &(elem(&1, 0) == d)) end)
+    assert Enum.all?(World.Drawing.Catalog.names(), fn d -> Enum.any?(all, &(elem(&1, 0) == d)) end)
     assert {:ok, ^all} = Bench.select([])
     # In the order of all the orders.
     assert {:ok,

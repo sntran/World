@@ -23,7 +23,7 @@ defmodule World.Orders.Blueprint do
     parts list makes each piece alone (`World.Elements`).
   - `sources`: where the data of the blueprint comes from.
   """
-  defstruct name: nil, doc: "", options: [], build: nil, check: nil, resolve: nil, pieces: nil, sources: []
+  defstruct name: nil, doc: "", options: [], build: nil, check: nil, resolve: nil, pieces: nil, rule: nil, sources: []
 
   defmodule Option do
     @moduledoc """

@@ -216,15 +216,17 @@ defmodule World.Elements do
   def stopped, do: [%{"path" => "", "message" => "the build stopped before its end: send the request again"}]
 
   @doc """
-  The version of a rule: a hash of the code of its module and of each
-  module of World that its code calls, again and again. It changes when
-  one of them changes, and not when another module of World changes.
+  The version of a rule: a hash of its source (`World.Elements.Source`),
+  the files of its module and of each module of World that it names,
+  again and again, each with its path from the root of the project, the
+  data files that they read, and the versions of Elixir and Erlang/OTP.
+  It changes when one of these files changes, and not when another file
+  of World changes. It is the same in each folder of a build.
   """
   def version(module) do
     case :persistent_term.get({__MODULE__, :version, module}, nil) do
       nil ->
-        sums = for m <- module |> calls(MapSet.new()) |> Enum.sort(), do: m.module_info(:md5)
-        version = :crypto.hash(:md5, sums) |> Base.encode16(case: :lower) |> binary_part(0, 12)
+        version = World.Elements.Source.version(World.Elements.Sources.get(), module)
         :persistent_term.put({__MODULE__, :version, module}, version)
         version
 
@@ -306,7 +308,7 @@ defmodule World.Elements do
 
     parts =
       for {name, _make, _place} <- pieces do
-        key = hash({:piece, version(Blueprints), full, name, job.level})
+        key = hash({:piece, version(blueprint.rule || Blueprints), full, name, job.level})
 
         unless Store.has?(key) do
           Store.put_recipe(key, JSON.encode!(%{"order" => hash, "level" => Atom.to_string(job.level), "piece" => name}))
@@ -572,40 +574,12 @@ defmodule World.Elements do
 
   # --- Hashes and versions ----------------------------------------------
 
+  # (With `:deterministic`: the keys of a map of more than 32 keys go in
+  # order. With no option, their order can change from one start of the VM
+  # to the next, and so can the key.)
   defp hash(term),
-    do: :crypto.hash(:sha256, :erlang.term_to_binary(term)) |> binary_part(0, 16) |> Base.encode16(case: :lower)
-
-  # A module of World that can be a part of a rule: not a module of the
-  # service (the orders, the store, the constructions, the files). (A
-  # rule calls the orders for an item in a drawing; a change of the
-  # service does not change a part.)
-  @service ~w(Orders Elements Construction Service MCP Engineers Log Line Guard Files Stream Supervisor Application)
-           |> Enum.map(&"Elixir.World.#{&1}")
-
-  defp rule?(module) do
-    name = Atom.to_string(module)
-
-    String.starts_with?(name, "Elixir.World.") and
-      not Enum.any?(@service, &(name == &1 or String.starts_with?(name, &1 <> ".")))
-  end
-
-  # The modules of World that a module calls, again and again (with it).
-  defp calls(module, seen) do
-    if MapSet.member?(seen, module) do
-      seen
-    else
-      seen = MapSet.put(seen, module)
-
-      with {^module, beam, _} <- :code.get_object_code(module),
-           {:ok, {_, [imports: imports]}} <- :beam_lib.chunks(beam, [:imports]) do
-        imports
-        |> Enum.map(&elem(&1, 0))
-        |> Enum.uniq()
-        |> Enum.filter(&rule?/1)
-        |> Enum.reduce(seen, &calls/2)
-      else
-        _ -> seen
-      end
-    end
-  end
+    do:
+      :crypto.hash(:sha256, :erlang.term_to_binary(term, [:deterministic]))
+      |> binary_part(0, 16)
+      |> Base.encode16(case: :lower)
 end

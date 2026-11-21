@@ -12,6 +12,9 @@
 #   Worker) build, and Wrangler takes them.
 # - scripts/wings.sh: wings/ is the copy of the core of Wings 3D at the
 #   commit of wings/VERSION.
+# - keys: the keys of the parts of five orders, from the commit built in
+#   two folders, are the same; a change of a data file changes only the
+#   keys of its rule.
 name: CI
 
 on:
@@ -88,3 +91,70 @@ jobs:
       - run: npx wrangler deploy --dry-run
       - name: wings/ is the copy of the core of Wings 3D
         run: sh scripts/wings.sh && git diff --exit-code wings
+
+  # One key in each folder (docs/factory.md, "One key in each folder"):
+  # the commit built in two folders gives the same keys for the parts of
+  # five orders (test/fixtures/keys/orders.json), and a third folder with
+  # another height of the van transit_148 (priv/data/vans.json) gives
+  # other keys for the van and the same keys for the four other orders.
+  keys:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      MIX_ENV: prod
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run APE programs with /bin/sh
+        run: sudo sh -c 'echo ":APE:M::MZqFpD::/bin/sh:" > /proc/sys/fs/binfmt_misc/register' || true
+
+      - name: Install beam.com
+        run: |
+          mkdir -p "$HOME/bin"
+          cd "$HOME/bin"
+          curl -fsSLO "https://github.com/sntran/BEAM.com/releases/download/v$BEAM_COM_VERSION/beam.com"
+          echo "$BEAM_COM_SHA256  beam.com" | sha256sum -c -
+          chmod +x beam.com
+          for tool in mix.com iex.com; do ln -s beam.com "$tool"; done
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Hex and rebar
+        run: |
+          mix.com local.hex --force
+          mix.com local.rebar --force
+
+      - name: The keys of the parts in three folders
+        run: |
+          mix.com deps.get
+          one="$RUNNER_TEMP/one/World"
+          two="$RUNNER_TEMP/two/a/folder/with/another/name"
+          van="$RUNNER_TEMP/van/World"
+          for d in "$one" "$two" "$van"; do
+            mkdir -p "$d"
+            git archive HEAD | tar -x -C "$d"
+            cp -a deps "$d/"
+          done
+          node -e '
+            const fs = require("fs"), p = process.argv[1] + "/priv/data/vans.json";
+            const d = JSON.parse(fs.readFileSync(p, "utf8"));
+            d.models.transit_148.height = 2.885;
+            fs.writeFileSync(p, JSON.stringify(d, null, 2));
+          ' "$van"
+          for d in "$one" "$two" "$van"; do
+            (cd "$d" && mix.com compile && mkdir -p store && WORLD_ORDER_DIR="$d/store" mix.com run scripts/keys.exs test/fixtures/keys/orders.json "$d/keys.json")
+          done
+          node -e '
+            const fs = require("fs");
+            const [one, two, van] = process.argv.slice(1).map((d) => JSON.parse(fs.readFileSync(d + "/keys.json", "utf8")));
+            const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+            let failed = false;
+            const check = (ok, text) => { console.log(`${ok ? "ok" : "FAILED"}: ${text}`); failed ||= !ok; };
+            for (const [name, keys] of Object.entries(one.keys)) {
+              check(keys.length > 0, `${name}: ${keys.length} parts`);
+              check(same(keys, two.keys[name]), `${name}: the same keys in two folders`);
+              const changed = keys.filter((k, i) => k !== van.keys[name][i]).length;
+              check(name === "van" ? changed > 0 : changed === 0, `${name}: ${changed} keys change with another height of the van`);
+            }
+            check(same(one.versions, two.versions), `the same versions in two folders: ${JSON.stringify(one.versions)}`);
+            process.exit(failed ? 1 : 0);
+          ' "$one" "$two" "$van"
