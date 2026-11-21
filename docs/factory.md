@@ -1348,7 +1348,7 @@ jobs of the projects) ask the same Worker at its address on workers.dev,
 stays `https://world.mkfifo.com`, and the URLs in the comments of the
 issues are of world.mkfifo.com.
 
-A project of GitHub Actions asks with no secret:
+`docs/projects.md` is the guide for a new project. A project of GitHub Actions asks with no secret:
 
 ```yaml
 permissions:
