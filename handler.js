@@ -425,14 +425,16 @@ async function join(request, env, vm, check) {
 }
 
 // The store with the pass of a shift (64 hex digits): only a key that the
-// edge gave to that shift (the VM checks it), else 403. The token of the
+// edge gave to that shift (the VM checks it with the SHA-256 of the pass),
+// else 403. The token of the
 // store of a test takes each key.
 async function shiftStore(request, env, vm, key) {
   if (storeToken(request, env)) return store(request, env, key);
   const pass = (request.headers.get('authorization') ?? '').replace(/^Bearer /, '');
   if (!/^[0-9a-f]{64}$/.test(pass) || !KEY.test(key)) return errors(403, 'no pass for this key');
   const access = request.method === 'PUT' ? 'write' : 'read';
-  const r = await vm(new Request(`http://vm/shift/allowed?key=${encodeURIComponent(key)}&access=${access}`, { headers: { 'x-world-shift-pass': pass } }));
+  // (Only the SHA-256 of the pass goes to the VM: the Workers Logs keep the headers of a request to the VM.)
+  const r = await vm(new Request(`http://vm/shift/allowed?key=${encodeURIComponent(key)}&access=${access}`, { headers: { 'x-world-shift-pass-hash': await sha256(pass) } }));
   return r.status === 204 ? store(request, env, key) : errors(403, 'the edge did not give this key to this shift');
 }
 

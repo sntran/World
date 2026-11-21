@@ -11,7 +11,12 @@ defmodule World.Shift.Passes do
     that node connects with it;
   - a pass: the token of the store of the Worker (`/store/KEY`) for this
     shift. The Worker takes a key with the pass only when the edge gave
-    that part to the node of the pass (`allowed?/2`).
+    that part to the node of the pass (`allowed?/4`).
+
+  The VM keeps only the SHA-256 of each pass (`hash/1`), here and in its
+  store, and the Worker sends only that hash to the VM (the header
+  `x-world-shift-pass-hash` of `/shift/allowed`). So the pass is not in
+  the Workers Logs, and not in the SQLite of the Durable Object.
 
   The edge has a cookie of its own that nobody knows: random, made at the
   start of its distribution (the option `secret`, `WORLD_SHIFTS=true`).
@@ -56,20 +61,23 @@ defmodule World.Shift.Passes do
   """
   def join(run, passes \\ __MODULE__), do: GenServer.call(passes, {:join, run})
 
-  @doc "The node of a pass, or nil."
-  def node_of(pass, passes \\ __MODULE__), do: GenServer.call(passes, {:node_of, pass})
+  @doc "The SHA-256 of a pass, in hex: the VM knows a pass only by it."
+  def hash(pass), do: :crypto.hash(:sha256, pass) |> Base.encode16(case: :lower)
+
+  @doc "The node of the hash of a pass (`hash/1`), or nil."
+  def node_of(hash, passes \\ __MODULE__), do: GenServer.call(passes, {:node_of, hash})
 
   @doc """
-  True when the shift of `pass` can read (`:read`) or put (`:write`) the
-  key `key` of the store. It puts only the GLB of a part that the edge
+  True when the shift of the hash of a pass (`hash/1`) can read (`:read`)
+  or put (`:write`) the key `key` of the store. It puts only the GLB of a part that the edge
   gave to its node (`World.Labour`): in work on the node now, or, in the
   store of the queue, given to that node (`World.Labour.Store`: a new VM
   before it puts its queue back). It reads that GLB, the recipe of the
   part, its order, and the blueprints in data of the projects (an order
   can name one).
   """
-  def allowed?(pass, key, access, passes \\ __MODULE__) do
-    with node when node != nil <- node_of(pass, passes) do
+  def allowed?(hash, key, access, passes \\ __MODULE__) do
+    with node when node != nil <- node_of(hash, passes) do
       in_work = for {_, part} <- Registry.lookup(World.Labour, {World.Crew.Tasks, node}), do: part
       # (The store of the queue only when the parts in work do not allow it: a port call.)
       allows?(in_work, key, access) or allows?(given(node), key, access)
@@ -167,8 +175,9 @@ defmodule World.Shift.Passes do
       s.set_cookie.(node, cookie)
       pass = Base.encode16(:crypto.strong_rand_bytes(32), case: :lower)
       at = s.clock.()
-      s.store.put(pass, node, cookie, at)
-      passes = Map.put(s.passes, pass, %{node: node, cookie: cookie, at: at, gone: nil})
+      # (Only the hash of the pass stays: the pass goes to the runner in the answer.)
+      s.store.put(hash(pass), node, cookie, at)
+      passes = Map.put(s.passes, hash(pass), %{node: node, cookie: cookie, at: at, gone: nil})
 
       answer = %{
         "node" => Atom.to_string(node),
@@ -183,9 +192,9 @@ defmodule World.Shift.Passes do
     end
   end
 
-  def handle_call({:node_of, pass}, _from, s) do
+  def handle_call({:node_of, hash}, _from, s) do
     case s.passes do
-      %{^pass => %{node: node}} -> {:reply, node, s}
+      %{^hash => %{node: node}} -> {:reply, node, s}
       _ -> {:reply, nil, s}
     end
   end
