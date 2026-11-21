@@ -12,7 +12,7 @@
 //   node scripts/bucket-check.mjs plan DIR
 //     The commits of main in the window, in groups with the same code
 //     (DIR/groups.json), and the store of the rebuild (DIR/store: the
-//     orders, the blueprints, and the recipes of before the window).
+//     orders, the blueprints, and the recipes of the site).
 //   node scripts/bucket-check.mjs tasks DIR GROUP
 //     The tasks of scripts/bucket-rebuild.exs for a group.
 //   node scripts/bucket-check.mjs compare DIR [GROUP...]
@@ -249,7 +249,6 @@ const at = (times, t) => {
 // each level); and the hashes of the orders and the blueprints.
 export async function plan(dir, git) {
   const list = await json(join(dir, 'list.json'));
-  const inWindow = new Set(list.map((o) => o.key));
   const onMain = (commit) => {
     try {
       git(['merge-base', '--is-ancestor', commit, 'origin/main']);
@@ -276,13 +275,14 @@ export async function plan(dir, git) {
     if (g) g.files.push(f);
   }
 
-  // The store: each order and blueprint, and each recipe of before the window.
+  // The store: each order and blueprint, and each recipe of the site (the
+  // rebuild builds each part from its recipe, as the site does).
   const store = join(dir, 'store');
   for (const prefix of ['orders', 'blueprints', 'parts']) {
     const names = await readdir(join(dir, 'bucket', prefix)).catch(() => []);
     for (const name of names) {
       const key = `${prefix}/${name}`;
-      if (prefix === 'parts' && (!name.endsWith('.json') || inWindow.has(key))) continue;
+      if (prefix === 'parts' && !name.endsWith('.json')) continue;
       await mkdir(join(store, prefix), { recursive: true });
       await cp(join(dir, 'bucket', key), join(store, key));
     }
@@ -359,7 +359,11 @@ const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 // that are not JSON.
 export function where(rebuilt, mine) {
   const [a, b] = [parse(mine), parse(rebuilt)];
-  if (a === null || b === null) return '';
+  return a === null || b === null ? '' : paths(a, b);
+}
+
+// The first paths where two values differ (a: of the site, b: of the rebuild).
+function paths(a, b) {
   const out = [];
   const text = (v) => (v === undefined ? 'none' : JSON.stringify(v).slice(0, 60));
   const walk = (x, y, path) => {
@@ -369,8 +373,24 @@ export function where(rebuilt, mine) {
     } else if (JSON.stringify(x) !== JSON.stringify(y)) out.push(`${path || '/'}: ${text(x)} at the site, ${text(y)} in the rebuild`);
   };
   walk(a, b, '');
-  return out.length ? out.join('; ') : 'the same JSON values with other bytes';
+  return out.length ? out.join('; ') : SAME_VALUES;
 }
+
+const SAME_VALUES = 'the same JSON values with other bytes';
+
+// The JSON of a GLB with no buffers: its scene, nodes, meshes, materials
+// and the counts and bounds of its accessors.
+export function glbJson(bytes) {
+  const b = Buffer.from(bytes);
+  if (b.length < 20 || b.toString('latin1', 0, 4) !== 'glTF') return null;
+  const json = parse(b.subarray(20, 20 + b.readUInt32LE(12)));
+  if (!json) return null;
+  const { buffers: _b, bufferViews: _v, ...rest } = json;
+  return rest;
+}
+
+// The name and the level of a part (the first scene of its GLB).
+const nameOf = (json) => (json?.scenes?.[0] ? `${json.scenes[0].name} (${json.scenes[0].extras?.level ?? '?'})` : null);
 
 const exact = (a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0;
 const same = (key, a, b) => (key.endsWith('.log') ? bare(a) === bare(b) : exact(a, b));
@@ -399,11 +419,19 @@ export async function compare(dir, ids = null) {
   // (The SHA-256 of each part of the rebuilds, with its key: a part of the
   // site with the same bytes under another key.)
   const built = new Map();
+  // (And the GLB data of each part of the rebuilds, by its name and level.)
+  const named_ = new Map();
   for (const g of groups) {
     for (const name of await readdir(join(dir, 'out', g.id, 'parts')).catch(() => [])) {
-      if (name.endsWith('.glb')) built.set(sha(await readFile(join(dir, 'out', g.id, 'parts', name))), name.slice(0, 32));
+      if (!name.endsWith('.glb')) continue;
+      const bytes = await readFile(join(dir, 'out', g.id, 'parts', name));
+      built.set(sha(bytes), name.slice(0, 32));
+      const data = glbJson(bytes);
+      if (nameOf(data) && !named_.has(nameOf(data))) named_.set(nameOf(data), { key: name.slice(0, 32), data });
     }
   }
+  // (A part built here from the recipe of the site, under the key of the site.)
+  const fromRecipe = async (key) => (await Promise.all(groups.map((g) => read(g, `from-recipe/${key}.glb`)))).flat();
   const report = [];
   for (const o of list) {
     let verdict = 'request';
@@ -418,8 +446,24 @@ export async function compare(dir, ids = null) {
         verdict = 'agrees';
         note = 'the same list with the keys of the build of the site';
       }
+      if (o.kind === 'part' && verdict !== 'agrees' && (await fromRecipe(o.key.slice(6, 38))).some((b) => exact(b, mine))) {
+        verdict = 'agrees';
+        note = 'the part from the recipe of the site agrees';
+      }
+      if (o.kind === 'recipe' && verdict === 'differs') {
+        const diff = out.map((b) => where(b, mine));
+        const part = list.find((p) => p.key === o.key.replace(/\.json$/, '.glb'));
+        const glb = part ? await readFile(join(dir, 'bucket', part.key)) : await readFile(join(dir, 'bucket', o.key.replace(/\.json$/, '.glb'))).catch(() => null);
+        const agrees = glb !== null && (await fromRecipe(o.key.slice(6, 38))).some((b) => exact(b, glb));
+        if (diff.includes(SAME_VALUES)) [verdict, note] = ['agrees', SAME_VALUES];
+        else if (agrees && diff.some((d) => /^\/order: "[0-9a-f]{32}" at the site, "[0-9a-f]{32}" in the rebuild$/.test(d))) {
+          [verdict, note] = ['agrees', `another order with the same part (${diff[0]}); the part from this recipe agrees`];
+        }
+      }
       const twin = o.kind === 'part' && verdict !== 'agrees' ? built.get(sha(mine)) : null;
       if (twin) note = `the same bytes as the part ${twin} of the rebuild`;
+      const like = o.kind === 'part' && verdict !== 'agrees' && !twin ? named_.get(nameOf(glbJson(mine))) : null;
+      if (like) note = `the part ${like.key} of the rebuild has the same name: ${paths(glbJson(mine), like.data)}`;
       if (verdict === 'differs' && note === '') note = where(out[0], mine);
       if (work.preview.includes(o.key)) note = 'a commit that is not on main';
     } else if (o.kind === 'order' || o.kind === 'blueprint') {

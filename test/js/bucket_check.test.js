@@ -153,7 +153,8 @@ test('the plan, the tasks of each group and the compare: a part that agrees, a p
   assert.deepEqual(work.hashes, [`orders/${H}.json`, `blueprints/${B}.json`]);
   assert.deepEqual(work.preview, [`builds/${P}/${H}.far.glb`]);
   assert.equal(await readFile(join(dir, 'store', `parts/${A}.json`), 'utf8'), JSON.stringify({ order: H, level: 'mid', node: 'm' }));
-  await assert.rejects(readFile(join(dir, 'store', `parts/${R}.json`)));
+  // (And each recipe of the window: the rebuild builds each part from the recipe of the site.)
+  assert.equal(await readFile(join(dir, 'store', `parts/${R}.json`), 'utf8'), JSON.stringify({ order: H, level: 'near', node: 'n' }));
   assert.deepEqual(await tasks(dir, '1'), { files: one.files, lists: one.lists, parts: [A, Z], maps: [], hashes: work.hashes });
 
   // Group 1 builds A again with the same bytes, Z with other bytes, the file of C1, and no recipe R.
@@ -330,8 +331,57 @@ test('the notes of the compare: where a recipe differs, and a part with the byte
   const report = await compare(dir);
   const of = (key) => report.find((o) => o.key === key);
   assert.deepEqual([of(`parts/${R}.json`).verdict, of(`parts/${R}.json`).note], ['differs', '/tile/box/0/0: 0.1 at the site, 0.10000000000000002 in the rebuild; /tile/box/0/2: none at the site, 3 in the rebuild']);
-  assert.equal(of(`parts/${S}.json`).note, 'the same JSON values with other bytes');
+  assert.deepEqual([of(`parts/${S}.json`).verdict, of(`parts/${S}.json`).note], ['agrees', 'the same JSON values with other bytes']);
   assert.deepEqual([of(`parts/${T}.json`).verdict, of(`parts/${T}.json`).note], ['differs', '']);
   assert.deepEqual([of(`parts/${P}.glb`).verdict, of(`parts/${P}.glb`).note], ['none', `the same bytes as the part ${'9'.repeat(32)} of the rebuild`]);
   assert.deepEqual([of(`parts/${Q}.glb`).verdict, of(`parts/${Q}.glb`).note], ['none', '']);
+});
+
+// A GLB with a JSON chunk (and a BIN chunk that the data leaves out).
+const glb = (json) => {
+  const text = Buffer.from(JSON.stringify(json));
+  const pad = Buffer.concat([text, Buffer.alloc((4 - (text.length % 4)) % 4, 0x20)]);
+  const head = Buffer.alloc(20);
+  head.write('glTF', 0, 'latin1');
+  head.writeUInt32LE(2, 4);
+  head.writeUInt32LE(20 + pad.length + 12, 8);
+  head.writeUInt32LE(pad.length, 12);
+  head.write('JSON', 16, 'latin1');
+  return Buffer.concat([head, pad, Buffer.from([4, 0, 0, 0, 0x42, 0x49, 0x4e, 0, 1, 2, 3, 4])]);
+};
+
+test('the part from the recipe of the site; a recipe of another order with the same part; a part with the name of a part of the rebuild', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'recipe-'));
+  const [K, M, N] = ['6', '7', '8'].map((c) => c.repeat(32));
+  const [o1, o2] = ['1', '2'].map((c) => c.repeat(32));
+  const lamp = (size) => glb({ asset: { version: '2.0' }, scenes: [{ name: 'lamp', extras: { level: 'mid', size } }], buffers: [{ byteLength: 4 }] });
+  const files = {
+    [`parts/${K}.json`]: JSON.stringify({ order: o1, level: 'mid', node: 'n' }),
+    [`parts/${K}.glb`]: 'glTF K',
+    [`parts/${M}.json`]: JSON.stringify({ order: o1, level: 'mid', node: 'n' }),
+    [`parts/${N}.glb`]: lamp([1, 2]),
+  };
+  await mkdir(join(dir, 'bucket', 'parts'), { recursive: true });
+  for (const [key, value] of Object.entries(files)) await writeFile(join(dir, 'bucket', key), value);
+  // (The GLB of M is of before the window.)
+  await writeFile(join(dir, 'bucket', `parts/${M}.glb`), 'glTF M');
+  await writeFile(join(dir, 'list.json'), JSON.stringify(Object.keys(files).map((key) => ({ key, kind: kindOf(key), uploaded: new Date(WINDOW.from).toISOString(), size: 1, etag: 'e' }))));
+  await writeFile(join(dir, 'groups.json'), JSON.stringify({ groups: [{ id: '1', commits: ['1'.repeat(40)] }], hashes: [], preview: [] }));
+  const out = async (key, value) => {
+    await mkdir(join(dir, 'out', '1', key, '..'), { recursive: true });
+    await writeFile(join(dir, 'out', '1', key), value);
+  };
+  // (The rebuild: K from its recipe; the recipes of K and M at the place of the list name the other order; M from its recipe; a lamp of another size.)
+  await out(`from-recipe/${K}.glb`, 'glTF K');
+  await out(`parts/${K}.json`, JSON.stringify({ order: o2, level: 'mid', node: 'n' }));
+  await out(`parts/${M}.json`, JSON.stringify({ order: o2, level: 'mid', node: 'n' }));
+  await out(`from-recipe/${M}.glb`, 'glTF other');
+  await out(`parts/${'9'.repeat(32)}.glb`, lamp([1, 3]));
+  const report = await compare(dir);
+  const of = (key) => [report.find((o) => o.key === key).verdict, report.find((o) => o.key === key).note];
+  assert.deepEqual(of(`parts/${K}.glb`), ['agrees', 'the part from the recipe of the site agrees']);
+  assert.deepEqual(of(`parts/${K}.json`), ['agrees', `another order with the same part (/order: "${o1}" at the site, "${o2}" in the rebuild); the part from this recipe agrees`]);
+  // (The part from the recipe of M has other bytes than the GLB of the site: the recipe differs.)
+  assert.deepEqual(of(`parts/${M}.json`), ['differs', `/order: "${o1}" at the site, "${o2}" in the rebuild`]);
+  assert.deepEqual(of(`parts/${N}.glb`), ['none', `the part ${'9'.repeat(32)} of the rebuild has the same name: /scenes/0/extras/size/1: 2 at the site, 3 in the rebuild`]);
 });
