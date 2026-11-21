@@ -65,6 +65,11 @@ defmodule BucketRebuild do
   end
 end
 
+# (The recipes of the site, before each task: not a result of the rebuild.)
+parts = Path.join(store, "parts")
+File.mkdir_p!(parts)
+site = MapSet.new(File.ls!(parts))
+
 {:ok, errors} = Agent.start_link(fn -> %{} end)
 note = fn what, text -> Agent.update(errors, &Map.put(&1, what, text)) end
 
@@ -95,10 +100,6 @@ for %{"hash" => hash, "level" => level} <- tasks["lists"] || [] do
   end)
 end
 
-parts = Path.join(store, "parts")
-File.mkdir_p!(parts)
-# (The recipes of the site: not a result of the rebuild.)
-site = MapSet.new(File.ls!(parts))
 from_recipe = Path.join(out, "from-recipe")
 File.mkdir_p!(from_recipe)
 
