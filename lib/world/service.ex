@@ -473,10 +473,15 @@ defmodule World.Service do
   end
 
   get "/p/:file" do
-    project = get_req_header(conn, "x-world-project") != []
+    name = List.first(get_req_header(conn, "x-world-project"))
+    project = name != nil
+    key = file |> String.split(".") |> hd()
+    needs = project and World.Labour.needs_shift?(key)
+    # (The project of a part that waits for a shift, for the summary of the shift.)
+    if needs, do: World.Labour.asked(key, name)
     # (A part that needs a shift when no shift takes parts: the answer comes at once, with
     # the mark, so that the Worker starts the shift now, not after the wait.)
-    first = project and World.Labour.needs_shift?(file |> String.split(".") |> hd()) and World.Shift.wanted?(waiting: 1)
+    first = needs and World.Shift.wanted?(waiting: 1)
     conn = if first, do: put_resp_header(conn, "x-world-shift", "wanted"), else: conn
     wait = if first, do: 0, else: World.Elements.wait()
 

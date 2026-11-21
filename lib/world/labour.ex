@@ -42,13 +42,15 @@ defmodule World.Labour do
 
   @doc """
   The list of the parts in work on each node and of the parts in the
-  queue, which `build/3` reads, and the GLBs that this node built and the
-  store did not take yet (`make/1`) (`World.Supervisor`).
+  queue, which `build/3` reads, the GLBs that this node built and the
+  store did not take yet (`make/2`), and the projects of the parts with
+  no store of the queue (`World.Labour.Store.ask/2`) (`World.Supervisor`).
   """
   def children,
     do: [
       {Registry, keys: :duplicate, name: __MODULE__},
       %{id: __MODULE__.Kept, start: {Agent, :start_link, [fn -> %{} end, [name: __MODULE__.Kept]]}},
+      %{id: __MODULE__.Projects, start: {Agent, :start_link, [fn -> %{} end, [name: __MODULE__.Projects]]}},
       World.Labour.Restore
     ]
 
@@ -102,10 +104,19 @@ defmodule World.Labour do
   end
 
   @doc """
+  A project asked for the part `key`, which waits for a shift: the
+  summary of the shift gives the parts of each project (`World.Shift`).
+  A part keeps the place of its first request in the queue, whatever
+  project asks for it again.
+  """
+  def asked(key, project), do: Queue.ask(key, project)
+
+  @doc """
   The part of a key, on the node that gives it the work: `:stored` when
   the store has it already (a part in R2 does not build again), else
   built from its recipe and put in the store (in the record of the shift,
-  `World.Shift.work/2`). `:stored`, or the error of
+  `World.Shift.work/3`, with `projects`: the projects that asked for it).
+  `:stored`, or the error of
   `World.Elements.part/1`. The GLB stays on this node. When this node
   builds the key already (the edge gave it again: a VM of the edge that
   started again asks again), the make waits for that build and does not
@@ -115,14 +126,14 @@ defmodule World.Labour do
   edge gives the key again, and the next make puts that GLB, with no new
   build.
   """
-  def make(key) do
+  def make(key, projects \\ []) do
     if Store.has?(key) do
       :stored
     else
       case :global.trans({__MODULE__, {:make, key}}, fn -> claim(key) end, [node()]) do
         :mine ->
           try do
-            Shift.work(key, fn -> built(key) end)
+            Shift.work(key, fn -> built(key) end, projects)
           after
             Registry.unregister(__MODULE__, {:make, key})
           end
@@ -131,7 +142,7 @@ defmodule World.Labour do
           ref = Process.monitor(maker)
 
           receive do
-            {:DOWN, ^ref, :process, _, _} -> make(key)
+            {:DOWN, ^ref, :process, _, _} -> make(key, projects)
           end
       end
     end
@@ -420,7 +431,7 @@ defmodule World.Labour do
   # the make raised there.
   defp run_on(key, tasks) do
     try do
-      task = Task.Supervisor.async_nolink(tasks, __MODULE__, :make, [key])
+      task = Task.Supervisor.async_nolink(tasks, __MODULE__, :make, [key, Queue.projects(key)])
 
       case Task.yield(task, :infinity) do
         {:ok, done} -> {:ok, done}

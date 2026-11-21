@@ -138,3 +138,6 @@ files with no factory, clone World at the commit of the lock and use
   shorter shift with the header `x-world-shift-hours` (0.5 to 5.5).
 - A shift starts in about one minute when the build of its commit is in
   the cache, else in 3 to 5 minutes.
+- `GET /census` gives the starts of the day that are used (`shifts`:
+  the day, the starts, the limit and the time of the last start), and
+  the summary of a shift gives the parts of each project.

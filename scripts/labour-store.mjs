@@ -41,11 +41,21 @@ const table = {
   async done(key) {
     const map = await rows();
     delete map[key];
+    delete map[`projects/${key}`];
     await save(map);
+  },
+  async ask(key, project) {
+    const map = await rows();
+    const list = (map[`projects/${key}`] ??= []);
+    if (!list.includes(project)) list.push(project);
+    await save(map);
+  },
+  async projects(key) {
+    return (await rows())[`projects/${key}`] ?? [];
   },
   async all() {
     const order = (a, b) => a.ticket.length - b.ticket.length || (a.ticket < b.ticket ? -1 : a.ticket > b.ticket ? 1 : a.key < b.key ? -1 : 1);
-    return Object.values(await rows()).sort(order);
+    return Object.entries(await rows()).filter(([k]) => !k.startsWith('projects/')).map(([, row]) => row).sort(order);
   },
 };
 
