@@ -1549,6 +1549,82 @@ The check of each kind:
 - Each object that does not agree, and each object with no request,
   goes to `quarantine/`.
 
+### The memory of the VM (2026-11-21)
+
+`GET /census` gives the memory of the VM (`memory`), and
+`node scripts/memory-record.mjs BASE SECONDS MINUTES OUT.csv` records it.
+The size of the memory of WebAssembly is what the isolate counts: it is
+the peak of what the VM used, with the work of its builds, and it never
+gets smaller in one VM.
+
+**An hour with no request of mine** (`main` at ee61761, a look each
+30 s from 07:29 to 08:29 UTC):
+
+| Time (UTC) | Event | Size (MB) | Used (MB) | Processes | Their bytes (MB) |
+|---|---|---|---|---|---|
+| 07:29 | a new VM after the deploy | 30.6 | 27.6 | 146 | 1.0 |
+| 07:34:59 | my request of one small parts list (`mini`, far) | 55.4 | 42.3 | 146 | 1.0 |
+| 07:35 to 08:21 | no request | 55.4 | 42.4 | 146 | 1.0 |
+| 08:21:38 | a new VM, with no deploy | 30.6 | 27.7 | 148 | 1.1 |
+| 08:22 to 08:29 | the requests of another caller (a construction) | 70.5 | 36.2 to 38.3 | 152 to 161 | 1.2 to 2.3 |
+
+- With no request, nothing grows: from 07:35 to 08:21 the VM used
+  42.4 MB the whole time.
+- The processes (1 to 2.3 MB), the tables of ETS (0.5 MB at most), the
+  binaries (1.2 MB at most) and the persistent terms (0.1 MB) stay small.
+- What grows is the memory that the VM uses outside its processes: about
+  15 MB at the first build of a VM, and it stays. Most likely it is the
+  code of the modules that the build loads. Each new VM starts from the
+  memory image of the first VM of its deploy, with 27 MB used, and loads
+  that code again at its first build.
+
+**2026-11-20 near 18:50.** The three VMs in 5 minutes (18:49:28,
+18:50:18, 18:54:24) each built whole models one after the other: an
+order, then its GLB at near, mid and far, its parts and its receipt.
+Their peaks were 46 then 97 MB, 49 MB, and 62 MB. The near GLB of a
+whole model is the largest of these builds. The isolate also holds
+`edge.com` (50 MB) and the memory image of the VM (19 MB), so the VM
+stops before the guard of `WORLD_MEMORY_MB` (118 MB) stops a build.
+
+**Three orders of three projects in one shift** (2026-11-21, `main` at
+ee61761): a job of each repository with its own ID token (branch
+`ci/world-three-projects`), 20 s apart. Each job placed its order (the
+edit of Hải Âu: its edits), got its parts list at mid, and asked for all
+its parts at one time. The edge started shift 19 at 08:33:47, and its
+node built the 14 parts (each stored).
+
+| Project | Start (UTC) | Order | Parts list | Last part |
+|---|---|---|---|---|
+| vung_tau (an edit of Hải Âu, 7 parts) | 08:33:00 | 3.1 s | 35.7 s | 330.8 s |
+| tre (a village house, 6 parts) | 08:33:20 | 23.8 s | 41.6 s | 328.6 s |
+| diy (a fridge, 1 part) | 08:33:40 | 10.7 s | 25.8 s | 310.6 s |
+
+The memory of the VM (a look each 10 s):
+
+| Time (UTC) | Event | Size (MB) | Used (MB) |
+|---|---|---|---|
+| 08:30 | before the measure (left from 08:22) | 70.5 | 36.3 |
+| 08:33:35 | the three orders | 70.5 | 53.7 (the peak) |
+| 08:33:46 | a new VM | 50.1 | 40.3 |
+| 08:34:06 | the parts lists | 62.5 | 42.8 |
+| 08:35:59 | a new VM | 30.8 | 28.0 |
+| 08:36 to 08:42 | the parts in the shift | 31.0 | 27.6 to 28.1 |
+
+- The peak of the size was 70.5 MB, under 80 MB, but the VM still
+  started again two times. So 80 MB of memory of WebAssembly is not
+  under the limit of the isolate with `edge.com` and its memory image in
+  it. The node of the shift joined again each time (08:35:56, and also at
+  08:42:16), and no part went.
+- The first new VM came while the edge checked the three orders at the
+  same time: an order and its edits do not go through the line of the
+  builds (`World.Line`), so they add up.
+- The Workers Logs give the cause of the end of an isolate (`outcome`);
+  I did not read them for this measure.
+- The next changes to keep the peak low: the orders and their edits
+  through the line of the builds; a guard (`WORLD_MEMORY_MB`) at the room
+  that the isolate really has; and the code of World loaded before the
+  memory image, so that a build does not load it again in each new VM.
+
 ### The guard and the memory of WebAssembly
 
 The edge stops a VM on the size of its memory of WebAssembly (the log
