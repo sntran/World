@@ -1359,6 +1359,92 @@ steps:
       curl -sS -H "authorization: Bearer $token" https://world.mkfifo.workers.dev/p/KEY.glb
 ```
 
+### The listeners of the VM (a fault, closed on 2026-11-19)
+
+**The fault.** Until 629aea8, `handler.js` sent each path that starts
+with `/.tcp/` to the VM. BEAM.com connects a WebSocket on `/.tcp/PORT`
+to the listener of that port in the VM (its `docs/WORKERS.md`, "Incoming
+TCP and distributed Erlang": anyone who can reach the Worker can reach
+its listeners). The VM has two listeners: the HTTP server of
+`World.Service` (port 4000) and the distribution (port 4370). So a
+WebSocket to `/.tcp/4000` was a direct connection to `World.Service`,
+and no check of the Worker applied to it:
+
+- `POST /shift/join` with any `x-world-shift-run` gave a node name, a
+  cookie and a pass, with no ID token;
+- with that cookie, a node connected on `/.tcp/4370` and could run code
+  in the VM of the edge;
+- the text bindings of the Worker are the environment of the VM, so that
+  code could read `WORLD_SHIFT_TOKEN` and `WORLD_TOKEN`, and use the
+  store of the orders (R2).
+
+A test with the local edge (`wrangler dev`) showed each step before the
+correction: `/.tcp/4000` gave 101, an HTTP request over it reached
+`World.Service`, and a node that joined read the three secrets in the
+environment of the VM.
+
+**The corrections** (on the site on 2026-11-19 at 20:34:38 UTC):
+
+- 3b3c009: only a WebSocket on `/.tcp/4370` (or `DIST_PORT`) goes to the
+  VM. Each other `/.tcp/` path, and a request that is not a WebSocket,
+  gets 404 at the Worker.
+- 629aea8: the class `Beam` gives the VM the env of the Worker with no
+  `WORLD_SHIFT_TOKEN`, `WORLD_TOKEN` or `WORLD_STORE_TOKEN` (`vm_env.js`).
+- 82d433e: the object of the VM also refuses each other `/.tcp/` path,
+  whatever version of the Worker sends the request.
+- On 2026-11-21 the owner made new values for the three secrets
+  (`WORLD_SHIFT_TOKEN`, `WORLD_TOKEN` and `WORLD_STORE_TOKEN`). A test
+  order started `shift.yml` with the new `WORLD_SHIFT_TOKEN`.
+
+**The other ways in.**
+
+- A scan of all the ports of the local edge (`/.tcp/1` to
+  `/.tcp/65535`) found two listeners only: 4000 and 4370.
+- The Preview of each branch runs the code of that branch, with the
+  bucket of the site (`previews.r2_buckets` of `wrangler.jsonc`). The
+  branches with shift code got `main`, so their Previews have the
+  correction. A Deployment URL of a Preview
+  (`DEPLOYMENT-world.mkfifo.workers.dev`) keeps the code of its deploy.
+  On 2026-11-21 the owner deleted all the Previews
+  (`npx wrangler preview delete --name NAME`): each branch URL gives
+  404. Two Deployment URLs still answer; both are deploys of after the
+  correction (`/.tcp/4000` gives 404). A new Preview does not build:
+  its bucket `world-previews` does not exist, on purpose.
+- The routes of the Worker that send a path of the client to the VM go
+  through `forward()`, which keeps 4 headers only. The headers that the
+  VM trusts (`x-world-shift-run`, `x-world-shift-pass`, `x-world-project`,
+  `x-world-origin`) come only from the Worker.
+
+**The logs.** The owner read the Workers Logs of all requests, from
+2026-11-13 06:00 UTC (the oldest that Cloudflare kept) to the
+correction. The hole was open from 2026-11-18 20:10 UTC.
+
+- Only one WebSocket to a `/.tcp/` path other than `/.tcp/4370`
+  reached the VM: `/.tcp/4000` on `world.mkfifo.workers.dev` at
+  2026-11-19 20:32:26 UTC. It was the check of the fault before the
+  correction: a WebSocket upgrade, then no data. Four more
+  (`/.tcp/4000`, `/.tcp/1`, `/.tcp/4370x` and `/.tcp/04370` on
+  `world.mkfifo.com`, from 20:34:55) were the checks after the
+  correction, and got 404. The six rows have the same headers and the
+  same TLS fingerprint as that check.
+- So no other caller used `World.Service` with no check of the Worker,
+  and no node joined through `/.tcp/4000`.
+- Each `POST /shift/join` got 200 and was a run of `shift.yml` on
+  `main`, started by the owner: the runs 2, 4, 6, 7, 8, 9, 10, 11 and
+  12 (the run id in `x-world-shift-run` is that of GitHub). No join got
+  401 or 403.
+- The rows of `/.tcp/4370` are the nodes of the shifts. A node with a
+  wrong cookie was refused (`Invalid challenge reply`).
+- The requests of the Previews are not in the Workers Logs:
+  `observability` of `wrangler.jsonc` does not apply to a Preview, and a
+  check of `/.tcp/4000` on a Preview at 2026-11-19 20:32:19 UTC is not
+  in the logs. So the logs cannot show who used the hole of a Preview.
+  The Previews are deleted, and the three secrets are new.
+- The edge sends the pass of a shift to the VM in the header
+  `x-world-shift-pass` of `/shift/allowed`, and the Workers Logs keep
+  that header. A pass works only while its node is in the shift, and
+  for 10 minutes after (6 hours at most).
+
 ### The guard and the memory of WebAssembly
 
 The edge stops a VM on the size of its memory of WebAssembly (the log
