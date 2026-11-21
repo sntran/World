@@ -72,6 +72,18 @@ test('fetch: the objects of the window and each order, recipe and blueprint that
   // The move of an object of the window, and of one of before.
   assert.equal((await api.quarantine('shifts/state.json')).status, 200);
   assert.equal((await api.quarantine(`orders/${H}.json`)).status, 409);
+
+  // The objects in quarantine/ again (read only), with their upload time from before the move, and the objects that they name.
+  assert.equal((await api.quarantine(`parts/${K}.glb`)).status, 200);
+  const again = await mkdtemp(join(tmpdir(), 'bucket-'));
+  const held = await fetchAll(api, again, (line) => logs.push(line), true);
+  assert.equal(logs.at(-1), 'bucket: 2 objects in quarantine/');
+  const at = new Date(WINDOW.from + 10).toISOString();
+  assert.deepEqual(held.list.map((o) => [o.key, o.kind, o.uploaded]), [[`parts/${K}.glb`, 'part', at], ['shifts/state.json', 'shift', at]]);
+  assert.equal(await readFile(join(again, 'bucket', `parts/${K}.glb`), 'utf8'), 'glTF');
+  assert.match(await readFile(join(again, 'bucket', `parts/${K}.json`), 'utf8'), /"node":"n"/);
+  assert.equal(await readFile(join(again, 'bucket', `orders/${H}.json`), 'utf8'), JSON.stringify({ blueprint: { hash: B } }));
+  assert.equal(orders.items.has(`parts/${K}.glb`), false);
 });
 
 test('the client asks again after a 5xx, at most four times, and stops on another answer', async () => {

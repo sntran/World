@@ -109,6 +109,16 @@ test('the check of the bucket: only the job of bucket-check.yml lists the object
   // (The site does not give quarantine/.)
   assert.equal((await handler(req('/p/first.glb'), { ORDERS: orders }, { vm: v, commit: 'c1' })).status, 404);
 
+  // With held=1: the objects in quarantine/, read only, with the upload time and the ETag of before the move.
+  const held = await (await call('/bucket/list?held=1')).json();
+  assert.deepEqual(held, { objects: [{ key: 'orders/last.json', size: 1, uploaded: new Date(WINDOW.to + 1).toISOString(), etag: 'v1' }, { key: 'parts/first.glb', size: 6, uploaded: new Date(WINDOW.from).toISOString(), etag: 'v1' }], seen: 2, cursor: null });
+  const back = await call('/bucket/object?key=parts/first.glb&held=1');
+  assert.equal(await back.text(), 'glTF 1');
+  assert.equal(back.headers.get('x-world-uploaded'), new Date(WINDOW.from).toISOString());
+  assert.equal((await call('/bucket/object?key=parts/none.glb&held=1')).status, 404);
+  assert.equal((await call('/bucket/quarantine?key=orders/last.json&held=1', 'POST')).status, 404);
+  assert.equal(orders.items.has('orders/last.json'), true);
+
   // Another method or path, and each other caller.
   assert.equal((await call('/bucket/list', 'POST')).status, 404);
   assert.equal((await call('/bucket/other?key=parts/after.glb')).status, 404);

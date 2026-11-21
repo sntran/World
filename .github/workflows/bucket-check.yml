@@ -20,6 +20,9 @@ name: The check of the bucket
 #   verdicts, no content.
 # - With "quarantine": each of these keys goes to quarantine/KEY, so that
 #   the site does not give it. Nothing is deleted.
+# - With "held": the same check for the objects in quarantine/ (read only,
+#   each with its upload time from before the move), to find the cause of
+#   an object that did not agree.
 on:
   workflow_dispatch:
     inputs:
@@ -31,6 +34,10 @@ on:
         description: Build the parts, the recipes and the files of the window again, and compare them
         type: boolean
         default: true
+      held:
+        description: Check the objects in quarantine/ again (read only), in place of the objects of the window
+        type: boolean
+        default: false
 
 run-name: The check of the bucket
 
@@ -72,7 +79,8 @@ jobs:
       - name: The objects of the window
         env:
           WORLD_URL: https://world.mkfifo.workers.dev
-        run: node scripts/bucket-check.mjs fetch "$RUNNER_TEMP/bucket"
+          HELD: ${{ inputs.held }}
+        run: node scripts/bucket-check.mjs fetch "$RUNNER_TEMP/bucket" $([ "$HELD" = true ] && echo held)
 
       - name: The plan
         id: plan
@@ -115,8 +123,9 @@ jobs:
       - name: The objects of the window, and the plan
         env:
           WORLD_URL: https://world.mkfifo.workers.dev
+          HELD: ${{ inputs.held }}
         run: |
-          node scripts/bucket-check.mjs fetch "$RUNNER_TEMP/bucket"
+          node scripts/bucket-check.mjs fetch "$RUNNER_TEMP/bucket" $([ "$HELD" = true ] && echo held)
           node scripts/bucket-check.mjs plan "$RUNNER_TEMP/bucket"
 
       # beam.com, as in shift.yml.

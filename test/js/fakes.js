@@ -26,6 +26,7 @@ export function bucket({ clock = () => Date.now() } = {}) {
         body: bytes,
         uploaded: uploaded.get(key),
         httpMetadata: { contentType: types.get(key) },
+        customMetadata: customs.get(key),
         async arrayBuffer() { return bytes.slice().buffer; },
         async json() { return JSON.parse(new TextDecoder().decode(bytes)); },
         async text() { return new TextDecoder().decode(bytes); },
@@ -50,11 +51,17 @@ export function bucket({ clock = () => Date.now() } = {}) {
       uploaded.delete(key);
     },
     // The keys in their order, `limit` of them after the cursor (the index of the next key).
-    async list({ limit = 1000, cursor } = {}) {
-      const keys = [...items.keys()].sort();
+    async list({ limit = 1000, cursor, prefix = '', include = [] } = {}) {
+      const keys = [...items.keys()].filter((k) => k.startsWith(prefix)).sort();
       const start = Number(cursor ?? 0);
       const page = keys.slice(start, start + limit);
-      const objects = page.map((key) => ({ key, size: items.get(key).byteLength, uploaded: uploaded.get(key), etag: `v${versions.get(key)}` }));
+      const objects = page.map((key) => ({
+        key,
+        size: items.get(key).byteLength,
+        uploaded: uploaded.get(key),
+        etag: `v${versions.get(key)}`,
+        ...(include.includes('customMetadata') ? { customMetadata: customs.get(key) ?? {} } : {}),
+      }));
       const truncated = start + limit < keys.length;
       return { objects, truncated, cursor: truncated ? String(start + limit) : undefined };
     },
