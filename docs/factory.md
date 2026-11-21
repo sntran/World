@@ -346,7 +346,7 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 | `check_order` | Checks an `order` and does not keep it: the hash and the full order, or the errors. |
 | `edit_order` | Makes the `edits` on the order of a `hash` and keeps the new order, as `POST /orders/HASH/edits`. |
 | `place_order` | Checks an `order` and keeps it, as `POST /orders`: the hash, the full order, the URLs of its files and of its replay page, or the errors. |
-| `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for the owner. |
+| `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for me. |
 | `request_tool` | A project asks for a tool that World does not have (`docs/requests.md`, "When a tool is missing"): its `project`, what the `tool` does in general, the smallest `order` or `drawing` that needs it, and the `gap` (the error or the result). The factory checks the example and keeps the request (`requests/HASH.json`): its hash and the check. |
 | `plan_build` | The plan of the people for an `order` at a `level`, with no build: each task with its trade and its waits, the tasks of each trade, and the estimate of the triangles. |
 | `build` | Keeps an `order` and starts its construction in its `budget`, as `POST /builds`: the id of the build, the URL of the stream of its events, and the URLs of its files. |
@@ -805,7 +805,7 @@ need a deploy (the next measure on world.mkfifo.com).
 
 A construction shift builds the parts that the edge cannot build: a
 workflow of this repository (`.github/workflows/shift.yml`) on a runner
-of GitHub Actions, for the projects of the owner only. It is like the
+of GitHub Actions, for my projects only. It is like the
 custom builds of BEAM.com (an issue form, and `workflow_dispatch`). A
 shift starts on a request and ends. It is not a server that stays up,
 and it does not take the public orders.
@@ -847,7 +847,7 @@ for the new parts; it waits for the end of the shift that runs.
 | The time of a shift | 5.5 hours at most (`timeout-minutes: 330`); the shift stops 15 minutes before | `shift.yml`, `World.Shift` |
 | Shifts that the edge starts each day (UTC) | 6 (`WORLD_SHIFTS_A_DAY`) | `shift.js` |
 | A second start | not in the 20 minutes after a start (the runner, the cache and the start of the node) | `shift.js` |
-| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): GitHub can still start the workflow, so after 5 s the Worker looks at the runs of `shift.yml` (`workflow_dispatch`, since a minute before the start, with the commit in the name). A run is there, or the runs do not answer: the start stays used. No run: the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until the owner corrects the cause | `shift.js` |
+| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): GitHub can still start the workflow, so after 5 s the Worker looks at the runs of `shift.yml` (`workflow_dispatch`, since a minute before the start, with the commit in the name). A run is there, or the runs do not answer: the start stays used. No run: the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until I correct the cause | `shift.js` |
 | No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
 | A part in the queue | 6 hours at most, then an error | `World.Labour` |
 | The queue after a start of the VM | kept in the SQLite of the object; a new VM reads it in 10 s at most; a part in work waits 2.5 minutes for its node, then goes back to the queue | `World.Labour.Store`, `World.Labour.Restore` |
@@ -967,7 +967,7 @@ WORLD_STORE_TOKEN:TOKEN` (with no ID token, the node joins with it, and
 it takes each key of the store of the local Worker), and the two secrets
 as `--var`. The site has no `WORLD_STORE_TOKEN`.
 `node scripts/edit-time.mjs BASE HASH LEVEL EDITS` (with `WORLD_TOKEN`
-and `WORLD_PROJECT`, or in a job of a repository of the owner with its
+and `WORLD_PROJECT`, or in a job of a repository of my account with its
 ID token) measures the time from an edit of an order to its
 whole new level, as a project gets it: the edit, the parts list, then
 all its parts at one time.
@@ -975,7 +975,7 @@ all its parts at one time.
 #### Hải Âu in a shift at world.mkfifo.com
 
 The measure (2026-11-19, `main` at 456c42c): the edge at
-world.mkfifo.com and one shift on a runner of GitHub. The owner started
+world.mkfifo.com and one shift on a runner of GitHub. I started
 the shift by hand (`shift.yml`, 1.5 hours). Its node joined the edge 71
 s after the start: the queue of the runner, the checkout, the cache and
 the start of the node. The order is Hải Âu at mid (7 parts: the sign,
@@ -1016,7 +1016,7 @@ for this measure. A script looked at the parts with no token:
 
 What this measure does not show:
 
-- **The start of a shift by the edge on the site.** The owner started
+- **The start of a shift by the edge on the site.** I started
   the shift by hand before the requests, so each request found a shift
   that ran. The time from a request to the start of the workflow
   (`shift.js`) and to the join of its node is not measured on the site.
@@ -1235,7 +1235,7 @@ in the job (the job started 19 s after the push of its branch):
   5 minutes in the measures of the evening before).
 - One new order of 7 parts takes about 5 minutes from the request, with
   a shift that the request starts.
-- A job of a repository of the owner gets its parts with its own ID
+- A job of a repository of my account gets its parts with its own ID
   token and no secret: the project is the name of its repository.
 - The summary of the shift of the issue (run 44643134162): 7 parts, 16.4
   to 130.8 s each, all stored, no failures. The summary of the shift of
@@ -1314,7 +1314,7 @@ npx wrangler secret put WORLD_TOKEN        # 32 characters or more, for a projec
 
 - `WORLD_SHIFT_TOKEN`: the Worker starts the workflow `shift.yml` with
   it (`workflow_dispatch`, `shift.js`).
-- `WORLD_TOKEN`: one token for the projects of the owner, for a caller
+- `WORLD_TOKEN`: one token for my projects, for a caller
   that is not a job of GitHub Actions (for example the workspace of the
   builder of Vũng Tàu).
 
@@ -1323,7 +1323,7 @@ A caller proves who it is in `authorization: Bearer ...` (`callerOf` of
 
 | Caller | Token | The project |
 |---|---|---|
-| A job of a repository of the owner (GitHub Actions) | its ID token: `permissions: id-token: write`, the audience `https://world.mkfifo.com` | the name of its repository, in small letters |
+| A job of a repository of my account (GitHub Actions) | its ID token: `permissions: id-token: write`, the audience `https://world.mkfifo.com` | the name of its repository, in small letters |
 | Another place (a workspace, a computer) | `WORLD_TOKEN` | the header `x-world-project` (letters a to z, digits, `_`, `.` and `-`) |
 | The job of an issue (`shift-request.yml`) | its ID token | the header `x-world-project` (the project of the form) |
 | A shift (`shift.yml`) | its ID token, to `POST /shift/join` | (the pass of its shift for the store) |
@@ -1335,8 +1335,8 @@ has `repository` `sntran/World` and the `job_workflow_ref`
 `sntran/World/.github/workflows/shift.yml@refs/heads/main` (the whole
 text: a branch `main-test` is not `main`); the job of an issue the same
 with `shift-request.yml`. A project is a job of a
-repository whose `repository_owner_id` is the number of the account of
-the owner (`WORLD_OWNER_ID` of `wrangler.jsonc`), not only its name.
+repository whose `repository_owner_id` is the number of my account
+(`WORLD_OWNER_ID` of `wrangler.jsonc`), not only its name.
 
 **The address of the jobs.** The zone mkfifo.com gives the addresses of
 the runners of GitHub a challenge of Cloudflare (403, `cf-mitigated:
@@ -1393,7 +1393,7 @@ environment of the VM.
   `WORLD_SHIFT_TOKEN`, `WORLD_TOKEN` or `WORLD_STORE_TOKEN` (`vm_env.js`).
 - 82d433e: the object of the VM also refuses each other `/.tcp/` path,
   whatever version of the Worker sends the request.
-- On 2026-11-21 the owner made new values for the three secrets
+- On 2026-11-21 I made new values for the three secrets
   (`WORLD_SHIFT_TOKEN`, `WORLD_TOKEN` and `WORLD_STORE_TOKEN`). A test
   order started `shift.yml` with the new `WORLD_SHIFT_TOKEN`.
 
@@ -1406,7 +1406,7 @@ environment of the VM.
   branches with shift code got `main`, so their Previews have the
   correction. A Deployment URL of a Preview
   (`DEPLOYMENT-world.mkfifo.workers.dev`) keeps the code of its deploy.
-  On 2026-11-21 the owner deleted all the Previews
+  On 2026-11-21 I deleted all the Previews
   (`npx wrangler preview delete --name NAME`): each branch URL gives
   404. Two Deployment URLs still answer; both are deploys of after the
   correction (`/.tcp/4000` gives 404). A new Preview does not build:
@@ -1416,7 +1416,7 @@ environment of the VM.
   VM trusts (`x-world-shift-run`, `x-world-shift-pass`, `x-world-project`,
   `x-world-origin`) come only from the Worker.
 
-**The logs.** The owner read the Workers Logs of all requests, from
+**The logs.** I read the Workers Logs of all requests, from
 2026-11-13 06:00 UTC (the oldest that Cloudflare kept) to the
 correction. The hole was open from 2026-11-18 20:10 UTC.
 
@@ -1431,7 +1431,7 @@ correction. The hole was open from 2026-11-18 20:10 UTC.
 - So no other caller used `World.Service` with no check of the Worker,
   and no node joined through `/.tcp/4000`.
 - Each `POST /shift/join` got 200 and was a run of `shift.yml` on
-  `main`, started by the owner: the runs 2, 4, 6, 7, 8, 9, 10, 11 and
+  `main`, that I started: the runs 2, 4, 6, 7, 8, 9, 10, 11 and
   12 (the run id in `x-world-shift-run` is that of GitHub). No join got
   401 or 403.
 - The rows of `/.tcp/4370` are the nodes of the shifts. A node with a
@@ -1599,7 +1599,7 @@ part, shape and model has two kinds of source, never a memory:
 - **The sizes**: a standard, a data sheet, a drawing, or a trace of a
   drawing.
 - **The photos**: photos of the real thing (from the maker, a dealer, a
-  press kit, the owner). Before a commit, a render of the model and a
+  press kit, or my own). Before a commit, a render of the model and a
   photo from the same view are compared side by side.
 
 The sources of a part give both, with the URL of each photo. The
@@ -1684,7 +1684,7 @@ time and the memory). A comment line
 
 Anyone can watch a construction, but only its caller can change it. A
 pause, a resume, a cancel and a change need the control key of the
-construction, or `WORLD_TOKEN` (the owner), in `authorization: Bearer
+construction, or `WORLD_TOKEN` (my key), in `authorization: Bearer
 ...`. Each other caller gets 403, and the request does not go to the
 VM.
 
@@ -1747,7 +1747,7 @@ curl -N -H 'accept: text/event-stream' \
 
 ## The setup on Cloudflare
 
-The owner does this one time:
+I do this one time:
 
 1. In the dashboard of Cloudflare, Workers and Pages, make a Worker from
    the repository `sntran/World` (Workers Builds). The build command is
