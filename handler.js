@@ -60,6 +60,18 @@
 //   Worker reads and writes R2 itself, only for a key that the edge gave
 //   to that shift (the VM says so), else 403.
 //
+// The check of the bucket (docs/factory.md, "The check of the bucket"):
+//
+// - GET /bucket/list?cursor=: the objects of R2 whose upload time is in
+//   the window of the fault of the listeners (WINDOW), 1000 objects of
+//   the bucket for each request, with the cursor of the next ones.
+// - GET /bucket/object?key=KEY: the bytes of an object (any time).
+// - POST /bucket/quarantine?key=KEY: an object of the window goes to
+//   quarantine/KEY. No route of the site gives quarantine/.
+//
+// Only the job of .github/workflows/bucket-check.yml on main calls them
+// (its ID token, oidc.js), else 403.
+//
 // The Worker gives the VM the header x-world-origin (the start of the
 // URLs of an order), and x-world-project for a request of a project of
 // the owner (callerOf). When the VM stops (an order that needs more
@@ -365,6 +377,41 @@ function part(request, object, key) {
   return new Response(object.body, { headers: headers({ 'content-type': 'model/gltf-binary', ...extra }) });
 }
 
+// The window of the fault of the listeners of the VM (docs/factory.md):
+// from the first deploy with the open listeners to the delete of the
+// Previews (I said at 00:54:35 UTC that I had deleted them).
+export const WINDOW = { from: Date.parse('2026-11-18T20:10:00Z'), to: Date.parse('2026-11-21T00:55:00Z') };
+export const QUARANTINE = 'quarantine/';
+const OBJECT = /^(?!quarantine\/)(?!.*\.\.)[A-Za-z0-9_.\/-]{1,512}$/;
+const inWindow = (date) => date instanceof Date && date.getTime() >= WINDOW.from && date.getTime() <= WINDOW.to;
+const noStore = { 'cache-control': 'no-store' };
+
+// The check of the bucket: only the job of bucket-check.yml on main.
+async function bucket(request, env, check, url) {
+  const caller = await callerOf(request, env, check);
+  if (caller?.kind !== 'check') return errors(403, 'only the job of bucket-check.yml on main checks the bucket');
+  const path = url.pathname;
+  if (path === '/bucket/list' && request.method === 'GET') {
+    const page = await env.ORDERS.list({ limit: 1000, cursor: url.searchParams.get('cursor') || undefined });
+    const objects = page.objects.filter((o) => inWindow(o.uploaded)).map((o) => ({ key: o.key, size: o.size, uploaded: o.uploaded.toISOString(), etag: o.etag }));
+    return json(200, { objects, seen: page.objects.length, cursor: page.truncated ? page.cursor : null }, noStore);
+  }
+  const read = path === '/bucket/object' && request.method === 'GET';
+  if (!read && !(path === '/bucket/quarantine' && request.method === 'POST')) return errors(404, 'no such page');
+  const key = url.searchParams.get('key') ?? '';
+  if (!OBJECT.test(key)) return errors(400, 'not a key of the bucket');
+  const object = await env.ORDERS.get(key);
+  if (!object) return errors(404, 'no such key');
+  if (read) return new Response(object.body, { headers: headers({ 'content-type': 'application/octet-stream', 'x-world-uploaded': object.uploaded.toISOString(), ...noStore }) });
+  if (!inWindow(object.uploaded)) return errors(409, 'the upload time of the object is not in the window of the fault');
+  // (A copy first, only when quarantine/ does not have the key; then the delete of the object.)
+  const meta = { uploaded: object.uploaded.toISOString(), etag: object.etag };
+  const put = await env.ORDERS.put(QUARANTINE + key, await object.arrayBuffer(), { httpMetadata: object.httpMetadata, customMetadata: meta, onlyIf: { etagDoesNotMatch: '*' } });
+  if (!put) return errors(409, 'quarantine/ has this key already');
+  await env.ORDERS.delete(key);
+  return json(200, { moved: key, to: QUARANTINE + key, ...meta }, noStore);
+}
+
 // The join of a shift: a job of shift.yml (its ID token), or the token
 // of the store of a test. The VM gives its node, its cookie and its pass.
 async function join(request, env, vm, check) {
@@ -420,6 +467,7 @@ async function route(request, env, { vm, commit, later = () => {}, verify: check
   if (path.startsWith('/.tcp/')) return distribution(request, env) ? vm(request) : errors(404, 'no such page');
   if (path === '/shift/join' && request.method === 'POST') return join(request, env, vm, check);
   if (path.startsWith('/store/')) return shiftStore(request, env, vm, path.slice(7));
+  if (path.startsWith('/bucket/')) return bucket(request, env, check, url);
 
   if (path === '/blueprints' && request.method === 'GET') {
     const r = await vm(new Request('http://vm/blueprints'));

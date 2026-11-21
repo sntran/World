@@ -1,7 +1,7 @@
 // The tests of handler.js, with a fake VM and a fake R2 bucket.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { callerOf, handler, orderOf, split, storeToken, urlKey } from '../../handler.js';
+import { QUARANTINE, WINDOW, callerOf, handler, orderOf, split, storeToken, urlKey } from '../../handler.js';
 import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
 
 const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
@@ -32,6 +32,7 @@ const FAKES = {
   shift: { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/shift.yml@refs/heads/main', run_id: '1900', run_attempt: '2' },
   request: { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/shift-request.yml@refs/heads/main' },
   project: { repository: 'sntran/Vung_Tau', repository_owner_id: '973206', job_workflow_ref: 'sntran/Vung_Tau/.github/workflows/w.yml@refs/heads/main' },
+  check: { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/bucket-check.yml@refs/heads/main' },
   stranger: { repository: 'someone/Vung_Tau', repository_owner_id: '42' },
 };
 const check = async (token) => FAKES[token.split('.')[2]] ?? null;
@@ -57,6 +58,74 @@ test('the caller of a request: a job of GitHub Actions by its ID token, or WORLD
   assert.equal(await caller({ 'x-world-project': 'vung_tau' }, env), null);
   // (The real check of oidc.js: a token that is not signed by GitHub is no caller.)
   assert.equal(await callerOf(req('/p/x.glb', { headers: { authorization: 'Bearer a.b.c' } }), OWNER), null);
+});
+
+test('the check of the bucket: only the job of bucket-check.yml lists the objects of the window, reads an object, and moves an object of the window to quarantine/', async () => {
+  let now = WINDOW.from - 1;
+  const orders = bucket({ clock: () => now });
+  await orders.put('orders/before.json', '{"a":1}');
+  now = WINDOW.from;
+  await orders.put('parts/first.glb', 'glTF 1', { httpMetadata: { contentType: 'model/gltf-binary' } });
+  now = WINDOW.to;
+  await orders.put('orders/last.json', '{"b":2}');
+  now = WINDOW.to + 1;
+  await orders.put('parts/after.glb', 'glTF 2');
+  const v = vm();
+  const call = (path, method = 'GET', who = 'check') => handler(req(path, { method, headers: jwt(who) }), { ORDERS: orders, ...OWNER }, { vm: v, commit: 'c1', verify: check });
+
+  const listed = await call('/bucket/list');
+  assert.equal(listed.status, 200);
+  assert.equal(listed.headers.get('cache-control'), 'no-store');
+  const page = await listed.json();
+  assert.deepEqual(page.objects.map((o) => o.key), ['orders/last.json', 'parts/first.glb']);
+  assert.deepEqual(page.objects[1], { key: 'parts/first.glb', size: 6, uploaded: new Date(WINDOW.from).toISOString(), etag: 'v1' });
+  assert.equal(page.seen, 4);
+  assert.equal(page.cursor, null);
+
+  // An object of any time, with its upload time.
+  const object = await call('/bucket/object?key=orders/before.json');
+  assert.equal(await object.text(), '{"a":1}');
+  assert.equal(object.headers.get('x-world-uploaded'), new Date(WINDOW.from - 1).toISOString());
+  assert.equal((await call('/bucket/object?key=orders/none.json')).status, 404);
+  for (const key of ['', '../x', 'a/../b', 'quarantine/parts/first.glb', 'a b', 'x'.repeat(513)]) {
+    assert.equal((await call(`/bucket/object?key=${encodeURIComponent(key)}`)).status, 400, key);
+  }
+
+  // The move: a copy with its type and its upload time, then the delete; only an object of the window, one time.
+  const moved = await call('/bucket/quarantine?key=parts/first.glb', 'POST');
+  assert.equal(moved.status, 200);
+  assert.deepEqual(await moved.json(), { moved: 'parts/first.glb', to: `${QUARANTINE}parts/first.glb`, uploaded: new Date(WINDOW.from).toISOString(), etag: 'v1' });
+  assert.equal(orders.items.has('parts/first.glb'), false);
+  assert.equal(new TextDecoder().decode(orders.items.get('quarantine/parts/first.glb')), 'glTF 1');
+  assert.equal(orders.types.get('quarantine/parts/first.glb'), 'model/gltf-binary');
+  assert.equal(orders.customs.get('quarantine/parts/first.glb').uploaded, new Date(WINDOW.from).toISOString());
+  assert.equal((await call('/bucket/quarantine?key=parts/first.glb', 'POST')).status, 404);
+  assert.equal((await call('/bucket/quarantine?key=orders/before.json', 'POST')).status, 409);
+  assert.equal((await call('/bucket/quarantine?key=parts/after.glb', 'POST')).status, 409);
+  await orders.put('quarantine/orders/last.json', 'x');
+  assert.equal((await call('/bucket/quarantine?key=orders/last.json', 'POST')).status, 409);
+  assert.equal(orders.items.has('orders/last.json'), true);
+  // (The site does not give quarantine/.)
+  assert.equal((await handler(req('/p/first.glb'), { ORDERS: orders }, { vm: v, commit: 'c1' })).status, 404);
+
+  // Another method or path, and each other caller.
+  assert.equal((await call('/bucket/list', 'POST')).status, 404);
+  assert.equal((await call('/bucket/other?key=parts/after.glb')).status, 404);
+  for (const who of ['shift', 'request', 'project', 'stranger', 'nobody']) assert.equal((await call('/bucket/list', 'GET', who)).status, 403, who);
+  assert.equal((await handler(req('/bucket/list'), { ORDERS: orders, ...OWNER }, { vm: v, commit: 'c1', verify: check })).status, 403);
+  assert.deepEqual(v.calls, []);
+});
+
+test('the check of the bucket reads the bucket in pages of 1000 objects, with the cursor of the next page', async () => {
+  const orders = bucket({ clock: () => WINDOW.from + 1 });
+  for (let i = 0; i < 1001; i++) await orders.put(`parts/${String(i).padStart(4, '0')}.glb`, 'g');
+  const call = (path) => handler(req(path, { headers: jwt('check') }), { ORDERS: orders, ...OWNER }, { vm: vm(), commit: 'c1', verify: check });
+  const first = await (await call('/bucket/list')).json();
+  assert.equal(first.objects.length, 1000);
+  assert.equal(first.cursor, '1000');
+  const next = await (await call(`/bucket/list?cursor=${first.cursor}`)).json();
+  assert.deepEqual(next.objects.map((o) => o.key), ['parts/1000.glb']);
+  assert.equal(next.cursor, null);
 });
 
 test('the join of a shift: the ID token of shift.yml, or the token of the store of a test; another caller gets 401', async () => {

@@ -57,6 +57,7 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
 | `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge builds it from its recipe and keeps it, or, for a part that does not fit the edge, a construction shift builds it ("Construction shifts"): a project (a request with its token) that asks for all the parts of a list at one time gets them built at the same time. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. A part of a public order that does not fit the edge gives 422. |
+| `GET /bucket/list`, `GET /bucket/object?key=KEY`, `POST /bucket/quarantine?key=KEY` | The check of the bucket after the fault of the listeners (below, "The check of the bucket"): only the job of `bucket-check.yml` on `main`, else 403. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. The caller that opens the construction gets its control key: `control` in the JSON, or the first event `control` of the stream (below, "The control key"). |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
 | `/builds/ID/events` | The events of one build as a stream (`text/event-stream`), from `Last-Event-ID` or `?after=N`. |
@@ -1444,6 +1445,49 @@ correction. The hole was open from 2026-11-18 20:10 UTC.
   `x-world-shift-pass` of `/shift/allowed`, and the Workers Logs keep
   that header. A pass works only while its node is in the shift, and
   for 10 minutes after (6 hours at most).
+
+### The check of the bucket
+
+From 2026-11-18 20:10 UTC to the delete of the Previews (I said at
+00:54:35 UTC on 2026-11-21 that I had deleted them), an old Preview
+could write to the bucket of the site, and no log of a Preview exists.
+A part is used again by its key, so a part written in that time can go
+to each project that asks for the same key. This check finds each
+object of that window, with no token of Cloudflare:
+
+- The workflow `.github/workflows/bucket-check.yml` (`workflow_dispatch`,
+  on `main` only) asks GitHub for its ID token. The routes `/bucket/` of
+  the Worker (`handler.js`) take only that token: `oidc.js` compares the
+  whole `job_workflow_ref`
+  (`sntran/World/.github/workflows/bucket-check.yml@refs/heads/main`),
+  as for `shift.yml`. Each other caller gets 403.
+- `GET /bucket/list` gives the objects of the bucket `world` (the R2
+  binding of the Worker) whose upload time is in the window
+  (`WINDOW` of `handler.js`). `GET /bucket/object?key=KEY` gives the
+  bytes of an object of any time. `POST /bucket/quarantine?key=KEY`
+  moves an object of the window to `quarantine/KEY`, with its type and
+  its upload time. No route of the site gives `quarantine/`. Nothing is
+  deleted.
+- `scripts/bucket-check.mjs fetch DIR` (in the job) gets each object of
+  the window, and each order, recipe and blueprint that it names. The
+  summary of the job gives the count of each kind. The artifact
+  `bucket-list` has the keys, the sizes, the upload times and the ETags,
+  but no content.
+
+The check of each kind:
+
+- World builds a part (`parts/KEY.glb`), the recipe of a part
+  (`parts/KEY.json`) and a file of an order at a level
+  (`builds/COMMIT/HASH.LEVEL.FILE`). The check builds each one again
+  from its recipe at the same commit and compares the bytes: World
+  builds give the same bytes each time.
+- World does not build an order, a blueprint in data, an entry of the
+  history of the edits, the hash of the order of a URL (`urls/`), the
+  hash of a control key (`controls/`) or the state of the shifts. For
+  each one, the check finds the request of the site that wrote it in the
+  Workers Logs. An object with no such request came from a Preview.
+- Each object that does not agree, and each object with no request,
+  goes to `quarantine/`.
 
 ### The guard and the memory of WebAssembly
 
