@@ -140,6 +140,33 @@ defmodule World.CensusTest do
     def memory(_kind), do: :erlang.nif_error(:not_loaded)
   end
 
+  test "the report of the memory of the VM: WebAssembly, the processes, the binaries, the tables and the biggest of them" do
+    # (A list on the heap of the process, and a binary out of it.)
+    {:ok, holder} = Agent.start_link(fn -> {Enum.to_list(1..300_000), :binary.copy("x", 2_000_000)} end)
+    Process.register(holder, :memory_report_test)
+    table = :ets.new(:memory_report_table, [:named_table, :public])
+    :ets.insert(table, for(i <- 1..10_000, do: {i, i}))
+
+    report = World.memory_report(Host, 50)
+    assert report["wasm"] == %{"size" => 120_000_000, "used" => 70_000_000}
+    assert report["processes"]["count"] > 10 and report["processes"]["bytes"] > 0
+    assert report["binaries"] >= 2_000_000 and report["persistent_terms"] > 0
+    assert report["ets"] >= Enum.find(report["tables"], &(&1["name"] == ":memory_report_table"))["bytes"]
+    assert %{"size" => 10_000, "bytes" => bytes} = Enum.find(report["tables"], &(&1["name"] == ":memory_report_table"))
+    assert bytes > 100_000
+    assert Enum.any?(report["top"], &(&1["name"] == ":memory_report_test"))
+    # (A process with no registered name has the name of the function that started it.)
+    assert Enum.any?(report["top"], &(&1["name"] =~ ~r/^\{[A-Za-z.:']+, :[a-z_?!]+, \d+\}$/))
+    assert Enum.map(report["top"], & &1["bytes"]) == Enum.sort(Enum.map(report["top"], & &1["bytes"]), :desc)
+    assert length(World.memory_report(Host, 2)["top"]) == 2
+
+    # Not in WebAssembly; and in the census of the node.
+    assert World.memory_report()["wasm"] == nil
+    assert %{"memory" => %{"processes" => _, "top" => [_ | _]}} = World.census()
+    :ets.delete(table)
+    Agent.stop(holder)
+  end
+
   test "the memory of a VM in WebAssembly: the size of its memory and the part that it uses" do
     assert World.wasm_memory() == nil
     assert World.wasm_memory(Host) == {120_000_000, 70_000_000}
