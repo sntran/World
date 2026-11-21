@@ -194,10 +194,10 @@ defmodule World.Drawing do
   defp positive(v, path),
     do: if(is_number(v) and v > 0 and v <= @size, do: [], else: [{path, "must be a length from 0 to #{@size} m"}])
 
-  defp point(v, path) do
-    if match?([_, _, _], v) and Enum.all?(v, &(is_number(&1) and abs(&1) <= @size)),
+  defp point(v, path, limit \\ @size) do
+    if match?([_, _, _], v) and Enum.all?(v, &(is_number(&1) and abs(&1) <= limit)),
       do: [],
-      else: [{path, "must be a point [x, y, z] in meters, at most #{@size} m"}]
+      else: [{path, "must be a point [x, y, z] in meters, at most #{limit} m"}]
   end
 
   defp direction(v, path) do
@@ -322,9 +322,9 @@ defmodule World.Drawing do
 
   defp ports(_v, path), do: [{path, "must be an object"}]
 
-  defp port(v, path) do
+  defp port(v, path, limit \\ @size) do
     object(v, path, ~w(at axis up), fn port ->
-      required(port, "at", path, &point/2) ++
+      required(port, "at", path, &point(&1, &2, limit)) ++
         optional(port, "axis", path, &direction/2) ++ optional(port, "up", path, &direction/2)
     end)
   end
@@ -651,7 +651,10 @@ defmodule World.Drawing do
 
     case Map.get(node, key) do
       nil -> []
-      %{} = port -> port(port, p)
+      # The place of a node has the limit of the points of an edit, not of
+      # the points of a part: a part can be far from the middle of a large
+      # model (a house at the stern of a ship of 300 m).
+      %{} = port -> port(port, p, World.Skills.Sculpt.size())
       name when is_binary(name) -> if has_port?(item, name), do: [], else: [{p, "is not a port of the #{kind(item)}"}]
       _ -> [{p, "must be the name of a port, or a port"}]
     end
@@ -1052,12 +1055,20 @@ defmodule World.Drawing do
   defp ref(name) when is_binary(name), do: name
   defp ref(%{} = p), do: new_port("port", p)
 
-  defp new_port(name, p) do
+  # A port in data. With no `up` (or an `up` along its axis), its `up` is
+  # the `up` of the origin port, y to the front, or z when the axis is along
+  # y, as for an edit: so a node on a port with the same axis as its own
+  # port gets no turn.
+  # (The frame of a shape in data keeps the `up` of `World.Port.new/4`.)
+  defp new_port(name, p, default \\ &default_up/1) do
     axis = List.to_tuple(Map.get(p, "axis", [0, 0, 1]))
     up = p["up"] && List.to_tuple(p["up"])
-    up = if up && Vec.len(Vec.cross(Vec.float(up), Vec.float(axis))) > 1.0e-6, do: up
+    up = if up && Vec.len(Vec.cross(Vec.float(up), Vec.float(axis))) > 1.0e-6, do: up, else: default.(axis)
     Port.new(name, List.to_tuple(p["at"]), axis, up)
   end
+
+  defp default_up(axis),
+    do: if(Vec.len(Vec.cross(Vec.norm(Vec.float(axis)), {0.0, 1.0, 0.0})) < 1.0e-6, do: {0, 0, 1}, else: {0, 1, 0})
 
   defp part(_name, %{"standard" => s}), do: standard_part(s)
 
@@ -1165,7 +1176,7 @@ defmodule World.Drawing do
   # `up` (any direction at a right angle to the axis by default).
   defp frame(s) do
     if Map.has_key?(s, "at") or Map.has_key?(s, "axis"),
-      do: Port.frame(new_port("shape", Map.put_new(s, "at", [0, 0, 0]))),
+      do: Port.frame(new_port("shape", Map.put_new(s, "at", [0, 0, 0]), fn _ -> nil end)),
       else: Frame.identity()
   end
 
