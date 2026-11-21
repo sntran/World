@@ -40,8 +40,43 @@ defmodule World.Labour.Store do
   @doc "The part waits again, at its place: `:ok` or `:error`."
   def back(key), do: ok(["back", key])
 
-  @doc "The part is built, or failed: `:ok` or `:error`."
-  def done(key), do: ok(["done", key])
+  @doc "The part is built, or failed (its projects go too): `:ok` or `:error`."
+  def done(key) do
+    if on?(), do: ok(["done", key]), else: memory(&Map.delete(&1, key))
+  end
+
+  @doc """
+  A project asked for the part (a name of `x-world-project`): `:ok` or
+  `:error`. With no program, the projects are in the memory of the VM
+  (`World.Labour.Projects`).
+  """
+  def ask(key, project) do
+    if on?() do
+      ok(["ask", key, project])
+    else
+      memory(&Map.update(&1, key, [project], fn list -> if project in list, do: list, else: list ++ [project] end))
+    end
+  end
+
+  @doc "The projects that asked for the part, in the order of their first request ([] when the store fails)."
+  def projects(key) do
+    cond do
+      not on?() ->
+        if Process.whereis(World.Labour.Projects), do: Agent.get(World.Labour.Projects, &Map.get(&1, key, [])), else: []
+
+      match?({:ok, _}, result = run(["projects", key])) ->
+        {:ok, text} = result
+        String.split(text, "\n", trim: true)
+
+      true ->
+        []
+    end
+  end
+
+  defp memory(fun) do
+    if Process.whereis(World.Labour.Projects), do: Agent.update(World.Labour.Projects, fun)
+    :ok
+  end
 
   @doc """
   Each part in the store, in the order of the queue: `{:ok, [%{key,

@@ -36,6 +36,8 @@
 // - GET /o/HASH.elements.json (and .mid.elements.json, .far.elements.json):
 //   the parts list of the model at a level (World.Elements): each part
 //   with its key and its place. The factory does not join the parts.
+// - GET /census: the census of the VM, with the starts of the shifts of
+//   the day for all the projects (shift.js, in R2).
 // - GET /p/KEY.glb: a part by its key, from R2 (parts/KEY.glb) with no
 //   VM, else the VM builds it from its recipe and keeps it in R2 (202
 //   with retry-after while a large part is in work).
@@ -80,7 +82,7 @@
 
 import { KEY, type } from './order_store.js';
 import { AUDIENCE, verify, who } from './oidc.js';
-import { startShift } from './shift.js';
+import { STATE, startShift } from './shift.js';
 
 const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
@@ -412,6 +414,21 @@ async function bucket(request, env, check, url) {
   return json(200, { moved: key, to: QUARANTINE + key, ...meta }, noStore);
 }
 
+// GET /census: the census of the VM, and the starts of the shifts of the
+// day (UTC) for all the projects (shift.js): { day, starts, limit, last }.
+// The state of the starts is in R2, not in the VM.
+async function census(request, env, vm, origin, path) {
+  const r = await ask(request, vm, origin, path);
+  if (r.status !== 200 || !(r.headers.get('content-type') ?? '').startsWith('application/json')) return answer(r, path);
+  const body = await r.json();
+  const object = await env.ORDERS.get(STATE);
+  const state = object ? await object.json() : { day: '', count: 0, last: 0 };
+  const day = new Date().toISOString().slice(0, 10);
+  const starts = state.day === day ? state.count : 0;
+  body.shifts = { day, starts, limit: Number(env.WORLD_SHIFTS_A_DAY ?? '6'), last: state.last ? new Date(state.last).toISOString() : null };
+  return json(200, body, { 'cache-control': 'no-store' });
+}
+
 // The join of a shift: a job of shift.yml (its ID token), or the token
 // of the store of a test. The VM gives its node, its cookie and its pass.
 async function join(request, env, vm, check) {
@@ -526,7 +543,9 @@ async function route(request, env, { vm, commit, later = () => {}, verify: check
     return built ? part(request, built, key) : json(202, { building: key }, { 'retry-after': '1' });
   }
 
-  if (path === '/events' || path === '/census' || path === '/places' || path.startsWith('/places/') || path.startsWith('/builds/')) return forward(request, vm, url.origin, path + url.search);
+  if (path === '/census') return census(request, env, vm, url.origin, path + url.search);
+
+  if (path === '/events' || path === '/places' || path.startsWith('/places/') || path.startsWith('/builds/')) return forward(request, vm, url.origin, path + url.search);
 
   if (path.startsWith('/m/')) {
     const parts = split(path.slice(3));

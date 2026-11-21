@@ -43,9 +43,9 @@ defmodule World.ShiftTest do
 
     assert Shift.left() in 3_500_000..3_600_000
 
-    assert Shift.work(key, fn -> :stored end) == :stored
+    assert Shift.work(key, fn -> :stored end, ["vung_tau", "tre"]) == :stored
 
-    assert Shift.work("f" <> String.duplicate("0", 31), fn -> {:error, [%{"message" => "no memory"}]} end) ==
+    assert Shift.work("f" <> String.duplicate("0", 31), fn -> {:error, [%{"message" => "no memory"}]} end, ["tre"]) ==
              {:error, [%{"message" => "no memory"}]}
 
     assert Shift.work("e" <> String.duplicate("0", 31), fn -> :none end) == :none
@@ -56,7 +56,17 @@ defmodule World.ShiftTest do
     assert_receive {:DOWN, ^ref, :process, _, :normal}
     text = File.read!(summary)
     assert text =~ "4 parts in 0 minutes. The end: no work."
-    assert text =~ "| leader (far) | `#{key}` |" and text =~ "| stored |"
+    assert text =~ "| vung_tau, tre | leader (far) | `#{key}` |" and text =~ "| stored |"
+    # The parts of each project: a part of two projects counts for each, and a key that a node
+    # makes two times counts two times, with its projects of before; a part of no project is "-".
+    assert text =~ ~r/\| vung_tau \| 2 \| 1 \| \d+\.\d \|/
+    assert text =~ ~r/\| tre \| 3 \| 1 \| \d+\.\d \|/
+    assert text =~ ~r/\| - \| 1 \| 0 \| \d+\.\d \|/
+    assert length(Regex.scan(~r/\| vung_tau, tre \| leader \(far\)/, text)) == 2
+
+    assert text =~
+             ~r/### The parts of each project\n\n\| Project \| Parts \| Stored \| Time \(s\) \|\n\|---\|---\|---\|---\|\n\| vung_tau /
+
     assert text =~ "error: no memory" and text =~ "no recipe" and text =~ "raised: a fault"
     assert text =~ "| ? |"
     assert Shift.left() == nil
@@ -85,7 +95,7 @@ defmodule World.ShiftTest do
     assert_receive {:stop, 0}, 2_000
     text = File.read!(summary)
     assert text =~ "0 parts" and text =~ "The end: the end of the time of the shift."
-    assert text =~ "stopped at the end; it goes back to the queue"
+    assert text =~ "(`a#{String.duplicate("0", 31)}`, -): stopped at the end; it goes back to the queue"
     assert_receive {:DOWN, ^ref, :process, _, :normal}
 
     # A shift with no summary file, and no part: it ends too.

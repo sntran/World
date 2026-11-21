@@ -949,9 +949,21 @@ parts of the second.
 the next part between parts. It goes home early after 60 minutes with
 no work. It stops 15 minutes before the end of the time of its job, and
 its parts that are not done go back to the queue of the edge. It writes
-a summary in the summary of the job: each part, its time, the peak
-memory of the VM while it built, its result, and the failures and the
-stops.
+a summary in the summary of the job: the parts of each project (their
+count, how many are stored, and their time; a part that two projects
+asked for counts for each), then each part with its projects, its time,
+the peak memory of the VM while it built, and its result, and the
+failures and the stops.
+
+**Several projects in one shift.** The parts of all the projects go to
+the one shift, in the order of their first request: a part keeps its
+place in the queue, whatever project asks for it again. The edge keeps
+the projects that asked for each part that waits (`World.Labour.asked/2`,
+the header `x-world-project`), with the queue in the SQLite of the
+Durable Object, and gives them to the node with the part.
+`GET /census` gives the starts of the shifts of the day for all the
+projects (`shifts`: the day, the starts, the limit and the time of the
+last start).
 
 **SSH into a shift**, as `remote-ssh.yml` of BEAM.com: the input
 `ssh_key` of `shift.yml` (one line `ssh-ed25519 ...`) starts the SSH

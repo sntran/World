@@ -11,7 +11,10 @@
 //   (a part asked again keeps its place). The result is that ticket.
 // - give KEY NODE: the part is in work on the node NODE. "ok".
 // - back KEY: the part waits again, at its place. "ok".
-// - done KEY: the part is built, or failed. "ok".
+// - done KEY: the part is built, or failed (also its projects). "ok".
+// - ask KEY PROJECT: a project asked for the part. "ok".
+// - projects KEY: the projects that asked for the part, one on each line,
+//   in the order of their first request.
 // - all: each part, one on each line in the order of the queue: "KEY
 //   TICKET NODE", with "-" for a part that waits.
 //
@@ -24,6 +27,7 @@ const CHECKS = {
   key: /^[0-9a-f]{32}$/,
   ticket: /^\d{1,19}$/,
   node: /^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$/,
+  project: /^[a-z0-9_.-]{1,100}$/,
 };
 
 const checked = (name, value) => {
@@ -36,6 +40,7 @@ const checked = (name, value) => {
 // text so that no digit goes (SQLite and JavaScript numbers have 53 bits).
 export const labourTable = (sql) => {
   sql.exec('CREATE TABLE IF NOT EXISTS labour_parts (key TEXT PRIMARY KEY, ticket TEXT NOT NULL, node TEXT)');
+  sql.exec('CREATE TABLE IF NOT EXISTS labour_projects (key TEXT NOT NULL, project TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (key, project))');
   return {
     wait(key, ticket) {
       sql.exec('INSERT OR IGNORE INTO labour_parts (key, ticket, node) VALUES (?, ?, NULL)', key, ticket);
@@ -49,6 +54,13 @@ export const labourTable = (sql) => {
     },
     done(key) {
       sql.exec('DELETE FROM labour_parts WHERE key = ?', key);
+      sql.exec('DELETE FROM labour_projects WHERE key = ?', key);
+    },
+    ask(key, project) {
+      sql.exec('INSERT OR IGNORE INTO labour_projects (key, project, at) VALUES (?, ?, (SELECT count(*) FROM labour_projects))', key, project);
+    },
+    projects(key) {
+      return sql.exec('SELECT project FROM labour_projects WHERE key = ? ORDER BY at', key).toArray().map((r) => r.project);
     },
     all() {
       return sql.exec('SELECT key, ticket, node FROM labour_parts ORDER BY length(ticket), ticket, key').toArray();
@@ -68,6 +80,13 @@ export const labourStore = (table) => ({
     if ((op === 'back' || op === 'done') && args.length === 1) {
       await table[op](checked('key', args[0]));
       return text('ok\n');
+    }
+    if (op === 'ask' && args.length === 2) {
+      await table.ask(checked('key', args[0]), checked('project', args[1]));
+      return text('ok\n');
+    }
+    if (op === 'projects' && args.length === 1) {
+      return text((await table.projects(checked('key', args[0]))).map((p) => `${p}\n`).join(''));
     }
     if (op === 'all' && args.length === 0) {
       return text((await table.all()).map((r) => `${r.key} ${r.ticket} ${r.node ?? '-'}\n`).join(''));

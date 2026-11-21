@@ -87,17 +87,18 @@ defmodule World.Shift do
   end
 
   @doc """
-  The value of `fun`, the make of the part `key` (`World.Labour.make/1`),
+  The value of `fun`, the make of the part `key` (`World.Labour.make/2`),
   in the record of the shift: its time, the peak memory of the VM while
-  it ran, and its result. With no shift, only `fun`.
+  it ran, its result, and the projects that asked for it (`projects`,
+  from the edge). With no shift, only `fun`.
   """
-  def work(key, fun) do
+  def work(key, fun, projects \\ []) do
     case Process.whereis(__MODULE__) do
       nil ->
         fun.()
 
       shift ->
-        GenServer.cast(shift, {:begin, key})
+        GenServer.cast(shift, {:begin, key, projects})
         peak = sampler()
         start = System.monotonic_time(:millisecond)
 
@@ -137,12 +138,17 @@ defmodule World.Shift do
        start: System.system_time(:millisecond),
        last: System.monotonic_time(:millisecond),
        busy: %{},
-       done: []
+       done: [],
+       projects: %{}
      }}
   end
 
   @impl true
-  def handle_cast({:begin, key}, s), do: {:noreply, %{s | busy: Map.put(s.busy, key, true)}}
+  # (The projects of a key add up: a key that the edge gives again can come with no project.)
+  def handle_cast({:begin, key, projects}, s) do
+    projects = Map.update(s.projects, key, projects, &Enum.uniq(&1 ++ projects))
+    {:noreply, %{s | busy: Map.put(s.busy, key, true), projects: projects}}
+  end
 
   def handle_cast({:done, key, ms, peak, result}, s) do
     {:noreply,
@@ -188,13 +194,34 @@ defmodule World.Shift do
 
   @doc false
   def summary(s, why) do
+    # (The projects that asked for a part; "-" for none.)
+    asked = fn key ->
+      case Map.get(s.projects, key, []) do
+        [] -> ["-"]
+        list -> list
+      end
+    end
+
+    of = &Enum.join(asked.(&1), ", ")
+    done = Enum.reverse(s.done)
+
     rows =
-      for {key, ms, peak, result} <- Enum.reverse(s.done) do
-        "| #{label(key)} | `#{key}` | #{Float.round(ms / 1000, 1)} | #{div(peak, 1_000_000)} | #{outcome(result)} |"
+      for {key, ms, peak, result} <- done do
+        "| #{of.(key)} | #{label(key)} | `#{key}` | #{Float.round(ms / 1000, 1)} | #{div(peak, 1_000_000)} | #{outcome(result)} |"
+      end
+
+    # (A part that two projects asked for counts for each of them.)
+    projects =
+      for project <- done |> Enum.flat_map(fn {key, _, _, _} -> asked.(key) end) |> Enum.uniq() do
+        mine = for {key, _, _, _} = d <- done, project in asked.(key), do: d
+        stored = Enum.count(mine, fn {_, _, _, result} -> outcome(result) == "stored" end)
+        seconds = Float.round(Enum.sum(for {_, ms, _, _} <- mine, do: ms) / 1000, 1)
+        "| #{project} | #{length(mine)} | #{stored} | #{seconds} |"
       end
 
     stopped =
-      for key <- Map.keys(s.busy), do: "- #{label(key)} (`#{key}`): stopped at the end; it goes back to the queue"
+      for key <- Map.keys(s.busy),
+          do: "- #{label(key)} (`#{key}`, #{of.(key)}): stopped at the end; it goes back to the queue"
 
     failed =
       for {key, _, _, result} <- Enum.reverse(s.done),
@@ -209,9 +236,19 @@ defmodule World.Shift do
         "",
         "#{length(s.done)} parts in #{minutes} minutes. The end: #{why}.",
         "",
-        "| Part | Key | Time (s) | Peak memory of the VM (MB) | Result |",
-        "|---|---|---|---|---|"
+        "### The parts of each project",
+        "",
+        "| Project | Parts | Stored | Time (s) |",
+        "|---|---|---|---|"
       ] ++
+        projects ++
+        [
+          "",
+          "### Each part, in the order of its end",
+          "",
+          "| Project | Part | Key | Time (s) | Peak memory of the VM (MB) | Result |",
+          "|---|---|---|---|---|---|"
+        ] ++
         rows ++
         ["", "### Failures and stops", ""] ++ if(failed ++ stopped == [], do: ["None."], else: failed ++ stopped),
       "\n"

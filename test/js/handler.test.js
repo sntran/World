@@ -500,10 +500,10 @@ test('the constructions and the streams go to the VM, with Last-Event-ID, and co
   const events = await handler(req('/events?after=4', { headers: { 'last-event-id': '7' } }), env, { vm: v, commit: 'c1' });
   assert.equal(events.status, 200);
   assert.equal(v.last.headers.get('last-event-id'), '7');
-  for (const path of ['/census', '/places', '/places/nui_nho/ground.glb', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']) {
+  for (const path of ['/census?x=1', '/places', '/places/nui_nho/ground.glb', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']) {
     await handler(req(path), env, { vm: v, commit: 'c1' });
   }
-  assert.deepEqual(v.calls.slice(-8), ['/builds', '/events?after=4', '/census', '/places', '/places/nui_nho/ground.glb', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']);
+  assert.deepEqual(v.calls.slice(-8), ['/builds', '/events?after=4', '/census?x=1', '/places', '/places/nui_nho/ground.glb', '/builds/abc-far', '/builds/abc-far/events', '/builds/abc-far/elements/0.glb']);
   assert.equal((await handler(req('/builds', { method: 'PUT' }), env, { vm: v, commit: 'c1' })).status, 405);
   assert.equal((await handler(req('/builds/abc-far/stop', { method: 'POST' }), env, { vm: v, commit: 'c1' })).status, 405);
 });
@@ -623,6 +623,27 @@ test('a pause, a resume, a cancel and a change need the control key of the const
     assert.ok(!text.includes(a) && !text.includes(b) && !text.includes(token), r.path);
     assert.ok(!r.headers.some(([name]) => name === 'authorization'), r.path);
   }
+});
+
+test('GET /census gives the census of the VM and the starts of the shifts of the day for all the projects', async () => {
+  const orders = bucket();
+  const env = { ORDERS: orders, WORLD_SHIFTS_A_DAY: '6' };
+  const v = async () => Response.json({ free: { mason: 2 } });
+  const day = new Date().toISOString().slice(0, 10);
+  let r = await handler(req('/census'), env, { vm: v, commit: 'c1' });
+  assert.equal(r.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await r.json(), { free: { mason: 2 }, shifts: { day, starts: 0, limit: 6, last: null } });
+  const last = Date.parse(`${day}T01:02:03Z`);
+  await orders.put('shifts/state.json', JSON.stringify({ day, count: 3, last }));
+  r = await handler(req('/census'), { ORDERS: orders }, { vm: v, commit: 'c1' });
+  assert.deepEqual((await r.json()).shifts, { day, starts: 3, limit: 6, last: new Date(last).toISOString() });
+  // (The starts of another day are not the starts of today.)
+  await orders.put('shifts/state.json', JSON.stringify({ day: '2000-01-01', count: 5, last: 1 }));
+  assert.equal((await (await handler(req('/census'), env, { vm: v, commit: 'c1' })).json()).shifts.starts, 0);
+  // An answer of the VM that is not JSON, or not 200, goes as it is.
+  r = await handler(req('/census'), env, { vm: async () => new Response('down', { status: 503, headers: { 'content-type': 'text/plain' } }), commit: 'c1' });
+  assert.equal(r.status, 503);
+  assert.equal(await r.text(), 'down');
 });
 
 test('the other routes', async () => {

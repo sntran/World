@@ -45,6 +45,23 @@ test('wait keeps the first ticket of a key; give, back and done; all in the orde
   assert.equal(await run('all'), `${D} ${BIG} -\n`);
 });
 
+test('ask keeps the projects of a part in the order of their first request; done drops them', async () => {
+  const store = labourStore(labourTable(sql()));
+  const run = async (...argv) => text(await store.port(null, { argv }));
+  assert.equal(await run('wait', C, '1'), '1\n');
+  assert.equal(await run('projects', C), '');
+  assert.equal(await run('ask', C, 'vung_tau'), 'ok\n');
+  assert.equal(await run('ask', D, 'tre'), 'ok\n');
+  assert.equal(await run('ask', C, 'humans-must-die'), 'ok\n');
+  assert.equal(await run('ask', C, 'vung_tau'), 'ok\n');
+  assert.equal(await run('projects', C), 'vung_tau\nhumans-must-die\n');
+  assert.equal(await run('done', C), 'ok\n');
+  assert.equal(await run('projects', C), '');
+  assert.equal(await run('projects', D), 'tre\n');
+  await assert.rejects(store.port(null, { argv: ['ask', C, 'Vung Tau'] }), /not a project/);
+  await assert.rejects(store.port(null, { argv: ['projects', 'x'] }), /not a key/);
+});
+
 test('a wrong operation, key, ticket or node is an error', async () => {
   const store = labourStore(labourTable(sql()));
   await assert.rejects(store.port(null, { argv: ['clear'] }), /not an operation of the queue: clear/);
@@ -78,6 +95,16 @@ test('the program keeps the queue in a file; with no file it ends with the exit 
     run('wait', 'b'.repeat(32), '21');
     assert.equal(run('all').stdout, `${D} 20 -\n${'b'.repeat(32)} 21 -\n${C} 21 -\n`);
     assert.equal(run('wait', 'x', '1').status, 1);
+    // The projects of a part, also in the file; all gives no row of them, and done drops them.
+    assert.equal(run('ask', C, 'vung_tau').stdout, 'ok\n');
+    assert.equal(run('ask', C, 'tre').stdout, 'ok\n');
+    assert.equal(run('ask', C, 'vung_tau').stdout, 'ok\n');
+    assert.equal(run('projects', C).stdout, 'vung_tau\ntre\n');
+    assert.equal(run('projects', D).stdout, '');
+    assert.equal(run('all').stdout, `${D} 20 -\n${'b'.repeat(32)} 21 -\n${C} 21 -\n`);
+    run('done', C);
+    assert.equal(run('projects', C).stdout, '');
+    run('wait', C, '21');
     // Runs at one time take turns: no change goes.
     const many = Array.from({ length: 12 }, (_, i) => i.toString(16).padStart(32, 'f'));
     return Promise.all(many.map((key, i) => new Promise((done) => {

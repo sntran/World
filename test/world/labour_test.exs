@@ -34,9 +34,16 @@ defmodule World.LabourTest do
 
   # A part at near that is not in the store: a person of a group of `n`
   # (the key of a part has the hash of its order). A group has 12 people
-  # at most, so `n` above 12 is a group of `n - 12` with another seed.
+  # at most, so `n` above 12 is a group of `n - 12` with another seed, and
+  # above 24 a group of `n - 24` with a third seed.
   defp fresh(n) do
-    options = if n > 12, do: %{"count" => n - 12, "seed" => 2}, else: %{"count" => n}
+    options =
+      cond do
+        n > 24 -> %{"count" => n - 24, "seed" => 3}
+        n > 12 -> %{"count" => n - 12, "seed" => 2}
+        true -> %{"count" => n}
+      end
+
     [{key, recipe} | _] = parts("near", %{@group | "options" => options})
     refute Store.has?(key)
     {key, recipe}
@@ -381,6 +388,74 @@ defmodule World.LabourTest do
     _ = World.Labour.Store.wait(key, 2)
     assert Labour.restore(nodes: fn -> [] end) == :ok
     wait_for(fn -> World.Labour.Store.all() == {:ok, []} end)
+  end
+
+  @tag :tmp_dir
+  test "the parts of three projects in one shift keep the order of their requests, and the summary gives the projects of each part",
+       %{tmp_dir: dir} do
+    use_store()
+    me = self()
+    summary = Path.join(dir, "summary.md")
+
+    # Three projects ask, one after the other; the second part is asked again by the first project.
+    asks = [{25, ["vung_tau"]}, {26, ["tre", "vung_tau"]}, {27, ["humans-must-die"]}]
+    parts = for {n, projects} <- asks, do: {fresh(n), projects}
+    keys = for {{key, _}, _} <- parts, do: key
+    nobody = fn -> [] end
+
+    waiters =
+      for {{{key, recipe}, projects}, i} <- Enum.with_index(parts, 1) do
+        Labour.asked(key, hd(projects))
+        pid = spawn(fn -> Labour.build(key, recipe, shifts: true, project: true, poll: 5, nodes: nobody) end)
+        wait_for(fn -> Labour.waiting() == i end)
+        for p <- tl(projects), do: Labour.asked(key, p)
+        pid
+      end
+
+    assert World.Labour.Store.projects(Enum.at(keys, 1)) == ["tre", "vung_tau"]
+    # (A new VM: the queue and the projects come back from the store.)
+    for pid <- waiters, do: Process.exit(pid, :kill)
+    wait_for(fn -> Labour.waiting() == 0 end)
+    # (A shift on this node: its record of each part, and its summary when it goes home with no work.)
+    start_supervised!(
+      {World.Shift,
+       until: System.system_time(:millisecond) + 3_600_000,
+       idle: 3_000,
+       tick: 10,
+       summary: summary,
+       stop: &send(me, {:stop, &1})}
+    )
+
+    {:ok, n} = Task.Supervisor.start_link()
+    {:ok, order} = Agent.start_link(fn -> [] end)
+    watcher = spawn_link(fn -> record(order, n) end)
+    assert Labour.restore(nodes: fn -> [{n, 2}] end, poll: 5) == :ok
+    wait_for(fn -> Enum.all?(keys, &Store.has?/1) end)
+    assert_receive {:stop, 0}, 60_000
+    Process.unlink(watcher)
+    Process.exit(watcher, :kill)
+    # The order of the requests, whatever project asked; the projects of a part go when it is done.
+    assert Agent.get(order, & &1) == keys
+    assert Enum.all?(keys, &(World.Labour.Store.projects(&1) == []))
+
+    text = File.read!(summary)
+    rows = for line <- String.split(text, "\n"), key <- keys, String.contains?(line, key), do: {key, line}
+    assert Enum.map(rows, &elem(&1, 0)) == keys
+    assert [{_, a}, {_, b}, {_, c}] = rows
+    assert a =~ ~r/^\| vung_tau \|/ and b =~ ~r/^\| tre, vung_tau \|/ and c =~ ~r/^\| humans-must-die \|/
+
+    assert text =~ ~r/\| vung_tau \| 2 \| 2 \|/ and text =~ ~r/\| tre \| 1 \| 1 \|/ and
+             text =~ ~r/\| humans-must-die \| 1 \| 1 \|/
+  end
+
+  test "the projects of a part with no store of the queue are in the memory of the VM" do
+    key = String.duplicate("d", 32)
+    assert World.Labour.Store.ask(key, "vung_tau") == :ok and World.Labour.Store.ask(key, "tre") == :ok
+    assert World.Labour.Store.ask(key, "vung_tau") == :ok
+    assert World.Labour.Store.projects(key) == ["vung_tau", "tre"]
+    assert World.Labour.Store.done(key) == :ok and World.Labour.Store.projects(key) == []
+    use_store("/bin/false")
+    assert World.Labour.Store.ask(key, "tre") == :error and World.Labour.Store.projects(key) == []
   end
 
   test "the store of the queue: no program, and a program that fails" do
