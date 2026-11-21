@@ -9,9 +9,15 @@ name: The check of the bucket
 # the ID token of this workflow on main (oidc.js). It uses no secret and
 # no token of Cloudflare.
 #
-# - With no input: the list, and the count of each kind (the summary of
-#   the job, and the artifact bucket-list: the keys, the sizes, the
-#   upload times and the ETags, no content).
+# - With no input: the list, the count of each kind, and the rebuild.
+#   The commits of main that the site ran in the window go in groups with
+#   the same code (scripts/bucket-check.mjs plan). A job for each group
+#   builds again, at its commit, each file of an order of its commits, and
+#   each part and recipe that the site made while it ran that code
+#   (scripts/bucket-rebuild.exs), and compares them with the objects. The
+#   last job joins the verdicts in its summary and in the artifact
+#   bucket-check: the keys, the sizes, the upload times, the ETags and the
+#   verdicts, no content.
 # - With "quarantine": each of these keys goes to quarantine/KEY, so that
 #   the site does not give it. Nothing is deleted.
 on:
@@ -21,6 +27,10 @@ on:
         description: The keys to move to quarantine/ (separated by spaces); empty for none
         type: string
         default: ""
+      rebuild:
+        description: Build the parts, the recipes and the files of the window again, and compare them
+        type: boolean
+        default: true
 
 run-name: The check of the bucket
 
@@ -33,10 +43,15 @@ concurrency:
   group: bucket-check
   cancel-in-progress: false
 
+env:
+  BEAM_COM_VERSION: 0.1.0-rc.7
+  BEAM_COM_SHA256: 203f7395007698462fe18851b90865afac30f647c57eb12407c3e00109d30c54
+
 jobs:
-  check:
+  plan:
     runs-on: ubuntu-24.04
-    timeout-minutes: 330
+    outputs:
+      groups: ${{ steps.plan.outputs.groups }}
     steps:
       # Only main: the Worker takes only the ID token of this workflow on main.
       - name: Check the branch
@@ -44,9 +59,11 @@ jobs:
           REF: ${{ github.ref }}
         run: '[ "$REF" = refs/heads/main ] || { echo "Run this workflow on main" >&2; exit 1; }'
 
+      # All the commits of main: the plan reads the commits of the window.
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -57,17 +74,148 @@ jobs:
           WORLD_URL: https://world.mkfifo.workers.dev
         run: node scripts/bucket-check.mjs fetch "$RUNNER_TEMP/bucket"
 
+      - name: The plan
+        id: plan
+        run: |
+          node scripts/bucket-check.mjs plan "$RUNNER_TEMP/bucket"
+          echo "groups=$(node -e 'console.log(JSON.stringify(JSON.parse(require("fs").readFileSync(process.argv[1])).groups.map((g) => g.id)))' "$RUNNER_TEMP/bucket/groups.json")" >> "$GITHUB_OUTPUT"
+
       - uses: actions/upload-artifact@v7
         with:
-          name: bucket-list
+          name: bucket-plan
           path: |
             ${{ runner.temp }}/bucket/list.json
             ${{ runner.temp }}/bucket/kinds.json
+            ${{ runner.temp }}/bucket/groups.json
 
-      # The input is input of a person: it goes to the shell in the
-      # environment only, and each key must be a key of the bucket.
+  # A job for each group of commits with the same code. It gets the
+  # objects again (each job has its own runner) and builds them again at
+  # the commit of the group, with a store of its own: the orders, the
+  # blueprints, and the recipes of before the window; no part.
+  rebuild:
+    needs: plan
+    if: inputs.rebuild && inputs.quarantine == ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        group: ${{ fromJSON(needs.plan.outputs.groups) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
+      - name: The objects of the window, and the plan
+        env:
+          WORLD_URL: https://world.mkfifo.workers.dev
+        run: |
+          node scripts/bucket-check.mjs fetch "$RUNNER_TEMP/bucket"
+          node scripts/bucket-check.mjs plan "$RUNNER_TEMP/bucket"
+
+      # beam.com, as in shift.yml.
+      - name: Run APE programs with /bin/sh
+        run: sudo sh -c 'echo ":APE:M::MZqFpD::/bin/sh:" > /proc/sys/fs/binfmt_misc/register' || true
+
+      - name: Install beam.com
+        run: |
+          mkdir -p "$HOME/bin"
+          cd "$HOME/bin"
+          curl -fsSLO "https://github.com/sntran/BEAM.com/releases/download/v$BEAM_COM_VERSION/beam.com"
+          echo "$BEAM_COM_SHA256  beam.com" | sha256sum -c -
+          chmod +x beam.com
+          for tool in mix.com iex.com; do ln -s beam.com "$tool"; done
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: The checkout of the commit of the group
+        env:
+          GROUP: ${{ matrix.group }}
+        run: |
+          commit=$(node -e 'const w = JSON.parse(require("fs").readFileSync(process.argv[1])); console.log(w.groups.find((g) => g.id === process.argv[2]).commit)' "$RUNNER_TEMP/bucket/groups.json" "$GROUP")
+          git worktree add -f --detach "$RUNNER_TEMP/at" "$commit"
+          echo "COMMIT=$commit" >> "$GITHUB_ENV"
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ${{ runner.temp }}/at/deps
+            ${{ runner.temp }}/at/_build
+            ~/.mix
+            ~/.hex
+          key: bucket-check-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-${{ env.COMMIT }}
+          restore-keys: |
+            bucket-check-${{ runner.os }}-beam.com-${{ env.BEAM_COM_VERSION }}-
+
+      - name: The rebuild
+        env:
+          MIX_ENV: prod
+          GROUP: ${{ matrix.group }}
+        run: |
+          D="$RUNNER_TEMP/bucket"
+          mix.com local.hex --force --if-missing
+          mix.com local.rebar --force --if-missing
+          (cd "$RUNNER_TEMP/at" && mix.com deps.get --only prod && mix.com compile)
+          node scripts/bucket-check.mjs tasks "$D" "$GROUP" > "$D/tasks.json"
+          (cd "$RUNNER_TEMP/at" && WORLD_ORDER_DIR="$D/store" WORLD_CHECK_WIDTH=2 mix.com run "$GITHUB_WORKSPACE/scripts/bucket-rebuild.exs" "$D/tasks.json" "$D/out/$GROUP")
+          node scripts/bucket-check.mjs compare "$D" "$GROUP"
+          mkdir -p "$RUNNER_TEMP/report" && cp "$D/report.json" "$RUNNER_TEMP/report/report-$GROUP.json"
+          cp "$D/out/$GROUP/errors.json" "$RUNNER_TEMP/report/errors-$GROUP.json"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: bucket-report-${{ matrix.group }}
+          path: ${{ runner.temp }}/report/
+
+  report:
+    needs: rebuild
+    if: always() && needs.rebuild.result != 'skipped'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: bucket-report-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/reports
+
+      - name: The verdicts of all the groups
+        run: node scripts/bucket-check.mjs merge "$RUNNER_TEMP/reports/report.json" "$RUNNER_TEMP"/reports/report-*.json
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bucket-check
+          path: ${{ runner.temp }}/reports/
+
+  # The input is input of a person: it goes to the shell in the
+  # environment only, and each key must be a key of the bucket.
+  quarantine:
+    needs: plan
+    if: inputs.quarantine != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
       - name: Move to quarantine/
-        if: inputs.quarantine != ''
         env:
           WORLD_URL: https://world.mkfifo.workers.dev
           KEYS: ${{ inputs.quarantine }}

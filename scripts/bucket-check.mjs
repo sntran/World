@@ -9,13 +9,26 @@
 //     blueprint and recipe that they name (of any time), DIR/list.json
 //     (the objects of the window) and DIR/kinds.json (the count of each
 //     kind).
+//   node scripts/bucket-check.mjs plan DIR
+//     The commits of main in the window, in groups with the same code
+//     (DIR/groups.json), and the store of the rebuild (DIR/store: the
+//     orders, the blueprints, and the recipes of before the window).
+//   node scripts/bucket-check.mjs tasks DIR GROUP
+//     The tasks of scripts/bucket-rebuild.exs for a group.
+//   node scripts/bucket-check.mjs compare DIR [GROUP...]
+//     Each object of the window against its rebuild (DIR/out/GROUP/), in
+//     DIR/report.json.
+//   node scripts/bucket-check.mjs merge OUT REPORT...
+//     The reports of the groups in one report, and the summary of the job.
 //   node scripts/bucket-check.mjs quarantine KEY...
 //     Each key goes to quarantine/KEY (only an object of the window).
 //
 // WORLD_URL: the address of the Worker (https://world.mkfifo.workers.dev).
-import { mkdir, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { WINDOW } from '../handler.js';
 
 const AUDIENCE = 'https://world.mkfifo.com';
 
@@ -160,11 +173,232 @@ export function summary({ seen, list, kinds }) {
   ].join('\n');
 }
 
+const exists = (path) => readFile(path).then(() => true, () => false);
+const json = async (path) => JSON.parse(await readFile(path, 'utf8'));
+
+// The commits of main that the site ran in the window: the commit of main
+// at the start of the window, and each commit of main after it, to the
+// end of the window. git(args): the output of git.
+export function deployed(git) {
+  const commits = git(['log', '--first-parent', '--format=%H %cI', 'origin/main']).trim().split('\n').map((line) => {
+    const [commit, at] = line.split(' ');
+    return { commit, at: Date.parse(at) };
+  });
+  const before = commits.findIndex((c) => c.at <= WINDOW.from);
+  const window = commits.filter((c, i) => c.at <= WINDOW.to && (before < 0 || i <= before));
+  return window.reverse();
+}
+
+// The code of a commit, for the groups: the trees that a build reads.
+const code = (git, commit) => git(['rev-parse', ...['lib', 'priv', 'wings', 'mix.exs', 'mix.lock'].map((p) => `${commit}:${p}`)]).trim().replace(/\s+/g, ' ');
+
+// A file of an order of the window: builds/COMMIT/HASH.LEVEL.FILE.
+const fileOf = (key) => {
+  const [, commit, name] = key.split('/');
+  const [hash, level, file] = name.split('.');
+  return { key, commit, hash, level, file };
+};
+
+// The groups of the commits that the site ran at a time: the commit of
+// that time, and the commit before it when the time is less than NEAR
+// after a deploy (a build that started before the deploy). times: the
+// commits, the oldest first, each with its group.
+export const NEAR = 10 * 60_000;
+const at = (times, t) => {
+  const i = times.findLastIndex((c) => c.at <= t);
+  const now = times[Math.max(i, 0)];
+  const before = i > 0 && t - now.at < NEAR ? times[i - 1] : null;
+  return [...new Set([now.group, before?.group].filter(Boolean))];
+};
+
+// The plan of the rebuild: the groups of commits with the same code (the
+// oldest first), each with its own work, and the store of the rebuild.
+// The work of a group: the files of its commits; each part and recipe of
+// the window that the site made while it ran a commit of the group; the
+// lists for them (the order and the level of each recipe; for a part with
+// no recipe, the parts lists of the group and the orders of its time, at
+// each level); and the hashes of the orders and the blueprints.
+export async function plan(dir, git) {
+  const list = await json(join(dir, 'list.json'));
+  const inWindow = new Set(list.map((o) => o.key));
+  const onMain = (commit) => {
+    try {
+      git(['merge-base', '--is-ancestor', commit, 'origin/main']);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const files = list.filter((o) => o.kind === 'file').map((o) => fileOf(o.key));
+  const times = deployed(git);
+  const groups = [];
+  const join_ = (commit) => {
+    const tree = code(git, commit);
+    let group = groups.find((g) => g.code === tree);
+    if (!group) groups.push((group = { id: String(groups.length + 1), commit, commits: [], code: tree, files: [], lists: [], parts: [], recipes: [] }));
+    if (!group.commits.includes(commit)) group.commits.push(commit);
+    return group.id;
+  };
+  for (const c of times) c.group = join_(c.commit);
+  for (const f of files) if (!times.some((c) => c.commit === f.commit) && onMain(f.commit)) join_(f.commit);
+  const of = (id) => groups.find((g) => g.id === id);
+  for (const f of files) {
+    const g = groups.find((g) => g.commits.includes(f.commit));
+    if (g) g.files.push(f);
+  }
+
+  // The store: each order and blueprint, and each recipe of before the window.
+  const store = join(dir, 'store');
+  for (const prefix of ['orders', 'blueprints', 'parts']) {
+    const names = await readdir(join(dir, 'bucket', prefix)).catch(() => []);
+    for (const name of names) {
+      const key = `${prefix}/${name}`;
+      if (prefix === 'parts' && (!name.endsWith('.json') || inWindow.has(key))) continue;
+      await mkdir(join(store, prefix), { recursive: true });
+      await cp(join(dir, 'bucket', key), join(store, key));
+    }
+  }
+
+  const add = async (g, hash, level) => {
+    const ok = /^[0-9a-f]{32}$/.test(hash ?? '') && ['near', 'mid', 'far'].includes(level) && (await exists(join(store, `orders/${hash}.json`)));
+    if (ok && !g.lists.some((c) => c.hash === hash && c.level === level)) g.lists.push({ hash, level });
+  };
+  const time = (o) => Date.parse(o.uploaded);
+  for (const o of list.filter((o) => o.kind === 'recipe')) {
+    const recipe = await json(join(dir, 'bucket', o.key)).catch(() => null);
+    for (const id of at(times, time(o))) {
+      of(id).recipes.push(o.key);
+      await add(of(id), recipe?.order, recipe?.level);
+    }
+  }
+  for (const o of list.filter((o) => o.kind === 'part')) {
+    const key = o.key.slice(6, 38);
+    const recipe = list.some((r) => r.key === `parts/${key}.json`) || (await exists(join(store, `parts/${key}.json`)));
+    for (const id of at(times, time(o))) {
+      const g = of(id);
+      g.parts.push(key);
+      if (recipe) continue;
+      // (A part with no recipe: a part of a list, or of a construction, that the site made then.)
+      for (const f of g.files.filter((f) => f.file === 'elements')) await add(g, f.hash, f.level);
+      for (const r of list.filter((r) => r.kind === 'order' && at(times, time(r)).includes(id))) for (const level of ['near', 'mid', 'far']) await add(g, r.key.slice(7, 39), level);
+    }
+  }
+  const work = {
+    groups: groups.map(({ code: _, ...g }) => g),
+    hashes: list.filter((o) => o.kind === 'order' || o.kind === 'blueprint').map((o) => o.key),
+    preview: files.filter((f) => !groups.some((g) => g.commits.includes(f.commit))).map((f) => f.key),
+  };
+  await writeFile(join(dir, 'groups.json'), JSON.stringify(work, null, 1));
+  return work;
+}
+
+// A log of a construction with no times, process ids or measures of the
+// run: the events, in order of their text.
+export function bare(bytes) {
+  const lines = new TextDecoder().decode(bytes).split('\n').filter(Boolean).slice(1);
+  return lines.map((line) => {
+    const { at: _a, wall: _w, who: _p, ...event } = JSON.parse(line);
+    if (event.kind === 'run_done') event.data = {};
+    return JSON.stringify(event);
+  }).sort().join('\n');
+}
+
+const same = (key, a, b) => (key.endsWith('.log') ? bare(a) === bare(b) : Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0);
+
+// The tasks of a group for scripts/bucket-rebuild.exs.
+export async function tasks(dir, id) {
+  const work = await json(join(dir, 'groups.json'));
+  const g = work.groups.find((g) => g.id === id);
+  return { files: g.files, lists: g.lists, parts: g.parts, hashes: work.hashes };
+}
+
+// The verdicts of the groups in DIR/out/GROUP: each object of the window
+// against its rebuild. A verdict: agrees, differs (a rebuild with other
+// bytes), none (no rebuild: no recipe, no list, or a commit that is not on
+// main), or request (a kind that World does not build: it needs the
+// request of the site in the Workers Logs).
+export async function compare(dir, ids = null) {
+  const list = await json(join(dir, 'list.json'));
+  const work = await json(join(dir, 'groups.json'));
+  const groups = work.groups.filter((g) => !ids || ids.includes(g.id));
+  const hashes = {};
+  for (const g of groups) {
+    for (const [key, agrees] of Object.entries(await json(join(dir, 'out', g.id, 'hashes.json')).catch(() => ({})))) hashes[key] = hashes[key] === true || agrees;
+  }
+  const read = (g, key) => readFile(join(dir, 'out', g.id, key)).then((b) => [b], () => []);
+  const report = [];
+  for (const o of list) {
+    let verdict = 'request';
+    let note = '';
+    if (BUILT.has(o.kind)) {
+      const mine = await readFile(join(dir, 'bucket', o.key));
+      // (A file of an order only from the group of its commit.)
+      const from = o.kind === 'file' ? groups.filter((g) => g.commits.includes(o.key.split('/')[1])) : groups;
+      const out = (await Promise.all(from.map((g) => read(g, o.key)))).flat();
+      verdict = out.some((b) => same(o.key, b, mine)) ? 'agrees' : out.length ? 'differs' : 'none';
+      if (work.preview.includes(o.key)) note = 'a commit that is not on main';
+    } else if (o.kind === 'order' || o.kind === 'blueprint') {
+      note = hashes[o.key] ? 'its content gives its hash' : 'its content does not give its hash';
+    }
+    report.push({ ...o, verdict, note });
+  }
+  return report;
+}
+
+// The verdicts of all the groups in one report: for each object, the best
+// verdict of a group (agrees, then differs, then none).
+export function merge(reports) {
+  const rank = { agrees: 0, differs: 1, none: 2, request: 3 };
+  const best = new Map();
+  for (const o of reports.flat()) {
+    const was = best.get(o.key);
+    const pick = !was || rank[o.verdict] < rank[was.verdict] ? o : was;
+    const gives = [was, o].some((x) => x?.note === 'its content gives its hash');
+    best.set(o.key, { ...pick, note: gives ? 'its content gives its hash' : pick.note });
+  }
+  return [...best.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+}
+
+// The text of the summary of the verdicts.
+export function verdicts(report) {
+  const kinds = [...new Set(report.map((o) => o.kind))].sort();
+  const count = (kind, verdict) => report.filter((o) => o.kind === kind && o.verdict === verdict).length;
+  const bad = report.filter((o) => o.verdict === 'differs' || o.verdict === 'none' || o.note.includes('does not'));
+  return [
+    '| Kind | Objects | Agrees | Differs | No rebuild | Needs a request |',
+    '|---|---|---|---|---|---|',
+    ...kinds.map((k) => `| ${k} | ${report.filter((o) => o.kind === k).length} | ${count(k, 'agrees')} | ${count(k, 'differs')} | ${count(k, 'none')} | ${count(k, 'request')} |`),
+    '',
+    bad.length ? 'The objects that do not agree:' : 'Each object that World builds agrees.',
+    '',
+    ...bad.map((o) => `- \`${o.key}\` (${o.uploaded}): ${o.verdict}${o.note ? `, ${o.note}` : ''}`),
+    '',
+  ].join('\n');
+}
+
 async function main([command, ...args], env = process.env) {
-  const api = client(env.WORLD_URL ?? 'https://world.mkfifo.workers.dev', tokens(env, fetch));
-  if (command === 'fetch' && args.length === 1) {
-    const result = await fetchAll(api, args[0]);
-    const text = summary(result);
+  const git = (a) => execFileSync('git', a, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  if (command === 'plan' && args.length === 1) {
+    const work = await plan(args[0], git);
+    for (const g of work.groups) console.log(`group ${g.id}: ${g.commits.length} commits, ${g.files.length} files, ${g.parts.length} parts, ${g.lists.length} lists`);
+    return 0;
+  }
+  if (command === 'tasks' && args.length === 2) {
+    console.log(JSON.stringify(await tasks(args[0], args[1])));
+    return 0;
+  }
+  if (command === 'compare' && args.length >= 1) {
+    // (The groups of this job, or all.)
+    const report = await compare(args[0], args.length > 1 ? args.slice(1) : null);
+    await writeFile(join(args[0], 'report.json'), JSON.stringify(report, null, 1));
+    console.log(verdicts(report));
+    return 0;
+  }
+  if (command === 'merge' && args.length >= 2) {
+    const reports = await Promise.all(args.slice(1).map((path) => json(path)));
+    const report = merge(reports);
+    await writeFile(args[0], JSON.stringify(report, null, 1));
+    const text = verdicts(report);
     console.log(text);
     if (env.GITHUB_STEP_SUMMARY) await writeFile(env.GITHUB_STEP_SUMMARY, text, { flag: 'a' });
     return 0;
@@ -178,7 +412,7 @@ async function main([command, ...args], env = process.env) {
     }
     return failed === 0 ? 0 : 1;
   }
-  console.error('usage: bucket-check.mjs fetch DIR | quarantine KEY...');
+  console.error('usage: bucket-check.mjs fetch DIR | plan DIR | tasks DIR GROUP | compare DIR [GROUP...] | merge OUT REPORT... | quarantine KEY...');
   return 2;
 }
 

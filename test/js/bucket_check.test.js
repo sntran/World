@@ -1,12 +1,12 @@
 // The script of the check of the bucket (scripts/bucket-check.mjs), with
 // the routes /bucket/ of handler.js and a fake bucket.
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { WINDOW, handler } from '../../handler.js';
-import { BUILT, client, fetchAll, kindOf, named, summary } from '../../scripts/bucket-check.mjs';
+import { BUILT, NEAR, bare, client, compare, deployed, fetchAll, kindOf, merge, named, plan, summary, tasks, verdicts } from '../../scripts/bucket-check.mjs';
 import { bucket, vm } from './fakes.js';
 
 const H = 'a'.repeat(32);
@@ -82,4 +82,131 @@ test('the client asks again after a 5xx, at most four times, and stops on anothe
   const refused = client('https://w', async () => 't', async () => new Response('no', { status: 403 }));
   await assert.rejects(refused.list(), /the list of the bucket: 403 no/);
   await assert.rejects(refused.get('orders/x.json'), /the object orders\/x.json: 403/);
+});
+
+test('the commits that the site ran in the window: the commit of main at its start, and each commit after it to its end', () => {
+  const at = (ms) => new Date(ms).toISOString();
+  const log = [
+    `e5 ${at(WINDOW.to + 1)}`,
+    `e4 ${at(WINDOW.to)}`,
+    `e3 ${at(WINDOW.from + 1)}`,
+    `e2 ${at(WINDOW.from - 10)}`,
+    `e1 ${at(WINDOW.from - 20)}`,
+  ].join('\n');
+  assert.deepEqual(deployed(() => log).map((c) => c.commit), ['e2', 'e3', 'e4']);
+  // (No commit before the window: each commit to its end.)
+  assert.deepEqual(deployed(() => `e3 ${at(WINDOW.from + 1)}\n`).map((c) => c.commit), ['e3']);
+});
+
+test('a log of a construction with no times, process ids or measures of the run', () => {
+  const log = (at, who, ms) => new TextEncoder().encode([
+    `{"scale":86400,"start":${at}}`,
+    `{"at":${at},"data":{"trade":"sculptor"},"kind":"hired","order":"o","wall":${at},"who":"${who}"}`,
+    `{"at":${at + 1},"data":{"ms":${ms}},"kind":"run_done","order":"o","wall":${at},"who":null}`,
+    '',
+  ].join('\n'));
+  assert.equal(bare(log(1, '<0.1.0>', 5)), bare(log(9, '<0.7.0>', 50)));
+  assert.notEqual(bare(log(1, '<0.1.0>', 5)), bare(new TextEncoder().encode('{}\n{"kind":"hired","data":{"trade":"mason"}}\n')));
+});
+
+test('the plan, the tasks of each group and the compare: a part that agrees, a part that differs, a file of a Preview, and an order', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'rebuild-'));
+  const C1 = '1'.repeat(40);
+  const C2 = '2'.repeat(40);
+  const P = 'f'.repeat(40);
+  const [A, Z, R] = ['a'.repeat(32), 'e'.repeat(32), '9'.repeat(32)];
+  const put = async (key, value) => {
+    await mkdir(join(dir, 'bucket', key, '..'), { recursive: true });
+    await writeFile(join(dir, 'bucket', key), value);
+  };
+  await put(`orders/${H}.json`, '{"blueprint":"box"}');
+  await put(`blueprints/${B}.json`, '{"name":"b"}');
+  await put(`parts/${A}.glb`, 'glTF A');
+  await put(`parts/${Z}.glb`, 'glTF Z');
+  await put(`parts/${R}.json`, JSON.stringify({ order: H, level: 'near', node: 'n' }));
+  // (A recipe of before the window: in the store of the rebuild.)
+  await put(`parts/${A}.json`, JSON.stringify({ order: H, level: 'mid', node: 'm' }));
+  await put(`builds/${C2}/${H}.far.elements`, '{"parts":[]}');
+  await put(`builds/${C1}/${H}.far.glb`, 'glTF far');
+  await put(`builds/${P}/${H}.far.glb`, 'glTF of a Preview');
+  await put(`urls/${C1}/${'b'.repeat(64)}`, '{}');
+  const keys = [`orders/${H}.json`, `blueprints/${B}.json`, `parts/${A}.glb`, `parts/${Z}.glb`, `parts/${R}.json`, `builds/${C2}/${H}.far.elements`, `builds/${C1}/${H}.far.glb`, `builds/${P}/${H}.far.glb`, `urls/${C1}/${'b'.repeat(64)}`];
+  await writeFile(join(dir, 'list.json'), JSON.stringify(keys.map((key) => ({ key, size: 1, uploaded: new Date(WINDOW.from).toISOString(), etag: 'e', kind: kindOf(key) }))));
+  // (Two commits of main with the same code, a third with other code; P is not on main.)
+  const git = (args) => {
+    if (args[0] === 'log') return `${C2} ${new Date(WINDOW.from + 5).toISOString()}\n${'3'.repeat(40)} ${new Date(WINDOW.from + 2).toISOString()}\n${C1} ${new Date(WINDOW.from - 5).toISOString()}\n`;
+    if (args[0] === 'rev-parse') return args[1].startsWith(C2) ? 'other code\n' : 'code\n';
+    if (args[0] === 'merge-base' && args[2] === P) throw new Error('not on main');
+    return '';
+  };
+  const work = await plan(dir, git);
+  // (Group 1: C1 and the commit 3 with the same code; group 2: C2.)
+  assert.deepEqual(work.groups.map((g) => [g.id, g.commits.length, g.files.map((f) => f.file)]), [['1', 2, ['glb']], ['2', 1, ['elements']]]);
+  // The parts and the recipes of the window go to the group of their time: C1 ran then.
+  const [one, two] = work.groups;
+  assert.deepEqual([one.parts, one.recipes, two.parts], [[A, Z], [`parts/${R}.json`], []]);
+  // The list of the recipe; for Z (no recipe), the orders of the time of the group at each level.
+  assert.deepEqual(one.lists, [{ hash: H, level: 'near' }, { hash: H, level: 'mid' }, { hash: H, level: 'far' }]);
+  assert.deepEqual(two.lists, []);
+  assert.deepEqual(work.hashes, [`orders/${H}.json`, `blueprints/${B}.json`]);
+  assert.deepEqual(work.preview, [`builds/${P}/${H}.far.glb`]);
+  assert.equal(await readFile(join(dir, 'store', `parts/${A}.json`), 'utf8'), JSON.stringify({ order: H, level: 'mid', node: 'm' }));
+  await assert.rejects(readFile(join(dir, 'store', `parts/${R}.json`)));
+  assert.deepEqual(await tasks(dir, '1'), { files: one.files, lists: one.lists, parts: [A, Z], hashes: work.hashes });
+
+  // Group 1 builds A again with the same bytes, Z with other bytes, the file of C1, and no recipe R.
+  const out = async (id, key, value) => {
+    await mkdir(join(dir, 'out', id, key, '..'), { recursive: true });
+    await writeFile(join(dir, 'out', id, key), value);
+  };
+  await out('1', `parts/${A}.glb`, 'glTF A');
+  await out('1', `parts/${Z}.glb`, 'glTF other');
+  await out('1', `builds/${C1}/${H}.far.glb`, 'glTF far');
+  await out('1', 'hashes.json', JSON.stringify({ [`orders/${H}.json`]: true, [`blueprints/${B}.json`]: false }));
+  await out('2', `builds/${C2}/${H}.far.elements`, '{"parts":[]}');
+  // (A file of C2 that group 1 built is not a file of group 1.)
+  await out('1', `builds/${C2}/${H}.far.elements`, 'other');
+  await out('2', 'hashes.json', JSON.stringify({ [`orders/${H}.json`]: false }));
+
+  const report = await compare(dir);
+  const of = (key) => report.find((o) => o.key === key);
+  assert.equal(of(`parts/${A}.glb`).verdict, 'agrees');
+  assert.equal(of(`parts/${Z}.glb`).verdict, 'differs');
+  assert.equal(of(`parts/${R}.json`).verdict, 'none');
+  assert.equal(of(`builds/${C1}/${H}.far.glb`).verdict, 'agrees');
+  assert.equal(of(`builds/${C2}/${H}.far.elements`).verdict, 'agrees');
+  assert.deepEqual([of(`builds/${P}/${H}.far.glb`).verdict, of(`builds/${P}/${H}.far.glb`).note], ['none', 'a commit that is not on main']);
+  assert.deepEqual([of(`orders/${H}.json`).verdict, of(`orders/${H}.json`).note], ['request', 'its content gives its hash']);
+  assert.equal(of(`blueprints/${B}.json`).note, 'its content does not give its hash');
+  assert.equal(of(`urls/${C1}/${'b'.repeat(64)}`).verdict, 'request');
+  const text = verdicts(report);
+  assert.match(text, /\| part \| 2 \| 1 \| 1 \| 0 \| 0 \|/);
+  assert.match(text, /\| file \| 3 \| 2 \| 0 \| 1 \| 0 \|/);
+  assert.match(text, new RegExp(`- \`parts/${Z}.glb\` \\(.*\\): differs`));
+  assert.match(text, /a commit that is not on main/);
+  assert.doesNotMatch(text, new RegExp(`parts/${A}.glb`));
+  assert.match(verdicts(report.filter((o) => o.verdict === 'agrees')), /Each object that World builds agrees/);
+
+  // The report of each group alone, then the reports joined: the best verdict of a group for each object.
+  const [first, second] = [await compare(dir, ['1']), await compare(dir, ['2'])];
+  assert.equal(second.find((o) => o.key === `parts/${A}.glb`).verdict, 'none');
+  assert.equal(first.find((o) => o.key === `builds/${C2}/${H}.far.elements`).verdict, 'none');
+  assert.equal(second.find((o) => o.key === `orders/${H}.json`).note, 'its content does not give its hash');
+  const joined = merge([second, first]);
+  assert.deepEqual(joined.map((o) => [o.key, o.verdict, o.note]), report.map((o) => [o.key, o.verdict, o.note]).sort((a, b) => (a[0] < b[0] ? -1 : 1)));
+});
+
+test('the group of a part near a deploy: the commit of its time, and the commit before it', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'near-'));
+  const [K1, K2] = ['1'.repeat(32), '2'.repeat(32)];
+  const t0 = WINDOW.from + 3600_000;
+  for (const k of [K1, K2]) {
+    await mkdir(join(dir, 'bucket', 'parts'), { recursive: true });
+    await writeFile(join(dir, 'bucket', `parts/${k}.glb`), 'g');
+  }
+  const list = [{ key: `parts/${K1}.glb`, uploaded: new Date(t0 + NEAR - 1).toISOString() }, { key: `parts/${K2}.glb`, uploaded: new Date(t0 + NEAR).toISOString() }];
+  await writeFile(join(dir, 'list.json'), JSON.stringify(list.map((o) => ({ ...o, size: 1, etag: 'e', kind: 'part' }))));
+  const git = (args) => (args[0] === 'log' ? `${'b'.repeat(40)} ${new Date(t0).toISOString()}\n${'a'.repeat(40)} ${new Date(WINDOW.from - 1).toISOString()}\n` : args[0] === 'rev-parse' ? `${args[1].slice(0, 1)}\n` : '');
+  const work = await plan(dir, git);
+  assert.deepEqual(work.groups.map((g) => g.parts), [[K1], [K1, K2]]);
 });
