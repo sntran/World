@@ -1468,11 +1468,11 @@ object of that window, with no token of Cloudflare:
   moves an object of the window to `quarantine/KEY`, with its type and
   its upload time. No route of the site gives `quarantine/`. Nothing is
   deleted.
-- `scripts/bucket-check.mjs fetch DIR` (in the job) gets each object of
+- `scripts/bucket-check.mjs fetch DIR` (in each job) gets each object of
   the window, and each order, recipe and blueprint that it names. The
-  summary of the job gives the count of each kind. The artifact
-  `bucket-list` has the keys, the sizes, the upload times and the ETags,
-  but no content.
+  summary of the job gives the count of each kind. The artifacts have
+  the keys, the sizes, the upload times, the ETags and the verdicts, but
+  no content.
 
 The check of each kind:
 
@@ -1480,7 +1480,27 @@ The check of each kind:
   (`parts/KEY.json`) and a file of an order at a level
   (`builds/COMMIT/HASH.LEVEL.FILE`). The check builds each one again
   from its recipe at the same commit and compares the bytes: World
-  builds give the same bytes each time.
+  builds give the same bytes each time. A log of a construction
+  (`.log`) has times, process ids and measures of the run; the check
+  compares its events with these left out.
+- `scripts/bucket-check.mjs plan` puts the commits of `main` that the
+  site ran in the window (the commit of `main` at its start, and each
+  commit after it) in groups with the same code (`lib`, `priv`, `wings`,
+  `mix.exs`, `mix.lock`). A file of an order goes to the group of its
+  commit. A part or a recipe goes to the group of the commit that the
+  site ran at its upload time, and also to the group of the commit before
+  when the time is less than 10 minutes after a deploy.
+- A job for each group checks out the commit of the group, and
+  `scripts/bucket-rebuild.exs` builds there, with a store of its own
+  (the orders, the blueprints in data, and the recipes of before the
+  window; no part): each file of its commits, the parts list of the order
+  and the level of each recipe (for a part with no recipe, also the parts
+  lists of its time), and each part from its recipe, two at a time. The
+  last job joins the verdicts of the groups: for each object, the best
+  verdict of a group.
+- An order and a blueprint in data have a key that is the hash of their
+  content (`World.Orders.hash/1`): the check also says if the content
+  gives its key again.
 - World does not build an order, a blueprint in data, an entry of the
   history of the edits, the hash of the order of a URL (`urls/`), the
   hash of a control key (`controls/`) or the state of the shifts. For
