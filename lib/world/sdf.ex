@@ -171,7 +171,7 @@ defmodule World.SDF do
 
     # (An edit with no surface has the id that it had before the surfaces.)
     what = if e.surface, do: Tuple.insert_at(what, tuple_size(what), e.surface), else: what
-    %{e | id: :erlang.md5(:erlang.term_to_binary(what))}
+    %{e | id: :erlang.md5(:erlang.term_to_binary(what, [:deterministic]))}
   end
 
   defp number(nil), do: nil

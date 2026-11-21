@@ -236,7 +236,7 @@ defmodule World.ElementsTest do
     assert Elements.node_keys(drawing(), :mid)["wall"] != keys["wall"]
     assert Elements.node_keys(drawing(), :far) == keys
 
-    # A module with no file of code (made in memory) is its own version.
+    # A module with no file of the source (made in memory) has only the versions of Elixir and OTP.
     [{loose, _}] = Code.compile_string("defmodule World.ElementsTestLoose do def x, do: World.Frame.identity() end")
     assert Elements.version(loose) =~ ~r/^[0-9a-f]{12}$/
 

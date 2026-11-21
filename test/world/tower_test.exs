@@ -10,7 +10,7 @@ defmodule World.TowerTest do
   defp scene(item, level), do: Build.scene(item, level: level)
   defp roles(s), do: for(n <- s.nodes, p <- n.primitives, uniq: true, do: p.material)
   defp part(item, name), do: item.nodes |> List.keyfind(name, 0) |> elem(1)
-  defp vung_tau, do: Drawing.file("hai_dang_vung_tau")
+  defp vung_tau, do: Drawing.Catalog.file("hai_dang_vung_tau")
 
   # A tower of the blueprint in data, with the options of an order.
   defp tower(options) do

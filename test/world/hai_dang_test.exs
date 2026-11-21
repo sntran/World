@@ -7,7 +7,7 @@ defmodule World.HaiDangTest do
   test "the lighthouse from edits: the sizes of the tower of the catalog, and the forms of its photos" do
     d = file("hai_dang_vung_tau_edits")
     assert {:ok, _} = World.Drawing.check(d, "d")
-    assert "hai_dang_vung_tau_edits" in World.Drawing.names()
+    assert "hai_dang_vung_tau_edits" in World.Drawing.Catalog.names()
     # The tower that the people build from its blueprint, with its stair inside, keeps its name.
     assert %{"blueprint" => "tower", "options" => %{"name" => "hai_dang_vung_tau", "hollow" => true}} =
              file("hai_dang_vung_tau")

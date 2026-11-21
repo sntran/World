@@ -753,8 +753,9 @@ into one model, and it does not keep a whole model in its memory
   `ports` and `collision` of the model. `review/parts.html?list=URL`
   puts the parts together as a project does.
 - **The key of a part** is a hash of its data and of the version of its
-  rule: the code of the rule and of each module of World that it calls
-  (`World.Elements.version/1`). A part that is made (a node of shapes, a
+  rule (`World.Elements.version/1`): the source of the rule and of each
+  module of World that it calls, with the data files that they read
+  (below, "One key in each folder"). A part that is made (a node of shapes, a
   person, a vehicle) has its content as its data, with its level, its
   maps and the colors of the order: a wall of 1,000 bricks of one shape
   is one file. A part of a sculpture has its data: the edits near it,
@@ -763,6 +764,43 @@ into one model, and it does not keep a whole model in its memory
   and the factory builds only those (W27). The same keys are in the
   events `element` of `POST /builds` (W28), and the GLB of each element
   goes into the store of the parts.
+- **One key in each folder.** The version of a rule is a hash of its
+  source, not of its compiled modules (`World.Elements.Source`): the
+  file of each module that the rule calls, again and again, each with
+  its path from the root of the project and its MD5; the data files of
+  `priv` that those modules read; the files of `wings` and their
+  `-include`; and the versions of Elixir and Erlang/OTP. There is no
+  absolute path in it, and the order of the compile has no effect.
+  - A module depends on another when it calls a function of it (in a
+    function, or in the body of the module, which runs at the compile),
+    uses its struct, or takes it with `require`, `import` or `use`. A
+    module that is only a value (an entry of the list of the skills) is
+    not a part of the rule. The modules of the service (the orders, the
+    store, the line, the gate of the memory, the module `World`) are not
+    followed.
+  - A key changes when the source or the data of its rule changes, and
+    only then: a new drawing of the catalog (`World.Drawing.Catalog`) does
+    not change the key of a part of a sculpture, and a new height of the
+    van `transit_148` (`priv/data/vans.json`) changes only keys of the van.
+  - The hash of the data of a part (`term_to_binary/2` with
+    `:deterministic`) writes the keys of a map in order. With no option,
+    a map of more than 32 keys (the full order of Hải Âu) can give
+    another key at each start of the VM.
+  - So a build of one commit gives the same keys in each folder: the
+    factory (the folder of Workers Builds), a construction shift, a job
+    of CI, and a clone on a computer (`mix world.order`). The job `keys`
+    of `ci.yml` checks it at each push: the commit in two folders gives
+    the same keys for the parts of five orders
+    (`test/fixtures/keys/orders.json`: Hải Âu at mid, a village house,
+    the fire truck of `mini` at far, a drawing with two sculptures, and
+    a van), and a third folder with another height of the van gives other
+    keys for the van and the same keys for the others.
+    `scripts/keys.exs` gives the keys of a set of orders.
+  - **Each part got a new key one time** with this change (the deploy of
+    `main` after pull request #67). A key of a part made before that
+    deploy is a key of a build in one folder only. A lock of a project
+    must not take such a key: build the parts list again from the
+    factory, after that deploy, and lock the keys that it gives.
 - **A part fits the memory of the edge** (W26). A sculpture that has
   more than 20,000 faces at its cells (an estimate) is cut into parts,
   each with a budget of 4,000 triangles or more, and each part is made
@@ -1526,17 +1564,19 @@ The check of each kind:
 - An order and a blueprint in data have a key that is the hash of their
   content (`World.Orders.hash/1`): the check also says if the content
   gives its key again.
-- **The keys of the parts depend on the folder of the build.** The key of
-  a part has the version of its rule (`World.Elements.version/1`: the MD5
-  of the code of the rule and of each module of World that it calls),
-  and some modules keep the absolute path of the folder of their build
-  in their code (`World.Drawing`, `World.Standards`, `World.Textures`,
+- **In the window, the keys of the parts depended on the folder of the
+  build.** The key of a part had the version of its rule
+  (`World.Elements.version/1`), then the MD5 of the compiled code of the
+  rule and of each module of World that it calls, and some modules keep
+  the absolute path of the folder of their build in their code
+  (`World.Drawing`, `World.Standards`, `World.Textures`,
   `World.Terrain`, `World.Animals`, `World.References`, a `__DIR__` in a
   module attribute). So a build of the same commit in another folder
-  gives other keys: the site (the folder of Workers Builds), this
-  computer and the jobs of CI each have their own keys, and the GLB of
-  each part is the same. The edge in WebAssembly and a VM here give the
-  same key from the same folder.
+  gave other keys: the site (the folder of Workers Builds), this
+  computer and the jobs of CI each had their own keys, and the GLB of
+  each part was the same. (Since pull request #67, the version comes
+  from the source, and each folder gives the same keys: "The parts of a
+  model", "One key in each folder".)
 - So the check does not make the keys again. Only the Worker of the site
   writes `builds/` under a commit of `main` (a Preview writes under the
   commit of its branch, and the store of the VM takes no key of

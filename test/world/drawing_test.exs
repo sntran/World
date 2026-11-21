@@ -115,7 +115,7 @@ defmodule World.DrawingTest do
   defp scene_at(a, pose, node), do: Enum.at(Build.scene(a, pose: pose).nodes, node).frame
 
   test "the cart of bánh mì: a seller and a dog of other blueprints, and the clips" do
-    cart = Drawing.file("banh_mi_cart")
+    cart = Drawing.Catalog.file("banh_mi_cart")
     scene = Build.scene(cart, level: :far)
     assert ~w(wheel_l wheel_r door) -- scene.extras["joints"] == []
     assert "seller/elbow_r" in scene.extras["joints"] and "seller/arm_r" in scene.extras["limbs"]
@@ -124,22 +124,22 @@ defmodule World.DrawingTest do
     assert "non_la" in Enum.map(Build.parts(cart), & &1["name"])
     {{_, _, ground}, _} = Scene.bounds(scene)
     assert_in_delta ground, 0.0, 0.01
-    assert_raise ArgumentError, ~r/no drawing "nothing"/, fn -> Drawing.file("nothing") end
+    assert_raise ArgumentError, ~r/no drawing "nothing"/, fn -> Drawing.Catalog.file("nothing") end
   end
 
   test "each drawing of the catalog checks, and a drawing with errors does not" do
-    assert Drawing.check_all!() == Drawing.names()
-    assert "banh_mi_cart" in Drawing.names()
+    assert Drawing.Catalog.check_all!() == Drawing.Catalog.names()
+    assert "banh_mi_cart" in Drawing.Catalog.names()
 
     assert_raise ArgumentError, ~r/the drawing broken_test has errors/, fn ->
-      Drawing.check_all!(%{"broken_test" => %{"nodes" => []}})
+      Drawing.Catalog.check_all!(%{"broken_test" => %{"nodes" => []}})
     end
 
-    refute Drawing.__mix_recompile__?()
+    refute Drawing.Catalog.__mix_recompile__?()
   end
 
   test "the drawing of one node: a person makes the node from it and its inputs, as from the whole drawing (plan 0007, D3)" do
-    {:ok, %{drawing: raw}} = Orders.job(Drawing.raw("tuong_chua_kito_vua_cong_truong"), "far")
+    {:ok, %{drawing: raw}} = Orders.job(Drawing.Catalog.raw("tuong_chua_kito_vua_cong_truong"), "far")
 
     made =
       Enum.reduce(["figure", "robe"], %{}, fn n, made ->

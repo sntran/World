@@ -65,7 +65,7 @@ defmodule World.People.Parts do
     unless is_map_key(@parts, name),
       do: raise(ArgumentError, "unknown part #{inspect(name)}: #{Enum.join(names(), ", ")}")
 
-    item = World.Drawing.file(name)
+    item = World.Drawing.Catalog.file(name)
     scale = Keyword.get(opts, :scale, 1.0)
 
     nodes =

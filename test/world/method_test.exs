@@ -9,7 +9,7 @@ defmodule World.MethodTest do
 
   @moduletag :tmp_dir
 
-  defp order(method), do: put_in(Drawing.raw("tuong_chua_kito_vua_cong_truong"), ["options", "method"], method)
+  defp order(method), do: put_in(Drawing.Catalog.raw("tuong_chua_kito_vua_cong_truong"), ["options", "method"], method)
 
   test "the history of the statue: each fact names its sources, each stage its facts, the dates in order" do
     h = Method.history("tuong_chua_kito_vua_cong_truong")

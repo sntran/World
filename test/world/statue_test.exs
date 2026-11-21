@@ -11,7 +11,7 @@ defmodule World.StatueTest do
   # the site. Its scale is not right (18.4 m is from fingertip to
   # fingertip); the model `tuong_chua_kito_vua` has the true sizes
   # (plan 0014).
-  defp nui_nho(level), do: Detail.with(level, fn -> Drawing.file("tuong_chua_kito_vua_cong_truong") end)
+  defp nui_nho(level), do: Detail.with(level, fn -> Drawing.Catalog.file("tuong_chua_kito_vua_cong_truong") end)
 
   # A statue of the blueprint in data, with the options of an order.
   defp statue(level, options) do

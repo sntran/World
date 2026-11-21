@@ -110,7 +110,14 @@ The factory builds each file with the commit of World that it runs
 (`/version.json`, and the header `x-world-commit` of each file). A new
 deploy of World can change the files of an order. A part does not
 change: its key is a hash of its data and of the version of its rule, so
-the same key is the same file, for ever.
+the same key is the same file, for ever. The version of a rule comes
+from its source (`docs/factory.md`, "One key in each folder"), so the
+factory, a job of CI and a clone of the same commit in any folder give
+the same keys.
+
+Each part got a new key one time, with the deploy of pull request #67
+(the version from the source). Do not lock a key made before that
+deploy: get the parts lists again from the factory, and lock their keys.
 
 So keep a lock in the project, as Vũng Tàu does (`data/world/lock.json`,
 its plan 0023, R3, and plan 0027, D4):

@@ -182,7 +182,7 @@ defmodule World.SkillTest do
     assert Blueprints.drawing(order(drawing())) == drawing()
 
     assert Blueprints.drawing(%{"blueprint" => "catalog", "options" => %{"name" => "banh_mi_cart"}}) ==
-             Drawing.raw("banh_mi_cart")
+             Drawing.Catalog.raw("banh_mi_cart")
 
     assert Blueprints.drawing(%{"blueprint" => "catalog", "options" => %{"name" => "wall_brick_sample"}}) == nil
     assert Blueprints.drawing(%{"blueprint" => "strut", "options" => %{}}) == nil
@@ -206,10 +206,10 @@ defmodule World.SkillTest do
     refute Blueprints.__mix_recompile__?()
 
     # An order of the catalog: its check, and its errors.
-    assert Drawing.check_all!(%{"x" => %{"blueprint" => "statue", "options" => %{}}}) == ["x"]
+    assert Drawing.Catalog.check_all!(%{"x" => %{"blueprint" => "statue", "options" => %{}}}) == ["x"]
 
     assert_raise ArgumentError, ~r/has errors/, fn ->
-      Drawing.check_all!(%{"x" => %{"blueprint" => "statue", "options" => %{"height" => 0}}})
+      Drawing.Catalog.check_all!(%{"x" => %{"blueprint" => "statue", "options" => %{"height" => 0}}})
     end
   end
 
