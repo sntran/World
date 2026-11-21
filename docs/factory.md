@@ -1183,7 +1183,28 @@ A shift started by hand at 18:11:36 (run 44790421771, its node joined at
 - The summary of the shift: 16 parts in 28 minutes, the 4 makes with "no
   recipe", and no failure after them.
 
-The second run comes in a later change of this section.
+**The second run (2026-11-20, `main` at c78f091, with #31 and #32; the
+deploy of cffda79).** A shift started by hand at 23:48:04 (run
+44839411281, its node joined at 23:49:18); the deploy was live at
+23:50:55:
+
+| Measure | Parts list | First part | Whole mid level |
+|---|---|---|---|
+| C: a storey of 3.34 (issue #34, 23:53:04) | 34.4 s | 65.1 s (the sign, the same part as in D); the first main part 107.5 s | 198.7 s |
+| D: a storey of 3.54, 20 s after C (issue #35) | 39.3 s | 46.5 s (the sign); the first main part 157.0 s | 272.6 s |
+
+- The job of C wrote each of its 7 part requests: each waited 10 s at
+  the edge, so each was in the queue.
+- The new VM started at about 23:53:55 (the event `started`), while the
+  parts of C waited or were in work. No part went, and the order of the
+  queue stayed: the 5 main parts of C started on the node from 23:53:59
+  to 23:54:45, and the first main part of D at about 23:54:57 (from the
+  time of each part and its time on the node).
+- The summary of the shift: 13 parts in 23 minutes, each stored. The
+  store refused the sign one time during the start of the new VM; the
+  next make put the GLB that the node kept, in 1.3 s, with no new build.
+- C took 198.7 s, the best time of these measures, also with a start of
+  the VM during it.
 
 **One run for each issue (1398b04).** Before, each issue started two runs
 of "Shift request", and the time from the issue to the parts list was
