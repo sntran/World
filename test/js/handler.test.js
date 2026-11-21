@@ -1,5 +1,6 @@
 // The tests of handler.js, with a fake VM and a fake R2 bucket.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { QUARANTINE, WINDOW, callerOf, handler, orderOf, split, storeToken, urlKey } from '../../handler.js';
 import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
@@ -151,10 +152,14 @@ test('/store/ with the pass of a shift: only a key that the edge gave to that sh
   const pass = 'a'.repeat(64);
   const given = `parts/${HASH}.glb`;
   const asked = [];
+  // (The VM gets the SHA-256 of the pass, never the pass.)
+  const hash = createHash('sha256').update(pass).digest('hex');
   const v = async (request) => {
     const u = new URL(request.url);
-    asked.push(`${u.searchParams.get('access')} ${u.searchParams.get('key')} ${request.headers.get('x-world-shift-pass') === pass}`);
-    return new Response(null, { status: u.searchParams.get('key') === given && request.headers.get('x-world-shift-pass') === pass ? 204 : 403 });
+    assert.equal(request.headers.has('x-world-shift-pass'), false);
+    assert.equal(JSON.stringify([...request.headers]).includes(pass), false);
+    asked.push(`${u.searchParams.get('access')} ${u.searchParams.get('key')} ${request.headers.get('x-world-shift-pass-hash') === hash}`);
+    return new Response(null, { status: u.searchParams.get('key') === given && request.headers.get('x-world-shift-pass-hash') === hash ? 204 : 403 });
   };
   const call = (path, init = {}, token = pass) => handler(auth(path, init, token), env, { vm: v, commit: 'c1' });
   assert.equal(await (await call(`/store/${given}`, { method: 'PUT', body: 'glTF' })).text(), 'ok\n');

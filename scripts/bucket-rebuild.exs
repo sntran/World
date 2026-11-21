@@ -14,6 +14,13 @@
 # - "parts": [KEY]: each part with a recipe in STORE and no GLB there is
 #   built from its recipe (World.Elements.part/1), WORLD_CHECK_WIDTH (2)
 #   parts at the same time.
+# - "maps": [{"key", "hash", "level"}]: a parts list of the site
+#   (builds/COMMIT/HASH.LEVEL.elements, in BUCKET) and the same list here.
+#   The key of a part depends on the folder of the build
+#   (World.Elements.version/1), so the key of each part of the list here
+#   is not the key of the site: when the two lists are the same with no
+#   keys, the recipe and the GLB of each part here go to OUT/parts/ with
+#   the key of the site at the same place of the list.
 # - "hashes": [KEY]: an order or a blueprint in data (orders/HASH.json,
 #   blueprints/HASH.json) whose content gives its hash (World.Orders.hash/1)
 #   and its bytes again.
@@ -22,6 +29,7 @@
 # hashes to OUT/hashes.json, and each error or time out of a task to
 # OUT/errors.json. The script goes on after an error.
 [tasks_path, out] = System.argv()
+bucket = System.get_env("WORLD_CHECK_BUCKET", "")
 tasks = JSON.decode!(File.read!(tasks_path))
 store = System.fetch_env!("WORLD_ORDER_DIR")
 limit = String.to_integer(System.get_env("WORLD_CHECK_MINUTES", "20")) * 60_000
@@ -127,5 +135,47 @@ hashes =
 
 File.mkdir_p!(Path.join(out, "parts"))
 for name <- File.ls!(parts), do: File.cp!(Path.join(parts, name), Path.join([out, "parts", name]))
+
+keyless = fn list -> Map.update!(list, "parts", fn ps -> Enum.map(ps, &Map.drop(&1, ["key", "url"])) end) end
+
+maps =
+  for %{"key" => key, "hash" => hash, "level" => level} <- tasks["maps"] || [] do
+    BucketRebuild.timed("map #{key}", fn ->
+      site = JSON.decode!(File.read!(Path.join(bucket, key)))
+
+      case BucketRebuild.run(limit, fn -> World.Orders.build(BucketRebuild.order(store, hash), level, "elements") end) do
+        {:ok, {:ok, json}} ->
+          here = JSON.decode!(json)
+
+          if keyless.(here) == keyless.(site) do
+            pairs = Enum.zip(for(p <- site["parts"], do: p["key"]), for(p <- here["parts"], do: p["key"]))
+
+            for {theirs, mine} <- pairs do
+              # (A part of a sculpture: its GLB from its recipe here.)
+              if not File.exists?(Path.join(parts, "#{mine}.glb")) and File.exists?(Path.join(parts, "#{mine}.json")),
+                do: BucketRebuild.run(limit, fn -> World.Elements.part(mine) end)
+
+              for ext <- ["glb", "json"], File.exists?(Path.join(parts, "#{mine}.#{ext}")),
+                  do: File.cp!(Path.join(parts, "#{mine}.#{ext}"), Path.join([out, "parts", "#{theirs}.#{ext}"]))
+            end
+
+            {key, length(pairs)}
+          else
+            note.(key, "the list here is not the list of the site, with no keys")
+            {key, 0}
+          end
+
+        {:ok, {:error, e}} ->
+          note.(key, inspect(e))
+          {key, 0}
+
+        {:error, e} ->
+          note.(key, e)
+          {key, 0}
+      end
+    end)
+  end
+
+File.write!(Path.join(out, "maps.json"), JSON.encode!(Map.new(maps)))
 File.write!(Path.join(out, "hashes.json"), JSON.encode!(hashes))
 File.write!(Path.join(out, "errors.json"), JSON.encode!(Agent.get(errors, & &1)))

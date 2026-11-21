@@ -847,7 +847,7 @@ for the new parts; it waits for the end of the shift that runs.
 | The time of a shift | 5.5 hours at most (`timeout-minutes: 330`); the shift stops 15 minutes before | `shift.yml`, `World.Shift` |
 | Shifts that the edge starts each day (UTC) | 6 (`WORLD_SHIFTS_A_DAY`) | `shift.js` |
 | A second start | not in the 20 minutes after a start (the runner, the cache and the start of the node) | `shift.js` |
-| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): GitHub can still start the workflow, so after 5 s the Worker looks at the runs of `shift.yml` (`workflow_dispatch`, since a minute before the start, with the commit in the name). A run is there, or the runs do not answer: the start stays used. No run: the start of the day goes back, and the next start can come after 1 minute. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until I correct the cause | `shift.js` |
+| A start that GitHub does not take | no answer, 429 or 5xx (a cause that goes away): GitHub can still start the workflow, so after 5 s the Worker looks at the runs of `shift.yml` (`workflow_dispatch`, since a minute before the start, with the commit in the name). A run is there, or the runs do not answer: the start stays used. No run: the start of the day goes back, and the next start can come after 1 minute. GitHub can make its run some seconds later, so the next start looks at the runs again first: a run is there (or the runs do not answer), and that start is used again, with the wait of 20 minutes from its time; no second shift starts. 401, 403, 404, 422 or another answer (the token, the workflow or its inputs): the start stays used, with the wait of 20 minutes, until I correct the cause | `shift.js` |
 | No work | the shift goes home after 60 minutes (a request can set a shorter shift: `hours`, or the input `idle`) | `World.Shift` |
 | A part in the queue | 6 hours at most, then an error | `World.Labour` |
 | The queue after a start of the VM | kept in the SQLite of the object; a new VM reads it in 10 s at most; a part in work waits 2.5 minutes for its node, then goes back to the queue | `World.Labour.Store`, `World.Labour.Restore` |
@@ -906,7 +906,9 @@ shift, `scripts/order-store.mjs`), and gives back only the key. The
 Worker writes R2 with its binding. It takes a key with a pass only when
 the edge gave that part to that shift (the GLB to write; the GLB, the
 recipe and the order of the part to read, and the blueprints in data),
-else 403. No GLB goes over the link. A part in R2 does
+else 403. The Worker sends the VM only the SHA-256 of the pass (the
+header `x-world-shift-pass-hash` of `/shift/allowed`), and the VM keeps
+only that hash: the pass is not in the Workers Logs. No GLB goes over the link. A part in R2 does
 not build again, and a node that builds a part already does not build it
 a second time when the edge gives it again (a VM of the edge that starts
 again asks again). When the store does not take the GLB of a part (the
@@ -1413,7 +1415,7 @@ environment of the VM.
   its bucket `world-previews` does not exist, on purpose.
 - The routes of the Worker that send a path of the client to the VM go
   through `forward()`, which keeps 4 headers only. The headers that the
-  VM trusts (`x-world-shift-run`, `x-world-shift-pass`, `x-world-project`,
+  VM trusts (`x-world-shift-run`, `x-world-shift-pass-hash`, `x-world-project`,
   `x-world-origin`) come only from the Worker.
 
 **The logs.** I read the Workers Logs of all requests, from
@@ -1441,10 +1443,12 @@ correction. The hole was open from 2026-11-18 20:10 UTC.
   check of `/.tcp/4000` on a Preview at 2026-11-19 20:32:19 UTC is not
   in the logs. So the logs cannot show who used the hole of a Preview.
   The Previews are deleted, and the three secrets are new.
-- The edge sends the pass of a shift to the VM in the header
+- The edge sent the pass of a shift to the VM in the header
   `x-world-shift-pass` of `/shift/allowed`, and the Workers Logs keep
   that header. A pass works only while its node is in the shift, and
-  for 10 minutes after (6 hours at most).
+  for 10 minutes after (6 hours at most). Since 2026-11-21 the edge
+  sends only the SHA-256 of the pass (`x-world-shift-pass-hash`), and
+  the VM keeps only that hash.
 
 ### The check of the bucket
 
@@ -1501,6 +1505,30 @@ The check of each kind:
 - An order and a blueprint in data have a key that is the hash of their
   content (`World.Orders.hash/1`): the check also says if the content
   gives its key again.
+- **The keys of the parts depend on the folder of the build.** The key of
+  a part has the version of its rule (`World.Elements.version/1`: the MD5
+  of the code of the rule and of each module of World that it calls),
+  and some modules keep the absolute path of the folder of their build
+  in their code (`World.Drawing`, `World.Standards`, `World.Textures`,
+  `World.Terrain`, `World.Animals`, `World.References`, a `__DIR__` in a
+  module attribute). So a build of the same commit in another folder
+  gives other keys: the site (the folder of Workers Builds), this
+  computer and the jobs of CI each have their own keys, and the GLB of
+  each part is the same. The edge in WebAssembly and a VM here give the
+  same key from the same folder.
+- So the check does not make the keys again. Only the Worker of the site
+  writes `builds/` under a commit of `main` (a Preview writes under the
+  commit of its branch, and the store of the VM takes no key of
+  `builds/`), so the parts lists of the site
+  (`builds/COMMIT/HASH.LEVEL.elements`) give the true key of each part of
+  an order at a level. The fetch also gets the list of the site for the
+  order and the level of each recipe of the window, and for each order
+  of the window at each level, at each commit that the site ran. The job
+  of a group makes each list of its commits again; when the two lists
+  are the same with no keys, the recipe and the GLB of each part here
+  have the key of the site at the same place of the list, and the check
+  compares their bytes. A parts list of the site agrees when it is the
+  same list with no keys.
 - World does not build an order, a blueprint in data, an entry of the
   history of the edits, the hash of the order of a URL (`urls/`), the
   hash of a control key (`controls/`) or the state of the shifts. For

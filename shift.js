@@ -23,14 +23,20 @@
 //   run is there: the start stays used (a second start would wait in the
 //   queue for a whole shift). No run: the start of the day goes back, and
 //   the next start can come after RETRY ms. The runs do not answer: the
-//   start stays used, as a refused start. A start that GitHub refuses
+//   start stays used, as a refused start. GitHub can make the run some
+//   seconds after the first look: so the state keeps the start that went
+//   back (`back`), and the next start looks at the runs again first. A
+//   run is there, or the runs do not answer: that start is used again
+//   (the count of its day, and the wait of START from its time), and no
+//   second shift starts in that wait. A start that GitHub refuses
 //   (401 or 403: the token; 404 or 422: the workflow or its inputs; any
 //   other answer) keeps its start and the wait of START: a new try fails
 //   in the same way until the owner corrects it, so it does not use the
 //   starts of the day or the API of GitHub.
 //
-// The state is one object of R2, shifts/state.json ({ day, count, last }),
-// written only if no other request wrote it first (its ETag).
+// The state is one object of R2, shifts/state.json ({ day, count, last },
+// and back: { commit, at } after a start that went back), written only if
+// no other request wrote it first (its ETag).
 
 export const STATE = 'shifts/state.json';
 
@@ -70,19 +76,11 @@ export async function startShift(env, commit, { hours = null, fetch = globalThis
   const token = env.WORLD_SHIFT_TOKEN;
   if (typeof token !== 'string' || token === '') return 'no token';
   const limit = Number(env.WORLD_SHIFTS_A_DAY ?? '6');
-  const object = await env.ORDERS.get(STATE);
-  const state = object ? await object.json() : { day: '', count: 0, last: 0 };
-  const day = new Date(now).toISOString().slice(0, 10);
-  const count = state.day === day ? state.count : 0;
+  let object = await env.ORDERS.get(STATE);
+  let state = object ? await object.json() : { day: '', count: 0, last: 0 };
+  const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const day = dayOf(now);
   if (now - state.last < START) return 'starting';
-  if (count >= limit) return 'limit';
-
-  const only = object ? { etagMatches: object.etag } : { etagDoesNotMatch: '*' };
-  const put = await env.ORDERS.put(STATE, JSON.stringify({ day, count: count + 1, last: now }), {
-    onlyIf: only,
-    httpMetadata: { contentType: 'application/json' },
-  });
-  if (!put) return 'raced';
 
   const api = env.WORLD_SHIFT_API ?? 'https://api.github.com';
   const repository = env.WORLD_SHIFT_REPOSITORY ?? 'sntran/World';
@@ -92,6 +90,33 @@ export async function startShift(env, commit, { hours = null, fetch = globalThis
     'user-agent': 'world-factory',
     'x-github-api-version': '2022-11-28',
   };
+
+  // The second look at the runs of a start that went back.
+  if (state.back) {
+    const { commit: was, at } = state.back;
+    const seen = await dispatched(api, repository, headers, was, at - 60_000, fetch);
+    const late = { day: state.day, count: state.count, last: state.last };
+    if (seen !== false) {
+      // (The start of `at` is used again: the count of its day, and its time.)
+      Object.assign(late, { day: dayOf(at), count: (state.day === dayOf(at) ? state.count : 0) + 1, last: at });
+      log(seen ? `shift: GitHub made the run of the start of ${new Date(at).toISOString()} late; that start is used again` : 'shift: the runs of the workflow did not answer at the second look; the start that went back is used again');
+    }
+    const put = await env.ORDERS.put(STATE, JSON.stringify(late), { onlyIf: { etagMatches: object.etag }, httpMetadata: { contentType: 'application/json' } });
+    if (!put) return 'raced';
+    if (now - late.last < START) return 'starting';
+    object = put;
+    state = late;
+  }
+
+  const count = state.day === day ? state.count : 0;
+  if (count >= limit) return 'limit';
+
+  const only = object ? { etagMatches: object.etag } : { etagDoesNotMatch: '*' };
+  const put = await env.ORDERS.put(STATE, JSON.stringify({ day, count: count + 1, last: now }), {
+    onlyIf: only,
+    httpMetadata: { contentType: 'application/json' },
+  });
+  if (!put) return 'raced';
   const r = await fetch(`${api}/repos/${repository}/actions/workflows/shift.yml/dispatches`, {
     method: 'POST',
     headers: { ...headers, 'content-type': 'application/json' },
@@ -113,9 +138,9 @@ export async function startShift(env, commit, { hours = null, fetch = globalThis
       return 'failed';
     }
     // (The state before this start, if no other request wrote it since:
-    // the count of the day, and a time so that the next start can come
-    // after RETRY.)
-    const back = await env.ORDERS.put(STATE, JSON.stringify({ day, count, last: now - START + RETRY }), {
+    // the count of the day, a time so that the next start can come after
+    // RETRY, and this start for the second look at the runs.)
+    const back = await env.ORDERS.put(STATE, JSON.stringify({ day, count, last: now - START + RETRY, back: { commit, at: now } }), {
       onlyIf: { etagMatches: put.etag },
       httpMetadata: { contentType: 'application/json' },
     });
