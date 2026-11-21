@@ -1564,6 +1564,51 @@ The check of each kind:
 - Each object that does not agree, and each object with no request,
   goes to `quarantine/`.
 
+**The result (2026-11-21).** Run 44924224179 of `bucket-check.yml`, at
+`main` 7512a47, after the changes of #61 to #65. The window has 741
+objects. 13 groups of commits; each file of a commit is from a commit of
+`main` (no file of a commit of a Preview).
+
+| Kind | Objects | Agree | Differ | No rebuild | Need a request |
+|---|---|---|---|---|---|
+| A file of an order (`builds/`) | 156 | 149 | 0 | 7 | – |
+| A part (`parts/KEY.glb`) | 380 | 288 | 0 | 92 | – |
+| A recipe (`parts/KEY.json`) | 138 | 126 | 2 | 10 | – |
+| An order (`orders/`) | 40 | – | – | – | 40 |
+| An entry of the history of the edits | 16 | – | – | – | 16 |
+| The hash of the order of a URL (`urls/`) | 7 | – | – | – | 7 |
+| The hash of a control key | 2 | – | – | – | 2 |
+| A request of a part (`requests/`) | 2 | – | – | – | 2 |
+
+- The files: 128 have the same bytes, and the 21 parts lists are the same
+  lists with the keys of the build of the site.
+- The parts: 82 agree by their key (the part from the recipe of the
+  site, or the part at the same place of the parts list of the site),
+  and 206 parts of rules in code have the same bytes as a part of the
+  rebuild.
+- The recipes: 111 have the same JSON values with other bytes, and 15
+  name another order with the same part, and the part from the recipe
+  agrees.
+- Each order of the window gives its hash again from its content.
+- The 7 files and the 92 parts with no rebuild are all of the same 4
+  URLs of `/m/` (cars), at the commits 57e7eee and aa922fb. The site does
+  not keep the order of a URL in `orders/`, only its hash in `urls/`, so
+  the rebuild has no order for them. The URL of the request in the
+  Workers Logs gives that order.
+- 10 recipes have no part of a parts list of the site at their place,
+  and 2 recipes name another order and the part from them does not have
+  the bytes of the site.
+- An object that the site wrote again after the window has a new upload
+  time, so it is not in the list (an order: 41 in run 4, 40 in run 9).
+  The key of an order is the hash of its content, so it is the same
+  order.
+
+**The quarantine.** The 111 objects that World builds and that do not
+agree (the 7 files, the 92 parts and the 12 recipes) went to
+`quarantine/` in run 44928698402 (111 answers 200). The site builds a
+part, a recipe or a file again when a request asks for it. The 67
+objects that need a request wait for the Workers Logs of the window.
+
 ### The memory of the VM (2026-11-21)
 
 `GET /census` gives the memory of the VM (`memory`), and
