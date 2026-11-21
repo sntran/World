@@ -108,13 +108,64 @@ test('a start that fails for a cause that goes away (no answer, 429, 5xx), with 
     assert.deepEqual(waits, [SEEN]);
     assert.equal(g.looks.length, 1);
     assert.match(g.looks[0], /\/repos\/sntran\/World\/actions\/workflows\/shift\.yml\/runs\?event=workflow_dispatch&created=%3E%3D2026-11-18T09%3A59%3A00\.000Z/);
-    // The count of the day as before, and the next start after RETRY (not START).
-    assert.deepEqual(state(env), { day: '2026-11-18', count: 0, last: NOW - START + RETRY });
+    // The count of the day as before, the next start after RETRY (not START), and the start that went back.
+    assert.deepEqual(state(env), { day: '2026-11-18', count: 0, last: NOW - START + RETRY, back: { commit: COMMIT, at: NOW } });
     assert.equal(await startShift(env, COMMIT, { fetch: github().fetch, now: NOW + RETRY - 1 }), 'starting');
-    assert.equal(await startShift(env, COMMIT, { fetch: github().fetch, now: NOW + RETRY, log: () => {} }), 'started');
+    // (The second look at the runs finds no run still: a new start.)
+    const next = failing(204, { runs: [run('b'.repeat(40))] });
+    assert.equal(await startShift(env, COMMIT, { fetch: next.fetch, now: NOW + RETRY, log: () => {} }), 'started');
+    assert.equal(next.looks.length, 1);
+    assert.match(next.looks[0], /created=%3E%3D2026-11-18T09%3A59%3A00\.000Z/);
+    assert.deepEqual(state(env), { day: '2026-11-18', count: 1, last: NOW + RETRY });
     // (The one start of the day is still there for the start that works.)
     assert.equal(await startShift(env, COMMIT, { fetch: github().fetch, now: NOW + RETRY + START }), 'limit');
   }
+});
+
+test('GitHub makes the run of a start that went back some seconds after the first look: the next start looks again, uses that start again, and starts no second shift', async () => {
+  for (const [runs, runsStatus, line] of [
+    [[run(COMMIT)], 200, /GitHub made the run of the start of 2026-11-18T10:00:00.000Z late; that start is used again/],
+    [[], 503, /did not answer at the second look; the start that went back is used again/],
+  ]) {
+    const env = { ORDERS: bucket(), WORLD_SHIFT_TOKEN: 't' };
+    assert.equal(await startShift(env, COMMIT, { fetch: failing(503).fetch, now: NOW, log: () => {}, wait: async () => {} }), 'unavailable');
+    const log = [];
+    const g = failing(204, { runs, runsStatus });
+    assert.equal(await startShift(env, COMMIT, { fetch: g.fetch, now: NOW + RETRY, log: (l) => log.push(l) }), 'starting');
+    assert.match(log[0], line);
+    // (No dispatch: only the look.)
+    assert.equal(g.looks.length, 1);
+    assert.deepEqual(state(env), { day: '2026-11-18', count: 1, last: NOW });
+    // After START from that start, a new start, with the count of the day.
+    const later = failing(204);
+    assert.equal(await startShift(env, COMMIT, { fetch: later.fetch, now: NOW + START, log: (l) => log.push(l) }), 'started');
+    assert.deepEqual(later.looks, []);
+    assert.match(log[1], /2 of 6 today/);
+  }
+});
+
+test('a second look after START, of a start of the day before, and a second look that another request races', async () => {
+  // (The look comes after START from the start that went back: that start counts on its day, and a new one starts.)
+  const env = { ORDERS: bucket(), WORLD_SHIFT_TOKEN: 't', WORLD_SHIFTS_A_DAY: '1' };
+  const back = NOW + 14 * 3600_000 - 10;
+  assert.equal(await startShift(env, COMMIT, { fetch: failing(503).fetch, now: back, log: () => {}, wait: async () => {} }), 'unavailable');
+  const g = failing(204, { runs: [run(COMMIT)] });
+  const log = [];
+  assert.equal(await startShift(env, COMMIT, { fetch: g.fetch, now: back + START, log: (l) => log.push(l) }), 'started');
+  assert.match(log[1], /1 of 1 today/);
+  assert.deepEqual(state(env), { day: '2026-11-19', count: 1, last: back + START });
+
+  // (Another request writes the state between the read and the write of the second look.)
+  const raced = bucket();
+  const env2 = { ORDERS: raced, WORLD_SHIFT_TOKEN: 't' };
+  assert.equal(await startShift(env2, COMMIT, { fetch: failing(503).fetch, now: NOW, log: () => {}, wait: async () => {} }), 'unavailable');
+  const looks = failing(204);
+  const fetch = async (url, init) => {
+    if (url.includes('/runs?')) await raced.put(STATE, JSON.stringify({ day: '2026-11-18', count: 3, last: NOW + 7 }));
+    return looks.fetch(url, init);
+  };
+  assert.equal(await startShift(env2, COMMIT, { fetch, now: NOW + RETRY, log: () => {} }), 'raced');
+  assert.deepEqual(state(env2), { day: '2026-11-18', count: 3, last: NOW + 7 });
 });
 
 test('a start that fails for a cause that goes away, but GitHub made its run, stays used', async () => {
