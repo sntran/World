@@ -455,14 +455,15 @@ defmodule World.Service do
   end
 
   # The check of the Worker for /store/KEY with a pass: 204 when the
-  # shift of the pass can read (or write) the key, else 403.
+  # shift of the pass can read (or write) the key, else 403. The Worker
+  # sends the SHA-256 of the pass, not the pass.
   get "/shift/allowed" do
     conn = fetch_query_params(conn)
     access = if conn.query_params["access"] == "write", do: :write, else: :read
 
-    case get_req_header(conn, "x-world-shift-pass") do
-      [pass] ->
-        if World.Shift.Passes.allowed?(pass, conn.query_params["key"] || "", access),
+    case get_req_header(conn, "x-world-shift-pass-hash") do
+      [hash] ->
+        if World.Shift.Passes.allowed?(hash, conn.query_params["key"] || "", access),
           do: send_resp(conn, 204, ""),
           else: send_resp(conn, 403, "")
 

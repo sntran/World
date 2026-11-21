@@ -905,7 +905,9 @@ shift, `scripts/order-store.mjs`), and gives back only the key. The
 Worker writes R2 with its binding. It takes a key with a pass only when
 the edge gave that part to that shift (the GLB to write; the GLB, the
 recipe and the order of the part to read, and the blueprints in data),
-else 403. No GLB goes over the link. A part in R2 does
+else 403. The Worker sends the VM only the SHA-256 of the pass (the
+header `x-world-shift-pass-hash` of `/shift/allowed`), and the VM keeps
+only that hash: the pass is not in the Workers Logs. No GLB goes over the link. A part in R2 does
 not build again, and a node that builds a part already does not build it
 a second time when the edge gives it again (a VM of the edge that starts
 again asks again). When the store does not take the GLB of a part (the
@@ -1412,7 +1414,7 @@ environment of the VM.
   its bucket `world-previews` does not exist, on purpose.
 - The routes of the Worker that send a path of the client to the VM go
   through `forward()`, which keeps 4 headers only. The headers that the
-  VM trusts (`x-world-shift-run`, `x-world-shift-pass`, `x-world-project`,
+  VM trusts (`x-world-shift-run`, `x-world-shift-pass-hash`, `x-world-project`,
   `x-world-origin`) come only from the Worker.
 
 **The logs.** The owner read the Workers Logs of all requests, from
@@ -1440,10 +1442,12 @@ correction. The hole was open from 2026-11-18 20:10 UTC.
   check of `/.tcp/4000` on a Preview at 2026-11-19 20:32:19 UTC is not
   in the logs. So the logs cannot show who used the hole of a Preview.
   The Previews are deleted, and the three secrets are new.
-- The edge sends the pass of a shift to the VM in the header
+- The edge sent the pass of a shift to the VM in the header
   `x-world-shift-pass` of `/shift/allowed`, and the Workers Logs keep
   that header. A pass works only while its node is in the shift, and
-  for 10 minutes after (6 hours at most).
+  for 10 minutes after (6 hours at most). Since 2026-11-21 the edge
+  sends only the SHA-256 of the pass (`x-world-shift-pass-hash`), and
+  the VM keeps only that hash.
 
 ### The guard and the memory of WebAssembly
 

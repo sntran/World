@@ -38,7 +38,10 @@ defmodule World.Shift.PassesTest do
     node = String.to_atom(node)
     cookie = String.to_atom(cookie)
     assert_receive {:cookie, ^node, ^cookie}
-    assert Passes.node_of(pass, p) == node
+    # (The edge knows the pass by its SHA-256 only.)
+    assert Passes.hash(pass) =~ ~r/^[0-9a-f]{64}$/ and Passes.hash(pass) != pass
+    assert Passes.node_of(Passes.hash(pass), p) == node
+    assert Passes.node_of(pass, p) == nil
     assert Passes.node_of("another pass", p) == nil
 
     # Two runners: two names, two cookies.
@@ -57,8 +60,8 @@ defmodule World.Shift.PassesTest do
     # A node that goes keeps its pass and its cookie for a time: it can connect again.
     send(p, {:nodedown, node, node_type: :hidden})
     refute_receive {:cookie, ^node, _}, 50
-    assert Passes.node_of(pass, p) == node
-    assert Passes.node_of(other["pass"], p) == String.to_atom(other["node"])
+    assert Passes.node_of(Passes.hash(pass), p) == node
+    assert Passes.node_of(Passes.hash(other["pass"]), p) == String.to_atom(other["node"])
   end
 
   # A store of the passes in an agent (World.Shift.Store on the edge).
@@ -113,6 +116,9 @@ defmodule World.Shift.PassesTest do
     refute_receive {:cookie, :"shift_5_5_4372@127.0.0.1", _}, 20
 
     {:ok, joined} = Passes.join("3-1", q)
+    # (The store has the hash of the pass, not the pass.)
+    refute Map.has_key?(Rows.rows(), joined["pass"])
+    joined = %{joined | "pass" => Passes.hash(joined["pass"])}
     assert %{node: node, cookie: cookie, at: at} = Rows.rows()[joined["pass"]]
     assert Atom.to_string(node) == joined["node"] and at == now.()
     assert_receive {:cookie, ^node, ^cookie}
@@ -177,13 +183,14 @@ defmodule World.Shift.PassesTest do
     {:ok, new} = Passes.join("2-1", p)
     old_node = String.to_atom(old["node"])
     assert_receive {:cookie, ^old_node, _}
-    assert Passes.node_of(old["pass"], p) == nil and Passes.node_of(new["pass"], p) != nil
+    assert Passes.node_of(Passes.hash(old["pass"]), p) == nil and Passes.node_of(Passes.hash(new["pass"]), p) != nil
   end
 
   test "a pass reads and puts only the parts that the edge gave to its shift, their recipes and orders, and the blueprints" do
     p = passes(:passes_e)
-    {:ok, %{"node" => node, "pass" => pass}} = Passes.join("9-1", p)
+    {:ok, %{"node" => node, "pass" => plain}} = Passes.join("9-1", p)
     {:ok, %{"pass" => other}} = Passes.join("9-2", p)
+    [pass, other] = [Passes.hash(plain), Passes.hash(other)]
     [given, not_given, no_recipe] = for c <- ["7", "8", "9"], do: String.duplicate(c, 32)
 
     :ok =
@@ -216,6 +223,8 @@ defmodule World.Shift.PassesTest do
     # Another shift, and a pass that is not a pass.
     refute Passes.allowed?(other, "parts/#{given}.glb", :write, p)
     refute Passes.allowed?("no pass", "parts/#{given}.glb", :read, p)
+    # (The pass itself is not the hash of a pass.)
+    refute Passes.allowed?(plain, "parts/#{given}.glb", :read, p)
     # The part is done: no more.
     Process.unlink(holder)
     Process.exit(holder, :kill)
@@ -275,13 +284,17 @@ defmodule World.Shift.PassesTest do
     passes(Passes)
     joined = call.(post.([{"x-world-shift-run", "5-1"}]))
     assert joined.status == 200
-    %{"pass" => pass, "node" => node} = JSON.decode!(joined.resp_body)
+    %{"pass" => plain, "node" => node} = JSON.decode!(joined.resp_body)
+    pass = Passes.hash(plain)
     key = String.duplicate("6", 32)
-    assert call.(get.("key=parts/#{key}.glb&access=write", [{"x-world-shift-pass", pass}])).status == 403
+    assert call.(get.("key=parts/#{key}.glb&access=write", [{"x-world-shift-pass-hash", pass}])).status == 403
     {:ok, _} = Registry.register(World.Labour, {World.Crew.Tasks, String.to_atom(node)}, key)
-    assert call.(get.("key=parts/#{key}.glb&access=write", [{"x-world-shift-pass", pass}])).status == 204
-    assert call.(get.("key=parts/#{key}.glb", [{"x-world-shift-pass", pass}])).status == 204
-    assert call.(get.("", [{"x-world-shift-pass", pass}])).status == 403
+    assert call.(get.("key=parts/#{key}.glb&access=write", [{"x-world-shift-pass-hash", pass}])).status == 204
+    assert call.(get.("key=parts/#{key}.glb", [{"x-world-shift-pass-hash", pass}])).status == 204
+    assert call.(get.("", [{"x-world-shift-pass-hash", pass}])).status == 403
+    # (The pass itself, and the header of before: no.)
+    assert call.(get.("key=parts/#{key}.glb", [{"x-world-shift-pass-hash", plain}])).status == 403
+    assert call.(get.("key=parts/#{key}.glb", [{"x-world-shift-pass", plain}])).status == 403
     Registry.unregister(World.Labour, {World.Crew.Tasks, String.to_atom(node)})
 
     # Before the distribution of the edge.
