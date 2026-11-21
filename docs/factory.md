@@ -1655,8 +1655,68 @@ objects. 13 groups of commits; each file of a commit is from a commit of
 **The quarantine.** The 111 objects that World builds and that do not
 agree (the 7 files, the 92 parts and the 12 recipes) went to
 `quarantine/` in run 44928698402 (111 answers 200). The site builds a
-part, a recipe or a file again when a request asks for it. The 67
-objects that need a request wait for the Workers Logs of the window.
+part, a recipe or a file again when a request asks for it.
+
+**The check is done (2026-11-21).**
+
+- **The orders.** The key of an order is the hash of its content, so an
+  object whose content gives its key is that order, from any writer. Run
+  44951873153 (at 107cac8, after #69) gave each of the 40 orders of the
+  window the verdict `agrees` by its content: they need no log.
+- **The objects that stay.** In the same run, the window has 630
+  objects (the 741 of run 9 less the 111 in `quarantine/`): the 40
+  orders, 149 files, 288 parts and 126 recipes agree, and the 27 objects
+  below need a request.
+- **The 27 objects that need a request** went to `quarantine/` in run
+  44955757970 (27 answers 200): the 7 hashes of the order of a URL
+  (`urls/`), the 2 hashes of a control key (`controls/`), the 2 requests
+  of a part (`requests/`) and the 16 entries of the history of the edits
+  (`history/`). The site makes the hash of the order of a URL again at
+  the next request of that URL. A control key of the window no longer
+  controls its construction, and an edit of the window has no entry in
+  the history of its order.
+- **The Workers Logs** of the owner keep 7 days, so the first hours of
+  the window go on 2026-11-25 at 20:10 UTC. If the owner gives me the
+  logs before then, I put back each entry of the history that a request
+  of the site wrote. Else the 16 entries stay in `quarantine/`.
+- **The 12 recipes in `quarantine/`.** Run 44958553191 (at 871ae04,
+  with the input `held`, #70) checked the 138 objects of `quarantine/`
+  again and gave the order and the level of each recipe:
+  - **The 2 recipes that differed** (`ae043ff7…` and `ae7c94f6…`,
+    2026-11-19 21:02:40 and 21:02:41): the site wrote them from the parts
+    list at mid of the order `b4a4e642…`, an edit of Hải Âu. The order of
+    Hải Âu itself (`42bab18a…`) has the same two parts (the parts that the
+    edit does not change), and run 9 made its list first, so its recipe
+    named `42bab18a…`: the same part, with another order in the recipe.
+    With the list of `b4a4e642…`, the held run gives the same JSON values
+    (`agrees`). The bucket has no GLB of these two parts from the window
+    (no request asked for them), so no part bytes differ.
+  - **The 10 recipes with no part at their place**: 5 of the order
+    `e539db47…` (2026-11-19 21:09:13 to 21:09:15) and 5 of the order
+    `aabcb17f…` (21:47:05 to 21:47:06), each at mid. The two orders are
+    edits of Hải Âu (their entries of the history are at 21:03:58 and
+    21:39:28): the rebuild makes 7 parts of mid for each, and 5 of them
+    are new. The site wrote the recipes of the 5 new parts, and the bucket
+    has no parts list of the site for these two orders at any commit of
+    the window: each list stopped after its recipes and before its file.
+    The parts list of Hải Âu at mid needs about 85 MB and 25 to 35 s at
+    the local edge (below, "Hải Âu"), so the likely cause is an end of
+    the VM in the list; the record of that time has no cause (the record
+    of the ends of the VM came later). With no list, no part has the key
+    of these recipes, and their keys were keys of the folder of the build
+    of that time, which no build gives again.
+  - No recipe came from a build that gives other bytes at each run, so
+    there is nothing to correct in the builds. The 12 recipes stay in
+    `quarantine/`: the site makes a recipe again when a request asks for
+    the parts list of its order.
+- **In all:** of the 741 objects of the window, 603 agree and stay, and
+  138 are in `quarantine/`: the 111 that did not agree, and the 27 that
+  need a request.
+- **The routes `/bucket/`** answer 404 since this change, unless the
+  variable `WORLD_BUCKET_CHECK` of `wrangler.jsonc` is `"true"` (`"false"`
+  by default). `quarantine/` and the workflow stay: to run the check
+  again, set the variable to `"true"`, deploy, run the workflow, and set
+  it back.
 
 ### The memory of the VM (2026-11-21)
 

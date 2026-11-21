@@ -50,7 +50,7 @@ test('fetch: the objects of the window and each order, recipe and blueprint that
   // (A recipe of the window that names an order that the bucket does not have.)
   await orders.put(`parts/${'f'.repeat(32)}.json`, JSON.stringify({ order: 'f'.repeat(32) }));
   const claims = { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/bucket-check.yml@refs/heads/main' };
-  const env = { ORDERS: orders, WORLD_OWNER_ID: '973206' };
+  const env = { ORDERS: orders, WORLD_OWNER_ID: '973206', WORLD_BUCKET_CHECK: 'true' };
   const worker = (url, init) => handler(new Request(url, init), env, { vm: vm(), commit: 'c1', verify: async (t) => (t === 'a.b.c' ? claims : null) });
   const api = client('https://world.example', async () => 'a.b.c', worker);
   const dir = await mkdtemp(join(tmpdir(), 'bucket-'));
@@ -231,7 +231,7 @@ test('the command line: fetch and quarantine with the ID token of the job, again
   const orders = bucket({ clock: () => WINDOW.from + 1 });
   await orders.put(`parts/${K}.glb`, 'glTF');
   const claims = { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/bucket-check.yml@refs/heads/main' };
-  const env = { ORDERS: orders, WORLD_OWNER_ID: '973206' };
+  const env = { ORDERS: orders, WORLD_OWNER_ID: '973206', WORLD_BUCKET_CHECK: 'true' };
   const tokens = [];
   const server = createServer(async (req, res) => {
     const url = `http://${req.headers.host}${req.url}`;
@@ -277,7 +277,7 @@ test('the parts lists of the site: the lists of the orders and the recipes of th
   await orders.put(`builds/${C2}/${H}.near.elements`, '{"parts":[]}');
   await orders.put(`builds/${C1}/${B}.far.elements`, '{"parts":[]}');
   const claims = { repository: 'sntran/World', repository_owner_id: '973206', job_workflow_ref: 'sntran/World/.github/workflows/bucket-check.yml@refs/heads/main' };
-  const env = { ORDERS: orders, WORLD_OWNER_ID: '973206' };
+  const env = { ORDERS: orders, WORLD_OWNER_ID: '973206', WORLD_BUCKET_CHECK: 'true' };
   const worker = (url, init) => handler(new Request(url, init), env, { vm: vm(), commit: 'c1', verify: async () => claims });
   const api = client('https://world.example', async () => 'a.b.c', worker);
   const dir = await mkdtemp(join(tmpdir(), 'lists-'));

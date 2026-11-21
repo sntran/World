@@ -7,7 +7,10 @@ name: The check of the bucket
 # lists the objects of the bucket whose upload time is in that window,
 # with the routes /bucket/ of the Worker (handler.js), which take only
 # the ID token of this workflow on main (oidc.js). It uses no secret and
-# no token of Cloudflare.
+# no token of Cloudflare. The check ended on 2026-11-21, so the routes
+# answer 404 unless the variable WORLD_BUCKET_CHECK of wrangler.jsonc is
+# "true": to run the check again, set it to "true", deploy, run this
+# workflow, and set it back to "false".
 #
 # - With no input: the list, the count of each kind, and the rebuild.
 #   The commits of main that the site ran in the window go in groups with

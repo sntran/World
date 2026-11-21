@@ -72,7 +72,7 @@ test('the check of the bucket: only the job of bucket-check.yml lists the object
   now = WINDOW.to + 1;
   await orders.put('parts/after.glb', 'glTF 2');
   const v = vm();
-  const call = (path, method = 'GET', who = 'check') => handler(req(path, { method, headers: jwt(who) }), { ORDERS: orders, ...OWNER }, { vm: v, commit: 'c1', verify: check });
+  const call = (path, method = 'GET', who = 'check') => handler(req(path, { method, headers: jwt(who) }), { ORDERS: orders, ...OWNER, WORLD_BUCKET_CHECK: 'true' }, { vm: v, commit: 'c1', verify: check });
 
   const listed = await call('/bucket/list');
   assert.equal(listed.status, 200);
@@ -123,20 +123,37 @@ test('the check of the bucket: only the job of bucket-check.yml lists the object
   assert.equal((await call('/bucket/list', 'POST')).status, 404);
   assert.equal((await call('/bucket/other?key=parts/after.glb')).status, 404);
   for (const who of ['shift', 'request', 'project', 'stranger', 'nobody']) assert.equal((await call('/bucket/list', 'GET', who)).status, 403, who);
-  assert.equal((await handler(req('/bucket/list'), { ORDERS: orders, ...OWNER }, { vm: v, commit: 'c1', verify: check })).status, 403);
+  assert.equal((await handler(req('/bucket/list'), { ORDERS: orders, ...OWNER, WORLD_BUCKET_CHECK: 'true' }, { vm: v, commit: 'c1', verify: check })).status, 403);
   assert.deepEqual(v.calls, []);
 });
 
 test('the check of the bucket reads the bucket in pages of 1000 objects, with the cursor of the next page', async () => {
   const orders = bucket({ clock: () => WINDOW.from + 1 });
   for (let i = 0; i < 1001; i++) await orders.put(`parts/${String(i).padStart(4, '0')}.glb`, 'g');
-  const call = (path) => handler(req(path, { headers: jwt('check') }), { ORDERS: orders, ...OWNER }, { vm: vm(), commit: 'c1', verify: check });
+  const call = (path) => handler(req(path, { headers: jwt('check') }), { ORDERS: orders, ...OWNER, WORLD_BUCKET_CHECK: 'true' }, { vm: vm(), commit: 'c1', verify: check });
   const first = await (await call('/bucket/list')).json();
   assert.equal(first.objects.length, 1000);
   assert.equal(first.cursor, '1000');
   const next = await (await call(`/bucket/list?cursor=${first.cursor}`)).json();
   assert.deepEqual(next.objects.map((o) => o.key), ['parts/1000.glb']);
   assert.equal(next.cursor, null);
+});
+
+test('the routes of the check of the bucket answer 404 unless WORLD_BUCKET_CHECK is "true", also for the job of the check', async () => {
+  const orders = bucket({ clock: () => WINDOW.from + 1 });
+  await orders.put('parts/first.glb', 'glTF 1');
+  const v = vm();
+  for (const vars of [{}, { WORLD_BUCKET_CHECK: 'false' }, { WORLD_BUCKET_CHECK: 'TRUE' }]) {
+    const call = (path, method = 'GET') => handler(req(path, { method, headers: jwt('check') }), { ORDERS: orders, ...OWNER, ...vars }, { vm: v, commit: 'c1', verify: check });
+    for (const [path, method] of [['/bucket/list', 'GET'], ['/bucket/object?key=parts/first.glb', 'GET'], ['/bucket/quarantine?key=parts/first.glb', 'POST']]) {
+      const r = await call(path, method);
+      assert.equal(r.status, 404, `${JSON.stringify(vars)} ${path}`);
+      assert.equal(await r.text().then((t) => t.includes('glTF')), false);
+    }
+  }
+  assert.equal(orders.items.has('parts/first.glb'), true);
+  assert.equal(orders.items.has('quarantine/parts/first.glb'), false);
+  assert.deepEqual(v.calls, []);
 });
 
 test('the join of a shift: the ID token of shift.yml, or the token of the store of a test; another caller gets 401', async () => {
