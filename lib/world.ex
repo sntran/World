@@ -186,12 +186,61 @@ defmodule World do
   end
 
   @doc """
+  Where the memory of the VM is, for a record of it (`GET /census`,
+  `scripts/memory-record.mjs`): the memory of WebAssembly (`wasm`: its
+  `size` and the part that the VM `used`, nil when the VM does not run in
+  WebAssembly), the processes (their count and their bytes), the
+  binaries that the processes hold (each one time), the tables of ETS,
+  the persistent terms, and the `top` processes and `tables` by their
+  bytes. It needs no allocators of ERTS (`-Mea min` at the edge).
+  """
+  def memory_report(host \\ :wasm_host, top \\ 8) do
+    word = :erlang.system_info(:wordsize)
+
+    procs =
+      for p <- Process.list(),
+          info = Process.info(p, [:memory, :binary, :registered_name, :dictionary, :initial_call, :message_queue_len]),
+          do: info
+
+    binaries = for info <- procs, {id, size, _} <- info[:binary], into: %{}, do: {id, size}
+
+    tables =
+      for t <- :ets.all(),
+          bytes = :ets.info(t, :memory),
+          is_integer(bytes),
+          do: %{"name" => inspect(:ets.info(t, :name)), "bytes" => bytes * word, "size" => :ets.info(t, :size)}
+
+    biggest =
+      for info <- procs |> Enum.sort_by(& &1[:memory], :desc) |> Enum.take(top),
+          do: %{"name" => process_name(info), "bytes" => info[:memory], "messages" => info[:message_queue_len]}
+
+    %{
+      "wasm" => with({size, used} <- wasm_memory(host), do: %{"size" => size, "used" => used}),
+      "processes" => %{"count" => length(procs), "bytes" => Enum.sum(for info <- procs, do: info[:memory])},
+      "binaries" => Enum.sum(Map.values(binaries)),
+      "ets" => Enum.sum(for t <- tables, do: t["bytes"]),
+      "persistent_terms" => :persistent_term.info()[:memory],
+      "top" => biggest,
+      "tables" => tables |> Enum.sort_by(& &1["bytes"], :desc) |> Enum.take(top)
+    }
+  end
+
+  # The name of a process: its registered name, else the function that
+  # started it (of proc_lib, else of the VM).
+  defp process_name(info) do
+    case info[:registered_name] do
+      [] -> inspect(Keyword.get(info[:dictionary], :"$initial_call", info[:initial_call]))
+      name -> inspect(name)
+    end
+  end
+
+  @doc """
   The people of the node and the requests that wait
-  (`World.Census.people/1`), and the crews of the sites
-  (`World.Crew.census/1`).
+  (`World.Census.people/1`), the crews of the sites
+  (`World.Crew.census/1`), and the memory of the VM (`memory_report/2`).
   """
   def census do
-    people = World.Census.people()
+    people = Map.put(World.Census.people(), "memory", memory_report())
     if GenServer.whereis(World.Crew), do: Map.put(people, "crews", World.Crew.census()), else: people
   end
 end
