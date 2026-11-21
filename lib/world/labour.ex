@@ -73,6 +73,7 @@ defmodule World.Labour do
     shifts = Keyword.get_lazy(opts, :shifts, fn -> Application.get_env(:world, :shifts, false) end)
 
     cond do
+      fits?(recipe) and shifts and opts[:project] -> here_or_queue(key, opts)
       fits?(recipe) -> here(key)
       shifts and opts[:project] -> queue(key, opts)
       shifts -> {:error, public()}
@@ -82,10 +83,24 @@ defmodule World.Labour do
 
   @doc """
   True for a part that the edge builds itself in its memory and its CPU
-  limit: a person of a group at mid or far (about 100 MB and 10 s at the
-  edge). A part of a sculpture and a person at near do not fit.
+  limit, for each caller, by the rule of the edge for the parts of a
+  model (`World.Elements`, "A part fits the memory of the edge"):
+
+  - a part of a sculpture whose estimate of faces at its cells (the
+    `faces` of its tile, `tile.faces` of the parts list) is at most
+    `World.Elements.most/0`, the limit that cuts a sculpture into parts;
+  - a sculpture in one part (no tile): the cut makes one part only when
+    the estimate of the whole sculpture is under that limit;
+  - a person of a group at mid or far (about 100 MB and 10 s at the edge).
+
+  A part of more faces (made in steps), and a person at near, do not fit.
+  A part of a project that fits, and that the guard of the memory stops
+  at the edge (`World.Guard`), waits for a shift as a part that does not
+  fit (`build/3`).
   """
   def fits?(%{"piece" => _, "level" => level}) when level in ["mid", "far"], do: true
+  def fits?(%{"node" => _, "tile" => nil}), do: true
+  def fits?(%{"node" => _, "tile" => %{"faces" => faces}}) when is_number(faces), do: faces <= Elements.most()
   def fits?(_recipe), do: false
 
   @doc """
@@ -198,11 +213,21 @@ defmodule World.Labour do
       %{
         "path" => "",
         "message" =>
-          "this part does not fit the memory and the CPU time of the edge, and a construction shift builds only the orders of the projects of the owner (docs/factory.md, \"Construction shifts\")"
+          "this part does not fit the memory and the CPU time of the edge, and a construction shift builds only the parts of the projects of the owner: ask for the whole file of the order (GET /o/HASH.LEVEL.glb), or ask for the part from a job of GitHub Actions of a repository of the account sntran, with its ID token (docs/projects.md)"
       }
     ]
 
   defp here(key), do: Line.run(:now, fn -> Elements.part(key) end)
+
+  # A part of a project that fits by its estimate, at the edge with shifts:
+  # here, and when the guard of the memory stops it (`World.Guard`), it
+  # waits for a shift as a part that does not fit.
+  defp here_or_queue(key, opts) do
+    case here(key) do
+      {:error, errors} = error -> if errors == World.Guard.errors(), do: queue(key, opts), else: error
+      other -> other
+    end
+  end
 
   defp nodes(opts) do
     case Keyword.get(opts, :nodes, &Crew.parts/0) do

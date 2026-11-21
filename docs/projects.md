@@ -8,9 +8,18 @@ edge. `docs/factory.md` has the details of each URL and of the shifts.
 
 | Caller | What it gets |
 |---|---|
-| A job of GitHub Actions of a repository of my account (`sntran`), with its ID token | A project. Its name is the name of the repository, in small letters (`sntran/Vung_Tau` is `vung_tau`). A part that does not fit the edge waits for a construction shift, and the request can start a shift. No secret. |
-| A job of a repository of another account, or a request with no token | A public request. Each part that fits the edge builds, and each file of an order comes. A part that does not fit the edge gives 422, and the request starts no shift. |
+| A job of GitHub Actions of a repository of my account (`sntran`), with its ID token | A project. Its name is the name of the repository, in small letters (`sntran/Vung_Tau` is `vung_tau`). A part that fits the edge builds at once. Only a part that does not fit the edge waits for a construction shift, and the request can start a shift. No secret. |
+| A job of a repository of another account, or a request with no token | A public request. Each part that fits the edge builds at once, and each file of an order comes. A part that does not fit the edge gives 422 (ask for the whole file of the order instead), and the request starts no shift. |
 | A request with a wrong token (an old ID token, another audience) | A public request, as above. |
+
+A part fits the edge when the estimate of its faces (`tile.faces` of the
+parts list) is 12,000 or fewer: the edge cuts a sculpture into parts at
+that limit, so most parts of a sculpture fit. A sculpture in one part
+fits, and a person fits at mid and far. A part of more faces, and a
+person at near, do not fit (`docs/factory.md`, "The parts of a model").
+A part of a project that fits by its estimate, and that the guard of the
+memory of the edge stops (`World.Guard`), also waits for a shift; a
+public request gets the error of the guard (422).
 
 The Worker checks the ID token (`oidc.js`): its signature by GitHub,
 the issuer, the audience, the time, and the number of the account of
@@ -131,6 +140,29 @@ A check in CI compares each file with the lock, with no network. A new
 lock comes in one commit, after a look at the models. To build the same
 files with no factory, clone World at the commit of the lock and use
 `mix world.order` (`docs/factory.md`, "The server on a computer").
+
+## A builder in a workspace
+
+A builder that is not a job of GitHub Actions (an agent in a workspace,
+a tool on a computer) has no ID token, so its requests are public. It
+gets the files of an order, and each part that fits the edge, as any
+caller does. For the parts that do not fit, it does not ask the factory
+itself: it starts the workflow of its project, and takes the files from
+the run.
+
+1. The project has a workflow with `workflow_dispatch`, with the ID
+   token of its job (above, "The workflow"). The job asks for the parts
+   lists and the parts, waits for each part (a shift starts when a part
+   does not fit the edge), and keeps them as an artifact of the run
+   (`actions/upload-artifact`), or commits them to a branch.
+2. The builder starts the run (`gh workflow run`, or the API of GitHub
+   with the token of its own account), waits for its end (`gh run
+   watch`), and takes the artifact (`gh run download`).
+3. The builder checks each part with the lock of the project, as a
+   check in CI does (below, "Pin a commit of World").
+
+So the token of the project stays in the job, and the builder needs no
+secret of World.
 
 ## The limits
 
