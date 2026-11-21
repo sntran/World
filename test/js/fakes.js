@@ -7,9 +7,12 @@ export const HASH = '0123456789abcdef0123456789abcdef';
 export const BLUEPRINTS = [{ name: 'box', doc: 'A box.', options: [{ name: 'size', type: 'float', default: 1, unit: 'm' }] }];
 
 // A bucket in memory, with the API of R2 that handler.js and order_store.js use.
-export function bucket() {
+// clock(): the upload time of a put (ms).
+export function bucket({ clock = () => Date.now() } = {}) {
   const items = new Map();
   const types = new Map();
+  const uploaded = new Map();
+  const customs = new Map();
   // The version of each key, its ETag for a put with onlyIf (as R2).
   const versions = new Map();
   return {
@@ -21,6 +24,9 @@ export function bucket() {
         httpEtag: `"${key.length}-${bytes.byteLength}"`,
         etag: `v${versions.get(key)}`,
         body: bytes,
+        uploaded: uploaded.get(key),
+        httpMetadata: { contentType: types.get(key) },
+        async arrayBuffer() { return bytes.slice().buffer; },
         async json() { return JSON.parse(new TextDecoder().decode(bytes)); },
         async text() { return new TextDecoder().decode(bytes); },
       };
@@ -31,13 +37,30 @@ export function bucket() {
       if (only?.etagDoesNotMatch === '*' && items.has(key)) return null;
       items.set(key, typeof value === 'string' ? new TextEncoder().encode(value) : new Uint8Array(value));
       versions.set(key, (versions.get(key) ?? 0) + 1);
+      uploaded.set(key, new Date(clock()));
+      if (options?.customMetadata) customs.set(key, options.customMetadata);
       if (options) types.set(key, options.httpMetadata?.contentType);
       return { etag: `v${versions.get(key)}` };
     },
     async head(key) {
       return items.has(key) ? {} : null;
     },
+    async delete(key) {
+      items.delete(key);
+      uploaded.delete(key);
+    },
+    // The keys in their order, `limit` of them after the cursor (the index of the next key).
+    async list({ limit = 1000, cursor } = {}) {
+      const keys = [...items.keys()].sort();
+      const start = Number(cursor ?? 0);
+      const page = keys.slice(start, start + limit);
+      const objects = page.map((key) => ({ key, size: items.get(key).byteLength, uploaded: uploaded.get(key), etag: `v${versions.get(key)}` }));
+      const truncated = start + limit < keys.length;
+      return { objects, truncated, cursor: truncated ? String(start + limit) : undefined };
+    },
     types,
+    uploaded,
+    customs,
   };
 }
 

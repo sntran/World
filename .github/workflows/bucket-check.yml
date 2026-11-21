@@ -1,0 +1,78 @@
+name: The check of the bucket
+
+# The check of the bucket after the fault of the listeners of the VM
+# (docs/factory.md, "The check of the bucket"). From 2026-11-18 20:10 UTC
+# to the delete of the Previews on 2026-11-21, an old Preview could write
+# to the bucket of the site, and no log of a Preview exists. This job
+# lists the objects of the bucket whose upload time is in that window,
+# with the routes /bucket/ of the Worker (handler.js), which take only
+# the ID token of this workflow on main (oidc.js). It uses no secret and
+# no token of Cloudflare.
+#
+# - With no input: the list, and the count of each kind (the summary of
+#   the job, and the artifact bucket-list: the keys, the sizes, the
+#   upload times and the ETags, no content).
+# - With "quarantine": each of these keys goes to quarantine/KEY, so that
+#   the site does not give it. Nothing is deleted.
+on:
+  workflow_dispatch:
+    inputs:
+      quarantine:
+        description: The keys to move to quarantine/ (separated by spaces); empty for none
+        type: string
+        default: ""
+
+run-name: The check of the bucket
+
+permissions:
+  contents: read
+  # The ID token of the job, which proves the check to the Worker.
+  id-token: write
+
+concurrency:
+  group: bucket-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      # Only main: the Worker takes only the ID token of this workflow on main.
+      - name: Check the branch
+        env:
+          REF: ${{ github.ref }}
+        run: '[ "$REF" = refs/heads/main ] || { echo "Run this workflow on main" >&2; exit 1; }'
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
+      - name: The objects of the window
+        env:
+          WORLD_URL: https://world.mkfifo.workers.dev
+        run: node scripts/bucket-check.mjs fetch "$RUNNER_TEMP/bucket"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bucket-list
+          path: |
+            ${{ runner.temp }}/bucket/list.json
+            ${{ runner.temp }}/bucket/kinds.json
+
+      # The input is input of a person: it goes to the shell in the
+      # environment only, and each key must be a key of the bucket.
+      - name: Move to quarantine/
+        if: inputs.quarantine != ''
+        env:
+          WORLD_URL: https://world.mkfifo.workers.dev
+          KEYS: ${{ inputs.quarantine }}
+        run: |
+          for key in $KEYS; do
+            printf '%s' "$key" | grep -Eqx '[A-Za-z0-9_./-]{1,512}' || { echo "Not a key: $key" >&2; exit 1; }
+          done
+          node scripts/bucket-check.mjs quarantine $KEYS

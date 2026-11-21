@@ -7,9 +7,10 @@
 //   hour, and gets again for a key that it does not know;
 // - iss (GitHub), aud (the factory), exp and nbf (with 60 s of leeway);
 // - the claims of the caller (who()): a shift (shift.yml of the repository
-//   of World on main), the job of an issue (shift-request.yml), or a
-//   project (a job of a repository of the owner: repository_owner_id, the
-//   number of the account, not only its name).
+//   of World on main), the job of an issue (shift-request.yml), the check
+//   of the bucket (bucket-check.yml), or a project (a job of a repository
+//   of my account: repository_owner_id, the number of the account, not
+//   only its name).
 
 export const ISSUER = 'https://token.actions.githubusercontent.com';
 export const JWKS = `${ISSUER}/.well-known/jwks`;
@@ -66,9 +67,9 @@ export async function verify(token, { fetch: fetcher = globalThis.fetch, now = D
   }
 }
 
-// Who a job is, from its claims: { kind: 'shift' | 'request' | 'project',
-// project } or null. env: WORLD_OWNER_ID (the number of the account of
-// the owner), WORLD_SHIFT_REPOSITORY (sntran/World).
+// Who a job is, from its claims: { kind: 'shift' | 'request' | 'check' |
+// 'project', project } or null. env: WORLD_OWNER_ID (the number of my
+// account), WORLD_SHIFT_REPOSITORY (sntran/World).
 export function who(claims, env) {
   if (!claims || String(claims.repository_owner_id ?? '') !== String(env.WORLD_OWNER_ID ?? '-')) return null;
   const repository = env.WORLD_SHIFT_REPOSITORY ?? 'sntran/World';
@@ -77,6 +78,7 @@ export function who(claims, env) {
   if (claims.repository === repository) {
     if (ref === `${repository}/.github/workflows/shift.yml@refs/heads/main`) return { kind: 'shift' };
     if (ref === `${repository}/.github/workflows/shift-request.yml@refs/heads/main`) return { kind: 'request' };
+    if (ref === `${repository}/.github/workflows/bucket-check.yml@refs/heads/main`) return { kind: 'check' };
   }
   const name = String(claims.repository ?? '').split('/')[1]?.toLowerCase() ?? '';
   return /^[a-z0-9_.-]{1,100}$/.test(name) ? { kind: 'project', project: name } : null;

@@ -61,6 +61,7 @@ test('a good token of a shift: its claims, with the keys of GitHub in a cache', 
 test('the job of an issue, and a project: a job of a repository of the owner, by the number of the account', async () => {
   const env = { WORLD_OWNER_ID: OWNER };
   assert.deepEqual(who({ repository: 'sntran/World', repository_owner_id: OWNER, job_workflow_ref: 'sntran/World/.github/workflows/shift-request.yml@refs/heads/main' }, env), { kind: 'request' });
+  assert.deepEqual(who({ repository: 'sntran/World', repository_owner_id: OWNER, job_workflow_ref: 'sntran/World/.github/workflows/bucket-check.yml@refs/heads/main' }, env), { kind: 'check' });
   assert.deepEqual(who({ repository: 'sntran/Vung_Tau', repository_owner_id: OWNER, job_workflow_ref: 'sntran/Vung_Tau/.github/workflows/world.yml@refs/heads/main' }, env), { kind: 'project', project: 'vung_tau' });
   // Another owner with the same name: not the number of the account.
   assert.equal(who({ repository: 'sntran/Vung_Tau', repository_owner: 'sntran', repository_owner_id: '1' }, env), null);
@@ -78,11 +79,13 @@ test('another repository, another workflow, or another branch is not a shift', a
   assert.equal((await check({ job_workflow_ref: 'sntran/World/.github/workflows/ci.yml@refs/heads/main' })).kind, 'project');
   assert.equal((await check({ job_workflow_ref: 'sntran/World/.github/workflows/shift.yml@refs/heads/feature' })).kind, 'project');
   // The whole ref: a branch whose name starts with main is not main.
-  for (const ref of ['shift.yml@refs/heads/main-test', 'shift.yml@refs/heads/main/x', 'shift-request.yml@refs/heads/main2', 'shift.yml@refs/heads/mainx']) {
+  for (const ref of ['shift.yml@refs/heads/main-test', 'shift.yml@refs/heads/main/x', 'shift-request.yml@refs/heads/main2', 'shift.yml@refs/heads/mainx', 'bucket-check.yml@refs/heads/main-x', 'bucket-check.yml@refs/heads/fix/x']) {
     assert.equal((await check({ job_workflow_ref: `sntran/World/.github/workflows/${ref}` })).kind, 'project', ref);
   }
   // A fork with another owner: nobody.
   assert.equal(await check({ repository: 'someone/World', repository_owner_id: '42', job_workflow_ref: 'someone/World/.github/workflows/shift.yml@refs/heads/main' }), null);
+  // bucket-check.yml of another repository of the owner: a project, not the check.
+  assert.equal((await check({ repository: 'sntran/Vung_Tau', job_workflow_ref: 'sntran/World/.github/workflows/bucket-check.yml@refs/heads/main' })).kind, 'project');
 });
 
 test('another audience, another issuer, an old token, a token of the future, a bad signature, and a token that is not a token', async () => {
