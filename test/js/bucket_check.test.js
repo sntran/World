@@ -147,8 +147,8 @@ test('the plan, the tasks of each group and the compare: a part that agrees, a p
   // The parts and the recipes of the window go to the group of their time: C1 ran then.
   const [one, two] = work.groups;
   assert.deepEqual([one.parts, one.recipes, two.parts], [[A, Z], [`parts/${R}.json`], []]);
-  // The list of the recipe; for Z (no recipe), the orders of the time of the group at each level.
-  assert.deepEqual(one.lists, [{ hash: H, level: 'near' }, { hash: H, level: 'mid' }, { hash: H, level: 'far' }]);
+  // The list of the recipe; for Z (no recipe), the list of each file of the group (far), then the orders of the time of the group at each level.
+  assert.deepEqual(one.lists, [{ hash: H, level: 'near' }, { hash: H, level: 'far' }, { hash: H, level: 'mid' }]);
   assert.deepEqual(two.lists, []);
   assert.deepEqual(work.hashes, [`orders/${H}.json`, `blueprints/${B}.json`]);
   assert.deepEqual(work.preview, [`builds/${P}/${H}.far.glb`]);
@@ -333,7 +333,7 @@ test('the notes of the compare: where a recipe differs, and a part with the byte
   assert.deepEqual([of(`parts/${R}.json`).verdict, of(`parts/${R}.json`).note], ['differs', '/tile/box/0/0: 0.1 at the site, 0.10000000000000002 in the rebuild; /tile/box/0/2: none at the site, 3 in the rebuild']);
   assert.deepEqual([of(`parts/${S}.json`).verdict, of(`parts/${S}.json`).note], ['agrees', 'the same JSON values with other bytes']);
   assert.deepEqual([of(`parts/${T}.json`).verdict, of(`parts/${T}.json`).note], ['differs', '']);
-  assert.deepEqual([of(`parts/${P}.glb`).verdict, of(`parts/${P}.glb`).note], ['none', `the same bytes as the part ${'9'.repeat(32)} of the rebuild`]);
+  assert.deepEqual([of(`parts/${P}.glb`).verdict, of(`parts/${P}.glb`).note], ['agrees', `the same bytes as the part ${'9'.repeat(32)} of the rebuild`]);
   assert.deepEqual([of(`parts/${Q}.glb`).verdict, of(`parts/${Q}.glb`).note], ['none', '']);
 });
 

@@ -1511,8 +1511,13 @@ The check of each kind:
   (the orders, the blueprints in data, and the recipes of the site; no
   part): each file of its commits, the parts list of the order and the
   level of each recipe (for a part with no recipe, also the parts lists
-  of its time), and each part from the recipe of the site, two at a time.
-  A part agrees when the part from its recipe has the same bytes. A recipe
+  of its time, and of each file of its commits: the site makes the list of
+  an order for each of its files), and each part from the recipe of the
+  site, two at a time. A part agrees when the part from its recipe has the
+  same bytes. A part with no recipe (a part of a rule in code or of a
+  drawing: its key is a hash of its content and of the version of
+  `World.Build`, so it depends on the folder of the build too) agrees when
+  the rebuild made a part with the same bytes. A recipe
   agrees when the rebuild makes a recipe with the same JSON values at its
   key, or when the two differ only in the order (two orders with the same
   part) and the part from the recipe of the site agrees. The

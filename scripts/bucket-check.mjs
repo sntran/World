@@ -307,8 +307,10 @@ export async function plan(dir, git) {
       const g = of(id);
       g.parts.push(key);
       if (recipe) continue;
-      // (A part with no recipe: a part of a list, or of a construction, that the site made then.)
-      for (const f of g.files.filter((f) => f.file === 'elements')) await add(g, f.hash, f.level);
+      // (A part with no recipe: a part of a list, or of a construction, that
+      // the site made then. The site makes the list of an order for each of
+      // its files, also with no file of the list.)
+      for (const f of g.files) await add(g, f.hash, f.level);
       for (const r of list.filter((r) => r.kind === 'order' && at(times, time(r)).includes(id))) for (const level of ['near', 'mid', 'far']) await add(g, r.key.slice(7, 39), level);
     }
   }
@@ -460,8 +462,10 @@ export async function compare(dir, ids = null) {
           [verdict, note] = ['agrees', `another order with the same part (${diff[0]}); the part from this recipe agrees`];
         }
       }
+      // (A part with no recipe: its key depends on the folder of the build,
+      // so it agrees when the rebuild made a part with the same bytes.)
       const twin = o.kind === 'part' && verdict !== 'agrees' ? built.get(sha(mine)) : null;
-      if (twin) note = `the same bytes as the part ${twin} of the rebuild`;
+      if (twin) [verdict, note] = ['agrees', `the same bytes as the part ${twin} of the rebuild`];
       const like = o.kind === 'part' && verdict !== 'agrees' && !twin ? named_.get(nameOf(glbJson(mine))) : null;
       if (like) note = `the part ${like.key} of the rebuild has the same name: ${paths(glbJson(mine), like.data)}`;
       if (verdict === 'differs' && note === '') note = where(out[0], mine);
