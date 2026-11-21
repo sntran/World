@@ -427,9 +427,10 @@ export async function tasks(dir, id) {
 
 // The verdicts of the groups in DIR/out/GROUP: each object of the window
 // against its rebuild. A verdict: agrees, differs (a rebuild with other
-// bytes), none (no rebuild: no recipe, no list, or a commit that is not on
-// main), or request (a kind that World does not build: it needs the
-// request of the site in the Workers Logs).
+// bytes, or an order whose content does not give its key), none (no
+// rebuild: no recipe, no list, or a commit that is not on main), or
+// request (a kind that World does not build and whose content is not its
+// key: it needs the request of the site in the Workers Logs).
 export async function compare(dir, ids = null) {
   const list = await json(join(dir, 'list.json'));
   const work = await json(join(dir, 'groups.json'));
@@ -481,7 +482,7 @@ export async function compare(dir, ids = null) {
         if (diff.includes(SAME_VALUES)) [verdict, note] = ['agrees', SAME_VALUES];
         else if (agrees && diff.some((d) => /^\/order: "[0-9a-f]{32}" at the site, "[0-9a-f]{32}" in the rebuild$/.test(d))) {
           [verdict, note] = ['agrees', `another order with the same part (${diff[0]}); the part from this recipe agrees`];
-        }
+        } else if (glb === null) note = [diff[0], 'the site has no part for this key'].filter(Boolean).join('; ');
       }
       // (A part with no recipe: its key depends on the folder of the build,
       // so it agrees when the rebuild made a part with the same bytes.)
@@ -490,9 +491,14 @@ export async function compare(dir, ids = null) {
       const like = o.kind === 'part' && verdict !== 'agrees' && !twin ? named_.get(nameOf(glbJson(mine))) : null;
       if (like) note = `the part ${like.key} of the rebuild has the same name: ${paths(glbJson(mine), like.data)}`;
       if (verdict === 'differs' && note === '') note = where(out[0], mine);
+      // (The order and the level of a recipe that does not agree: its cause.)
+      const recipe = o.kind === 'recipe' && verdict !== 'agrees' ? parse(mine) : null;
+      if (typeof recipe?.order === 'string') note = [`the recipe of the order ${recipe.order} at ${recipe.level ?? '?'}`, note].filter(Boolean).join('; ');
       if (work.preview.includes(o.key)) note = 'a commit that is not on main';
     } else if (o.kind === 'order' || o.kind === 'blueprint') {
-      note = hashes[o.key] ? 'its content gives its hash' : 'its content does not give its hash';
+      // (The key of an order is the hash of its content: a content that
+      // gives its key again is the order of that key, from any writer.)
+      [verdict, note] = hashes[o.key] ? ['agrees', 'its content gives its hash'] : ['differs', 'its content does not give its hash'];
     }
     report.push({ ...o, verdict, note });
   }
@@ -506,9 +512,7 @@ export function merge(reports) {
   const best = new Map();
   for (const o of reports.flat()) {
     const was = best.get(o.key);
-    const pick = !was || rank[o.verdict] < rank[was.verdict] ? o : was;
-    const gives = [was, o].some((x) => x?.note === 'its content gives its hash');
-    best.set(o.key, { ...pick, note: gives ? 'its content gives its hash' : pick.note });
+    best.set(o.key, !was || rank[o.verdict] < rank[was.verdict] ? o : was);
   }
   return [...best.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
 }

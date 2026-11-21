@@ -175,12 +175,13 @@ test('the plan, the tasks of each group and the compare: a part that agrees, a p
   const of = (key) => report.find((o) => o.key === key);
   assert.equal(of(`parts/${A}.glb`).verdict, 'agrees');
   assert.equal(of(`parts/${Z}.glb`).verdict, 'differs');
-  assert.equal(of(`parts/${R}.json`).verdict, 'none');
+  assert.deepEqual([of(`parts/${R}.json`).verdict, of(`parts/${R}.json`).note], ['none', `the recipe of the order ${H} at near`]);
   assert.equal(of(`builds/${C1}/${H}.far.glb`).verdict, 'agrees');
   assert.equal(of(`builds/${C2}/${H}.far.elements`).verdict, 'agrees');
   assert.deepEqual([of(`builds/${P}/${H}.far.glb`).verdict, of(`builds/${P}/${H}.far.glb`).note], ['none', 'a commit that is not on main']);
-  assert.deepEqual([of(`orders/${H}.json`).verdict, of(`orders/${H}.json`).note], ['request', 'its content gives its hash']);
-  assert.equal(of(`blueprints/${B}.json`).note, 'its content does not give its hash');
+  // (An order whose content gives its key agrees, with no request; one that does not, differs.)
+  assert.deepEqual([of(`orders/${H}.json`).verdict, of(`orders/${H}.json`).note], ['agrees', 'its content gives its hash']);
+  assert.deepEqual([of(`blueprints/${B}.json`).verdict, of(`blueprints/${B}.json`).note], ['differs', 'its content does not give its hash']);
   assert.equal(of(`urls/${C1}/${'b'.repeat(64)}`).verdict, 'request');
   const text = verdicts(report);
   assert.match(text, /\| part \| 2 \| 1 \| 1 \| 0 \| 0 \|/);
@@ -330,9 +331,12 @@ test('the notes of the compare: where a recipe differs, and a part with the byte
   await writeFile(join(dir, 'out', '1', `parts/${'9'.repeat(32)}.glb`), 'glTF P');
   const report = await compare(dir);
   const of = (key) => report.find((o) => o.key === key);
-  assert.deepEqual([of(`parts/${R}.json`).verdict, of(`parts/${R}.json`).note], ['differs', '/tile/box/0/0: 0.1 at the site, 0.10000000000000002 in the rebuild; /tile/box/0/2: none at the site, 3 in the rebuild']);
+  assert.deepEqual([of(`parts/${R}.json`).verdict, of(`parts/${R}.json`).note], [
+    'differs',
+    'the recipe of the order h at ?; /tile/box/0/0: 0.1 at the site, 0.10000000000000002 in the rebuild; /tile/box/0/2: none at the site, 3 in the rebuild; the site has no part for this key',
+  ]);
   assert.deepEqual([of(`parts/${S}.json`).verdict, of(`parts/${S}.json`).note], ['agrees', 'the same JSON values with other bytes']);
-  assert.deepEqual([of(`parts/${T}.json`).verdict, of(`parts/${T}.json`).note], ['differs', '']);
+  assert.deepEqual([of(`parts/${T}.json`).verdict, of(`parts/${T}.json`).note], ['differs', 'the site has no part for this key']);
   assert.deepEqual([of(`parts/${P}.glb`).verdict, of(`parts/${P}.glb`).note], ['agrees', `the same bytes as the part ${'9'.repeat(32)} of the rebuild`]);
   assert.deepEqual([of(`parts/${Q}.glb`).verdict, of(`parts/${Q}.glb`).note], ['none', '']);
 });
@@ -382,7 +386,7 @@ test('the part from the recipe of the site; a recipe of another order with the s
   assert.deepEqual(of(`parts/${K}.glb`), ['agrees', 'the part from the recipe of the site agrees']);
   assert.deepEqual(of(`parts/${K}.json`), ['agrees', `another order with the same part (/order: "${o1}" at the site, "${o2}" in the rebuild); the part from this recipe agrees`]);
   // (The part from the recipe of M has other bytes than the GLB of the site: the recipe differs.)
-  assert.deepEqual(of(`parts/${M}.json`), ['differs', `/order: "${o1}" at the site, "${o2}" in the rebuild`]);
+  assert.deepEqual(of(`parts/${M}.json`), ['differs', `the recipe of the order ${o1} at mid; /order: "${o1}" at the site, "${o2}" in the rebuild`]);
   assert.deepEqual(of(`parts/${N}.glb`), ['none', `the part ${'9'.repeat(32)} of the rebuild has the same name: /scenes/0/extras/size/1: 2 at the site, 3 in the rebuild`]);
 
   // The names of the parts of the group: of the site, and of the rebuild (a part that is not a GLB has no name).

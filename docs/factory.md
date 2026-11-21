@@ -1562,8 +1562,12 @@ The check of each kind:
   last job joins the verdicts of the groups: for each object, the best
   verdict of a group.
 - An order and a blueprint in data have a key that is the hash of their
-  content (`World.Orders.hash/1`): the check also says if the content
-  gives its key again.
+  content (`World.Orders.hash/1`). The check builds the hash again from
+  the content: the object agrees when its content gives its key (an
+  object with that key is that order, from any writer), and it differs
+  when not. So an order needs no request in the Workers Logs.
+- For a recipe that does not agree, the note gives the order and the
+  level of the recipe, and says when the site has no part for its key.
 - **In the window, the keys of the parts depended on the folder of the
   build.** The key of a part had the version of its rule
   (`World.Elements.version/1`), then the MD5 of the compiled code of the

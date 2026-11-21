@@ -160,6 +160,10 @@ defmodule World.SculptTest do
         ] do
       assert_in_delta Sculpt.fit([e], 10), 0.05, 1.0e-12
     end
+
+    # A revolve: a wall 0.1 m thick and 2 m high (twice its area over its perimeter).
+    wall = SDF.edit(:revolve, {[{1.0, 0.0}, {1.1, 0.0}, {1.1, 2.0}, {1.0, 2.0}]})
+    assert_in_delta Sculpt.thinnest([wall], 0.0), 2 * 0.2 / 4.2, 1.0e-12
   end
 
   test "the meshes of the same edits, cells and budget come from the cache" do

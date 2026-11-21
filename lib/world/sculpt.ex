@@ -269,7 +269,18 @@ defmodule World.Sculpt do
   defp thickness(:cone, {r1, r2, h}), do: 2 * min(max(r1, r2), h)
   defp thickness(:prism, {r, h, _sides}), do: 2 * min(r, h)
   defp thickness(shape, {x, y, z, _}) when shape in [:round_box, :superellipsoid], do: 2 * Enum.min([x, y, z])
+  defp thickness(:revolve, {points}), do: band(points)
   defp thickness(_shape, size), do: 2 * (size |> Tuple.to_list() |> Enum.min())
+
+  # The width of a closed outline as a band: twice its area over its
+  # perimeter (a band of width w and length L has the area w L and the
+  # perimeter about 2 L). The wall of a basket in a revolve is a thin band.
+  defp band(points) do
+    pairs = Enum.zip(points, tl(points) ++ [hd(points)])
+    area = abs(Enum.sum(for {{x1, y1}, {x2, y2}} <- pairs, do: x1 * y2 - x2 * y1)) / 2
+    perimeter = Enum.sum(for {{x1, y1}, {x2, y2}} <- pairs, do: :math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2))
+    2 * area / perimeter
+  end
 
   @doc """
   The bricks of a sculpture with cells of `step` m: `%{bricks: bricks,
