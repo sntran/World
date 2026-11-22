@@ -9,7 +9,8 @@ defmodule World.Labour do
   of the repository on a runner of GitHub Actions, whose node joins the
   node of the edge (`World.Crew`) for some hours. Then:
 
-  - A part that fits the edge (`fits?/1`: a person at far) builds here.
+  - A part that fits the edge (`fits?/1`: a part of a sculpture with a
+    small estimate of memory) builds here.
   - The edge with shifts (the application environment `:shifts`,
     `WORLD_SHIFTS=true`) builds no other part. A part of an order of a
     project (a request with a project token: the option `project`) waits
@@ -91,12 +92,15 @@ defmodule World.Labour do
     recipe, `World.Skills.Sculpt.memory/3`) is at most `edge_memory/0`,
     and whose estimate of faces at its cells (`tile.faces` of the parts
     list; none for a sculpture in one part) is at most `edge_faces/0`;
-  - a person of a group at far.
+  - a person of a group at a level of `edge_people/0` (none by default).
 
   A part with more, a recipe with no estimate of memory (a recipe of
-  before 2026-11-22), and a person at near or mid, do not fit. A person
-  at mid took 15 to 27 MB at the local edge (more than `edge_memory/0`),
-  and at far 11 to 13 MB.
+  before 2026-11-22), and a person of a group at each other level, do
+  not fit.
+  A person at mid took 15 to 27 MB at the local edge (more than
+  `edge_memory/0`). On the site a person at far went over the guard
+  (56.5 MB in use at a look, 2026-11-22) and took the size of the memory
+  of the VM to 85.7 MB before the guard stopped it.
 
   The memory: the VM at the edge ends when the size of its memory of
   WebAssembly goes past the room of its isolate (after 73 to 83 MB in
@@ -115,7 +119,7 @@ defmodule World.Labour do
   at the edge, waits for a shift as a part that does not fit; so does a
   part whose build at the edge ended the VM (`build/3`).
   """
-  def fits?(%{"piece" => _, "level" => "far"}), do: true
+  def fits?(%{"piece" => _, "level" => level}), do: level in edge_people()
 
   def fits?(%{"node" => _, "tile" => tile} = recipe) when is_nil(tile) or is_map(tile) do
     faces = if tile, do: tile["faces"], else: 0
@@ -143,6 +147,14 @@ defmodule World.Labour do
   at the edge.
   """
   def edge_memory, do: Application.get_env(:world, :edge_memory, 20)
+
+  @doc """
+  The levels at which the edge builds a person of a group (`fits?/1`):
+  the application environment `:edge_people`, none by default. A person
+  at mid took 15 to 27 MB at the local edge, and one at far went over the
+  guard on the site (2026-11-22).
+  """
+  def edge_people, do: Application.get_env(:world, :edge_people, [])
 
   @doc """
   True at the edge with shifts for the key of a part with a recipe that

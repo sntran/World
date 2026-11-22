@@ -207,8 +207,7 @@ With the server of World (`https://world.mkfifo.com`):
 - The parts list of an order (`/o/HASH.LEVEL.elements.json`) gives each
   part with its URL `/p/KEY.glb`. The edge builds each part that fits it
   (an estimate of the memory of its build of 20 MB or less, and of
-  150,000 faces or fewer, `tile.faces` of the list; a person at far),
-  for each caller. A part that does not fit gives
+  150,000 faces or fewer, `tile.faces` of the list), for each caller. A part that does not fit gives
   422 to a public request: ask for the whole file of the order
   (`/o/HASH.LEVEL.glb`), or ask from a job of GitHub Actions of a
   project of the owner, which gets the part from a construction shift
