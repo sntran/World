@@ -51,8 +51,8 @@ export function bucket({ clock = () => Date.now() } = {}) {
       uploaded.delete(key);
     },
     // The keys in their order, `limit` of them after the cursor (the index of the next key).
-    async list({ limit = 1000, cursor, prefix = '', include = [] } = {}) {
-      const keys = [...items.keys()].filter((k) => k.startsWith(prefix)).sort();
+    async list({ limit = 1000, cursor, prefix = '', include = [], startAfter = '' } = {}) {
+      const keys = [...items.keys()].filter((k) => k.startsWith(prefix) && k > startAfter).sort();
       const start = Number(cursor ?? 0);
       const page = keys.slice(start, start + limit);
       const objects = page.map((key) => ({

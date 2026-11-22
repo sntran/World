@@ -659,7 +659,8 @@ test('GET /census gives the census of the VM and the starts of the shifts of the
   const day = new Date().toISOString().slice(0, 10);
   let r = await handler(req('/census'), env, { vm: v, commit: 'c1' });
   assert.equal(r.headers.get('cache-control'), 'no-store');
-  assert.deepEqual(await r.json(), { free: { mason: 2 }, shifts: { day, starts: 0, limit: 6, last: null } });
+  const empty = { since: (await r.clone().json()).isolates.since, starts: [], ends: [], causes: {}, failed: [] };
+  assert.deepEqual(await r.json(), { free: { mason: 2 }, shifts: { day, starts: 0, limit: 6, last: null }, isolates: empty });
   const last = Date.parse(`${day}T01:02:03Z`);
   await orders.put('shifts/state.json', JSON.stringify({ day, count: 3, last }));
   r = await handler(req('/census'), { ORDERS: orders }, { vm: v, commit: 'c1' });
@@ -671,6 +672,24 @@ test('GET /census gives the census of the VM and the starts of the shifts of the
   r = await handler(req('/census'), env, { vm: async () => new Response('down', { status: 503, headers: { 'content-type': 'text/plain' } }), commit: 'c1' });
   assert.equal(r.status, 503);
   assert.equal(await r.text(), 'down');
+});
+
+test('a request to the VM that fails: 503, and the record of the ends of the VM keeps its time and the word of its cause, with no header, no body and no token', async () => {
+  const orders = bucket();
+  const later = [];
+  const failing = async () => {
+    throw new Error("Durable Object's isolate exceeded its memory limit and was reset.");
+  };
+  const r = await handler(req('/census', { headers: { authorization: 'Bearer secret' } }), { ORDERS: orders }, { vm: failing, commit: 'c1', later: (p) => later.push(p) });
+  assert.equal(r.status, 503);
+  await Promise.all(later);
+  const keys = [...orders.items.keys()];
+  assert.equal(keys.length, 1);
+  assert.match(keys[0], /^isolates\/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z\.end\.memory$/);
+  assert.equal(orders.items.get(keys[0]).byteLength, 0);
+  // (A store that fails does not change the answer.)
+  const broken = { ...bucket(), put: async () => { throw new Error('no store'); } };
+  assert.equal((await handler(req('/census'), { ORDERS: broken }, { vm: failing, commit: 'c1' })).status, 503);
 });
 
 test('the other routes', async () => {

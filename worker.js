@@ -19,6 +19,7 @@ import { logStore, sqlTable } from './log_store.js';
 import { shiftStore, shiftTable } from './shift_store.js';
 import { labourStore, labourTable } from './labour_store.js';
 import { vmEnv } from './vm_env.js';
+import { noteStart } from './isolates.js';
 
 // The VM gets four ports, plain objects with port(), so it needs no other
 // Worker: /env/ORDER_STORE, the store of the orders with the R2 bucket
@@ -40,6 +41,8 @@ export class Beam extends BeamObject {
       SHIFT_STORE: shiftStore(shiftTable(ctx.storage.sql)),
       LABOUR_STORE: labourStore(labourTable(ctx.storage.sql)),
     }));
+    // A new VM: the record of the starts and the ends of the VM (isolates.js).
+    ctx.waitUntil(noteStart(env.ORDERS, version.commit).catch(() => {}));
   }
 
   fetch(request) {

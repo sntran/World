@@ -37,7 +37,9 @@
 //   the parts list of the model at a level (World.Elements): each part
 //   with its key and its place. The factory does not join the parts.
 // - GET /census: the census of the VM, with the starts of the shifts of
-//   the day for all the projects (shift.js, in R2).
+//   the day for all the projects (shift.js, in R2), and the starts and the
+//   ends of the VM of the last 7 days with the cause of each end
+//   (isolates.js, in R2).
 // - GET /p/KEY.glb: a part by its key, from R2 (parts/KEY.glb) with no
 //   VM, else the VM builds it from its recipe and keeps it in R2 (202
 //   with retry-after while a large part is in work).
@@ -88,6 +90,7 @@
 import { KEY, type } from './order_store.js';
 import { AUDIENCE, verify, who } from './oidc.js';
 import { STATE, startShift } from './shift.js';
+import { isolates, noteEnd } from './isolates.js';
 
 const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
@@ -445,6 +448,7 @@ async function census(request, env, vm, origin, path) {
   const day = new Date().toISOString().slice(0, 10);
   const starts = state.day === day ? state.count : 0;
   body.shifts = { day, starts, limit: Number(env.WORLD_SHIFTS_A_DAY ?? '6'), last: state.last ? new Date(state.last).toISOString() : null };
+  body.isolates = await isolates(env.ORDERS).catch(() => null);
   return json(200, body, { 'cache-control': 'no-store' });
 }
 
@@ -484,8 +488,18 @@ export function distribution(request, env) {
 }
 
 export async function handler(request, env, options) {
+  // (A request to the VM that fails: its isolate ended. The record keeps the time and the word of the cause.)
+  const vm = async (...args) => {
+    try {
+      return await options.vm(...args);
+    } catch (e) {
+      const note = noteEnd(env.ORDERS, e).catch(() => {});
+      if (options.later) options.later(note);
+      throw e;
+    }
+  };
   try {
-    return await route(request, env, options);
+    return await route(request, env, { ...options, vm });
   } catch {
     return json(503, { errors: [{ path: '', message: 'the builder stopped: the order needs more memory than the edge has, or the VM failed' }] }, { 'retry-after': '10' });
   }
