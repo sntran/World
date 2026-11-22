@@ -339,6 +339,12 @@ const failure = (r) => new Response(r.body, { status: r.status, headers: headers
 async function file(request, env, vm, commit, hash, [, level, kind, type]) {
   const key = buildKey(commit, hash, level, kind);
   let object = await env.ORDERS.get(key);
+  // (A model of the catalog with no change: its file of the site, with no build.)
+  const catalog = object ? null : await catalogFile(env, hash, level, kind);
+  if (catalog) {
+    await env.ORDERS.put(key, catalog, { httpMetadata: { contentType: type } });
+    object = await env.ORDERS.get(key);
+  }
   if (!object) {
     const r = await vm(new Request(`http://vm/build?level=${level}&file=${kind}&hash=${hash}`, { method: 'POST' }), hash);
     // (A parts list of a large model that builds on: ask again after retry-after.)
@@ -348,6 +354,36 @@ async function file(request, env, vm, commit, hash, [, level, kind, type]) {
     object = await env.ORDERS.get(key);
   }
   return send(request, object, commit, hash, type);
+}
+
+// The path of the file of the catalog of an order, or null. An order of a
+// model of the catalog with no change has the blueprint catalog, only the
+// name of the model in its options, and no color and no pose: its files
+// at each level are the files of priv/models, in the static files of the
+// site (/models/, scripts/site.sh). mix world.build checks that each of
+// them is the build of the order at the same commit, as a clone builds
+// it (mix world.order). So the edge gives them with no build, also to a
+// public caller, also when the build needs more memory than the edge has.
+export function catalogPath(order, level, kind) {
+  if (kind !== 'glb' || order?.blueprint !== 'catalog') return null;
+  const empty = (value) => value == null || (typeof value === 'object' && Object.keys(value).length === 0);
+  const other = Object.keys(order).some((k) => !['blueprint', 'options', 'colors', 'joints'].includes(k));
+  const name = order.options?.name;
+  if (other || Object.keys(order.options ?? {}).length !== 1 || !/^[a-z0-9_]+$/.test(name ?? '')) return null;
+  if (!empty(order.colors) || !empty(order.joints)) return null;
+  return `/models/${name}${level === 'near' ? '' : `.${level}`}.glb`;
+}
+
+// The bytes of the file of the catalog of the order HASH at a level, from
+// the static files of the site (env.ASSETS), or null.
+async function catalogFile(env, hash, level, kind) {
+  if (!env.ASSETS || kind !== 'glb') return null;
+  const stored = await env.ORDERS.get(`orders/${hash}.json`);
+  const order = stored ? await stored.json().catch(() => null) : null;
+  const path = catalogPath(order, level, kind);
+  if (!path) return null;
+  const r = await env.ASSETS.fetch(new Request(`https://assets${path}`));
+  return r.ok ? r.arrayBuffer() : null;
 }
 
 // A file of a URL /m/: from R2 when the factory knows the URL (no VM),

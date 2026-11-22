@@ -25,6 +25,13 @@ defmodule Mix.Tasks.World.Build do
   and the kit are in part 1). A commit that changes a model builds its
   files again (`mix world.build NAME`).
 
+  A drawing of the catalog (`World.Drawing.Catalog`) is also the order
+  `{"blueprint": "catalog", "options": {"name": NAME}}`, and the edge gives
+  the files of `priv/models` for that order with no build (`handler.js`).
+  So the task also builds that order at each level, as a clone builds it
+  (`mix world.order`), and it stops with an error when the order does not
+  give the bytes of the file.
+
   The models build at the same time, one on each core (`--jobs` sets
   the count).
   """
@@ -51,9 +58,16 @@ defmodule Mix.Tasks.World.Build do
     # wait in memory.
     put = if opts[:check], do: &compare/1, else: &write/1
 
+    # (Each result: the count of the files, the files not the same as the build, and the files that
+    # the order of a drawing of the catalog does not give.)
     results =
       chosen
-      |> Task.async_stream(&put.(files(dir, &1)),
+      |> Task.async_stream(
+        fn model ->
+          {files, wrong} = files(dir, model)
+          {n, bad} = put.(files)
+          {n, bad, wrong}
+        end,
         max_concurrency: Keyword.get(opts, :jobs, System.schedulers_online()),
         timeout: :infinity,
         ordered: true
@@ -66,7 +80,18 @@ defmodule Mix.Tasks.World.Build do
         else: []
 
     {count, bad} =
-      Enum.reduce(results ++ rest, {0, []}, fn {n, b}, {count, bad} -> {count + n, bad ++ b} end)
+      Enum.reduce(results ++ rest, {0, []}, fn result, {count, bad} ->
+        {count + elem(result, 0), bad ++ elem(result, 1)}
+      end)
+
+    wrong = Enum.flat_map(results, &elem(&1, 2))
+
+    if wrong != [] do
+      Mix.raise(
+        "The order catalog of a drawing does not give the bytes of its file (a clone and the edge give other files): " <>
+          Enum.join(wrong, ", ")
+      )
+    end
 
     cond do
       !opts[:check] -> Mix.shell().info("Wrote #{count} files.")
@@ -86,7 +111,21 @@ defmodule Mix.Tasks.World.Build do
 
     [{:near, near, _} | _] = built
     parts = World.Build.parts_file(name, near)
-    [{Path.join(dir, name <> ".parts.json"), JSON.encode!(parts)} | Enum.map(built, &elem(&1, 2))]
+    {[{Path.join(dir, name <> ".parts.json"), JSON.encode!(parts)} | Enum.map(built, &elem(&1, 2))], order(name, built)}
+  end
+
+  # The files of a drawing of the catalog that its order does not give at their level (none for a
+  # model that is not a drawing of the catalog).
+  defp order(name, built) do
+    if name in World.Drawing.Catalog.names() do
+      order = %{"blueprint" => "catalog", "options" => %{"name" => name}}
+
+      for {level, _item, {path, glb}} <- built,
+          World.Orders.build(order, Atom.to_string(level), "glb") != {:ok, glb},
+          do: path
+    else
+      []
+    end
   end
 
   defp part!(nil), do: {1, 1}

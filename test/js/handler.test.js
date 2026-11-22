@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
-import { QUARANTINE, WINDOW, callerOf, handler, orderOf, split, storeToken, urlKey } from '../../handler.js';
+import { QUARANTINE, WINDOW, callerOf, catalogPath, handler, orderOf, split, storeToken, urlKey } from '../../handler.js';
 import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
 
 const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
@@ -396,6 +396,51 @@ test('GET /o/ builds a file one time, then serves it from R2, with an ETag', asy
 
   const receipt = await handler(req(`/o/${HASH}.receipt.json`), env, { vm: v, commit: 'c1' });
   assert.equal(await receipt.text(), 'near receipt');
+});
+
+test('GET /o/ of a model of the catalog with no change gives the file of the site with no build, also to a public caller', async () => {
+  const orders = bucket();
+  const asked = [];
+  const ASSETS = {
+    fetch: async (request) => {
+      const path = new URL(request.url).pathname;
+      asked.push(path);
+      return path.startsWith('/models/honda_vision_110') ? new Response(`file ${path}`) : new Response('no', { status: 404 });
+    },
+  };
+  const env = { ORDERS: orders, ASSETS };
+  const v = vm();
+  // (The full order of a model of the catalog: the order 176593c8... of Vũng Tàu.)
+  const scooter = { blueprint: 'catalog', colors: {}, joints: {}, options: { name: 'honda_vision_110' } };
+  await orders.put(`orders/${HASH}.json`, JSON.stringify(scooter));
+  for (const [name, path] of [['glb', '/models/honda_vision_110.glb'], ['mid.glb', '/models/honda_vision_110.mid.glb'], ['far.glb', '/models/honda_vision_110.far.glb']]) {
+    const r = await handler(req(`/o/${HASH}.${name}`), env, { vm: v, commit: 'c1' });
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('content-type'), 'model/gltf-binary');
+    assert.equal(await r.text(), `file ${path}`);
+  }
+  assert.deepEqual(v.calls.filter((c) => c.startsWith('/build')), []);
+  // (Kept in R2 as a build: the next request does not ask for the file again.)
+  await handler(req(`/o/${HASH}.far.glb`), env, { vm: v, commit: 'c1' });
+  assert.equal(asked.length, 3);
+
+  // Another file of the order, a model with no file of the site, and an order with a change go to the VM.
+  v.orders.set(HASH, scooter);
+  await handler(req(`/o/${HASH}.parts.json`), env, { vm: v, commit: 'c1' });
+  await orders.put(`orders/${HASH}.json`, JSON.stringify({ ...scooter, options: { name: 'no_such_model' } }));
+  assert.equal((await handler(req(`/o/${HASH}.mid.glb`), env, { vm: v, commit: 'c2' })).status, 200);
+  assert.equal(v.calls.filter((c) => c.startsWith('/build')).length, 2);
+
+  assert.equal(catalogPath(scooter, 'mid', 'glb'), '/models/honda_vision_110.mid.glb');
+  assert.equal(catalogPath({ ...scooter, colors: { body: '#ff0000' } }, 'mid', 'glb'), null);
+  assert.equal(catalogPath({ ...scooter, joints: { stand: 1 } }, 'mid', 'glb'), null);
+  assert.equal(catalogPath({ ...scooter, mipmaps: true }, 'mid', 'glb'), null);
+  assert.equal(catalogPath({ ...scooter, options: { name: 'honda_vision_110', size: 2 } }, 'mid', 'glb'), null);
+  assert.equal(catalogPath({ ...scooter, options: { name: '../x' } }, 'mid', 'glb'), null);
+  assert.equal(catalogPath({ blueprint: 'scooter', options: { name: 'honda_vision_110' } }, 'mid', 'glb'), null);
+  assert.equal(catalogPath(scooter, 'mid', 'elements'), null);
+  assert.equal(catalogPath(null, 'mid', 'glb'), null);
+  assert.equal(catalogPath({ blueprint: 'catalog', options: { name: 'cat' } }, 'near', 'glb'), '/models/cat.glb');
 });
 
 test('GET /o/ of a parts list goes to the VM at its level', async () => {

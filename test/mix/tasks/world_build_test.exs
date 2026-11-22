@@ -28,6 +28,30 @@ defmodule Mix.Tasks.World.BuildTest do
     end
   end
 
+  # The edge gives the files of a drawing of the catalog for its order with no build (handler.js), so
+  # the order gives the bytes of each file, as a clone builds it (mix world.order).
+  test "a drawing of the catalog: its order gives the bytes of its file at each level" do
+    Mix.Tasks.World.Build.run(["--dir", @dir, "thung_chai_flat_edits"])
+    assert_received {:mix_shell, :info, ["Wrote 4 files."]}
+
+    for ext <- ~w(.glb .mid.glb .far.glb),
+        do:
+          assert(
+            File.read!(Path.join(@dir, "thung_chai_flat_edits" <> ext)) ==
+              File.read!("priv/models/thung_chai_flat_edits" <> ext)
+          )
+
+    # (A model of that name that is not the drawing: its order gives other bytes.)
+    Application.put_env(:world, :catalog, __MODULE__.Other)
+    on_exit(fn -> Application.delete_env(:world, :catalog) end)
+
+    assert_raise Mix.Error,
+                 ~r/The order catalog of a drawing does not give the bytes of its file .*thung_chai_flat_edits\.glb/,
+                 fn ->
+                   Mix.Tasks.World.Build.run(["--dir", @dir, "thung_chai_flat_edits"])
+                 end
+  end
+
   test "an unknown model stops the task" do
     assert_raise Mix.Error, ~r/No model nope/, fn -> Mix.Tasks.World.Build.run(["--dir", @dir, "nope"]) end
   end
@@ -95,4 +119,12 @@ defmodule Mix.Tasks.World.BuildTest do
     assert {:ok, fun} = World.Catalog.fetch("wheel_bicycle_37_622")
     assert is_function(fun, 0) and World.Catalog.fetch("nope") == :error
   end
+end
+
+defmodule Mix.Tasks.World.BuildTest.Other do
+  @moduledoc false
+  # A catalog with a model of the name of a drawing of the catalog that is another model.
+  def models, do: [{"thung_chai_flat_edits", fn -> World.Vehicles.Wheels.spoked_wheel("37-622") end}]
+  def kit, do: []
+  def fetch(name), do: if(name == "thung_chai_flat_edits", do: {:ok, elem(hd(models()), 1)}, else: :error)
 end

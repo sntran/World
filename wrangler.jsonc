@@ -15,7 +15,9 @@
   "workers_dev": true,
   // The static files: the review page and the catalog. They go out
   // before the Worker runs. site/_headers gives CORS and the cache.
-  "assets": { "directory": "./site" },
+  // ASSETS: the static files for the Worker too: the files of the catalog
+  // of an order of a model of the catalog with no change (handler.js).
+  "assets": { "directory": "./site", "binding": "ASSETS" },
   // edge.com goes into the Worker as bytes.
   "rules": [{ "type": "Data", "globs": ["**/*.com"], "fallthrough": true }],
   // The VM of World runs in the Durable Object Beam (worker.js).
