@@ -1,10 +1,10 @@
 # Plan 0017: people: the body of MakeHuman with parts from edits
 
 Status: In progress. The first parts are made (2026-11-14, section 8;
-the owner: "Let's build the parts first."), and the hair has strands
+I said: "Let's build the parts first."), and the hair has strands
 (section 9). The plan is the answer to
-a question of the owner, from research, and the steps that it
-proposes. (The owner, 2026-11-13: "What's about people? Can we use the
+my question, from research, and the steps that it
+proposes. (On 2026-11-13 I asked: "What's about people? Can we use the
 Dream's way to build realistic people, better than MakeHuman?")
 
 Depends on: plan 0010 (a sculpture with bones, the maps), plan 0014 (a
@@ -82,7 +82,7 @@ the body is not public.
 | D3 | The body is in the field as one edit (the distance to the body at rest), so that a part can grow from it (`grow` by a distance) and be cut by an outline. A part takes its weights from the nearest points of the body; a rigid part names one bone. | A hat fits the head of each person, and a garment follows the body with no gap. |
 | D4 | At mid and far, the body and its parts are one surface with a bake, in the place of the body with the colors of its clothes. | The outline of a person in a crowd is true: a hat is a hat. |
 | D5 | Thin cloth that moves stays sewn (the áo dài of today). | A sheet thinner than two cells is not a field. |
-| D6 | Before any model: tools that measure a person (the outline from the front and the side, lengths and girths, a joint at 90 degrees, the places of the marks of a face). | "Better" needs numbers and a blind test by the owner, not an opinion. |
+| D6 | Before any model: tools that measure a person (the outline from the front and the side, lengths and girths, a joint at 90 degrees, the places of the marks of a face). | "Better" needs numbers and a blind test by me, not an opinion. |
 
 ## 4. The steps that this plan proposes
 
@@ -109,9 +109,9 @@ the body is not public.
 - An elbow, a knee, a shoulder and a hip at 90 degrees: no face turned
   over, and the volume round the joint changes by less than 10%.
 - 20 marks of the face in 1.5 mm in the mean.
-- A blind test: the owner sees pairs of shots at each level, and picks
-  the person that looks more real. The person from edits passes a
-  level when the owner picks it in half of the pairs or more.
+- A blind test: I see pairs of shots at each level, and pick the
+  person that looks more real. The person from edits passes a level
+  when I pick it in half of the pairs or more.
 - A person with a hat and hair from edits builds in the time of today
   and 5 s more at the most.
 
@@ -126,7 +126,7 @@ the body is not public.
   blend, and **the weights** at the shoulder and the hip.
 - **No full table of the body sizes of people of Việt Nam** is public.
 
-## 7. Open questions for the owner
+## 7. Open questions for me
 
 - Is the proof of step 2 wanted first, or the parts of step 3 (which
   are of use at once in a street: helmets, nón lá, hair)?
@@ -135,7 +135,7 @@ the body is not public.
 
 ## 8. The first parts (2026-11-14)
 
-The owner chose the parts before the proof. What is made:
+I chose the parts before the proof. What is made:
 
 | # | Decision | Why |
 |---|---|---|
@@ -174,7 +174,7 @@ What these parts are not:
 
 ## 9. Hair that looks as hair (2026-11-14)
 
-The owner, after the first parts: "Make the hair look like real hair,
+After the first parts, I said: "Make the hair look like real hair,
 not clay. The nón lá and helmet should match too." The first hair was a
 smooth mass with painted lines: its outline was the outline of a ball
 of clay.

@@ -1,8 +1,8 @@
 # Plan 0009: A sculpture with a fine finish, a rich vocabulary, and motion
 
 Status: Done, but for R5: a change of one edit takes 9% to 12% of the
-time of the whole sculpture, not less than 7% (section 10, step 4). The
-owner, 2026-11-12: "Let get this `World`
+time of the whole sculpture, not less than 7% (section 10, step 4). On
+2026-11-12 I said: "Let get this `World`
 project to the finish line ... build the world-class model builder that
 rival Sony Dreams in concept and performance, and can produce AAA-level
 models fast and accurate, taking advantaged of latest Erlang and Elixir.
@@ -28,13 +28,13 @@ moves:
 - **A sculpture moves.** A sculpture with bones is a skinned mesh, with
   the clips of World.
 
-## 2. What the owner asked
+## 2. What I asked
 
 The message of the status line. The builder reads it with the vision of
 `docs/world.md` ("an engine which outside users can use to make any
 content and models. And do them fast!") and the open questions of plans
-0007 and 0008. The owner can change each requirement and the order of
-the steps.
+0007 and 0008. I can change each requirement and the order of the
+steps.
 
 ## 3. The state before this plan
 
@@ -55,7 +55,7 @@ the steps.
 - A renderer (Dreams draws points; World gives a GLB to any app).
 - A tool with a screen to sculpt by hand: World takes data over MCP.
 - The form of the GLB of the other models of the catalog (plan 0007,
-  R6): that decision stays with the owner.
+  R6): that decision stays with me.
 
 ## 5. Decisions
 
@@ -113,7 +113,7 @@ the steps.
 ## 9. Open questions
 
 - **The model of step 6.** The carp from edits, with its scales and its
-  colors (done). The owner can name another one.
+  colors (done). I can name another one.
 - **R5** (step 4): less than 7% for each change needs the field of each
   eighth of a brick in the cache.
 - **Cells of one size.** A detail smaller than about three cells (the
@@ -155,7 +155,7 @@ the surface, so only such points pay.
 The carp has its colors on its edits now, on one white material: a
 gold body, a dark back and a pale belly as paints with a blend of 3 cm,
 bronze fins. The borders of the colors are smooth at each level (the
-shots went to the owner), and the far level has the light of the true
+shots went to me), and the far level has the light of the true
 surface. One fault came out: a paint with a color and no material gave
 its faces no material (a second mesh, in blocks); a paint with no
 material keeps the material under it.
@@ -304,7 +304,7 @@ and its test:
    also (522, not 674 at cells of 2.5 mm), because the true distance
    comes to the limit of the field sooner.
 
-The carp, before this plan and now (the shots went to the owner):
+The carp, before this plan and now (the shots went to me):
 
 | | Before (plan 0008) | Now |
 |---|---|---|

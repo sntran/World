@@ -1,6 +1,6 @@
 # Plan 0015: the face and the stair of the statue, a faster build, and the basket boats
 
-Status: Done (2026-11-13). Section 10 has the measure. (The owner,
+Status: Done (2026-11-13). Section 10 has the measure. (I said on
 2026-11-13, after the recap of World: "Let fix the face of the statue,
 the stairs, optimize the bake, the last pass of the collapse, the
 basket boat.")
@@ -16,7 +16,7 @@ statue is the face of the photos, its stair goes round its open well,
 a model from edits builds faster, and the two basket boats meet their
 budgets and stand.
 
-## 2. What the owner asked
+## 2. What I asked
 
 Five items, in this order: the face of the statue, its stair, the
 bake, the last pass of the collapse, the basket boat.
@@ -96,7 +96,7 @@ the same height, and the check passed by chance.
 ## 4. Out of scope
 
 - The reliefs of the base as figures.
-- The time lapse of the site with the new statue (the owner: later).
+- The time lapse of the site with the new statue (my decision: later).
 - A bake in native code, or on a graphics card.
 
 ## 5. Decisions
@@ -230,7 +230,7 @@ faces) kept only 75% of the volume at 300 triangles.
 - The head: the sizes of section 3.1 are in the generator of the
   drawing as the places of the edits. The head with its hair is 2.6 m
   wide (the test of the sizes). It leans to the front by 12 degrees (a
-  photo from the air, from the owner: the first build had 6 degrees).
+  photo from the air, from me: the first build had 6 degrees).
 - The halo: its middle is at the middle of the head (the same photo).
   Before, its middle was 0.7 m behind it. A test compares the two
   middles.

@@ -1,15 +1,15 @@
 # Ideas for later
 
-The owner decides about each idea. An idea that the owner accepts goes
-into the steps of `AGENTS.md`.
+I decide about each idea. An idea that I accept goes into the steps of
+`AGENTS.md`.
 
-## From the owner
+## From me
 
 - A service on the web (LiveView) that makes a new model from numbers:
   from a model of the library, or from a `.wings` file that a person
   sends.
 - **The crew van of the Transit.** Ford does not sell it for 2024 to
-  2027. The owner wants it in the line: its sizes come from the earlier
+  2027. I want it in the line: its sizes come from the earlier
   years. The Sprinter and the ProMaster are on the line now
   (`docs/world.md`, step W8); the crew van waits for photos. No photo
   shows its left side: its window of the second row is the window of
@@ -44,7 +44,7 @@ into the steps of `AGENTS.md`.
   at each level, hair at far, a side stand, the light look with a
   budget and a wrap, the blueprint `plant`), and Tre has the clothes of
   old Việt Nam, the things of a yard, the buffalo calf and the areca
-  palm. The direction after the word of the owner (plan 0019, 7.0):
+  palm. The direction after my word (plan 0019, 7.0):
   World takes requests and edits for any model, and does not make a
   rule for each model. Made: the edits of an order (`POST
   /orders/HASH/edits`, the MCP tool `edit_order`), and the numbers of a
@@ -131,7 +131,7 @@ into the steps of `AGENTS.md`.
   for a seat shell: 3 plies of mat is an estimate.
 - **The ghe of Vũng Tàu, more real.** The lines from a drawing (now by
   eye, with the stern, the stem head, the wale, the propeller and the
-  paint from the photos of the owner); the engine and its bed (QCVN 91,
+  paint from my photos); the engine and its bed (QCVN 91,
   Bảng 4/2-B), the shaft, the fish holds and their hatches (Bảng 10/2-B
   and 11/2-B), the mast, the eyes on the bow, and the blue and white
   lines on the bow of the photos. A ghe of Hội An from the model on
@@ -249,8 +249,8 @@ into the steps of `AGENTS.md`.
   sparse: no building of the block of Ba Cu has a height or a roof
   shape, only 10 have levels, and many buildings are not in the data.
   The blueprints of the tube houses on the footprints (W1), the roofs,
-  the sidewalks and the trees of their species. A tile of the data of the
-  owner of the game (photos of the street) can correct the levels.
+  the sidewalks and the trees of their species. A tile of my data (photos
+  of the street) can correct the levels.
 - **The sizes of TCVN 9366-1:2012.** The doors and the windows of Việt Nam
   have their sizes in TCVN 9366-1:2012 (Table 1), which has no open copy;
   the table of World has the least door of an exit (TCVN 4451:2012) and
@@ -435,7 +435,7 @@ and no logo on them.
     same order gives the same bytes.
     Done: the tube house, the shop house, the villa and the mini-hotel
     (`World.Buildings.Lot` and the blueprint `lot_house`; a bare side
-    wall is brick from the ground to the roof: the owner chose this).
+    wall is brick from the ground to the roof: I chose this).
     Still to do: a villa wider than 6 m with a yard at its sides (W17
     gives 3 to 6 m for each kind), a mezzanine in a shop house, a lower
     neighbor of its own height for a bare wall; the
@@ -464,8 +464,8 @@ and no logo on them.
     use the visible mesh for collision.
     Done: the collision boxes of each house, and `interior: front_room`
     (a room behind the front, its stairs, and the door of 0.9 by 2.1 m
-    in the wall at its back: `docs/format.md`, "A house on a lot"; the
-    owner can change this reading). Still to do: the doors of a door
+    in the wall at its back: `docs/format.md`, "A house on a lot"; I
+    can change this reading). Still to do: the doors of a door
     with a gate and the cửa xếp do not move yet, so a player enters an
     open shop or under a raised shutter; the floors over the ground
     floor have no rooms.
@@ -487,8 +487,7 @@ and no logo on them.
     player sees roofs from Núi Lớn and Núi Nhỏ.
     Done: `test/world/town_limits_test.exs` fails when a house is over a
     limit or has a role that is not of a house. A house keeps its 12
-    roles; the game merges them into its 6 materials (the owner chose
-    this).
+    roles; the game merges them into its 6 materials (I chose this).
   - **Roles and UVs for the wall shader (W23).** The roles `plaster`,
     `brick_ong`, `tile_granite`, `tile_pattern`, `metal_shutter`,
     `iron`, `roof_corrugated`, `roof_clay`, `concrete`, and `glass`.
@@ -497,7 +496,7 @@ and no logo on them.
     game can put damp at the bottom and streaks at the corners.
     Done: `World.Surface` (the UVs in meters, `TEXCOORD_1` and `COLOR_0`;
     `docs/format.md`, "GLB"). A house keeps all its roles: the game
-    merges them into its 6 materials (the owner chose this).
+    merges them into its 6 materials (I chose this).
 - **The construction is in the project (W24 to W28, plan 0027).** World
   works as Dreams: World gives the tools, the parts and the labour, and
   a project does the construction. The factory does not join the parts
@@ -554,7 +553,7 @@ and no logo on them.
     `hai_dang_vung_tau` (`docs/format.md`, "A tower"). Not yet: sizes
     from a drawing of the tower in place of the measures on a photo. The
     keeper's house and the other buildings near it are models of their
-    own (the owner, 2026-11-06).
+    own (I said this on 2026-11-06).
   - **A French villa.** Walls with openings, verandas with arches and
     columns, balustrades, a hip roof of clay tiles, and a band of tiles
     under the roof (Bạch Dinh, 1898 to 1916).

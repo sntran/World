@@ -1,7 +1,7 @@
 # Plan 0010: The detail of a sculpture in maps, in parts, and at once
 
 Status: Done (2026-11-13), but for R7 (the coarse piece first: dropped
-by its measure). The owner, 2026-11-13: "You make decisions and proceed
+by its measure). On 2026-11-13 I said: "You make decisions and proceed
 all the way to achieve that level of Sony Dreams!". The open points are
 in section 9.
 
@@ -24,14 +24,14 @@ of its cells or on the count of its triangles:
 - **More bodies move.** A sculpture with the bones of another body plan
   has its clips.
 
-## 2. What the owner asked
+## 2. What I asked
 
 The message of the status line, after the report of plan 0009. That
 report named the limits: cells of one size, one body plan with clips,
 and R5 of plan 0009. The builder decides the order and each decision
-here; the owner can change each one.
+here; I can change each one.
 
-## 2a. What a user of Dreams has (the owner, 2026-11-13: "If not clear, do research on Sony Dreams in details to know what the expectations are.")
+## 2a. What a user of Dreams has (I said on 2026-11-13: "If not clear, do research on Sony Dreams in details to know what the expectations are.")
 
 Plan 0008, section 3, has the engine of Dreams (the list of edits, the
 evaluator, the renderers). This section has what a user of the sculpt
@@ -248,7 +248,7 @@ schedulers):
 | The peak of the memory of the node: near, mid, far | 187 MB, 139 MB, 135 MB | 223 MB, 139 MB, 140 MB |
 | The files: near, mid, far | 1.09 MB, 0.12 MB, 0.04 MB | 4.33 MB, 1.35 MB, 0.35 MB |
 
-The shots went to the owner: the mid level and the far level have the
+The shots went to me: the mid level and the far level have the
 scales, the rays and the round pupil of the near level. The price is the
 time of the bake (about 1 s for each 250,000 texels) and the size of the
 files (two PNG images, and three points for each triangle: a chart for
@@ -450,4 +450,4 @@ The carp was 6.8 s, 3.9 s and 2.8 s, and 4.33 MB, 1.35 MB and 0.35 MB,
 in step 2: the build is faster, and the files are less than half (the
 texels with no chart are one gray, and the triangles of a patch have
 points in common in the file). R9 is met: the shots of the carp and of
-the robot at each level went to the owner.
+the robot at each level went to me.

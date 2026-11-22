@@ -8,7 +8,7 @@
 
 ## 1. Goal
 
-The owner (2026-11-07): "The better tests would be looking at real
+On 2026-11-07 I said: "The better tests would be looking at real
 blueprints for actual buildings and vehicles, and build them in World.
 That would let us test 'building anything' from standards."
 
@@ -35,12 +35,12 @@ build.
 |---|---|---|
 | D1 | A **reference** is a real thing (`priv/references/NAME.json`): its source (the document, the page, the license), the order that builds it in World (a blueprint of World with the numbers of the document, a blueprint in data that World reads from the document, or an IFC file), and each published number with its unit, its tolerance and the name of its measure. | One format for a van, a bicycle and a house; the numbers are facts with their sources. |
 | D2 | **The measures follow the standards** that define the numbers (`World.Measure`): the dimensions of a motor vehicle as SAE J1100 defines them (the overall length, the width with no mirrors, the height at curb mass, the wheelbase, the track, the ground clearance), the seat height and the wheelbase of a two-wheeler, the geometry of a bicycle frame, the curb mass (`World.Mass`); for a building, the quantities of IFC (`Qto_WallBaseQuantities`, `Qto_SlabBaseQuantities`, `Qto_SpaceBaseQuantities`, `Qto_WindowBaseQuantities`, `Qto_DoorBaseQuantities`), the storey heights, and the bill of quantities of a Vietnamese design (bricks, m3 of concrete, kg of rebar, m2 of render and of roof). | A number means what its standard says; a test that measures something else proves nothing. |
-| D3 | **No gaps** (the owner): each number of each reference is in its tolerance (the tolerance of its source, or 1% for a size, 5% for a mass, 5% for a quantity, with the reason). A reference that fails is a bug of a skill, a blueprint, a material or a standard of World, and its step fixes it. | The owner chose it. |
+| D3 | **No gaps** (my decision): each number of each reference is in its tolerance (the tolerance of its source, or 1% for a size, 5% for a mass, 5% for a quantity, with the reason). A reference that fails is a bug of a skill, a blueprint, a material or a standard of World, and its step fixes it. | I chose it. |
 | D4 | **IFC in** (ISO 16739; the files of ISO 10303-21): `World.IFC` reads an IFC file and gives a blueprint in data of the skills of World. A part that no skill can make is an error with its IFC id, so the list of the missing skills is a result. | IFC is the open standard of the blueprints of the engineers of buildings; any house in IFC becomes an order. |
 | D5 | **New skills from the references**, each with its standard: a wall of a layer set, the members of a timber roof, a panel of plywood or OSB cut by CNC, a stud wall of lumber, and the materials of the layers of IFC. | A real blueprint uses materials and trades that World does not have yet. |
-| D7 | **The blueprints come from the outside** (the owner, 2026-11-08): a reference gives the path of a blueprint in data, and the run sends it as a project does (the check of `check_blueprint`, `POST /blueprints`, an order by its hash). A vehicle or a house of a maker that only a reference uses is a blueprint of a project (`priv/references/blueprints/`), not of World. | Vũng Tàu and Phượt send their blueprints to World; the references prove that World reads them and builds them. |
-| D8 | **A number with no source is not in a reference, and a mass of a hidden part is an estimate** (the owner: "Use your best judgement"). A sheet that gives no ground clearance gives no number (the Bolt, the Transit). A part that a drawing does not show is in the `contents` of its part with its mass and its source, most of them estimates; so a curb mass has a tolerance of 10%, with the reason in the reference. | A test of a number that no one published proves nothing; a tolerance that hides estimates is a gap. |
-| D6 | The report: `mix world.references` builds each reference through the people of the node, measures it, and prints each number (the real value, the value of the model, the error, the tolerance); `test/world/references_test.exs` asserts each. | The owner and the projects see how true each model is. |
+| D7 | **The blueprints come from the outside** (my decision, 2026-11-08): a reference gives the path of a blueprint in data, and the run sends it as a project does (the check of `check_blueprint`, `POST /blueprints`, an order by its hash). A vehicle or a house of a maker that only a reference uses is a blueprint of a project (`priv/references/blueprints/`), not of World. | Vũng Tàu and Phượt send their blueprints to World; the references prove that World reads them and builds them. |
+| D8 | **A number with no source is not in a reference, and a mass of a hidden part is an estimate** (I said: "Use your best judgement"). A sheet that gives no ground clearance gives no number (the Bolt, the Transit). A part that a drawing does not show is in the `contents` of its part with its mass and its source, most of them estimates; so a curb mass has a tolerance of 10%, with the reason in the reference. | A test of a number that no one published proves nothing; a tolerance that hides estimates is a gap. |
+| D6 | The report: `mix world.references` builds each reference through the people of the node, measures it, and prints each number (the real value, the value of the model, the error, the tolerance); `test/world/references_test.exs` asserts each. | The projects and I see how true each model is. |
 
 ## 4. Requirements
 
@@ -67,7 +67,7 @@ build.
 2. **The spec sheets of vehicles.** R3, and the fixes.
 3. **A house of an engineer in IFC.** R4.
 4. **A standard house of Việt Nam.** R5. If no design with its
-   quantities is public, the owner gives one.
+   quantities is public, I give one.
 5. **Open source houses.** R6, with the new skills of D5.
 6. **The docs.** `docs/references.md` and the state of the plan.
 

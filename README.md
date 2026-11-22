@@ -2,8 +2,8 @@
 
 World makes things as the real world makes them. People, materials,
 warehouses, factories and vehicles build each thing from the ground up:
-a bolt, a seat, a van, a house. World makes the 3D models of the
-projects of the owner: [Phượt](https://github.com/sntran/phuot),
+a bolt, a seat, a van, a house. World makes the 3D models of my
+projects: [Phượt](https://github.com/sntran/phuot),
 [DIY](https://github.com/sntran/DIY), [Tre](https://github.com/sntran/Tre),
 [Vung_Tau](https://github.com/sntran/Vung_Tau) and
 [Humans_Must_Die](https://github.com/sntran/Humans_Must_Die).
@@ -122,7 +122,7 @@ models").
 | W6. The world: the stores | The stock is the files: each warehouse has a store (the memory of the VM, a bucket, or the catalog of the release). A full warehouse refuses the model, and the driver brings it to the annex. A second order gets the same files from the stock. | Done |
 | W7. The world: the measures | Each run has its time and its memory in its log. An order of Phượt gives its files and its log, and the times agree with the service. The release is 31 MB (no catalog files in it), so the site can deploy again. | Done |
 | W8. The world: the other vans | The ProMaster with a high roof (136 in, 159 in, 159 in extended) and a standard roof (118 in, 136 in), from the renders and the sizes of Ram; the Sprinter with a high roof (144 in, 170 in, 170 in extended), from the drawing and the tables of the guide of Mercedes-Benz, and a standard roof (144 in), from the drawings of Mercedes-Benz Australia. The crew van waits for photos. The order of a van gives its windows (a list, with the presets cargo, crew and passenger), its doors and its rows of seats as numbers; the openings factory makes the doors and the windows as sub-orders. | In progress |
-| W9. The world: the engineers | The second world: engineers that propose new processes and models (step P9 has the first tools). | Later, with the owner |
+| W9. The world: the engineers | The second world: engineers that propose new processes and models (step P9 has the first tools). | Later, with me |
 | W10. The world: the people build on demand | Plan 0001 (`docs/plans/0001-people-build-on-demand.md`): the node is the world. The people are processes of a trade (`World.Person`), the census shares them (`World.Census`), a construction builds each element of a model with them (`World.Construction`), and a client watches the stream of the events (`POST /builds`, `/events`). This takes the place of the yard, the factories by family and the run of W1 to W7. The flows in TLA+: `specs/Build.tla`, `Census.tla`, `Stream.tla`, `LogStore.tla`. | In progress: steps 1 to 3 (the people, the constructions, the stream, the world page; the statue and the tower in data, made by the skills of their trades; the MCP tools `plan_build` and `build`; pause, resume, change, cancel, and the memory budget). The lot house, the van and the places of the world are next (plan 0001, section 10). |
 | P1. The real world: sewing | `World.Sewing`: garments from patterns, seams and layers; a bra, the áo dài, a T-shirt and pants (`docs/world.md`, "The real world"). | Done: the garments, the layers, the drape and the bra; the renders next to photos (the faults that they found are in `TODO.md`) |
 | P2. The real world: turning | `World.Lathe`: cups, bowls, bottles, posts and pots from a profile; the turnery of the world turns them. | Done: the lathe, five parts, the turnery and the renders next to photos |
@@ -134,7 +134,7 @@ models").
 | P8. The real world: places | Streets from OpenStreetMap, with the buildings, the roads and the trees; a street of Vũng Tàu first. | Done: `World.Places.OSM` and a block of the street Ba Cu, Vũng Tàu, at three levels; the blueprints of the houses on the footprints are next |
 | H1. Houses for the lots of Vũng Tàu | One order makes one whole house from the options of W17, with the roles, the UVs and the data of the walls of W23, at the three levels in the limits of W22; the ports (W18), the collision boxes and a room to enter (W20), sets of variants (W19), the other kinds and the street kit (W21). | In progress: the tube house, the shop house, the villa and the mini-hotel (`World.Buildings.Lot`, the blueprint `lot_house`, seven houses in the catalog), the data of the walls (`World.Surface`), the ports in `parts.json`, the limits of the levels in a test, the collision boxes and the front room, sets of variants (`POST /sets`), and the street kit (`World.Places.StreetKit`) |
 | H2. Buildings and statues of Vũng Tàu (W13) | Blueprints that make the known buildings and statues from the options and the sources of an order, with the materials, parts, levels, ports and collision boxes of the houses: the statue, the tower, the French villa, the Southern temple, the church, and the pieces of a stone jetty. | In progress: the statue (`World.Cast`, the blueprint in data `priv/blueprints/statue.json` and the skills of its trades, the statue on Núi Nhỏ in the catalog as an order) and the tower (the blueprint in data `priv/blueprints/tower.json` and the skills of its trades, the lighthouse of Vũng Tàu in the catalog as an order). |
-| P9. The real world: the engineers | New blueprints from requests, with the checks as the gate and the owner as the reviewer. | In progress: the tools `check_drawing` and `propose_drawing` of the MCP server, standard parts and masses in a drawing, the proposals in the store, and `mix world.review`; the first proposal (a chair of bamboo) waits for the owner |
+| P9. The real world: the engineers | New blueprints from requests, with the checks as the gate and me as the reviewer. | In progress: the tools `check_drawing` and `propose_drawing` of the MCP server, standard parts and masses in a drawing, the proposals in the store, and `mix world.review`; the first proposal (a chair of bamboo) waits for me |
 | 7. DIY uses World | DIY draws its SVG from the models, and keeps its pictures. | To do |
 | 8. Voxel models | The `.vox` reader and writer, the voxel maker, and the stamp of a model into the grid of Tre. | To do |
 | 9. STL for a printer | STL at a scale, for each material too, and the checks of a print. | To do |
@@ -190,8 +190,8 @@ The code, the models, and the files that the build makes are under the
   A print of a model is a model. Do not use it as a part of a vehicle or
   to hold a load.
 
-The owner has the copyright, so the other projects of the owner use the
-models with no change to their own licenses. A model from another person
+I have the copyright, so my other projects use the models with no
+change to their own licenses. A model from another person
 comes in only when that person agrees to the AGPL-3.0
 (`CONTRIBUTING.md`).
 

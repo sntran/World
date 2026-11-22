@@ -3,7 +3,7 @@
 Status: In progress. The survey is made, and the south block is in the
 catalog: the office of the port at number 2, and the row of the
 numbers 4 to 26. The south wing of the Grand Hotel is the first part
-of step 3. (The owner, 2026-11-14: "Let's
+of step 3. (On 2026-11-14 I said: "Let's
 build Quang Trung street".)
 
 Depends on: plan 0016 (a house and a street from rules), plan 0014 (a
@@ -15,7 +15,7 @@ A person who knows the street of the Front Beach (Bãi Trước) sees it in
 World: each building in its place, with its storeys, its colors and its
 use, on its sidewalk, with the park and the sea across the road.
 
-## 2. What the owner asked
+## 2. What I asked
 
 "Let's build Quang Trung street": the real street, after the rules of
 plan 0016 made a street that is no real street.
@@ -107,7 +107,7 @@ one empty lot of 98 m. Only one block is a row of narrow houses.
    from the tile of OpenStreetMap.
 7. The place `quang_trung`: each model at its place on the ground.
 
-## 6. Open questions for the owner
+## 6. Open questions for me
 
 - **Photos of the row 4 to 26, and of the buildings that the survey
   did not see.** One photo of each front from the street makes each lot
@@ -210,7 +210,7 @@ What it is not:
 
 ## 10. How long a building takes: the lighthouse of Vũng Tàu
 
-The owner, after the first buildings (2026-11-14): "It still took you a
+On 2026-11-14, after the first buildings, I said: "It still took you a
 lot of time to make those buildings. Is the Dreams concept not workable
 for us? Can you build the next building faster? Like the Hải Đăng Vũng
 Tàu?"
@@ -249,7 +249,7 @@ things:
 
 ### The second build: from ten photos
 
-The owner: "That may not look like the real thing. Please find more
+I said: "That may not look like the real thing. Please find more
 photos of it to build it correctly." About ten photos from travel pages
 and two more of Wikimedia Commons (48 files read, for study only)
 showed the faults of the first build:
@@ -309,7 +309,7 @@ from photos that look up.
 
 ## 11. The rules of a building: a building is a short list of words
 
-The owner (2026-11-14): "make the tools of a building a module of World
+On 2026-11-14 I said: "make the tools of a building a module of World
 first".
 
 The office of the port and the south wing each had a generator of

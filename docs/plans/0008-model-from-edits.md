@@ -2,17 +2,17 @@
 
 | Field | Value |
 |---|---|
-| Status | Approved (the owner, 2026-11-12: "I approve plan") |
-| Depends on | Plan 0007 (the people build each model as actors). It comes before the open steps of plan 0007 (the owner, 2026-11-12). |
+| Status | Approved (by me, 2026-11-12: "I approve plan") |
+| Depends on | Plan 0007 (the people build each model as actors). It comes before the open steps of plan 0007 (my decision, 2026-11-12). |
 | Changes | A new module of fields of distances (`World.SDF`); a tree of processes that finds the cells near the surface; bricks of the field in binaries; a surface with sharp edges and no gaps between bricks; a cache of bricks by hash; a skill `sculpt` for blueprints and drawings; the format of a sculpture in `docs/format.md`; one model of the catalog made again from edits. |
 
 ## 1. Goal
 
-The vision of the owner (`docs/world.md`, "The vision"): World is an
+My vision (`docs/world.md`, "The vision"): World is an
 engine that outside users use to make any content and models, and fast,
 as Dreams is. Dreams and the papers are a reference (sections 3 and 4):
 World learns from them, and chooses the way that is best for it, on the
-parallel architecture of Erlang (the owner, 2026-11-12).
+parallel architecture of Erlang (I said this on 2026-11-12).
 
 At the end:
 
@@ -40,7 +40,7 @@ At the end:
 - **One model of the catalog** comes from edits, and the measure
   (`mix world.bench`) compares it with the model of today.
 
-## 2. What the owner asked
+## 2. What I asked
 
 On 2026-11-12:
 
@@ -265,7 +265,7 @@ on each commit, and the full check on the tip before a push.
 
 ## 11. Open questions
 
-- **The model of step 7** (the owner, 2026-11-12): a simple animal. It
+- **The model of step 7** (my choice, 2026-11-12): a simple animal. It
   is the carp (`priv/drawings/carp_edits.json`, section 13).
 - **The memory of a sculpture at the edge.** The carp from edits needs
   202 MB to 374 MB at its peak, and the edge has 128 MB. The catalog
@@ -291,7 +291,7 @@ on each commit, and the full check on the tip before a push.
   near stone to 40,000 faces. A collapse in each region of bricks, with
   the points at the borders of the regions kept, can use each scheduler;
   it comes when a model needs it.
-- **A live sculpture** is a part of this plan (the owner, 2026-11-12):
+- **A live sculpture** is a part of this plan (my decision, 2026-11-12):
   D11, R8, step 5.
 
 ## 12. Sources
@@ -514,7 +514,7 @@ and its meshes in 2.1 s at near, 0.35 s at mid and 0.12 s at far.
 
 ### Step 7: one model from edits (2026-11-12)
 
-The owner chose a simple animal: the carp. `priv/drawings/carp_edits.json`
+I chose a simple animal: the carp. `priv/drawings/carp_edits.json`
 is a drawing of one node of the skill `sculpt`: 21 edits (an ellipsoid
 for the body, the head, the snout and the stalk of the tail; a paint for
 the dark back and one for the pale belly; the mouth and two grooves of
@@ -533,7 +533,7 @@ The carp of the catalog builds in 0.15 s to 0.6 s: its mesh is a file.
 The carp from edits lies on its belly: its fins are over the lowest
 point of the belly, so it stands (`World.Check.model/1`).
 The shots of the two carps at each level, next to each other, went to
-the owner.
+me.
 
 The carp found six changes:
 
@@ -564,8 +564,8 @@ The carp found six changes:
 
 ### Faster: the cells of the budget, and the cache of the meshes (2026-11-12)
 
-The owner asked if 6.6 s for the near carp is the best that World can
-do. It was not: the near carp made 95,408 faces with cells of 2 mm, and
+I asked if 6.6 s for the near carp is the best that World can do.
+It was not: the near carp made 95,408 faces with cells of 2 mm, and
 the collapse took 80% of them away. The time of the near carp went to
 the bricks (2.7 s), the mesh (0.8 s), the collapse (3.9 s) and the GLB
 (0.45 s). Two changes:
@@ -622,7 +622,7 @@ the bricks (1.0 s), the mesh (0.6 s) and the collapse (1.1 s).
 
 ### The memory of a sculpture (2026-11-12)
 
-The owner asked why a sculpture needs so much memory, when each worker
+I asked why a sculpture needs so much memory, when each worker
 gives its memory back at the end of its task. The workers do: after the
 tree of the bricks of the near carp, the node had 72 MB (53 MB before
 the build). The peak was in the work after the tree, which was not in

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Done: steps 1, 2, 3 and 6, and the tower of step 4 (section 10). The rest of steps 4 and 5 moved to plan 0002, with a new direction of the owner: World builds any blueprint that a project sends, and the cast is pours in parallel (0002, D3, in place of D30). |
+| Status | Done: steps 1, 2, 3 and 6, and the tower of step 4 (section 10). The rest of steps 4 and 5 moved to plan 0002, with my new direction: World builds any blueprint that a project sends, and the cast is pours in parallel (0002, D3, in place of D30). |
 | Depends on | The matter of World as it is (`docs/format.md`), the drawing format (`docs/format.md`, "A drawing"), the MCP server (`World.MCP`), the stores (`World.Store`), the log (`World.Log`). |
 | Changes | `docs/world.md` (the world layer: the run, the foreman, the workers), `specs/Order.tla`, `docs/factory.md` (the calls of the site), plan 0023 of Vũng Tàu (the fetch at compile time) and a new plan of Vũng Tàu (the QA mode). |
 
@@ -67,16 +67,16 @@ code.
 
 | # | Decision | Reason |
 |---|---|---|
-| D1 | An architect outside World (a person or an LLM) writes the blueprint of a new thing, as data. World checks it and builds it. The code for each kind of thing goes away as its blueprint becomes data. | World needs only materials, parts, skills and people. A new kind of thing is a new drawing, not new code. The owner, 2026-11-07. |
-| D2 | The budget of a build is computer limits: seconds of real time, memory, and the size of the model (triangles). | A phone asks for a small model, a desktop for a big one; the edge has 128 MB. The owner, 2026-11-07. |
-| D3 | A game gets a model at run time, when it needs it, and keeps it after. The same calls serve a fetch at compile time. | Vũng Tàu takes its known places at compile time, and in a QA mode the owner asks for a house at an address and watches it go up. The owner, 2026-11-07. |
-| D4 | Keep the matter (meshes, materials, standard parts, the GLB writer, the drawing format, the checks, the log, the stores). Replace the world layer (the run, the foreman, the workers) with the people of the node. | The matter works and has its tests. The world layer does not do what the vision says. The owner, 2026-11-07. |
-| D5 | No nested namespace. `World` is the door of the node; `World.Supervisor` is its supervisor; `World.Construction` is one build; `World.Person` is one person; `World.Store` keeps the files (it exists). | The owner, 2026-11-07. |
-| D6 | Many constructions run at one time on one node, and they split and share the people. | A node is a city, not one factory. The owner, 2026-11-07. |
-| D7 | The words: an **element** is one piece of a thing (a wall, a pour, a stair, a cabinet); a **task** is the work of one element; the **sequence** says which task comes after which. These are the words of IFC (section 5, R4). | One vocabulary for a house, a statue and a van, and the vocabulary of the building standard. The owner, 2026-11-07. |
-| D8 | A **skill** is one module of the behaviour `World.Skill`: the work of a trade on its data. Others can contribute a skill, or a better skill of the same name. | A skill is the common pattern of a building site and of an agent. The owner, 2026-11-07. |
-| D9 | The web app is the world: people first, then the vehicles and the factories being built, then each construction in real time. | The owner, 2026-11-07. |
-| D10 | There is no line between a building and another thing. A camper van is a house on wheels: its cabinets, its insulation, its wires and its appliances are elements of the same kinds as in a house. A cup is one element of one task. One drawing holds every thing. | The owner, 2026-11-07. |
+| D1 | An architect outside World (a person or an LLM) writes the blueprint of a new thing, as data. World checks it and builds it. The code for each kind of thing goes away as its blueprint becomes data. | World needs only materials, parts, skills and people. A new kind of thing is a new drawing, not new code. My decision, 2026-11-07. |
+| D2 | The budget of a build is computer limits: seconds of real time, memory, and the size of the model (triangles). | A phone asks for a small model, a desktop for a big one; the edge has 128 MB. My decision, 2026-11-07. |
+| D3 | A game gets a model at run time, when it needs it, and keeps it after. The same calls serve a fetch at compile time. | Vũng Tàu takes its known places at compile time, and in a QA mode I ask for a house at an address and watch it go up. My decision, 2026-11-07. |
+| D4 | Keep the matter (meshes, materials, standard parts, the GLB writer, the drawing format, the checks, the log, the stores). Replace the world layer (the run, the foreman, the workers) with the people of the node. | The matter works and has its tests. The world layer does not do what the vision says. My decision, 2026-11-07. |
+| D5 | No nested namespace. `World` is the door of the node; `World.Supervisor` is its supervisor; `World.Construction` is one build; `World.Person` is one person; `World.Store` keeps the files (it exists). | My decision, 2026-11-07. |
+| D6 | Many constructions run at one time on one node, and they split and share the people. | A node is a city, not one factory. My decision, 2026-11-07. |
+| D7 | The words: an **element** is one piece of a thing (a wall, a pour, a stair, a cabinet); a **task** is the work of one element; the **sequence** says which task comes after which. These are the words of IFC (section 5, R4). | One vocabulary for a house, a statue and a van, and the vocabulary of the building standard. My decision, 2026-11-07. |
+| D8 | A **skill** is one module of the behaviour `World.Skill`: the work of a trade on its data. Others can contribute a skill, or a better skill of the same name. | A skill is the common pattern of a building site and of an agent. My decision, 2026-11-07. |
+| D9 | The web app is the world: people first, then the vehicles and the factories being built, then each construction in real time. | My decision, 2026-11-07. |
+| D10 | There is no line between a building and another thing. A camper van is a house on wheels: its cabinets, its insulation, its wires and its appliances are elements of the same kinds as in a house. A cup is one element of one task. One drawing holds every thing. | My decision, 2026-11-07. |
 | D11 | The drawing of World stays its own small JSON. It takes the words of IFC (element, storey, material, task, sequence) and the names of elements of IFC where IFC has one (a wall, a slab, a stair, a cabinet), and the word of World where IFC has none (a wheel, a hull, a robe). An export to IFC can come later. | The full IFC is hundreds of kinds of things, too big for the builder at the edge. A person who knows BIM reads the drawing. |
 | D12 | The clock stays: one second of the wall clock is one day of the world. The log of a construction is the truth: the web page and the statistics read it. | `docs/world.md`. |
 | D13 | `World.Supervisor` is the module of the supervisor of the node, and `World.Application` starts it. Its children: `World.Census`, the registries `World.Names` (a construction by its id) and `World.Events` (the watchers), the dynamic supervisors with the names `World.Persons` and `World.Constructions` (names, not modules), the log of the node, and Bandit when `WORLD_SERVER` is set. | Flat names. A supervisor decides nothing. |
@@ -89,8 +89,8 @@ code.
 | D20 | A node of a drawing can be an element made by a skill: `{"name", "skill": {"cast": {...}}, "trade", "after", "from"}`. `from` names the elements whose data it takes. A skill gives the part (or the smaller assembly) of the element, its data for the elements that take it, and model extras, which go into the model in the order of the nodes. A drawing also gets `extras`, the kinds `statue`, `tower` and `house`, and the role `open`. | A statue needs the data of its figure, a lot house the data of its plan, a van the data of its hull. The extras hold `site`, `sizes`, `ports`, `collision` and `surface`. |
 | D21 | The code of a kind does not go away: it becomes skills of the trades in `lib/world/skills/`. What goes is the module of the kind and its blueprint in code. The elements, their sequence and their numbers become data. | The lot house has 1,639 lines of rules, and the line of the vans has about 2,500 lines. A skill keeps them, so another person can make a better skill. |
 | D22 | `World.Places.family_of/1` becomes `World.Plan.trade/1`: the kind of an item gives the trade of its workers. | The new world has trades, not factories by family. |
-| D23 | A person has its PID as its name in the log (`"<0.123.0>"`). | The owner, 2026-11-07 (Q3). |
-| D24 | A construction has a priority alias (Erlang/OTP 28, EEP 76): the deadline comes to it as a priority message (`:timer.apply_after/4`, because a timer cannot send to an alias), and so do the pause, the resume, the cancel and the change (step 3). It watches each person that it holds with a monitor of priority, and the census watches the constructions and the people in the same way. | The results of the people fill the mailbox of a construction (thousands for a house of bricks). A message of priority does not wait behind them. The owner, 2026-11-07. |
+| D23 | A person has its PID as its name in the log (`"<0.123.0>"`). | My decision, 2026-11-07 (Q3). |
+| D24 | A construction has a priority alias (Erlang/OTP 28, EEP 76): the deadline comes to it as a priority message (`:timer.apply_after/4`, because a timer cannot send to an alias), and so do the pause, the resume, the cancel and the change (step 3). It watches each person that it holds with a monitor of priority, and the census watches the constructions and the people in the same way. | The results of the people fill the mailbox of a construction (thousands for a house of bricks). A message of priority does not wait behind them. My decision, 2026-11-07. |
 | D25 | Each worker has a limit of its heap, its part of the memory budget, with its shared binaries (`max_heap_size` with `include_shared_binaries`, Erlang/OTP 27). A worker over its limit stops alone, and its task fails with the reason `memory` (step 3). | The edge has 128 MB. One big element must not stop the VM and each construction in it. |
 | D26 | Each process of the node has a label (`Process.set_label/1`): `{:person, job, trade}`, `{:construction, id}`, `{:stream, key}`. | A crash report and the observer name the person or the construction, not only a PID. |
 | D27 | The watchers are in a registry with duplicate keys in partitions by key (`keys: {:duplicate, :key}`, Elixir 1.20). | A dispatch to the watchers of one construction reads one partition only. |
@@ -281,8 +281,8 @@ something to see at the end of it.
 6. **Vũng Tàu.** A draft plan in Vung_Tau, "QA mode: build a house at
    an address": walk to an address, say what stands there, the LLM
    architect writes the drawing with the tools of R15, the game watches
-   the stream and shows the house go up on its lot; the owner approves
-   it, and its drawing goes into the data of the game as the model of
+   the stream and shows the house go up on its lot; I approve it,
+   and its drawing goes into the data of the game as the model of
    that lot. The known places and the houses of the lots come at compile
    time through the same calls (`tools/world/fetch.py` of plan 0023).
 
@@ -308,25 +308,25 @@ the risks are in the sizes, not in the idea.
 | The stream | A `Plug` sends chunked responses; a Durable Object streams a `Response` and stays alive while it streams; Godot and a browser read server-sent events. | A Durable Object idles out between requests; the log in its SQLite lets the page replay what happened, then follow. |
 | Skills as a behaviour | A behaviour with `check`, `make` and `estimate` is plain Elixir; the first skills wrap functions that exist. | A skill must be pure so a job gives the same bytes each time. |
 | A drawing as the blueprint of everything | `World.Drawing` checks and builds a model from JSON today, with items of other blueprints inside; `after`, `trade` and the skills are additions to its check. | The drawing of a house or a van is bigger than the limits of today; the limits grow with the skills. |
-| An LLM as the architect | The MCP server exists, with `check_drawing` and `propose_drawing`; the checks of a true model (`World.Check`) are the gate, and the owner reviews. | The quality of a drawing from an LLM is the open question; the gate and the review page answer it one drawing at a time. |
+| An LLM as the architect | The MCP server exists, with `check_drawing` and `propose_drawing`; the checks of a true model (`World.Check`) are the gate, and I review. | The quality of a drawing from an LLM is the open question; the gate and the review page answer it one drawing at a time. |
 | The budget | The log has the real time of each task; an estimate by the size of an element is a sum. | The first estimate of a new skill is a guess until its first builds are in the log. |
-| The edge | The VM at the edge builds small jobs and serves the store; a computer of the owner (many cores) builds the big ones through the same calls. | 128 MB and one scheduler at the edge: one or two workers at one time there; the parallel crew shows on a computer. |
+| The edge | The VM at the edge builds small jobs and serves the store; my computer (many cores) builds the big ones through the same calls. | 128 MB and one scheduler at the edge: one or two workers at one time there; the parallel crew shows on a computer. |
 | The specification | `specs/Order.tla` and the replay of a log exist; `Build.tla` is the same method on the new flow. | The state space of the model check grows with the shared pool; the small model stays small (two constructions, three people). |
 
 ## 9. Open questions
 
 - **Q1.** The first estimate of a skill (R21): a fixed guess in the
   skill, or a first build with no limit of seconds that fills the log?
-  Answered (the owner, 2026-11-07): a first build with no time limit.
+  Answered (by me, 2026-11-07): a first build with no time limit.
   Its log gives the estimate of the next builds.
 - **Q2.** The web page at the start of a node (R24, step 5): the people
   build the places at each start of the Durable Object, or only once,
   with the log of that first build kept in the SQLite?
-  Answered (the owner, 2026-11-07): once. A later start reads the log of
+  Answered (by me, 2026-11-07): once. A later start reads the log of
   that first build from the store.
 - **Q3.** The names of the first people (the figures and the names of
   the yard of `World.Run` today, or new ones)?
-  Answered (the owner, 2026-11-07): the PID of the process
+  Answered (by me, 2026-11-07): the PID of the process
   (`"<0.123.0>"`).
 
 ## 10. The state of the work

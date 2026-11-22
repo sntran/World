@@ -2,7 +2,7 @@
 
 Status: Done (2026-11-13). Plan 0015 made the face from the close
 photos, the stair round its open well, and the budgets of the basket
-boat. Section 10 has the measure. (The owner,
+boat. Section 10 has the measure. (I said on
 2026-11-13: "So far we have only built small to medium models, but what
 about buildings, landmarks? Can we build the 'Tượng Chúa giang tay' in
 Vũng Tàu? Do deep research for specs as I don't have them. Make sure
@@ -22,7 +22,7 @@ photos. The work is split as a real site and Dreams split it: the
 model is parts, each part is a sculpture of its own, and the parts are
 made at the same time.
 
-## 2. What the owner asked
+## 2. What I asked
 
 1. A landmark, not only small and medium models: the statue of Vũng Tàu.
 2. Research for its specifications.
@@ -131,8 +131,8 @@ of 1994).
 | D7 | The distance to a side of an outline is from the cross product next to the side: it is 0 to the last bit at a point of a level or an upright side. | A fault: a point of a flat face of a `revolve` on a plane of the grid was 1e-16 over or under 0, the mesh had two sheets there, and the collapse did not reach its budget (the dome: 11,400 triangles for 4,000; the basket boat of plan 0012 at mid and far). |
 | D8 | The occlusion of a texel is the change of the field from the place of the texel, not the field with 0 at the place. | A fault: a place on a triangle a little under the surface was dark, as a crease. |
 | D9 | When no scale of the charts fits the image, each chart is one texel (the bake does not stop). | A fault: a division by a scale of 0 for a part with many small charts in a small image. |
-| D10 | The new model has the name of the statue, `tuong_chua_kito_vua`. The earlier cast model has the new name `tuong_chua_kito_vua_cong_truong` (the site): it stays for the site of plans 0002 to 0006 and its time lapse, with its tests, and its drawing says that its scale is not right. | The owner (2026-11-13): "Put the new model in its place, with the interior too". The place of the statue in the world (`priv/places.json`) now shows the model with the true sizes. |
-| D11 | The halo goes round the head and leans to the front by 30 degrees: its top is over the front of the crown, its sides pass the sides of the hair, its lower part goes down behind the neck, and the arms of its cross join the hair. | The owner (2026-11-13): "the halo is not behind the head". The close photos show it, and the measure of plan 0005 gave the lean (the top 1.5 m in front of the middle, at its scale). D6 of plan 0004 (the halo behind the head) was wrong, and the first model of this plan had it wrong too. |
+| D10 | The new model has the name of the statue, `tuong_chua_kito_vua`. The earlier cast model has the new name `tuong_chua_kito_vua_cong_truong` (the site): it stays for the site of plans 0002 to 0006 and its time lapse, with its tests, and its drawing says that its scale is not right. | I said (2026-11-13): "Put the new model in its place, with the interior too". The place of the statue in the world (`priv/places.json`) now shows the model with the true sizes. |
+| D11 | The halo goes round the head and leans to the front by 30 degrees: its top is over the front of the crown, its sides pass the sides of the hair, its lower part goes down behind the neck, and the arms of its cross join the hair. | I said (2026-11-13): "the halo is not behind the head". The close photos show it, and the measure of plan 0005 gave the lean (the top 1.5 m in front of the middle, at its scale). D6 of plan 0004 (the halo behind the head) was wrong, and the first model of this plan had it wrong too. |
 | D12 | An edit can have `levels`: it is in the sculpture only at those levels. | The inside of a large model is at near only. At mid and far the model is solid (a hollow model with few triangles has an inner face through its outer face), and a paint is in the place of an opening. |
 | D13 | The inside of the statue, at near: a room in the base (a door at its back, a hole in its roof under the dome), the hollow dome, a well in the robe and the cape, a room under the neck that opens to the two balconies, six windows as openings with grilles of bars, and a stair of 133 steps round a post (one edit with a repeat: a turn of 30 degrees and a move of 18.6 cm). The stair and the grilles are a detail of the robe. | The sources give the 133 steps (to the shoulders), the door at the back of the base and the windows in the form of the word Thọ. The walls (0.25 to 0.4 m), the post in place of the open well of eight sides, and the plan of the room are a guess. |
 

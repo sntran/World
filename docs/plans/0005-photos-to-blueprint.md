@@ -22,7 +22,7 @@ measure, not by eye. At the end:
   frames, and the measure.
 
 The statue of Vũng Tàu is the first model. On 2026-11-08 a test with
-one drone video of the owner gave these results:
+one drone video from me gave these results:
 
 - the cameras of 38 frames, with a mean error of 0.5 px;
 - 18 features, each within 1 to 4 px in three frames;
@@ -51,7 +51,7 @@ The eye on single photos gave 1.14 to 1.4 for the ratio of the figure
 | D1 | **Measure, do not estimate.** COLMAP (BSD license, `pycolmap`) solves the cameras of the frames of a video, or of a set of photos with overlap. | A model of AI that looks at a photo cannot give the right sizes: the photos disagree because of perspective. The cameras remove the perspective. |
 | D2 | **The builder marks features; the geometry gives the sizes.** The builder (a person or a model of AI) marks the pixel of each feature (the top of the halo, a cuff, a window) in three or more frames, on ruled crops. Triangulation gives the point in 3D and its error in pixels. A mark with an error over 4 px is marked again. | To say which pixel is a feature is easy to check. To say how many metres a thing has is not. |
 | D3 | **One number of a source sets the scale; a second number checks it.** For the statue: 18.4 m from cuff to cuff sets the scale, and 32 m from the foot of the plinth to the top of the halo checks it. | A video has no scale. A second number finds a wrong reading of a source. |
-| D4 | **The fit is two numbers.** A similarity transform (Umeyama) puts the model on the measured points: the error of each feature in metres. The outline of the model, drawn with the camera of each frame, overlaps the white of the statue: the overlap (IoU) of each frame. | The owner and the tests see the same numbers, and a change of the model shows its effect. |
+| D4 | **The fit is two numbers.** A similarity transform (Umeyama) puts the model on the measured points: the error of each feature in metres. The outline of the model, drawn with the camera of each frame, overlaps the white of the statue: the overlap (IoU) of each frame. | The tests and I see the same numbers, and a change of the model shows its effect. |
 | D5 | **The inputs stay out; the measures go in.** The frames and the photos stay in a folder out of the repository. `priv/measures/<model>/` keeps the marks (`marks.json`: frame, pixel), the solved cameras of the marked frames (`cameras.json`), the points in 3D (`points.json`), and a `README.md` with the source of the video or the photos. | The measures can be checked and done again; no file with no license goes into the repository. |
 | D6 | **The tools are Python, out of the checks of CI.** `scripts/measure/` has the tools (`sfm.py`, `ruled.py`, `tri.py`, `fit.py`, `outline.py`) and a `requirements.txt` (`pycolmap`, `numpy`, `scipy`, `trimesh`, `pillow`). World reads only the JSON files. | COLMAP has no Elixir binding. The build of World must not need Python. |
 | D7 | **Depth needs a side view.** The frames of one shot see the model from one side, so the depth (front to back) has an error of metres. A size in depth comes from a shot from the side, or else from the photos, marked as "by eye". | The test of 2026-11-08: across and up within 0.3 m; in depth, up to 7 m. |
@@ -92,8 +92,8 @@ The eye on single photos gave 1.14 to 1.4 for the ratio of the figure
 - Each feature of the statue across and up is within 0.5 m of its
   measure.
 - The overlap of the outline of the statue is in each marked frame
-  over a value that the owner sets after step 3.
-- The owner says that the statue looks like the statue of the photos.
+  over a value that I set after step 3.
+- I say that the statue looks like the statue of the photos.
 
 ## 7. The measures of 2026-11-08
 
@@ -132,6 +132,6 @@ cuff to the tip) 2.94 m.
     over it, a ring that leans to the front looks short.
 - The people of World: Anny (NAVER LABS, 2025: Apache 2.0 for the code,
   CC0 for the assets of MakeHuman) can fit a pose and a shape to a
-  photo. Does the owner want a plan for it after this one?
+  photo. Do I want a plan for it after this one?
 - A side view for the depth: the video has none. Is there one in other
   videos or photos with a license?
