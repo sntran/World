@@ -1,6 +1,6 @@
 # Plan 0013: real things from their sources, and long shapes at the cost of their near parts
 
-Status: Done (2026-11-13). Section 10 has the measure. (The owner,
+Status: Done (2026-11-13). Section 10 has the measure. (I said on
 2026-11-13, after the open questions of plan 0012: "Proceed. Do
 research to find sources anywhere you can.")
 
@@ -16,9 +16,9 @@ common car, a tree of the streets. A model with a long shape of many
 points (the hull of a boat, the side view of a car) builds in the time
 that its near parts need.
 
-## 2. What the owner asked
+## 2. What I asked
 
-Plan 0012 ended with open questions. The owner said to proceed, and to
+Plan 0012 ended with open questions. I said to proceed, and to
 find sources where they are. So this plan takes three of the
 questions:
 

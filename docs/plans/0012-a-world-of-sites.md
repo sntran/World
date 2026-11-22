@@ -2,7 +2,7 @@
 
 Status: Done (2026-11-13), but for a part of R8 (three of four models,
 no fishing boat) and the 15% of R1 for the house (17%). Section 10 has
-the measure. (The owner, 2026-11-13: "The models look rather
+the measure. (On 2026-11-13 I said: "The models look rather
 cartoonish. This World project would need to serve models for
 Vung_Tau, Phuot, DIY, Humans_Must_Die, and maybe Tre. Sony Dreams is an
 amazing platform to let players create games, with any kinds of models
@@ -30,7 +30,7 @@ processes at its site. The node gives its workers to the sites that
 work now, in equal parts, and a second Erlang node adds its workers to
 the same sites.
 
-## 2. What the owner asked
+## 2. What I asked
 
 1. The models of plan 0011 look like toys. They must look real.
 2. World serves the models of five projects.
@@ -87,7 +87,7 @@ light of a room: the light is not the cause. The models are:
   module that gives each node its own port.
 - The edge (a Durable Object of Cloudflare, WebAssembly, 128 MB, one
   scheduler) cannot join other nodes. A node with many cores (a
-  container, a computer of the owner) can.
+  container, my computer) can.
 
 ## 4. Out of scope
 
@@ -107,9 +107,9 @@ light of a room: the light is not the cause. The models are:
 | D3 | **A surface for each edit:** a word (`wood`, `bark`, `brushed`, `cast`, `plaster`, `concrete`, `fabric`, `weave`, `leather`, `rubber`, `leaves`, `stone`, `rust`) with a scale. It is a relief, a change of the color and a change of the roughness, from a function of the place in the axes of the edit. Only the maps have it (as the raise of a paint): no more triangles. | Grain and weave are what a flat color does not have. The bake reads the field at each texel already. |
 | D4 | **Outlines as shapes:** `extrude` (a closed outline in a plane, with a depth and a round edge) and `revolve` (a profile round an axis). The field of an outline is the true distance. | The side of a car, the section of a hull, a bottle, a baluster: real things are made from outlines. |
 | D5 | **A look for each order:** `real` (the maps; by default) or `flat` (flat facets, the color of each face from the field, no textures). | Humans Must Die and Tre draw flat facets with no textures. |
-| D6 | **The crew of a site.** A sculpture is a site. Each stage of its work is a stream of tasks, through one call (`World.Crew.map`): one light process for each job (`Task.Supervisor.async_stream`), linked to the site. | One place decides how many tasks a site has. The owner (2026-11-13): "running the actor model and lightweight processes, with Elixir `Task` and `Stream`". |
-| D7 | **A stream has its part of the workers of the node.** The node has two workers for each scheduler (a number of the configuration): the tasks that it runs at one time for all its sites. With one site, a stream runs all of them at one time; with two sites, half; and so on. The part is counted at the start of each stream. | The owner: "The amount of workers depend on how many constructions going on at once." |
-| D8 | **A second node adds its workers.** Two connected nodes with the same code (a hash of the modules) share their workers: a stream gives a part of its jobs to tasks of the supervisor of the other node. A job that the other node does not end is done on this node. | The owner: "actual distributed nodes help too [...] can scale up if needed". Erlang runs a task on another node as on this one. |
+| D6 | **The crew of a site.** A sculpture is a site. Each stage of its work is a stream of tasks, through one call (`World.Crew.map`): one light process for each job (`Task.Supervisor.async_stream`), linked to the site. | One place decides how many tasks a site has. I said (2026-11-13): "running the actor model and lightweight processes, with Elixir `Task` and `Stream`". |
+| D7 | **A stream has its part of the workers of the node.** The node has two workers for each scheduler (a number of the configuration): the tasks that it runs at one time for all its sites. With one site, a stream runs all of them at one time; with two sites, half; and so on. The part is counted at the start of each stream. | I said: "The amount of workers depend on how many constructions going on at once." |
+| D8 | **A second node adds its workers.** Two connected nodes with the same code (a hash of the modules) share their workers: a stream gives a part of its jobs to tasks of the supervisor of the other node. A job that the other node does not end is done on this node. | I said: "actual distributed nodes help too [...] can scale up if needed". Erlang runs a task on another node as on this one. |
 | D9 | **The census shows the crews,** and the log of a construction has an event when the crew of its sculpture changes. | A person who watches the world sees who works where. |
 | D10 | **Each change keeps the bytes of a model the same** for one worker and for many, on one node and on two; and no stage is slower than before (the bench of plan 0011). | Performance is a measure, not a hope. |
 | D11 | **Models that Vũng Tàu asks for, as the proof:** a basket boat (thúng chai), a low plastic stool, an outdoor unit of an air conditioner, a fishing boat (ghe). Each from edits, at true size from a source, next to a photo. The gallery of plan 0011 gets the new means too. | The proof of "real" is a real thing next to its photo. |
@@ -161,8 +161,8 @@ light of a room: the light is not the cause. The models are:
 
 - The delivery for Phượt, and the pictures of DIY: each needs a plan.
 - Tre has the rule of no request to another site and no file of art:
-  a model of World can only be a source for its own code. The owner
-  decides if Tre uses World.
+  a model of World can only be a source for its own code. I decide if
+  Tre uses World.
 - **Speed past 4 cores.** About 13% of a build is in one process
   (section 10, step 3). The next work for "fast" is to make those
   parts streams too, then to measure on a machine with more cores.
@@ -217,7 +217,7 @@ show. The hammer at near: 1.1 s with a surface on each edit.
 ### Step 3: the crews (R5, R7)
 
 The first crews of this plan were a pool of worker processes with
-messages of their own (commit `fc9c4ae`). The owner then said what he
+messages of their own (commit `fc9c4ae`). I then said what I
 meant by distributed (2026-11-13): "running the actor model and
 lightweight processes, with Elixir `Task` and `Stream`, but actual
 distributed nodes help too. I want to be able to build models fast, and
@@ -305,7 +305,7 @@ Each passes the check of a model (it stands, and goes through a door).
 **R8 is met in part:** three models of the four. The fishing boat
 (ghe) is not made: a hull needs its lines (the sections of a real
 boat), which no source of this plan has. The shots are next to no
-photo in this plan: the owner compares them. The gallery of plan 0011
+photo in this plan: I compare them. The gallery of plan 0011
 has surfaces, dirt and wear now; its car, its tree and its animals
 still have the simple shapes of that plan.
 

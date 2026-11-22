@@ -2,7 +2,7 @@
 
 Status: Done (2026-11-13), but for R1: the build of the robot uses 3.1
 of 4 cores and takes 5.4 s (the aim: 3.2 cores and 4.5 s; before: 2.4
-cores and 7.2 s). Section 10 has the measure. (The owner, 2026-11-13:
+cores and 7.2 s). Section 10 has the measure. (On 2026-11-13 I said:
 "You could get the project
 `World` to the finish line, that can build any models in parallel, the
 way Dreams project did for Sony. Get it done! Not just build a model or
@@ -32,7 +32,7 @@ At the end:
 - **Many models build at the same time,** with each core in use and a
   limit of the memory.
 
-## 2. What the owner asked
+## 2. What I asked
 
 2026-11-13, after plan 0010 (a carp and a robot from edits): "May I
 wasn't clear. You are the top frontier, you could get the project

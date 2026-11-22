@@ -1,6 +1,6 @@
 # Plan 0020: The look of a town: a tint for each copy, a finish at each point, and the surfaces of made things
 
-Status: Draft. The owner approves it before I build it.
+Status: Draft. I approve it before the work starts.
 
 Depends on: plan 0010 (the maps of a sculpture: color, normal, finish,
 glow), plan 0012 (occlusion, dirt, wear, and a surface for each edit),
@@ -113,8 +113,8 @@ Issue #44 (the far level of `mini`) waits: Humans Must Die does not use
 ## 6. Steps
 
 Each step is one pull request, with its tests, its documents and its
-pictures. The steps go in this order; I start a step only after the
-owner looks at the pictures of the step before it.
+pictures. The steps go in this order; a step starts only after I look
+at the pictures of the step before it.
 
 1. **A tint and a scale for each copy** (R1 to R5). Pictures: one tube
    house of Vũng Tàu as a street of ten copies with ten tints, and the

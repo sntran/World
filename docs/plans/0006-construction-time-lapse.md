@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | In progress (the owner approved it on 2026-11-10: "Rewrite plan 0006 and proceed") |
+| Status | In progress (I approved it on 2026-11-10: "Rewrite plan 0006 and proceed") |
 | Depends on | Plan 0001 (the people build on demand), plan 0002 (the yard, the places, the trucks), plan 0005 (the statue on Núi Nhỏ from its measures). |
 | Changes | The clock of the world; the terrain of a place (`priv/terrain/`, from the Vũng Tàu game); the places of the yard; the methods of a site and the history of the statue (`priv/history/`); a change that takes down what it drops; a site that gets old in a pause; the stages of a construction as parts of the model; the work of the people; the page of the world (`review/world.html`) and a video script. |
 
@@ -12,7 +12,8 @@ World is a small world of people and construction sites: the page of
 the world (`review/world.html`) shows the places of the yard, the people
 of the census that walk to the lots and work, the trucks that bring the
 materials, and each construction on its lot as its parts arrive. The
-statue on Núi Nhỏ is one of those constructions (the owner, 2026-11-10).
+statue on Núi Nhỏ is one of those constructions (I said this on
+2026-11-10).
 
 At the end:
 
@@ -34,7 +35,7 @@ At the end:
   construction at a faster clock, with a camera that the viewer sets; a
   script makes a video of it.
 
-## 2. What the owner asked
+## 2. What I asked
 
 On 2026-11-10:
 
@@ -101,18 +102,18 @@ that a blueprint keeps what it builds apart from how it is built.
 
 | # | Decision | Why |
 |---|---|---|
-| D1 | **One clock for the world, in days of a site.** The clock of the world runs at a scale (the seconds of the world in one second of the wall; one day a second by default). Each task of each construction takes its days on the site: its work (from the data of its skill: a volume of concrete, an area of formwork, a count of steps) over the rate of its crew (`priv/standards/`, each rate with its source, or an estimate), and a wait after it (a cure). The people do the work of the computer at once, and the task ends at its day on the clock. The log keeps the time of the world (`at`) and the wall time (`wall`). | The owner: a single clock for the world. Today the time of a task in the world is the time of its calculation. |
+| D1 | **One clock for the world, in days of a site.** The clock of the world runs at a scale (the seconds of the world in one second of the wall; one day a second by default). Each task of each construction takes its days on the site: its work (from the data of its skill: a volume of concrete, an area of formwork, a count of steps) over the rate of its crew (`priv/standards/`, each rate with its source, or an estimate), and a wait after it (a cure). The people do the work of the computer at once, and the task ends at its day on the clock. The log keeps the time of the world (`at`) and the wall time (`wall`). | My request: a single clock for the world. Today the time of a task in the world is the time of its calculation. |
 | D2 | **The order of a real site.** A band of a cast waits for the cure of the band under it; the scaffold of a band goes up before its formwork; the formwork comes off after the cure. | Concrete stands on cured concrete. |
-| D3 | **The hill from the Vũng Tàu game.** `priv/terrain/nui_nho/` has the height tiles of the game round Núi Nhỏ and the cape of Nghinh Phong, in the format of the game: 16-bit PNG tiles of 256 m, one sample each 2 m, the height `offset + value * step`, in the frame of the game (X east, Z south, the origin at Bãi Trước). A copy, with no change, from `data/geo/build/height/` of sntran/Vung_Tau, with its notices (the Copernicus DEM GLO-30, and the OpenStreetMap data of the roads and the coast in the build). `World.Terrain` reads them, gives the height at a point, and makes the mesh of the ground. | The owner: a real hill, and the hill back in the game. The same files and the same frame make that a copy, not a conversion. |
+| D3 | **The hill from the Vũng Tàu game.** `priv/terrain/nui_nho/` has the height tiles of the game round Núi Nhỏ and the cape of Nghinh Phong, in the format of the game: 16-bit PNG tiles of 256 m, one sample each 2 m, the height `offset + value * step`, in the frame of the game (X east, Z south, the origin at Bãi Trước). A copy, with no change, from `data/geo/build/height/` of sntran/Vung_Tau, with its notices (the Copernicus DEM GLO-30, and the OpenStreetMap data of the roads and the coast in the build). `World.Terrain` reads them, gives the height at a point, and makes the mesh of the ground. | My request: a real hill, and the hill back in the game. The same files and the same frame make that a copy, not a conversion. |
 | D4 | **A place can have a terrain and lots on it.** The place `nui_nho` of the yard has the terrain `nui_nho` and two lots in the frame of the game: the top (the statue of the game, landmark `chua_kito_vua`, at X 1159.87, Z 1893.39, 138.3 m) and the cape of Nghinh Phong (landmark `mui_nghinh_phong`). The statues go to it; the other buildings stay on the flat site. | The two sites of the history are at the two places of the real hill. |
-| D5 | **A model on a terrain has its place in the game.** Its extras have `"geo"`: the frame (`vung_tau_game`), the point of its origin (X, height, Z) and its turn round the vertical. The game puts it on its ground with no more data. | The owner: reuse it back in Vũng Tàu. |
-| D6 | **The method of a site is an option of an order** (`method`: `today` or `1974` for the statue). A method gives the machines, the scaffold, how the concrete comes to the form, the rates of the crews, the most people on the site, and the stages with their dates. The model at the end is the same. `1974` takes its stages from `priv/history/`. | The owner: both old and modern methods, from the history of the statue. |
+| D5 | **A model on a terrain has its place in the game.** Its extras have `"geo"`: the frame (`vung_tau_game`), the point of its origin (X, height, Z) and its turn round the vertical. The game puts it on its ground with no more data. | My request: reuse it back in Vũng Tàu. |
+| D6 | **The method of a site is an option of an order** (`method`: `today` or `1974` for the statue). A method gives the machines, the scaffold, how the concrete comes to the form, the rates of the crews, the most people on the site, and the stages with their dates. The model at the end is the same. `1974` takes its stages from `priv/history/`. | My request: both old and modern methods, from the history of the statue. |
 | D7 | **A change takes down what it drops.** A change of an order (`World.Construction.change/2`, plan 0001, D32) now has a cost on the site: each built element that the change does not keep is taken down by people (a new action of a task, `remove`), the last one built first, with its days. The lot is an option of an order: a change of the lot drops each element. | The first statue at Nghinh Phong was taken down when the order changed: "that shows a request for change". |
-| D8 | **A site gets old in a pause.** In a pause the built model gets old with the days: the concrete gets darker, weeds grow on the base and the plinth, a part can go (the copper cable of the lightning rod). The repair at the end of the pause makes it clean. The rate is an estimate. | The facts of the pause of 1975 to 1992; the owner chose the statue that gets old. |
+| D8 | **A site gets old in a pause.** In a pause the built model gets old with the days: the concrete gets darker, weeds grow on the base and the plinth, a part can go (the copper cable of the lightning rod). The repair at the end of the pause makes it clean. The rate is an estimate. | The facts of the pause of 1975 to 1992; I chose the statue that gets old. |
 | D9 | **The stages of a construction are parts of the model.** The replay model (`replay.glb`) has a node for each state that a person sees on the site: the scaffold of each band, the formwork of each band, each poured band in rough grey concrete, the render of washed stone over it, the reliefs. Each node has the task that puts it up and the task that takes it down (`"from"`, `"to"`). | A prototype that cuts the finished model at a height cannot show a formwork that comes off, or the grey concrete before the render. |
-| D10 | **The people at work.** Each person that a construction hires walks from the census to the lot (on the path of the hill when the method has no machine) and works at the place of its task with the work of its trade: carry a load, set a panel, pour, trowel, hammer, climb the scaffold, guide a load of the crane. New animations of `World.People.Pose` and new props (a hard hat, a bucket, a trowel, a hammer). At most 50 people on a site (the 50 skilled workers of 1974; an estimate for today). | The owner: the people at work. |
-| D11 | **The time lapse is the page of the world.** `review/world.html` can follow one construction: its camera turns with the mouse or a finger, has places to choose (three quarters, the front, the side, the back, the base, above), a slow turn round the lot, and takes `cam`, `target` and `fov` from the URL. Its clock runs faster (the days of the world in one second of the page), the same for each step and each pause, so the length of a film is the days of the site over that scale. `scripts/timelapse.mjs` makes a video of a construction with the camera of the URL. | The owner: the time lapse as one construction of the world, the camera that the viewer sets, the right time for each step. |
-| D12 | **The work cycle of a site** (the owner, 2026-11-11: "people work on the wall, moving around, grabbing materials"). A person at work does a cycle, not one pose. It goes to the source of its materials, takes a load, carries the load to a point on the part, and works there. Then it does the cycle again at the next point along the part. The time of a cycle is a few seconds of the film, so the cycle shows at each speed of the film. The person of a task works more and carries less; its helpers carry more. At one time, about 40% of the people do the work with their hands, and the rest carry, walk, get ready or wait (a mean of 43.6% of direct work in 474 studies of work sampling: Wandahl, Neve and Lerche, IGLC 29, 2021). The point of the work is on the surface of the part, at the deck or on the ground. The load is in the hands: a panel for the formwork, a bar for the steel, a tube for the scaffold, a bucket for the concrete and the mortar. The materials go up as the method of the stage says: the bucket of the tower crane today, with a person that hooks it at the ground and the crew that takes it at the deck; the bucket on the rope of the pulley in 1974, pulled at the foot of the ladder. A free helper mixes at the heap or carries buckets from the heap to the foot of the lift. | A real site: each trade has a cycle of fetch, carry and work (the rebar, the forms, the pour in layers, the crane with its rigger and its signal person, the helpers that sieve, mix and carry the buckets: "xúc bê tông ra từng xô nhỏ", VnExpress). |
+| D10 | **The people at work.** Each person that a construction hires walks from the census to the lot (on the path of the hill when the method has no machine) and works at the place of its task with the work of its trade: carry a load, set a panel, pour, trowel, hammer, climb the scaffold, guide a load of the crane. New animations of `World.People.Pose` and new props (a hard hat, a bucket, a trowel, a hammer). At most 50 people on a site (the 50 skilled workers of 1974; an estimate for today). | My request: the people at work. |
+| D11 | **The time lapse is the page of the world.** `review/world.html` can follow one construction: its camera turns with the mouse or a finger, has places to choose (three quarters, the front, the side, the back, the base, above), a slow turn round the lot, and takes `cam`, `target` and `fov` from the URL. Its clock runs faster (the days of the world in one second of the page), the same for each step and each pause, so the length of a film is the days of the site over that scale. `scripts/timelapse.mjs` makes a video of a construction with the camera of the URL. | My request: the time lapse as one construction of the world, the camera that the viewer sets, the right time for each step. |
+| D12 | **The work cycle of a site** (I said on 2026-11-11: "people work on the wall, moving around, grabbing materials"). A person at work does a cycle, not one pose. It goes to the source of its materials, takes a load, carries the load to a point on the part, and works there. Then it does the cycle again at the next point along the part. The time of a cycle is a few seconds of the film, so the cycle shows at each speed of the film. The person of a task works more and carries less; its helpers carry more. At one time, about 40% of the people do the work with their hands, and the rest carry, walk, get ready or wait (a mean of 43.6% of direct work in 474 studies of work sampling: Wandahl, Neve and Lerche, IGLC 29, 2021). The point of the work is on the surface of the part, at the deck or on the ground. The load is in the hands: a panel for the formwork, a bar for the steel, a tube for the scaffold, a bucket for the concrete and the mortar. The materials go up as the method of the stage says: the bucket of the tower crane today, with a person that hooks it at the ground and the crew that takes it at the deck; the bucket on the rope of the pulley in 1974, pulled at the foot of the ladder. A free helper mixes at the heap or carries buckets from the heap to the foot of the lift. | A real site: each trade has a cycle of fetch, carry and work (the rebar, the forms, the pour in layers, the crane with its rigger and its signal person, the helpers that sieve, mix and carry the buckets: "xúc bê tông ra từng xô nhỏ", VnExpress). |
 
 ## 6. Requirements
 
@@ -160,13 +161,13 @@ that a blueprint keeps what it builds apart from how it is built.
 7. The stages of a construction as parts of the replay model (R7).
 8. The work of the people (R8).
 9. The page of the world as a time lapse, its test, and the video
-   script; the two time lapses of the statue for the owner (R9, R10).
+   script; the two time lapses of the statue for me (R9, R10).
 
 ## 8. Acceptance criteria
 
 - Each requirement has its test, and the checks of D9 of plan 0004 pass.
 - The two time lapses of the statue (`today` and `1974`), each from its
-  order over MCP, on the hill: the owner says that they look like the
+  order over MCP, on the hill: I say that they look like the
   building of the statue.
 - The model of the statue on the hill goes into the Vũng Tàu game at its
   place with no change of its data.
@@ -194,20 +195,20 @@ What is not as the plan says:
   chapters of the norms of Việt Nam on the concrete, the masonry and the
   finish (Thông tư 12/2021/TT-BXD, Phụ lục II) were not found. The waits
   of the forms cite ACI 347R-14.
-- The means of each stage (the owner, 2026-11-10: "show whatever
+- The means of each stage (I said on 2026-11-10: "show whatever
   methods the people were using at the time to build"): the crane only
   where the history allows it (today); in 1974 and 1992 to 1994 the
   carriers of the path, the mixing by hand and a pulley. The sources say
   that there was no machine in 1992 to 1994 (grandart.vn); for 1974 they
   say only that the carry was the biggest difficulty, so the rest is an
   estimate.
-- The film (the owner, 2026-11-10: the pauses too long, the work too
+- The film (I said on 2026-11-10: the pauses too long, the work too
   fast, few people, no weeds): the work at one speed (5 days in a
   second) and a pause faster (a year in a second), each part that grows
   over its task, the crew of each task, the grass of a pause. The
   scaffold goes in the first year of the pause and comes back for the
   repair of 1992 (no source: an estimate).
-- The people of the film (the owner, 2026-11-10: "they do not move";
+- The people of the film (I said on 2026-11-10: "they do not move";
   "when construction pauses, they just disappear. They should leave
   instead"): each person moves all the time round the place of its task
   and works at each stop; the crew stays with its person from task to
@@ -215,7 +216,7 @@ What is not as the plan says:
   people walk out on the way to the lot (the path of the hill) and the
   carriers walk down the path while the day waits 4 s at the start of
   the pause.
-- The people at work (the owner, 2026-11-11: "they came after the base
+- The people at work (I said on 2026-11-11: "they came after the base
   already had some layers", "They should be climbing up stairs, do
   something on the construction, not moving around"): the day waits 4 s
   at the start of each stage while its people walk in; each person of a
@@ -224,13 +225,13 @@ What is not as the plan says:
   the band (the scaffold of the model has no ladder: the page puts one
   at the corner to the side of the path); the free helpers mix at the
   heap of the materials.
-- The work cycle (D12; the owner, 2026-11-11: "people are mostly
+- The work cycle (D12; I said on 2026-11-11: "people are mostly
   standing there"): the cycle of each person, the points of the work on
   the surface of the part, the loads in the hands, the bucket of the
   crane (today) and of the pulley (1974). No source tells how the statue
   itself was built (the scaffold, the forms, the pours), so the cycles
   of 1974 are the general work by hand of Việt Nam.
-- The model at the end (the owner, 2026-11-11: "The ending result that
+- The model at the end (I said on 2026-11-11: "The ending result that
   the people built suddenly become a different model ... That makes it
   look fake"): the rough bands of the replay (D9) are not the surface of
   the finished model, and the finished model came at its last task with
@@ -239,7 +240,7 @@ What is not as the plan says:
   the render covers it with the stone from the foot to the top, and the
   halo puts up the steel; the finished model comes on the same surface,
   so nothing changes. The replay model still has the rough bands.
-- The move to the new lot (the owner, 2026-11-11: "between old and new
+- The move to the new lot (I said on 2026-11-11: "between old and new
   location, the frame just jumps directly"; "the camera should be from
   the first person perspective going up the road to the hill. Also only
   moves after the old site is fully taken down, with a small pause"): the

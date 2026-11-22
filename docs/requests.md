@@ -185,8 +185,8 @@ change its options (`options.drawing.nodes.model.item.options.age`).
 You cannot carve its body with an edit: change its body with its
 options (the shapes of a person, the numbers of an animal or a plant).
 The options of the rule are not options of a free order, so make the
-changes that the rule can make first. Tell the owner of
-World about a number that a rule does not let you change: the fix is to
+changes that the rule can make first. Tell me about a number that a
+rule does not let you change: the fix is to
 put that number in the request, not to make a new rule for your model.
 
 ## From the server
@@ -211,7 +211,7 @@ With the server of World (`https://world.mkfifo.com`):
   far), for each caller. A part that does not fit gives
   422 to a public request: ask for the whole file of the order
   (`/o/HASH.LEVEL.glb`), or ask from a job of GitHub Actions of a
-  project of the owner, which gets the part from a construction shift
+  project of mine, which gets the part from a construction shift
   (`docs/projects.md`).
 - A tool that gets all the files of a project adds `?class=batch`, so
   that a person who waits for one model goes first.
@@ -236,8 +236,8 @@ for the tool, not for the model: the MCP tool `request_tool`, with
 The factory checks the order or the drawing and keeps the request
 (`requests/HASH.json`) with that check; the answer gives its hash. World
 adds the tool in general, with its tests, for every project, and the
-project then makes its model with it. The owner reads a request with
-its hash (`World.Engineers.tool_request/1`).
+project then makes its model with it. I read a request with its
+hash (`World.Engineers.tool_request/1`).
 
 ## What to prepare for a thing
 

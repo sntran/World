@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Approved (the owner, 2026-11-12: "Approve. Proceed!") |
+| Status | Approved (by me, 2026-11-12: "Approve. Proceed!") |
 | Depends on | Plan 0001 (the people build on demand), plan 0002 (the people build any blueprint), plan 0006 (one clock for the world). |
 | Changes | A measure of each build (`World.Bench`, `mix world.bench`); the plan of the people for each model; the work of a construction and of a person; the clock of a build; the messages of priority; the output and the memory of a build; the log server. |
 
@@ -11,7 +11,7 @@
 World builds most models in a streaming and parallel way, so that it
 uses the Erlang BEAM: actor processes, messages, and messages of
 priority. The build is faster and better, and it follows the process of
-real life on a real site (the owner, 2026-11-12).
+real life on a real site (I said this on 2026-11-12).
 
 At the end:
 
@@ -37,7 +37,7 @@ At the end:
   the store when it is made; the model at the end comes from the parts;
   each construction has a limit of memory.
 
-## 2. What the owner asked
+## 2. What I asked
 
 On 2026-11-12:
 
@@ -148,7 +148,7 @@ on each commit, and the full check on the tip before a push.
 
 ## 9. Open questions
 
-- **The order** (the owner, 2026-11-12, "Yes" to the order that the
+- **The order** (my answer, 2026-11-12, "Yes" to the order that the
   builder gave): plan 0008 (a model from edits) comes before the steps
   of this plan that are open. Its blocks of cells, each a task for a
   person, are the better way to step 2 for a model of one part (an
@@ -254,7 +254,7 @@ that wait (about 150 MB live), and the joiner has a copy of the model
 and makes the scene of 7,594 nodes. The next change of size is the join
 from the GLBs that the people make for each element (D6), or instances
 for the meshes that repeat (33 meshes for 7,108 bricks); each changes
-the form of the GLB of a model, and the owner decides it.
+the form of the GLB of a model, and I decide it.
 
 ### Step 7: the measure again (2026-11-12)
 
@@ -300,8 +300,8 @@ What is open:
 - **R6** is not met: `house_brick_vn` at near needs about 680 MB at the
   peak (1,222 MB before step 6), and R6 asks for less than 424 MB. The
   join from the GLBs of the elements (D6), or instances for the meshes
-  that repeat, changes the form of the GLB of a model: the owner
-  decides it.
+  that repeat, changes the form of the GLB of a model: I
+  decide it.
 - **The animals** take 10% to 20% more time than in step 1 (a sample of
   one run each; the full sweeps of the construction, step 6, cost a
   little for a model of one task).

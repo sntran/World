@@ -1,7 +1,7 @@
 # Plan 0016: a house of Vũng Tàu that looks real, and the rules for a street of houses
 
 Status: Done for the first four types (2026-11-13). Section 10 has the
-measure. (The owner, 2026-11-13: "Then build a realistic typical house
+measure. (On 2026-11-13 I said: "Then build a realistic typical house
 with two stories in Vung Tau. Do research how they look. Then
 determine the algorithms so that one can request various types of
 houses in Vung Tau to form a real street.")
@@ -17,7 +17,7 @@ Tàu looks: its door, its balcony, its sign, its tank, its stains. A
 request for a street gives a row of such houses, each different, that
 fit each other as neighbors.
 
-## 2. What the owner asked
+## 2. What I asked
 
 1. A realistic, typical house of two storeys of Vũng Tàu, from
    research.
@@ -137,8 +137,8 @@ shares of the choices are a guess, and each drawing says so.
 ## 9. Open questions
 
 - **The shares are a guess.** A count of the houses of one real street
-  (their types, widths, colors) makes the plan of a street true. The
-  owner can name the street.
+  (their types, widths, colors) makes the plan of a street true. I can
+  name the street.
 - **The other types** (section 4), and for each type more rules: a
   front with two windows, a loggia, a front yard with a gate, a
   terrace with a roof of steel on posts, plants in pots.

@@ -1,7 +1,7 @@
 # Plans
 
-A plan describes one block of work on World. The owner reads it,
-changes it, and approves it. The work of a plan comes after its
+A plan describes one block of work on World. I read it, change it,
+and approve it. The work of a plan comes after its
 approval, as small commits on `main` (`AGENTS.md`).
 
 ## Status values
@@ -9,7 +9,7 @@ approval, as small commits on `main` (`AGENTS.md`).
 | Status | Meaning |
 |---|---|
 | Draft | The plan is written. Do not build it. |
-| Approved | The owner approved it. The work can start. |
+| Approved | I approved it. The work can start. |
 | In progress | The work is in progress. |
 | Done | Each step of the plan is done, with its tests and its pictures. |
 
@@ -27,7 +27,7 @@ Each plan has these sections:
 8. Open questions.
 
 The builder writes questions and answers under "Open questions". The
-builder does not change the requirements: the owner does.
+builder does not change the requirements: I do.
 
 ## List of plans
 
@@ -38,7 +38,7 @@ builder does not change the requirements: the owner does.
 | 0003 | [World builds real blueprints, and the tests compare them](0003-real-blueprints.md) | In progress |
 | 0004 | [The statue of Vũng Tàu looks like the real one](0004-statue-look.md) | In progress |
 | 0005 | [From photos to a blueprint: measure, then fit](0005-photos-to-blueprint.md) | In progress |
-| 0006 | [The world on one clock, the hill of Núi Nhỏ, and the time lapse of a construction](0006-construction-time-lapse.md) | In progress: each step done; the owner looks at the two time lapses. |
+| 0006 | [The world on one clock, the hill of Núi Nhỏ, and the time lapse of a construction](0006-construction-time-lapse.md) | In progress: each step done; I look at the two time lapses. |
 | 0007 | [The people build each model as actors: faster, better, as on a real site](0007-actors-build-faster.md) | In progress |
 | 0008 | [A model from edits, made by many hands at once](0008-model-from-edits.md) | In progress |
 | 0009 | [A sculpture with a fine finish, a rich vocabulary, and motion](0009-sculpture-finish.md) | Done, but for R5 |

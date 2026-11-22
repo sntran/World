@@ -876,8 +876,8 @@ and it does not take the public orders.
   request by hand: the project, its orders (one link to its
   `orders.json` at a commit, or the hashes of orders), the levels, and
   the hours. The job `.github/workflows/shift-request.yml` starts at
-  once only for an issue of a member; another issue waits until the
-  owner adds the label again. The job puts no text of the issue in a
+  once only for an issue of a member; another issue waits until I add
+  the label again. The job puts no text of the issue in a
   shell command: the text goes to `scripts/shift-issues.mjs` in the
   environment, and only checked values go on (`scripts/shift-form.mjs`).
   The job gets the parts lists with its ID token, for the project of the
@@ -1053,9 +1053,9 @@ the base, and the 5 parts of the main node).
 Each request is an issue of the form "A construction shift" (a project
 with no token), for an order that an edit made before the issue
 (`POST /orders/HASH/edits`). Each time of B, C and D is from the issue.
-The time of A is from the new label of issue 6, not from the issue: the
-owner opened issue 6 on 2026-11-18, and it got the label `shift` again
-for this measure. A script looked at the parts with no token:
+The time of A is from the new label of issue 6, not from the issue: I
+opened issue 6 on 2026-11-18, and it got the label `shift` again for
+this measure. A script looked at the parts with no token:
 
 | Request | Parts list | Sign and base | Main parts | Whole mid level |
 |---|---|---|---|---|
@@ -1692,10 +1692,10 @@ part, a recipe or a file again when a request asks for it.
   the next request of that URL. A control key of the window no longer
   controls its construction, and an edit of the window has no entry in
   the history of its order.
-- **The Workers Logs** of the owner keep 7 days, so the first hours of
-  the window go on 2026-11-25 at 20:10 UTC. If the owner gives me the
-  logs before then, I put back each entry of the history that a request
-  of the site wrote. Else the 16 entries stay in `quarantine/`.
+- **My Workers Logs** keep 7 days, so the first hours of the window go
+  on 2026-11-25 at 20:10 UTC. If I send the logs before then, each entry
+  of the history that a request of the site wrote goes back. Else the 16
+  entries stay in `quarantine/`.
 - **The 12 recipes in `quarantine/`.** Run 44958553191 (at 871ae04,
   with the input `held`, #70) checked the 138 objects of `quarantine/`
   again and gave the order and the level of each recipe:

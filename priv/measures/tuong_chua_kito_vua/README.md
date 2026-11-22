@@ -8,7 +8,7 @@ cameras that COLMAP solved.
 ## Source
 
 - The video: YouTube `8ShbTdMaE4g` (2 min 28 s), a copy of 1280 x 720
-  that the owner sent on 2026-11-08. The black bands are cut off: each
+  that I sent on 2026-11-08. The black bands are cut off: each
   frame is 1280 x 544 (`crop=1280:544:0:88`), 4 frames a second.
 - `front/`: the shot from 0:23 to 0:35 (frame `NNN.jpg` at 23 s +
   (NNN - 1) / 4 s). The drone is in front of the statue and over it,

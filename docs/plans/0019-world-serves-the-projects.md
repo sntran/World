@@ -9,14 +9,14 @@ model from edits), plan 0012 (the crews of a node), plan 0016 and plan
 
 ## 1. Goal
 
-Each project of the owner can ask World for its models, and World
+Each of my projects can ask World for its models, and World
 answers in a way that is smart and fast for that project. The projects
 prepare the requests (blueprints in data, drawings of edits, the words
 of a rule). World has the rules and builds on demand.
 
-## 2. What the owner asked
+## 2. What I asked
 
-The owner, 2026-11-15:
+On 2026-11-15 I said:
 
 - "Like Dreams, World is an engine. It has rules that let the user
   build any kind of models. The tests should test the rules ... not
@@ -63,7 +63,7 @@ that a project does not give is "not found" here, not a guess.
   catalog of 76 kinds and the requests W1 to W23. The files are pinned
   by a lock (the commit of World, the hash of the order, the SHA-256 of
   each file).
-- **For the scene of the owner** it has the place of each thing in its
+- **For my scene** it has the place of each thing in its
   own frame (meters, from the center of Bãi Trước): the statue at
   (1159.87, 1893.39) on ground of 138.33 m, the lighthouse at (402.21,
   1056.5) on ground of 173.11 m, the road to the lighthouse (2,802 m),
@@ -78,8 +78,8 @@ that a project does not give is "not found" here, not a guess.
   the check of the factory; the mid and far levels of a person stand 1
   to 2 cm too high; two kinds of hair have no far level; the scooter
   has no side stand; no outdoor unit of an air conditioner.
-- **A conflict in its documents:** who owns the blueprints. The owner
-  now says: the projects prepare the blueprints and the edits.
+- **A conflict in its documents:** who owns the blueprints. I now
+  say: the projects prepare the blueprints and the edits.
 
 ### 3.3 Phượt
 
@@ -293,7 +293,7 @@ as a reference; no test builds them (the commit `b6905ce`).
    "The server on a computer"): the native server has each route that
    the Worker had, the pages of the site, the store on its disk and the
    line. Open: the tunnel and the start of the server on the mini PC
-   (the owner), and a release with no `mix`.
+   (by me), and a release with no `mix`.
 8. **The Earth of Humans Must Die:** real heights and kinds of land for
    the points that the game sends (section 7.2). Done for the heights
    (`World.Earth`, `POST /earth/heights`): ETOPO1 of NOAA at a quarter
@@ -310,7 +310,7 @@ as a reference; no test builds them (the commit `b6905ce`).
     1 m at the most), for a ship of 300 m. Open: a light at each point
     for the windows, and more kinds when the game asks for them.
 
-## 7. The answers of the owner (2026-11-15)
+## 7. My answers (2026-11-15)
 
 - **Tre:** "Tre's rules were made by me, so I can change them. I chose
   Voxel so models could be made by code, as Tre runs on the browser,
@@ -330,7 +330,7 @@ too: a small mesh with a color at each point.
 
 ### 7.0 Requests and edits, not rules for each model
 
-The owner (2026-11-15), after the rules of sections 6 and 7.1: "We can
+On 2026-11-15, after the rules of sections 6 and 7.1, I said: "We can
 fix them, but we can't fix everything. What I would like for World to
 have is the ability to be able to take requests and create and edit any
 models. That is, Phuot can request World for a coconut palm with
@@ -363,7 +363,7 @@ of thing that a project can want. It gets these abilities:
    the options of the rule are not sufficient. Open: the same for a
    model that the code of a rule makes (a plant, a person, an animal, a
    house of a village): its rule must give a drawing.
-5. **The tools are for a model of any kind. Done.** The owner
+5. **The tools are for a model of any kind. Done.** I said
    (2026-11-15): "the MCP has a lots of tools, but many tools are
    specific to certain types of models. Should the tools focus on the
    creating and editing models (of any kind)?" Yes. The seven tools for
@@ -377,7 +377,7 @@ of thing that a project can want. It gets these abilities:
    The MCP server has 13 tools: find a blueprint, check, place and edit
    an order, watch a build, a live sculpture, and the review of a new
    drawing or blueprint.
-6. **The edit `free`. Done.** The owner (2026-11-15): "Can we take the
+6. **The edit `free`. Done.** I said (2026-11-15): "Can we take the
    fixed in the code to be something that can be edited? Or the plant,
    a person or an animal into free edits?" Yes. `{"free": true}` makes
    an order an order of its drawing. For a rule that draws its thing as
@@ -401,9 +401,9 @@ Step T1 (done): a sheet of twelve models that World has and that fit
 the content of Tre (a buffalo, a chicken, a duck, a dog, a carp,
 bamboo, a banana plant, a tree, a woman with a nón lá, a basket boat in
 two looks, a house). It shows three looks: real, soft, and flat faces.
-The owner chooses the look.
+I choose the look.
 
-The owner (2026-11-15): "Tre is about the old Vietnam. Buildings there
+I said (2026-11-15): "Tre is about the old Vietnam. Buildings there
 have different look than what World currently has, so World need to
 support them. ... I want real, soft faces, with kids. There are a lot
 of kids in that game."
@@ -412,7 +412,7 @@ Step T2 (in progress):
 
 - **Children. Done:** a person has an age from 1 to 90 years, from the
   shapes of a baby and of a child of MakeHuman (48 targets, CC0, 1.7
-  MB). The owner (2026-11-15): "That does not look like a child at
+  MB). I said (2026-11-15): "That does not look like a child at
   all, and the hat is not at the right position." So the shapes of an
   age give the median height of the CDC charts, the head has the size
   of the head of a real child of that age (Snyder and others, 1977), a
@@ -420,7 +420,7 @@ Step T2 (in progress):
   round neck and covers the shoulders, the cloth over the chest has no
   fold, and a hat sits at the brow with the size of the real head (it
   was scaled two times: by the head node and by the head of the
-  person). The owner then: "The child chest is also inappropriate." The
+  person). Then I said: "The child chest is also inappropriate." The
   shapes of a child of MakeHuman have a small bust that a shirt shows,
   so a child has a flat chest (a membrane over the points of the
   breasts, to 16 years). Open: a hair of a child (the hairline of `short04` is of an
