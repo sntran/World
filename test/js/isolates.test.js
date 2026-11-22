@@ -1,7 +1,7 @@
 // The record of the starts and the ends of the VM (isolates.js).
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PREFIX, causeOf, isolates, noteEnd, noteStart } from '../../isolates.js';
+import { PREFIX, causeOf, isolates, noteEnd, noteStart, stoppedAnswer } from '../../isolates.js';
 import { bucket } from './fakes.js';
 
 test('the word of the cause of an error of the runtime', () => {
@@ -12,6 +12,21 @@ test('the word of the cause of an error of the runtime', () => {
   assert.equal(causeOf(new Error('Network connection lost.')), 'connection');
   assert.equal(causeOf(new Error('something else')), 'other');
   assert.equal(causeOf(null), 'other');
+});
+
+test('the answer of beam.com for a VM that stopped itself, and no other answer', async () => {
+  const text = (body, status = 503, type = 'text/plain') => new Response(body, { status, headers: { 'content-type': type, 'retry-after': '1' } });
+  const stopped = text('The app stopped. Try again.\n');
+  assert.equal(await stoppedAnswer(stopped), true);
+  // (The answer goes out as it is.)
+  assert.equal(await stopped.text(), 'The app stopped. Try again.\n');
+  assert.equal(await stoppedAnswer(text('down')), false);
+  assert.equal(await stoppedAnswer(text('{"errors": []}', 503, 'application/json')), false);
+  assert.equal(await stoppedAnswer(text('The app stopped. Try again.\n', 200)), false);
+  assert.equal(await stoppedAnswer(undefined), false);
+  const orders = bucket();
+  await noteEnd(orders, 'stopped', Date.parse('2026-11-22T01:53:20Z'));
+  assert.deepEqual([...orders.items.keys()], ['isolates/2026-11-22T01:53:20.000Z.end.stopped']);
 });
 
 test('the record: each start of a VM, and the cause of the end before each start after the first', async () => {

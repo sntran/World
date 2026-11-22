@@ -90,7 +90,7 @@
 import { KEY, type } from './order_store.js';
 import { AUDIENCE, verify, who } from './oidc.js';
 import { STATE, startShift } from './shift.js';
-import { isolates, noteEnd } from './isolates.js';
+import { isolates, noteEnd, stoppedAnswer } from './isolates.js';
 
 const CACHE = 'public, max-age=300, stale-while-revalidate=86400';
 
@@ -488,15 +488,22 @@ export function distribution(request, env) {
 }
 
 export async function handler(request, env, options) {
-  // (A request to the VM that fails: its isolate ended. The record keeps the time and the word of the cause.)
+  // (A request to the VM that fails: its isolate ended, or the VM stopped
+  // itself. The record keeps the time and the word of the cause.)
+  const note = (cause) => {
+    const done = noteEnd(env.ORDERS, cause).catch(() => {});
+    if (options.later) options.later(done);
+  };
   const vm = async (...args) => {
+    let response;
     try {
-      return await options.vm(...args);
+      response = await options.vm(...args);
     } catch (e) {
-      const note = noteEnd(env.ORDERS, e).catch(() => {});
-      if (options.later) options.later(note);
+      note(e);
       throw e;
     }
+    if (await stoppedAnswer(response)) note('stopped');
+    return response;
   };
   try {
     return await route(request, env, { ...options, vm });

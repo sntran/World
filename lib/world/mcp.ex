@@ -455,7 +455,8 @@ defmodule World.MCP do
     do: wrong(~s(the argument "drawing" must be a JSON object))
 
   defp call("edit_order", %{"hash" => hash, "edits" => edits}, origin) when is_binary(hash) do
-    case World.Orders.Edits.place(hash, edits, origin) do
+    # (Through the line of the builds, as POST /orders/HASH/edits.)
+    case World.Line.run(fn -> World.Orders.Edits.place(hash, edits, origin) end) do
       {:ok, data} -> result(data)
       {:error, :store} -> wrong("the store of the orders failed; try again later")
       {:error, errors} -> result(%{"errors" => errors}, true)
@@ -465,7 +466,8 @@ defmodule World.MCP do
   defp call("edit_order", _args, _origin), do: wrong(~s(the arguments "hash" and "edits" are necessary))
 
   defp call(tool, %{"order" => order}, origin) when is_map(order) do
-    case if(tool == "check_order", do: check(order), else: Orders.place(order, origin)) do
+    # (Through the line of the builds, as POST /orders.)
+    case World.Line.run(fn -> if(tool == "check_order", do: check(order), else: Orders.place(order, origin)) end) do
       {:ok, data} -> result(data)
       {:error, :store} -> wrong("the store of the orders failed; try again later")
       {:error, errors} -> result(%{"errors" => errors}, true)

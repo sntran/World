@@ -813,8 +813,9 @@ into one model, and it does not keep a whole model in its memory
   them.
 - **The guard of the memory.** A build runs in a process of its own,
   and `World.Guard` stops it when the memory of the VM goes over
-  `WORLD_MEMORY_MB` (118 MB at the edge, "The guard and the memory of
-  WebAssembly"): the order gets an error, and
+  `WORLD_MEMORY_MB` (60 MB at the edge since 2026-11-22, "The guard and
+  the memory of WebAssembly" and "Three orders at one time, with the
+  record"): the order gets an error, and
   the VM and the other orders go on. The check of an order with a large
   sculpture does not build it at far.
 
@@ -1804,6 +1805,9 @@ The memory of the VM (a look each 10 s):
   through the line of the builds; a guard (`WORLD_MEMORY_MB`) at the room
   that the isolate really has; and the code of World loaded before the
   memory image, so that a build does not load it again in each new VM.
+  On 2026-11-22 I made the first two, and not the third: it makes a new
+  VM need more memory at its start ("Three orders at one time, with the
+  record").
 
 ### The record of the starts and the ends of the VM
 
@@ -1816,7 +1820,14 @@ with no content:
 - `isolates/TIME.end.CAUSE`: a request to the VM that failed because its
   isolate ended (`handler.js`), with one word for the cause from the
   message of the runtime: `memory`, `cpu`, `deploy`, `reset`,
-  `connection` or `other`.
+  `connection` or `other`;
+- `isolates/TIME.end.stopped`: a request to the VM that got the answer
+  of beam.com for a VM that stopped itself (503, "The app stopped. Try
+  again."; since 2026-11-22). beam.com gives that answer, with no error,
+  to each open request when the VM stops (most often an allocation that
+  failed in the memory of WebAssembly), and to each request while its
+  object starts again. Before, such an end had no failed request, and
+  the census gave it as `idle`.
 
 `GET /census` gives `isolates`: the starts of the last 7 days, and for
 each start after the first, the end of the VM before it with its cause:
@@ -1825,6 +1836,75 @@ the cause of the last failed request between the two starts; else
 request in flight). `failed` has the failed requests after the last
 start. No header, no body, no IP address and no token goes into the
 record.
+
+### Three orders at one time, with the record (2026-11-22)
+
+**Before the changes** (`main` at b186451, with the record and with the
+parts that fit the edge, #74): three jobs of Vũng Tàu with their ID
+tokens, 20 s apart from 01:52:00 UTC (run 44972379940 of Vũng Tàu), as
+the three projects of 2026-11-21: the edit of Hải Âu (7 parts at mid), a
+village house (`village_house`, 6 parts) and a fridge (`appliance`, 1
+part). Each job placed its order, got its parts list at mid, and asked
+for all its parts at one time, again on each 202 and 503.
+
+| Order | Order (s) | Parts list (s) | Last part (s) |
+|---|---|---|---|
+| The edit of Hải Âu | 5.1 | 76.2 | 458.2 |
+| A village house | 36.5 | 53.4 | 636.8 |
+| A fridge | 17.5 | 40.0 | 739.2 |
+
+The record of the VM (`GET /census`, `isolates`): 15 new VMs from
+01:53:32 to 02:04:58, 8 ends with the cause `memory` and 7 with no
+failed request (the VM stopped itself; the census of then gave them as
+`idle`). The memory of WebAssembly (a look each 10 s, in MB of 10^6
+bytes):
+
+| Time (UTC) | Event | Size (MB) | Used (MB) |
+|---|---|---|---|
+| 01:51:05 | before the orders | 31.5 | 28.1 |
+| 01:52:32 | the three orders and their checks at one time | 86.9 | 62.1 (the peak) |
+| 01:53:32 | a new VM (the VM stopped itself) | 31.0 | 28.3 |
+| 01:54 to 02:03 | 8 more new VMs: each one ended after a look at 50 to 78 MB | | 36 to 56 |
+| 02:03:22 to 02:04:58 | 6 more new VMs, each 18 s after the one before: the build of the part of the fridge at the edge, from 31 MB | | |
+
+- An order and its edits did not go through the line of the builds, so
+  the three checks added up: 86.9 MB in 30 s. The VM went on at that
+  size for one minute, then it stopped.
+- Since #74 the edge builds each part of 150,000 faces or fewer itself.
+  The guard of 118 MB never stopped a build, because the VM ended before
+  its memory was at 118 MB. The part of the fridge ended six VMs in a
+  row; each job asked again on each 503.
+- The census shows the ends of the VM, but a look each 10 s does not see
+  the size at the end itself.
+
+**The changes** (the pull request after #75):
+
+- `POST /orders`, `POST /orders/HASH/edits`, `POST /sets`, and the MCP
+  tools `place_order`, `check_order` and `edit_order` go through the line
+  of the builds (`World.Line`): one check at a time, as a build.
+- `WORLD_MEMORY_MB` is 60 (was 118). The parts list of the edit of Hải
+  Âu alone used 51 MB at most (the census of 2026-11-22 01:18), so it
+  still fits. A part that the guard stops waits for a shift (a project),
+  or gives the error of the guard (a public caller).
+- The record has the cause `stopped` (above, "The record of the starts
+  and the ends of the VM").
+- I did not load the code of World before the memory image. beam.com
+  makes the image of a VM with no SQLite of its own (World) at the first
+  request of the first VM of a deploy, after its server listens: so the
+  code that `World.Application` loads at its start would be in it. But
+  the image is the pages of the VM that are not zero, and beam.com has a
+  copy of them and the memory of the VM at one time: when it makes the
+  image, and when a new VM restores it. The isolate also holds
+  `edge.com` (50 MB). Today that is about 27 MB of image, 31 MB of
+  memory and 50 MB. The code of World is about 16 MB more
+  (`Code.ensure_all_loaded/1` of its 315 modules on a computer: 11 MB
+  more of code, 16 MB more in all), in the image and in the VM: about
+  32 MB more at that moment. The
+  first VM of a deploy could then end when it makes its image, and each
+  next VM would boot again and end the same way. When a build loads the
+  code, the copy of the image is gone.
+
+**After the changes:** I measure again after the deploy, and I write the result here.
 
 ### The guard and the memory of WebAssembly
 

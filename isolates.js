@@ -9,6 +9,11 @@
 //   isolates/TIME.end.CAUSE (noteEnd), with one word for the cause from
 //   the message of the error: memory, cpu, deploy, reset, connection or
 //   other.
+// - A request to the VM that gets the answer of beam.com for a VM that
+//   stopped itself (stoppedAnswer): the cause stopped. beam.com gives that
+//   answer, 503 with no error, to each open request when the VM stops (an
+//   allocation that failed in the memory of WebAssembly, most often), and
+//   to each request while its object starts again.
 //
 // Each event is a key of R2 with no content, so GET /census reads only a
 // list. No header, no body, no IP address and no token goes into the
@@ -27,6 +32,17 @@ const CAUSES = [
   ['connection', /connection|disconnected/i],
 ];
 
+// The answer of beam.com when the VM stopped itself (runtime/worker.js,
+// stopped(); runtime/cloudflare/durable.js, the reset of the object).
+const STOPPED = /^The app stopped\./;
+
+// True for that answer. It reads the body of a copy, so the answer goes
+// out as it is.
+export async function stoppedAnswer(response) {
+  if (response?.status !== 503 || !String(response.headers.get('content-type') ?? '').startsWith('text/plain')) return false;
+  return STOPPED.test(await response.clone().text().catch(() => ''));
+}
+
 // The word of the cause of an error of a request to the VM.
 export function causeOf(error) {
   const message = String(error?.message ?? '');
@@ -41,9 +57,10 @@ export function noteStart(bucket, commit, now = Date.now()) {
   return bucket.put(`${PREFIX}${time(now)}.start.${String(commit ?? 'unknown').slice(0, 12)}`, '');
 }
 
-// A request to the VM that failed with `error`.
+// A request to the VM that failed with `error`, or that got the answer
+// of a VM that stopped itself (`error` is then the word stopped).
 export function noteEnd(bucket, error, now = Date.now()) {
-  return bucket.put(`${PREFIX}${time(now)}.end.${causeOf(error)}`, '');
+  return bucket.put(`${PREFIX}${time(now)}.end.${error === 'stopped' ? 'stopped' : causeOf(error)}`, '');
 }
 
 // The events of a key, or null for another key.
