@@ -56,7 +56,7 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
-| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge builds it from its recipe and keeps it, for each caller, when it fits the edge: a part of a sculpture whose estimate of memory (`memory` of its recipe, `World.Skills.Sculpt.memory/3`) is at most 20 MB (`World.Labour.edge_memory/0`: in practice a sculpture with no maps and few faces) and whose estimate of faces (`tile.faces` of the parts list) is at most 150,000 (`World.Labour.edge_faces/0`), or a person at mid or far (`World.Labour.fits?/1`). A part whose build at the edge ended the VM (its mark `parts/KEY.edge` and no GLB) does not fit from then on. A construction shift builds a part of a project that does not fit ("Construction shifts"): a project (a request with its token) that asks for all the parts of a list at one time gets them built at the same time. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. A part of a public order that does not fit the edge gives 422, and its message tells the caller to ask for the whole file of the order, or to ask from a job of GitHub Actions of a repository of my account. |
+| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge builds it from its recipe and keeps it, for each caller, when it fits the edge: a part of a sculpture whose estimate of memory (`memory` of its recipe, `World.Skills.Sculpt.memory/3`) is at most 20 MB (`World.Labour.edge_memory/0`: in practice a sculpture with no maps and few faces) and whose estimate of faces (`tile.faces` of the parts list) is at most 150,000 (`World.Labour.edge_faces/0`), or a person at far (`World.Labour.fits?/1`). A part whose build at the edge ended the VM (its mark `parts/KEY.edge` and no GLB) does not fit from then on. A construction shift builds a part of a project that does not fit ("Construction shifts"): a project (a request with its token) that asks for all the parts of a list at one time gets them built at the same time. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. A part of a public order that does not fit the edge gives 422, and its message tells the caller to ask for the whole file of the order, or to ask from a job of GitHub Actions of a repository of my account. |
 | `GET /bucket/list`, `GET /bucket/object?key=KEY`, `POST /bucket/quarantine?key=KEY` | The check of the bucket after the fault of the listeners (below, "The check of the bucket"): only the job of `bucket-check.yml` on `main`, else 403. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. The caller that opens the construction gets its control key: `control` in the JSON, or the first event `control` of the stream (below, "The control key"). |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
@@ -952,7 +952,7 @@ build. The edge starts the
 distribution after the application, so `World.Crew` watches the nodes
 from its start (`:net_kernel.monitor_nodes/2` with `node_type: :all`: a
 node that only connects is hidden). The edge gives work and takes none
-(`WORLD_LABOUR=parts`): it builds the parts that fit it (`World.Labour.fits?/1`: a part of a sculpture with an estimate of memory of 20 MB or less and of 150,000 faces or fewer, or a person at mid or far), and gives the others to a shift.
+(`WORLD_LABOUR=parts`): it builds the parts that fit it (`World.Labour.fits?/1`: a part of a sculpture with an estimate of memory of 20 MB or less and of 150,000 faces or fewer, or a person at far), and gives the others to a shift.
 
 **Whole parts, not small jobs.** The edge gives the shift a whole part
 by its key (`World.Labour`). The node builds it, puts the GLB in R2
@@ -2102,6 +2102,39 @@ build when the VM uses more than `WORLD_MEMORY_MB`, or when the size is
 more than `WORLD_MEMORY_MB` and less than 8 MB of it is free (the next
 growth would go over the limit). On a native VM it reads
 `:erlang.memory/1`.
+
+### The files of MakeHuman at the edge (2026-11-22)
+
+The Worker imports `edge.com` as bytes (`worker.js`), and beam.com reads
+each file of the release from those bytes: so all of `edge.com` stays in
+the isolate of 128 MB, next to the memory of WebAssembly of the VM. Of
+its 50 MB, 34.6 MB were the data of MakeHuman (`priv/makehuman`: the
+clothes 18 MB, the targets of the body 6.7 MB, the hair 5.5 MB, the
+skins 1.8 MB). On 2026-11-22 a VM of the site ended at rest, with no
+work and no failed request, after its size had gone to 71.5 MB (from
+18:10 to 18:21 UTC); 71.5 MB and 50 MB are near the 128 MB of the
+isolate.
+
+So the release of the edge has no `priv/makehuman` (`mix.exs`), and
+`scripts/site.sh` puts the folder in the static files of the site
+(`/makehuman/`; the data is CC0, as in this repository). A build at the
+edge reads each file that it needs, when it needs it, through the port
+`ASSET_STORE` of the object of the VM (`asset_store.js`, with the binding
+`ASSETS`; `World.People.Files`): the whole file, a part of
+`targets.pack` for each target of a person (a range of the static
+files), or a look for a swatch. `edge.com` is then 15.5 MB. A node
+that has the folder (a computer, the node of a shift, the tests) reads
+it as before.
+
+The version of a rule comes from the source of its modules
+(`World.Elements.Source`), so this change gives a new key to each part
+of a person, one time: the bytes are the same (the leader of a group of
+two at mid at the local edge: 897,760 bytes, the same with the release
+of `main`). A person at mid now goes to a shift too
+(`World.Labour.fits?/1`): it took 15 to 27 MB at the local edge, more
+than the 20 MB of `World.Labour.edge_memory/0`, and one took the size of
+the memory to 82 MB before the guard stopped it. A person at far (11 to
+13 MB) still builds at the edge.
 
 ### Hải Âu
 

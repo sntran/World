@@ -2146,7 +2146,13 @@ defmodule World.People.Human do
 
   defp textured(path, alpha) do
     mime = if String.ends_with?(path, ".png"), do: "image/png", else: "image/jpeg"
-    spec = %{"color" => [255, 255, 255], "roughness" => 0.75, "metalness" => 0.0, "image" => {mime, File.read!(path)}}
+
+    spec = %{
+      "color" => [255, 255, 255],
+      "roughness" => 0.75,
+      "metalness" => 0.0,
+      "image" => {mime, World.People.Files.read!(path)}
+    }
 
     case alpha do
       :blend -> Map.merge(spec, %{"alpha_mode" => "BLEND", "double_sided" => true})
