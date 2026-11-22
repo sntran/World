@@ -154,7 +154,9 @@ defmodule World.Labour do
     if Store.has?(key) do
       :stored
     else
-      case :global.trans({__MODULE__, {:make, key}}, fn -> claim(key) end, [node()]) do
+      # (The lock of :global belongs to the second element of its id, the
+      # requester: with this process there, a second make of the key waits.)
+      case :global.trans({{__MODULE__, :make, key}, self()}, fn -> claim(key) end, [node()]) do
         :mine ->
           try do
             Shift.work(key, fn -> built(key) end, projects)
@@ -346,17 +348,20 @@ defmodule World.Labour do
     away = {Crew.Tasks, node}
     {:ok, _} = Registry.register(__MODULE__, away, key)
     ready.()
-    there = there(node, opts, System.monotonic_time(:millisecond) + Keyword.get(opts, :back, 150_000))
-    Registry.unregister(__MODULE__, away)
 
-    case there do
+    case there(node, opts, System.monotonic_time(:millisecond) + Keyword.get(opts, :back, 150_000)) do
       {tasks, _} ->
-        {:ok, _} = Registry.register(__MODULE__, tasks, key)
-        after_run(key, run_on(key, tasks), opts, 0, until, ticket)
+        # (The part stays in the work of the node: with another name of
+        # its supervisor, the new registration comes first.)
+        if tasks != away do
+          {:ok, _} = Registry.register(__MODULE__, tasks, key)
+          Registry.unregister(__MODULE__, away)
+        end
+
+        after_run(key, tasks, run_on(key, tasks), opts, 0, until, ticket)
 
       :none ->
-        wait(key, ticket)
-        Queue.back(key)
+        back(key, away, ticket)
         turn(key, opts, 0, until, ticket)
     end
   end
@@ -397,42 +402,54 @@ defmodule World.Labour do
 
       tasks ->
         Queue.give(key, node_of(tasks))
-        after_run(key, run_on(key, tasks), opts, tries, until, ticket)
+        after_run(key, tasks, run_on(key, tasks), opts, tries, until, ticket)
     end
   end
 
-  defp after_run(key, result, opts, tries, until, ticket) do
+  # The end of a run on the node `tasks`, which has the part in its work
+  # until this function takes it out.
+  defp after_run(key, tasks, result, opts, tries, until, ticket) do
     case result do
       {:ok, done} ->
+        Registry.unregister(__MODULE__, tasks)
         done
 
       # (The node went away, or its shift ended: the part goes back to
-      # the queue, at its place. It is in the queue again before the
-      # store hears of it: no part of a later ticket takes its core in
-      # that time.)
+      # the queue, at its place.)
       :gone ->
-        wait(key, ticket)
-        Queue.back(key)
+        back(key, tasks, ticket)
         Process.sleep(Keyword.get(opts, :poll, 1_000))
         turn(key, opts, tries, until, ticket)
 
       {:failed, _} when tries + 1 >= @tries ->
+        Registry.unregister(__MODULE__, tasks)
         {:error, [%{"path" => "", "message" => "the part failed on #{@tries} nodes of a construction shift"}]}
 
       {:failed, _} ->
-        wait(key, ticket)
-        Queue.back(key)
+        back(key, tasks, ticket)
         turn(key, opts, tries + 1, until, ticket)
     end
+  end
+
+  # A part back in the queue at its place. It is in the queue before it
+  # goes out of the work of its node, and before the store hears of it:
+  # so no part of a later ticket takes its core in that time.
+  defp back(key, tasks, ticket) do
+    wait(key, ticket)
+    Registry.unregister(__MODULE__, tasks)
+    Queue.back(key)
   end
 
   # A free core of a node for the part of `ticket`, or nil: the parts
   # that came to the queue before it take the free cores first. The part
   # goes into the work of the node in the lock, so two parts do not take
-  # one core.
+  # one core. (The lock of :global belongs to the second element of its
+  # id, the requester: with the same requester for each process, as
+  # `{__MODULE__, :take}` had, two processes were in the lock at one time,
+  # and a part of a later ticket took a core with a part before it.)
   defp take(nodes, key, ticket) do
     :global.trans(
-      {__MODULE__, :take},
+      {{__MODULE__, :take}, self()},
       fn ->
         free = for {tasks, workers} <- nodes, room(tasks, workers) > 0, do: {tasks, workers}
         before = Enum.count(Registry.lookup(__MODULE__, :queue), fn {_, {t, _}} -> t < ticket end)
@@ -456,27 +473,25 @@ defmodule World.Labour do
 
   defp try_on(key, tasks) do
     {:ok, _} = Registry.register(__MODULE__, tasks, key)
-    run_on(key, tasks)
+    result = run_on(key, tasks)
+    Registry.unregister(__MODULE__, tasks)
+    result
   end
 
   # The make of a part on a node, which has the part in its work (its
-  # registration): `{:ok, result}`, `:gone` when the node went away or
-  # stopped its tasks (the end of a shift), or `{:failed, reason}` when
-  # the make raised there.
+  # registration, which the caller takes out): `{:ok, result}`, `:gone`
+  # when the node went away or stopped its tasks (the end of a shift), or
+  # `{:failed, reason}` when the make raised there.
   defp run_on(key, tasks) do
-    try do
-      task = Task.Supervisor.async_nolink(tasks, __MODULE__, :make, [key, Queue.projects(key)])
+    task = Task.Supervisor.async_nolink(tasks, __MODULE__, :make, [key, Queue.projects(key)])
 
-      case Task.yield(task, :infinity) do
-        {:ok, done} -> {:ok, done}
-        {:exit, reason} -> if gone?(reason), do: :gone, else: {:failed, reason}
-      end
-    catch
-      # (The supervisor of the node is not there: the node went away.)
-      :exit, _ -> :gone
-    after
-      Registry.unregister(__MODULE__, tasks)
+    case Task.yield(task, :infinity) do
+      {:ok, done} -> {:ok, done}
+      {:exit, reason} -> if gone?(reason), do: :gone, else: {:failed, reason}
     end
+  catch
+    # (The supervisor of the node is not there: the node went away.)
+    :exit, _ -> :gone
   end
 
   defp gone?(reason),
