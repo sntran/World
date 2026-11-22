@@ -177,8 +177,12 @@ has (60 MB)", for:
   `.mid.glb`, `.far.glb`): most models with sculptures at near (for
   example the scooter of the catalog, before its files came from the
   catalog), and large buildings at each level;
-- the check of an order whose model the check builds at far
-  (`POST /orders`), when that model is large;
+- the check of an order with a pose (`joints`) whose model the check
+  builds at far (`POST /orders`), when that model is large: the check
+  of the joints needs the model. With no pose, the check keeps the check
+  of the data of the order when the build at far needs more memory: the
+  order is good, and its parts list and its parts give the errors of its
+  build;
 - a parts list, when the model is too large for its list.
 
 A model of the catalog with no change is not in this list: for the

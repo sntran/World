@@ -525,14 +525,24 @@ defmodule World.Orders do
   # by the tests of its rule (a group of people with fans took 150 MB at the edge for nothing). A
   # model with a sculpture of more faces than a step of a part (W26: a large building) is not built
   # for them: its build needs more memory than the edge has, and its parts are built one by one.
-  # The check of its data stays.
+  # The check of its data stays. So does the check of a model with no pose whose build at far the
+  # guard stops (the village house of a project at the edge, 2026-11-22): the order is good, and
+  # its parts list and its parts give the errors of its build. A pose needs the model for its
+  # joints: its order gets the error of the memory.
   defp sound(order) do
     drawing = Blueprints.drawing(order)
 
     cond do
       drawing == nil and Map.get(order, "joints", %{}) == %{} -> :ok
       large?(drawing) -> :ok
-      true -> guarded(fn -> sound_now(order) end)
+      true -> sound_in_room(order)
+    end
+  end
+
+  defp sound_in_room(order) do
+    case World.Guard.run(fn -> sound_now(order) end) do
+      {:ok, result} -> result
+      {:error, :memory} -> if Map.get(order, "joints", %{}) == %{}, do: :ok, else: {:error, World.Guard.errors()}
     end
   end
 
