@@ -24,6 +24,12 @@ defmodule World.LabourTest do
     :ok
   end
 
+  # (A person at far fits the edge in these tests: a part that builds here.)
+  setup do
+    Application.put_env(:world, :edge_people, ["far"])
+    on_exit(fn -> Application.delete_env(:world, :edge_people) end)
+  end
+
   # A group of two people: each person is a part with a recipe.
   @group %{"blueprint" => "exercise", "options" => %{"count" => 1}}
 
@@ -61,7 +67,7 @@ defmodule World.LabourTest do
     end
   end
 
-  test "the parts that fit the edge: a person at mid or far, a part of a sculpture under the limit of faces; the others need a shift at the edge with shifts" do
+  test "the parts that fit the edge: a person at a level of edge_people/0, a part of a sculpture under the limit of faces; the others need a shift at the edge with shifts" do
     [{near, _} | _] = parts("near")
     [{far, _} | _] = parts("far")
     refute Labour.needs_shift?(near)
@@ -78,6 +84,11 @@ defmodule World.LabourTest do
     assert Labour.fits?(%{"piece" => "leader", "level" => "far"})
     refute Labour.fits?(%{"piece" => "leader", "level" => "mid"})
     refute Labour.fits?(%{"piece" => "leader", "level" => "near"})
+    # (By default no person fits the edge.)
+    Application.delete_env(:world, :edge_people)
+    assert Labour.edge_people() == []
+    refute Labour.fits?(%{"piece" => "leader", "level" => "far"})
+    Application.put_env(:world, :edge_people, ["far"])
     # (A part of a sculpture fits by the estimate of its memory, at most edge_memory/0 MB, and of its faces.)
     assert Labour.edge_memory() == 20
     assert Labour.fits?(%{"node" => "wall", "level" => "far", "tile" => nil, "memory" => 20})
