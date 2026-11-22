@@ -2103,6 +2103,18 @@ more than `WORLD_MEMORY_MB` and less than 8 MB of it is free (the next
 growth would go over the limit). On a native VM it reads
 `:erlang.memory/1`.
 
+The build of a whole file (`/o/HASH.glb`) opens a construction
+(`World.build/1`), whose processes are not linked to the build. Before
+2026-11-22 the guard stopped only the build, and the construction went
+on: at 20:19 UTC the memory in use went to 82.1 MB (the size to
+105.1 MB), over the guard of 60 MB, and the VM ended. That was a file of
+an order of Vũng Tàu (its workflows `Test` and `Export` ask for the
+files of their orders, and each deploy of World gives new keys to the
+whole files). Now a build gives the guard the stop of the work that it
+started (`World.Guard.on_stop/1`): the build of a file gives the cancel
+of its construction (`World.cancel/1`), and the guard runs it when it
+stops the build.
+
 ### The files of MakeHuman at the edge (2026-11-22)
 
 The Worker imports `edge.com` as bytes (`worker.js`), and beam.com reads

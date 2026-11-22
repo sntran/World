@@ -86,6 +86,54 @@ defmodule World.GuardTest do
     assert Process.alive?(self())
   end
 
+  test "the guard runs the stop of the work that a build started when it stops the build, and not after a good end" do
+    me = self()
+    assert Guard.on_stop(fn -> send(me, :outside) end) == :ok
+    refute_received :outside
+
+    Application.put_env(:world, :memory_mb, 100_000)
+
+    assert {:ok, :done} =
+             Guard.run(fn ->
+               :ok = Guard.on_stop(fn -> send(me, :after_a_good_end) end)
+               :done
+             end)
+
+    Application.put_env(:world, :memory_mb, 1)
+
+    assert {:error, :memory} =
+             Guard.run(fn ->
+               Guard.on_stop(fn -> send(me, {:stop, 1}) end)
+               Guard.on_stop(fn -> send(me, {:stop, 2}) end)
+               Process.sleep(:infinity)
+             end)
+
+    assert_received {:stop, 1}
+    assert_received {:stop, 2}
+
+    # (Killed by its limit of the heap, before the next look.)
+    assert {:error, :memory} =
+             Guard.run(fn ->
+               Guard.on_stop(fn -> send(me, :heap) end)
+               Enum.map(1..1_000_000, & &1)
+             end)
+
+    assert_received :heap
+    refute_received :after_a_good_end
+
+    # The construction of a file that the guard stops is cancelled: it does not go on.
+    group = %{"blueprint" => "exercise", "options" => %{"count" => 3, "fans" => false}}
+    {:ok, full} = Orders.check(group)
+    {:ok, job} = Orders.job(full, "near")
+    assert {:error, [%{"message" => "needs more memory" <> _}]} = Orders.build(group, "near", "glb")
+
+    wait = fn wait, n ->
+      if Registry.lookup(World.Names, job.id) == [] or n == 0, do: n, else: Process.sleep(20) && wait.(wait, n - 1)
+    end
+
+    assert wait.(wait, 500) > 0
+  end
+
   test "a build in the guard keeps the level of detail of its caller, gives its errors, and stops when its process stops" do
     Application.put_env(:world, :memory_mb, 100_000)
     assert Detail.with(:far, fn -> Guard.run(&Detail.level/0) end) == {:ok, :far}

@@ -230,7 +230,11 @@ defmodule World.LabourTest do
         Labour.build(key, recipe, shifts: true, project: true, poll: 5, nodes: turns([[{gone, 4}], [{b, 2}], [{c, 2}]]))
       end)
 
-    wait = fn wait -> if Labour.busy(b) == 1, do: :ok, else: Process.sleep(5) && wait.(wait) end
+    # (The part is in the work of the node before its task starts there: wait for both.)
+    wait = fn wait ->
+      if Labour.busy(b) == 1 and Task.Supervisor.children(b) != [], do: :ok, else: Process.sleep(5) && wait.(wait)
+    end
+
     wait.(wait)
     [task] = Task.Supervisor.children(b)
     Process.exit(task, :shutdown)
