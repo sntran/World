@@ -83,25 +83,34 @@ defmodule World.Labour do
 
   @doc """
   True for a part that the edge builds itself in its memory and its CPU
-  limit, for each caller, by the rule of the edge for the parts of a
-  model (`World.Elements`, "A part fits the memory of the edge"):
+  limit, for each caller, as it builds a whole model: in steps of
+  `World.Elements.most/0` faces, under the guard of the memory
+  (`World.Guard`). The CPU time of a part goes with the estimate of its
+  faces at its cells (`tile.faces` of the parts list: at the local edge, a
+  part of 51,264 faces of Hải Âu at mid took 20 s, one of 106,510 faces
+  37 s, and one of 216,190 faces 111 s), so a part fits with room in the 5
+  minutes of the CPU limit when that estimate is at most `edge_faces/0`:
 
-  - a part of a sculpture whose estimate of faces at its cells (the
-    `faces` of its tile, `tile.faces` of the parts list) is at most
-    `World.Elements.most/0`, the limit that cuts a sculpture into parts;
-  - a sculpture in one part (no tile): the cut makes one part only when
-    the estimate of the whole sculpture is under that limit;
+  - a part of a sculpture whose estimate is at most `edge_faces/0`;
+  - a sculpture in one part (no tile: its estimate is under
+    `World.Elements.most/0`);
   - a person of a group at mid or far (about 100 MB and 10 s at the edge).
 
-  A part of more faces (made in steps), and a person at near, do not fit.
-  A part of a project that fits, and that the guard of the memory stops
-  at the edge (`World.Guard`), waits for a shift as a part that does not
-  fit (`build/3`).
+  A part of more faces, and a person at near, do not fit. A part of a
+  project that fits, and that the guard of the memory stops at the edge,
+  waits for a shift as a part that does not fit (`build/3`).
   """
   def fits?(%{"piece" => _, "level" => level}) when level in ["mid", "far"], do: true
   def fits?(%{"node" => _, "tile" => nil}), do: true
-  def fits?(%{"node" => _, "tile" => %{"faces" => faces}}) when is_number(faces), do: faces <= Elements.most()
+  def fits?(%{"node" => _, "tile" => %{"faces" => faces}}) when is_number(faces), do: faces <= edge_faces()
   def fits?(_recipe), do: false
+
+  @doc """
+  The most faces of the estimate of a part that the edge builds
+  (`fits?/1`): the application environment `:edge_faces`, #{150_000} by
+  default.
+  """
+  def edge_faces, do: Application.get_env(:world, :edge_faces, 150_000)
 
   @doc """
   True at the edge with shifts for the key of a part with a recipe that

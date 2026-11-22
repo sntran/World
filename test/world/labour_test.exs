@@ -80,8 +80,14 @@ defmodule World.LabourTest do
     refute Labour.fits?(%{"piece" => "leader", "level" => "near"})
     # (A sculpture in one part, and a part of a sculpture at most at the limit of the cut, fit.)
     assert Labour.fits?(%{"node" => "wall", "level" => "far", "tile" => nil})
-    assert Labour.fits?(%{"node" => "wall", "level" => "mid", "tile" => %{"faces" => Elements.most()}})
-    refute Labour.fits?(%{"node" => "wall", "level" => "mid", "tile" => %{"faces" => Elements.most() + 1}})
+    # (A part of more faces than a step of the cut fits too: the edge builds it in steps, as a whole
+    # model; the two parts of the helicopter of issue #42 have 17,200 and 36,296 faces.)
+    assert Labour.edge_faces() == 150_000 and Labour.edge_faces() > Elements.most()
+    assert Labour.fits?(%{"node" => "body", "level" => "mid", "tile" => %{"faces" => 36_296}})
+    assert Labour.fits?(%{"node" => "wall", "level" => "mid", "tile" => %{"faces" => Labour.edge_faces()}})
+    refute Labour.fits?(%{"node" => "wall", "level" => "mid", "tile" => %{"faces" => Labour.edge_faces() + 1}})
+    # (A large part of the body of Hải Âu at mid does not fit.)
+    refute Labour.fits?(%{"node" => "than", "level" => "mid", "tile" => %{"faces" => 216_190}})
     refute Labour.fits?(%{"order" => "x", "level" => "far"})
   end
 

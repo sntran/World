@@ -56,7 +56,7 @@ An order is data, never code. World runs no code from an order.
 | `/o/HASH.solids.json` | The simple solids of the model (`World.Solids`, plan 0019), for a project that draws boxes or SVG and cannot draw a GLB. For a drawing from edits: each edit with its copies as one solid (its `shape` and `size` as in the data of an edit, its place `at` and its axes `x`, `y`, `z` in the axes of the model, its `mode`, its `color` and its `role`), in the parts of the drawing, with no build (milliseconds). For another model: one box for each node and each material. The lengths are in meters, z is up, and the front is to +y. |
 | `/o/HASH.log.json`, `/o/HASH.replay.glb` | The log of the construction that built the near level (`World.Log`: one line for the clock, then one line for each event), and the model with each part in a node of its own, with the id of its task (extras `task`), for the replay. The replay of a drawing has its temporary nodes too, each with the task that puts it up and the task that takes it down (extras `from`, `to`; plan 0006, D9): the scaffold and the forms of each band, each band in rough concrete. |
 | `/o/HASH.elements.json`, `.mid.elements.json`, `.far.elements.json` | The parts list of the model at a level (below, "The parts of a model"): each part with its key, its URL, its node, its place and its roles, and the joints, the ports and the collision boxes of the model. The factory does not join the parts: a project puts them together. |
-| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge builds it from its recipe and keeps it, for each caller, when it fits the edge: a part of a sculpture whose estimate of faces (`tile.faces` of the parts list) is at most 12,000 (the limit that cuts a sculpture into parts, `World.Elements.most/0`), a sculpture in one part, or a person at mid or far (`World.Labour.fits?/1`). A construction shift builds a part of a project that does not fit ("Construction shifts"): a project (a request with its token) that asks for all the parts of a list at one time gets them built at the same time. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. A part of a public order that does not fit the edge gives 422, and its message tells the caller to ask for the whole file of the order, or to ask from a job of GitHub Actions of a repository of my account. |
+| `/p/KEY.glb` | A part by its key: the same key is the same file, for ever (`cache-control: immutable`). From R2 with no VM, else the edge builds it from its recipe and keeps it, for each caller, when it fits the edge: a part of a sculpture whose estimate of faces (`tile.faces` of the parts list) is at most 150,000 (`World.Labour.edge_faces/0`: the edge builds it in steps of 12,000 faces, as a whole model, well in its CPU limit), a sculpture in one part, or a person at mid or far (`World.Labour.fits?/1`). A construction shift builds a part of a project that does not fit ("Construction shifts"): a project (a request with its token) that asks for all the parts of a list at one time gets them built at the same time. A large part that takes more than 45 s gives 202 with `retry-after`: ask again. A part of a public order that does not fit the edge gives 422, and its message tells the caller to ask for the whole file of the order, or to ask from a job of GitHub Actions of a repository of my account. |
 | `GET /bucket/list`, `GET /bucket/object?key=KEY`, `POST /bucket/quarantine?key=KEY` | The check of the bucket after the fault of the listeners (below, "The check of the bucket"): only the job of `bucket-check.yml` on `main`, else 403. |
 | `POST /builds` | A build that anyone can watch: an order with a `level` and a `budget` (below, "The constructions"). With `accept: text/event-stream`, the answer is the stream of its events; else 202 with its id and the URL of its events; or 422 with the errors. The caller that opens the construction gets its control key: `control` in the JSON, or the first event `control` of the stream (below, "The control key"). |
 | `/builds/ID` | The state of a build from its events: `building`, `done`, `stopped` or `failed`, its level, its tasks and its elements. |
@@ -840,9 +840,13 @@ So the edge builds only the parts that fit it with room, and a
 construction shift builds the others (below). These times are of
 `wrangler dev` on a shared core; the times at the edge need a deploy
 (the next measure on world.mkfifo.com). Since the change of issue #42 the rule is the
-estimate of the faces of a part (`World.Labour.fits?/1`): a part of a
-sculpture of 12,000 faces or fewer, a sculpture in one part, and a
-person at mid or far build at the edge, for each caller.
+estimate of the faces of a part at its cells (`World.Labour.fits?/1`),
+which goes with its CPU time: a part of a sculpture of 150,000 faces or
+fewer (`World.Labour.edge_faces/0`; above: 51,264 faces took 20 s,
+106,510 faces 37 s, and the parts of 216,190 faces or more 111 s or
+more), a sculpture in one part, and a person at mid or far build at the
+edge, for each caller. A part that the guard of the memory stops waits
+for a shift (a project) or gets 422 (a public request).
 
 ### Construction shifts
 
@@ -940,7 +944,7 @@ build. The edge starts the
 distribution after the application, so `World.Crew` watches the nodes
 from its start (`:net_kernel.monitor_nodes/2` with `node_type: :all`: a
 node that only connects is hidden). The edge gives work and takes none
-(`WORLD_LABOUR=parts`): it builds the parts that fit it (`World.Labour.fits?/1`: a part of a sculpture of 12,000 faces or fewer, a sculpture in one part, a person at mid or far), and gives the others to a shift.
+(`WORLD_LABOUR=parts`): it builds the parts that fit it (`World.Labour.fits?/1`: a part of a sculpture of 150,000 faces or fewer, a sculpture in one part, a person at mid or far), and gives the others to a shift.
 
 **Whole parts, not small jobs.** The edge gives the shift a whole part
 by its key (`World.Labour`). The node builds it, puts the GLB in R2

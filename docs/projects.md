@@ -13,10 +13,12 @@ edge. `docs/factory.md` has the details of each URL and of the shifts.
 | A request with a wrong token (an old ID token, another audience) | A public request, as above. |
 
 A part fits the edge when the estimate of its faces (`tile.faces` of the
-parts list) is 12,000 or fewer: the edge cuts a sculpture into parts at
-that limit, so most parts of a sculpture fit. A sculpture in one part
-fits, and a person fits at mid and far. A part of more faces, and a
-person at near, do not fit (`docs/factory.md`, "The parts of a model").
+parts list) is 150,000 or fewer: the edge builds it as it builds a whole
+model, in steps of 12,000 faces, and its CPU time stays well in the 5
+minutes of the edge. A sculpture in one part fits, and a person fits at
+mid and far. A part of more faces (the large parts of the body of Hải
+Âu), and a person at near, do not fit (`docs/factory.md`, "The CPU limit
+of the edge").
 A part of a project that fits by its estimate, and that the guard of the
 memory of the edge stops (`World.Guard`), also waits for a shift; a
 public request gets the error of the guard (422).
