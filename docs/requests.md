@@ -204,6 +204,14 @@ With the server of World (`https://world.mkfifo.com`):
   2.3308]` for the first van of the list.
 - The first request of a file builds it; each request after it reads
   it from the store (0.2 s). The files stay after a deploy of World.
+- The parts list of an order (`/o/HASH.LEVEL.elements.json`) gives each
+  part with its URL `/p/KEY.glb`. The edge builds each part that fits it
+  (an estimate of 12,000 faces or fewer, `tile.faces` of the list; a
+  person at mid or far), for each caller. A part that does not fit gives
+  422 to a public request: ask for the whole file of the order
+  (`/o/HASH.LEVEL.glb`), or ask from a job of GitHub Actions of a
+  project of the owner, which gets the part from a construction shift
+  (`docs/projects.md`).
 - A tool that gets all the files of a project adds `?class=batch`, so
   that a person who waits for one model goes first.
 - Ask for gzip (`accept-encoding: gzip`): a GLB is about 3 times

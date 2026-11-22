@@ -394,6 +394,7 @@ defmodule World.ElementsTest do
 
     {:ok, list} = Elements.list(%{"blueprint" => "exercise", "options" => %{"count" => 5}}, "near")
     key = hd(list["parts"])["key"]
+    memory = Application.get_env(:world, :memory_mb)
     Application.put_env(:world, :shifts, true)
     Application.put_env(:world, :part_wait, 50)
 
@@ -407,12 +408,47 @@ defmodule World.ElementsTest do
       Application.put_env(:world, :part_wait, 50)
       public = get.("/p/#{key}.glb", [])
       assert public.status == 422 and public.resp_body =~ "does not fit the memory and the CPU time of the edge"
+
+      assert public.resp_body =~ "ask for the whole file of the order" and
+               public.resp_body =~ "a repository of the account sntran"
+
       # (No node of a shift here: the part waits in the queue.)
       project = get.("/p/#{key}.glb", [{"x-world-project", "vung_tau"}])
       assert project.status == 202
       assert Plug.Conn.get_resp_header(project, "x-world-shift") == ["wanted"]
       assert World.Labour.waiting() == 1
+
+      # A part of a sculpture under the limit of faces fits the edge: it builds at once, for a project and for a public caller.
+      # (The wait of a request is longer than its build.)
+      Application.put_env(:world, :part_wait, 60_000)
+      {:ok, wall} = Elements.list(order(drawing(0.3, "shift")), "far")
+      sculpted = Enum.find(wall["parts"], &(&1["tile"] != nil or &1["node"] == "wall"))["key"]
+      assert <<"glTF", _::binary>> = get.("/p/#{sculpted}.glb", [{"x-world-project", "vung_tau"}]).resp_body
+      assert get.("/p/#{sculpted}.glb", []).status == 200
+
+      # A part that fits by its estimate, and that the guard of the memory stops at the edge: a
+      # project waits for a shift; a public caller gets the error of the guard.
+      {:ok, other} = Elements.list(order(drawing(0.25, "guard")), "far")
+      guarded = Enum.find(other["parts"], &(&1["tile"] != nil or &1["node"] == "wall"))["key"]
+      Application.put_env(:world, :memory_mb, 1)
+      public = get.("/p/#{guarded}.glb", [])
+      assert public.status == 422 and public.resp_body =~ "needs more memory than the factory has"
+      # (The process of that build waits 1 s for late requests: a new request starts a new build.)
+      for {pid, _} <- Registry.lookup(World.Names, {:build, {:part, guarded}}), do: Process.exit(pid, :kill)
+      Process.sleep(20)
+      Application.put_env(:world, :part_wait, 50)
+      project = get.("/p/#{guarded}.glb", [{"x-world-project", "vung_tau"}])
+      # (The build starts here; when the guard stops it, the part goes to the queue.)
+      assert project.status == 202
+
+      assert Enum.find(1..400, fn _ ->
+               Process.sleep(25)
+               World.Labour.waiting() == 2
+             end)
+
+      for {pid, _} <- Registry.lookup(World.Names, {:build, {:part, guarded}}), do: Process.exit(pid, :kill)
     after
+      if memory, do: Application.put_env(:world, :memory_mb, memory), else: Application.delete_env(:world, :memory_mb)
       Application.delete_env(:world, :shifts)
       Application.delete_env(:world, :part_wait)
       # (The part waits no more.)

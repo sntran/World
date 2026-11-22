@@ -61,7 +61,7 @@ defmodule World.LabourTest do
     end
   end
 
-  test "the parts that fit the edge: a person at mid or far; the others need a shift at the edge with shifts" do
+  test "the parts that fit the edge: a person at mid or far, a part of a sculpture under the limit of faces; the others need a shift at the edge with shifts" do
     [{near, _} | _] = parts("near")
     [{far, _} | _] = parts("far")
     refute Labour.needs_shift?(near)
@@ -78,7 +78,11 @@ defmodule World.LabourTest do
     assert Labour.fits?(%{"piece" => "leader", "level" => "far"})
     assert Labour.fits?(%{"piece" => "leader", "level" => "mid"})
     refute Labour.fits?(%{"piece" => "leader", "level" => "near"})
-    refute Labour.fits?(%{"node" => "wall", "level" => "far", "tile" => nil})
+    # (A sculpture in one part, and a part of a sculpture at most at the limit of the cut, fit.)
+    assert Labour.fits?(%{"node" => "wall", "level" => "far", "tile" => nil})
+    assert Labour.fits?(%{"node" => "wall", "level" => "mid", "tile" => %{"faces" => Elements.most()}})
+    refute Labour.fits?(%{"node" => "wall", "level" => "mid", "tile" => %{"faces" => Elements.most() + 1}})
+    refute Labour.fits?(%{"order" => "x", "level" => "far"})
   end
 
   test "with no shifts: a node builds a part by its key, puts it in the store, and gives back only the key" do
