@@ -508,6 +508,9 @@ defmodule World.Orders do
   # Two requests of one order at one level are one construction.
   defp world(job) do
     {:ok, id} = World.build(job)
+    # (The construction is not linked to this build: when the guard of the memory stops this
+    # build, the construction stops too, and does not take the rest of the memory of the VM.)
+    World.Guard.on_stop(fn -> World.cancel(id) end)
     {:ok, result} = World.await(id)
     {result.glb, Log.to_json(result.log)}
   end

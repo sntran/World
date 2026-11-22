@@ -11,7 +11,10 @@ defmodule World.Guard do
   the order gets an error, and the VM and the other orders go on. The
   heap of the process of the build, with its binaries, has the same
   limit (`max_heap_size` with `include_shared_binaries`), so a process
-  that grows fast stops before the next look.
+  that grows fast stops before the next look. A build that starts work
+  in processes that are not linked to it (a construction: `World.build/1`)
+  gives the guard the stop of that work (`on_stop/1`), and the guard runs
+  it when it stops the build.
 
   In WebAssembly (the edge), the guard reads the memory of WebAssembly
   (`World.wasm_memory/1`): the edge counts its size against the 128 MB,
@@ -51,6 +54,24 @@ defmodule World.Guard do
     end
   end
 
+  @doc """
+  In a build in the guard: `fun` runs (in the process of the caller of
+  `run/1`) when the guard stops the build for the memory, so work that
+  the build started and that is not linked to it stops too (the
+  construction of a file, `World.cancel/1`). Outside a build in the
+  guard it does nothing. `:ok`.
+  """
+  def on_stop(fun) when is_function(fun, 0) do
+    case Process.get({__MODULE__, :waiter}) do
+      nil ->
+        :ok
+
+      waiter ->
+        send(waiter, {__MODULE__, :on_stop, self(), fun})
+        :ok
+    end
+  end
+
   @doc "The error of an order that needs more memory than the VM has, as the errors of `World.Orders.check/1`."
   def errors do
     [
@@ -65,9 +86,11 @@ defmodule World.Guard do
 
   defp guarded(fun, bytes) do
     level = World.Detail.level()
+    waiter = self()
 
     {pid, ref} =
       spawn_monitor(fn ->
+        Process.put({__MODULE__, :waiter}, waiter)
         words = div(bytes, :erlang.system_info(:wordsize))
         # (With its binaries: the bake of a sculpture keeps large ones.)
         Process.flag(:max_heap_size, %{size: words, kill: true, error_logger: false, include_shared_binaries: true})
@@ -82,7 +105,7 @@ defmodule World.Guard do
         exit({:guard, result})
       end)
 
-    wait(pid, ref, bytes)
+    wait(pid, ref, bytes, [])
   end
 
   @doc false
@@ -90,22 +113,25 @@ defmodule World.Guard do
   def over?(bytes, {size, used}), do: used > bytes or (size > bytes and size - used < @reserve)
   def over?(bytes, nil), do: elem(World.memory(), 1) > bytes
 
-  defp wait(pid, ref, bytes) do
+  defp wait(pid, ref, bytes, stops) do
     receive do
+      {__MODULE__, :on_stop, ^pid, fun} -> wait(pid, ref, bytes, [fun | stops])
       {:DOWN, ^ref, :process, ^pid, {:guard, {:ok, value}}} -> {:ok, value}
       {:DOWN, ^ref, :process, ^pid, {:guard, {:raise, e, stack}}} -> reraise e, stack
-      {:DOWN, ^ref, :process, ^pid, :killed} -> {:error, :memory}
+      {:DOWN, ^ref, :process, ^pid, :killed} -> stopped(stops)
       {:DOWN, ^ref, :process, ^pid, reason} -> exit(reason)
     after
       @look ->
-        if over?(bytes, World.wasm_memory()) do
-          Process.exit(pid, :kill)
-          receive do: ({:DOWN, ^ref, :process, ^pid, _} -> :ok)
-          :erlang.garbage_collect()
-          {:error, :memory}
-        else
-          wait(pid, ref, bytes)
-        end
+        # (After the kill, the end of the build comes after each message of the build: its stops.)
+        if over?(bytes, World.wasm_memory()), do: Process.exit(pid, :kill)
+        wait(pid, ref, bytes, stops)
     end
+  end
+
+  # The build stopped for the memory: the stop of each work that it started, then the error.
+  defp stopped(stops) do
+    Enum.each(Enum.reverse(stops), & &1.())
+    :erlang.garbage_collect()
+    {:error, :memory}
   end
 end
