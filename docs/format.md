@@ -2576,7 +2576,15 @@ of the catalog, a person, an animal, a drawing). Each node but the root
 connects its port `port` to the port `at` of the node `to`, which comes
 before it. A port is the name of a port of the part or of the item (a
 person has `grip_r` and the others: a node can be in a hand), or a port
-in the data (`at`, `axis`, `up`); the origin by default. A node can have
+in the data (`at`, `axis`, `up`); the origin by default. A port in the
+data with no `up` (or with an `up` along its `axis`), of a node or of a
+part, has the `up` of the origin port: y to the front, or z when the
+axis is along y, as the frame of an edit. So a node on a port in the
+data with the same axis as its own port gets no turn. (The frame of a
+shape with no `up` takes any direction at a right angle to its axis.)
+The place of a node (its `at` and its `port` in the data) is within
+1,000 m, as the points of an edit, so a large model can have a part far
+from its middle: a house at the stern of a ship of 300 m. A node can have
 a `turn` (degrees) and an `offset` (meters), and be a `joint`: `kind`
 (`hinge` or `slide`), `role` (`crank`, `door`, `drawer`, `handle`,
 `knob`, `lid`, `open`, `pedal`, `recline`, `slide`, `spin`, `stand`,
@@ -2683,7 +2691,8 @@ The check gives each error with its path
 (`options.drawing.nodes.2.at`: "is not a port of the part"). The limits
 keep a drawing small for the builder at the edge: 64 parts, 256 shapes
 in all, 128 nodes, 64 points in a list, 8 clips of 64 keys, points
-within 50 m, and 3 drawings one in the other.
+of a part within 50 m, the place of a node within 1,000 m, and 3
+drawings one in the other.
 
 ## The files of a model
 

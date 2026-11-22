@@ -541,6 +541,9 @@ defmodule World.Skills.Sculpt do
     )
   end
 
+  @doc "The limit of a point and of a size of an edit, in meters: also the limit of the place of a node of a drawing."
+  def size, do: @size
+
   @impl true
   def estimate(data, level) do
     with [] <- check(data, ""),

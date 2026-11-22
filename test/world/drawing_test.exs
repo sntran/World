@@ -114,6 +114,92 @@ defmodule World.DrawingTest do
 
   defp scene_at(a, pose, node), do: Enum.at(Build.scene(a, pose: pose).nodes, node).frame
 
+  defp frame_of(scene, name), do: Enum.find(scene.nodes, &(&1.name == name)).frame
+
+  defp near(a, b), do: Enum.all?(Enum.zip(Tuple.to_list(a), Tuple.to_list(b)), fn {x, y} -> abs(x - y) < 1.0e-9 end)
+
+  test "a node on a port in data with no up has the up of the origin port: no turn (issue #40)" do
+    rotor = fn at ->
+      %{
+        "name" => "rotor",
+        "part" => "blade",
+        "to" => "body",
+        "at" => at,
+        "joint" => %{"kind" => "hinge", "role" => "spin"}
+      }
+    end
+
+    d = fn at ->
+      %{
+        "name" => "heli",
+        "sources" => ["A test."],
+        "parts" => %{
+          "body" => %{"shapes" => [%{"box" => %{"from" => [-1, -2, 0], "to" => [1, 2, 2]}}]},
+          "blade" => %{"shapes" => [%{"box" => %{"from" => [-3, -0.1, 0], "to" => [3, 0.1, 0.05]}}]}
+        },
+        "nodes" => [%{"name" => "body", "part" => "body"}, rotor.(at)]
+      }
+    end
+
+    # An axis z: the up of the port is y, as the origin port of the child.
+    f = frame_of(Build.scene(Drawing.build(d.(%{"at" => [0, 0.1, 2.3], "axis" => [0, 0, 1]}))), "rotor")
+    assert near(f.x, {1.0, 0.0, 0.0}) and near(f.y, {0.0, 1.0, 0.0}) and near(f.at, {0.0, 0.1, 2.3})
+    # An up along the axis is no up; an axis along y has the up z: the child turns to the axis only.
+    f = frame_of(Build.scene(Drawing.build(d.(%{"at" => [0, 2, 1], "axis" => [0, 1, 0], "up" => [0, 2, 0]}))), "rotor")
+    assert near(f.z, {0.0, 1.0, 0.0}) and near(f.y, {0.0, 0.0, 1.0})
+  end
+
+  test "the place of a node has the limit of the points of an edit, not 50 m: a ship of 300 m with a house at its stern (issue #41)" do
+    hull = %{
+      "sculpt" => %{
+        "edits" => [%{"shape" => "box", "size" => [10, 150, 4], "at" => [0, 0, 4], "material" => "steel"}],
+        "sources" => ["A test hull."],
+        "cells" => %{"near" => 4.0, "mid" => 4.0, "far" => 4.0},
+        "budget" => %{"near" => 2_000, "mid" => 2_000, "far" => 2_000}
+      }
+    }
+
+    ship = fn at ->
+      %{
+        "name" => "ship",
+        "sources" => ["A test."],
+        "parts" => %{"house" => %{"shapes" => [%{"box" => %{"from" => [-8, -6, 0], "to" => [8, 6, 12]}}]}},
+        "nodes" => [
+          %{"name" => "hull", "skill" => hull},
+          %{
+            "name" => "house",
+            "part" => "house",
+            "to" => "hull",
+            "at" => %{"at" => at, "axis" => [0, 0, 1], "up" => [0, 1, 0]}
+          }
+        ]
+      }
+    end
+
+    assert {:ok, _} = Orders.check(order(ship.([0, -140, 8])))
+    assert paths(Orders.check(order(ship.([0, -1_001, 8])))) == ["options.drawing.nodes.1.at.at"]
+    # (The point of a part in data keeps its limit of 50 m.)
+    long =
+      put_in(ship.([0, -140, 8]), ["parts", "house", "shapes"], [%{"box" => %{"from" => [0, 0, 0], "to" => [0, 60, 1]}}])
+
+    assert paths(Orders.check(order(long))) == ["options.drawing.parts.house.shapes.0.box.to"]
+
+    # The house (16 x 12 x 12 m) stands at the stern of the hull (y from -150 to 150, z to 8).
+    scene = World.Detail.with(:far, fn -> Build.scene(Drawing.build(ship.([0, -140, 8])), level: :far) end)
+    frames = Scene.world_frames(scene)
+
+    house =
+      for {n, i} <- Enum.with_index(scene.nodes),
+          p <- n.primitives,
+          pt <- Scene.positions(p),
+          {_, _, z} = q = World.Frame.point(frames[i], pt),
+          z > 12,
+          do: q
+
+    {{x0, y0, _}, {x1, y1, z1}} = World.Vec.bounds(house)
+    assert {x0, y0, x1, y1, z1} == {-8.0, -146.0, 8.0, -134.0, 20.0}
+  end
+
   test "the cart of bánh mì: a seller and a dog of other blueprints, and the clips" do
     cart = Drawing.Catalog.file("banh_mi_cart")
     scene = Build.scene(cart, level: :far)
