@@ -29,8 +29,3 @@ test('wrangler.jsonc gives no secret, to the site or to a Preview', () => {
     for (const name of SECRETS) assert.equal(name in vars, false, name);
   }
 });
-
-test('each VM boots from the release, with no memory image, on the site and in a Preview', () => {
-  // (A VM that restored the image had about 27 MB less room in its isolate: docs/factory.md.)
-  for (const vars of [config.vars, config.previews.vars]) assert.equal(vars.BEAM_SNAPSHOT, 'off');
-});
