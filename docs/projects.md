@@ -166,6 +166,44 @@ the run.
 So the token of the project stays in the job, and the builder needs no
 secret of World.
 
+## The orders that the factory refuses for memory
+
+The edge has the room of one VM in an isolate of 128 MB, and the guard
+of the memory (`WORLD_MEMORY_MB`, 60 MB) stops each build that needs
+more. The factory then answers 422, "needs more memory than the factory
+has (60 MB)", for:
+
+- the whole file of a large model at a level (`/o/HASH.glb`,
+  `.mid.glb`, `.far.glb`): most models with sculptures at near (for
+  example the scooter of the catalog, before its files came from the
+  catalog), and large buildings at each level;
+- the check of an order whose model the check builds at far
+  (`POST /orders`), when that model is large;
+- a parts list, when the model is too large for its list.
+
+A model of the catalog with no change is not in this list: for the
+order `{"blueprint": "catalog", "options": {"name": NAME}}` with no
+colors and no pose, the factory gives the files of `priv/models` of its
+commit at each level with no build, also to a public caller
+(`handler.js`). `mix world.build` checks that each of these files is the
+build of the order at the same commit, so a clone (`mix world.order`)
+gives the same bytes.
+
+What a project does then:
+
+1. It asks for the parts list of the order at that level
+   (`/o/HASH.LEVEL.elements.json`), and it gets each part alone
+   (`/p/KEY.glb`), with its place in the list. Each part fits in its own
+   build.
+2. A part that does not fit the edge (`docs/factory.md`, "Three orders
+   at one time, with the record") comes from a construction shift, for
+   a request of a job of GitHub Actions of the project with its ID token
+   (above, "Who can ask"). A builder with no ID token starts that job
+   (above, "A builder in a workspace").
+3. When the parts list itself gets 422, the project asks for a lower
+   level, or it makes the model smaller (fewer edits, larger cells, a
+   smaller bake).
+
 ## The limits
 
 - **6 starts of a shift each day (UTC), for all the projects.** The edge
