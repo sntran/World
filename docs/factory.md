@@ -1904,7 +1904,46 @@ bytes):
   next VM would boot again and end the same way. When a build loads the
   code, the copy of the image is gone.
 
-**After the changes:** I measure again after the deploy, and I write the result here.
+**After the changes** (`main` at d97237f, #76): the same three jobs from
+03:40:00 UTC (run 44980547384 of Vũng Tàu), with a look at the census
+each 2 s.
+
+| Order | Order (s) | Parts list (s) | Last part (s) |
+|---|---|---|---|
+| The edit of Hải Âu | 3.4 | 31.9 | 243.0 |
+| A village house | 30.3 | 48.4 | none at 03:49:41 |
+| A fridge | 15.2 | 33.6 | none at 03:49:41 |
+
+- The goal was no new VM in the measure. It was not met: from 03:41:22
+  to 03:49:00 the VM started again 8 times, about each minute. 2 ends
+  had the cause `memory`; the others had no failed request: the VM
+  ended in a build of a part that the edge builds after its answer
+  (202), when no request is in flight. I stopped the run at 03:49:41,
+  because each next VM got the same builds, and each other caller of
+  the site got 503 in that time.
+- The checks of the orders went one at a time: the edit of Hải Âu got
+  its parts list at 31.9 s, and its parts (the sign and the base were
+  in the store, and shift 23 built the body) at 243.0 s, against 458.2 s
+  before the change.
+- The parts of the village house and of the fridge fit the edge (#74),
+  and the edge built them itself. Each VM ended after a look at 73 to
+  83 MB of size, with 39 to 58 MB used: under the guard of 60 MB, which
+  looks at the use. One allocation can grow the size by 10 to 20 MB at
+  one time.
+- The first VM of a deploy restores no image, and it went on at more:
+  101 MB at 03:35 (a request of another caller), and 87 MB at 01:18
+  (the parts list of Hải Âu). Each VM that restored the image ended at
+  70 to 80 MB. The difference is about the size of the image (27 MB):
+  the bytes of the image that the VM restored can stay in the isolate
+  until the garbage collector frees them, and a module of the Worker
+  (`edge.com`, 50 MB) stays in it all the time (beam.com,
+  `runtime/worker.js`).
+
+**The next change** (the pull request after #76): `BEAM_SNAPSHOT` is
+`"off"`, so each VM boots from the release, with no memory image, as
+the first VM of a deploy does. A new VM takes the time of a boot, and
+it has the room of the first VM of a deploy. I measure again after the
+deploy, and I write the result here.
 
 ### The guard and the memory of WebAssembly
 
