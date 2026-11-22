@@ -75,7 +75,9 @@
 //   before the move, to check it again.
 //
 // Only the job of .github/workflows/bucket-check.yml on main calls them
-// (its ID token, oidc.js), else 403.
+// (its ID token, oidc.js), else 403. The check ended on 2026-11-21: the
+// routes answer 404 unless the variable WORLD_BUCKET_CHECK is "true"
+// (wrangler.jsonc).
 //
 // The Worker gives the VM the header x-world-origin (the start of the
 // URLs of an order), and x-world-project for a request of a project of
@@ -503,7 +505,7 @@ async function route(request, env, { vm, commit, later = () => {}, verify: check
   if (path.startsWith('/.tcp/')) return distribution(request, env) ? vm(request) : errors(404, 'no such page');
   if (path === '/shift/join' && request.method === 'POST') return join(request, env, vm, check);
   if (path.startsWith('/store/')) return shiftStore(request, env, vm, path.slice(7));
-  if (path.startsWith('/bucket/')) return bucket(request, env, check, url);
+  if (path.startsWith('/bucket/')) return env.WORLD_BUCKET_CHECK === 'true' ? bucket(request, env, check, url) : errors(404, 'no such page');
 
   if (path === '/blueprints' && request.method === 'GET') {
     const r = await vm(new Request('http://vm/blueprints'));
