@@ -119,20 +119,9 @@ defmodule World.Sculpt.BakeTest do
     # Each texel of a triangle has the color of the ball, and each texel
     # as far as two texels from it too (the border of its chart: an app
     # reads the maps a little past the edge of a triangle). A texel far
-    # from each triangle is gray.
-    owned = MapSet.new(all)
-
-    near? = fn x, y, far ->
-      Enum.any?(-far..far, fn dy -> Enum.any?(-far..far, &MapSet.member?(owned, {x + &1, y + dy})) end)
-    end
-
-    for y <- 0..127, x <- 0..127 do
-      cond do
-        near?.(x, y, 2) -> assert texel(maps.color, x, y) == gold
-        not near?.(x, y, 4) -> assert texel(maps.color, x, y) == {128, 128, 128}
-        true -> :border
-      end
-    end
+    # from each triangle has the value of the nearest chart: the ball
+    # (issue #43).
+    for y <- 0..127, x <- 0..127, do: assert(texel(maps.color, x, y) == gold)
 
     # The triangles next to each other on the ball are next to each other in the image: two
     # triangles with a common edge have that edge at one place of the image, for most of the edges.
@@ -317,6 +306,35 @@ defmodule World.Sculpt.BakeTest do
     assert red in colors
   end
 
+  test "each texel with no chart has the values of the nearest chart, to the edge of the image, in the four images (issue #43)" do
+    # Two balls of two colors, far apart: a red one that glows, and a blue one of metal.
+    {red, blue} = {{200, 30, 30}, {30, 30, 200}}
+    a = SDF.edit(:ball, {0.3}, frame: Frame.move({-1.0, 0.0, 0.0}), color: red, glow: 1.0)
+    b = SDF.edit(:ball, {0.3}, frame: Frame.move({1.0, 0.0, 0.0}), color: blue, metal: 1.0, roughness: 0.2)
+    edits = [a, b]
+    meshes = Sculpt.model(edits, step: 0.1, budget: 300, cache: false)
+    {baked, maps} = Bake.maps([{meshes, edits, 0.1}], 128, %{paint: {0.5, 0.0}}, %{occlusion: true})
+    owned = baked |> charts(128) |> Enum.flat_map(& &1.texels) |> MapSet.new()
+
+    # The texels of the triangles, with their color; each other texel has the color of a texel of a triangle near it.
+    sure = for {x, y} <- owned, into: %{}, do: {{x, y}, texel(maps.color, x, y)}
+    assert sure |> Map.values() |> Enum.uniq() |> Enum.sort() == Enum.sort([red, blue])
+
+    for y <- 0..127, x <- 0..127, not MapSet.member?(owned, {x, y}) do
+      {near, _} = Enum.min_by(sure, fn {{i, j}, _} -> (i - x) ** 2 + (j - y) ** 2 end)
+      d = :math.sqrt((elem(near, 0) - x) ** 2 + (elem(near, 1) - y) ** 2)
+      colors = for {{i, j}, c} <- sure, (i - x) ** 2 + (j - y) ** 2 <= (d + 4) ** 2, uniq: true, do: c
+      assert texel(maps.color, x, y) in colors, "#{x}, #{y}"
+    end
+
+    # No texel of the four images has the value of a place with no chart: the glow is the red or none, the finish has metal or none.
+    for rows <- [maps.normal, maps.finish, maps.glow], do: assert(length(rows) == 128)
+    glows = for row <- maps.glow, <<r, g, b <- row>>, uniq: true, do: {r, g, b}
+    assert {0, 0, 0} in glows and Enum.all?(glows, fn {r, g, b} -> r >= g and g == b end)
+    metals = for row <- maps.finish, <<_, _, m <- row>>, uniq: true, do: m
+    assert 0 in metals and 255 in metals
+  end
+
   test "a triangle with no area, a triangle far from each edit, one triangle alone; a frame with no volume" do
     edits = [SDF.edit(:ball, {0.1}, color: {10, 20, 30})]
     up = {0.0, 0.0, 1.0}
@@ -354,8 +372,9 @@ defmodule World.Sculpt.BakeTest do
     {[baked], maps} = Bake.maps([mesh], edits, 0.01, 64)
     assert length(baked.uvs) == 9
     # Far from each edit the field has no gradient: the normal of the face, and no color of an edit.
+    # (Each texel with no chart has the value of the nearest chart: no gray.)
     colors = for row <- maps.color, <<r, g, b <- row>>, uniq: true, do: {r, g, b}
-    assert Enum.sort(colors) == [{128, 128, 128}, {255, 255, 255}]
+    assert colors == [{255, 255, 255}]
     for row <- maps.normal, <<r, g, b <- row>>, do: assert(r in 127..128 and g in 127..128 and b == 255)
 
     assert Bake.in_frame({0.0, 1.0, 0.0}, {1.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, up) == {0.0, 0.0, 1.0}
@@ -388,6 +407,55 @@ defmodule World.Sculpt.BakeTest do
     "budget" => %{"far" => 300},
     "bake" => %{"far" => 128}
   }
+
+  test "an order with mipmaps: each sculpture of its drawing has a sampler with smaller copies of its maps, and no repeat" do
+    g = gltf(Map.put(@data, "mipmaps", true))
+    assert [_, %{"minFilter" => 9987, "magFilter" => 9729, "wrapS" => 33071, "wrapT" => 33071}] = g["samplers"]
+    assert Enum.all?(g["textures"], &(&1["sampler"] == 1))
+    assert paths(Map.put(@data, "mipmaps", 1)) == ["options.drawing.nodes.0.skill.sculpt.mipmaps"]
+
+    order = %{"blueprint" => "drawing", "options" => %{"drawing" => drawing(@data)}}
+    assert {:ok, plain} = Orders.check(order)
+    assert {:ok, %{"mipmaps" => true} = full} = Orders.check(Map.put(order, "mipmaps", true))
+    refute Map.has_key?(plain, "mipmaps")
+    assert Orders.hash(full) != Orders.hash(plain)
+    assert [%{"skill" => %{"sculpt" => %{"mipmaps" => true}}}] = World.Orders.Blueprints.drawing(full)["nodes"]
+    assert {:error, [%{"path" => "mipmaps"}]} = Orders.check(Map.put(order, "mipmaps", "yes"))
+    # (An order of a rule with no drawing: no sculpture to give the key.)
+    assert World.Orders.Blueprints.drawing(%{
+             "blueprint" => "strut",
+             "options" => %{"length" => 0.3},
+             "mipmaps" => true
+           }) == nil
+
+    # A node in a repeat, and a node of another skill, in the drawing of an order with mipmaps.
+    many = %{
+      "name" => "two",
+      "sources" => ["A test."],
+      "parts" => %{"box" => %{"shapes" => [%{"box" => %{"from" => [0, 0, 0], "to" => [1, 1, 1]}}]}},
+      "nodes" => [
+        %{"name" => "base", "part" => "box"},
+        %{
+          "repeat" => %{"for" => "i", "in" => %{"count" => 2}},
+          "node" => hd(drawing(@data)["nodes"]) |> Map.merge(%{"name" => "s_{i}", "to" => "base"})
+        }
+      ]
+    }
+
+    raw = %{"blueprint" => "drawing", "options" => %{"drawing" => many}, "mipmaps" => true}
+
+    # (Before the check, the drawing has its repeat; the check makes it into its nodes.)
+    assert [%{"part" => "box"}, %{"node" => %{"skill" => %{"sculpt" => %{"mipmaps" => true}}}}] =
+             World.Orders.Blueprints.drawing(raw)["nodes"]
+
+    {:ok, full} = Orders.check(raw)
+
+    assert [
+             %{"part" => "box"},
+             %{"name" => "s_1", "skill" => %{"sculpt" => %{"mipmaps" => true}}},
+             %{"name" => "s_2", "skill" => %{"sculpt" => %{"mipmaps" => true}}}
+           ] = World.Orders.Blueprints.drawing(full)["nodes"]
+  end
 
   test "the GLB of a baked sculpture: the two maps on each material, a sampler with no smaller copies, tangents (R5)" do
     assert paths(@data) == []

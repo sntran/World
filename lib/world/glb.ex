@@ -52,7 +52,16 @@ defmodule World.GLB do
   defp gltf(%Scene{nodes: nodes} = scene) do
     roles = nodes |> Enum.flat_map(& &1.primitives) |> Enum.map(& &1.material) |> Enum.uniq() |> Enum.sort()
     mat_index = roles |> Enum.with_index() |> Map.new()
-    buf = %{bin: <<>>, views: [], accessors: [], images: [], image_of: %{}, plain: MapSet.new()}
+
+    buf = %{
+      bin: <<>>,
+      views: [],
+      accessors: [],
+      images: [],
+      image_of: %{},
+      plain: MapSet.new(),
+      mipmapped: MapSet.new()
+    }
 
     # The roles with a normal texture: their primitives have tangents.
     bumpy =
@@ -149,7 +158,7 @@ defmodule World.GLB do
         "textures",
         nonempty(
           for {_, i} <- Enum.with_index(buf.images),
-              do: %{"source" => i, "sampler" => if(MapSet.member?(buf.plain, i), do: 1, else: 0)}
+              do: %{"source" => i, "sampler" => sampler(buf, i)}
         )
       )
       |> put_some("samplers", samplers(buf))
@@ -395,20 +404,37 @@ defmodule World.GLB do
 
   # The extensions that the materials and the nodes use.
   # The samplers: the first one with the smaller copies of an image
-  # (mipmaps) and a repeat; the second one for the maps of a sculpture
-  # (`"atlas"` in the spec of a material): no smaller copies and no
-  # repeat, so a texel of one chart is never in the next one.
+  # (mipmaps) and a repeat; then, for the maps of a sculpture (`"atlas"`
+  # in the spec of a material), one with no smaller copies and no repeat,
+  # so a texel of one chart is never in the next one; and one with the
+  # smaller copies and no repeat, for the maps of a sculpture with
+  # `"mipmaps"` (each texel with no chart has the values of the nearest
+  # chart: `World.Sculpt.Bake`).
   defp samplers(%{images: []}), do: nil
 
   defp samplers(buf) do
+    clamp = %{"magFilter" => 9729, "wrapS" => 33071, "wrapT" => 33071}
+
     [%{"magFilter" => 9729, "minFilter" => 9987}] ++
-      if MapSet.size(buf.plain) > 0,
-        do: [%{"magFilter" => 9729, "minFilter" => 9729, "wrapS" => 33071, "wrapT" => 33071}],
-        else: []
+      if(MapSet.size(buf.plain) > 0, do: [Map.put(clamp, "minFilter", 9729)], else: []) ++
+      if MapSet.size(buf.mipmapped) > 0, do: [Map.put(clamp, "minFilter", 9987)], else: []
   end
 
-  defp plain(buf, %{"index" => image}, spec),
-    do: if(spec["atlas"], do: %{buf | plain: MapSet.put(buf.plain, image)}, else: buf)
+  defp sampler(buf, image) do
+    cond do
+      MapSet.member?(buf.plain, image) -> 1
+      MapSet.member?(buf.mipmapped, image) -> if(MapSet.size(buf.plain) > 0, do: 2, else: 1)
+      true -> 0
+    end
+  end
+
+  defp plain(buf, %{"index" => image}, spec) do
+    cond do
+      spec["atlas"] && spec["mipmaps"] -> %{buf | mipmapped: MapSet.put(buf.mipmapped, image)}
+      spec["atlas"] -> %{buf | plain: MapSet.put(buf.plain, image)}
+      true -> buf
+    end
+  end
 
   defp extensions(materials, instances?) do
     transform? =

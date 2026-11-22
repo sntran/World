@@ -656,6 +656,8 @@ The data of the skill:
 - `bake`: the side of the image of the maps at `near`, `mid` and `far`
   (64, 128, 256, 512, 1024, 2048 or 4096 texels; "The maps of a
   sculpture" below). A level with a bake needs a budget;
+- `mipmaps` (false by default): true gives the maps a sampler with
+  smaller copies of the image ("The maps of a sculpture" below);
 - `occlusion` (true by default), `dirt` and `wear` (0 to 1, 0 by
   default): the look of the surface from its shape, in the maps of a
   level with a bake ("The maps of a sculpture" below);
@@ -879,21 +881,33 @@ point. The maps come from the field of the edits, not from the mesh:
   to it. An app with antialiasing reads the maps as far as a pixel past
   the edge of a triangle: it reads the same surface there, when a pixel
   is not more than two texels. So show each level at the distance where
-  that holds (a level has its own image).
+  that holds (a level has its own image);
+- each texel that is in no chart has the values of the nearest texel of
+  a chart, to the edge of the image, in each of the four images (the
+  color, the normal, the finish and the glow). So a smaller copy of an
+  image (a mipmap) has no other color at the border of a chart. An
+  order with `"mipmaps": true` (next to `blueprint` and `options`) gives
+  each sculpture of its drawing the key `mipmaps`: the GLB then has a
+  sampler with the smaller copies of the image and no repeat for its
+  maps, so an app with a free camera can show one level at each
+  distance. A sculpture in data takes `"mipmaps": true` too.
 
 So the detail of the model is the detail of the edits at the size of a
 texel. A mesh of 600 triangles shows a pattern of colors and a round
 shape, and an edit that is smaller than the cells (a bump, a groove)
 shows in the light, but not in the outline of the model. The image must
 have a place for the triangles of the budget: about 20 texels for each
-triangle or more (the check gives the least side). About half of the
-image is in the triangles; the rest is the borders of the charts. With an edit that is
+triangle or more (the check gives the least side). The triangles use a fifth to two fifths of
+the image, and with the borders of their charts two fifths to three
+quarters (six sculptures of the catalog at mid, in 2026-11: 21 % to 42 %
+in the triangles, 38 % to 72 % with the borders); the rest has the values
+of the nearest chart (above). With an edit that is
 thinner than the cells must be, give `cells`: with no `cells`, World
 takes them from the thinnest edit (the ring of 8 mm below would make
 cells of 4 mm). The two images are
 PNG files in the GLB, on each material of the sculpture, with a sampler
 that makes no smaller copies of the image (each level has its own
-image). The GLB has a third image, the finish: the roughness of each
+image), or with them for a sculpture with `mipmaps`. The GLB has a third image, the finish: the roughness of each
 texel in its green and the metal in its blue (the finish of each edit,
 or of its material), and the occlusion in its red. When an edit glows,
 it has a fourth one (the light of each texel).

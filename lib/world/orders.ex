@@ -18,6 +18,10 @@ defmodule World.Orders do
     in meters in the axes of the figure (`{"arm_r": [0.3, 0.4, 1.3]}`).
     The full order has this key only when it has a target: the hash of
     an order with no target stays the same.
+  - `"mipmaps"`: true gives each sculpture of the drawing of the order
+    the key `mipmaps` (`World.Skills.Sculpt`): its maps have a sampler
+    with smaller copies of the image. The full order has this key only
+    when it is true.
 
   `check/1` gives the full order: each option with its value, and the
   keys in one order. `hash/1` is the name of its files: the same order
@@ -25,7 +29,7 @@ defmodule World.Orders do
   """
   alias World.{Build, Detail, GLB, Log}
   alias World.Orders.{Blueprint, Blueprints, Store}
-  @keys ~w(blueprint options colors joints targets)
+  @keys ~w(blueprint options colors joints targets mipmaps)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
   @files ~w(glb log replay parts receipt solids flat light drawing elements)
 
@@ -55,14 +59,19 @@ defmodule World.Orders do
          [] <- if(blueprint.check, do: blueprint.check.(options), else: []),
          {:ok, colors} <- colors(Map.get(order, "colors", %{})),
          {:ok, joints} <- joints(Map.get(order, "joints", %{})),
-         {:ok, targets} <- targets(Map.get(order, "targets", %{})) do
+         {:ok, targets} <- targets(Map.get(order, "targets", %{})),
+         {:ok, mipmaps} <- mipmaps(Map.get(order, "mipmaps", false)) do
       full = %{"blueprint" => given, "options" => options, "colors" => colors, "joints" => joints}
-      {:ok, if(targets == %{}, do: full, else: Map.put(full, "targets", targets))}
+      full = if(targets == %{}, do: full, else: Map.put(full, "targets", targets))
+      {:ok, if(mipmaps, do: Map.put(full, "mipmaps", true), else: full)}
     else
       errors when is_list(errors) -> {:error, errors}
       {:error, errors} -> {:error, errors}
     end
   end
+
+  defp mipmaps(v) when is_boolean(v), do: {:ok, v}
+  defp mipmaps(_v), do: {:error, [{"mipmaps", "must be true or false"}]}
 
   defp blueprint(%{"hash" => hash} = given) when map_size(given) == 1 do
     with true <- is_binary(hash) and hash =~ ~r/^[0-9a-f]{32}$/,
