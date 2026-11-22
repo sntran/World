@@ -455,4 +455,36 @@ defmodule World.ElementsTest do
       for {pid, _} <- Registry.lookup(World.Names, {:build, {:part, key}}), do: Process.exit(pid, :kill)
     end
   end
+
+  test "the check of an order and of its edits waits in the line of the builds, as a build" do
+    me = self()
+    post = fn path, body -> Plug.Test.conn(:post, path, body) |> World.Service.call(World.Service.init([])) end
+
+    # (A build holds the one place of the line; a request waits behind it, and goes when it ends.)
+    behind = fn request ->
+      holder =
+        spawn(fn ->
+          World.Line.run(fn ->
+            send(me, :in)
+            receive(do: (:go -> :ok))
+          end)
+        end)
+
+      assert_receive :in
+      task = Task.async(request)
+      # (The request is in the line, behind the build, for 10 s at most.)
+      assert Enum.any?(1..1000, fn _ -> World.Line.state().now == 1 or (Process.sleep(10) && false) end)
+      refute Task.yield(task, 300)
+      send(holder, :go)
+      Task.await(task, 60_000)
+    end
+
+    placed = behind.(fn -> post.("/orders", ~s({"blueprint": "strut", "options": {"length": 0.3}})) end)
+    assert placed.status == 200
+    hash = JSON.decode!(placed.resp_body)["hash"]
+
+    edited = behind.(fn -> post.("/orders/#{hash}/edits", ~s({"edits": [{"set": "options.length", "to": 0.4}]})) end)
+    assert edited.status == 200
+    assert JSON.decode!(edited.resp_body)["hash"] != hash
+  end
 end

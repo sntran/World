@@ -692,6 +692,20 @@ test('a request to the VM that fails: 503, and the record of the ends of the VM 
   assert.equal((await handler(req('/census'), { ORDERS: broken }, { vm: failing, commit: 'c1' })).status, 503);
 });
 
+test('a VM that stopped itself: its answer goes out as it is, and the record keeps an end with the cause stopped', async () => {
+  const orders = bucket();
+  const later = [];
+  const stopped = async () => new Response('The app stopped. Try again.\n', { status: 503, headers: { 'content-type': 'text/plain', 'retry-after': '1' } });
+  const r = await handler(req('/census', { headers: { authorization: 'Bearer secret' } }), { ORDERS: orders }, { vm: stopped, commit: 'c1', later: (p) => later.push(p) });
+  assert.equal(r.status, 503);
+  assert.equal(await r.text(), 'The app stopped. Try again.\n');
+  await Promise.all(later);
+  const keys = [...orders.items.keys()];
+  assert.equal(keys.length, 1);
+  assert.match(keys[0], /^isolates\/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z\.end\.stopped$/);
+  assert.equal(orders.items.get(keys[0]).byteLength, 0);
+});
+
 test('the other routes', async () => {
   const env = { ORDERS: bucket() };
   const blueprints = await handler(req('/blueprints'), env, { vm: vm(), commit: 'c1' });

@@ -171,9 +171,12 @@ defmodule World.Service do
     end)
   end
 
+  # (The check of an order and of its edits goes through the line of the
+  # builds, as a build: so the checks of some orders at one time do not
+  # add up in the memory of the edge.)
   post "/orders" do
     with_order(conn, fn order ->
-      case Orders.place(order, origin(conn)) do
+      case Line.run(class(conn), fn -> Orders.place(order, origin(conn)) end) do
         {:ok, placed} ->
           json(conn, 200, placed)
 
@@ -188,7 +191,7 @@ defmodule World.Service do
 
   post "/orders/:hash/edits" do
     with_order(conn, fn body ->
-      case Orders.Edits.place(hash, is_map(body) && body["edits"], origin(conn)) do
+      case Line.run(class(conn), fn -> Orders.Edits.place(hash, is_map(body) && body["edits"], origin(conn)) end) do
         {:ok, placed} ->
           json(conn, 200, placed)
 
@@ -206,7 +209,7 @@ defmodule World.Service do
 
   post "/sets" do
     with_order(conn, fn set ->
-      case Set.place(set, origin(conn)) do
+      case Line.run(class(conn), fn -> Set.place(set, origin(conn)) end) do
         {:ok, placed} ->
           json(conn, 200, placed)
 
