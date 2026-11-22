@@ -1142,6 +1142,8 @@ defmodule World.Construction do
       "from" => st.from,
       "to" => st.to,
       "fit" => s.fit,
+      # (The day of the site when the stage starts, from its origin: the day of its fit.)
+      "day" => Float.round(day(s), 3),
       "text" => st.text,
       "date" => st.date,
       "means" => st.means,

@@ -33,7 +33,8 @@ defmodule World.YardTest do
 
     %{open: open, trucks: trucks, log: log} = Yard.state()
     assert open == ~w(gate nui_nho site vehicles warehouse workshop)
-    assert trucks == ~w(truck_1 truck_2)
+    # (The two trucks are made at the same time: the yard keeps them in the order that they come.)
+    assert Enum.sort(trucks) == ~w(truck_1 truck_2)
     assert Log.check(log) == :ok
     kinds = for e <- Log.events(log), do: {e.kind, e.data["place"] || e.data["truck"]}
     assert {"place_held", "vehicles"} in kinds and {"place_open", "warehouse"} in kinds

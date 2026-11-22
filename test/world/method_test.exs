@@ -69,6 +69,10 @@ defmodule World.MethodTest do
     events = Log.events(rb.log)
     start = hd(events).at
     day = fn e -> (e.at - start) / Clock.day() end
+    # The day of the site at an event: from the origin of the site, a moment before its first event
+    # (the event of a stage gives it).
+    first = Enum.find(events, &(&1.kind == "stage_started"))
+    site = fn e -> day.(e) + (first.data["day"] - day.(first)) end
     stages = for e <- events, e.kind == "stage_started", do: e.data["name"]
     assert stages == ~w(first_build first_pause first_down rough pause finish)
 
@@ -88,14 +92,15 @@ defmodule World.MethodTest do
 
     for e <- events, e.kind == "stage_started" do
       st = Enum.find(plan, &(&1.name == e.data["name"]))
-      assert day.(e) >= st.from - 1, st.name
+      # (The day of the site in the event is from its origin, a moment before its first event.)
+      assert e.data["day"] >= st.from - 1, st.name
 
       if st.work == "build" do
         drawing = if st.name == "first_build", do: old.drawing, else: today.drawing
         span = World.Site.span(World.Site.schedule(drawing, "1974", e.data["tasks"]))
-        # (The fit is from the day of the clock a moment before the event: with other tests on the same
-        # cores, some ms more, and 1 ms is one day.)
-        assert_in_delta e.data["fit"] * span, max(st.to - max(day.(e), st.from), 1), 25.0
+        # (The fit is from the day of the site in the event, so the time of the computer has no
+        # effect; the span of the stage can have the days of the parts made again.)
+        assert_in_delta e.data["fit"] * span, max(st.to - max(e.data["day"], st.from), 1), 25.0
       end
     end
 
@@ -114,7 +119,7 @@ defmodule World.MethodTest do
     # are left, and the count comes from the days that are left.
     long = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "pause"))
     pause = Enum.at(events, long)
-    left = pause.data["to"] - max(day.(pause), pause.data["from"])
+    left = pause.data["to"] - max(pause.data["day"], pause.data["from"])
     years = Enum.count(1..max(floor(left / 365), 1), &(&1 * 365 < left))
     in_pause = for e <- Enum.drop(events, long), e.kind == "aged", do: e.data
     assert left > 365 and abs(length(in_pause) - (years + 1)) <= 1
@@ -158,7 +163,7 @@ defmodule World.MethodTest do
     assert %{data: %{"crew" => 12}} = Enum.find(events, &(&1.kind == "task_started" and &1.data["task"] == "pour_1"))
 
     # The end: on or after 1 December 1994.
-    assert day.(List.last(events)) >= 8188 - 1
+    assert site.(List.last(events)) >= 8188 - 1
     # Today: one stage, about a year, with the machines of today.
     assert [%{data: %{"name" => "build", "fit" => 1.0, "means" => means}}] =
              for(e <- Log.events(ra.log), e.kind == "stage_started", do: e)
