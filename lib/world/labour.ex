@@ -9,8 +9,7 @@ defmodule World.Labour do
   of the repository on a runner of GitHub Actions, whose node joins the
   node of the edge (`World.Crew`) for some hours. Then:
 
-  - A part that fits the edge (`fits?/1`: a person at mid or far) builds
-    here.
+  - A part that fits the edge (`fits?/1`: a person at far) builds here.
   - The edge with shifts (the application environment `:shifts`,
     `WORLD_SHIFTS=true`) builds no other part. A part of an order of a
     project (a request with a project token: the option `project`) waits
@@ -92,10 +91,12 @@ defmodule World.Labour do
     recipe, `World.Skills.Sculpt.memory/3`) is at most `edge_memory/0`,
     and whose estimate of faces at its cells (`tile.faces` of the parts
     list; none for a sculpture in one part) is at most `edge_faces/0`;
-  - a person of a group at mid or far.
+  - a person of a group at far.
 
   A part with more, a recipe with no estimate of memory (a recipe of
-  before 2026-11-22), and a person at near, do not fit.
+  before 2026-11-22), and a person at near or mid, do not fit. A person
+  at mid took 15 to 27 MB at the local edge (more than `edge_memory/0`),
+  and at far 11 to 13 MB.
 
   The memory: the VM at the edge ends when the size of its memory of
   WebAssembly goes past the room of its isolate (after 73 to 83 MB in
@@ -114,7 +115,7 @@ defmodule World.Labour do
   at the edge, waits for a shift as a part that does not fit; so does a
   part whose build at the edge ended the VM (`build/3`).
   """
-  def fits?(%{"piece" => _, "level" => level}) when level in ["mid", "far"], do: true
+  def fits?(%{"piece" => _, "level" => "far"}), do: true
 
   def fits?(%{"node" => _, "tile" => tile} = recipe) when is_nil(tile) or is_map(tile) do
     faces = if tile, do: tile["faces"], else: 0

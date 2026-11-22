@@ -54,7 +54,9 @@
   // shifts (worker.js, World.Shift.Store). WORLD_LABOUR_STORE: the port of
   // the queue of the parts (worker.js, World.Labour.Store).
   // WORLD_ORDER_STORE: the port of the store of the orders (worker.js,
-  // World.Orders.Store). -Mea min: the smallest allocators, for the
+  // World.Orders.Store). WORLD_ASSET_STORE: the port of the files of
+  // MakeHuman (worker.js, World.People.Files): the release of the edge
+  // has no priv/makehuman. -Mea min: the smallest allocators, for the
   // 128 MB of an isolate. WORLD_MEMORY_MB: the most memory of
   // WebAssembly of the VM for a build (World.Guard, wasm_host:memory/1):
   // a build that needs more stops with an error, and the VM stays under
@@ -65,7 +67,7 @@
   // at one time, with the record"). WORLD_BUCKET_CHECK: "true" turns on the
   // routes /bucket/ of the check of the bucket (handler.js,
   // docs/factory.md, "The check of the bucket"); else they answer 404.
-  "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_LABOUR_STORE": "/env/LABOUR_STORE", "WORLD_MEMORY_MB": "60", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206", "WORLD_BUCKET_CHECK": "false" },
+  "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_LABOUR_STORE": "/env/LABOUR_STORE", "WORLD_ASSET_STORE": "/env/ASSET_STORE", "WORLD_MEMORY_MB": "60", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206", "WORLD_BUCKET_CHECK": "false" },
   // The Preview of a branch that is not main (Workers Builds runs "npx
   // wrangler preview" for it). A Preview does not take the settings
   // above, and Wrangler refuses a Preview with no "previews" block. The
@@ -76,7 +78,7 @@
   // setup on Cloudflare").
   "previews": {
     "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world-previews" }],
-    "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_LABOUR_STORE": "/env/LABOUR_STORE", "WORLD_MEMORY_MB": "60", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206", "WORLD_BUCKET_CHECK": "false" }
+    "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_LABOUR_STORE": "/env/LABOUR_STORE", "WORLD_ASSET_STORE": "/env/ASSET_STORE", "WORLD_MEMORY_MB": "60", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206", "WORLD_BUCKET_CHECK": "false" }
   },
   "observability": { "enabled": true }
 }

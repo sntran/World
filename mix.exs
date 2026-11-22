@@ -18,7 +18,11 @@ defmodule World.MixProject do
       # runtime of beam.com has its own ERTS.
       # The files of the catalog (priv/models) and the kit of a person
       # (priv/kit) are static files of the site: the VM does not read
-      # them, so the release has none.
+      # them, so the release has none. The files of MakeHuman
+      # (priv/makehuman, 35 MB) are static files too: at the edge the VM
+      # reads each one that a build needs through a port
+      # (World.People.Files), so the module edge.com, which stays in the
+      # isolate of 128 MB next to the memory of the VM, does not hold them.
       releases: [
         world: [include_erts: System.get_env("RELEASE_ERTS") != "false", steps: [:assemble, &no_site_files/1]]
       ],
@@ -62,7 +66,7 @@ defmodule World.MixProject do
   end
 
   defp no_site_files(release) do
-    for dir <- ~w(models kit),
+    for dir <- ~w(models kit makehuman),
         do: File.rm_rf!(Path.join([release.path, "lib", "world-#{release.version}", "priv", dir]))
 
     release

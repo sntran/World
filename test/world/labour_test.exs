@@ -76,7 +76,7 @@ defmodule World.LabourTest do
     end
 
     assert Labour.fits?(%{"piece" => "leader", "level" => "far"})
-    assert Labour.fits?(%{"piece" => "leader", "level" => "mid"})
+    refute Labour.fits?(%{"piece" => "leader", "level" => "mid"})
     refute Labour.fits?(%{"piece" => "leader", "level" => "near"})
     # (A part of a sculpture fits by the estimate of its memory, at most edge_memory/0 MB, and of its faces.)
     assert Labour.edge_memory() == 20

@@ -6,11 +6,14 @@ defmodule World.People.Data do
   bodies). `scripts/makehuman.py` makes the folder.
 
   The units of MakeHuman are decimeters, with +Y up and the front to +Z.
-  Each function reads its file once, then keeps the data in
-  `:persistent_term`.
+  Each function reads its file once (`World.People.Files`: from the
+  folder, or at the edge from the static files of the site), then keeps
+  the data in `:persistent_term`.
   """
 
-  @doc "The folder of the data (in `priv/`, so that a release has it)."
+  alias World.People.Files
+
+  @doc "The folder of the data (in `priv/`; the release of the edge has none, `World.People.Files`)."
   def dir, do: Path.join(:code.priv_dir(:world), "makehuman")
 
   @doc """
@@ -32,23 +35,18 @@ defmodule World.People.Data do
   """
   def targets do
     cached(:targets, fn ->
-      {:ok, file} = :file.open(Path.join(dir(), "targets.pack"), [:read, :binary, :raw])
+      pack = Path.join(dir(), "targets.pack")
+      [<<"XTP1", count::little-32, size::little-32>>] = Files.pread!(pack, [{0, 12}])
+      [index] = Files.pread!(pack, [{12, size}])
 
-      try do
-        {:ok, <<"XTP1", count::little-32, size::little-32>>} = :file.pread(file, 0, 12)
-        {:ok, index} = :file.pread(file, 12, size)
+      {entries, <<>>} =
+        Enum.map_reduce(1..count//1, index, fn _,
+                                               <<len::little-16, name::binary-size(len), at::little-32, n::little-32,
+                                                 rest::binary>> ->
+          {{:binary.copy(name), {at, n}}, rest}
+        end)
 
-        {entries, <<>>} =
-          Enum.map_reduce(1..count//1, index, fn _,
-                                                 <<len::little-16, name::binary-size(len), at::little-32, n::little-32,
-                                                   rest::binary>> ->
-            {{:binary.copy(name), {at, n}}, rest}
-          end)
-
-        Map.new(entries)
-      after
-        :file.close(file)
-      end
+      Map.new(entries)
     end)
   end
 
@@ -82,19 +80,13 @@ defmodule World.People.Data do
 
     if missing != [] do
       index = targets()
-      {:ok, file} = :file.open(Path.join(dir(), "targets.pack"), [:read, :binary, :raw])
+      blocks = Files.pread!(Path.join(dir(), "targets.pack"), for(name <- missing, do: Map.fetch!(index, name)))
 
-      try do
-        for name <- missing do
-          {at, n} = Map.fetch!(index, name)
-          {:ok, block} = :file.pread(file, at, n)
-          data = :zlib.uncompress(block)
-          size = div(byte_size(data), 4)
-          <<idx::binary-size(^size), dx::binary-size(^size), dy::binary-size(^size), dz::binary-size(^size)>> = data
-          :persistent_term.put({__MODULE__, {:target, name}}, {idx, dx, dy, dz})
-        end
-      after
-        :file.close(file)
+      for {name, block} <- Enum.zip(missing, blocks) do
+        data = :zlib.uncompress(block)
+        size = div(byte_size(data), 4)
+        <<idx::binary-size(^size), dx::binary-size(^size), dy::binary-size(^size), dz::binary-size(^size)>> = data
+        :persistent_term.put({__MODULE__, {:target, name}}, {idx, dx, dy, dz})
       end
     end
 
@@ -225,7 +217,7 @@ defmodule World.People.Data do
         drape:
           with(
             %{"file" => file, "steps" => n} <- entry["drape"],
-            do: %{points: JSON.decode!(File.read!(Path.join(folder, file))), steps: n}
+            do: %{points: JSON.decode!(Files.read!(Path.join(folder, file))), steps: n}
           )
       }
     end)
@@ -239,7 +231,7 @@ defmodule World.People.Data do
   def swatch(name) do
     cached({:swatch, name}, fn ->
       path = Path.join([dir(), "clothes", name <> ".swatch.png"])
-      if File.exists?(path), do: World.PNG.decode(File.read!(path))
+      if Files.exists?(path), do: World.PNG.decode(Files.read!(path))
     end)
   end
 
@@ -326,7 +318,7 @@ defmodule World.People.Data do
     end
   end
 
-  defp read_gz(path), do: :zlib.gunzip(File.read!(Path.join(dir(), path)))
+  defp read_gz(path), do: :zlib.gunzip(Files.read!(Path.join(dir(), path)))
 
   @doc "Parse the text of an OBJ file: points, UV and faces by group."
   def parse_obj(text) do

@@ -12,6 +12,9 @@
 #   against the build of the code.
 # - /kit/: the kit of a person (priv/kit, World.People.Kit), which CI
 #   checks with the catalog.
+# - /makehuman/: the data of MakeHuman (priv/makehuman, CC0): the VM at the
+#   edge reads each file that a build needs from here (asset_store.js,
+#   World.People.Files), so the release of the edge has none.
 # - /scene.js: the light of the three pages (review/scene.js).
 # - /palette.json, /version.json (the commit of the build).
 # - /_headers: CORS and the cache of each file.
@@ -23,6 +26,7 @@ rm -rf site
 mkdir -p site/models
 cp priv/models/* site/models/
 cp -R priv/kit site/kit
+cp -R priv/makehuman site/makehuman
 cp priv/palette.json site/palette.json
 
 # The review page reads the models at ../priv/models/ in the repository,

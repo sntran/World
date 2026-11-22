@@ -19,9 +19,10 @@ import { logStore, sqlTable } from './log_store.js';
 import { shiftStore, shiftTable } from './shift_store.js';
 import { labourStore, labourTable } from './labour_store.js';
 import { vmEnv } from './vm_env.js';
+import { assetStore } from './asset_store.js';
 import { noteStart } from './isolates.js';
 
-// The VM gets four ports, plain objects with port(), so it needs no other
+// The VM gets five ports, plain objects with port(), so it needs no other
 // Worker: /env/ORDER_STORE, the store of the orders with the R2 bucket
 // ORDERS (order_store.js, World.Orders.Store), /env/LOG_STORE, the log of
 // the node in the SQLite of the object (log_store.js, World.Log.Store),
@@ -29,7 +30,9 @@ import { noteStart } from './isolates.js';
 // SQLite (shift_store.js, World.Shift.Store), and /env/LABOUR_STORE, the
 // queue of the parts and the parts in work (labour_store.js,
 // World.Labour.Store): a VM that starts again reads them back, so the
-// shifts that run connect again and no part goes. The VM gets no
+// shifts that run connect again and no part goes; and /env/ASSET_STORE,
+// the files of MakeHuman from the static files of the site with the
+// binding ASSETS (asset_store.js, World.People.Files). The VM gets no
 // secret of the Worker (vm_env.js). The object also takes only the
 // WebSocket of the distribution on /.tcp/ (handler.js, distribution()),
 // whatever version of the Worker sends the request.
@@ -40,6 +43,7 @@ export class Beam extends BeamObject {
       LOG_STORE: logStore(sqlTable(ctx.storage.sql)),
       SHIFT_STORE: shiftStore(shiftTable(ctx.storage.sql)),
       LABOUR_STORE: labourStore(labourTable(ctx.storage.sql)),
+      ASSET_STORE: assetStore(env.ASSETS),
     }));
     // A new VM: the record of the starts and the ends of the VM (isolates.js).
     ctx.waitUntil(noteStart(env.ORDERS, version.commit).catch(() => {}));
