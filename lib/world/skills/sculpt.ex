@@ -558,6 +558,37 @@ defmodule World.Skills.Sculpt do
     end
   end
 
+  @doc """
+  The warnings of the data of a sculpture (issue #49), with no build:
+  each edit that adds or takes away and that is thinner than two cells
+  of a level, `{path, level, message}` (the path from the data: `edits.3`,
+  `details.0.edits.1`). Such an edit can go or tear at that level. The
+  order is still good.
+  """
+  def warnings(data) do
+    groups = Map.get(data, "groups", %{})
+    details = if is_list(data["details"]), do: Enum.with_index(data["details"]), else: []
+
+    for {part, prefix} <- [{data, ""} | for({d, k} <- details, do: {Map.put(d, "groups", groups), "details.#{k}."})],
+        level <- [:near, :mid, :far],
+        prefix == "" or Atom.to_string(level) in Map.get(part, "levels", ~w(near mid far)),
+        step = step(part, level),
+        {e, i} <- Enum.with_index(part["edits"]),
+        thin = World.Sculpt.thinnest(edits([e], groups, level), 0.0),
+        thin != nil and thin < 2 * step do
+      l = Atom.to_string(level)
+
+      {"#{prefix}edits.#{i}", l,
+       "is #{r3(thin)} m thin, and the cells of #{l} are #{r3(step)} m: the edit can go or tear. " <>
+         "Give cells of #{Float.floor(thin / 2, 3)} m or less, or put the edit in a detail."}
+    end
+  end
+
+  @doc "The estimate of the faces of a sculpture at each level (`faces/2`, as `tile.faces` of a parts list), with no build."
+  def faces(data), do: Map.new(~w(near mid far), &{&1, faces(data, String.to_existing_atom(&1))})
+
+  defp r3(v), do: Float.round(v / 1, 3)
+
   # The size of the cells of a level: from the data; else, with a budget,
   # the cells that fit the budget and the thinnest edit; else the cells of
   # the level.

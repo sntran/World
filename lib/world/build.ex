@@ -123,6 +123,10 @@ defmodule World.Build do
       "limbs" => acc.limbs
     }
 
+    # The turns in each second of each joint of the role spin with a rate (issue #50).
+    rates = for n <- nodes, n.extras["rate"], into: %{}, do: {n.name, n.extras["rate"]}
+    extras = if rates == %{}, do: extras, else: Map.put(extras, "rates", rates)
+
     # The ports of the small parts go into the list of the parts
     # (`parts_file/2`), not into the GLB; the collision boxes are nodes.
     own = Map.get(item, :extras, %{})
@@ -387,7 +391,11 @@ defmodule World.Build do
             name: name,
             parent: parent_node,
             frame: Frame.compose(port, motion(c.kind, value)),
-            extras: Map.put(Joint.extras(j), "axis", [0.0, 1.0, 0.0])
+            extras:
+              j
+              |> Joint.extras()
+              |> Map.put("axis", [0.0, 1.0, 0.0])
+              |> Map.merge(Map.reject(%{"rate" => c.rate, "part" => c.part}, &is_nil(elem(&1, 1))))
           }
 
           id = length(acc.nodes)

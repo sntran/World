@@ -199,12 +199,52 @@ defmodule World.Orders do
       case World.Orders.Store.put(hash, encode(full)) do
         :ok ->
           files = Map.new(@urls, &{&1, "#{origin}/o/#{hash}.#{&1}"})
-          {:ok, %{"hash" => hash, "order" => full, "files" => files, "replay" => "#{origin}/replay.html?order=#{hash}"}}
+
+          {:ok,
+           Map.merge(
+             %{"hash" => hash, "order" => full, "files" => files, "replay" => "#{origin}/replay.html?order=#{hash}"},
+             notes(full)
+           )}
 
         :error ->
           {:error, :store}
       end
     end
+  end
+
+  @doc """
+  The notes of a full order with no build (issue #49), for the answer of
+  a check: `"warnings"`, each edit of a sculpture of its drawing that is
+  thinner than two cells of a level (`"path"`, `"level"`, `"message"`:
+  the edit can go or tear; the order is still good), and `"faces"`, the
+  estimate of the faces of each sculpture at each level, by the name of
+  its node (as `tile.faces` of the parts list). The path is in the order
+  for the blueprint `drawing` (`options.drawing.nodes.0.skill.sculpt.edits.3`),
+  else in the drawing of the order (`/o/HASH.drawing`: `nodes.0...`).
+  Empty for an order with no sculpture.
+  """
+  def notes(full) do
+    {drawing, prefix} =
+      case full do
+        %{"blueprint" => "drawing", "options" => %{"drawing" => d}} -> {d, "options.drawing."}
+        _ -> {Blueprints.drawing(full), ""}
+      end
+
+    sculptures =
+      for {node, i} <- Enum.with_index(if(drawing, do: drawing["nodes"], else: [])),
+          {inner, at} = if(is_map_key(node, "node"), do: {node["node"], "#{i}.node"}, else: {node, "#{i}"}),
+          %{"skill" => %{"sculpt" => data}} <- [inner],
+          do: {inner["name"], "#{prefix}nodes.#{at}.skill.sculpt", data}
+
+    warnings =
+      for {_, path, data} <- sculptures,
+          {at, level, message} <- World.Skills.Sculpt.warnings(data),
+          do: %{"path" => "#{path}.#{at}", "level" => level, "message" => message}
+
+    %{
+      "warnings" => warnings,
+      "faces" => Map.new(sculptures, fn {name, _, data} -> {name, World.Skills.Sculpt.faces(data)} end)
+    }
   end
 
   @doc """

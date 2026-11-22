@@ -59,6 +59,9 @@ defmodule World.Engineers do
           "parts" => Enum.frequencies_by(placed, fn {_, p} -> p.name end)
         }
 
+        # The warnings of the thin edits and the faces of each sculpture (issue #49).
+        review = Map.merge(review, World.Orders.notes(%{"blueprint" => "drawing", "options" => %{"drawing" => raw}}))
+
         if checks == [] and unknown == [], do: {:ok, review}, else: {:error, review}
 
       {:error, errors} ->

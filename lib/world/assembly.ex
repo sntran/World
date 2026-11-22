@@ -27,9 +27,20 @@ defmodule World.Assembly do
     How a node connects: the node and its port (`to`, `at`), the port of
     the child (`port`), the kind (`:fixed`, `:hinge`, `:slide`), the turn
     around the axis (degrees) and the move along it (meters) at rest, and
-    for a joint its `role` and `limits`.
+    for a joint its `role` and `limits`, its `rate` (the turns in each
+    second of a joint of the role `spin`), and its `part` (the name of
+    the part of a joint that is a copy of a part).
     """
-    defstruct to: nil, at: nil, port: nil, kind: :fixed, turn: 0.0, offset: 0.0, role: nil, limits: nil
+    defstruct to: nil,
+              at: nil,
+              port: nil,
+              kind: :fixed,
+              turn: 0.0,
+              offset: 0.0,
+              role: nil,
+              limits: nil,
+              rate: nil,
+              part: nil
   end
 
   @doc """
@@ -96,7 +107,9 @@ defmodule World.Assembly do
       turn: Keyword.get(opts, :turn, 0.0) / 1,
       offset: Keyword.get(opts, :offset, 0.0) / 1,
       role: Keyword.get(opts, :role),
-      limits: Keyword.get(opts, :limits)
+      limits: Keyword.get(opts, :limits),
+      rate: Keyword.get(opts, :rate),
+      part: Keyword.get(opts, :part)
     }
 
     # Each port must exist now: a wrong name stops the code that makes the model.
