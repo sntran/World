@@ -83,6 +83,9 @@ defmodule World.CensusTest do
     waiting = construction()
     ref = hire(s, :steel, waiting)
     hire(s, :mason, c)
+    # (A hire is a cast of this process, and the end of the construction a message of the
+    # runtime: a call after the cast makes sure that the census has the request before the end.)
+    _ = Census.people(s)
     Process.unlink(c)
     Process.exit(c, :kill)
 
