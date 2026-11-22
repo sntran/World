@@ -1939,11 +1939,41 @@ each 2 s.
   (`edge.com`, 50 MB) stays in it all the time (beam.com,
   `runtime/worker.js`).
 
-**The next change** (the pull request after #76): `BEAM_SNAPSHOT` is
-`"off"`, so each VM boots from the release, with no memory image, as
-the first VM of a deploy does. A new VM takes the time of a boot, and
-it has the room of the first VM of a deploy. I measure again after the
-deploy, and I write the result here.
+**Each VM with no memory image** (#77, `BEAM_SNAPSHOT` `"off"`, `main`
+at 44f2bcb; the same three jobs from 04:45:00 UTC, run 44985489627 of
+Vũng Tàu, a look at the census each 2 s):
+
+| Order | Order (s) | Parts list (s) | Last part (s) |
+|---|---|---|---|
+| The edit of Hải Âu | 3.0 | 35.1 | 261.6 |
+| A village house | 43.0 | 62.2 | 462.8 |
+| A fridge | 28.1 | 47.2 | none at 04:56:19 |
+
+- It was worse: 13 new VMs from 04:46:32 to 04:55:54 (8 ends with the
+  cause `memory`, 5 with no failed request), and some VMs ended after a
+  look at only 49 to 51 MB. So a VM that boots with no image has no
+  more room than a VM that restores it, and my reason for #77 was
+  wrong. I stopped the run at 04:56:19, and the next pull request puts
+  the image back (`BEAM_SNAPSHOT` is not set).
+- From 04:49 to 04:56 the build of the part of the fridge at the edge
+  ended each new VM, as in the first measure: the job asked again on
+  each 503, and each new VM built the part again.
+
+**Where this leaves the goal.** With the three orders, the VM still
+starts again. The cause that I can see in the three measures is the
+build at the edge of a part that fits by its faces (#74) but needs more
+memory than the VM has: the part of the fridge, and the parts of the
+village house. Its memory grows faster than the guard looks (each
+25 ms), so the guard does not stop it. The next changes that I see:
+
+- a part whose build at the edge ended the VM goes to a shift at its
+  next request: a mark in the store before the build, taken away after
+  it, so a new VM sees a build that did not end;
+- a limit of the edge for a part from its estimate of memory, not only
+  from its faces;
+- the guard of the binaries of the process of a build too
+  (`max_heap_size` with `include_shared_binaries`), not only of its
+  heap.
 
 ### The guard and the memory of WebAssembly
 

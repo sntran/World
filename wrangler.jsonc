@@ -60,12 +60,10 @@
   // runtime, so the room of the VM is less: on 2026-11-22 the VM ended 15
   // times with 45 to 87 MB at the last look of the census, and the parts
   // list of the edit of Hải Âu used 51 MB (docs/factory.md, "Three orders
-  // at one time, with the record"). BEAM_SNAPSHOT "off": each VM boots
-  // from the release, with no memory image: a VM that restored the image
-  // of beam.com had about 27 MB less room in its isolate (the same page). WORLD_BUCKET_CHECK: "true" turns on the
+  // at one time, with the record"). WORLD_BUCKET_CHECK: "true" turns on the
   // routes /bucket/ of the check of the bucket (handler.js,
   // docs/factory.md, "The check of the bucket"); else they answer 404.
-  "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_LABOUR_STORE": "/env/LABOUR_STORE", "WORLD_MEMORY_MB": "60", "BEAM_ERL_FLAGS": "-Mea min", "BEAM_SNAPSHOT": "off", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206", "WORLD_BUCKET_CHECK": "false" },
+  "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_LABOUR_STORE": "/env/LABOUR_STORE", "WORLD_MEMORY_MB": "60", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206", "WORLD_BUCKET_CHECK": "false" },
   // The Preview of a branch that is not main (Workers Builds runs "npx
   // wrangler preview" for it). A Preview does not take the settings
   // above, and Wrangler refuses a Preview with no "previews" block. The
@@ -76,7 +74,7 @@
   // setup on Cloudflare").
   "previews": {
     "r2_buckets": [{ "binding": "ORDERS", "bucket_name": "world-previews" }],
-    "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_LABOUR_STORE": "/env/LABOUR_STORE", "WORLD_MEMORY_MB": "60", "BEAM_ERL_FLAGS": "-Mea min", "BEAM_SNAPSHOT": "off", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206", "WORLD_BUCKET_CHECK": "false" }
+    "vars": { "WORLD_SERVER": "true", "WORLD_ORDER_STORE": "/env/ORDER_STORE", "WORLD_LOG_STORE": "/env/LOG_STORE", "WORLD_SHIFT_STORE": "/env/SHIFT_STORE", "WORLD_LABOUR_STORE": "/env/LABOUR_STORE", "WORLD_MEMORY_MB": "60", "BEAM_ERL_FLAGS": "-Mea min", "WORLD_LABOUR": "parts", "WORLD_SHIFTS": "true", "WORLD_SHIFTS_A_DAY": "6", "DIST_NAME": "world@127.0.0.1", "DIST_LISTEN": "true", "BEAM_MAX_WEBSOCKETS": "4", "WORLD_OWNER_ID": "973206", "WORLD_BUCKET_CHECK": "false" }
   },
   "observability": { "enabled": true }
 }
