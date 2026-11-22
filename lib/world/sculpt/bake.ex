@@ -230,7 +230,7 @@ defmodule World.Sculpt.Bake do
               # The field of the part of the rectangle (of its first triangle).
               field = whole && whole[s.tris |> hd() |> elem(0) |> Map.fetch!(:id) |> elem(0)]
               look = Map.put(look, :field, field)
-              {s.at, {s.w, s.h}, texels(%{s | tris: Enum.map(s.tris, edits)}, defaults, side, look)}
+              {s.at, {s.w, s.h}, List.to_tuple(texels(%{s | tris: Enum.map(s.tris, edits)}, defaults, side, look))}
             end
           end)
           |> Enum.concat()
@@ -250,9 +250,16 @@ defmodule World.Sculpt.Bake do
             )
           end
 
+        # Each texel with no chart takes the values of the nearest texel
+        # of a chart, to the edge of the image: so a smaller copy of an
+        # image (a mipmap) has no gray at the border of a chart.
+        near = nearest(image(done, side, 4, <<0>>), side)
+
         [color, normal, finish, glow] =
           [{colors?, 0, blank(look)}, {true, 1, @flat}, {finish?, 2, @plain}, {glow?, 3, <<0, 0, 0>>}]
-          |> World.Crew.map(fn {wanted?, which, blank} -> if wanted?, do: image(done, side, which, blank) end)
+          |> World.Crew.map(fn {wanted?, which, blank} ->
+            if wanted?, do: fill(image(done, side, which, blank), near, byte_size(blank))
+          end)
 
         {meshes, %{side: side, color: color, normal: normal, finish: finish, glow: glow, alpha: look.strands != nil}}
     end
@@ -670,22 +677,21 @@ defmodule World.Sculpt.Bake do
 
     rows =
       for j <- 0..(h - 1) do
-        for i <- 0..(w - 1), reduce: {<<>>, <<>>, <<>>, <<>>} do
-          {colors, normals, finishes, glows} ->
+        for i <- 0..(w - 1), reduce: {<<>>, <<>>, <<>>, <<>>, <<>>} do
+          {colors, normals, finishes, glows, mask} ->
             case done[{i, j}] do
               {color, normal, finish, glow} ->
                 {<<colors::binary, color::binary>>, <<normals::binary, normal::binary>>,
-                 <<finishes::binary, finish::binary>>, <<glows::binary, glow::binary>>}
+                 <<finishes::binary, finish::binary>>, <<glows::binary, glow::binary>>, <<mask::binary, 1>>}
 
               nil ->
                 {<<colors::binary, blank(look)::binary>>, <<normals::binary, @flat::binary>>,
-                 <<finishes::binary, @plain::binary>>, <<glows::binary, 0, 0, 0>>}
+                 <<finishes::binary, @plain::binary>>, <<glows::binary, 0, 0, 0>>, <<mask::binary, 0>>}
             end
         end
       end
 
-    {Enum.map(rows, &elem(&1, 0)), Enum.map(rows, &elem(&1, 1)), Enum.map(rows, &elem(&1, 2)),
-     Enum.map(rows, &elem(&1, 3))}
+    for k <- 0..4, do: Enum.map(rows, &elem(&1, k))
   end
 
   # The texels next to a texel: the four at its sides first.
@@ -1269,8 +1275,121 @@ defmodule World.Sculpt.Bake do
 
   # --- The image --------------------------------------------------------------
 
+  # --- The fill of the texels with no chart ------------------------------------
+
+  # The texel with no value: nothing is nearer than it.
+  @none 0xFFFFFFFF
+
+  # The nearest texel with a value to each texel of the image (`mask`: the
+  # rows of the image of the texels with a value, one byte each, 1 or 0):
+  # the rows from the top, each a binary of 4 bytes for each texel, its
+  # row times 65,536 plus its column, or `@none` when no texel has a value.
+  # Two passes, as a distance transform of 8 neighbours (Danielsson): down
+  # the image, each row from the left and then from the right with the
+  # row over it; then up the image with the row under it. Each pass keeps
+  # only one row of texels as a tuple, so the memory is the rows of 4
+  # bytes.
+  defp nearest(mask, side) do
+    down =
+      mask
+      |> Enum.with_index()
+      |> Enum.map_reduce(nil, fn {m, y}, over ->
+        row =
+          sweep(y, side, fn x, left ->
+            if :binary.at(m, x) == 1, do: code(x, y), else: least(x, y, [left | around(over, x)])
+          end)
+
+        {row, row}
+      end)
+      |> elem(0)
+
+    down
+    |> Enum.with_index()
+    |> Enum.reverse()
+    |> Enum.map_reduce(nil, fn {row, y}, under ->
+      got = sweep_back(y, side, fn x, right -> least(x, y, [at(row, x), right | around(under, x)]) end)
+      {got, got}
+    end)
+    |> elem(0)
+    |> Enum.reverse()
+  end
+
+  # A pass along a row: from the left with `first`, then from the right
+  # with the texel at the right. The row as a binary.
+  defp sweep(y, side, first) do
+    {from_left, _} = Enum.map_reduce(0..(side - 1), @none, fn x, left -> with c <- first.(x, left), do: {c, c} end)
+
+    from_left
+    |> Enum.reverse()
+    |> Enum.zip((side - 1)..0//-1)
+    |> Enum.reduce({[], @none}, fn {c, x}, {row, right} ->
+      with c <- least(x, y, [c, right]), do: {[<<c::32>> | row], c}
+    end)
+    |> elem(0)
+    |> IO.iodata_to_binary()
+  end
+
+  # A pass along a row from the right with `first`, then from the left.
+  defp sweep_back(y, side, first) do
+    {from_right, _} =
+      Enum.map_reduce((side - 1)..0//-1, @none, fn x, right -> with c <- first.(x, right), do: {c, c} end)
+
+    from_right
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.map_reduce(@none, fn {c, x}, left -> with c <- least(x, y, [c, left]), do: {<<c::32>>, c} end)
+    |> elem(0)
+    |> IO.iodata_to_binary()
+  end
+
+  # The three texels of the next row (over or under) at x - 1, x and x + 1.
+  defp around(nil, _x), do: []
+  defp around(row, x), do: [at(row, x - 1), at(row, x), at(row, x + 1)]
+
+  defp at(_row, x) when x < 0, do: @none
+  defp at(row, x) when 4 * x >= byte_size(row), do: @none
+
+  defp at(row, x) do
+    skip = 4 * x
+    <<_::binary-size(^skip), c::32, _::binary>> = row
+    c
+  end
+
+  defp code(x, y), do: y * 65_536 + x
+
+  # The nearest of some texels to the texel {x, y}.
+  defp least(x, y, codes) do
+    Enum.min_by(codes, fn
+      @none -> :infinity
+      c -> (x - rem(c, 65_536)) ** 2 + (y - div(c, 65_536)) ** 2
+    end)
+  end
+
+  # The rows of an image with each texel with no value from its nearest
+  # texel (`nearest/2`), `size` bytes for each texel.
+  defp fill(rows, near, size) do
+    all = List.to_tuple(rows)
+
+    for {{row, codes}, y} <- Enum.with_index(Enum.zip(rows, near)) do
+      for <<c::32 <- codes>>, reduce: {[], 0} do
+        {texels, x} ->
+          texel =
+            if c == @none or c == code(x, y),
+              do: binary_part(row, x * size, size),
+              else: binary_part(elem(all, div(c, 65_536)), rem(c, 65_536) * size, size)
+
+          {[texels | texel], x + 1}
+      end
+      |> elem(0)
+      |> IO.iodata_to_binary()
+    end
+  end
+
+  # --- The image of the squares ------------------------------------------------
+
   # The rows of the image from the rows of the squares (`which`: 0 for the
-  # colors, 1 for the normals), with `blank` where no square is.
+  # colors, 1 for the normals, 2 for the finish, 3 for the glow, 4 for the
+  # mask of the texels with a value), with `blank` where no square is.
   defp image(done, side, which, blank) do
     by_row = Enum.group_by(done, fn {{_, y}, _, _} -> y end)
     fill = fn count -> :binary.copy(blank, count) end

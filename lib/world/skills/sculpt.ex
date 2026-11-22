@@ -33,7 +33,7 @@ defmodule World.Skills.Sculpt do
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
   alias World.Sculpt.{Bones, Texture}
 
-  @keys ~w(edits groups details ports sources budget cells bake look occlusion dirt wear strands bones bone_blend plan gait clips)
+  @keys ~w(edits groups details ports sources budget cells bake mipmaps look occlusion dirt wear strands bones bone_blend plan gait clips)
   @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow surface mirror repeat levels)
   # The finishes with a name: a roughness and a metal.
   @finishes %{
@@ -90,6 +90,7 @@ defmodule World.Skills.Sculpt do
       optional(data, "cells", path, &cells/2) ++
       optional(data, "details", path, &details(&1, &2, groups)) ++
       optional(data, "bake", path, &bake(&1, &2, data)) ++
+      optional(data, "mipmaps", path, &flag/2) ++
       optional(data, "look", path, &choice(&1, &2, ~w(flat real))) ++
       optional(data, "occlusion", path, &flag/2) ++
       optional(data, "dirt", path, &number(&1, &2, 0, 1)) ++
@@ -370,6 +371,7 @@ defmodule World.Skills.Sculpt do
     # (The look from the shape: the occlusion unless the data says no, the dirt and the wear.)
     look = %{
       occlusion: Map.get(data, "occlusion", true),
+      mipmaps: data["mipmaps"] == true,
       dirt: Map.get(data, "dirt", 0.0) / 1,
       wear: Map.get(data, "wear", 0.0) / 1,
       # (Strands: the shapes where the hair is thin, as edits.)
@@ -482,6 +484,7 @@ defmodule World.Skills.Sculpt do
          |> Task.await_many(:infinity)
          |> Map.new()
          |> Map.merge(%{"atlas" => true, "occlusion" => look.occlusion})
+         |> Map.merge(if(look.mipmaps, do: %{"mipmaps" => true}, else: %{}))
          |> Map.merge(if(maps.alpha, do: %{"alpha_mode" => "MASK", "double_sided" => true}, else: %{}))
 
        %{"materials" => Map.new(meshes, &{Atom.to_string(&1.material), spec})}

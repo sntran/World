@@ -71,6 +71,7 @@ defmodule World.Orders.Blueprints do
   catalog that is an order of them; nil for a model with no drawing. A
   construction builds a drawing node by node (`World.Construction`).
   """
+  def drawing(%{"mipmaps" => true} = order), do: order |> Map.delete("mipmaps") |> drawing() |> mipmapped()
   def drawing(%{"blueprint" => "drawing", "options" => %{"drawing" => d}}), do: d
 
   def drawing(%{"blueprint" => "catalog", "options" => %{"name" => name}}) do
@@ -95,6 +96,18 @@ defmodule World.Orders.Blueprints do
       {raw, _} -> World.Drawing.fill(raw, o)
     end
   end
+
+  # The drawing of an order with `"mipmaps": true`: each sculpture of its
+  # nodes (also in a repeat) has the key `mipmaps`.
+  defp mipmapped(nil), do: nil
+  defp mipmapped(%{"nodes" => nodes} = d), do: %{d | "nodes" => Enum.map(nodes, &mipmapped_node/1)}
+
+  defp mipmapped_node(%{"node" => inner} = repeat), do: %{repeat | "node" => mipmapped_node(inner)}
+
+  defp mipmapped_node(%{"skill" => %{"sculpt" => %{} = s}} = n),
+    do: put_in(n, ["skill", "sculpt"], Map.put(s, "mipmaps", true))
+
+  defp mipmapped_node(n), do: n
 
   @doc """
   The drawing of a full order for free edits (the file `drawing` of an
