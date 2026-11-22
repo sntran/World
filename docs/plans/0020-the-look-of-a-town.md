@@ -148,5 +148,13 @@ owner looks at the pictures of the step before it.
 - **Q2.** KTX2 needs a Basis encoder in the VM (C code or WebAssembly).
   I propose to measure its time and its memory at the edge before step
   4, and to make KTX2 only on a construction shift if it does not fit.
-- **Q3.** Godot reads `_COLOR_0` of `EXT_mesh_gpu_instancing`? I check
-  it with Vũng Tàu before step 1 ends, and I write the answer here.
+- **Q3.** Godot reads `_COLOR_0` of `EXT_mesh_gpu_instancing`?
+  **My answer (2026-11-22):** no: Godot does not read
+  `EXT_mesh_gpu_instancing`. Vũng Tàu has its own import plugin
+  (`addons/gpu_instancing/`), which makes a `MultiMeshInstance3D` of a
+  mesh with instances; today it reads `TRANSLATION`, `ROTATION` and
+  `SCALE`, and it will read `_COLOR_0` for the tint of each copy. So
+  World writes `_COLOR_0` as the extension says (R2): an attribute of
+  the extension of the node, with an underscore because it is not one of
+  the three attributes of the extension, and an accessor with one color
+  for each copy. Vũng Tàu changes its plugin when step 1 is there.
