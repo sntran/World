@@ -12,16 +12,16 @@ edge. `docs/factory.md` has the details of each URL and of the shifts.
 | A job of a repository of another account, or a request with no token | A public request. Each part that fits the edge builds at once, and each file of an order comes. A part that does not fit the edge gives 422 (ask for the whole file of the order instead), and the request starts no shift. |
 | A request with a wrong token (an old ID token, another audience) | A public request, as above. |
 
-A part fits the edge when the estimate of its faces (`tile.faces` of the
-parts list) is 150,000 or fewer: the edge builds it as it builds a whole
-model, in steps of 12,000 faces, and its CPU time stays well in the 5
-minutes of the edge. A sculpture in one part fits, and a person fits at
-mid and far. A part of more faces (the large parts of the body of Hải
-Âu), and a person at near, do not fit (`docs/factory.md`, "The CPU limit
-of the edge").
-A part of a project that fits by its estimate, and that the guard of the
-memory of the edge stops (`World.Guard`), also waits for a shift; a
-public request gets the error of the guard (422).
+A part of a sculpture fits the edge when the estimate of the memory of
+its build is 20 MB or less, and the estimate of its faces (`tile.faces`
+of the parts list) is 150,000 or fewer. The maps take the most memory,
+so in practice a sculpture with no maps and few faces fits, and a part
+with maps does not (`docs/factory.md`, "Three orders at one time, with
+the record"). A person fits at mid and far, and not at near.
+A part of a project that fits by its estimates, and that the guard of
+the memory of the edge stops (`World.Guard`), also waits for a shift; a
+public request gets the error of the guard (422). So does a part whose
+build at the edge ended the VM: it waits for a shift from then on.
 
 The Worker checks the ID token (`oidc.js`): its signature by GitHub,
 the issuer, the audience, the time, and the number of the account of

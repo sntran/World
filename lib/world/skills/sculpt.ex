@@ -587,6 +587,25 @@ defmodule World.Skills.Sculpt do
     end
   end
 
+  @doc """
+  The estimate of the memory of the build of a sculpture at a level, or
+  of one of its tiles (`tiles/4`: a map with `share` and `faces`), in MB,
+  with no build: 15 MB, 160 MB for each million texels of its maps (the
+  side of the bake of the level, or of the tile, squared), and 0.15 MB
+  for each thousand faces at its cells. The maps take the most: at the
+  local edge (2026-11-22, the memory of WebAssembly in use), the body of a
+  fridge of 3,323 faces with maps of 512 took 54.5 MB, the roof of a
+  village house of 76,836 faces with maps of 512 took 31 MB, and parts
+  with maps of 256 or 128 took 14 to 16 MB. No part was over this
+  estimate. `World.Labour.fits?/1` compares it with the room of the edge.
+  """
+  def memory(data, level, tile \\ nil) do
+    side = if data["look"] == "flat", do: nil, else: tile_side(get_in(data, ["bake", Atom.to_string(level)]), tile)
+    texels = if side, do: side * side, else: 0
+    faces = if tile, do: tile.faces, else: faces(data, level)
+    Float.round(15 + 160 * texels / 1.0e6 + 0.15 * faces / 1000, 1)
+  end
+
   @doc "The estimate of the faces of a sculpture at each level (`faces/2`, as `tile.faces` of a parts list), with no build."
   def faces(data), do: Map.new(~w(near mid far), &{&1, faces(data, String.to_existing_atom(&1))})
 

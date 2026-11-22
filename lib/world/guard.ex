@@ -9,8 +9,9 @@ defmodule World.Guard do
   works. When the memory is more than the limit, the guard stops the
   build (and the processes that it started and that are linked to it):
   the order gets an error, and the VM and the other orders go on. The
-  heap of the process of the build has the same limit (`max_heap_size`),
-  so a process that grows fast stops before the next look.
+  heap of the process of the build, with its binaries, has the same
+  limit (`max_heap_size` with `include_shared_binaries`), so a process
+  that grows fast stops before the next look.
 
   In WebAssembly (the edge), the guard reads the memory of WebAssembly
   (`World.wasm_memory/1`): the edge counts its size against the 128 MB,
@@ -68,7 +69,8 @@ defmodule World.Guard do
     {pid, ref} =
       spawn_monitor(fn ->
         words = div(bytes, :erlang.system_info(:wordsize))
-        Process.flag(:max_heap_size, %{size: words, kill: true, error_logger: false})
+        # (With its binaries: the bake of a sculpture keeps large ones.)
+        Process.flag(:max_heap_size, %{size: words, kill: true, error_logger: false, include_shared_binaries: true})
 
         result =
           try do

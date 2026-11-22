@@ -22,6 +22,15 @@ defmodule World.GuardTest do
     assert Guard.run(fn -> self() end) == {:ok, self()}
   end
 
+  test "the limit of the heap of a build counts its binaries" do
+    Application.put_env(:world, :memory_mb, 1000)
+
+    assert {:ok, {:max_heap_size, %{size: size, kill: true, include_shared_binaries: true}}} =
+             Guard.run(fn -> Process.info(self(), :max_heap_size) end)
+
+    assert size == div(Guard.limit(), :erlang.system_info(:wordsize))
+  end
+
   test "a build that needs more memory than the limit stops with an error, and the VM and its caller go on" do
     Application.put_env(:world, :memory_mb, 1)
     assert Guard.limit() == 1_000_000
