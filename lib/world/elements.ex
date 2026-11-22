@@ -388,7 +388,8 @@ defmodule World.Elements do
   end
 
   defp result(full, job, parts, extras) do
-    %{
+    # (`rates` only for a model with a joint of the role spin with a rate.)
+    Map.merge(Map.take(extras, ["rates"]), %{
       "order" => Orders.hash(full),
       "level" => Atom.to_string(job.level),
       "parts" => parts,
@@ -396,7 +397,7 @@ defmodule World.Elements do
       "limbs" => Map.get(extras, "limbs", []),
       "ports" => Map.get(extras, "ports", []),
       "collision" => Map.get(extras, "collision", [])
-    }
+    })
   end
 
   # One node of a drawing: `{light thing, data, extras, parts}`. A

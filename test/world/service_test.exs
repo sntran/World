@@ -105,7 +105,8 @@ defmodule World.ServiceTest do
               call(:post, "/build?level=far", ~s({"blueprint": "strut", "options": {"length": #{length}}}))
             end)
 
-    assert [%{status: 200}, %{status: 200}] = Task.await_many(builds, 60_000)
+    # (Since #76 the checks of the orders of the other tests go through the same line of the builds.)
+    assert [%{status: 200}, %{status: 200}] = Task.await_many(builds, 600_000)
   end
 
   test "POST /orders keeps the full order and gives the URLs of its files, from x-world-origin" do

@@ -477,7 +477,8 @@ defmodule World.MCP do
   defp call(_tool, _args, _origin), do: wrong(~s(the argument "order" must be a JSON object))
 
   defp check(order) do
-    with {:ok, full} <- Orders.check(order), do: {:ok, %{"hash" => Orders.hash(full), "order" => full}}
+    with {:ok, full} <- Orders.check(order),
+         do: {:ok, Map.merge(%{"hash" => Orders.hash(full), "order" => full}, Orders.notes(full))}
   end
 
   # A tool result: the data as JSON text, and as structured content.

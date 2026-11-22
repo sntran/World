@@ -200,6 +200,131 @@ defmodule World.DrawingTest do
     assert {x0, y0, x1, y1, z1} == {-8.0, -146.0, 8.0, -134.0, 20.0}
   end
 
+  test "the check of an order gives the thin edits of each level and the faces of each sculpture, with no build (issue #49)" do
+    hull = %{
+      "edits" => [
+        # (Small enough for the door of the workshop of an item: the place of an order builds it at far.)
+        %{"shape" => "box", "size" => [0.5, 0.8, 0.4], "material" => "steel"},
+        # A ring of 0.14 m and a blade of 0.06 m.
+        %{"shape" => "ring", "size" => [0.5, 0.07], "at" => [0, 0.8, 0], "material" => "steel"},
+        %{
+          "shape" => "box",
+          "size" => [0.5, 0.03, 0.2],
+          "at" => [0, -0.8, 0],
+          "material" => "steel",
+          "levels" => ["near", "mid"]
+        },
+        %{"shape" => "ball", "size" => [0.02], "mode" => "paint", "color" => "#ff0000"}
+      ],
+      "cells" => %{"near" => 0.02, "mid" => 0.1, "far" => 0.3},
+      "budget" => %{"near" => 20_000, "mid" => 3_000, "far" => 600},
+      "details" => [
+        %{
+          "edits" => [%{"shape" => "ball", "size" => [0.03]}],
+          "cells" => %{"mid" => 0.04},
+          "budget" => %{"mid" => 500},
+          "levels" => ["mid"]
+        }
+      ]
+    }
+
+    d = %{"name" => "jet", "sources" => ["A test."], "nodes" => [%{"name" => "hull", "skill" => %{"sculpt" => hull}}]}
+    {:ok, full} = Orders.check(order(d))
+    %{"warnings" => warnings, "faces" => %{"hull" => faces}} = Orders.notes(full)
+    at = "options.drawing.nodes.0.skill.sculpt"
+
+    assert for(w <- warnings, do: {w["path"], w["level"]}) ==
+             [
+               {"#{at}.edits.1", "mid"},
+               {"#{at}.edits.2", "mid"},
+               {"#{at}.edits.1", "far"},
+               {"#{at}.details.0.edits.0", "mid"}
+             ]
+
+    assert hd(warnings)["message"] ==
+             "is 0.14 m thin, and the cells of mid are 0.1 m: the edit can go or tear. Give cells of 0.07 m or less, or put the edit in a detail."
+
+    # (The faces at the cells before the cut to the budget, as tile.faces of a parts list.)
+    assert Map.keys(faces) == ~w(far mid near) and faces["near"] > faces["mid"] and faces["mid"] > faces["far"]
+    assert faces["mid"] == World.Skills.Sculpt.faces(hull, :mid)
+
+    # The answer of POST /orders, of check_order and of check_drawing; an order with no sculpture has none.
+    assert {:ok, %{"warnings" => [_, _, _, _], "faces" => %{"hull" => _}}} = Orders.place(order(d), "https://w")
+
+    assert Orders.notes(elem(Orders.check(%{"blueprint" => "strut", "options" => %{"length" => 0.3}}), 1)) == %{
+             "warnings" => [],
+             "faces" => %{}
+           }
+
+    # The drawing of an order of a rule: the paths are in its drawing (/o/HASH.drawing).
+    {:ok, house} = Orders.check(%{"blueprint" => "catalog", "options" => %{"name" => "thung_chai_edits"}})
+    assert Enum.all?(Orders.notes(house)["warnings"], &String.starts_with?(&1["path"], "nodes."))
+  end
+
+  test "a joint of the role spin has its rate, and a joint of a copy of a part has the name of the part (issue #50)" do
+    blade = %{"shapes" => [%{"box" => %{"from" => [-1, -0.05, 0], "to" => [1, 0.05, 0.02]}}]}
+    spin = fn rate -> Map.reject(%{"kind" => "hinge", "role" => "spin", "rate" => rate}, &is_nil(elem(&1, 1))) end
+
+    d = %{
+      "name" => "plane",
+      "sources" => ["A test."],
+      "parts" => %{
+        "body" => %{"shapes" => [%{"box" => %{"from" => [-1, -3, 0], "to" => [1, 3, 1]}}]},
+        "propeller" => blade,
+        "radar" => blade
+      },
+      "nodes" => [
+        %{"name" => "body", "part" => "body"},
+        %{
+          "name" => "propeller_1",
+          "part" => "propeller",
+          "to" => "body",
+          "at" => %{"at" => [-1, 3, 0.5], "axis" => [0, 1, 0]},
+          "joint" => spin.(2.3)
+        },
+        %{
+          "name" => "propeller_2",
+          "part" => "propeller",
+          "to" => "body",
+          "at" => %{"at" => [1, 3, 0.5], "axis" => [0, 1, 0]},
+          "joint" => spin.(2.3)
+        },
+        %{
+          "name" => "radar",
+          "part" => "radar",
+          "to" => "body",
+          "at" => %{"at" => [0, 0, 1], "axis" => [0, 0, 1]},
+          "joint" => spin.(nil)
+        }
+      ]
+    }
+
+    assert {:ok, _} = Orders.check(order(d))
+    bad = fn joint -> paths(Orders.check(order(put_in(d, ["nodes", Access.at(3), "joint"], joint)))) end
+    assert bad.(spin.(0)) == ["options.drawing.nodes.3.joint.rate"]
+    assert bad.(spin.(101)) == ["options.drawing.nodes.3.joint.rate"]
+    assert bad.(%{"kind" => "hinge", "role" => "wheel", "rate" => 1}) == ["options.drawing.nodes.3.joint.rate"]
+
+    scene = Build.scene(Drawing.build(d))
+    extras = Map.new(scene.nodes, &{&1.name, &1.extras})
+    assert %{"rate" => 2.3, "part" => "propeller", "axis" => [0.0, 1.0, 0.0], "role" => "spin"} = extras["propeller_1"]
+    assert %{"rate" => 2.3, "part" => "propeller"} = extras["propeller_2"]
+    refute Map.has_key?(extras["radar"], "rate") or Map.has_key?(extras["radar"], "part")
+    assert scene.extras["rates"] == %{"propeller_1" => 2.3, "propeller_2" => 2.3}
+
+    # The parts list: the rates; a model with no rate has none.
+    {:ok, list} = World.Elements.list(order(d), "far")
+    assert list["rates"] == %{"propeller_1" => 2.3, "propeller_2" => 2.3}
+
+    assert Enum.sort(for p <- list["parts"], p["joint"] in ["propeller_1", "propeller_2"], do: p["part"]) == [
+             "propeller",
+             "propeller"
+           ]
+
+    {:ok, plain} = World.Elements.list(order(put_in(d, ["nodes"], Enum.take(d["nodes"], 1))), "far")
+    refute Map.has_key?(plain, "rates")
+  end
+
   test "the cart of bánh mì: a seller and a dog of other blueprints, and the clips" do
     cart = Drawing.Catalog.file("banh_mi_cart")
     scene = Build.scene(cart, level: :far)

@@ -2588,7 +2588,9 @@ from its middle: a house at the stern of a ship of 300 m. A node can have
 a `turn` (degrees) and an `offset` (meters), and be a `joint`: `kind`
 (`hinge` or `slide`), `role` (`crank`, `door`, `drawer`, `handle`,
 `knob`, `lid`, `open`, `pedal`, `recline`, `slide`, `spin`, `stand`,
-`steer`, `suspension`, `vane`, `wheel`) and `limits`.
+`steer`, `suspension`, `vane`, `wheel`) and `limits`; a joint of the
+role `spin` can have a `rate`, the turns in each second (more than 0, at
+most 100), which the GLB and the parts list give (`rates`).
 
 A node can also be an element that a person of a trade makes with a
 skill (`World.Skill`, `World.Skills`): `skill` is `{NAME: data}`, with
@@ -2726,7 +2728,15 @@ The tests of the rules use small models of their own
   node, a child of the node of its parent joint, with the point of its
   port as its translation. Its parts have points relative to that point.
   `extras` of a joint node gives `role`, `axis`, `kind` and `limits`.
-  An engine turns or moves the node along `extras.axis`.
+  An engine turns or moves the node along `extras.axis`. The axis is in
+  the axes of the joint node itself, not in the axes of its parent: it is
+  always `[0, 1, 0]` (the frame of the node turns the axis of the port
+  to y). A joint of the role `spin` with a `rate` (the turns in each
+  second: a rotor, a propeller, a radar) has `rate` too, and the scene
+  has `rates` (each such joint by its name). A joint node of a part that
+  is in more than one node of a drawing (a copy: `propeller_1` and
+  `propeller_2`) has `part`, the name of that part, as each part of the
+  parts list has (`docs/factory.md`, "The parts of a model").
 - **The meshes.** One mesh for each node, with one primitive for each
   material.
 - **The copies.** A mesh that is in a model more than once (a brick, a

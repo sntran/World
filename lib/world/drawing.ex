@@ -678,11 +678,18 @@ defmodule World.Drawing do
   end
 
   defp joint(v, path) do
-    object(v, path, ~w(kind role limits), fn j ->
+    object(v, path, ~w(kind role limits rate), fn j ->
       required(j, "kind", path, &choice(&1, &2, ~w(hinge slide))) ++
         required(j, "role", path, &choice(&1, &2, @roles)) ++
         optional(j, "limits", path, fn l, p ->
           if match?([a, b] when is_number(a) and is_number(b) and a <= b, l), do: [], else: [{p, "must be [min, max]"}]
+        end) ++
+        optional(j, "rate", path, fn r, p ->
+          cond do
+            j["role"] != "spin" -> [{p, "is only for a joint of the role spin"}]
+            is_number(r) and r > 0 and r <= 100 -> []
+            true -> [{p, "must be the turns in each second, from 0 to 100"}]
+          end
         end)
     end)
   end
@@ -996,6 +1003,14 @@ defmodule World.Drawing do
         place: if(place, do: World.Frame.move(List.to_tuple(place)), else: World.Frame.identity())
       )
 
+    # The parts that are in more than one node: a joint node of such a
+    # part has its name (a copy: `propeller_1` and `propeller_2`).
+    copies =
+      for {part, n} <- Enum.frequencies(for(n <- raw["nodes"], n["part"], do: n["part"])),
+          n > 1,
+          into: MapSet.new(),
+          do: part
+
     Enum.reduce(rest, a, fn node, a ->
       joint = node["joint"]
 
@@ -1011,7 +1026,9 @@ defmodule World.Drawing do
             do: [
               kind: Map.fetch!(@atoms, joint["kind"]),
               role: Map.fetch!(@atoms, joint["role"]),
-              limits: joint["limits"]
+              limits: joint["limits"],
+              rate: joint["rate"],
+              part: if(MapSet.member?(copies, node["part"]), do: node["part"])
             ],
             else: []
 

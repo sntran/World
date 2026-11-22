@@ -47,7 +47,7 @@ An order is data, never code. World runs no code from an order.
 | `/version.json` | The commit of World that the site has. |
 | `/blueprints` | Each blueprint with its options: the type, the default, the unit, the range or the values. |
 | `POST /blueprints` | A blueprint in data of a project (`docs/skills.md`): 201 with its `hash` (an order gives `{"blueprint": {"hash": HASH}}`), or 422 with the errors, each with its path. |
-| `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. |
+| `POST /orders` | An order in JSON. The answer gives its hash, the full order (with each default), the URLs of its files, and the URL of its replay page; or 422 with the errors. It also gives, with no build, `warnings` (each edit of a sculpture that is thinner than two cells of a level, with its path, its level and a message: it can go or tear there; the order is still good) and `faces` (the estimate of the faces of each sculpture at each level, by the name of its node, as `tile.faces` of the parts list). |
 | `POST /orders/HASH/edits` | Small changes to an order of `POST /orders`, in JSON: `{"edits": [...]}` ("An edit of an order"). The answer is as the answer of `POST /orders` for the new order, with `parent` (the hash of the order before) and `history` (each order from the first one to this one, with the edits that made it); 422 with the errors (the path `edits.N` for an edit that is not possible, else the paths of the check of the new order); 404 for a hash that the store does not have. |
 | `/o/HASH.glb`, `.mid.glb`, `.far.glb`, `.parts.json`, `.receipt.json` | The files of an order of `POST /orders`. The people of the node build the GLB at each level (`World.Construction`). |
 | `/o/HASH.drawing.json` | The drawing of the model, with the options of the order in it: each part with its shapes or its skill, the nodes, the joints. It is the drawing that the edit `free` of an order puts in the order ("An edit of an order"). A model that the code of a rule makes as a mesh (a plant, a person, an animal) is the one node `model` of its drawing: an item of its blueprint. |
@@ -343,7 +343,7 @@ and no session (`GET` and `DELETE` give 405), and no sign-in, as for
 |---|---|
 | `list_blueprints` | The name and the description of each blueprint. |
 | `get_blueprint` | The options of one blueprint (`name`), as `GET /blueprints` gives them. |
-| `check_order` | Checks an `order` and does not keep it: the hash and the full order, or the errors. |
+| `check_order` | Checks an `order` and does not keep it: the hash and the full order, with the `warnings` and the `faces` of its sculptures (as `POST /orders`), or the errors. `check_drawing` gives them too. |
 | `edit_order` | Makes the `edits` on the order of a `hash` and keeps the new order, as `POST /orders/HASH/edits`. |
 | `place_order` | Checks an `order` and keeps it, as `POST /orders`: the hash, the full order, the URLs of its files and of its replay page, or the errors. |
 | `check_drawing`, `propose_drawing` | For an engineer: the review of a new `drawing`, and a proposal for me. |
@@ -750,7 +750,9 @@ into one model, and it does not keep a whole model in its memory
   `roles`, its `joint` (the joint that moves it, or null), its `kind`
   (`part`, or `figure` for a person with its props) and, for a part of
   a large sculpture, its `tile`. The list has the `joints`, `limbs`,
-  `ports` and `collision` of the model. `review/parts.html?list=URL`
+  `ports` and `collision` of the model, and `rates` (the turns in each
+  second of each joint of the role `spin` with a `rate`) for a model
+  with such a joint. `review/parts.html?list=URL`
   puts the parts together as a project does.
 - **The key of a part** is a hash of its data and of the version of its
   rule (`World.Elements.version/1`): the source of the rule and of each
