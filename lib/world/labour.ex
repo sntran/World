@@ -72,9 +72,12 @@ defmodule World.Labour do
   def build(key, recipe, opts) do
     shifts = Keyword.get_lazy(opts, :shifts, fn -> Application.get_env(:world, :shifts, false) end)
 
+    # (A part whose build at the edge did not end does not fit: its VM ended in it.)
+    fits = fits?(recipe) and not Store.marked?(key)
+
     cond do
-      fits?(recipe) and shifts and opts[:project] -> here_or_queue(key, opts)
-      fits?(recipe) -> here(key)
+      fits and shifts and opts[:project] -> here_or_queue(key, opts)
+      fits -> here(key)
       shifts and opts[:project] -> queue(key, opts)
       shifts -> {:error, public()}
       true -> away(key, nodes(opts))
@@ -83,27 +86,45 @@ defmodule World.Labour do
 
   @doc """
   True for a part that the edge builds itself in its memory and its CPU
-  limit, for each caller, as it builds a whole model: in steps of
-  `World.Elements.most/0` faces, under the guard of the memory
-  (`World.Guard`). The CPU time of a part goes with the estimate of its
-  faces at its cells (`tile.faces` of the parts list: at the local edge, a
-  part of 51,264 faces of Hải Âu at mid took 20 s, one of 106,510 faces
-  37 s, and one of 216,190 faces 111 s), so a part fits with room in the 5
-  minutes of the CPU limit when that estimate is at most `edge_faces/0`:
+  limit, for each caller:
 
-  - a part of a sculpture whose estimate is at most `edge_faces/0`;
-  - a sculpture in one part (no tile: its estimate is under
-    `World.Elements.most/0`);
-  - a person of a group at mid or far (about 100 MB and 10 s at the edge).
+  - a part of a sculpture whose estimate of memory (`memory` of its
+    recipe, `World.Skills.Sculpt.memory/3`) is at most `edge_memory/0`,
+    and whose estimate of faces at its cells (`tile.faces` of the parts
+    list; none for a sculpture in one part) is at most `edge_faces/0`;
+  - a person of a group at mid or far.
 
-  A part of more faces, and a person at near, do not fit. A part of a
-  project that fits, and that the guard of the memory stops at the edge,
-  waits for a shift as a part that does not fit (`build/3`).
+  A part with more, a recipe with no estimate of memory (a recipe of
+  before 2026-11-22), and a person at near, do not fit.
+
+  The memory: the VM at the edge ends when the size of its memory of
+  WebAssembly goes past the room of its isolate (after 73 to 83 MB in
+  the measures of 2026-11-22, `docs/factory.md`). A VM uses about 45 MB
+  at rest when the code of a build is loaded, and the memory of a build
+  can grow faster than the guard (`World.Guard`) looks. The maps of a
+  sculpture take the most: the body of a fridge of 3,323 faces with maps
+  of 512 took 54.5 MB, and ended each VM that built it.
+
+  The CPU time of a part goes with the estimate of its faces (at the
+  local edge, a part of 51,264 faces of Hải Âu at mid took 20 s, one of
+  106,510 faces 37 s, and one of 216,190 faces 111 s), in the 5 minutes
+  of the CPU limit.
+
+  A part of a project that fits, and that the guard of the memory stops
+  at the edge, waits for a shift as a part that does not fit; so does a
+  part whose build at the edge ended the VM (`build/3`).
   """
   def fits?(%{"piece" => _, "level" => level}) when level in ["mid", "far"], do: true
-  def fits?(%{"node" => _, "tile" => nil}), do: true
-  def fits?(%{"node" => _, "tile" => %{"faces" => faces}}) when is_number(faces), do: faces <= edge_faces()
+
+  def fits?(%{"node" => _, "tile" => tile} = recipe) when is_nil(tile) or is_map(tile) do
+    faces = if tile, do: tile["faces"], else: 0
+    is_number(faces) and faces <= edge_faces() and room?(recipe)
+  end
+
   def fits?(_recipe), do: false
+
+  defp room?(%{"memory" => mb}) when is_number(mb), do: mb <= edge_memory()
+  defp room?(_recipe), do: false
 
   @doc """
   The most faces of the estimate of a part that the edge builds
@@ -111,6 +132,16 @@ defmodule World.Labour do
   default.
   """
   def edge_faces, do: Application.get_env(:world, :edge_faces, 150_000)
+
+  @doc """
+  The most memory of the estimate of a part that the edge builds
+  (`fits?/1`), in MB: the application environment `:edge_memory`, #{20}
+  by default. With it, a sculpture with maps goes to a shift (its maps
+  of 128 texels or more are 2.6 MB or more of the estimate, over 15 MB
+  for each build), and a sculpture with no maps and with few faces builds
+  at the edge.
+  """
+  def edge_memory, do: Application.get_env(:world, :edge_memory, 20)
 
   @doc """
   True at the edge with shifts for the key of a part with a recipe that
@@ -121,7 +152,7 @@ defmodule World.Labour do
     with true <- Application.get_env(:world, :shifts, false),
          {:ok, json} <- Store.recipe(key),
          {:ok, recipe} <- JSON.decode(json) do
-      not fits?(recipe)
+      not fits?(recipe) or Store.marked?(key)
     else
       _ -> false
     end
@@ -228,7 +259,15 @@ defmodule World.Labour do
       }
     ]
 
-  defp here(key), do: Line.run(:now, fn -> Elements.part(key) end)
+  # A build at the edge, with its mark in the store first: when the VM
+  # ends in the build, the next VM sees the mark and no GLB, and the part
+  # goes to a shift from then on (`build/3`).
+  defp here(key) do
+    Line.run(:now, fn ->
+      _ = Store.mark(key)
+      Elements.part(key)
+    end)
+  end
 
   # A part of a project that fits by its estimate, at the edge with shifts:
   # here, and when the guard of the memory stops it (`World.Guard`), it

@@ -96,7 +96,10 @@ defmodule World.ElementsTest do
       assert t["key"] =~ ~r/^[0-9a-f]{32}$/ and t["url"] == "/p/#{t["key"]}.glb"
       assert t["roles"] |> Enum.sort() == ["paint", "plaster"]
       assert t["tile"]["share"] > 0 and t["matrix"] == Frame.matrix(World.GLB.gl_frame(Frame.identity()))
-      assert {:ok, _} = Store.recipe(t["key"])
+      # (The recipe has the estimate of the memory of the build of the tile: World.Labour.fits?/1.)
+      assert {:ok, json} = Store.recipe(t["key"])
+      recipe = JSON.decode!(json)
+      assert is_float(recipe["memory"]) and recipe["memory"] >= 15
       refute Store.has?(t["key"])
     end
 
@@ -431,6 +434,10 @@ defmodule World.ElementsTest do
       # project waits for a shift; a public caller gets the error of the guard.
       {:ok, other} = Elements.list(order(drawing(0.25, "guard")), "far")
       guarded = Enum.find(other["parts"], &(&1["tile"] != nil or &1["node"] == "wall"))["key"]
+      {:ok, third} = Elements.list(order(drawing(0.26, "guard")), "far")
+      # (The last tile has the bump of 0.26 m: a part of its own.)
+      first = third["parts"] |> Enum.filter(&(&1["node"] == "wall")) |> List.last() |> Map.fetch!("key")
+      assert first != guarded
       Application.put_env(:world, :memory_mb, 1)
       public = get.("/p/#{guarded}.glb", [])
       assert public.status == 422 and public.resp_body =~ "needs more memory than the factory has"
@@ -438,8 +445,9 @@ defmodule World.ElementsTest do
       for {pid, _} <- Registry.lookup(World.Names, {:build, {:part, guarded}}), do: Process.exit(pid, :kill)
       Process.sleep(20)
       Application.put_env(:world, :part_wait, 50)
+      # (That build wrote its mark, and it did not end: the part waits for a shift at once.)
+      assert World.Elements.Store.marked?(guarded)
       project = get.("/p/#{guarded}.glb", [{"x-world-project", "vung_tau"}])
-      # (The build starts here; when the guard stops it, the part goes to the queue.)
       assert project.status == 202
 
       assert Enum.find(1..400, fn _ ->
@@ -447,7 +455,19 @@ defmodule World.ElementsTest do
                World.Labour.waiting() == 2
              end)
 
-      for {pid, _} <- Registry.lookup(World.Names, {:build, {:part, guarded}}), do: Process.exit(pid, :kill)
+      # The first request of another part is of a project: the build starts here, and when the
+      # guard stops it, the part goes to the queue.
+      refute World.Elements.Store.marked?(first)
+      assert get.("/p/#{first}.glb", [{"x-world-project", "vung_tau"}]).status == 202
+
+      assert Enum.find(1..400, fn _ ->
+               Process.sleep(25)
+               World.Labour.waiting() == 3
+             end)
+
+      for k <- [guarded, first],
+          {pid, _} <- Registry.lookup(World.Names, {:build, {:part, k}}),
+          do: Process.exit(pid, :kill)
     after
       if memory, do: Application.put_env(:world, :memory_mb, memory), else: Application.delete_env(:world, :memory_mb)
       Application.delete_env(:world, :shifts)

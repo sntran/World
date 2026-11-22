@@ -78,17 +78,83 @@ defmodule World.LabourTest do
     assert Labour.fits?(%{"piece" => "leader", "level" => "far"})
     assert Labour.fits?(%{"piece" => "leader", "level" => "mid"})
     refute Labour.fits?(%{"piece" => "leader", "level" => "near"})
-    # (A sculpture in one part, and a part of a sculpture at most at the limit of the cut, fit.)
-    assert Labour.fits?(%{"node" => "wall", "level" => "far", "tile" => nil})
-    # (A part of more faces than a step of the cut fits too: the edge builds it in steps, as a whole
-    # model; the two parts of the helicopter of issue #42 have 17,200 and 36,296 faces.)
+    # (A part of a sculpture fits by the estimate of its memory, at most edge_memory/0 MB, and of its faces.)
+    assert Labour.edge_memory() == 20
+    assert Labour.fits?(%{"node" => "wall", "level" => "far", "tile" => nil, "memory" => 20})
+    refute Labour.fits?(%{"node" => "wall", "level" => "far", "tile" => nil, "memory" => 20.1})
+    # (The body of the fridge of the measure of 2026-11-22: 3,323 faces in one part, maps of 512.)
+    refute Labour.fits?(%{"node" => "fridge_than", "level" => "mid", "tile" => nil, "memory" => 57.4})
+    # (A recipe of before the estimate does not fit.)
+    refute Labour.fits?(%{"node" => "wall", "level" => "far", "tile" => nil})
     assert Labour.edge_faces() == 150_000 and Labour.edge_faces() > Elements.most()
-    assert Labour.fits?(%{"node" => "body", "level" => "mid", "tile" => %{"faces" => 36_296}})
-    assert Labour.fits?(%{"node" => "wall", "level" => "mid", "tile" => %{"faces" => Labour.edge_faces()}})
-    refute Labour.fits?(%{"node" => "wall", "level" => "mid", "tile" => %{"faces" => Labour.edge_faces() + 1}})
+
+    assert Labour.fits?(%{
+             "node" => "wall",
+             "level" => "mid",
+             "tile" => %{"faces" => Labour.edge_faces()},
+             "memory" => 19
+           })
+
+    refute Labour.fits?(%{
+             "node" => "wall",
+             "level" => "mid",
+             "tile" => %{"faces" => Labour.edge_faces() + 1},
+             "memory" => 19
+           })
+
     # (A large part of the body of Hải Âu at mid does not fit.)
-    refute Labour.fits?(%{"node" => "than", "level" => "mid", "tile" => %{"faces" => 216_190}})
+    refute Labour.fits?(%{"node" => "than", "level" => "mid", "tile" => %{"faces" => 216_190}, "memory" => 19})
+
+    # The estimate: 15 MB, 160 MB for each million texels of the maps, 0.15 MB for each thousand faces.
+    data = %{
+      "edits" => [%{"shape" => "box", "size" => [0.35, 0.34, 0.9]}],
+      "cells" => %{"mid" => 0.04},
+      "bake" => %{"mid" => 512}
+    }
+
+    faces = World.Skills.Sculpt.faces(data, :mid)
+    assert World.Skills.Sculpt.memory(data, :mid) == Float.round(15 + 160 * 512 * 512 / 1.0e6 + 0.15 * faces / 1000, 1)
+    # (A tile of a quarter has maps of half the side; a flat look and a level with no bake have no maps.)
+    assert World.Skills.Sculpt.memory(data, :mid, %{share: 0.25, faces: 1000}) ==
+             Float.round(15 + 160 * 256 * 256 / 1.0e6 + 0.15, 1)
+
+    assert World.Skills.Sculpt.memory(Map.put(data, "look", "flat"), :mid) == Float.round(15 + 0.15 * faces / 1000, 1)
+    assert World.Skills.Sculpt.memory(data, :far) < 20
     refute Labour.fits?(%{"order" => "x", "level" => "far"})
+  end
+
+  test "a part whose build at the edge did not end goes to a shift, or gives 422 to a public caller" do
+    [{key, recipe} | _] = parts("far", %{@group | "options" => %{"count" => 2, "seed" => 9}})
+    refute Store.has?(key)
+    assert Labour.fits?(recipe)
+    # (The mark of a build at the edge whose VM ended: no GLB.)
+    :ok = Store.mark(key)
+    assert Store.marked?(key)
+    Application.put_env(:world, :shifts, true)
+
+    try do
+      assert Labour.needs_shift?(key)
+      assert Labour.build(key, recipe, shifts: true) == {:error, Labour.public()}
+
+      assert {:error, [%{"message" => "no construction shift came" <> _}]} =
+               Labour.build(key, recipe, shifts: true, project: true, nodes: fn -> [] end, poll: 5, most: 50)
+    after
+      Application.delete_env(:world, :shifts)
+    end
+
+    # With no shifts, a node builds it, and the mark counts no more.
+    {:ok, a} = Task.Supervisor.start_link()
+    assert Labour.build(key, recipe, nodes: [{a, 2}]) == :stored
+    refute Store.marked?(key)
+  end
+
+  test "a build at the edge writes its mark before the build" do
+    [{key, recipe} | _] = parts("far", %{@group | "options" => %{"count" => 2, "seed" => 10}})
+    mark = "parts/#{key}.edge"
+    refute Store.has?(key) or World.Orders.Store.has?(mark)
+    assert {:ok, <<"glTF", _::binary>>} = Labour.build(key, recipe, nodes: [])
+    assert World.Orders.Store.has?(mark)
+    refute Store.marked?(key)
   end
 
   test "with no shifts: a node builds a part by its key, puts it in the store, and gives back only the key" do

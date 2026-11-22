@@ -422,13 +422,13 @@ defmodule World.Elements do
       case Sculpt.tiles(data, args.level, most(), least()) do
         nil ->
           key = node_part_key(Sculpt, args.key, 0)
-          recipe(key, args, nil)
+          recipe(key, args, nil, Sculpt.memory(data, args.level))
           [entry(key, args.name, args.name, roles, nil) |> Map.merge(%{"kind" => "part", :frame => Frame.identity()})]
 
         tiles ->
           for t <- tiles do
             key = hash({:tile, version(Sculpt), Sculpt.tile_key(data, t, args.level), args.level})
-            recipe(key, args, t)
+            recipe(key, args, t, Sculpt.memory(data, args.level, t))
             share = %{"index" => t.index, "share" => t.share, "faces" => t.faces}
 
             entry(key, args.name, "#{args.name}_#{t.index}", roles, nil)
@@ -470,8 +470,10 @@ defmodule World.Elements do
     MapSet.put(stored, key)
   end
 
-  # The recipe of a part of a sculpture: the order, the level, the node and the tile.
-  defp recipe(key, args, tile) do
+  # The recipe of a part of a sculpture: the order, the level, the node,
+  # the tile, and the estimate of the memory of its build (MB,
+  # `World.Skills.Sculpt.memory/3`: `World.Labour.fits?/1`).
+  defp recipe(key, args, tile, memory) do
     unless Store.has?(key) do
       tile = tile && %{tile | box: boxlist(tile.box), steps: for({b, share} <- tile.steps, do: [boxlist(b), share])}
 
@@ -481,7 +483,8 @@ defmodule World.Elements do
           "order" => args.hash,
           "level" => Atom.to_string(args.level),
           "node" => args.name,
-          "tile" => tile
+          "tile" => tile,
+          "memory" => memory
         })
       )
     end

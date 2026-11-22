@@ -86,15 +86,19 @@ test('a blueprint in data of a project has a key of its own', async () => {
   assert.equal(await text(await store.port(input(), { argv: ['get', key] })), '{}');
 });
 
-test('a part of a model and its recipe have keys of their own, with their types, and has tells if the store has a key', async () => {
+test('a part of a model, its recipe and the mark of its build at the edge have keys of their own, with their types, and has tells if the store has a key', async () => {
   const b = bucket();
   const store = orderStore(b);
   const glb = 'parts/0123456789abcdef0123456789abcdef.glb';
   const recipe = 'parts/0123456789abcdef0123456789abcdef.json';
+  const mark = 'parts/0123456789abcdef0123456789abcdef.edge';
   assert.equal(await text(await store.port(input('glTF'), { argv: ['put', glb, '4'] })), 'ok\n');
   assert.equal(await text(await store.port(input('{}'), { argv: ['put', recipe, '2'] })), 'ok\n');
+  assert.equal(await text(await store.port(input('1'), { argv: ['put', mark, '1'] })), 'ok\n');
   assert.equal(b.types.get(glb), 'model/gltf-binary');
   assert.equal(b.types.get(recipe), 'application/json');
+  assert.equal(b.types.get(mark), 'text/plain');
+  assert.equal(await text(await store.port(input(), { argv: ['has', mark] })), 'yes\n');
   assert.equal(await text(await store.port(input(), { argv: ['get', glb] })), 'glTF');
   assert.equal(await text(await store.port(input(), { argv: ['has', glb] })), 'yes\n');
   assert.equal(await text(await store.port(input(), { argv: ['has', glb.replace('0123', 'ffff')] })), 'no\n');
