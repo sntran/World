@@ -380,6 +380,23 @@ defmodule World.LabourTest do
     assert Registry.lookup(Labour, {World.Crew.Tasks, me}) == []
   end
 
+  test "after a start of the VM, a part in work goes to its node when the node comes back under another name of its supervisor" do
+    use_store()
+    {key, _recipe} = fresh(18)
+    me = node()
+    _ = World.Labour.Store.wait(key, 1)
+    :ok = World.Labour.Store.give(key, me)
+    # (The node comes back with a supervisor of its tasks by its pid, not by the name of World.Crew.)
+    {:ok, n} = Task.Supervisor.start_link()
+    {:ok, there} = Agent.start_link(fn -> [] end)
+    assert Labour.restore(nodes: fn -> Agent.get(there, & &1) end, poll: 5) == :ok
+    wait_for(fn -> Registry.lookup(Labour, {World.Crew.Tasks, me}) != [] end)
+    Agent.update(there, fn _ -> [{n, 2}] end)
+    wait_for(fn -> Store.has?(key) end)
+    wait_for(fn -> World.Labour.Store.all() == {:ok, []} end)
+    assert Registry.lookup(Labour, {World.Crew.Tasks, me}) == [] and Registry.lookup(Labour, n) == []
+  end
+
   test "after a start of the VM, a part whose node does not come back goes back to the queue at its place; a part in the store is done" do
     use_store()
     {key, _recipe} = fresh(14)
