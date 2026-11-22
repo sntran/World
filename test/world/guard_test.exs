@@ -54,6 +54,31 @@ defmodule World.GuardTest do
     }
 
     assert {:error, [%{"message" => "needs more memory" <> _}]} = Orders.place(door, "o")
+
+    # The check of a model with no pose that the guard stops at far keeps the check of its data:
+    # the order is good.
+    tag = "#{System.unique_integer([:positive])}"
+
+    wall = %{
+      "name" => "wall",
+      "kind" => "item",
+      "sources" => ["A test #{tag}."],
+      "nodes" => [
+        %{
+          "name" => "wall",
+          "skill" => %{
+            "sculpt" => %{
+              "edits" => [%{"shape" => "box", "size" => [4, 0.15, 0.5], "at" => [0, 0, 0.5], "material" => "plaster"}],
+              "sources" => ["A test wall #{tag}."],
+              "cells" => %{"far" => 0.04},
+              "budget" => %{"far" => 4_000}
+            }
+          }
+        }
+      ]
+    }
+
+    assert {:ok, %{"hash" => _}} = Orders.place(%{"blueprint" => "drawing", "options" => %{"drawing" => wall}}, "o")
     group = %{"blueprint" => "exercise", "options" => %{"count" => 2, "fans" => true}}
     assert {:error, [%{"message" => "needs more memory" <> _}]} = Orders.build(group, "far", "glb")
     # (A rule in code with no pose is checked by the tests of its rule: its order needs no build.)

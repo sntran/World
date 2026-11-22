@@ -2017,7 +2017,74 @@ about 14 MB more stayed in use in the VM (their data).
 - The guard limits the heap of the process of a build with its binaries
   (`include_shared_binaries`).
 
-**After the changes:** I measure again after the deploy, and I write the result here.
+**After the changes** (`main` at 6691ac2, #82): the same three jobs
+from 17:40:00 UTC (run 45050329486 of Vũng Tàu), with a look at the
+census each 2 s as another caller:
+
+| Order | Order (s) | Parts list (s) | Last part (s) |
+|---|---|---|---|
+| The edit of Hải Âu (7 parts at mid) | 4.1 | 34.4 | 448.0 |
+| A village house (6 parts) | 422 at 19.5 | none | none |
+| A fridge (1 part) | 4.6 | 13.3 | 409.3 |
+
+- No part was built at the edge. Each part of the two orders waited for
+  the shift (run 25 of `shift.yml`, on its runner from 17:43:19), and
+  the shift built all 8 of them by 17:47:28.
+- **The goal (no new VM) was not met:** 2 new VMs, at 17:43:19 and
+  17:43:36, each with the cause `idle` (no request failed), and no end
+  with the cause `memory`. Each of the 189 looks at the census from
+  17:40:00 to 17:47:30 got 200 (and each of the 1,236 looks from
+  17:35:47 to 18:24:19): no 503 for me as another caller.
+- The checks and the parts lists took the size of the memory from
+  31.5 MB to 75.8 MB in 40 s (the parts list of Hải Âu alone from 49.9
+  to 75.2 MB). Then the VM was at rest, at 44 MB in use (the code of the
+  builds), for 2.5 minutes until its end.
+- I cannot see the cause of the two ends in the record, because no
+  request failed. At that time no work of the three orders was at the
+  edge. My push of the branch of the measure also started the workflow
+  `Test` of Vũng Tàu (run 371), whose R4 test asks for three models of
+  the catalog at each level as a public caller: before #83, builds at
+  the edge. At 18:08:41, with no measure, the VM ended in the same way
+  after a push to another branch of Vũng Tàu (run 372 of `Test`): the
+  size went from 32.8 to 56.0 MB in 5 s, and a new VM started. Since
+  #83 these files come with no build. That next VM went to a size of
+  71.5 MB, was at rest from 18:10 (36.5 MB in use, no work), and ended
+  at 18:21:12 with no failed request: a VM whose size went past about
+  70 MB can end later with no work.
+- The guard stopped the check of the village house (422): the VM used
+  44 MB at rest, and the check needed more than the 16 MB that was left.
+
+**The memory at the local edge** (`wrangler dev`, the `edge.com` of
+6691ac2, the guard of 60 MB, from a fresh VM, one step after the other;
+a look at the census each 100 ms):
+
+| Step | In use at most | Size after |
+|---|---|---|
+| The check of the edit of Hải Âu | 39.4 MB | 49.2 MB |
+| The parts list of Hải Âu | 53.9 MB | 83.3 MB |
+| The check of the village house | 58.2 MB (422) | 83.3 MB |
+| The check of the fridge, then its parts list | 54.4 MB | 83.3 MB |
+
+The check of the village house alone, from a fresh VM, used 52.0 MB at
+most, and the size went from 31.0 MB to 70.5 MB (74.8 MB in a second
+try). So one check or one parts list of a large model takes the size
+near the 73 to 83 MB after which the VMs of the site ended, also when
+the memory in use stays under the guard: the size never gets smaller,
+and the gaps between the blocks of the C allocator stay. At rest after
+these steps, the processes, the binaries and the tables held about 2 MB;
+the rest of the 44 MB in use was the code. A brick cache of 4 MB (in
+place of 32 MB) and the load of all of the code of World before the
+first build did not make the size smaller.
+
+**The change after this measure** (#84): the check of an order with no
+pose keeps the check of its data when the guard stops the build of its
+model at far. The order is good, as a large model, and its parts list
+and its parts give the errors of its build. An order with a pose still
+gets the error of the memory: the check of its joints needs the model.
+
+**The next measure:** the 6 shifts of 2026-11-22 are used. After
+00:00 UTC I send the same three orders again, with #83 and #84, and I
+write the result here.
 
 ### The guard and the memory of WebAssembly
 
