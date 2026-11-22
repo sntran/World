@@ -281,10 +281,13 @@ defmodule World.LabourTest do
   end
 
   # The keys in work on a node, in the order that they came to it.
-  defp record(order, tasks) do
-    for {_, key} <- Registry.lookup(Labour, tasks), do: Agent.update(order, &if(key in &1, do: &1, else: &1 ++ [key]))
+  defp record(order, tasks, most \\ nil) do
+    work = Registry.lookup(Labour, tasks)
+    for {_, key} <- work, do: Agent.update(order, &if(key in &1, do: &1, else: &1 ++ [key]))
+    # (With `most`, the most parts in work on the node at one time.)
+    if most, do: Agent.update(most, &max(&1, length(work)))
     Process.sleep(1)
-    record(order, tasks)
+    record(order, tasks, most)
   end
 
   test "a start of the VM in the middle of a shift loses no part, and the order of the queue stays: the parts of C before the parts of D" do
@@ -377,6 +380,23 @@ defmodule World.LabourTest do
     assert Registry.lookup(Labour, {World.Crew.Tasks, me}) == []
   end
 
+  test "after a start of the VM, a part in work goes to its node when the node comes back under another name of its supervisor" do
+    use_store()
+    {key, _recipe} = fresh(18)
+    me = node()
+    _ = World.Labour.Store.wait(key, 1)
+    :ok = World.Labour.Store.give(key, me)
+    # (The node comes back with a supervisor of its tasks by its pid, not by the name of World.Crew.)
+    {:ok, n} = Task.Supervisor.start_link()
+    {:ok, there} = Agent.start_link(fn -> [] end)
+    assert Labour.restore(nodes: fn -> Agent.get(there, & &1) end, poll: 5) == :ok
+    wait_for(fn -> Registry.lookup(Labour, {World.Crew.Tasks, me}) != [] end)
+    Agent.update(there, fn _ -> [{n, 2}] end)
+    wait_for(fn -> Store.has?(key) end)
+    wait_for(fn -> World.Labour.Store.all() == {:ok, []} end)
+    assert Registry.lookup(Labour, {World.Crew.Tasks, me}) == [] and Registry.lookup(Labour, n) == []
+  end
+
   test "after a start of the VM, a part whose node does not come back goes back to the queue at its place; a part in the store is done" do
     use_store()
     {key, _recipe} = fresh(14)
@@ -438,13 +458,16 @@ defmodule World.LabourTest do
 
     {:ok, n} = Task.Supervisor.start_link()
     {:ok, order} = Agent.start_link(fn -> [] end)
-    watcher = spawn_link(fn -> record(order, n) end)
+    {:ok, most} = Agent.start_link(fn -> 0 end)
+    watcher = spawn_link(fn -> record(order, n, most) end)
     assert Labour.restore(nodes: fn -> [{n, 2}] end, poll: 5) == :ok
     wait_for(fn -> Enum.all?(keys, &Store.has?/1) end)
     assert_receive {:stop, 0}, 60_000
     Process.unlink(watcher)
     Process.exit(watcher, :kill)
-    # The order of the requests, whatever project asked; the projects of a part go when it is done.
+    # The order of the requests, whatever project asked, one part at a time on the core of the
+    # node; the projects of a part go when it is done.
+    assert Agent.get(most, & &1) == 1
     assert Agent.get(order, & &1) == keys
     assert Enum.all?(keys, &(World.Labour.Store.projects(&1) == []))
 

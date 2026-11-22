@@ -416,7 +416,8 @@ defmodule World.ElementsTest do
       project = get.("/p/#{key}.glb", [{"x-world-project", "vung_tau"}])
       assert project.status == 202
       assert Plug.Conn.get_resp_header(project, "x-world-shift") == ["wanted"]
-      assert World.Labour.waiting() == 1
+      # (The build goes on after the answer of 202: the part comes into the queue soon after.)
+      assert Enum.find(1..400, fn _ -> World.Labour.waiting() == 1 or (Process.sleep(25) && false) end)
 
       # A part of a sculpture under the limit of faces fits the edge: it builds at once, for a project and for a public caller.
       # (The wait of a request is longer than its build.)

@@ -219,7 +219,8 @@ defmodule World.ConstructionTest do
     j = job("wall_brick_sample", budget: %{"workers" => 1})
     World.watch(j.id)
     {:ok, id} = World.build(j)
-    assert_receive {:world, %{"kind" => "task_started", "who" => who}}
+    # (The first task can start after the 100 ms of assert_receive when other work is on the cores.)
+    assert_receive {:world, %{"kind" => "task_started", "who" => who}}, 10_000
     Process.exit(:erlang.list_to_pid(String.to_charlist(who)), :kill)
     assert {:ok, r} = World.await(id)
     assert r.glb == glb("wall_brick_sample", :near)
