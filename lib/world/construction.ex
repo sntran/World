@@ -209,6 +209,8 @@ defmodule World.Construction do
             workers: %{},
             idle: [],
             requests: %{},
+            # The hires that wait for a person that another construction holds (`World.Census.hire/4`).
+            queued: MapSet.new(),
             triangles: %{},
             glbs: %{},
             cured: %{},
@@ -348,18 +350,24 @@ defmodule World.Construction do
 
   def handle_info({:hired, ref, p}, s) do
     {trade, requests} = Map.pop(s.requests, ref)
-    s = %{s | requests: requests}
+    s = %{s | requests: requests, queued: MapSet.delete(s.queued, ref)}
 
     if trade != nil and not s.paused and Enum.any?(ready(s), &(&1.trade == trade)) and
          not Enum.any?(s.idle, &(s.workers[&1] == trade)) do
       watched = Map.put(s.watched, p, :erlang.monitor(:process, p, [:priority]))
       s = %{s | workers: Map.put(s.workers, p, trade), idle: s.idle ++ [p], watched: watched}
-      {:noreply, s |> record("hired", p, %{"trade" => Atom.to_string(trade)}) |> assign()}
+      s |> record("hired", p, %{"trade" => Atom.to_string(trade)}) |> assign() |> hired()
     else
       # A person that the construction does not need now goes back.
       Person.release(p)
-      {:noreply, assign(s)}
+      s |> assign() |> hired()
     end
+  end
+
+  # A hire that waits for a person of another construction: the fast clock does not wait for it.
+  def handle_info({:queued, ref}, s) do
+    s = if is_map_key(s.requests, ref), do: %{s | queued: MapSet.put(s.queued, ref)}, else: s
+    hired(s)
   end
 
   # The result of a task that a change made again: it goes to nobody, and
@@ -516,10 +524,21 @@ defmodule World.Construction do
     if s.job.drawing, do: place(s, p), else: elements(s, p, id, Map.get(s.elements, id, []))
   end
 
+  # On the fast clock, the time goes on after a hire (`advance/1`).
+  defp hired(%{fast: true} = s), do: s |> advance() |> finish()
+  defp hired(s), do: {:noreply, s}
+
   # The fast clock: the task in hand that ends first is done when its
   # result is here; then the next. When no task is in hand, the clock goes
-  # to the end of the next cure.
+  # to the end of the next cure. While a hire waits for its person (one
+  # that the census can give now: not `queued`), the time stays: the task
+  # of the person starts at the time of the hire, so the hire takes no
+  # days of the site, also when the computer is slow.
   defp advance(s) do
+    if Enum.any?(Map.keys(s.requests), &(not MapSet.member?(s.queued, &1))), do: s, else: next(s)
+  end
+
+  defp next(s) do
     case Enum.min_by(Map.keys(s.running), &s.dues[&1], fn -> nil end) do
       nil ->
         wake(s)

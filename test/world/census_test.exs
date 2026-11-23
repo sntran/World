@@ -50,11 +50,16 @@ defmodule World.CensusTest do
   test "the construction that holds fewer people gets the next free person" do
     s = census(limit: 2)
     [a, b] = [construction(), construction()]
-    p1 = hired(a, hire(s, :mason, a))
+    r1 = hire(s, :mason, a)
+    p1 = hired(a, r1)
     _p2 = hired(a, hire(s, :mason, a))
     ra = hire(s, :mason, a)
     rb = hire(s, :mason, b)
     assert length(Census.people(s)["waiting"]) == 2
+    # A hire that no person can take now is queued at once; a hire with a person is not.
+    assert_receive {^a, {:queued, ^ra}}
+    assert_receive {^b, {:queued, ^rb}}
+    refute_received {^a, {:queued, ^r1}}
 
     Census.release(p1, a, s)
     assert hired(b, rb) == p1

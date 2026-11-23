@@ -92,6 +92,100 @@ defmodule World.FastClockTest do
     assert Enum.all?(on_world, fn {_, d, span} -> span >= round(d * Clock.day()) end)
   end
 
+  test "on the fast clock, a slow hire takes no days of the site: the same days of each task" do
+    # A slab, then three walls on it (one short, two long), and a rail of another trade after the short
+    # wall: the smith is hired while the two long walls are in work.
+    wall = fn name, work ->
+      %{"name" => name, "skill" => %{"block" => %{"size" => 0.3}}, "to" => "slab", "work" => %{"concrete" => work}}
+    end
+
+    d = %{
+      "name" => "two_trades",
+      "nodes" => [
+        %{"name" => "slab", "skill" => %{"block" => %{"size" => 1.0}}, "work" => %{"concrete" => 50.0}},
+        wall.("wall_1", 5.0),
+        wall.("wall_2", 40.0),
+        wall.("wall_3", 40.0),
+        %{
+          "name" => "rail",
+          "skill" => %{"block" => %{"size" => 0.2}},
+          "to" => "slab",
+          "trade" => "smith",
+          "after" => ["wall_1"]
+        }
+      ]
+    }
+
+    job = %{item: fn level -> Detail.with(level, fn -> Drawing.build(d) end) end, drawing: d}
+    {quick, _} = build(job, "fast")
+
+    # The census of the node answers each hire late: it stops for 30 ms, then goes on for 2 ms, while the site works.
+    slow =
+      spawn_link(fn ->
+        Stream.repeatedly(fn ->
+          :sys.suspend(World.Census)
+          Process.sleep(30)
+          :sys.resume(World.Census)
+          Process.sleep(2)
+        end)
+        |> Stream.run()
+      end)
+
+    {late, _} = build(job, "fast")
+    Process.unlink(slow)
+    Process.exit(slow, :kill)
+    :sys.resume(World.Census)
+
+    assert Enum.sort(days(late.log)) == Enum.sort(days(quick.log))
+    # (The rail starts when the short wall is done, before the long walls.)
+    assert at(quick.log, "task_started", "rail") == at(quick.log, "task_done", "wall_1")
+  end
+
+  test "on the fast clock, a hire that waits for a person of another construction does not stop the site" do
+    d = %{
+      "name" => "two_walls",
+      "nodes" => [
+        %{"name" => "slab", "skill" => %{"block" => %{"size" => 1.0}}, "work" => %{"concrete" => 50.0}},
+        %{"name" => "wall", "skill" => %{"block" => %{"size" => 0.3}}, "to" => "slab", "trade" => "smith"}
+      ]
+    }
+
+    job = %{item: fn level -> Detail.with(level, fn -> Drawing.build(d) end) end, drawing: d}
+    {quick, _} = build(job, "fast")
+
+    # No person can go to a hire now: the census has a limit of 0, and each free person is held.
+    holder = spawn(fn -> Process.sleep(:infinity) end)
+    limit = :sys.get_state(World.Census).limit
+
+    hold = fn from, to ->
+      &Map.new(&1, fn {p, info} -> {p, if(info.by == from, do: %{info | by: to}, else: info)} end)
+    end
+
+    :sys.replace_state(World.Census, &%{&1 | limit: 0, people: hold.(nil, holder).(&1.people)})
+
+    id = "fast-#{System.unique_integer([:positive])}"
+    {:ok, ^id} = World.build(Map.merge(job, %{id: id, budget: %{"workers" => 4, "clock" => "fast"}}))
+    # (The site has a hire in the census: it waits there, queued.)
+    wait = fn wait -> if World.Census.people()["waiting"] == [], do: Process.sleep(10) && wait.(wait) end
+    wait.(wait)
+
+    # The people are free again; a hire of the test makes the census give each hire its person.
+    :sys.replace_state(World.Census, &%{&1 | limit: limit, people: hold.(holder, nil).(&1.people)})
+    ref = World.Person.hire(:fast_clock_test)
+    assert_receive {:hired, ^ref, person}
+    World.Person.release(person)
+    Process.exit(holder, :kill)
+
+    assert {:ok, late} = World.await(id, 120_000)
+    assert Enum.sort(days(late.log)) == Enum.sort(days(quick.log))
+  end
+
+  defp days(log) do
+    events = Log.events(log)
+    start = hd(events).at
+    for e <- events, e.kind in ["task_started", "task_done"], do: {e.data["task"], e.kind, e.at - start}
+  end
+
   test "the stages of a site: in their order on the world clock, and at their days on the fast clock" do
     d = %{"name" => "two_stages", "nodes" => [%{"name" => "slab", "skill" => %{"block" => %{"size" => 1.0}}}]}
 
