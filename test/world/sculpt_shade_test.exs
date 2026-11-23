@@ -212,6 +212,10 @@ defmodule World.Sculpt.ShadeTest do
     assert World.Skills.Sculpt.check(slab(%{"occlusion" => "red"}), "s") == [
              {"s.occlusion", "must be one of: true, false, alpha, color"}
            ]
+
+    # (mipmaps stays true or false.)
+    assert World.Skills.Sculpt.check(slab(%{"mipmaps" => true}), "s") == []
+    assert World.Skills.Sculpt.check(slab(%{"mipmaps" => "yes"}), "s") == [{"s.mipmaps", "must be true or false"}]
   end
 
   test "the finish of a corner in a primitive and in a GLB; a point with no face; a primitive with a finish is not packed" do
