@@ -312,6 +312,41 @@ defmodule World.TownTest do
     refute Enum.any?(front, &(&1["color"] in ["#b9bdc0", "#6f8078"]))
   end
 
+  test "the bake of a house: the side of the image of the front at each level; a level that is not in it has no image" do
+    r = %{"use" => "bar", "seed" => 1}
+    # (With no bake in the request, the full request has none: the order of a house stays the same.)
+    refute Map.has_key?(House.request(r), "bake")
+    assert sculpt(House.drawing(r), "mat_tien")["bake"] == %{"near" => 2048, "mid" => 512, "far" => 128}
+
+    d = House.drawing(Map.put(r, "bake", %{"near" => 1024, "mid" => 256}))
+    assert {:ok, _} = World.Drawing.check(d, "d")
+    assert sculpt(d, "mat_tien")["bake"] == %{"near" => 1024, "mid" => 256}
+    # (The body and the roof: the side of the rules, at most the side of the front.)
+    assert sculpt(d, "than")["bake"] == %{"near" => 512, "mid" => 256}
+    assert sculpt(d, "mai")["bake"] == %{"near" => 1024, "mid" => 256}
+
+    for bad <- [%{"far" => 100}, %{"top" => 128}, [128]] do
+      assert_raise ArgumentError, ~r/the bake of a house/, fn -> House.request(Map.put(r, "bake", bad)) end
+    end
+
+    # (An order of the blueprint street_house takes it.)
+    order = %{"blueprint" => "street_house", "options" => Map.put(r, "bake", %{"near" => 1024})}
+    assert {:ok, %{"options" => %{"bake" => %{"near" => 1024}}}} = World.Orders.check(order)
+  end
+
+  test "the light of the front room of a bar at far with no image: its points stay in the budget (plan 0020, D7)" do
+    d = House.drawing(%{"use" => "bar", "seed" => 1, "bake" => %{"near" => 2048, "mid" => 512}})
+
+    {part, _, _} =
+      World.Detail.with(:far, fn ->
+        World.Skills.Sculpt.make(sculpt(d, "mat_tien"), %{}, %{level: :far, name: "front"})
+      end)
+
+    triangles = part.shapes |> Enum.map(&length(&1.faces)) |> Enum.sum()
+    lit = for m <- part.shapes, {_, _, glow} <- m.finish, glow >= 77, do: glow
+    assert triangles <= 300 and length(lit) >= 10
+  end
+
   test "the survey of a real street gives the lots of a block" do
     assert Survey.names() == ["quang_trung"]
     survey = Survey.survey("quang_trung")

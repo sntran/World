@@ -743,6 +743,7 @@ defmodule World.Build do
       {p, n} -> {Frame.point(f, p), Frame.dir(f, n)}
       {p, n, c} -> {Frame.point(f, p), Frame.dir(f, n), c}
       {p, n, c, uv} -> {Frame.point(f, p), Frame.dir(f, n), c, uv}
+      {p, n, c, uv, finish} -> {Frame.point(f, p), Frame.dir(f, n), c, uv, finish}
     end)
   end
 

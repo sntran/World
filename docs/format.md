@@ -373,6 +373,7 @@ houses.
   | `seed` | A whole number | 1 |
   | `left`, `right` | `shared` (a bare wall at a neighbor) or `free` | `shared` |
   | `wall`, `ground`, `rail`, `sign`, `awning`, `vents`, `roof`, `age`, `flip` | A choice of the rules (`World.Town.House.request/1` shows each) | by the family and the seed |
+  | `bake` | An object of `near`, `mid` and `far`: the side of the image of the front at that level (64 to 4096); the body and the roof have the side of the rules, at most that. A level that is not in it has no image: its parts have the look at each point ("The look of a level with no maps"). `{"near": 2048, "mid": 512}` gives a far level with no image. | the images of the rules: 2048 (1024 in a row), 512 and 128 for the front |
 
 - **The parts.** `NAME_mat_tien` (the front: cells of 2.5 cm, an image
   of 2048, and the thin rails and the awning in a detail at near),
@@ -658,9 +659,11 @@ The data of the skill:
   sculpture" below). A level with a bake needs a budget;
 - `mipmaps` (false by default): true gives the maps a sampler with
   smaller copies of the image ("The maps of a sculpture" below);
-- `occlusion` (true by default), `dirt` and `wear` (0 to 1, 0 by
-  default): the look of the surface from its shape, in the maps of a
-  level with a bake ("The maps of a sculpture" below);
+- `occlusion` (`true` by default, or `"alpha"`, `"color"` or `false`),
+  `dirt` and `wear` (0 to 1, 0 by default): the look of the surface from
+  its shape, in the maps of a level with a bake ("The maps of a
+  sculpture" below), and at each point of a level with a budget and no
+  bake ("The look of a level with no maps" below);
 - `strands`: the strands of a sculpture of hair, at a level with a
   bake ("The strands of a sculpture" below);
 - `look`: `real` (by default) or `flat`. With `flat`, the model has flat
@@ -934,6 +937,56 @@ its maps: another node of the same model must use other roles.
   "bake": {"near": 1024, "mid": 512, "far": 256}
 }}}
 ```
+
+### The look of a level with no maps
+
+A level with a `budget` and no `bake`, with the look `real`, has the
+look of the maps at each point of its mesh (`World.Sculpt.Shade`, plan
+0020, step 2): a far model with no image still has dark creases, worn
+edges, metal and light.
+
+- **The occlusion** (D5): how open each point is, from the field along
+  its normal, with the distances and the parts of the bake. As the color
+  of a point, it is even over the faces round the point: half its own
+  value, half the mean of the values at the centers of its faces (each as
+  large as its face). So a large open face is not dark from a crease at
+  one of its corners. `dirt` makes a point in a crease darker, and `wear`
+  makes a point at a sharp edge lighter, as in the maps. The occlusion
+  goes into the alpha of `COLOR_0` (`"occlusion": true` or `"alpha"`):
+  the color stays true. With `"occlusion": "color"`, the color is the
+  color times how open the point is, and `COLOR_0` has no alpha (for a
+  project with no shader of its own). With `false`, no occlusion.
+- **The finish** (D6): the roughness, the metal and the glow of each
+  point, as the edits give them (each edit with no finish of its own has
+  the finish of its role in the palette), in `_FINISH` ("GLB" below).
+  The level has `_FINISH` unless `"occlusion": false` and no edit has a
+  finish, a dirt or a wear.
+- **The cut to the budget** (D7) keeps the borders of the color, the
+  finish and the glow: a point where they change stays near its place.
+  The pin of a change of the color, the roughness or the metal is
+  smaller when the budget keeps few of the faces; the pin of a change of
+  the glow is not (its weight is 10,000 for a change of the glow from 0
+  to 1: a move of 1 cm of such a point costs 1), so a light does not
+  melt into its wall at far. When the mesh
+  of a level must be made again with larger cells for its budget (a
+  mesh with more faces than its budget is made again with cells 1.5
+  times as large), and the larger cells lose each point of the lights of
+  the edits (a lamp in a recess that the cells close), four sizes of the
+  cells between the two are tried, and the mesh in the budget with the
+  most points of light is taken. The light of the front room of a bar
+  of `street_house` (a glow of 0.6) at far, with no bake: 15 points of
+  its 300 triangles, where the cut before step 2 kept none.
+- A sculpture with `bones` (a figure) has its colors through the rig,
+  with no alpha and no finish: it has the look only in its maps. The flat
+  look (`look: flat`, and the file `flat` of an order) has no alpha and
+  no `_FINISH`.
+
+An app with no shader of its own draws such a model opaque: the alpha
+of `COLOR_0` does not change the material (glTF with the alpha mode
+`OPAQUE`, the default). `review/scene.js` draws the look as a game does:
+the alpha takes the light of the sky and of the room (as the occlusion
+of a map), and the glow is the color of the point times its glow, as
+light. The review page has a switch for the night (`night=1`).
 
 ### The strands of a sculpture
 
@@ -2801,6 +2854,18 @@ The tests of the rules use small models of their own
   core of Wings closes an open shape with hidden faces (holes). A flat
   face (a hard edge) has the normal of its face; a smooth part has the
   normal of each vertex.
+- **The look of each point** (a level of a sculpture with a budget and
+  no bake, "The look of a level with no maps"). `COLOR_0` has four
+  floats (linear): the color, and how open the point is in the alpha
+  (from 0 to 1), or three floats with `"occlusion": "color"`.
+  `_FINISH` is a `VEC3` of the component type `UNSIGNED_BYTE` (5121),
+  `normalized`, with the numbers in this order: the roughness, the metal
+  and the glow, each from 0 to 1 (0 to 255 in the byte). Each element
+  of an attribute starts at a multiple of 4 bytes, so the buffer view of
+  `_FINISH` has a `byteStride` of 4: three bytes and one byte of nothing.
+  The glow of a point is the color of the point times its glow, as
+  light (the maps have it in their fourth image). Godot does not read
+  `_FINISH` (plan 0020, Q4): a project reads it in its own import.
 - **The materials.** One glTF material for each role, with the values of
   the palette. Its name is its role. A material can have a color
   texture and a normal texture (each can repeat, with

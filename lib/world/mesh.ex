@@ -6,6 +6,11 @@ defmodule World.Mesh do
   The core of Wings 3D builds the mesh (`wings_we:build/2`), smooths it
   `smooth` times (Catmull-Clark, `wings_subdiv:smooth/1`), and cuts it
   into triangles (`wings_tesselation:triangulate/2`).
+
+  A mesh of a sculpture can have the normal, the color and the finish of
+  each point (`finish/3`, `shaded/3`): the color `{r, g, b}` or, with how
+  open the point is as its alpha, `{r, g, b, a}` (a from 0 to 1); the
+  finish `{roughness, metal, glow}`, each from 0 to 255.
   """
   alias World.{Frame, Vec}
 
@@ -18,6 +23,7 @@ defmodule World.Mesh do
             matter: nil,
             normals: nil,
             colors: nil,
+            finish: nil,
             uvs: nil
 
   @type t :: %__MODULE__{
@@ -29,7 +35,8 @@ defmodule World.Mesh do
           skin: number | nil,
           matter: atom | nil,
           normals: [Vec.t()] | nil,
-          colors: [{0..255, 0..255, 0..255}] | nil
+          colors: [{0..255, 0..255, 0..255} | {0..255, 0..255, 0..255, float}] | nil,
+          finish: [{0..255, 0..255, 0..255}] | nil
         }
 
   @doc """
@@ -80,6 +87,13 @@ defmodule World.Mesh do
   def finish(%__MODULE__{} = mesh, normals, colors), do: %{mesh | normals: normals, colors: colors}
 
   @doc """
+  The mesh with the color and the finish of each point (`World.Sculpt.Shade`):
+  `triangles/2` gives corners `{point, normal, color, uv, finish}` then
+  (the uv is nil for a mesh with no maps).
+  """
+  def shaded(%__MODULE__{} = mesh, colors, finish), do: %{mesh | colors: colors, finish: finish}
+
+  @doc """
   A mesh of triangles with the UV of each corner of each face (a list of
   three `{u, v}` for each face, in the order of the faces): the place of
   the corner in the maps of the mesh (`World.Sculpt.Bake`). `triangles/2`
@@ -118,20 +132,23 @@ defmodule World.Mesh do
   The triangles of the mesh at a smooth level (the level of the mesh by
   default): a list of corners `{point, normal}`, three for each triangle.
   A mesh with the colors of its points (`finish/3`) gives corners
-  `{point, normal, color}`.
+  `{point, normal, color}`, and a mesh with the finish of its points
+  (`shaded/3`) corners `{point, normal, color, uv, finish}`.
   """
   def triangles(%__MODULE__{} = m, level \\ nil) do
     level = if level == nil, do: m.smooth, else: level
     {tris, pos} = wings_triangles(m, level)
     corners = normals(tris, pos, if(level > 0, do: 180.0, else: m.angle))
-    if m.normals || m.colors || m.uvs, do: own(m, corners), else: corners
+    if m.normals || m.colors || m.uvs || m.finish, do: own(m, corners), else: corners
   end
 
   # The corners with the normals and the colors of the points of the mesh
   # (a mesh of triangles: its faces are its triangles, in their order).
-  defp own(%__MODULE__{faces: faces, normals: normals, colors: colors, angle: angle, uvs: uvs}, corners) do
+  defp own(%__MODULE__{faces: faces, normals: normals, colors: colors, angle: angle, uvs: uvs} = m, corners) do
     limit = :math.cos(angle * :math.pi() / 180) - 1.0e-6
-    {nt, ct} = {normals && List.to_tuple(normals), colors && List.to_tuple(colors)}
+
+    {nt, ct, ft} =
+      {normals && List.to_tuple(normals), colors && List.to_tuple(colors), m.finish && List.to_tuple(m.finish)}
 
     [faces, Enum.chunk_every(corners, 3), uvs || Enum.map(faces, fn _ -> [nil, nil, nil] end)]
     |> Enum.zip()
@@ -142,6 +159,7 @@ defmodule World.Mesh do
         n = if nt && Vec.dot(elem(nt, v), face) >= limit, do: elem(nt, v), else: n
 
         cond do
+          ft -> {p, n, ct && elem(ct, v), uv, elem(ft, v)}
           uv -> {p, n, ct && elem(ct, v), uv}
           ct -> {p, n, elem(ct, v)}
           true -> {p, n}

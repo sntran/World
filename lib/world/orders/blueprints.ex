@@ -48,7 +48,7 @@ defmodule World.Orders.Blueprints do
   # request: each choice made (the size of an appliance from its kind).
   @rules [
     {"street_house", World.Town.House, :request,
-     "A house of a street of Vũng Tàu that looks real, from a request of a few words: type (cap4, pho2_flat, pho2_tile, pho3), family (old, steel, modern), width, depth, road, use, wall, sign, seed and more. The rules of World.Town.House make each choice that the request does not make, and its drawing: one part from edits for each of its walls, its roof, its doors."},
+     "A house of a street of Vũng Tàu that looks real, from a request of a few words: type (cap4, pho2_flat, pho2_tile, pho3), family (old, steel, modern), width, depth, road, use, wall, sign, seed and more, and bake (the side of the image of the front at near, mid and far; a level that is not in it has no image). The rules of World.Town.House make each choice that the request does not make, and its drawing: one part from edits for each of its walls, its roof, its doors."},
     {"building", World.Town.Building, :spec,
      "A building of a town that is not a house of a row (a hotel, an office, a villa), from a request: size or outline, storeys, floor, fronts (each with a style: plain, windows, loggias, glass; bays, balconies, the storeys it is on), porches (straight or curved), blocks (parts of the plan with their own storeys), roof (flat or tiles), colors, letters. The rules of World.Town.Building make its drawing."},
     {"village_house", World.Village.House, :request,
@@ -349,18 +349,19 @@ defmodule World.Orders.Blueprints do
       %Blueprint{
         name: name,
         doc: doc <> " Each option has a default; name and sources are options too.",
-        # (A building takes its `size` too: the full request has its `plan`, the outline.)
-        options:
-          for(
-            key <- Enum.sort(Map.keys(apply(module, full, [%{}])) ++ if(name == "building", do: ["size"], else: [])),
-            do: word(key)
-          ),
+        # (A building takes its `size` too: the full request has its `plan`, the outline. A house
+        # takes `bake`: the full request has it only when the order gives it.)
+        options: for(key <- Enum.sort(Map.keys(apply(module, full, [%{}])) ++ more(name)), do: word(key)),
         resolve: fn o -> resolved(fn -> apply(module, full, [given(o)]) end) end,
         build: fn o -> World.Drawing.build(module.drawing(o)) end,
         sources: ["The request of the order: its sources are in it. The rule: #{inspect(module)}."]
       }
     end
   end
+
+  defp more("building"), do: ["size"]
+  defp more("street_house"), do: ["bake"]
+  defp more(_rule), do: []
 
   # An option of a rule: any value, that the rule checks in its request.
   defp word(key), do: option(key, :data, default: nil, check: fn value, _path -> {:ok, value} end)

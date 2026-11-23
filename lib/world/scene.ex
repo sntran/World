@@ -8,6 +8,10 @@ defmodule World.Scene do
   side, y to the front, z up). The writer turns them to the axes of glTF.
   """
   alias World.{Frame, Vec}
+
+  # The finish of a point with no finish of its own in a primitive with
+  # finishes: rough (0.6, as `World.SDF.finish/3`), no metal, no glow.
+  @finish {153, 0, 0}
   defstruct name: "model", extras: %{}, nodes: [], skins: [], animations: [], materials: %{}
 
   defmodule Node do
@@ -51,7 +55,9 @@ defmodule World.Scene do
     the points of a body). `uvs2` is a second UV set (`TEXCOORD_1`), and
     `data` a list of `{r, g, b, a}` (0 to 1) for each point that goes
     into `COLOR_0` as it is: numbers for a shader of an app, not colors
-    (`World.Surface`).
+    (`World.Surface`). `finish` is the roughness, the metal and the glow
+    of each point (`{r, m, g}`, 0 to 255: `_FINISH` in the GLB, plan
+    0020, D6).
 
     A primitive with only points, normals and indices can be `packed`
     (`World.Scene.pack/1`): its points and its normals as binaries of
@@ -72,6 +78,7 @@ defmodule World.Scene do
               targets: nil,
               uvs2: nil,
               data: nil,
+              finish: nil,
               packed: nil
   end
 
@@ -91,6 +98,7 @@ defmodule World.Scene do
           fur_dirs: nil,
           targets: nil,
           data: nil,
+          finish: nil,
           packed: nil
         } = p
       ) do
@@ -133,17 +141,21 @@ defmodule World.Scene do
   color of each point. A corner can be `{point, normal, color, uv}` (a
   mesh with maps, `World.Mesh.map/2`): the primitive then has the UV of
   each point, and corners with the same point and normal and two UVs are
-  two points.
+  two points. A corner can be `{point, normal, color, uv, finish}` (a
+  mesh with the finish of its points, `World.Mesh.shaded/3`; the uv can
+  be nil): the primitive then has the finish of each point, and a corner
+  with no finish has the finish of #{inspect(@finish)}.
   """
   def primitive(material, items, place) do
-    {indices, verts, _seen, _count, colors?, uvs?} =
-      Enum.reduce(items, {[], [], %{}, 0, false, false}, fn item, acc ->
-        Enum.reduce(place.(item), acc, fn corner, {indices, verts, seen, count, colors?, uvs?} ->
-          {p, n, c, uv} =
+    {indices, verts, _seen, _count, {colors?, uvs?, finish?}} =
+      Enum.reduce(items, {[], [], %{}, 0, {false, false, false}}, fn item, acc ->
+        Enum.reduce(place.(item), acc, fn corner, {indices, verts, seen, count, has} ->
+          {p, n, c, uv, f} =
             case corner do
-              {p, n} -> {p, n, nil, nil}
-              {p, n, c} -> {p, n, c, nil}
-              four -> four
+              {p, n} -> {p, n, nil, nil, nil}
+              {p, n, c} -> {p, n, c, nil, nil}
+              {p, n, c, uv} -> {p, n, c, uv, nil}
+              five -> five
             end
 
           {rp, rn} = {round6(p), round6(n)}
@@ -151,11 +163,13 @@ defmodule World.Scene do
 
           case seen do
             %{^key => i} ->
-              {[i | indices], verts, seen, count, colors?, uvs?}
+              {[i | indices], verts, seen, count, has}
 
             _ ->
-              {[count | indices], [{rp, rn, c, uv} | verts], Map.put(seen, key, count), count + 1, colors? or c != nil,
-               uvs? or uv != nil}
+              {colors?, uvs?, finish?} = has
+
+              {[count | indices], [{rp, rn, c, uv, f} | verts], Map.put(seen, key, count), count + 1,
+               {colors? or c != nil, uvs? or uv != nil, finish? or f != nil}}
           end
         end)
       end)
@@ -169,7 +183,8 @@ defmodule World.Scene do
       indices: Enum.reverse(indices),
       colors: if(colors?, do: colors(Enum.map(verts, &elem(&1, 2)))),
       # A corner with no UV in a primitive with UVs is at the first texel.
-      uvs: if(uvs?, do: Enum.map(verts, &(elem(&1, 3) || {0.0, 0.0})))
+      uvs: if(uvs?, do: Enum.map(verts, &(elem(&1, 3) || {0.0, 0.0}))),
+      finish: if(finish?, do: Enum.map(verts, &(elem(&1, 4) || @finish)))
     }
   end
 

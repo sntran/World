@@ -41,8 +41,13 @@ defmodule World.Sculpt.Surface do
   # The least faces of a region, on the mean, for a collapse by regions.
   @least 500
   # The weight of the pin of a point for the collapse, for a change of
-  # the color from black to white at the point.
+  # the color from black to white at the point (or of the roughness, the
+  # metal from 0 to 1).
   @pin 9.0
+  # The weight of the pin of a point for a change of the glow from 0 to
+  # 1: a move of 1 cm costs 1. A light keeps its border also when the
+  # budget keeps few of the faces (plan 0020, D7).
+  @light 1.0e4
   # The pin of a point at the border of a tile: a move of 0.1 mm costs
   # 1, much more than a collapse of a surface. (A larger weight loses the
   # precision of a quadric of 64 bits at a place of some tens of m.)
@@ -58,7 +63,9 @@ defmodule World.Sculpt.Surface do
   The piece of the surface of a brick (`World.Sculpt.bricks/3`), as
   binaries that go from one process to another with no copy:
   `%{at: brick, points: binary, quads: binary, materials: list}` (and
-  `colors`, three bytes for each point, when an edit has a color). Each
+  `colors`, three bytes for each point, when an edit has a color, and
+  `finish`, the roughness, the metal and the glow of each point in three
+  bytes, when an edit has a finish of its own). Each
   point is its key (`key/2`, 64 bits) and its place (three floats of 64
   bits); each quad is the indices of its four points in the piece (in
   turn round its edge, the outside to the right hand; 32 bits each) and
@@ -115,14 +122,31 @@ defmodule World.Sculpt.Surface do
     piece = %{at: {bi, bj, bk}, points: points, quads: quads, materials: materials}
 
     # With an edit that has a color, the color of each point too: the
-    # collapse keeps the points where the colors change (`meshes/2`).
-    if Enum.any?(edits, & &1.color) do
-      color = color(brick, edits, limit, step)
-      Map.put(piece, :colors, for(p <- places, {r, g, b} = color.(p), into: <<>>, do: <<round(r), round(g), round(b)>>))
+    # collapse keeps the points where the colors change (`meshes/2`). With
+    # an edit that has a finish, the finish of each point: the collapse
+    # keeps the points where the finish or the glow changes (plan 0020, D7).
+    piece =
+      if Enum.any?(edits, & &1.color) do
+        color = color(brick, edits, limit, step)
+
+        Map.put(
+          piece,
+          :colors,
+          for(p <- places, {r, g, b} = color.(p), into: <<>>, do: <<round(r), round(g), round(b)>>)
+        )
+      else
+        piece
+      end
+
+    if SDF.finished?(edits) do
+      finish = finish(brick, edits, step)
+      Map.put(piece, :finish, for(p <- places, {r, m, g} = finish.(p), into: <<>>, do: <<byte(r), byte(m), byte(g)>>))
     else
       piece
     end
   end
+
+  defp byte(v), do: round(min(max(v, 0.0), 1.0) * 255)
 
   @doc "The key of a point: its cell `{i, j, k}` and its part (0 to 7), in one integer."
   def key({i, j, k}, part) do
@@ -141,8 +165,9 @@ defmodule World.Sculpt.Surface do
 
   @doc """
   The quads and the points of a piece as terms: `%{quads: [{keys,
-  material}], points: %{key => {x, y, z}}, colors: %{key => {r, g, b}}}`
-  (no colors for a piece with none).
+  material}], points: %{key => {x, y, z}}, colors: %{key => {r, g, b}},
+  finish: %{key => {roughness, metal, glow}}}` (no colors and no finish
+  for a piece with none; each from 0 to 255).
   """
   def decode(%{points: points, quads: quads, materials: materials} = piece) do
     keys = for <<k::64, _::binary-size(24) <- points>>, do: k
@@ -151,6 +176,7 @@ defmodule World.Sculpt.Surface do
 
     %{
       colors: Map.new(Enum.zip(keys, for(<<r::8, g::8, b::8 <- Map.get(piece, :colors, <<>>)>>, do: {r, g, b}))),
+      finish: Map.new(Enum.zip(keys, for(<<r::8, m::8, g::8 <- Map.get(piece, :finish, <<>>)>>, do: {r, m, g}))),
       points: Map.new(for(<<k::64, x::float-64, y::float-64, z::float-64 <- points>>, do: {k, {x, y, z}})),
       quads:
         for(<<a::32, b::32, c::32, d::32, i::8 <- quads>>,
@@ -240,11 +266,12 @@ defmodule World.Sculpt.Surface do
     decoded = Enum.map(pieces, &decode/1)
     points = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.points))
     colors = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.colors))
+    finish = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.finish))
     quads = Enum.flat_map(decoded, & &1.quads)
     keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
     ids = keys |> Enum.with_index() |> Map.new()
     tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
-    {keys, Enum.map(keys, &points[&1]), tris, seam_pins(pins(keys, colors, tris, pin), keys, seam)}
+    {keys, Enum.map(keys, &points[&1]), tris, seam_pins(pins(keys, {colors, finish}, tris, pin), keys, seam)}
   end
 
   # The pins with a very large weight for each point at the border of a
@@ -264,24 +291,30 @@ defmodule World.Sculpt.Surface do
   end
 
   # The pin of each point for the collapse (`World.Simplify.collapse/4`):
-  # the square of the most change of the color from the point to a point
-  # next to it (each color from 0 to 1), times the weight `pin`. A point
-  # where the colors change stays near its place, so the collapse keeps
-  # the border of two colors, and takes the points where the color is even.
-  defp pins(_keys, colors, _tris, pin) when colors == %{} or pin == 0.0, do: nil
+  # the most change from the point to a point next to it. The square of
+  # the change of the color, of the roughness and of the metal (each from
+  # 0 to 1) has the weight `pin`, which is smaller when the budget keeps
+  # few of the faces; the square of the change of the glow has the weight
+  # @light (plan 0020, D7: a light does not melt into its wall at far). A
+  # point where they change stays near its place, so the collapse keeps
+  # the border, and takes the points where the surface is even.
+  defp pins(_keys, {colors, finish}, _tris, pin) when (colors == %{} and finish == %{}) or pin == 0.0, do: nil
 
-  defp pins(keys, colors, tris, pin) do
+  defp pins(keys, {colors, finish}, tris, pin) do
     c = keys |> Enum.map(&Map.get(colors, &1, {255, 255, 255})) |> List.to_tuple()
+    f = keys |> Enum.map(&Map.get(finish, &1, {153, 0, 0})) |> List.to_tuple()
 
     change =
       for {[a, b, d], _} <- tris, {u, v} <- [{a, b}, {b, d}, {d, a}], reduce: %{} do
         acc ->
           {{r0, g0, b0}, {r1, g1, b1}} = {elem(c, u), elem(c, v)}
-          square = ((r0 - r1) ** 2 + (g0 - g1) ** 2 + (b0 - b1) ** 2) / (255 * 255)
-          acc |> Map.update(u, square, &max(&1, square)) |> Map.update(v, square, &max(&1, square))
+          {{s0, m0, l0}, {s1, m1, l1}} = {elem(f, u), elem(f, v)}
+          look = ((r0 - r1) ** 2 + (g0 - g1) ** 2 + (b0 - b1) ** 2 + (s0 - s1) ** 2 + (m0 - m1) ** 2) / (255 * 255)
+          weight = pin * look + @light * (l0 - l1) ** 2 / (255 * 255)
+          acc |> Map.update(u, weight, &max(&1, weight)) |> Map.update(v, weight, &max(&1, weight))
       end
 
-    for i <- 0..(tuple_size(c) - 1)//1, do: pin * Map.get(change, i, 0.0)
+    for i <- 0..(tuple_size(c) - 1)//1, do: Map.get(change, i, 0.0)
   end
 
   # Fewer faces, in three rounds. The first round: each region of bricks
@@ -736,6 +769,14 @@ defmodule World.Sculpt.Surface do
   end
 
   defp color(_brick, edits, limit, _step), do: &SDF.color(edits, &1, limit)
+
+  # The finish of the edits of a brick at a point (the finish of their own: no finish of a role).
+  defp finish(%{eighths: eighths, at: at}, _edits, step) do
+    corner = Sculpt.corner(at, step)
+    fn p -> SDF.finish(elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))), p) end
+  end
+
+  defp finish(_brick, edits, _step), do: &SDF.finish(edits, &1)
 
   # The faces of each piece of the surface (faces joined by their points)
   # whose box is at least `small` m across: a smaller piece is the noise of
