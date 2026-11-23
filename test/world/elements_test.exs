@@ -123,6 +123,58 @@ defmodule World.ElementsTest do
     assert Elements.part(String.duplicate("e", 32)) == :none
   end
 
+  test "the parts list of a drawing with copies (plan 0020): the tint and the scale of each part of a copy, with the key of the part" do
+    box = %{
+      "shapes" => [%{"box" => %{"from" => [0, 0, 0], "to" => [1, 1, 1]}, "material" => "wood"}],
+      "ports" => %{"top" => %{"at" => [0.5, 0.5, 1]}}
+    }
+
+    inner = %{
+      "name" => "pair",
+      "parts" => %{"box" => box},
+      "nodes" => [
+        %{"name" => "ground", "part" => "box"},
+        %{"name" => "x", "part" => "box", "to" => "ground", "at" => "top", "tint" => "#ff0000"}
+      ]
+    }
+
+    d = %{
+      "name" => "street",
+      "sources" => ["A test of the copies."],
+      "parts" => %{"box" => box},
+      "nodes" => [
+        %{"name" => "ground", "part" => "box"},
+        %{"name" => "a", "part" => "box", "to" => "ground", "at" => %{"at" => [2, 0, 0]}, "tint" => "#FF0000"},
+        %{"name" => "b", "part" => "box", "to" => "ground", "at" => %{"at" => [4, 0, 0]}, "scale" => 2},
+        %{"name" => "e", "part" => "box", "to" => "b", "at" => "top"},
+        %{"name" => "i", "item" => order(inner), "to" => "ground", "at" => %{"at" => [8, 0, 0]}, "tint" => "#808080"}
+      ]
+    }
+
+    assert {:ok, list} = Elements.list(order(d), "far")
+    [ground, a, b, e, i_ground, i_x] = list["parts"]
+    assert Enum.map(list["parts"], & &1["node"]) == ~w(ground a b e i/ground i/x)
+
+    # A part that is not in a copy has no tint and no scale; each part of a copy has both.
+    for p <- [ground, e], do: refute(Map.has_key?(p, "tint") or Map.has_key?(p, "scale"))
+    assert {a["tint"], a["scale"]} == {"#ff0000", 1.0}
+    assert {b["tint"], b["scale"]} == {nil, 2.0}
+
+    # A copy in an item of another drawing: the product of the two tints.
+    assert {i_ground["tint"], i_x["tint"], i_x["scale"]} == {"#808080", "#800000", 1.0}
+
+    # Each part is the same box: one key.
+    assert list["parts"] |> Enum.map(& &1["key"]) |> Enum.uniq() |> length() == 1
+
+    # The matrix has the scale in it; the node on the top of b is at its
+    # place on the large box (x 4 + 0.5 × 2, y 0.5 × 2, z 1 × 2), at its own size.
+    [x0, y0, z0 | _] = b["matrix"]
+    assert_in_delta :math.sqrt(x0 * x0 + y0 * y0 + z0 * z0), 2.0, 1.0e-9
+    [m0, m1, m2 | _] = e["matrix"]
+    assert_in_delta :math.sqrt(m0 * m0 + m1 * m1 + m2 * m2), 1.0, 1.0e-9
+    for {i, v} <- [{12, -5.0}, {13, 2.0}, {14, 1.0}], do: assert_in_delta(Enum.at(e["matrix"], i), v, 1.0e-9)
+  end
+
   test "an edit of an order changes only the keys of the parts whose data changed (W27)" do
     {:ok, before} = Elements.list(order(drawing(0.3, "edit")), "far")
     # A larger bump at the end x = 3.5: the tiles at the other end, and the lid, keep their keys.
@@ -238,6 +290,10 @@ defmodule World.ElementsTest do
     assert Elements.node_keys(drawing(0.35), :far)["lid"] != keys["lid"]
     assert Elements.node_keys(drawing(), :mid)["wall"] != keys["wall"]
     assert Elements.node_keys(drawing(), :far) == keys
+
+    # A copy (plan 0020) at another place, with a tint, a scale and share, has the key of its node.
+    copy = %{"at" => %{"at" => [1, 2, 0.5]}, "turn" => 30, "tint" => "#ff0000", "scale" => 2, "share" => true}
+    assert Elements.node_keys(update_in(drawing(), ["nodes", Access.at(1)], &Map.merge(&1, copy)), :far) == keys
 
     # A module with no file of the source (made in memory) has only the versions of Elixir and OTP.
     [{loose, _}] = Code.compile_string("defmodule World.ElementsTestLoose do def x, do: World.Frame.identity() end")

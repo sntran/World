@@ -1,8 +1,9 @@
 // The test of the review page (review/index.html) and its light
 // (review/scene.js, plan 0004, D7): a model of the catalog loads and is
 // drawn; the colors go through tone mapping; each mesh of the model casts
-// and takes shadows, and a ground takes them. It needs Playwright with
-// Chromium; with no Playwright, the test does not run.
+// and takes shadows, and a ground takes them; a copy shows its tint
+// (plan 0020). It needs Playwright with Chromium; with no Playwright, the
+// test does not run.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -36,7 +37,7 @@ function serve() {
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
 }
 
-test('the review page draws a model in the sun: tone mapping, soft shadows, a ground that takes them', { skip: !playwright && 'no Playwright' }, async () => {
+test('the review page draws a model in the sun: tone mapping, soft shadows, a ground that takes them, the tint of a copy', { skip: !playwright && 'no Playwright' }, async () => {
   const server = await serve();
   const browser = await playwright.chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'], executablePath: process.env.CHROMIUM });
   try {
@@ -74,6 +75,34 @@ test('the review page draws a model in the sun: tone mapping, soft shadows, a gr
     assert.equal(state.ground, true);
     assert.equal(state.sun, true);
     assert.ok(state.frames >= 1, 'READY comes after the first frame');
+
+    // The tint of a copy (plan 0020): the meshes of a node with
+    // extras.tint get a copy of their material, with the color times the
+    // tint; the material of the other copies stays.
+    const tints = await page.evaluate(async () => {
+      const THREE = await import('three');
+      const { light } = await import('/review/scene.js');
+      const stage = light(new THREE.WebGLRenderer(), new THREE.Scene());
+      const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+      const box = new THREE.BoxGeometry();
+      const one = new THREE.Mesh(box, material);
+      one.userData.tint = '#ff0000';
+      const group = new THREE.Group();
+      group.userData.tint = '#ff0000';
+      group.add(new THREE.Mesh(box, material));
+      const plain = new THREE.Mesh(box, material);
+      const root = new THREE.Group();
+      root.add(one, group, plain);
+      stage.shade(root);
+      const red = new THREE.Color('#ff0000');
+      return {
+        one: one.material.color.equals(red),
+        group: group.children[0].material.color.equals(red),
+        shared: one.material === group.children[0].material,
+        plain: plain.material === material && material.color.getHex() === 0xffffff,
+      };
+    });
+    assert.deepEqual(tints, { one: true, group: true, shared: true, plain: true });
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

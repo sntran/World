@@ -15,12 +15,15 @@ defmodule World.Scene do
     A node: its name, the index of its parent (or nil), its frame relative
     to the parent, and its scale after the frame: a number (the same on
     each axis: the size of the head of a person) or `{x, y, z}` (`{-1.0,
-    1.0, 1.0}`: a mirror).
+    1.0, 1.0}`: a mirror). A frame can have a scale in its axes too (a
+    copy at another size, plan 0020).
 
     - `mesh`: a key of its primitives, or nil. The nodes with one key
       have the same primitives: the GLB has them once.
     - `instances`: nil, or a list of frames in the node: the node shows
       its primitives at each frame (a wall of bricks), in place of once.
+    - `tints`: nil, or the tint of each instance (`#rrggbb`, or nil for
+      no tint: `World.Tint`).
     """
     defstruct name: "node",
               parent: nil,
@@ -30,7 +33,8 @@ defmodule World.Scene do
               extras: %{},
               skin: nil,
               mesh: nil,
-              instances: nil
+              instances: nil,
+              tints: nil
   end
 
   defmodule Primitive do

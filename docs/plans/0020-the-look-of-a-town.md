@@ -1,6 +1,6 @@
 # Plan 0020: The look of a town: a tint for each copy, a finish at each point, and the surfaces of made things
 
-Status: Draft. I approve it before the work starts.
+Status: Approved (2026-11-22).
 
 Depends on: plan 0010 (the maps of a sculpture: color, normal, finish,
 glow), plan 0012 (occlusion, dirt, wear, and a surface for each edit),
@@ -54,7 +54,7 @@ Issue #44 (the far level of `mini`) waits: Humans Must Die does not use
 | D7 | The cut to the budget keeps the points where the finish or the glow changes, as it keeps the points where the color changes (`World.Sculpt.Finish`). | Else a pane of glass or a lit window melts into the wall. |
 | D8 | Three new kinds of surface (`World.Sculpt.Texture`): `windows`, `panels` and `corrugated`. Each is a pattern in the axes of the edit, with its scale. A rule in code (a house of `World.Town.House`) gets the same patterns as a texture of a role (`World.Textures`): `roof_corrugated`, `metal_shutter`, and the glass of the windows. | One pattern for the edits and for the rules, so a house of Vũng Tàu and a building of Humans Must Die look the same. |
 | D9 | `windows`: the width and the height of a pane, the width of the frame, `lit` (a share of the panes, from 0 to 1, chosen by a hash of the row, the column and a `seed`), and a warm and a cold color of the light. A pane has the finish of glass (roughness 0.05, metal 0), the frame has the color of the edit, and the pane is 2 cm in from the frame (in the normal map, and in the relief). The light of a pane goes into the glow. | The data of issue #48. A hash of the row and the column gives the same panes each time, so a key does not change. The light in the glow lets a game turn it off with one multiply. |
-| D10 | `panels`: plates of a width and a height, with seams of a width and a depth, and `rivets` (a step, or none). `corrugated`: ribs along z of the edit, with a pitch and a depth (a roof sheet of Vũng Tàu: 76 mm and 18 mm; a rolling shutter: ribs across, with a pitch of 80 mm). | The surfaces of a hull, a wing, a tank, a container, a roof and a shutter. |
+| D10 | `panels`: plates of a width and a height, with seams of a width and a depth, and `rivets` (a step, or none). `corrugated`: ribs along z of the edit, with a profile, a pitch and a depth. The profile is `round` (a sine) or `square` (flat tops with sloped sides, and the width of the top). Most metal roofs in Việt Nam have square ribs: the common sheets have 5, 9 or 11 ribs on a useful width of 1 070 mm, with a pitch of 250, 125 or 100 mm and a depth of 32, 21 or about 19 mm (https://www.tonthephoangphuc.com/cac-loai-song-ton-pho-bien, status Source). The round ribs of 76 mm and 18 mm stay as an example; a rolling shutter has ribs across, with a pitch of 80 mm. Vũng Tàu gives the profile, the pitch and the depth of each roof from its photos. | The surfaces of a hull, a wing, a tank, a container, a roof and a shutter. |
 | D11 | At a level with a bake, a surface goes into the maps (color, normal, finish, glow). At a level with no bake, a surface gives its mean color, finish and glow to the points (D5 and D6); a pane that is larger than about two cells of the level keeps its own points. | A far house of 30 pixels shows lit windows as points of glow; a near house shows each pane. |
 | D12 | `POST /sets` takes `atlas: true`: World puts the charts of the parts of all the models of the set into one color image, one normal image, one finish image, and one glow image. The answer gives the images one time, and each GLB refers to them (a URL of the set), with no image of its own. | One material for a batch (a `BatchedMesh` of three.js, a `MultiMesh` of Godot). |
 | D13 | An order can take `atlas: true` for its own parts (one set of images for each model, not for each role). | The container ship of Humans Must Die is then one draw call for its body. |
@@ -145,9 +145,12 @@ at the pictures of the step before it.
 
 - **Q1.** A scale on one axis (a longer container) as a part of D1, or a
   new part? I propose a new part (D1).
+  **My answer (2026-11-22):** yes. A scale on one axis is a new part.
 - **Q2.** KTX2 needs a Basis encoder in the VM (C code or WebAssembly).
   I propose to measure its time and its memory at the edge before step
   4, and to make KTX2 only on a construction shift if it does not fit.
+  **My answer (2026-11-22):** yes. I measure the time and the memory of
+  KTX2 at the edge before step 4.
 - **Q3.** Godot reads `_COLOR_0` of `EXT_mesh_gpu_instancing`?
   **My answer (2026-11-22):** no: Godot does not read
   `EXT_mesh_gpu_instancing`. Vũng Tàu has its own import plugin
@@ -158,3 +161,11 @@ at the pictures of the step before it.
   the extension of the node, with an underscore because it is not one of
   the three attributes of the extension, and an accessor with one color
   for each copy. Vũng Tàu changes its plugin when step 1 is there.
+- **Q4.** Godot reads `_FINISH`?
+  **My answer (2026-11-22):** no. The glTF import of Godot 4.7.2 reads
+  only `POSITION`, `NORMAL`, `TANGENT`, `TEXCOORD_0` to `TEXCOORD_7`,
+  `COLOR_0` (with its alpha), `JOINTS_0`, `JOINTS_1`, `WEIGHTS_0` and
+  `WEIGHTS_1` (`modules/gltf/gltf_document.cpp` at 4.7.2-stable). World
+  writes `_FINISH` as the glTF format says (an attribute of an
+  application starts with an underscore), and Vũng Tàu reads it in its
+  import (Vũng Tàu report 0009, section 10.5a).

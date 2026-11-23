@@ -3,6 +3,12 @@ defmodule World.Frame do
   A rigid place in space: a turn (a matrix of 3 columns, the x, y and z
   directions of the frame) and a point (the origin of the frame). A frame
   takes a point from its own axes to the axes of its parent.
+
+  A frame can also have a scale, the same on each axis (`scale/1`: a copy
+  of a node at another size, plan 0020): its three directions then have
+  that length. `compose/2` and `point/2` take the scale with them, and
+  `invert/1`, `quaternion/1` and `scale_of/1` take it out. A frame of a
+  scale of 1 has the same numbers as before.
   """
   alias World.Vec
 
@@ -15,6 +21,16 @@ defmodule World.Frame do
 
   @doc "A frame that only moves."
   def move(at), do: %__MODULE__{at: Vec.float(at)}
+
+  @doc "A frame that only scales, by `s` on each axis (more than 0)."
+  def scale(s) when is_number(s) and s > 0,
+    do: %__MODULE__{x: {s / 1, 0.0, 0.0}, y: {0.0, s / 1, 0.0}, z: {0.0, 0.0, s / 1}}
+
+  @doc "The scale of a frame (1.0 for a rigid frame)."
+  def scale_of(%__MODULE__{x: x}) do
+    s = Vec.len(x)
+    if abs(s - 1.0) < 1.0e-9, do: 1.0, else: s
+  end
 
   @doc """
   A frame from a point, its z direction (`axis`) and its y direction
@@ -56,14 +72,29 @@ defmodule World.Frame do
     %__MODULE__{x: dir(a, b.x), y: dir(a, b.y), z: dir(a, b.z), at: point(a, b.at)}
   end
 
-  @doc "The frame that undoes `f`."
-  def invert(%__MODULE__{x: {a, b, c}, y: {d, e, g}, z: {h, i, j}, at: at}) do
-    f = %__MODULE__{x: {a, d, h}, y: {b, e, i}, z: {c, g, j}}
+  @doc "The frame that undoes `f` (with its scale: the transpose over the square of the scale)."
+  def invert(%__MODULE__{} = frame) do
+    %__MODULE__{x: {a, b, c}, y: {d, e, g}, z: {h, i, j}, at: at} = frame
+
+    f =
+      case scale_of(frame) do
+        1.0 ->
+          %__MODULE__{x: {a, d, h}, y: {b, e, i}, z: {c, g, j}}
+
+        s ->
+          %__MODULE__{
+            x: Vec.scale({a, d, h}, 1 / (s * s)),
+            y: Vec.scale({b, e, i}, 1 / (s * s)),
+            z: Vec.scale({c, g, j}, 1 / (s * s))
+          }
+      end
+
     %{f | at: Vec.neg(dir(f, at))}
   end
 
-  @doc "The turn of the frame as a unit quaternion `{x, y, z, w}`."
-  def quaternion(%__MODULE__{x: {m00, m10, m20}, y: {m01, m11, m21}, z: {m02, m12, m22}}) do
+  @doc "The turn of the frame as a unit quaternion `{x, y, z, w}` (with no scale)."
+  def quaternion(%__MODULE__{} = frame) do
+    %__MODULE__{x: {m00, m10, m20}, y: {m01, m11, m21}, z: {m02, m12, m22}} = rigid(frame)
     trace = m00 + m11 + m22
 
     q =
@@ -88,6 +119,14 @@ defmodule World.Frame do
     {qx, qy, qz, qw} = q
     l = :math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw)
     {qx / l, qy / l, qz / l, qw / l}
+  end
+
+  # The frame with no scale: its directions of length 1.
+  defp rigid(frame) do
+    case scale_of(frame) do
+      1.0 -> frame
+      s -> %{frame | x: Vec.scale(frame.x, 1 / s), y: Vec.scale(frame.y, 1 / s), z: Vec.scale(frame.z, 1 / s)}
+    end
   end
 
   @doc "The frame of a unit quaternion `{x, y, z, w}`, at a point."

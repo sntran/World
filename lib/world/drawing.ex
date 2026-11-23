@@ -22,7 +22,12 @@ defmodule World.Drawing do
     animal, a drawing). It connects its port `port` to the port `at` of
     the node `to` (a name, or a port in the data: `at`, `axis`, `up`; the
     origin by default), with a `turn` and an `offset`, and can be a
-    `joint` (`kind` hinge or slide, `role`, `limits`);
+    `joint` (`kind` hinge or slide, `role`, `limits`). A node that is not
+    the root can have a `tint` (`#rrggbb`: it multiplies the color of each
+    of its parts) and a `scale` (0.1 to 10, the same on each axis, at its
+    port), and `share` (`true`: its parts are copies that share their
+    mesh, plan 0020). They are data of the node, not of its parts: a part
+    keeps its key, and the copies of a part share one mesh;
   - `clips`: animations of the joints: a `name`, a `length` in seconds,
     and `keys`, each a time `t` and the values of some `joints`;
   - `extras`: the data of the model for an app (`site`, `ports`,
@@ -490,7 +495,8 @@ defmodule World.Drawing do
 
   # A node: its errors, and its item (the part, or the item of the order).
   defp node(node, path, i, parts, known) when is_map(node) do
-    keys = ~w(name part item skill trade after from to at port joint turn offset temporary work cure down only)
+    keys =
+      ~w(name part item skill trade after from to at port joint turn offset temporary work cure down only tint scale share)
 
     keys =
       if Map.has_key?(node, "repeat"),
@@ -504,7 +510,10 @@ defmodule World.Drawing do
         optional(node, "temporary", path, &choice(&1, &2, [true, false])) ++
         optional(node, "work", path, &work/2) ++
         optional(node, "cure", path, &choice(&1, &2, World.Site.cures())) ++
-        optional(node, "down", path, &name/2)
+        optional(node, "down", path, &name/2) ++
+        optional(node, "tint", path, &color/2) ++
+        optional(node, "scale", path, &number(&1, &2, 0.1, 10)) ++
+        optional(node, "share", path, &choice(&1, &2, [true, false]))
 
     name = node["name"]
 
@@ -536,7 +545,11 @@ defmodule World.Drawing do
     root =
       if i == 0,
         do:
-          for(k <- ~w(to at port joint turn offset), Map.has_key?(node, k), do: {"#{path}.#{k}", "is not for the root"}),
+          for(
+            k <- ~w(to at port joint turn offset tint scale share),
+            Map.has_key?(node, k),
+            do: {"#{path}.#{k}", "is not for the root"}
+          ),
         else: []
 
     links = if i > 0 and errors == [], do: links(node, path, item, known), else: []
@@ -1020,7 +1033,10 @@ defmodule World.Drawing do
           at: ref(node["at"]),
           port: ref(node["port"]),
           turn: Map.get(node, "turn", 0),
-          offset: Map.get(node, "offset", 0)
+          offset: Map.get(node, "offset", 0),
+          tint: node["tint"],
+          scale: Map.get(node, "scale", 1.0),
+          share: Map.get(node, "share", false)
         ] ++
           if joint,
             do: [

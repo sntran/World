@@ -149,7 +149,8 @@ defmodule World.Mass do
     {known, unknown} =
       item
       |> Build.placed(pose)
-      |> Enum.map(fn {f, p} -> {p.name, part(p), f} end)
+      # (A copy at another size, plan 0020: the mass goes with the cube of its scale.)
+      |> Enum.map(fn {f, p} -> {p.name, part(p) |> sized(Frame.scale_of(f)), f} end)
       |> Enum.split_with(fn {_, m, _} -> m end)
 
     mass = known |> Enum.map(fn {_, m, _} -> m.mass end) |> Enum.sum() |> Kernel.*(1.0)
@@ -165,4 +166,7 @@ defmodule World.Mass do
 
     %{mass: mass, center: center, unknown: unknown |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> Enum.sort()}
   end
+
+  defp sized(%{mass: kg} = m, s) when s != 1.0, do: %{m | mass: kg * s * s * s}
+  defp sized(m, _s), do: m
 end
