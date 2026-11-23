@@ -197,6 +197,14 @@ defmodule World.Sculpt.ShadeTest do
     assert part.shapes == []
   end
 
+  test "the piece of a brick has the finish of each point when an edit has one (the pins of the cut, D7)" do
+    step = 0.04
+    %{bricks: bricks} = World.Sculpt.bricks(World.Skills.Sculpt.edits(slab()["edits"]), step)
+    pieces = Enum.map(bricks, &World.Sculpt.Surface.decode(World.Sculpt.Surface.piece(&1, step)))
+    glows = for p <- pieces, {_, _, glow} <- Map.values(p.finish), do: glow
+    assert 204 in glows and 0 in glows
+  end
+
   test "the check of occlusion: true, false, alpha or color" do
     for v <- [true, false, "alpha", "color"],
         do: assert(World.Skills.Sculpt.check(slab(%{"occlusion" => v}), "s") == [])
