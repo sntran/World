@@ -2606,6 +2606,21 @@ a `turn` (degrees) and an `offset` (meters), and be a `joint`: `kind`
 role `spin` can have a `rate`, the turns in each second (more than 0, at
 most 100), which the GLB and the parts list give (`rates`).
 
+A node that is not the root can be a copy (plan 0020): a `tint`
+(`#rrggbb`) multiplies the color of each part of its part or its item,
+a `scale` (0.1 to 10, the same on each axis) changes its size at its own
+port, and `share: true` puts its parts in nodes of their own that share
+their meshes ("GLB", "The copies"). They are data of the node, not of the
+part: a part keeps its key, so a street of ten houses in ten colors has
+the parts of one house. They are for the part or the item of the node
+only: a port of the node moves with its scale, and a node on that port
+keeps its own size and tint. A copy in a copy (a node with a tint in the
+drawing of an item with a tint) has the product of the tints and of the
+scales. The mass of a copy goes with the cube of its scale. A person or
+an animal in a copy keeps the colors of its body (the tint is for the
+parts). In a repeat, `"tint": "#{c}"` gives each copy a tint from its
+value (`"in": ["c0392b", "2980b9"]`, and the name `"house_{c}"`).
+
 A node can also be an element that a person of a trade makes with a
 skill (`World.Skill`, `World.Skills`): `skill` is `{NAME: data}`, with
 the data of the skill. Each skill checks its data (each error with its
@@ -2753,11 +2768,20 @@ The tests of the rules use small models of their own
   parts list has (`docs/factory.md`, "The parts of a model").
 - **The meshes.** One mesh for each node, with one primitive for each
   material.
-- **The copies.** A mesh that is in a model more than once (a brick, a
-  bolt, the two shoes of a pair) is in the file once. Each part with it
-  is a node of its own, a child of the node of its joint, with the frame
-  of the part; the nodes share the mesh. The parts that are in the model
-  once go into the mesh of the node of their joint, at their places.
+- **The copies.** A mesh of 100 triangles or more that is in a model
+  more than once (a wheel, the two shoes of a pair) is in the file once.
+  Each part with it is a node of its own, a child of the node of its
+  joint, with the frame of the part; the nodes share the mesh. 16 copies
+  or more of a smaller mesh in the node of one joint (a brick, a bolt)
+  are one node with instances (below). A part of a copy of a drawing (a
+  node with a `tint`, a `scale` or `share: true`, and each part of its
+  item: plan 0020) is always a node of its own, and shares its mesh with
+  each other part with the same mesh. Its node has the tint in
+  `extras.tint` (`#rrggbb`: an app multiplies the color of the mesh by
+  it, as `review/scene.js` does) and the scale in its `scale` (times
+  the -1 on x of a mirror). The other parts go into the mesh of the node
+  of their joint, at their places: an app that draws each node alone
+  draws fewer nodes, and an app that draws instances gets the copies.
 - **The mirrors.** A part from `World.Mirror.part/2` keeps the meshes of
   its source (`mirror`). Its node has the mesh of its source and a
   `scale` of `[-1, 1, 1]`: an app turns the faces of the node over, so
@@ -2766,8 +2790,11 @@ The tests of the rules use small models of their own
 - **The instances.** 16 copies or more of one mesh, with one scale, in
   the node of one joint (a wall of bricks) are one node with
   `EXT_mesh_gpu_instancing`: a `TRANSLATION` and a `ROTATION` for each
-  copy, and `extras.count`. three.js (0.169) and gltf-transform read
-  it. An app that does not read it shows one copy: Godot (4.x) does not
+  copy, and `extras.count`. When a copy has a scale or a tint (plan
+  0020), each copy also has a `SCALE`, and a `_COLOR_0` (its tint in
+  linear values, as `COLOR_0`; white for a copy with no tint).
+  three.js (0.169) and gltf-transform read it, and three.js draws
+  `_COLOR_0` as the color of each instance. An app that does not read it shows one copy: Godot (4.x) does not
   read it yet (the proposal godot-proposals 8787). For such an app,
   build with `instances: false` (`World.Build.scene/2`): a node for each
   copy. A replay file (`split: true`) has no instances. The writer takes only the visible faces of a Wings mesh: the

@@ -12,7 +12,8 @@ const SUN = new THREE.Vector3(3, 6, 4).normalize();
 
 // Light a scene: gives `fit(object or box)`, which puts the sun, its
 // shadow camera and the ground on the box of a model, and `shade(object)`,
-// which has each mesh of an object cast and take shadows.
+// which has each mesh of an object cast and take shadows, and shows the
+// tint of each copy (plan 0020: a node with `extras.tint`).
 export function light(renderer, scene) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -42,7 +43,25 @@ export function light(renderer, scene) {
         o.castShadow = true;
         o.receiveShadow = true;
       }
+      if (o.userData.tint) tint(o, o.userData.tint);
     });
+  }
+
+  // The tint multiplies the color of each mesh of the node (the node, or
+  // the meshes of its primitives), in a copy of its material: one copy
+  // for each material and tint. (three.js draws the `_COLOR_0` of the
+  // instances itself.)
+  const tinted = new Map();
+  function tint(node, hex) {
+    for (const mesh of node.isMesh ? [node] : node.children.filter((c) => c.isMesh)) {
+      const key = `${mesh.material.uuid} ${hex}`;
+      if (!tinted.has(key)) {
+        const material = mesh.material.clone();
+        material.color.multiply(new THREE.Color(hex));
+        tinted.set(key, material);
+      }
+      mesh.material = tinted.get(key);
+    }
   }
 
   function fit(what) {

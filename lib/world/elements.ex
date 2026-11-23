@@ -11,9 +11,11 @@ defmodule World.Elements do
     `node` (the id of its node: the path in the plan of the model), its
     `part` (its name), its `matrix` (16 numbers, by columns: its place in
     the axes of the model, Y up as in glTF), its `roles` (the materials
-    that it uses), its `joint` (the joint that moves it, or nil) and, for
+    that it uses), its `joint` (the joint that moves it, or nil), for
     a tile of a sculpture, its `tile` (its index and its share of the
-    faces of the sculpture);
+    faces of the sculpture) and, for a part of a copy (plan 0020: a node
+    with a `tint`, a `scale` or `share`), its `tint` (`#rrggbb`, or nil)
+    and its `scale` (the matrix has the scale in it too);
   - `joints`, `limbs` and `ports` of the model, and `collision` (its
     boxes), as in the extras of its GLB.
 
@@ -23,8 +25,9 @@ defmodule World.Elements do
   the store keeps each part once, and an edit of an order changes only
   the keys of the parts whose data changed (W27):
 
-  - a sculpture that is one part: the data of its node and of the nodes
-    it waits for (`node_keys/2`);
+  - a sculpture that is one part: the data of its node (not its place,
+    and not its tint and its scale: plan 0020) and of the nodes it waits
+    for (`node_keys/2`);
   - a tile of a sculpture (W26, `World.Skills.Sculpt.tiles/3`): the
     edits near the tile, its box, its share, and the other data of the
     sculpture;
@@ -235,10 +238,17 @@ defmodule World.Elements do
     end
   end
 
+  # The data of a node that is not in its key: its name, its place and its
+  # copy (plan 0020). The part of a node is the node alone at its own
+  # origin, so a copy at another place, with a tint or a scale, has the
+  # key of the part.
+  @place ~w(name to at port turn offset joint tint scale share)
+
   @doc """
   The key of each node of a drawing at a level: a hash of the data of
-  the node (with no name), of the keys of the nodes that it waits for,
-  and of the level.
+  the node (with no name, no place and no tint, scale or share: a copy of
+  a node at another place has its key), of the keys of the nodes that it
+  waits for, and of the level.
   """
   def node_keys(raw, level) do
     root = hd(raw["nodes"])["name"]
@@ -247,7 +257,7 @@ defmodule World.Elements do
     Enum.reduce(Drawing.order(raw), %{}, fn name, keys ->
       node = by_name[name]
       waits = for w <- Drawing.waits(node, root), do: keys[w]
-      Map.put(keys, name, hash({Map.delete(node, "name"), waits, level}))
+      Map.put(keys, name, hash({Map.drop(node, @place), waits, level}))
     end)
   end
 
@@ -327,6 +337,7 @@ defmodule World.Elements do
   defp item_list(full, job) do
     item = job.item.(job.level)
     places = Build.places(item, job.level, job.pose || %{})
+    copies = Build.copies(item, job.level, job.pose || %{})
 
     colors = full["colors"] || %{}
 
@@ -338,6 +349,7 @@ defmodule World.Elements do
         e =
           entry(key, path, thing.name, roles(thing), joint)
           |> Map.merge(%{"matrix" => matrix(frame), "kind" => Atom.to_string(kind)})
+          |> Map.merge(copy(copies[path]))
 
         {e, stored}
       end)
@@ -367,6 +379,7 @@ defmodule World.Elements do
 
     model = Drawing.assemble(raw, made)
     places = Build.places(model, level, job.pose || %{})
+    copies = Build.copies(model, level, job.pose || %{})
 
     parts =
       for n <- raw["nodes"], list = Map.get(own, n["name"], []), list != [] do
@@ -380,7 +393,13 @@ defmodule World.Elements do
 
         for e <- list do
           {f, e} = Map.pop(e, :frame)
-          Map.merge(e, %{"matrix" => matrix(Frame.compose(base, f)), "joint" => joint})
+          # (The path of the part in the model: its path in the thing of the node, under the node.)
+          {inner, e} = Map.pop(e, :path)
+          at = if inner, do: n["name"] <> "/" <> inner, else: n["name"]
+
+          e
+          |> Map.merge(%{"matrix" => matrix(Frame.compose(base, f)), "joint" => joint})
+          |> Map.merge(copy(copies[at]))
         end
       end
 
@@ -448,12 +467,14 @@ defmodule World.Elements do
         places = Build.places(thing, args.level)
 
         {list, _} =
-          Enum.map_reduce(pieces(places), MapSet.new(), fn {kind, _path, frame, piece, _}, stored ->
+          Enum.map_reduce(pieces(places), MapSet.new(), fn {kind, path, frame, piece, _}, stored ->
             key = made_key(piece, args.level, materials, args.colors)
             stored = keep(stored, key, fn -> glb(piece, args.level, materials, args.colors) end)
+            # (The path in an assembly, under the node; a part or a figure is the node.)
+            path = if is_struct(thing, World.Assembly), do: path
 
             {entry(key, args.name, piece.name, roles(piece), nil)
-             |> Map.merge(%{"kind" => Atom.to_string(kind), :frame => frame}), stored}
+             |> Map.merge(%{"kind" => Atom.to_string(kind), :frame => frame, :path => path}), stored}
           end)
 
         list
@@ -570,6 +591,10 @@ defmodule World.Elements do
   defp entry(key, node, name, roles, joint) do
     %{"key" => key, "url" => "/p/#{key}.glb", "node" => node, "part" => name, "roles" => roles, "joint" => joint}
   end
+
+  # The tint and the scale of a part of a copy (plan 0020), for the list.
+  defp copy(nil), do: %{}
+  defp copy(%{tint: tint, scale: scale}), do: %{"tint" => tint, "scale" => scale}
 
   defp roles(%Part{shapes: shapes}), do: shapes |> Enum.map(&to_string(&1.material)) |> Enum.uniq()
   defp roles(%World.Figure{materials: m}), do: m |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort()

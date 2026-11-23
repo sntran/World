@@ -748,8 +748,11 @@ into one model, and it does not keep a whole model in its memory
   of its node in the plan), its `part`, its `matrix` (16 numbers by
   columns: its place in the axes of the model, Y up as in glTF), its
   `roles`, its `joint` (the joint that moves it, or null), its `kind`
-  (`part`, or `figure` for a person with its props) and, for a part of
-  a large sculpture, its `tile`. The list has the `joints`, `limbs`,
+  (`part`, or `figure` for a person with its props), for a part of a
+  large sculpture, its `tile` and, for a part of a copy (plan 0020: a
+  node with a `tint`, a `scale` or `share`), its `tint` (`#rrggbb`, or
+  null) and its `scale` (the matrix has the scale in it too); a copy has
+  the key of its part. The list has the `joints`, `limbs`,
   `ports` and `collision` of the model, and `rates` (the turns in each
   second of each joint of the role `spin` with a `rate`) for a model
   with such a joint. `review/parts.html?list=URL`
@@ -761,7 +764,9 @@ into one model, and it does not keep a whole model in its memory
   person, a vehicle) has its content as its data, with its level, its
   maps and the colors of the order: a wall of 1,000 bricks of one shape
   is one file. A part of a sculpture has its data: the edits near it,
-  its box, its share of the faces and the other data of the sculpture.
+  its box, its share of the faces and the other data of the sculpture,
+  but not the place of its node and not its tint and its scale (plan
+  0020): a copy of a sculpture at another place has its key.
   So an edit of an order changes the keys of the parts that it changes,
   and the factory builds only those (W27). The same keys are in the
   events `element` of `POST /builds` (W28), and the GLB of each element

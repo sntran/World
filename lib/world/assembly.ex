@@ -29,7 +29,11 @@ defmodule World.Assembly do
     around the axis (degrees) and the move along it (meters) at rest, and
     for a joint its `role` and `limits`, its `rate` (the turns in each
     second of a joint of the role `spin`), and its `part` (the name of
-    the part of a joint that is a copy of a part).
+    the part of a joint that is a copy of a part). A copy (plan 0020) has
+    its `tint` (`#rrggbb`, or nil), its `scale` (the same on each axis, at
+    the port of the child) and `share` (its parts share their meshes).
+    They are for the item of the node only: a port of the node moves with
+    the scale, and a node on that port keeps its own size and tint.
     """
     defstruct to: nil,
               at: nil,
@@ -40,7 +44,10 @@ defmodule World.Assembly do
               role: nil,
               limits: nil,
               rate: nil,
-              part: nil
+              part: nil,
+              tint: nil,
+              scale: 1.0,
+              share: false
   end
 
   @doc """
@@ -69,7 +76,7 @@ defmodule World.Assembly do
   @doc """
   Add a node. The options: `to` (the node, the root by default), `at` (its
   port), `port` (the port of the child), `kind`, `turn`, `offset`,
-  `role`, `limits`.
+  `role`, `limits`, `rate`, `part`, `tint`, `scale` and `share`.
   """
   def add(%__MODULE__{nodes: nodes} = a, name, item, opts) do
     if List.keymember?(nodes, name, 0), do: raise(ArgumentError, "the assembly #{a.name} has a node #{name} already")
@@ -109,7 +116,10 @@ defmodule World.Assembly do
       role: Keyword.get(opts, :role),
       limits: Keyword.get(opts, :limits),
       rate: Keyword.get(opts, :rate),
-      part: Keyword.get(opts, :part)
+      part: Keyword.get(opts, :part),
+      tint: Keyword.get(opts, :tint),
+      scale: Keyword.get(opts, :scale, 1.0) / 1,
+      share: Keyword.get(opts, :share, false)
     }
 
     # Each port must exist now: a wrong name stops the code that makes the model.
@@ -155,9 +165,17 @@ defmodule World.Assembly do
 
   # The frame of a port of a node, in the axes of the assembly, at rest.
   defp port_frame(a, node, path) do
-    {_, item, _} = List.keyfind(a.nodes, node, 0)
-    Frame.compose(node_frame(a, node), item_port_frame(item, path))
+    {_, item, conn} = List.keyfind(a.nodes, node, 0)
+    a |> node_frame(node) |> Frame.compose(item_port_frame(item, path)) |> unscale(conn)
   end
+
+  @doc """
+  The frame of a port of a node with a scale (a copy, plan 0020) with no
+  scale of its own: the port moves with the scale of the node, and the
+  node on it keeps its size.
+  """
+  def unscale(frame, %Connection{scale: s}) when s != 1.0, do: Frame.compose(frame, Frame.scale(1 / s))
+  def unscale(frame, _conn), do: frame
 
   @doc "The frame of a node in the axes of the assembly, at rest."
   def node_frame(%__MODULE__{nodes: nodes} = a, node) do
@@ -176,6 +194,9 @@ defmodule World.Assembly do
   def placement(%Connection{} = c, item, value) do
     {turn, offset} = if c.kind == :slide, do: {c.turn, c.offset + value}, else: {c.turn + value, c.offset}
     motion = Frame.compose(Frame.move({0.0, 0.0, offset}), Frame.turn({0.0, 0.0, 1.0}, turn))
-    Frame.compose(motion, Frame.invert(item_port_frame(item, c.port)))
+    child = Frame.invert(item_port_frame(item, c.port))
+    # (A copy at another size: the child scales at its own port.)
+    child = if c.scale == 1.0, do: child, else: Frame.compose(Frame.scale(c.scale), child)
+    Frame.compose(motion, child)
   end
 end

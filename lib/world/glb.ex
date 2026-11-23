@@ -14,7 +14,7 @@ defmodule World.GLB do
     `materials` of the scene. Its name is its role.
   - The same scene gives the same bytes.
   """
-  alias World.{Frame, Scene, Vec}
+  alias World.{Frame, Scene, Tint, Vec}
   @external_resource palette_path = Path.join([__DIR__, "..", "..", "priv", "palette.json"])
   @palette palette_path |> File.read!() |> JSON.decode!() |> Map.fetch!("roles")
 
@@ -101,7 +101,9 @@ defmodule World.GLB do
       end)
 
     # The instances of a node: a move and a turn for each, in the axes of
-    # glTF (EXT_mesh_gpu_instancing).
+    # glTF (EXT_mesh_gpu_instancing), and the scale and the tint of each
+    # copy when one copy has them (plan 0020: `_COLOR_0`, linear, as
+    # `COLOR_0`).
     {node_instances, buf} =
       nodes
       |> Enum.with_index()
@@ -109,7 +111,18 @@ defmodule World.GLB do
       |> Enum.reduce({%{}, buf}, fn {n, i}, {map, buf} ->
         {moves, buf} = floats(buf, Enum.map(n.instances, & &1.at), "VEC3", nil, false, &gl/1)
         {turns, buf} = floats(buf, Enum.map(n.instances, &Frame.quaternion(gl_frame(&1))), "VEC4", nil, false)
-        {Map.put(map, i, %{"attributes" => %{"TRANSLATION" => moves, "ROTATION" => turns}}), buf}
+        scales = Enum.map(n.instances, &Frame.scale_of/1)
+
+        {scales, buf} =
+          if Enum.all?(scales, &(&1 == 1.0)),
+            do: {nil, buf},
+            else: floats(buf, Enum.map(scales, &{&1, &1, &1}), "VEC3", nil, false)
+
+        {tints, buf} =
+          if n.tints, do: floats(buf, Enum.map(n.tints, &Tint.linear/1), "VEC3", nil, false), else: {nil, buf}
+
+        attributes = %{"TRANSLATION" => moves, "ROTATION" => turns, "SCALE" => scales, "_COLOR_0" => tints}
+        {Map.put(map, i, %{"attributes" => Map.reject(attributes, &is_nil(elem(&1, 1)))}), buf}
       end)
 
     {skins, buf} = Enum.map_reduce(scene.skins, buf, &skin/2)
@@ -132,7 +145,7 @@ defmodule World.GLB do
         |> put_some("mesh", node_mesh[i])
         |> put_some("children", children[i])
         |> put_some("skin", n.skin)
-        |> put_some("scale", scale(n.scale))
+        |> put_some("scale", scale(node_scale(n)))
         |> put_some("extensions", if(m = node_instances[i], do: %{"EXT_mesh_gpu_instancing" => m}))
         |> put_some("extras", if(n.extras == %{}, do: nil, else: n.extras))
       end
@@ -394,6 +407,16 @@ defmodule World.GLB do
       end)
 
     {%{"name" => name, "samplers" => Enum.map(pairs, &elem(&1, 0)), "channels" => Enum.map(pairs, &elem(&1, 1))}, buf}
+  end
+
+  # The scale of a node: the scale of its frame (a copy at another size,
+  # plan 0020) times its own scale (a mirror).
+  defp node_scale(%{frame: frame, scale: own}) do
+    case {Frame.scale_of(frame), own} do
+      {1.0, own} -> own
+      {s, {x, y, z}} -> {s * x, s * y, s * z}
+      {s, own} -> s * own
+    end
   end
 
   # The scale of a node: none, the same on each axis, or one for each

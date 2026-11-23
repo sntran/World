@@ -43,6 +43,12 @@ defmodule World.Build do
   with it is a node with its frame, and the nodes share the mesh. A
   mirror is a scale of -1 on x. #{@instances} copies or more of a mesh
   in one node (a wall of bricks) are one node with instances.
+
+  A part of a copy (plan 0020: a node with a `tint`, a `scale` or
+  `share`, or a node in it) is always a node of its own, and shares its
+  mesh with each other part with the same mesh. Its node has the tint in
+  `extras.tint`, and the scale in its frame; a node with instances has
+  the tint of each instance (`tints`).
   """
   def scene(item, opts \\ []) do
     # The triangles that the people of a construction made (a map of a
@@ -191,7 +197,11 @@ defmodule World.Build do
       figures: [],
       targets: targets,
       path: item.name,
-      prefix: ""
+      prefix: "",
+      # The copy of the node of the walk, and the copy of each path of a
+      # node of a copy (`copies/3`).
+      copy: nil,
+      copies: %{}
     }
   end
 
@@ -257,6 +267,16 @@ defmodule World.Build do
 
     figures ++ parts
   end
+
+  @doc """
+  The copies of a model (plan 0020): for each path of a node of a copy (a
+  node with a `tint`, a `scale` or `share`, and each node in it), its
+  `tint` (`#rrggbb`, or nil), its `scale` (the product of the scales of
+  the copies over it) and its `share`. A path that is not in a copy is
+  not in the map.
+  """
+  def copies(item, level, pose \\ %{}),
+    do: walk(keep_root(item), Frame.identity(), 0, start(item, %{}), level, pose).copies
 
   # The frame of each node in the axes of the model.
   defp frames(nodes) do
@@ -366,16 +386,24 @@ defmodule World.Build do
     # The path of a node is its id in World.Plan.flat/1: the names of the
     # nodes of the smaller assemblies, with "/" between them.
     prefix = acc.prefix
-    at = fn acc, name -> %{acc | path: prefix <> name, prefix: prefix <> name <> "/"} end
+    # (The copy of a node goes to each node of its item: `copy_of/2`.)
+    copy = acc.copy
+
+    at = fn acc, name, copy ->
+      path = prefix <> name
+      copies = if copy, do: Map.put(acc.copies, path, copy), else: acc.copies
+      %{acc | path: path, prefix: prefix <> name <> "/", copy: copy, copies: copies}
+    end
+
     places = %{root => {node, frame, length(acc.nodes)}}
-    acc = acc |> at.(root) |> then(&walk(root_item, frame, node, &1, level, pose))
+    acc = acc |> at.(root, copy) |> then(&walk(root_item, frame, node, &1, level, pose))
 
     {acc, _} =
       Enum.reduce(rest, {acc, places}, fn {name, item, %Connection{} = c}, {acc, places} ->
         a = %Assembly{nodes: [{root, root_item, nil} | rest], place: Frame.identity()}
         {parent_node, port} = attach(a, c, places)
 
-        acc = at.(acc, name)
+        acc = at.(acc, name, copy_of(copy, c))
 
         if c.kind == :fixed do
           f = Frame.compose(port, Assembly.placement(c, item, 0.0))
@@ -412,7 +440,17 @@ defmodule World.Build do
         end
       end)
 
-    %{acc | prefix: prefix}
+    %{acc | prefix: prefix, copy: copy}
+  end
+
+  # The copy of a node (plan 0020): the tint, the scale and `share` of its
+  # connection, in the copy of the assembly (nil: not a copy). A node on a
+  # port of a copy is not in the copy.
+  defp copy_of(outer, %Connection{tint: nil, scale: 1.0, share: false}), do: outer
+
+  defp copy_of(outer, %Connection{tint: tint, scale: scale, share: share}) do
+    outer = outer || %{tint: nil, scale: 1.0, share: false}
+    %{tint: World.Tint.mix(outer.tint, tint), scale: outer.scale * scale, share: outer.share or share}
   end
 
   # The props of a figure: each in the node of the bone of its port (or
@@ -436,19 +474,24 @@ defmodule World.Build do
   end
 
   # The node of the parent of a connection, and the frame of its port in
-  # that node. A port on a bone of a figure is in the node of the bone.
+  # that node. A port on a bone of a figure is in the node of the bone. A
+  # port of a copy with a scale has no scale (`Assembly.unscale/2`).
   defp attach(%Assembly{nodes: nodes} = a, %Connection{to: to, at: at} = c, places) do
     {parent_node, parent_frame, first} = Map.fetch!(places, to)
+    {_, item, conn} = List.keyfind(nodes, to, 0)
 
-    case List.keyfind(nodes, to, 0) do
-      {_, %Figure{} = f, _} when is_binary(at) ->
-        if Figure.port!(f, at).bone,
-          do: on_figure(f, first, at),
-          else: {parent_node, Frame.compose(parent_frame, port_in_node(a, c))}
+    {node, frame} =
+      case item do
+        %Figure{} = f when is_binary(at) ->
+          if Figure.port!(f, at).bone,
+            do: on_figure(f, first, at),
+            else: {parent_node, Frame.compose(parent_frame, port_in_node(a, c))}
 
-      _ ->
-        {parent_node, Frame.compose(parent_frame, port_in_node(a, c))}
-    end
+        _ ->
+          {parent_node, Frame.compose(parent_frame, port_in_node(a, c))}
+      end
+
+    {node, Assembly.unscale(frame, conn)}
   end
 
   # The frame of the port `at` of the node `to`, in the axes of that node.
@@ -497,21 +540,24 @@ defmodule World.Build do
   # A mirror has the key of the part it comes from, and a scale of -1 on
   # x. Only a mesh of @share triangles or more, or @instances copies or
   # more in one node (with `instances`: one node with an instance for
-  # each copy, a wall of bricks). The other parts go into the mesh of
-  # their node, at their places.
-  defp finish(%{nodes: nodes, parts: parts}, {false, instances}) do
+  # each copy, a wall of bricks). A part of a copy (plan 0020) is always
+  # in a node of its own. The other parts go into the mesh of their node,
+  # at their places.
+  defp finish(%{nodes: nodes, parts: parts, copies: copied}, {false, instances}) do
     all = all_placed(nodes, parts)
     counts = Enum.frequencies_by(all, fn {_, _, _, _, {shapes, _}} -> shapes end)
     copies = Enum.filter(all, fn {_, _, _, _, {shapes, _}} -> counts[shapes] > 1 end)
-    keys = keys(copies)
+    keys = keys(Enum.filter(all, fn {_, _, _, path, {shapes, _}} -> counts[shapes] > 1 or is_map_key(copied, path) end))
     groups = Enum.frequencies_by(copies, fn {i, _, _, _, shown} -> {i, shown} end)
 
-    # A node of its own costs a draw of the app: only for a big mesh, or
-    # for the instances of many copies.
+    # A node of its own costs a draw of the app: only for a big mesh, for
+    # the instances of many copies, or for a copy with its own tint or
+    # scale.
     {many, once} =
-      Enum.split_with(all, fn {i, _, _, _, {shapes, _} = shown} ->
-        counts[shapes] > 1 and
-          (keys[shapes].triangles >= @share or (instances and groups[{i, shown}] >= @instances))
+      Enum.split_with(all, fn {i, _, _, path, {shapes, _} = shown} ->
+        is_map_key(copied, path) or
+          (counts[shapes] > 1 and
+             (keys[shapes].triangles >= @share or (instances and groups[{i, shown}] >= @instances)))
       end)
 
     once = Enum.group_by(once, &elem(&1, 0), fn {_, f, p, _, _} -> {f, p.shapes} end)
@@ -520,12 +566,12 @@ defmodule World.Build do
       for {n, i} <- Enum.with_index(nodes),
           do: %{n | primitives: n.primitives ++ primitives(Map.get(once, i, []), true)}
 
-    {nodes ++ shared(many, keys, instances), parts}
+    {nodes ++ shared(many, keys, instances, copied), parts}
   end
 
   # Each part in a node of its own, under the node of its joint, with the
   # id of its task; the parts with one mesh share it, as above.
-  defp finish(%{nodes: nodes, parts: parts}, {true, _}) do
+  defp finish(%{nodes: nodes, parts: parts, copies: copied}, {true, _}) do
     all = all_placed(nodes, parts)
     keys = keys(all)
 
@@ -536,7 +582,7 @@ defmodule World.Build do
           parent: i,
           frame: f,
           scale: scale,
-          extras: %{"task" => path},
+          extras: Map.merge(%{"task" => path}, tint(copied, path)),
           primitives: keys[shapes].primitives,
           mesh: keys[shapes].id
         }
@@ -582,8 +628,10 @@ defmodule World.Build do
   # The nodes of the parts with a shared mesh: one for each part, or one
   # with instances for each group of @instances parts or more with one
   # node, one mesh and one scale (a mirror in the scale of the node: an
-  # app turns the faces of the node over, not of each instance).
-  defp shared(many, keys, instances) do
+  # app turns the faces of the node over, not of each instance). A copy
+  # has its tint in the extras of its node, or in the tints of the
+  # instances.
+  defp shared(many, keys, instances, copied) do
     groups = Enum.group_by(many, fn {i, _, _, _, shown} -> {i, shown} end)
 
     {nodes, _} =
@@ -592,7 +640,15 @@ defmodule World.Build do
 
         cond do
           not instances or length(group) < @instances ->
-            node = %Scene.Node{name: path, parent: i, frame: f, scale: scale, primitives: keys[shapes].primitives}
+            node = %Scene.Node{
+              name: path,
+              parent: i,
+              frame: f,
+              scale: scale,
+              primitives: keys[shapes].primitives,
+              extras: tint(copied, path)
+            }
+
             {[%{node | mesh: keys[shapes].id}], done}
 
           MapSet.member?(done, {i, shown}) ->
@@ -602,6 +658,7 @@ defmodule World.Build do
             # A mirror in the scale of the node: each frame in the node
             # is the mirror of the frame of its part (S F S, a turn).
             frames = for {_, g, _, _, _} <- group, do: if(scale == 1.0, do: g, else: Mirror.frame(g))
+            tints = for {_, _, _, path, _} <- group, do: copied[path][:tint]
 
             node = %Scene.Node{
               name: p.name,
@@ -610,6 +667,7 @@ defmodule World.Build do
               primitives: keys[shapes].primitives,
               mesh: keys[shapes].id,
               instances: frames,
+              tints: if(Enum.all?(tints, &is_nil/1), do: nil, else: tints),
               extras: %{"count" => length(group)}
             }
 
@@ -618,6 +676,14 @@ defmodule World.Build do
       end)
 
     nodes
+  end
+
+  # The tint of a part of a copy, for the extras of its node.
+  defp tint(copied, path) do
+    case copied[path] do
+      %{tint: tint} when tint != nil -> %{"tint" => tint}
+      _ -> %{}
+    end
   end
 
   # One material at a time: the corners of one material are live, not
