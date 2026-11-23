@@ -35,7 +35,13 @@ defmodule World.Census do
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
-  @doc "Ask for a person of `trade` for `construction`: it gets `{:hired, ref, person}`."
+  @doc """
+  Ask for a person of `trade` for `construction`: it gets `{:hired, ref,
+  person}`. When no person can go to it now (the limit, and no free person),
+  it gets `{:queued, ref}` at once, and `{:hired, ref, person}` when a person
+  is free: a construction on the fast clock does not wait for a person that
+  only another construction can free.
+  """
   def hire(trade, construction, ref, server \\ __MODULE__),
     do: GenServer.cast(server, {:hire, trade, construction, ref})
 
@@ -58,8 +64,10 @@ defmodule World.Census do
 
   @impl true
   def handle_cast({:hire, trade, c, ref}, s) do
-    s = %{s | waiting: s.waiting ++ [{c, trade, ref, s.count}], count: s.count + 1}
-    {:noreply, serve(s)}
+    request = {c, trade, ref, s.count}
+    s = serve(%{s | waiting: s.waiting ++ [request], count: s.count + 1})
+    if request in s.waiting, do: send(c, {:queued, ref})
+    {:noreply, s}
   end
 
   def handle_cast({:release, p, c}, s) do
