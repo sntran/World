@@ -177,8 +177,8 @@ defmodule World.LabourTest do
     assert Labour.busy(a) == 0 and Labour.busy(b) == 0
 
     # A node that went away: the part builds on the next node; with no node left, here.
-    gone = spawn(fn -> :ok end)
-    Process.sleep(10)
+    {gone, ref} = spawn_monitor(fn -> :ok end)
+    assert_receive {:DOWN, ^ref, :process, ^gone, _}
     assert Labour.build(key, recipe, nodes: [{gone, 8}, {b, 2}]) == :stored
     assert {:ok, <<"glTF", _::binary>>} = Labour.build(key, recipe, nodes: [{gone, 8}])
     # A person at far fits the edge: here.

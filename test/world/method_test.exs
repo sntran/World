@@ -58,8 +58,11 @@ defmodule World.MethodTest do
     # The first statue: 8.6 m on its base.
     assert Enum.find(old.drawing["nodes"], &(&1["name"] == "survey"))["skill"]["cast_survey"]["height"] == 8.6
 
-    {:ok, a} = World.build(%{today | id: "method-today-#{System.unique_integer([:positive])}"})
-    {:ok, b} = World.build(%{old | id: "method-1974-#{System.unique_integer([:positive])}"})
+    # On the fast clock (plan 0007, D4): the log has the days of the plan, and the time of the computer
+    # takes no days of the site, also on a busy computer.
+    fast = fn job -> Map.update(job, :budget, %{"clock" => "fast"}, &Map.put(&1, "clock", "fast")) end
+    {:ok, a} = World.build(fast.(%{today | id: "method-today-#{System.unique_integer([:positive])}"}))
+    {:ok, b} = World.build(fast.(%{old | id: "method-1974-#{System.unique_integer([:positive])}"}))
     assert {:ok, ra} = World.await(a, 60_000)
     assert {:ok, rb} = World.await(b, 120_000)
     assert ra.glb == rb.glb
@@ -84,10 +87,8 @@ defmodule World.MethodTest do
     assert length(started["rough"]["path"]) == 6 and started["first_build"]["path"] == nil
     assert started["pause"]["means"] == []
 
-    # Each stage starts at its date, or later when the computer is slow:
-    # at 1,000 days in a second, the work of the computer on the figure
-    # (0.8 s) is 800 days (at one day in a second, less than one day).
-    # The days of the tasks of a stage are fitted to the days that are left.
+    # Each stage starts at its date, or at the end of the stage before it. The days of the tasks of a
+    # stage are fitted to the days that are left.
     plan = Method.stages(order("1974"))
 
     for e <- events, e.kind == "stage_started" do
@@ -114,31 +115,25 @@ defmodule World.MethodTest do
     # lightning rod goes in the middle of the pause of 17 years, and the
     # repair of 1992 makes it clean (plan 0006, D8).
     aged = for e <- events, e.kind == "aged", do: e.data
-    # The pause of 17 years: an age each year that is left of it, and one
-    # at its end. A slow computer starts the pause late, so fewer years
-    # are left, and the count comes from the days that are left.
+    # The pause of 17 years: an age each year of it, and one at its end. It starts at its date.
     long = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "pause"))
     pause = Enum.at(events, long)
+    assert_in_delta pause.data["day"], pause.data["from"], 1
     left = pause.data["to"] - max(pause.data["day"], pause.data["from"])
-    years = Enum.count(1..max(floor(left / 365), 1), &(&1 * 365 < left))
+    years = Enum.count(1..floor(left / 365), &(&1 * 365 < left))
     in_pause = for e <- Enum.drop(events, long), e.kind == "aged", do: e.data
-    assert left > 365 and abs(length(in_pause) - (years + 1)) <= 1
+    assert years >= 16 and length(in_pause) == years + 1
     assert_in_delta List.last(in_pause)["days"], left, 30
     # The new statue has no age at the change: its dirt grows in the long pause.
     dirt = for e <- in_pause, do: e["dirt"]
     assert dirt == Enum.sort(dirt)
-    # The dirt and the weeds from the years (a pause that starts late is shorter).
+    # The dirt and the weeds from the years.
     last = List.last(aged)
     assert_in_delta last["dirt"], 1 - :math.exp(-last["days"] / 365 / 8), 0.001
     assert_in_delta last["weeds"], min(last["days"] / 365 / 5, 1.0), 0.001
-    # The cable goes in the year of the middle of the pause. A pause that starts after that year (a slow
-    # computer) does not have it: the cable stays.
-    half = (pause.data["to"] - pause.data["from"]) / 2
+    # The cable goes in the year of the middle of the pause.
     lost = for(a <- aged, a["lost"] != [], do: a["lost"])
-
-    if left > half + 365,
-      do: assert(lost == [["the copper cable of the lightning rod"]]),
-      else: assert(lost in [[], [["the copper cable of the lightning rod"]]])
+    assert lost == [["the copper cable of the lightning rod"]]
 
     assert %{data: %{"parts" => ["the copper cable of the lightning rod"]}} =
              Enum.find(events, &(&1.kind == "repaired"))
@@ -171,8 +166,8 @@ defmodule World.MethodTest do
     assert "tower_crane" in means and Map.keys(Method.means()) -- means != []
 
     span = (List.last(Log.events(ra.log)).at - hd(Log.events(ra.log)).at) / Clock.day()
-    # About a year of the plan; more with the work of a slow computer.
-    assert span > 300 and World.Site.span(World.Site.schedule(today.drawing)) < 400
+    # About a year of the plan.
+    assert span > 300 and span < 400 and World.Site.span(World.Site.schedule(today.drawing)) < 400
   end
 
   test "the replay of the statue has each part that a person sees on the site, with its tasks; the model passes its checks" do

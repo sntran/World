@@ -325,16 +325,23 @@ defmodule World.SkillTest do
     {:ok, d} = Drawing.check(d, "d")
     item = fn level -> Detail.with(level, fn -> Drawing.build(d) end) end
 
+    # The starts and the ends of the tasks of the copies, in the order of the log: with four people
+    # the four copies start before one of them ends; with one person each copy ends before the next
+    # starts. (The order of the log, not the time of the wall clock, so a busy computer does not
+    # change it.)
     [one, four] =
       for workers <- [1, 4] do
         id = "repeat-#{workers}-#{System.unique_integer([:positive])}"
         {:ok, ^id} = World.build(%{id: id, item: item, drawing: d, level: :far, budget: %{"workers" => workers}})
         assert {:ok, r} = World.await(id, 30_000)
-        %{data: %{"ms" => ms}} = Enum.find(Log.events(r.log), &(&1.kind == "run_done"))
-        ms
+
+        for %{kind: kind, data: %{"task" => "b_" <> _}} <- Log.events(r.log),
+            kind in ["task_started", "task_done"],
+            do: kind
       end
 
-    assert one >= 1_600 and four < one / 2
+    assert one == List.flatten(List.duplicate(["task_started", "task_done"], 4))
+    assert four == List.duplicate("task_started", 4) ++ List.duplicate("task_done", 4)
   end
 
   test "a temporary node: in the stream, not in the model; a node to it goes to its parent; a number less one in a name",

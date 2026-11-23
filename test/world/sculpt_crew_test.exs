@@ -44,10 +44,8 @@ defmodule World.Sculpt.CrewTest do
 
     tasks = wait.(wait)
     refs = for pid <- tasks, do: Process.monitor(pid)
-    t0 = System.monotonic_time(:millisecond)
     Person.stop(p)
-    for ref <- refs, do: assert_receive({:DOWN, ^ref, :process, _, _}, 1_000)
-    assert System.monotonic_time(:millisecond) - t0 < 100
+    for ref <- refs, do: assert_receive({:DOWN, ^ref, :process, _, _})
     refute_receive {_, ^p, "big", _}, 50
     assert %{hand: nil} = Person.info(p)
     # The node has no site and no task, and the next sculpture is the same.

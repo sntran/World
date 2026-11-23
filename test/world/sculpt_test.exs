@@ -169,8 +169,16 @@ defmodule World.SculptTest do
   test "the meshes of the same edits, cells and budget come from the cache" do
     edits = stone(20)
     World.Sculpt.Cache.clear()
-    {cold, first} = :timer.tc(fn -> Sculpt.model(edits, step: 0.04, budget: 500) end)
-    {warm, again} = :timer.tc(fn -> Sculpt.model(edits, step: 0.04, budget: 500) end)
+    # (The work of each call, in the reductions of this process: the same on a busy computer.)
+    work = fn f ->
+      {:reductions, r0} = Process.info(self(), :reductions)
+      result = f.()
+      {:reductions, r1} = Process.info(self(), :reductions)
+      {r1 - r0, result}
+    end
+
+    {cold, first} = work.(fn -> Sculpt.model(edits, step: 0.04, budget: 500) end)
+    {warm, again} = work.(fn -> Sculpt.model(edits, step: 0.04, budget: 500) end)
     assert again == first and warm * 10 < cold
     assert Sculpt.model(edits, step: 0.04, budget: 500, cache: false) == first
     assert Sculpt.model(edits, step: 0.04, budget: 400) != first

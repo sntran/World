@@ -78,8 +78,8 @@ defmodule World.CrewTest do
 
     assert_receive {:DOWN, ^ref, :process, ^raiser, {%ArgumentError{message: "no"}, _}}, 2_000
     tasks = for _ <- 1..3, do: receive(do: ({:task, pid} -> pid))
-    Process.sleep(50)
-    refute Enum.any?(tasks, &Process.alive?/1)
+    refs = for pid <- tasks, do: Process.monitor(pid)
+    for ref <- refs, do: assert_receive({:DOWN, ^ref, :process, _, _})
 
     # A site with long jobs stops: its tasks stop at once.
     site =

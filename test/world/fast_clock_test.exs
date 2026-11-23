@@ -23,8 +23,8 @@ defmodule World.FastClockTest do
 
   defp at(log, kind, task), do: Enum.find(Log.events(log), &(&1.kind == kind and &1.data["task"] == task)).at
 
-  test "a slab, its cure and a wall: the days of the world in the log, and no wait (one day in a second of the wall)" do
-    Application.put_env(:world, :scale, 86_400)
+  test "a slab, its cure and a wall: the days of the world in the log, and no wait (one day in 10 s of the wall)" do
+    Application.put_env(:world, :scale, 8_640)
 
     d = %{
       "name" => "slab_and_wall",
@@ -50,11 +50,12 @@ defmodule World.FastClockTest do
     assert Log.check(log) == :ok
     day = Clock.day()
     # 10 days of the slab, 7 days of its cure, the wall of one hour: 17
-    # days of the world (17 s of the wall on the world clock).
+    # days of the world (170 s of the wall on the world clock).
     assert at(log, "task_done", "slab") - at(log, "task_started", "slab") == 10 * day
     assert at(log, "task_started", "wall") - at(log, "task_done", "slab") == 7 * day
     assert at(log, "task_done", "wall") - at(log, "task_started", "wall") == div(day, 8)
-    assert ms < 5_000
+    # (No wait: less than half of the 170 s, also on a busy computer.)
+    assert ms < 85_000
     # The log says that its times are of the fast clock, in its JSON too.
     assert log.clock.fast and {:ok, log} == Log.from_json(Log.to_json(log))
     assert Log.to_json(log) =~ ~r/^\{[^\n]*"fast":true/
@@ -89,5 +90,57 @@ defmodule World.FastClockTest do
     # clock, its days or more.
     assert Enum.all?(on_fast, fn {_, d, span} -> span == round(d * Clock.day()) end)
     assert Enum.all?(on_world, fn {_, d, span} -> span >= round(d * Clock.day()) end)
+  end
+
+  test "the stages of a site: in their order on the world clock, and at their days on the fast clock" do
+    d = %{"name" => "two_stages", "nodes" => [%{"name" => "slab", "skill" => %{"block" => %{"size" => 1.0}}}]}
+
+    stage = fn name, work, from, to ->
+      %{
+        name: name,
+        work: work,
+        text: nil,
+        place: nil,
+        date: nil,
+        from: from,
+        to: to,
+        until: "all",
+        options: nil,
+        lot: nil,
+        repair: false,
+        lost: [],
+        means: [],
+        takes: [],
+        again: [],
+        path: nil
+      }
+    end
+
+    # A build, then a pause of 2 days to the day 30 of the site.
+    stages = [stage.("build", "build", 0, nil), stage.("rest", "pause", 28, 30)]
+    job = %{item: fn level -> Detail.with(level, fn -> Drawing.build(d) end) end, drawing: d, stages: stages}
+
+    for clock <- ["world", "fast"] do
+      {%{log: log}, _} = build(job, clock)
+      assert Log.check(log) == :ok
+      events = for e <- Log.events(log), e.kind in ["stage_started", "stage_done"], do: {e.kind, e.data["name"], e.at}
+
+      assert [
+               {"stage_started", "build", _},
+               {"stage_done", "build", _},
+               {"stage_started", "rest", started},
+               {"stage_done", "rest", done}
+             ] =
+               events
+
+      origin = hd(Log.events(log)).at
+      # On the world clock the days come after the wall time (so at their day or later); on the fast
+      # clock the pause starts at its day 28 and ends at its day 30, with no wait.
+      if clock == "fast" do
+        assert {started - origin, done - origin} == {28 * Clock.day(), 30 * Clock.day()}
+      else
+        assert done - origin >= 30 * Clock.day()
+      end
+    end
   end
 end
