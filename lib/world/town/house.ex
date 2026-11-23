@@ -82,6 +82,13 @@ defmodule World.Town.House do
   `roof` (`terrace`, `tiles` or `steel`), `age` (0 to 1) and `flip`
   (true: the door of the balcony is at the other side). A key of the
   request that has a value keeps it.
+
+  `bake` (none by default: the images of the rules at each level) is an
+  object of `near`, `mid` and `far`, each the side of the image of the
+  front at that level (64 to 4096); the body and the roof have the side
+  of the rules, at most the side of the front. A level that is not in it
+  has no image: its parts have the occlusion and the finish at each point
+  (`World.Sculpt.Shade`).
   """
   def request(opts \\ %{}) do
     unless is_map(opts), do: raise(ArgumentError, "the request of a house is a map")
@@ -130,14 +137,34 @@ defmodule World.Town.House do
       "flip" => unit(seed, :flip) < 0.5
     }
 
-    r = Map.merge(choices, Map.take(opts, Map.keys(choices)))
+    # (`bake` is in the request only when the order gives it: the full order of a house with the
+    # images of the rules stays the same.)
+    r = Map.merge(choices, Map.take(opts, ["bake" | Map.keys(choices)]))
     number = fn key, lo, hi -> is_number(r[key]) and r[key] >= lo and r[key] <= hi end
     unless is_integer(seed), do: raise(ArgumentError, "the seed of a house is a whole number")
     unless number.("width", 3, 8), do: raise(ArgumentError, "the width of a house is from 3 m to 8 m")
     unless number.("depth", 6, 30), do: raise(ArgumentError, "the depth of a house is from 6 m to 30 m")
     unless number.("road", 1, 100), do: raise(ArgumentError, "the width of a road is from 1 m to 100 m")
+
+    unless bake?(r["bake"]),
+      do:
+        raise(
+          ArgumentError,
+          "the bake of a house is an object of near, mid and far, each 64, 128, 256, 512, 1024, 2048 or 4096"
+        )
+
     %{r | "width" => r["width"] * 1.0, "depth" => r["depth"] * 1.0, "road" => r["road"] * 1.0}
   end
+
+  defp bake?(nil), do: true
+
+  defp bake?(bake) when is_map(bake),
+    do:
+      Enum.all?(bake, fn {level, side} ->
+        level in ~w(near mid far) and side in [64, 128, 256, 512, 1024, 2048, 4096]
+      end)
+
+  defp bake?(_bake), do: false
 
   @doc "How far a balcony goes out over the sidewalk, by the width of the road (TCVN 9411:2012, table 2)."
   def reach(road) when road < 5, do: 0.0
@@ -184,7 +211,7 @@ defmodule World.Town.House do
             "edits" => Enum.flat_map(edits, &place(&1, x, role)),
             "cells" => levels.(cells),
             "budget" => levels.(budget),
-            "bake" => levels.(bake)
+            "bake" => sides(levels.(bake), r["bake"], i == 1)
           })
 
         data =
@@ -212,6 +239,13 @@ defmodule World.Town.House do
       "nodes" => nodes
     }
   end
+
+  # The sides of the images of a part at each level: the rules, or the
+  # levels of the request (the side of the front; another part has its
+  # own side, at most that).
+  defp sides(rules, nil, _front?), do: rules
+  defp sides(rules, bake, true), do: Map.take(bake, Map.keys(rules))
+  defp sides(rules, bake, false), do: for({level, side} <- bake, into: %{}, do: {level, min(side, rules[level])})
 
   defp sources(r) do
     [

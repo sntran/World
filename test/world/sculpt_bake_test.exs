@@ -556,7 +556,10 @@ defmodule World.Sculpt.BakeTest do
     # The horn is 8 cm high and 4 cm wide: less than one cell of the ball, and it has its shape.
     assert_in_delta top, 0.37, 0.003
     assert length(horn.faces) in 50..200 and length(ball.faces) <= 400
-    assert {32, 32, 200} in horn.colors and {200, 32, 32} in ball.colors
+    # (Each point has how open it is in its alpha: plan 0020, step 2.)
+    assert Enum.any?(horn.colors, &match?({32, 32, 200, _}, &1)) and
+             Enum.any?(ball.colors, &match?({200, 32, 32, _}, &1))
+
     # At far the sculpture has no detail.
     assert [_ball] = shapes.(data, :far)
 

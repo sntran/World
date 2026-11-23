@@ -20,8 +20,10 @@ defmodule World.RuleBlueprintsTest do
     for {name, module, full, request} <- @rules do
       assert name in Blueprints.names()
       {:ok, blueprint} = Blueprints.fetch(name)
-      # (A building takes its size too: its full request has the outline of its plan.)
-      keys = Map.keys(apply(module, full, [%{}])) ++ if(name == "building", do: ["size"], else: [])
+      # (A building takes its size too: its full request has the outline of its plan. A house takes
+      # bake: its full request has it only when the order gives it.)
+      more = %{"building" => ["size"], "street_house" => ["bake"]}
+      keys = Map.keys(apply(module, full, [%{}])) ++ Map.get(more, name, [])
       assert Enum.map(blueprint.options, & &1.name) == Enum.sort(keys)
 
       assert {:ok, order} = Orders.check(%{"blueprint" => name, "options" => request})

@@ -30,6 +30,7 @@
   <select id="level"><option value="">near</option><option value=".mid">mid</option><option value=".far">far</option></select>
   <p id="info"></p>
   <label><input type="checkbox" id="fur"> Fur (shells from <code>_FUR</code> and the UVs)</label>
+  <label><input type="checkbox" id="night"> Night (no sun: the glow shows)</label>
   <label for="animation">Animation</label>
   <select id="animation"><option value="">none</option></select>
   <div id="joints"></div>
@@ -79,6 +80,19 @@ levelSelect.value = params.get('level') ?? '';
 const furBox = document.getElementById('fur');
 furBox.checked = params.get('fur') === '1';
 modelSelect.onchange = levelSelect.onchange = furBox.onchange = () => load(true);
+// Day or night (plan 0020, step 2): the light of the night shows the glow of a model.
+const nightBox = document.getElementById('night');
+const day = scene.background.clone();
+const dark = new THREE.Color(0x0b0e16);
+function lights() {
+  stage.night(nightBox.checked);
+  scene.background = nightBox.checked ? dark : day;
+  grid.visible = !nightBox.checked;
+  drawn = false;
+}
+nightBox.checked = params.get('night') === '1';
+nightBox.onchange = lights;
+lights();
 
 function resize() {
   const { clientWidth: w, clientHeight: h } = canvas.parentElement;

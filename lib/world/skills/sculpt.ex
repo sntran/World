@@ -92,7 +92,7 @@ defmodule World.Skills.Sculpt do
       optional(data, "bake", path, &bake(&1, &2, data)) ++
       optional(data, "mipmaps", path, &flag/2) ++
       optional(data, "look", path, &choice(&1, &2, ~w(flat real))) ++
-      optional(data, "occlusion", path, &flag/2) ++
+      optional(data, "occlusion", path, &choice(&1, &2, [true, false, "alpha", "color"])) ++
       optional(data, "dirt", path, &number(&1, &2, 0, 1)) ++
       optional(data, "wear", path, &number(&1, &2, 0, 1)) ++
       optional(data, "strands", path, &strands(&1, &2, groups)) ++
@@ -359,7 +359,7 @@ defmodule World.Skills.Sculpt do
               {World.Sculpt.model(from.(step), step: step, budget: budget, within: tile.box), step}
 
             true ->
-              in_budget(&World.Sculpt.model(from.(&1), step: &1, budget: budget), step, budget)
+              in_budget(&World.Sculpt.model(from.(&1), step: &1, budget: budget), step, budget, lit(edits))
           end
 
         {if(flat?, do: Enum.map(meshes, &facets(&1, edits)), else: meshes), edits, step}
@@ -368,9 +368,16 @@ defmodule World.Skills.Sculpt do
     # (The images of the maps become PNG files in their own processes,
     # while this one makes the part or the figure.)
     # (A sculpture with no surface has no maps: a crop or a cut can take all of it away.)
-    # (The look from the shape: the occlusion unless the data says no, the dirt and the wear.)
+    # (The look from the shape: the occlusion unless the data says no, the dirt and the wear. At a
+    # level with a budget and no maps, the look of each point, with the occlusion in the alpha of its
+    # color or in its color: plan 0020, D5.)
+    occlusion = Map.get(data, "occlusion", true)
+
     look = %{
-      occlusion: Map.get(data, "occlusion", true),
+      occlusion: occlusion != false,
+      into: if(occlusion == "color", do: :color, else: :alpha),
+      # (A sculpture with bones is a figure: its colors go through the rig, with no alpha and no finish.)
+      points: not flat? and data["bones"] == nil and get_in(data, ["budget", Atom.to_string(level)]) != nil,
       mipmaps: data["mipmaps"] == true,
       dirt: Map.get(data, "dirt", 0.0) / 1,
       wear: Map.get(data, "wear", 0.0) / 1,
@@ -401,13 +408,43 @@ defmodule World.Skills.Sculpt do
   # The meshes of a sculpture in its budget, and their cells: the
   # collapse stops above the budget when no collapse keeps the mesh closed
   # (a thin ring, a small part of many materials). Then the meshes again,
-  # with cells 1.5 times as large, at most #{@tries} times.
-  defp in_budget(model, step, budget, n \\ 0) do
+  # with cells 1.5 times as large, at most #{@tries} times. When the
+  # larger cells lose each point of the lights of the edits (a lamp in a
+  # recess that the cells close), four cells between the two are tried,
+  # and the meshes in the budget with the most points of light are taken
+  # (plan 0020, D7).
+  defp in_budget(model, step, budget, lit, n \\ 0, over \\ nil) do
     meshes = model.(step)
 
-    if budget && n < @tries && meshes |> Enum.map(&length(&1.faces)) |> Enum.sum() > budget,
-      do: in_budget(model, 1.5 * step, budget, n + 1),
-      else: {meshes, step}
+    cond do
+      budget && n < @tries && count(meshes) > budget -> in_budget(model, 1.5 * step, budget, lit, n + 1, step)
+      over && lit && lit.(meshes) == 0 -> between(model, over, step, budget, lit, {meshes, step})
+      true -> {meshes, step}
+    end
+  end
+
+  defp between(model, over, step, budget, lit, found) do
+    tries =
+      for k <- 1..4,
+          cells = over * :math.pow(step / over, k / 5),
+          meshes = model.(cells),
+          count(meshes) <= budget,
+          points = lit.(meshes),
+          points > 0,
+          do: {points, -cells, meshes}
+
+    case Enum.max(tries, fn -> nil end) do
+      nil -> found
+      {_, cells, meshes} -> {meshes, -cells}
+    end
+  end
+
+  defp count(meshes), do: meshes |> Enum.map(&length(&1.faces)) |> Enum.sum()
+
+  # The count of the points of the meshes where an edit glows, or nil when no edit glows.
+  defp lit(edits) do
+    if Enum.any?(edits, &((&1.glow || 0.0) > 0.0)),
+      do: fn meshes -> Enum.count(for(m <- meshes, p <- m.points, do: p), &(elem(SDF.finish(edits, &1), 2) > 0.0)) end
   end
 
   # A mesh for the flat look (`"look": "flat"`; plan 0012, D5): each face
@@ -437,6 +474,10 @@ defmodule World.Skills.Sculpt do
     }
   end
 
+  # The finish of each role of the palette, for an edit with no finish of its own.
+  defp finishes,
+    do: Map.new(GLB.palette(), fn {role, spec} -> {GLB.role(role), {spec["roughness"] / 1, spec["metalness"] / 1}} end)
+
   # The side of the maps of a tile: at most the texels on each m² of the
   # maps of all of the sculpture (a power of 2, from 64 to #{512}: the bake
   # of 1,024 × 1,024 texels takes about 150 MB, more than the edge has).
@@ -451,12 +492,17 @@ defmodule World.Skills.Sculpt do
   # for the materials of the model (`World.Drawing.assemble/3`). The
   # check makes sure that the image has a place for the triangles of the
   # budget.
+  defp maps(built, nil, %{points: true} = look) do
+    defaults = finishes()
+
+    {for({ms, edits, step} <- built, m <- World.Sculpt.Shade.meshes(ms, edits, step, defaults, look), do: m),
+     fn -> %{} end}
+  end
+
   defp maps(built, nil, _look), do: {Enum.flat_map(built, &elem(&1, 0)), fn -> %{} end}
 
   defp maps(built, side, look) do
-    # The finish of each role of the palette, for an edit with no finish of its own.
-    defaults =
-      Map.new(GLB.palette(), fn {role, spec} -> {GLB.role(role), {spec["roughness"] / 1, spec["metalness"] / 1}} end)
+    defaults = finishes()
 
     # (The bake in a process of its own, which sweeps its garbage often: a
     # bake makes much garbage, and only its meshes and images come back.)

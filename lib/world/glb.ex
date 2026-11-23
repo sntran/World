@@ -245,6 +245,14 @@ defmodule World.GLB do
           with_attr(attrs, "COLOR_0", floats(buf, linear, "VEC3", 34962, false))
       end
 
+    # The finish of each point (plan 0020, D6): the roughness, the metal
+    # and the glow, each a byte from 0 to 255 for 0 to 1 (an attribute of
+    # the application: its name starts with _). Each element of an
+    # attribute starts at a multiple of 4 bytes: three bytes and one byte
+    # of nothing.
+    {attrs, buf} =
+      if p.finish, do: with_attr(attrs, "_FINISH", finish(buf, p.finish)), else: {attrs, buf}
+
     # The length of the fur of each point (m), for an app that draws fur:
     # an attribute of the application (its name starts with _).
     {attrs, buf} =
@@ -689,6 +697,24 @@ defmodule World.GLB do
       "min" => [Enum.min(ts)],
       "max" => [Enum.max(ts)]
     })
+  end
+
+  defp finish(buf, vals) do
+    data = for {r, m, g} <- vals, into: <<>>, do: <<r, m, g, 0>>
+    acc = %{"componentType" => 5121, "normalized" => true, "count" => length(vals), "type" => "VEC3"}
+    view = length(buf.views)
+    bin = pad(buf.bin, <<0>>)
+
+    view_spec = %{
+      "buffer" => 0,
+      "byteOffset" => byte_size(bin),
+      "byteLength" => byte_size(data),
+      "byteStride" => 4,
+      "target" => 34962
+    }
+
+    buf = %{buf | bin: bin <> data, views: [view_spec | buf.views]}
+    {length(buf.accessors), %{buf | accessors: [Map.put(acc, "bufferView", view) | buf.accessors]}}
   end
 
   defp ushorts(buf, vals) do
