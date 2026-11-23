@@ -104,9 +104,10 @@ defmodule World.Construction do
       |> Map.put_new(:geo, nil)
 
     budget = job.budget
-    # The fast clock (plan 0007, D4), for a site with no stages and no
-    # trucks: their dates and their drives are on the world clock.
-    fast = budget["clock"] == "fast" and Map.get(job, :stages, []) == [] and job.haul == nil
+    # The fast clock (plan 0007, D4), for a site with no trucks: their
+    # drives are on the world clock. The stages of a site go to their days
+    # on it at once (`later/3`).
+    fast = budget["clock"] == "fast" and job.haul == nil
     clock = %{Clock.world() | fast: fast}
     Process.set_label({:construction, job.id})
     urgent = :erlang.alias([:priority])
@@ -219,7 +220,8 @@ defmodule World.Construction do
             last_stage: nil,
             allowed: :all,
             fit: 1.0,
-            origin: Clock.at(s.log.clock),
+            # (On the fast clock, the time of the construction: the work of the drafter takes no days.)
+            origin: if(s.fast, do: s.at, else: Clock.at(s.log.clock)),
             age: 0.0,
             pause_from: 0.0,
             workers_limit: Map.get(s.job.budget, "workers", Map.get(s.job, :workers, @workers))
@@ -446,6 +448,9 @@ defmodule World.Construction do
 
   # The day of the next stage of the site, and the end of a pause.
   def handle_info(:stage, s), do: s |> next_stage() |> assign() |> finish()
+
+  # On the fast clock, a message of a stage at its time of the world (`later/3`).
+  def handle_info({:fast, at, message}, s), do: handle_info(message, %{s | at: max(s.at, at)})
 
   def handle_info(:pause_over, s) do
     days = day(s) - s.pause_from
@@ -1066,9 +1071,9 @@ defmodule World.Construction do
 
         for y <- 1..max(floor(days / 365), 1),
             y * 365 < days,
-            do: Process.send_after(self(), {:age, y * 365.0}, wall(s, y * 365.0))
+            do: later(s, {:age, y * 365.0}, day(s) + y * 365.0)
 
-        Process.send_after(self(), :pause_over, wall(s, max(st.to - day(s), 0)))
+        later(s, :pause_over, st.to)
         record(%{s | pause_from: day(s)}, "stage_started", nil, stage_data(s, st))
 
       "change" ->
@@ -1108,7 +1113,7 @@ defmodule World.Construction do
     s = record(s, "stage_done", nil, %{"name" => st.name, "work" => st.work})
 
     case s.stages do
-      [next | _] -> Process.send_after(self(), :stage, wall(s, max(next.from - day(s), 0)))
+      [next | _] -> later(s, :stage, next.from)
       [] -> :ok
     end
 
@@ -1155,9 +1160,18 @@ defmodule World.Construction do
     if st.lot, do: Map.put(data, "lot", st.lot), else: data
   end
 
-  # The day of the site now, from the start of the construction.
+  # The day of the site now, from the start of the construction (on the fast clock, from its time).
+  defp day(%{fast: true} = s), do: (s.at - s.origin) / Clock.day()
   defp day(s), do: (Clock.at(s.log.clock) - s.origin) / Clock.day()
-  defp wall(s, days), do: Clock.to_wall(s.log.clock, round(days * Clock.day()))
+
+  # A message at a day of the site (or now, when that day is past): on the world clock after the
+  # days that are left, and on the fast clock at once, with the time of that day (plan 0007, D4).
+  # So the time of the computer takes no days of the site on the fast clock.
+  defp later(%{fast: true} = s, message, at_day),
+    do: send(self(), {:fast, s.origin + round(max(at_day, day(s)) * Clock.day()), message})
+
+  defp later(s, message, at_day),
+    do: Process.send_after(self(), message, Clock.to_wall(s.log.clock, round(max(at_day - day(s), 0) * Clock.day())))
 
   # A pause: the built model gets old with the days (plan 0006, D8): each
   # year of the pause and at its end. The concrete gets darker and weeds

@@ -85,8 +85,7 @@ defmodule World.Log.ServerTest do
     # 60 events: a batch of 50 at once, and 10 after the time of a batch.
     for n <- 1..60, do: Server.publish(event("kept", "requested", n), s)
     assert Server.last(s) == 110
-    Process.sleep(400)
-    assert {:ok, 110} = Store.last()
+    assert Enum.find(1..2000, fn _ -> Store.last() == {:ok, 110} or (Process.sleep(5) && false) end)
 
     stop_supervised!(s)
     again = server([])

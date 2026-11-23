@@ -34,10 +34,10 @@ defmodule World.PersonTest do
     p = person()
     Person.work(p, "wall", fn -> Process.sleep(:infinity) end)
     assert %{hand: {hand, _, _, "wall"}} = Person.info(p)
-    t0 = System.monotonic_time(:millisecond)
+    ref = Process.monitor(hand)
     Person.stop(p)
     assert %{hand: nil} = Person.info(p)
-    assert System.monotonic_time(:millisecond) - t0 < 100 and not Process.alive?(hand)
+    assert_receive {:DOWN, ^ref, :process, ^hand, _}
     refute_receive {_, ^p, "wall", _}, 50
     # A stop with no task does nothing; a stop of a person that is gone too.
     Person.stop(p)
@@ -54,11 +54,11 @@ defmodule World.PersonTest do
     {:ok, ^id} = World.build(%{id: id, item: item, budget: %{"workers" => 4}})
     assert_receive {:world, %{"kind" => "task_started", "who" => who}}, 10_000
     p = who |> String.to_charlist() |> :erlang.list_to_pid()
-    assert %{hand: {_, _, _, _}} = Person.info(p)
-    t0 = System.monotonic_time(:millisecond)
+    assert %{hand: {hand, _, _, _}} = Person.info(p)
+    ref = Process.monitor(hand)
     :ok = World.cancel(id)
-    assert {:error, {:stopped, "cancelled"}} = World.await(id, 5_000)
+    assert {:error, {:stopped, "cancelled"}} = World.await(id, 10_000)
     assert %{hand: nil} = Person.info(p)
-    assert System.monotonic_time(:millisecond) - t0 < 100
+    assert_receive {:DOWN, ^ref, :process, ^hand, _}
   end
 end

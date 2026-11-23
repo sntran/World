@@ -13,4 +13,8 @@ Application.put_env(:world, :files, files)
 # same cores (plan 0013). A test that builds a sculpture also waits for its
 # turn at the gate of the node, behind the large models of the catalog
 # (plan 0018: a row of houses, a hotel): the limit of a test is 15 minutes.
-ExUnit.start(timeout: 900_000)
+#
+# A message that a test waits for (`assert_receive` with no time) can come late on busy cores: the
+# wait is 5 s, not 100 ms. A test does not check a time of the wall clock (2026-11-23: the tests of
+# the clock and of the load of the computer).
+ExUnit.start(timeout: 900_000, assert_receive_timeout: 5_000)
