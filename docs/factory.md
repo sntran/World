@@ -2082,9 +2082,67 @@ model at far. The order is good, as a large model, and its parts list
 and its parts give the errors of its build. An order with a pose still
 gets the error of the memory: the check of its joints needs the model.
 
-**The next measure:** the 6 shifts of 2026-11-22 are used. After
-00:00 UTC I send the same three orders again, with #83 and #84, and I
-write the result here.
+**After #85, with no shift** (`main` at c687282; the 6 shifts of
+2026-11-22 were used): the same three jobs from 20:05:00 UTC (run
+45063883775 of Vũng Tàu). The edge did its work for the three orders,
+and the parts waited in the queue:
+
+| Order | Order (s) | Parts list (s) | Last part (s) |
+|---|---|---|---|
+| The edit of Hải Âu (7 parts at mid) | 4.0 | 35.9 | none (no shift) |
+| A village house (6 parts) | 38.4 | 60.9 | none (no shift) |
+| A fridge (1 part) | 24.1 | 46.4 | none (no shift) |
+
+- Each of the 1,153 looks at the census from 20:05:00 to 20:50:30 got
+  200, and the check of the village house passed (#84).
+- 6 new VMs, each with the cause `idle` (no request failed):
+  - 20:11:21 and 20:16:53: the VM was at rest, a few minutes after its
+    size had gone to 81.8 MB (the checks and the parts lists of the
+    three orders) and to 70.8 MB (a build for another caller);
+  - 20:20:46: a construction of a file for another caller went over the
+    guard (82.1 MB in use), because the guard did not stop it (#89);
+  - 20:29:08, 20:37:16 and 20:46:53: the VM was at rest at 30.7 MB of
+    size, about each 8 to 9 minutes, while the jobs asked for their
+    parts each 15 s. I do not see their cause. After the jobs ended
+    (20:50), the next VM lived 13.5 minutes, until a deploy.
+- The changes after this measure: a person of a group goes to a shift
+  at each level (#88), and the guard stops the construction of a file
+  when it stops its build (#89).
+
+**After #89, with a shift** (`main` at 81c46f3): the same three jobs
+from 00:10:00 UTC on 2026-11-23 (run 45086665981 of Vũng Tàu), with a
+look at the census each 2 s as another caller:
+
+| Order | Order (s) | Parts list (s) | Last part (s) |
+|---|---|---|---|
+| The edit of Hải Âu (7 parts at mid) | 3.4 | 43.8 | 483.1 |
+| A village house (6 parts) | 47.4 | 68.9 | 445.7 |
+| A fridge (1 part) | 33.2 | 53.9 | 388.7 |
+
+- One shift (its start at 00:10:45) built the parts that do not fit the
+  edge. All 14 parts came; two parts of Hải Âu were in the store from a
+  measure before (44 s).
+- **No 503 for another caller:** each of the 212 looks at the census
+  from 00:10:00 to 00:18:30 got 200 (and each of the 615 looks from
+  00:05:07 to 00:29:30).
+- **1 new VM**, at 00:15:13, with the cause `idle` (no request failed),
+  and no end with the cause `memory`. The checks and the parts lists of
+  the three orders took the size from 30.7 MB to 81.5 MB by 00:10:32
+  (59.3 MB in use at most at a look); then the VM was at rest, and it
+  ended 4.5 minutes later.
+- The measures before: 15 new VMs after #75, 8 after #76, 13 after #77,
+  2 after #82.
+
+**Where this leaves the goal.** The goal (no new VM) is not met yet. The
+cause that I see is the work of the edge for the orders themselves: the
+check of a model with sculptures (its build at far) and the parts list
+of a large sculpture (the estimate of its tiles) take the size of the
+memory of WebAssembly to 70 to 83 MB, also when the memory in use stays
+under the guard, and the size never gets smaller. A VM at that size
+ended a few minutes later at rest, four times in these measures. The
+next change that I see: the parts list of a large sculpture, and the
+build at far of the check of a model with maps, go to a shift for a
+project, as its parts do.
 
 ### The guard and the memory of WebAssembly
 
