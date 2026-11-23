@@ -115,10 +115,15 @@ defmodule World.MethodTest do
     # lightning rod goes in the middle of the pause of 17 years, and the
     # repair of 1992 makes it clean (plan 0006, D8).
     aged = for e <- events, e.kind == "aged", do: e.data
-    # The pause of 17 years: an age each year of it, and one at its end. It starts at its date.
+    # The pause of 17 years: an age each year of it, and one at its end. It starts at its date, or at
+    # the end of the stage before it when that stage is late. (On the fast clock the hire of a person
+    # takes time of the computer, and the site goes on meanwhile: the end of a stage of work changes
+    # by about a day from one run to the next.)
     long = Enum.find_index(events, &(&1.kind == "stage_started" and &1.data["name"] == "pause"))
     pause = Enum.at(events, long)
-    assert_in_delta pause.data["day"], pause.data["from"], 1
+    before = events |> Enum.take(long) |> Enum.filter(&(&1.kind == "stage_done")) |> List.last()
+    assert before.data["name"] == "rough"
+    assert_in_delta pause.data["day"], max(pause.data["from"], day.(before)), 0.001
     left = pause.data["to"] - max(pause.data["day"], pause.data["from"])
     years = Enum.count(1..floor(left / 365), &(&1 * 365 < left))
     in_pause = for e <- Enum.drop(events, long), e.kind == "aged", do: e.data
