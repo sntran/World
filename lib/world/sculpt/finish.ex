@@ -113,8 +113,9 @@ defmodule World.Sculpt.Finish do
   @doc """
   Each point on the surface, with its normal and its color (nil with no
   `colors?`): `[{point, normal, color}]`, in the order of the points.
+  `sizes` is the side of the square of each point (`sizes/2`), or nil.
   """
-  def points(points, lists, edits, step, limit, colors?, sizes \\ nil),
+  def points(points, lists, edits, step, limit, colors?, sizes),
     do: each(points, lists, edits, step, &point(&1, &3, &4, step, limit, colors? && {size(sizes, &2)}))
 
   defp size(nil, _i), do: nil

@@ -202,8 +202,6 @@ defmodule World.Sculpt.Texture do
     if errors == [], do: rib(name, Map.merge(@made[name], data), path), else: errors
   end
 
-  def check(_name, _data, _path), do: []
-
   defp word("windows", "pane", v, path), do: pair(v, path, 0.05, 50)
 
   defp word("windows", "frame", v, path) when is_number(v), do: number(v, path, 0.0, 50)

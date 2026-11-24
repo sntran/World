@@ -795,29 +795,30 @@ defmodule World.Sculpt.Surface do
   end
 
   # The color of the edits of a brick at a point, in the same way.
-  defp color(%{eighths: eighths, at: at}, _edits, limit, step) do
-    corner = Sculpt.corner(at, step)
-
-    fn p -> SDF.color(elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))), p, limit) end
+  defp color(brick, edits, limit, step) do
+    list = lists(brick, edits, step)
+    fn p -> SDF.color(list.(p), p, limit) end
   end
-
-  defp color(_brick, edits, limit, _step), do: &SDF.color(edits, &1, limit)
 
   # The finish of the edits of a brick at a point (the finish of their own: no finish of a role).
-  defp finish(%{eighths: eighths, at: at}, _edits, step) do
-    corner = Sculpt.corner(at, step)
-    fn p -> SDF.finish(elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))), p) end
+  defp finish(brick, edits, step) do
+    list = lists(brick, edits, step)
+    fn p -> SDF.finish(list.(p), p) end
   end
-
-  defp finish(_brick, edits, _step), do: &SDF.finish(edits, &1)
 
   # The glow of the edits alone of a brick at a point (no surface of a made thing).
-  defp light(%{eighths: eighths, at: at}, _edits, step) do
-    corner = Sculpt.corner(at, step)
-    fn p -> SDF.light(elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))), p) end
+  defp light(brick, edits, step) do
+    list = lists(brick, edits, step)
+    fn p -> SDF.light(list.(p), p) end
   end
 
-  defp light(_brick, edits, _step), do: &SDF.light(edits, &1)
+  # The edits of a brick at a point: the short list of its eighth, or all the edits.
+  defp lists(%{eighths: eighths, at: at}, _edits, step) do
+    corner = Sculpt.corner(at, step)
+    fn p -> elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))) end
+  end
+
+  defp lists(_brick, edits, _step), do: fn _p -> edits end
 
   # The faces of each piece of the surface (faces joined by their points)
   # whose box is at least `small` m across: a smaller piece is the noise of
