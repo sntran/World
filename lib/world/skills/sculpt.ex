@@ -340,7 +340,8 @@ defmodule World.Skills.Sculpt do
         # With maps, the mesh has no relief smaller than its cells: the maps have it. With no maps, the
         # cut keeps the borders of the finish and of the glow (plan 0020, D7); with maps, the maps have
         # them, and the cut stays as it was.
-        from = fn step -> if side, do: SDF.coarse(edits, step), else: edits end
+        # (With no maps, a surface of a made thing gives its look to the points: plan 0020, D11.)
+        from = fn step -> if side, do: SDF.coarse(edits, step), else: SDF.on_points(edits, step) end
         pins = side == nil
 
         {meshes, step} =
@@ -371,6 +372,7 @@ defmodule World.Skills.Sculpt do
               )
           end
 
+        edits = if side, do: edits, else: SDF.on_points(edits, step)
         {if(flat?, do: Enum.map(meshes, &facets(&1, edits)), else: meshes), edits, step}
       end
 
@@ -462,7 +464,7 @@ defmodule World.Skills.Sculpt do
   # and the model needs no image.
   defp facets(%World.Mesh{points: points, faces: faces} = mesh, edits) do
     at = List.to_tuple(points)
-    colors? = Enum.any?(edits, & &1.color)
+    colors? = Enum.any?(edits, & &1.color) or SDF.made?(edits)
     corners = for [a, b, c] <- faces, do: {elem(at, a), elem(at, b), elem(at, c)}
 
     colors =
@@ -743,7 +745,7 @@ defmodule World.Skills.Sculpt do
       roughness: e["roughness"] || elem(Map.get(@finishes, e["finish"], {nil, nil}), 0),
       metal: e["metal"] || elem(Map.get(@finishes, e["finish"], {nil, nil}), 1),
       glow: e["glow"],
-      surface: surface(e["surface"])
+      surface: surface(e["surface"], @atoms[e["shape"]], size(e["shape"], e["size"]))
     }
 
     for copy <- copies(e), do: copy.(spec)
@@ -752,12 +754,24 @@ defmodule World.Skills.Sculpt do
   defp to_edit(s), do: SDF.edit(s.shape, s.size, Keyword.new(Map.drop(s, [:shape, :size])))
 
   # The surface of an edit: the name of a kind (with the scale of the
-  # kind), or a kind with a scale (m).
-  defp surface(nil), do: nil
-  defp surface(name) when is_binary(name), do: Texture.kind(name)
+  # kind), or a kind with a scale (m). A kind of a made thing has its
+  # data, and the panes of `windows` fit the faces of a box.
+  defp surface(nil, _shape, _size), do: nil
+  defp surface(name, _shape, _size) when is_binary(name), do: Texture.kind(name)
 
-  defp surface(%{"kind" => name} = s),
-    do: {elem(Texture.kind(name), 0), Map.get(s, "scale", elem(Texture.kind(name), 1)) / 1}
+  defp surface(%{"kind" => name} = s, shape, size) do
+    {kind, scale} = Texture.kind(name)
+    scale = Map.get(s, "scale", scale) / 1
+
+    case kind do
+      {_, _} ->
+        box = if shape in [:box, :round_box], do: {elem(size, 0) / scale, elem(size, 1) / scale, elem(size, 2) / scale}
+        {Texture.made(name, s, box), scale}
+
+      kind ->
+        {kind, scale}
+    end
+  end
 
   # The frame of an edit: the axes of the sculpture by default, z up and
   # y to the front (z up when the axis is along y).
@@ -1105,11 +1119,13 @@ defmodule World.Skills.Sculpt do
 
   defp surface(name, path) when is_binary(name), do: choice(name, path, Texture.kinds())
 
-  defp surface(%{"kind" => name} = s, path) when is_binary(name),
-    do:
-      choice(name, "#{path}.kind", Texture.kinds()) ++
-        optional(s, "scale", path, &number(&1, &2, 0.0005, 10)) ++
-        for(k <- Map.keys(s) -- ~w(kind scale), do: {"#{path}.#{k}", "is not a word of a surface"})
+  defp surface(%{"kind" => name} = s, path) when is_binary(name) do
+    choice(name, "#{path}.kind", Texture.kinds()) ++
+      optional(s, "scale", path, &number(&1, &2, 0.0005, 10)) ++
+      if name in Texture.made_kinds(),
+        do: Texture.check(name, s, path),
+        else: for(k <- Map.keys(s) -- ~w(kind scale), do: {"#{path}.#{k}", "is not a word of a surface"})
+  end
 
   defp surface(_v, path), do: [{path, "must be the name of a kind, or an object with a kind and a scale"}]
 

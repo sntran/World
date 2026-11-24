@@ -25,13 +25,14 @@ defmodule World.Sculpt.TextureTest do
   end
 
   test "each kind: a name, a scale, and numbers in their ranges at each place" do
-    assert Texture.kinds() ==
+    assert Texture.kinds() -- Texture.made_kinds() ==
              ~w(bark brushed cast concrete fabric hair leather leaves palm plaster rubber rust stone weave wood)
 
     assert Texture.kind("wood") == {:wood, 0.006} and Texture.kind("glass") == nil
     :rand.seed(:exsss, {4, 5, 6})
 
-    for name <- Texture.kinds(), {kind, scale} = Texture.kind(name) do
+    # (The surfaces of made things have data: `World.Sculpt.MadeTest`.)
+    for name <- Texture.kinds() -- Texture.made_kinds(), {kind, scale} = Texture.kind(name) do
       assert scale >= 0.001 and scale < 0.2
 
       seen =

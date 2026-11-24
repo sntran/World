@@ -132,7 +132,12 @@ defmodule World.Sculpt.Bake do
         Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, & &1.color) end)
 
     finish? = shade? or grain? or Enum.any?(parts, fn {_, edits, _} -> SDF.finished?(edits) end)
-    glow? = Enum.any?(parts, fn {_, edits, _} -> Enum.any?(edits, &((&1.glow || 0.0) > 0.0)) end)
+
+    glow? =
+      Enum.any?(parts, fn {_, edits, _} ->
+        Enum.any?(edits, &((&1.glow || 0.0) > 0.0 or Texture.glows?(&1.surface)))
+      end)
+
     # The finish of the materials, when a texel needs it (nil with no finish of an edit).
     defaults = if finish?, do: defaults
     meshes = parts |> Enum.flat_map(&elem(&1, 0)) |> Enum.map(&split/1)
@@ -764,6 +769,15 @@ defmodule World.Sculpt.Bake do
   # (so the normals of the texels have it), and the color and the finish
   # change. A mark of the surface that is smaller than 1.5 texels does not
   # show (the image cannot have it); it shows in full from 3.5 texels.
+  # (A surface of a made thing is the mean over the square of the texel:
+  # a pane, a seam or a rib smaller than a texel is its mean.)
+  defp grain({f, color, finish, %{surface: {{kind, data}, scale}} = e}, %{u: u, face: face}, p) do
+    q = Vec.scale(World.Frame.point(e.back, p), 1 / scale)
+    {height, _, _} = look = Texture.look({kind, data}, q, World.Frame.dir(e.back, face), Vec.len(u) / scale)
+    {{r, g, b}, {rough, metal, glow}} = Texture.apply(look, color, finish)
+    {f - height * scale, {byte8(round(r)), byte8(round(g)), byte8(round(b))}, {min(max(rough, 0.05), 1.0), metal, glow}}
+  end
+
   defp grain({f, color, finish, %{surface: {kind, scale}} = e}, %{u: u, face: face}, p) do
     fade = min(max((scale / Vec.len(u) - 1.5) / 2, 0.0), 1.0)
 

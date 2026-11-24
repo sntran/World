@@ -20,6 +20,22 @@ defmodule World.Textures do
 
   A texture is only at near (`World.Detail`): at mid and far a pebble is
   smaller than a texel of the screen, and the file stays small.
+
+  - The surfaces of made things (plan 0020, D8), with the patterns of the
+    surfaces of the edits (`World.Sculpt.Texture.look/4`), for a role of a
+    rule in code. Each is a tile of one pitch (64 by 64 texels: a color
+    texture, white on the mean, and a normal texture), at each level:
+    the texture is small, and the mipmaps of an app give its mean far away.
+
+    | Texture | For the role | The tile |
+    |---|---|---|
+    | `corrugated` | `roof_corrugated`: a roof of metal sheets | Square ribs of 32 mm on a pitch of 0.25 m, along v (across u). |
+    | `shutter` | `metal_shutter`: a rolling shutter | Round ribs of 12 mm on a pitch of 0.08 m, along u (across v). |
+    | `panes` | `glass`: the glass of a window | Panes of 0.5 by 0.6 m in frames of 5 cm (darker), each pane 2 cm in. |
+
+    A sheet with a relief of its own (the roof of `World.Skills.Roof` at
+    near and mid) has its ribs in its shape: the texture is for a flat
+    sheet.
   """
 
   alias World.{PNG, Vec}
@@ -38,8 +54,20 @@ defmodule World.Textures do
   for f <- File.ls!(Path.join(__DIR__, "../../priv/textures")),
       do: @external_resource(Path.join(__DIR__, "../../priv/textures/" <> f))
 
+  # The textures of made things: a surface of `World.Sculpt.Texture`, the
+  # size of its tile (m, along u and along v), and the side of the surface
+  # that the tile is (`:up`: x along u, y along v; `:side`: x along u, z
+  # along v; `:across`: the ribs along u).
+  @made %{
+    "corrugated" => {{"corrugated", %{}}, {0.25, 0.25}, :up},
+    "shutter" => {{"corrugated", %{"profile" => "round", "pitch" => 0.08, "depth" => 0.012}}, {0.08, 0.08}, :across},
+    "panes" => {{"windows", %{"pane" => [0.5, 0.6], "frame" => 0.05}}, {0.55, 0.65}, :side}
+  }
+  # The texels on each side of the tile of a made thing.
+  @texels 64
+
   @doc "The names of the textures."
-  def names, do: ["washed_stone" | @photos]
+  def names, do: ["washed_stone" | Enum.sort(Map.keys(@made))] ++ @photos
 
   @doc """
   The keys of the material of a role for a texture at a level (`nil` for
@@ -69,7 +97,78 @@ defmodule World.Textures do
     }
   end
 
+  def spec(name, _level) when is_map_key(@made, name) do
+    {_, {u, v}, _} = @made[name]
+    {color, normal} = made(name)
+    scale = %{"scale" => [Float.round(1 / u, 4), Float.round(1 / v, 4)]}
+
+    %{
+      "image" => {"image/png", color},
+      "image_transform" => scale,
+      "normal_image" => {"image/png", normal},
+      "normal_scale" => 1.0
+    }
+  end
+
   def spec(_name, _level), do: nil
+
+  @doc """
+  The two PNG files of a texture of a made thing (`corrugated`,
+  `shutter` or `panes`): `{color, normal}`.
+  """
+  def made(name) do
+    case :persistent_term.get({__MODULE__, name}, nil) do
+      nil ->
+        pngs = make(@made[name])
+        :persistent_term.put({__MODULE__, name}, pngs)
+        pngs
+
+      pngs ->
+        pngs
+    end
+  end
+
+  defp make({{kind, data}, {u, v}, facing}) do
+    look = World.Sculpt.Texture.made(kind, data)
+    {du, dv} = {u / @texels, v / @texels}
+
+    # The place of a texel in the axes of the surface, and the side that it faces.
+    {place, n} =
+      case facing do
+        :up -> {fn i, j -> {i * du, j * dv, 0.0} end, {0.0, 0.0, 1.0}}
+        :side -> {fn i, j -> {i * du, 0.0, j * dv} end, {0.0, 1.0, 0.0}}
+        # (Ribs along u: the profile goes along v.)
+        :across -> {fn i, j -> {j * dv, i * du, 0.0} end, {0.0, 0.0, 1.0}}
+      end
+
+    texels =
+      for j <- 0..(@texels - 1), i <- 0..(@texels - 1), into: %{} do
+        {height, tone, to} = World.Sculpt.Texture.look(look, place.(i + 0.5, j + 0.5), n, min(du, dv))
+        part = if to, do: elem(to, 2), else: 1.0
+        # (The frames of the panes are darker; the panes take the color of the role.)
+        shade = if kind == "windows", do: tone * (0.6 + 0.4 * part), else: tone
+        {{i, j}, {height, shade}}
+      end
+
+    h = fn i, j -> elem(texels[{rem(i + @texels, @texels), rem(j + @texels, @texels)}], 0) end
+
+    colors =
+      for j <- 0..(@texels - 1) do
+        for i <- 0..(@texels - 1), into: <<>>, do: <<byte(elem(texels[{i, j}], 1))::8>> |> :binary.copy(3)
+      end
+
+    normals =
+      for j <- 0..(@texels - 1) do
+        for i <- 0..(@texels - 1), into: <<>> do
+          {nx, ny, nz} =
+            Vec.norm({-(h.(i + 1, j) - h.(i - 1, j)) / (2 * du), -(h.(i, j + 1) - h.(i, j - 1)) / (2 * dv), 1.0})
+
+          <<byte((nx + 1) / 2)::8, byte((ny + 1) / 2)::8, byte((nz + 1) / 2)::8>>
+        end
+      end
+
+    {PNG.encode(colors, 3), PNG.encode(normals, 3)}
+  end
 
   @doc "The two PNG files of washed stone: `{color, normal}`."
   def washed_stone do

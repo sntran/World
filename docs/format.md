@@ -380,6 +380,13 @@ houses.
   `NAME_than` (the body with its side walls and its back) and
   `NAME_mai` (the roof: a terrace with its parapet, the head of the
   stair and a tank; or tiles; or steel sheet). The kind is `house`.
+- **The surfaces** (plan 0020, step 3): the roof of steel sheet is one
+  edit with the surface `corrugated` (square ribs of 32 mm on a pitch of
+  0.25 m, down the slope), the roll-up door one edit with round ribs of
+  12 mm on a pitch of 8 cm across it, and each leaf of glass of an upper
+  storey has the surface `windows`: two panes across, in frames of 5 cm,
+  and the light of the room in all of them or in none (half of the
+  leaves, by the seed). A leaf of wood (the family `old`) has no panes.
 - **The axes.** x across the front, the front wall at y = 0, the street
   to +y, z up from the sidewalk. The floor is 0.3 m over the sidewalk.
   The balcony, the sign, the awning and the step go out over the
@@ -725,7 +732,8 @@ An edit has its `shape` and its `size`, and these keys:
   `blend`. So a part of one surface is metal, or wet, or a lamp;
 - `surface`: the surface of the edit, for a level with maps: the name
   of a kind, or `{"kind": NAME, "scale": M}` (the size of one mark of
-  the kind in meters, 0.0005 to 10). A surface is a small relief, a
+  the kind in meters, 0.0005 to 10), with the data of a kind of a made
+  thing (below). A surface is a small relief, a
   change of the color and a change of the roughness from place to
   place, in the axes of the edit (the grain of a leg goes along the
   leg, and turns with it; for a box, along its longest side). Only the
@@ -751,6 +759,37 @@ An edit has its `shape` and its `size`, and these keys:
   | `rust` | Patches of rust on a metal: brown, rough, no metal there. | A patch: 30 mm. |
   | `hair` | Strands that go out and down from the z of the edit, as hair from the top of a head: locks, single strands, some that catch the light. | 1.5 mm (along a strand; 377 strands go round the z). |
   | `palm` | 40 blades of a leaf of palm round the z of the edit, each with its tone and its fibers, with a dark line between two blades: a nón lá. | 3 mm (along a fiber). |
+
+  Three kinds are the surfaces of large made things (plan 0020, D8 to
+  D10). Each takes its data in the object of the surface, with its sizes
+  in meters (times `scale`, 1 by default), in the axes of the edit (not
+  along the longest side of a box):
+
+  | Kind | What it is | Its data (the default) |
+  |---|---|---|
+  | `windows` | Rows and columns of panes on each face that stands up (a face that faces the z of the edit has none). A pane has the finish of glass (roughness 0.05, no metal) and is 2 cm in from its frame; the frame has the color and the finish of the edit. A lit pane has the color of its light and a glow of 0.9. | `pane` [width, height] ([1.2, 1.5]); `frame`, the width between two panes, one number or [across, up] (0.3); `lit`, the share of the lit panes, 0 to 1 (0); `seed` (1); `warm` and `cold`, the colors of the light (`#ffd08a`, `#d6e4ff`). |
+  | `panels` | Plates with dark seams in the plane that the face faces most, and rivets on the seams as an option: a hull, the skin of an aircraft, a tank. | `plate` [width, height] ([1.0, 0.5]); `seam`, the width of a seam (0.006); `depth` (0.002); `rivets`, the step of the rivets on a seam, or none. |
+  | `corrugated` | Ribs along the z of the edit (along its y on a face that faces z): a roof of metal sheets, a container, a rolling shutter. | `profile`: `square` (flat tops, sides at 45 degrees, flat pans) or `round` (a sine) (`square`); `pitch` (0.25); `depth` (0.032); `top`, the width of the flat top of a square rib (0.03; at most the pitch less two times the depth). |
+
+  The common sheets of metal of the roofs of Việt Nam have square ribs:
+  5, 9 or 11 ribs on a useful width of 1,070 mm, with a pitch of 250, 125
+  or 100 mm and a depth of 32, 21 or about 19 mm (plan 0020, D10). A
+  rolling shutter has round ribs across it, with a pitch of 80 mm: turn
+  the edit so that its z goes across the shutter.
+
+  The panes go in rows from the middle of the edit; on a box, they fit
+  each face (a face of 30 pitches has 30 whole panes, with half a frame at
+  each side). A pane is lit by a hash of the seed, the face, its row and
+  its column: the same edit has the same lit panes each time. Two of
+  three lit panes have the warm light. A lit pane has the color of its
+  light by day too: the glow is the color times the glow.
+
+  The value of a texel is the mean of the surface over the texel (a pane,
+  a seam or a rib smaller than a texel is its mean). Where a texel is
+  more than a quarter of the pitch of the panes, the texels cannot show
+  the rows: the panes go to the mean of all of them, in full at half a
+  pitch. At a level with no maps, each point has the mean of a surface of
+  a made thing ("The look of a level with no maps" below).
 - `raise` (m, from -0.1 to 0.1; for an edit of the mode `paint`, and at
   most its `blend`): the surface moves out by that much in the shape of
   the edit, or in with less than 0, with a slope across its border as
@@ -976,6 +1015,19 @@ edges, metal and light.
   most points of light is taken. The light of the front room of a bar
   of `street_house` (a glow of 0.6) at far, with no bake: 15 points of
   its 300 triangles, where the cut before step 2 kept none.
+- **The surfaces of made things** (D11): an edit with the surface
+  `windows`, `panels` or `corrugated` gives its look to the points: the
+  color, the finish and the glow of the surface at each point, as the
+  mean over a square of the size of the point (the square root of a third
+  of the area of its faces, and two cells at least). So a pane that is
+  larger than about two cells keeps its own points (the cut keeps its
+  borders when the budget has room for them), and where the points are
+  far apart, each point has the mean of the panes: the glass, the frame
+  and the light together. The cut gives the glow of such a surface the pin
+  of a change of the color, not the pin of a light: the lit panes are a
+  pattern, and the cut keeps the shape first. The other kinds of surface
+  have marks of millimeters: their mean is about the color of the edit,
+  and they give nothing to the points.
 - A sculpture with `bones` (a figure) has its colors through the rig,
   with no alpha and no finish: it has the look only in its maps. The flat
   look (`look: flat`, and the file `flat` of an order) has no alpha and
@@ -2605,7 +2657,7 @@ the catalog: `banh_mi_cart`).
 | Key | What it is |
 |---|---|
 | `name`, `kind`, `sources` | The name of the model (a to z, 0 to 9 and _), its kind (`appliance`, `boat`, `building`, `electrical`, `furniture`, `house`, `item`, `plant`, `prop`, `statue`, `tower`, `vehicle`; `item` by default: a `house`, a `building`, a `plant`, a `statue` and a `tower` are made where they stand, so they go through no door; a `boat` is built on a slipway and floats, so it has no check of its stand and of a door), and where its data comes from. |
-| `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model, and its `texture`, only at near (`World.Textures`): `washed_stone`, the pebbles of a render of washed stone, a tile of 0.3 m on the UVs in metres of a surface; or a photo of a relief of `priv/textures/` (`relief_last_supper`, `relief_keys`, `relief_pilate`, `relief_magi`) with `panel` `[u0, v0, u1, v1]`: the rectangle of the UVs in metres where the image is once. A drawing makes no new role. |
+| `materials` | A role of the palette to its `color`, `roughness` and `metalness` in this model, and its `texture` (`World.Textures`): `washed_stone`, the pebbles of a render of washed stone, a tile of 0.3 m on the UVs in metres of a surface, only at near; a photo of a relief of `priv/textures/` (`relief_last_supper`, `relief_keys`, `relief_pilate`, `relief_magi`) with `panel` `[u0, v0, u1, v1]`: the rectangle of the UVs in metres where the image is once, only at near; or the pattern of a surface of a made thing, at each level (plan 0020, D8): `corrugated` (the square ribs of a roof, along v, on a pitch of 0.25 m: for `roof_corrugated`), `shutter` (the round ribs of a rolling shutter, along u, on a pitch of 0.08 m: for `metal_shutter`) or `panes` (panes of 0.5 by 0.6 m in darker frames of 5 cm: for `glass`), a tile of one pitch of 64 by 64 texels. A sheet with a relief of its own (the roof of `World.Skills.Roof` at near and mid) has its ribs in its shape: these are for a flat sheet. A drawing makes no new role. |
 | `parts` | A name to a part: its `shapes`, its `ports` (a name to `at`, `axis`, `up`), its `sources`; or a standard part: `standard` (`"bolt M8x40"`, `"cap_screw M6x20"`, `"nut M8"`, `"washer M8"`, `"bearing 6204"`), with the ports of the standard part (a bolt has `head` and `tip`). |
 | `nodes` | The tree of the model, the root first. |
 | `clips` | The animations of the joints. |

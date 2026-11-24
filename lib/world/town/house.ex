@@ -322,15 +322,17 @@ defmodule World.Town.House do
     ]
   end
 
-  # A roll-up door: slats of steel, 10 cm each.
+  # A roll-up door: a sheet of steel with ribs across, 8 cm each (plan
+  # 0020, D10: the surface `corrugated`; the z of the edit goes across the
+  # door, so the ribs go across too).
   defp door("roller_door", half, mid) do
     [
-      e("box", [half, 0.03, @opening / 2], [0, -0.1, mid], "#b9bdc0", %{"roughness" => 0.4, "metal" => 0.8}),
-      e("box", [half, 0.06, 0.006], [0, -0.1, @floor + 0.1], "#8f9498", %{
-        "mode" => "paint",
-        "blend" => 0.006,
-        "raise" => -0.006,
-        "repeat" => %{"count" => floor(@opening / 0.1) - 1, "move" => [0, 0, 0.1]}
+      e("box", [@opening / 2, 0.03, half], [0, -0.1, mid], "#b9bdc0", %{
+        "axis" => [1, 0, 0],
+        "up" => [0, 1, 0],
+        "roughness" => 0.4,
+        "metal" => 0.8,
+        "surface" => %{"kind" => "corrugated", "profile" => "round", "pitch" => 0.08, "depth" => 0.012}
       }),
       e("box", [0.3, 0.05, 0.03], [0, -0.06, @floor + 0.35], "#3b3d40", %{"roughness" => 0.5, "metal" => 0.8})
     ]
@@ -437,23 +439,51 @@ defmodule World.Town.House do
         ],
         else: []
 
+    # (Glass in aluminum: panes, and a light in the room behind some of them, by the seed: plan 0020, D9.)
+    lit = fn which -> if glass?, do: panes(r, n, which) end
+
     slab ++
-      opening(door, z + 1.15, 0.6, 1.15, tone, finish, frame) ++
-      opening(window, z + 1.6, 0.6, 0.7, tone, finish, frame) ++
+      opening(door, z + 1.15, 0.6, 1.15, tone, finish, frame, lit.(:door)) ++
+      opening(window, z + 1.6, 0.6, 0.7, tone, finish, frame, lit.(:window)) ++
       [
         # The shade over the door and the window.
         e("box", [hw - 0.05, 0.3, 0.04], [0, 0.25, z + 2.55], shade(r["wall"], 0.95), %{"roughness" => 0.85})
       ] ++ vents(r, hw, z) ++ wall_rail(r, hw, z, out)
   end
 
-  # An opening of an upper storey: a hollow in the wall, a leaf, a frame round it and a bar at its middle.
-  defp opening(x, z, half, high, tone, finish, frame) do
+  # An opening of an upper storey: a hollow in the wall, a leaf, a frame
+  # round it and a bar at its middle. A leaf of glass has panes: two
+  # across, and as many up as fit 0.7 m (the surface `windows`, with the
+  # light of the room in all of them or in none).
+  defp opening(x, z, half, high, tone, finish, frame, nil) do
     [
       e("box", [half, 0.06, high], [x, 0, z], frame, %{"mode" => "subtract", "roughness" => 0.5}),
       e("box", [half - 0.05, 0.02, high - 0.05], [x, -0.07, z], tone, finish),
       e("box", [0.025, 0.03, high], [x, -0.05, z], frame, %{"roughness" => 0.5})
     ]
   end
+
+  defp opening(x, z, half, high, _tone, _finish, frame, lit) do
+    {w, h} = {2 * (half - 0.05), 2 * (high - 0.05)}
+    rows = max(round(h / 0.7), 1)
+    bar = 0.05
+
+    windows = %{
+      "kind" => "windows",
+      "pane" => [r4(w / 2 - bar), r4(h / rows - bar)],
+      "frame" => bar,
+      "lit" => lit
+    }
+
+    [
+      e("box", [half, 0.06, high], [x, 0, z], frame, %{"mode" => "subtract", "roughness" => 0.5}),
+      e("box", [half - 0.05, 0.02, high - 0.05], [x, -0.07, z], frame, %{"roughness" => 0.5, "surface" => windows}),
+      e("box", [0.025, 0.03, high], [x, -0.05, z], frame, %{"roughness" => 0.5})
+    ]
+  end
+
+  # The light of the room behind a door or a window of glass: 1 for half of them, by the seed.
+  defp panes(r, n, which), do: if(unit(r["seed"], {:lit, n, which}) < 0.5, do: 1, else: 0)
 
   # Blocks for the air over the shade of an old house: dark squares in a row.
   defp vents(%{"vents" => true}, hw, z) do
@@ -755,21 +785,14 @@ defmodule World.Town.House do
     {normal, along} = {[0, 0.0872, 0.9962], [0, 0.9962, -0.0872]}
     at = [0, -d / 2 - 0.1, top + 0.1]
 
+    # (The sheets of the roof: square ribs down the slope, along the y of the edit: plan 0020, D10.)
     [
       e("box", [hw, d / 2, 0.03], at, "#8b98a0", %{
         "axis" => normal,
         "up" => along,
         "roughness" => 0.5,
         "metal" => 0.7,
-        "surface" => %{"kind" => "rust", "scale" => 0.4}
-      }),
-      e("box", [0.03, d / 2, 0.06], [-hw + 0.1, -d / 2 - 0.1, top + 0.1], "#75828a", %{
-        "mode" => "paint",
-        "axis" => normal,
-        "up" => along,
-        "blend" => 0.012,
-        "raise" => 0.012,
-        "repeat" => %{"count" => floor((2 * hw - 0.2) / 0.2) + 1, "move" => [0.2, 0, 0]}
+        "surface" => %{"kind" => "corrugated", "profile" => "square", "pitch" => 0.25, "depth" => 0.032}
       })
     ]
   end

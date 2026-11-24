@@ -67,8 +67,12 @@ defmodule World.Sculpt.Shade do
           area > 0.0,
           do: {face, Vec.scale(Vec.add(Vec.add(p, q), r), 1 / 3), cross, area}
 
+    # (The square of a point for the look of a surface of a made thing: a third of the area of its faces.)
+    sizes = if SDF.made?(edits), do: elem(World.Sculpt.Finish.sizes(points, faces), 0)
+
     samples =
-      for({p, n} <- Enum.zip(points, normals), do: {p, n, true}) ++ for({_, c, n, _} <- centers, do: {c, n, false})
+      for({{p, n}, i} <- Enum.with_index(Enum.zip(points, normals)), do: {p, n, (sizes && elem(sizes, i)) || true}) ++
+        for({_, c, n, _} <- centers, do: {c, n, false})
 
     seen =
       samples
@@ -134,7 +138,8 @@ defmodule World.Sculpt.Shade do
       {o3, o4} = {taken.(far, p, n, f1, wide) ** 2, taken.(far, p, n, f2, wide) ** 2}
       edge = if look.wear > 0.0, do: thin(near, p, n, at, step, limit), else: 0.0
       # (The finish of a point; a face gives only how open its center is.)
-      {{1.0 - (a * o1 + b * o2 + c * o3 + d * o4), (o1 + o2) / 2, edge}, finish? && SDF.finish(here, p, defaults)}
+      size = if is_number(finish?), do: finish?
+      {{1.0 - (a * o1 + b * o2 + c * o3 + d * o4), (o1 + o2) / 2, edge}, finish? && SDF.finish(here, p, defaults, size)}
     end
   end
 
