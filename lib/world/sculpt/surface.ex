@@ -197,6 +197,11 @@ defmodule World.Sculpt.Surface do
   its own (the borders of the first regions are in the middle of these);
   then the band of faces at the borders that are left.
 
+  The collapse keeps the points where the colors change (`pins/4`). With
+  the option `finish_pins` (true: a level with no maps, plan 0020, D7),
+  also the points where the finish or the glow changes; a level with maps
+  has them in its maps, and its cut stays as it was.
+
   With the option `seam` (a function of a cell that is true for a cell at
   the border of a tile, `World.Sculpt.model/2`), each point of such a
   cell stays where it is: the next tile has the same point there, so the
@@ -213,6 +218,7 @@ defmodule World.Sculpt.Surface do
     # faces: a budget that takes most of the faces away cannot keep a
     # pattern of colors, and must keep the shape.
     pin = if budget, do: @pin * min(budget / max(total, 1), 1.0) ** 2, else: 0.0
+    finish? = Keyword.get(opts, :finish_pins, false)
 
     {pts, tris} =
       if budget && total > budget && map_size(groups) > 1 && total / map_size(groups) >= @least do
@@ -224,7 +230,7 @@ defmodule World.Sculpt.Surface do
              r,
              ps,
              max(round(1.1 * budget * faces.(ps) / total), div(faces.(ps), 4)),
-             pin,
+             {pin, finish?},
              free(opts[:step]),
              seam
            )}
@@ -236,7 +242,7 @@ defmodule World.Sculpt.Surface do
         |> wider(budget, opts[:step])
         |> last_pass(budget)
       else
-        {_keys, pts, tris, pins} = triangles(pieces, pin, seam)
+        {_keys, pts, tris, pins} = triangles(pieces, {pin, finish?}, seam)
 
         if budget != nil and length(tris) > budget do
           %{points: pts, faces: tris} = World.Simplify.collapse(pts, tris, budget, pins: pins, loose: true)
@@ -262,11 +268,11 @@ defmodule World.Sculpt.Surface do
 
   # The triangles of some pieces, on their points (one point for each key):
   # `{keys, points, triangles, pins}`.
-  defp triangles(pieces, pin, seam) do
+  defp triangles(pieces, {pin, finish?}, seam) do
     decoded = Enum.map(pieces, &decode/1)
     points = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.points))
     colors = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.colors))
-    finish = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.finish))
+    finish = if finish?, do: Enum.reduce(decoded, %{}, &Map.merge(&2, &1.finish)), else: %{}
     quads = Enum.flat_map(decoded, & &1.quads)
     keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
     ids = keys |> Enum.with_index() |> Map.new()

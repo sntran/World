@@ -28,6 +28,7 @@ mix.com world.build NAME        # the files of a model in priv/models
 mix.com world.build --check NAME   # build a model again and compare
 npm install && npm test         # the tests of the pages
 npm run validate -- DIR         # the Khronos validator on each GLB of a directory
+node scripts/shape.mjs --base origin/main   # the shape of each changed model, before and after
 sh scripts/wings.sh COMMIT      # copy the core of Wings 3D again
 ```
 

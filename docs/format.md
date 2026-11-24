@@ -1120,7 +1120,7 @@ landmark in parts (plan 0014).
 | `cang_vu_vung_tau` | The office of the port of Vũng Tàu (Cảng vụ Hàng hải), 2 Quang Trung: 5 storeys, 21.3 m on the street, a corner tower of 21.2 m | The mass is an `extrude` of its footprint of OpenStreetMap, with the roof behind its parapet taken away. Each front is a wall with its own axes: windows as paints in hollows, loggias taken away, ledges, a bay of glass with its grid. Two porches, a board with four letters from tubes, two masts in a detail. From two photos of 2014. |
 | `khach_san_grand_canh_nam` | The south wing of the Grand Hotel of Vũng Tàu, on Quang Trung at the corner of Nguyễn Trãi: 3 storeys, 39.7 m by 20.3 m | From a request of `World.Town.Building` (above, "A house and a street from rules"; the request is in `World.Town.QuangTrung`): two fronts of loggias (9 bays and 4 bays), each with a loggia at two storeys, a door of glass at its back, a pilaster, a pier, the brown bands; two fronts of windows. The rails of iron are 390 thin tubes in a detail of the near level. The roof of tiles has four slopes, 3 m high. A bed behind a low wall, with the stone of the name, as `more` edits. From a photo of 2015 and a photo from the air. |
 | `khach_san_grand` | The main block of the Grand Hotel of Vũng Tàu, behind its fore court: 3 storeys, 37.2 m by 24 m | From a request of `World.Town.Building`: a front of 8 bays of balconies with rails of upright bars, over a ground storey of windows; a porch 35 m wide with a terrace on it (a rail round it); the name GRAND HOTEL in red letters on the top of the cornice (a part of its own); a roof of tiles behind a terrace, with a gable to Nguyễn Du and a slope at the other end. The pergola of the terrace and the tower of the stair are `more` edits. From two photos of 2014, a photo from the air and a photo at night. |
-| `hai_dang_vung_tau_edits` | The lighthouse of Vũng Tàu on Núi Nhỏ from edits: the look of its photos (the tower that the people build, with its stair inside, is `hai_dang_vung_tau`) | The round body with the corbel of its gallery, the two deep rings, the wall of the lantern and its dome are each a `revolve` of a profile. Four ribs are an `extrude` of a side view. The lantern is a cylinder of glass with bars. The rail of 72 bars, the ladder, the rod and the flag are a detail with cells of 12 mm at near and mid. The sizes are those of the tower of the catalog; the forms are from about ten photos. |
+| `hai_dang_vung_tau_edits` | The lighthouse of Vũng Tàu on Núi Nhỏ from edits: the look of its photos (the tower that the people build, with its stair inside, is `hai_dang_vung_tau`) | The round body with the corbel of its gallery, the two deep rings, the wall of the lantern and its dome are each a `revolve` of a profile. Four ribs are an `extrude` of a side view. The lantern is a cylinder of glass with bars. The rail of 72 bars, the ladder, the rod and the flag are a detail with cells of 12 mm at near and mid. The sizes are those of the tower of the catalog; the forms are from about ten photos. At far the tower has cells of 0.3 m: with cells of 0.15 m, the cut from 45,000 faces to its budget of 500 took away the neck under the lantern, and the lantern floated over a gap. |
 | `day_pho_vung_tau` | A row of five houses of Vũng Tàu on their sidewalk, 26 m long | From `World.Town.Street`: each type and each family, wall to wall; 16 parts, each with its image. |
 | `tuong_chua_kito_vua` | The statue of Christ the King of Vũng Tàu on its base: 31 m to the top of the halo (32 m with its rod), 18.4 m from fingertip to fingertip | A model in parts (above): eight sculptures (the base, the dome, the robe, the cape, the sleeves, the hands, the head, the halo), each with its cells (2 cm to 7 cm), its budget and its image; bands of Greek key by paints with a raise; groups with a scale for the head and the hands. Its inside is at near only (`levels`): a room in the base, the dome, six open windows, and a stair of 133 steps round an open well of eight sides: the steps as one edit with a `repeat` (a turn and a move), the handrail as one tube through 67 corners, and the balusters in a detail with cells of 12 mm. Each balcony has a rail of bars. |
 
@@ -2795,7 +2795,16 @@ The build gives the same bytes for the same model.
 `mix world.build --check NAME` builds a model again and compares. The
 files of `priv/models` are always the build of the code: CI checks the
 whole catalog at each commit, in parts at the same time (`--part I/N`),
-and also fails on a file of a model that is not in the catalog. A
+and also fails on a file of a model that is not in the catalog. The
+check of the shape (`node scripts/shape.mjs`) gives, for the mid and the
+far level of a model, the 95th percentile of the distances from points
+on the level to the surface of the near level (a part that the level has
+and the model has not: a spike, a dent), and from points on the near
+level to the surface of the level (a part that the level lost: a
+chimney, a step); 20,000 points on each surface, the same at each run.
+With `--base REV` it compares each model with a changed file to its files
+at REV, and fails when a number grows by more than 20 % and by more than
+2 cm. A
 project that needs a model asks World to build it (`docs/factory.md`).
 The tests of the rules use small models of their own
 (`test/support/fixtures.ex`).

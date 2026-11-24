@@ -1,6 +1,8 @@
 # The check of the catalog, on request only: each file of priv/models is
 # the build of the code, and no file is of a model that is not in the
-# catalog (mix world.build --check, in 8 parts at the same time).
+# catalog (mix world.build --check, in 8 parts at the same time); and the
+# shape of each model with a changed file is not worse than before
+# (node scripts/shape.mjs --base).
 #
 # It runs for:
 #
@@ -114,3 +116,25 @@ jobs:
       - run: mix.com deps.get
       - name: The files of priv/models are the build of the code (part ${{ matrix.part }} of 8)
         run: MIX_ENV=test mix.com world.build --check --part ${{ matrix.part }}/8
+
+  # The shape of each model with a file that the pull request changes: how
+  # far its mid and its far level are from its near level (the 95th
+  # percentile of the distances, in each direction), before (the base of
+  # the pull request) and after. A level fails when a number grows by more
+  # than 20 % and by more than 2 cm (scripts/shape.mjs).
+  shape:
+    needs: wanted
+    if: needs.wanted.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - name: The shape of each changed model is not worse
+        env:
+          BASE: ${{ github.base_ref || 'main' }}
+        run: node scripts/shape.mjs --base "origin/$BASE"
