@@ -337,8 +337,11 @@ defmodule World.Skills.Sculpt do
         edits = if tile, do: near_tile(edits, tile.box, step), else: edits
         budget = get_in(d, ["budget", Atom.to_string(level)])
         budget = if tile && budget, do: max(round(budget * tile.share), 12), else: budget
-        # With maps, the mesh has no relief smaller than its cells: the maps have it.
+        # With maps, the mesh has no relief smaller than its cells: the maps have it. With no maps, the
+        # cut keeps the borders of the finish and of the glow (plan 0020, D7); with maps, the maps have
+        # them, and the cut stays as it was.
         from = fn step -> if side, do: SDF.coarse(edits, step), else: edits end
+        pins = side == nil
 
         {meshes, step} =
           cond do
@@ -351,15 +354,21 @@ defmodule World.Skills.Sculpt do
                  step: step,
                  budget: budget,
                  within: tile.box,
-                 steps: tile.steps
+                 steps: tile.steps,
+                 finish_pins: pins
                ), step}
 
             # (A tile keeps its cells: its borders meet the cells of the next tiles.)
             tile ->
-              {World.Sculpt.model(from.(step), step: step, budget: budget, within: tile.box), step}
+              {World.Sculpt.model(from.(step), step: step, budget: budget, within: tile.box, finish_pins: pins), step}
 
             true ->
-              in_budget(&World.Sculpt.model(from.(&1), step: &1, budget: budget), step, budget, lit(edits))
+              in_budget(
+                &World.Sculpt.model(from.(&1), step: &1, budget: budget, finish_pins: pins),
+                step,
+                budget,
+                if(pins, do: lit(edits))
+              )
           end
 
         {if(flat?, do: Enum.map(meshes, &facets(&1, edits)), else: meshes), edits, step}

@@ -73,9 +73,12 @@ defmodule World.HaulTest do
     lost = %{log | events: List.delete(log.events, Enum.find(Enum.reverse(log.events), &(&1.kind == "unloaded")))}
     assert {:error, {:diverged, %{kind: "hauled"}}} = HaulSpec.replay(lost, [], dir)
 
-    # One truck takes the two loads: in the fault model, a truck over its load.
-    [first | _] = for %{kind: "loaded", data: d} <- Log.events(log), do: d["truck"]
-    two = %{log | events: Enum.map(log.events, &if(&1.kind == "loaded", do: put_in(&1.data["truck"], first), else: &1))}
+    # One truck takes the two loads: in the fault model, a truck over its load. (The second load is
+    # taken at the time of the first: on a busy computer, the first truck can drop its load before
+    # the second truck takes its load, and then no truck has two loads.)
+    [a, b | _] = for %{kind: "loaded"} = e <- Log.events(log), do: e
+    second = %{b | wall: a.wall, data: Map.put(b.data, "truck", a.data["truck"])}
+    two = %{log | events: Enum.map(log.events, &if(&1 == b, do: second, else: &1))}
 
     assert {:error, {:violated, "InLoad", %{kind: "loaded"}}} =
              HaulSpec.replay(two, [], Path.join(dir, "two"), guard: false)

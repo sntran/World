@@ -50,7 +50,12 @@ An idea that is not a decision goes into `TODO.md`. I decide about it.
   runs on request only: give the label `catalog` to a pull request that
   can change a model (a change of a skill, of the sculpture, of a
   drawing or a blueprint). It also runs for a pull request that changes
-  `priv/models`, and by hand.
+  `priv/models`, and by hand. It also checks the shape of each model with
+  a changed file (`node scripts/shape.mjs --base origin/main`): how far
+  its mid and its far level are from its near level, the 95th percentile
+  of the distances in each direction, before and after. A level fails
+  when a number grows by more than 20 % and by more than 2 cm. Run it
+  before a commit that builds a model again.
 - When a project sends a tool request (`request_tool`,
   `docs/requests.md`, "When a tool is missing") with an order or a
   drawing that shows a gap, add the tool in general, with its tests, for

@@ -40,4 +40,17 @@ defmodule World.HaiDangTest do
     assert [what, sizes, forms] = d["sources"]
     assert what =~ "hai_dang_vung_tau" and sizes =~ "tower of the catalog" and forms =~ "A guess"
   end
+
+  test "the far level: the lantern stands on its tower (the neck under it stays in the cut to 500 triangles)" do
+    tower = hd(file("hai_dang_vung_tau_edits")["nodes"])["skill"]["sculpt"]
+    assert tower["cells"]["far"] == 0.3
+
+    {part, _, _} =
+      World.Detail.with(:far, fn -> World.Skills.Sculpt.make(tower, %{}, %{level: :far, name: "thap"}) end)
+
+    points = for m <- part.shapes, p <- m.points, do: p
+    assert part.shapes |> Enum.map(&length(&1.faces)) |> Enum.sum() <= 500
+    # (The gallery at 12.6 m and the base of the lantern to 14.46 m: points between the top of the ribs and the glass.)
+    assert Enum.count(points, fn {_, _, z} -> z > 11.8 and z < 14.4 end) >= 20
+  end
 end

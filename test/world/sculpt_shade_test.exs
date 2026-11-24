@@ -205,6 +205,20 @@ defmodule World.Sculpt.ShadeTest do
     assert 204 in glows and 0 in glows
   end
 
+  test "a level with a bake cuts as before step 2: no pins of the finish and of the glow (its maps have them)" do
+    data = slab(%{"bake" => %{"far" => 512}, "budget" => %{"far" => 600}})
+    edits = World.Skills.Sculpt.edits(data["edits"])
+    points = fn meshes -> meshes |> Enum.flat_map(& &1.points) |> MapSet.new() end
+
+    cut = fn pins ->
+      World.Sculpt.model(SDF.coarse(edits, 0.04), step: 0.04, budget: 600, cache: false, finish_pins: pins)
+    end
+
+    assert points.(meshes(data)) == points.(cut.(false))
+    # (With the pins, the cut keeps other points: the borders of the lamp and of the plate.)
+    refute points.(cut.(true)) == points.(cut.(false))
+  end
+
   test "the check of occlusion: true, false, alpha or color" do
     for v <- [true, false, "alpha", "color"],
         do: assert(World.Skills.Sculpt.check(slab(%{"occlusion" => v}), "s") == [])

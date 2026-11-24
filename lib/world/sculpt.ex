@@ -61,9 +61,11 @@ defmodule World.Sculpt do
   `World.Sculpt.Finish`). The
   options: `level` (the level of detail of `World.Detail` by default),
   `step` (the size of the cells, the size of the level by default),
-  `budget` (the most faces, `World.Simplify`), `parallel`, and `cache`
+  `budget` (the most faces, `World.Simplify`), `finish_pins` (true: the
+  cut keeps the borders of the finish and of the glow too, for a level
+  with no maps: `World.Sculpt.Surface.meshes/2`), `parallel`, and `cache`
   (true by default: the pieces of the bricks of the node, and the meshes
-  of the same edits, cells and budget, `World.Sculpt.Cache`).
+  of the same edits, cells, budget and pins, `World.Sculpt.Cache`).
   """
   def model(edits, opts \\ []) do
     step = opts[:step] || step(opts[:level] || Detail.level())
@@ -71,7 +73,7 @@ defmodule World.Sculpt do
     opts = opts |> Keyword.put(:each, &Surface.piece(&1, step)) |> Keyword.put_new(:cache, true)
     opts = opts |> Keyword.put(:within, within) |> Keyword.put(:fields, false)
     # The meshes of the same edits, cells, budget and tile come from the cache.
-    key = if opts[:cache], do: Cache.key({:model, opts[:budget], within}, step, SDF.ids(edits))
+    key = if opts[:cache], do: Cache.key({:model, opts[:budget], within, opts[:finish_pins]}, step, SDF.ids(edits))
 
     with nil <- key && Cache.get(key) do
       %{bricks: bricks} = bricks(edits, step, opts)
@@ -82,6 +84,7 @@ defmodule World.Sculpt do
         |> Enum.map(& &1.piece)
         |> Surface.meshes(
           budget: opts[:budget],
+          finish_pins: Keyword.get(opts, :finish_pins, false),
           small: 2 * step,
           step: step,
           seam: seam
@@ -112,7 +115,8 @@ defmodule World.Sculpt do
   less than 2 cells from a side of the box: the next part has the same
   points there), and each point goes back on the surface with its normal
   and its color (`World.Sculpt.Finish`). The options: `step`, `budget`,
-  `within` and `steps` (a list of `{box, share}`).
+  `within`, `steps` (a list of `{box, share}`) and `finish_pins` (as for
+  `model/2`).
   """
   def model_in_steps(edits, opts) do
     {step, budget, within} = {opts[:step], opts[:budget], opts[:within]}
@@ -123,7 +127,7 @@ defmodule World.Sculpt do
         b = if budget, do: max(round(max(3 * budget, @join) * share), 12)
 
         Detail.apart(fn ->
-          model(local, step: step, budget: b, within: box, finish: false, cache: false)
+          model(local, step: step, budget: b, within: box, finish: false, cache: false, finish_pins: opts[:finish_pins])
         end)
       end
 
