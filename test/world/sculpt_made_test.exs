@@ -82,14 +82,31 @@ defmodule World.Sculpt.MadeTest do
 
     # A face of 30 pitches across and 40 up has whole panes from its middle; a face of 3 pitches has a pane at its middle.
     data = %{"pane" => [1.1, 2.2], "frame" => [0.4, 1.3]}
-    assert {:windows, %{frame: {0.4, 1.3}, phase: {0.0, 0.0, 0.0}}} = Texture.made("windows", data, {22.5, 22.5, 70.0})
-    assert {:windows, %{phase: {0.75, 0.0, 1.75}}} = Texture.made("windows", data, {2.25, 1.5, 1.75})
+    assert {:windows, %{frame: {0.4, 1.3}, phase: {+0.0, +0.0, +0.0}}} = Texture.made("windows", data, {22.5, 22.5, 70.0})
+    assert {:windows, %{phase: {0.75, +0.0, 1.75}}} = Texture.made("windows", data, {2.25, 1.5, 1.75})
 
     assert Texture.made("panels", %{}) == {:panels, %{plate: {1.0, 0.5}, seam: 0.006, depth: 0.002, rivets: nil}}
     assert {:panels, %{rivets: 0.05}} = Texture.made("panels", %{"rivets" => 0.05})
 
     assert Texture.made("corrugated", %{}) ==
              {:corrugated, %{profile: :square, pitch: 0.25, depth: 0.032, top: 0.03}}
+
+    # In the data of a sculpture: a kind by its name, a kind with its data on a shape that is not a box, and in a group at a scale.
+    edits = fn list, groups -> Sculpt.edits(list, groups) end
+
+    assert [%{surface: {{:corrugated, %{pitch: 0.25}}, 1.0}}] =
+             edits.([%{"shape" => "box", "size" => [1, 1, 1], "surface" => "corrugated"}], %{})
+
+    tank = %{
+      "shape" => "cylinder",
+      "size" => [1, 2],
+      "surface" => %{"kind" => "windows", "pane" => [0.5, 0.5], "scale" => 2}
+    }
+
+    assert [%{surface: {{:windows, %{phase: {+0.0, +0.0, +0.0}, pane: {0.5, 0.5}}}, 2.0}}] = edits.([tank], %{})
+
+    assert [%{surface: {{:windows, _}, 6.0}}] =
+             edits.([%{"shape" => "group", "group" => "g", "scale" => 3}], %{"g" => [tank]})
 
     assert Texture.glows?({Texture.made("windows", %{"lit" => 0.2}), 1.0})
     refute Texture.glows?(Texture.kind("windows")) or Texture.glows?({:wood, 0.006}) or Texture.glows?(nil)
