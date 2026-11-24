@@ -82,7 +82,10 @@ defmodule World.Sculpt.MadeTest do
 
     # A face of 30 pitches across and 40 up has whole panes from its middle; a face of 3 pitches has a pane at its middle.
     data = %{"pane" => [1.1, 2.2], "frame" => [0.4, 1.3]}
-    assert {:windows, %{frame: {0.4, 1.3}, phase: {+0.0, +0.0, +0.0}}} = Texture.made("windows", data, {22.5, 22.5, 70.0})
+
+    assert {:windows, %{frame: {0.4, 1.3}, phase: {+0.0, +0.0, +0.0}}} =
+             Texture.made("windows", data, {22.5, 22.5, 70.0})
+
     assert {:windows, %{phase: {0.75, +0.0, 1.75}}} = Texture.made("windows", data, {2.25, 1.5, 1.75})
 
     assert Texture.made("panels", %{}) == {:panels, %{plate: {1.0, 0.5}, seam: 0.006, depth: 0.002, rivets: nil}}
