@@ -2110,15 +2110,24 @@
         -0.07,
         5.05
        ],
-       "color": "#24323c",
+       "color": "#5c6064",
        "material": "part_04",
-       "roughness": 0.08,
+       "roughness": 0.5,
        "shape": "box",
        "size": [
         0.55,
         0.02,
         1.1
-       ]
+       ],
+       "surface": {
+        "frame": 0.05,
+        "kind": "windows",
+        "lit": 1,
+        "pane": [
+         0.5,
+         0.6833
+        ]
+       }
       },
       {
        "at": [
@@ -2159,15 +2168,24 @@
         -0.07,
         5.5
        ],
-       "color": "#24323c",
+       "color": "#5c6064",
        "material": "part_04",
-       "roughness": 0.08,
+       "roughness": 0.5,
        "shape": "box",
        "size": [
         0.55,
         0.02,
         0.65
-       ]
+       ],
+       "surface": {
+        "frame": 0.05,
+        "kind": "windows",
+        "lit": 1,
+        "pane": [
+         0.5,
+         0.6
+        ]
+       }
       },
       {
        "at": [

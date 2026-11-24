@@ -33,14 +33,47 @@ defmodule World.Sculpt.Finish do
   """
   def meshes(meshes, lists, edits, step) do
     limit = Sculpt.limit(edits, step)
-    colors? = Enum.any?(edits, & &1.color)
+    colors? = Enum.any?(edits, & &1.color) or SDF.made?(edits)
+    made? = SDF.made?(edits)
 
     Enum.map(meshes, fn %Mesh{} = mesh ->
-      done = points(mesh.points, lists, edits, step, limit, colors?)
+      # (With the surface of a made thing, the look of a point is the mean over the area of its faces.)
+      sizes = if made?, do: sizes(mesh.points, mesh.faces), else: {nil, nil}
+      done = points(mesh.points, lists, edits, step, limit, colors?, elem(sizes, 0))
       points = Enum.map(done, &elem(&1, 0))
-      colors = if colors?, do: even(points, mesh.faces, Enum.map(done, &elem(&1, 2)), lists, edits, step, limit)
+
+      colors =
+        if colors?,
+          do: even(points, mesh.faces, Enum.map(done, &elem(&1, 2)), lists, edits, step, limit, elem(sizes, 1))
+
       Mesh.finish(%{mesh | points: points}, Enum.map(done, &elem(&1, 1)), colors)
     end)
+  end
+
+  @doc """
+  The side of the square of each point and of each face of a mesh: the
+  square root of the area of a face, and of a third of the area of the
+  faces of a point (`{points, faces}`, two tuples). The look of a
+  surface of a made thing at a point is its mean over that square
+  (`World.SDF.on_points/2`).
+  """
+  def sizes(points, faces) do
+    at = List.to_tuple(points)
+
+    areas =
+      for [a, b, c] <- faces do
+        {p, q, r} = {elem(at, a), elem(at, b), elem(at, c)}
+        Vec.len(Vec.cross(Vec.sub(q, p), Vec.sub(r, p))) / 2
+      end
+
+    sums =
+      for {[a, b, c], area} <- Enum.zip(faces, areas),
+          i <- [a, b, c],
+          reduce: %{},
+          do: (acc -> Map.update(acc, i, area, &(&1 + area)))
+
+    {List.to_tuple(for i <- 0..(length(points) - 1)//1, do: :math.sqrt(Map.get(sums, i, 0.0) / 3)),
+     List.to_tuple(Enum.map(areas, &:math.sqrt/1))}
   end
 
   # The color of each point, even over the faces round it: half its own
@@ -49,11 +82,11 @@ defmodule World.Sculpt.Finish do
   # the color, that is the color at the point; where the colors change
   # in less than a face (a pattern at a level of few faces), it is their
   # mean, not the color of a place that the point happens to be at.
-  defp even(points, faces, colors, lists, edits, step, limit) do
+  defp even(points, faces, colors, lists, edits, step, limit, sizes) do
     at = List.to_tuple(points)
     corners = for [a, b, c] <- faces, do: {elem(at, a), elem(at, b), elem(at, c)}
     centers = for {p, q, r} <- corners, do: Vec.scale(Vec.add(Vec.add(p, q), r), 1 / 3)
-    seen = each(centers, lists, edits, step, fn p, list, _fast -> SDF.color(list, p, limit) end)
+    seen = each(centers, lists, edits, step, fn p, i, list, _fast -> SDF.color(list, p, limit, size(sizes, i)) end)
 
     sums =
       for {[a, b, c], {p, q, r}, {cr, cg, cb}} <- Enum.zip([faces, corners, seen]),
@@ -80,9 +113,13 @@ defmodule World.Sculpt.Finish do
   @doc """
   Each point on the surface, with its normal and its color (nil with no
   `colors?`): `[{point, normal, color}]`, in the order of the points.
+  `sizes` is the side of the square of each point (`sizes/2`), or nil.
   """
-  def points(points, lists, edits, step, limit, colors?),
-    do: each(points, lists, edits, step, &point(&1, &2, &3, step, limit, colors?))
+  def points(points, lists, edits, step, limit, colors?, sizes),
+    do: each(points, lists, edits, step, &point(&1, &3, &4, step, limit, colors? && {size(sizes, &2)}))
+
+  defp size(nil, _i), do: nil
+  defp size(sizes, i), do: elem(sizes, i)
 
   # The value of `f` for each point, with the short list of edits of its
   # brick (as edits, and for the hot loop), in the order of the points: the points of some bricks in one
@@ -104,7 +141,7 @@ defmodule World.Sculpt.Finish do
           list = Enum.map(places, &elem(some, &1)),
           fast = SDF.fast(list),
           {p, i} <- ps,
-          do: {i, f.(p, list, fast)}
+          do: {i, f.(p, i, list, fast)}
     end)
     |> Enum.concat()
     |> Enum.sort()
@@ -127,10 +164,11 @@ defmodule World.Sculpt.Finish do
     {Enum.reverse(some), for({list, ps} <- group, do: {Enum.map(list, &index[key.(&1)]), ps})}
   end
 
-  defp point(p, list, fast, step, limit, colors?) do
+  # (`colors`: false, or `{size}`: the size of the square of the point, or nil.)
+  defp point(p, list, fast, step, limit, colors) do
     field = &SDF.value(fast, &1, limit)
     {p, gradient} = settle(p, field, step, 5)
-    {p, Vec.norm(gradient), if(colors?, do: SDF.color(list, p, limit))}
+    {p, Vec.norm(gradient), with({size} <- colors, do: SDF.color(list, p, limit, size))}
   end
 
   # The point on the surface: steps of Newton along the gradient, each at

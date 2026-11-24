@@ -61,6 +61,7 @@ defmodule World.SDF do
   """
 
   alias World.{Frame, Vec}
+  alias World.Sculpt.Texture
   require World.SDF.Inline, as: Inline
 
   # The field of no edit: far outside.
@@ -185,6 +186,49 @@ defmodule World.SDF do
   """
   def coarse(edits, step) do
     for e <- edits, do: if(e.raise != 0.0 and abs(e.raise) < step / 2, do: identify(%{e | raise: 0.0}), else: e)
+  end
+
+  @doc """
+  The edits of a level with no maps (plan 0020, D11): an edit with the
+  surface of a made thing (`World.Sculpt.Texture.look/4`) gives its look
+  to the points of the mesh (`color/3`, `finish/3`), each the mean over
+  a square of two cells of `step`. So a pane that is larger than about
+  two cells keeps its own points, and the panes of a smaller window are
+  their mean: the glass, the frame and the light together.
+  """
+  def on_points(edits, step) do
+    for e <- edits do
+      case e.surface do
+        {{kind, data}, scale} -> identify(%{e | surface: {{kind, Map.put(data, :cell, step)}, scale}})
+        _ -> e
+      end
+    end
+  end
+
+  @doc "An edit of these gives the look of a made thing to the points (`on_points/2`)."
+  def made?(edits), do: Enum.any?(edits, &match?(%Edit{surface: {{_, %{cell: _}}, _}}, &1))
+
+  # The color and the finish of a place with the surface of a made thing
+  # of its edit, at a level with no maps (`on_points/2`): the mean over a
+  # square of `size` m, two cells at least.
+  defp made(%Edit{surface: {{kind, %{cell: cell} = data}, scale}} = e, p, color, finish, size) do
+    q = Vec.scale(Frame.point(e.back, p), 1 / scale)
+    Texture.apply(Texture.look({kind, data}, q, facing(e, p), max(2 * cell, size || 0.0) / scale), color, finish)
+  end
+
+  defp made(_e, _p, color, finish, _size), do: {color, finish}
+
+  # The direction that the surface of an edit faces at a place, in the
+  # axes of the edit: the gradient of the distance to its own shape.
+  defp facing(e, {x, y, z}) do
+    h = 1.0e-4
+    d = &distance(e, &1)
+
+    Frame.dir(
+      e.back,
+      {d.({x + h, y, z}) - d.({x - h, y, z}), d.({x, y + h, z}) - d.({x, y - h, z}),
+       d.({x, y, z + h}) - d.({x, y, z - h})}
+    )
   end
 
   @doc """
@@ -759,9 +803,21 @@ defmodule World.SDF do
   gives it to the surface that it cuts, in the same way; an edit with a
   color that paints gives it in its shape, with a smooth step across its
   border over its blend. An edit that adds with no color is white: the
-  color of its material shows as it is.
+  color of its material shows as it is. With the surface of a made thing
+  at a level with no maps (`on_points/2`), the color of its look, the
+  mean over a square of `size` m (two cells at least).
   """
-  def color(edits, p, limit \\ @far), do: elem(sample(edits, p, limit), 1)
+  def color(edits, p, limit \\ @far, size \\ nil) do
+    if made?(edits) do
+      {_, color, finish, top} = seen(edits, p, limit, %{})
+      {{r, g, b}, _} = made(top, p, color, finish, size)
+      {byte(r), byte(g), byte(b)}
+    else
+      elem(sample(edits, p, limit), 1)
+    end
+  end
+
+  defp byte(v), do: v |> round() |> max(0) |> min(255)
 
   @doc """
   The value of the field and the color at a point, in one pass over the
@@ -896,7 +952,19 @@ defmodule World.SDF do
   and no glow with none of its own; an edit that takes away or paints
   gives the parts of the finish that it has, and keeps the others.
   """
-  def finish(edits, p, defaults \\ %{}) do
+  def finish(edits, p, defaults \\ %{}, size \\ nil) do
+    if made?(edits) do
+      {_, color, finish, top} = seen(edits, p, @far, defaults)
+      elem(made(top, p, color, finish, size), 1)
+    else
+      fold_finish(edits, p, defaults)
+    end
+  end
+
+  @doc "The glow of the edits at a point (`finish/3`), with no surface of a made thing."
+  def light(edits, p), do: elem(fold_finish(edits, p, %{}), 2)
+
+  defp fold_finish(edits, p, defaults) do
     {_, finish} =
       Enum.reduce(edits, {@far, {0.6, 0.0, 0.0}}, fn e, {u, finish} ->
         de = distance(e, p)
@@ -922,8 +990,11 @@ defmodule World.SDF do
     finish
   end
 
-  @doc "An edit of these has a finish of its own (`finish/3`)."
-  def finished?(edits), do: Enum.any?(edits, &(&1.roughness || &1.metal || &1.glow))
+  @doc """
+  An edit of these has a finish of its own (`finish/3`), or gives the
+  look of a made thing to the points (`on_points/2`).
+  """
+  def finished?(edits), do: Enum.any?(edits, &(&1.roughness || &1.metal || &1.glow)) or made?(edits)
 
   # Each part of a finish to the part of another one by a weight (a part
   # that the other one does not have stays). With a weight of 1, the part

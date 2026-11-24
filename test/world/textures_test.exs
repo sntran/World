@@ -37,6 +37,51 @@ defmodule World.TexturesTest do
     refute Map.has_key?(far, "image") or Map.has_key?(far, "texture")
   end
 
+  test "the textures of made things: a tile of one pitch with the pattern of a surface, at each level (plan 0020, D8)" do
+    assert Enum.all?(~w(corrugated shutter panes), &(&1 in Textures.names()))
+
+    for {name, scale} <- [{"corrugated", [4.0, 4.0]}, {"shutter", [12.5, 12.5]}, {"panes", [1.8182, 1.5385]}],
+        level <- [:near, :mid, :far] do
+      spec = Textures.spec(name, level)
+      assert spec["image_transform"] == %{"scale" => scale} and spec["normal_scale"] == 1.0
+      assert {"image/png", color} = spec["image"]
+      assert {"image/png", normal} = spec["normal_image"]
+      assert {64, 64, 3, _} = World.PNG.decode(color)
+      assert {64, 64, 3, _} = World.PNG.decode(normal)
+    end
+
+    assert Textures.made("panes") == Textures.made("panes")
+    normals = fn name -> name |> Textures.made() |> elem(1) |> World.PNG.decode() |> elem(3) end
+    across = fn row -> for i <- 0..63, do: :binary.at(row, 3 * i) end
+
+    # The ribs of a roof go along v: each row is the same, and the normal turns across u.
+    rows = normals.("corrugated")
+    assert elem(rows, 10) == elem(rows, 50)
+    assert Enum.max(across.(elem(rows, 10))) - Enum.min(across.(elem(rows, 10))) > 40
+    # The ribs of a shutter go along u: each row is even, and the rows are not the same.
+    rows = normals.("shutter")
+    assert across.(elem(rows, 10)) |> Enum.uniq() |> length() == 1 and elem(rows, 10) != elem(rows, 30)
+    # The frames of the panes are darker than the panes.
+    {_, _, _, rows} = "panes" |> Textures.made() |> elem(0) |> World.PNG.decode()
+    assert :binary.at(elem(rows, 32), 0) < :binary.at(elem(rows, 32), 3 * 32)
+
+    # A drawing gives the texture to a role: its images at far too.
+    raw = %{
+      "name" => "shed",
+      "materials" => %{"roof_corrugated" => %{"texture" => "corrugated"}},
+      "parts" => %{
+        "roof" => %{
+          "shapes" => [%{"box" => %{"from" => [0, 0, 0], "to" => [3, 4, 0.05]}, "material" => "roof_corrugated"}]
+        }
+      },
+      "nodes" => [%{"name" => "roof", "part" => "roof"}]
+    }
+
+    assert {:ok, _} = Drawing.check(raw, "d")
+    far = Build.scene(Drawing.build(raw), level: :far).materials.roof_corrugated
+    assert far["normal_image"] && far["image_transform"] == %{"scale" => [4.0, 4.0]}
+  end
+
   test "a photo of a relief is once on its panel: its image, its normal image, and the transform of the panel" do
     assert "relief_last_supper" in Textures.names()
     spec = Textures.spec("relief_last_supper", :near)

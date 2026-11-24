@@ -156,6 +156,38 @@ defmodule World.TownTest do
     assert_in_delta hd(legs["repeat"]["center"]), 7.5 + 1.2, 1.0e-9
   end
 
+  test "the surfaces of a house (plan 0020, D8 to D10): a roof of corrugated steel, a roll-up door with ribs across, panes of glass" do
+    d = House.drawing(%{"family" => "steel", "roof" => "steel", "seed" => 2})
+    {front, roof} = {sculpt(d, "mat_tien")["edits"], sculpt(d, "mai")["edits"]}
+    surfaces = fn edits, kind -> Enum.filter(edits, &match?(%{"surface" => %{"kind" => ^kind}}, &1)) end
+
+    # One sheet of square ribs down the slope, and no paint for each rib.
+    assert [%{"surface" => sheet, "metal" => 0.7}] = surfaces.(roof, "corrugated")
+    assert sheet == %{"kind" => "corrugated", "profile" => "square", "pitch" => 0.25, "depth" => 0.032}
+    refute Enum.any?(roof, &match?(%{"mode" => "paint", "color" => "#75828a"}, &1))
+    # The door: ribs of 8 cm across it (the z of the edit across the door).
+    assert [%{"surface" => ribs, "axis" => [1, 0, 0], "size" => [1.425, 0.03, half]}] = surfaces.(front, "corrugated")
+    assert ribs == %{"kind" => "corrugated", "profile" => "round", "pitch" => 0.08, "depth" => 0.012} and half > 1.5
+    # The door and the window of the upper storey: two panes across, the light of the room in all of them or in none.
+    assert [door, window] = Enum.map(surfaces.(front, "windows"), & &1["surface"])
+    assert door["pane"] == [0.5, 0.6833] and window["pane"] == [0.5, 0.6] and door["frame"] == 0.05
+    assert door["lit"] in [0, 1] and window["lit"] in [0, 1]
+
+    assert [] ==
+             World.Skills.Sculpt.check(sculpt(d, "mat_tien"), "s") ++ World.Skills.Sculpt.check(sculpt(d, "mai"), "s")
+
+    lit =
+      for seed <- 1..40,
+          %{"surface" => %{"lit" => l}} <-
+            surfaces.(sculpt(House.drawing(%{"family" => "modern", "seed" => seed}), "mat_tien")["edits"], "windows"),
+          do: l
+
+    assert Enum.count(lit, &(&1 == 1)) in 25..55 and length(lit) == 80
+
+    # An old house has leaves of wood: no panes.
+    assert surfaces.(sculpt(House.drawing(%{"family" => "old", "seed" => 2}), "mat_tien")["edits"], "windows") == []
+  end
+
   test "the two models of the catalog are the drawings of the rules: the most common house, and a row of five houses" do
     file = fn name -> "priv/drawings/#{name}.json" |> File.read!() |> JSON.decode!() end
     house = %{"type" => "pho2_flat", "family" => "steel", "seed" => 3, "sign" => "#1f4f9c"}

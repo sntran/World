@@ -126,7 +126,7 @@ defmodule World.Sculpt.Surface do
     # an edit that has a finish, the finish of each point: the collapse
     # keeps the points where the finish or the glow changes (plan 0020, D7).
     piece =
-      if Enum.any?(edits, & &1.color) do
+      if Enum.any?(edits, & &1.color) or SDF.made?(edits) do
         color = color(brick, edits, limit, step)
 
         Map.put(
@@ -138,9 +138,19 @@ defmodule World.Sculpt.Surface do
         piece
       end
 
-    if SDF.finished?(edits) do
-      finish = finish(brick, edits, step)
-      Map.put(piece, :finish, for(p <- places, {r, m, g} = finish.(p), into: <<>>, do: <<byte(r), byte(m), byte(g)>>))
+    piece =
+      if SDF.finished?(edits) do
+        finish = finish(brick, edits, step)
+        Map.put(piece, :finish, for(p <- places, {r, m, g} = finish.(p), into: <<>>, do: <<byte(r), byte(m), byte(g)>>))
+      else
+        piece
+      end
+
+    # (With the surface of a made thing, the glow of the edits alone too:
+    # the lit panes of windows are a pattern, not a lamp, in the pins.)
+    if SDF.made?(edits) do
+      light = light(brick, edits, step)
+      Map.put(piece, :light, for(p <- places, into: <<>>, do: <<byte(light.(p))>>))
     else
       piece
     end
@@ -166,7 +176,8 @@ defmodule World.Sculpt.Surface do
   @doc """
   The quads and the points of a piece as terms: `%{quads: [{keys,
   material}], points: %{key => {x, y, z}}, colors: %{key => {r, g, b}},
-  finish: %{key => {roughness, metal, glow}}}` (no colors and no finish
+  finish: %{key => {roughness, metal, glow}}, light: %{key => glow}}` (the
+  glow of the edits alone, with the surface of a made thing; no colors and no finish
   for a piece with none; each from 0 to 255).
   """
   def decode(%{points: points, quads: quads, materials: materials} = piece) do
@@ -177,6 +188,7 @@ defmodule World.Sculpt.Surface do
     %{
       colors: Map.new(Enum.zip(keys, for(<<r::8, g::8, b::8 <- Map.get(piece, :colors, <<>>)>>, do: {r, g, b}))),
       finish: Map.new(Enum.zip(keys, for(<<r::8, m::8, g::8 <- Map.get(piece, :finish, <<>>)>>, do: {r, m, g}))),
+      light: Map.new(Enum.zip(keys, for(<<l::8 <- Map.get(piece, :light, <<>>)>>, do: l))),
       points: Map.new(for(<<k::64, x::float-64, y::float-64, z::float-64 <- points>>, do: {k, {x, y, z}})),
       quads:
         for(<<a::32, b::32, c::32, d::32, i::8 <- quads>>,
@@ -273,11 +285,12 @@ defmodule World.Sculpt.Surface do
     points = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.points))
     colors = Enum.reduce(decoded, %{}, &Map.merge(&2, &1.colors))
     finish = if finish?, do: Enum.reduce(decoded, %{}, &Map.merge(&2, &1.finish)), else: %{}
+    light = if finish?, do: Enum.reduce(decoded, %{}, &Map.merge(&2, &1.light)), else: %{}
     quads = Enum.flat_map(decoded, & &1.quads)
     keys = quads |> Enum.flat_map(&elem(&1, 0)) |> Enum.uniq()
     ids = keys |> Enum.with_index() |> Map.new()
     tris = for {q, m} <- quads, [a, b, c, d] = Enum.map(q, &ids[&1]), f <- [[a, b, c], [a, c, d]], do: {f, m}
-    {keys, Enum.map(keys, &points[&1]), tris, seam_pins(pins(keys, {colors, finish}, tris, pin), keys, seam)}
+    {keys, Enum.map(keys, &points[&1]), tris, seam_pins(pins(keys, {colors, finish, light}, tris, pin), keys, seam)}
   end
 
   # The pins with a very large weight for each point at the border of a
@@ -301,21 +314,35 @@ defmodule World.Sculpt.Surface do
   # the change of the color, of the roughness and of the metal (each from
   # 0 to 1) has the weight `pin`, which is smaller when the budget keeps
   # few of the faces; the square of the change of the glow has the weight
-  # @light (plan 0020, D7: a light does not melt into its wall at far). A
-  # point where they change stays near its place, so the collapse keeps
+  # @light (plan 0020, D7: a light does not melt into its wall at far). The
+  # glow of a surface of a made thing (the lit panes of windows: a
+  # pattern, plan 0020, D11) is a part of the look, with the weight `pin`.
+  # A point where they change stays near its place, so the collapse keeps
   # the border, and takes the points where the surface is even.
-  defp pins(_keys, {colors, finish}, _tris, pin) when (colors == %{} and finish == %{}) or pin == 0.0, do: nil
+  defp pins(_keys, {colors, finish, _light}, _tris, pin) when (colors == %{} and finish == %{}) or pin == 0.0,
+    do: nil
 
-  defp pins(keys, {colors, finish}, tris, pin) do
+  defp pins(keys, {colors, finish, light}, tris, pin) do
     c = keys |> Enum.map(&Map.get(colors, &1, {255, 255, 255})) |> List.to_tuple()
-    f = keys |> Enum.map(&Map.get(finish, &1, {153, 0, 0})) |> List.to_tuple()
+
+    f =
+      keys
+      |> Enum.map(fn k ->
+        {s, m, g} = Map.get(finish, k, {153, 0, 0})
+        {s, m, g, Map.get(light, k, g)}
+      end)
+      |> List.to_tuple()
 
     change =
       for {[a, b, d], _} <- tris, {u, v} <- [{a, b}, {b, d}, {d, a}], reduce: %{} do
         acc ->
           {{r0, g0, b0}, {r1, g1, b1}} = {elem(c, u), elem(c, v)}
-          {{s0, m0, l0}, {s1, m1, l1}} = {elem(f, u), elem(f, v)}
-          look = ((r0 - r1) ** 2 + (g0 - g1) ** 2 + (b0 - b1) ** 2 + (s0 - s1) ** 2 + (m0 - m1) ** 2) / (255 * 255)
+          {{s0, m0, w0, l0}, {s1, m1, w1, l1}} = {elem(f, u), elem(f, v)}
+
+          look =
+            ((r0 - r1) ** 2 + (g0 - g1) ** 2 + (b0 - b1) ** 2 + (s0 - s1) ** 2 + (m0 - m1) ** 2 +
+               (w0 - l0 - (w1 - l1)) ** 2) / (255 * 255)
+
           weight = pin * look + @light * (l0 - l1) ** 2 / (255 * 255)
           acc |> Map.update(u, weight, &max(&1, weight)) |> Map.update(v, weight, &max(&1, weight))
       end
@@ -768,21 +795,30 @@ defmodule World.Sculpt.Surface do
   end
 
   # The color of the edits of a brick at a point, in the same way.
-  defp color(%{eighths: eighths, at: at}, _edits, limit, step) do
-    corner = Sculpt.corner(at, step)
-
-    fn p -> SDF.color(elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))), p, limit) end
+  defp color(brick, edits, limit, step) do
+    list = lists(brick, edits, step)
+    fn p -> SDF.color(list.(p), p, limit) end
   end
-
-  defp color(_brick, edits, limit, _step), do: &SDF.color(edits, &1, limit)
 
   # The finish of the edits of a brick at a point (the finish of their own: no finish of a role).
-  defp finish(%{eighths: eighths, at: at}, _edits, step) do
-    corner = Sculpt.corner(at, step)
-    fn p -> SDF.finish(elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))), p) end
+  defp finish(brick, edits, step) do
+    list = lists(brick, edits, step)
+    fn p -> SDF.finish(list.(p), p) end
   end
 
-  defp finish(_brick, edits, _step), do: &SDF.finish(edits, &1)
+  # The glow of the edits alone of a brick at a point (no surface of a made thing).
+  defp light(brick, edits, step) do
+    list = lists(brick, edits, step)
+    fn p -> SDF.light(list.(p), p) end
+  end
+
+  # The edits of a brick at a point: the short list of its eighth, or all the edits.
+  defp lists(%{eighths: eighths, at: at}, _edits, step) do
+    corner = Sculpt.corner(at, step)
+    fn p -> elem(eighths, Sculpt.eighth(Vec.scale(Vec.sub(p, corner), 1 / step))) end
+  end
+
+  defp lists(_brick, edits, _step), do: fn _p -> edits end
 
   # The faces of each piece of the surface (faces joined by their points)
   # whose box is at least `small` m across: a smaller piece is the noise of
