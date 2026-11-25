@@ -33,6 +33,8 @@ defmodule World.Skills.Sculpt do
   alias World.{Drawing, Frame, GLB, Part, Port, SDF, Vec}
   alias World.Sculpt.{Bones, Texture}
 
+  # The factor of the color of a material whose image or points have the color.
+  @white %{"color" => [255, 255, 255]}
   @keys ~w(edits groups details ports sources budget cells bake mipmaps look occlusion dirt wear strands bones bone_blend plan gait clips)
   @edit ~w(shape size at axis up mode blend blend_type opacity material color raise finish roughness metal glow surface mirror repeat levels)
   # The finishes with a name: a roughness and a metal.
@@ -506,11 +508,20 @@ defmodule World.Skills.Sculpt do
   defp maps(built, nil, %{points: true} = look) do
     defaults = finishes()
 
-    {for({ms, edits, step} <- built, m <- World.Sculpt.Shade.meshes(ms, edits, step, defaults, look), do: m),
-     fn -> %{} end}
+    meshes = for {ms, edits, step} <- built, m <- World.Sculpt.Shade.meshes(ms, edits, step, defaults, look), do: m
+    {meshes, fn -> white(meshes) end}
   end
 
-  defp maps(built, nil, _look), do: {Enum.flat_map(built, &elem(&1, 0)), fn -> %{} end}
+  defp maps(built, nil, _look) do
+    meshes = Enum.flat_map(built, &elem(&1, 0))
+    {meshes, fn -> white(meshes) end}
+  end
+
+  # The color of a sculpture is at the points of its meshes (or in its image): the factor of the color of
+  # each of their materials is white, not the color of the role in the palette, which would multiply the
+  # color a second time.
+  defp white(meshes),
+    do: %{"materials" => Map.new(for(m <- meshes, m.colors != nil, do: {Atom.to_string(m.material), @white}))}
 
   defp maps(built, side, look) do
     defaults = finishes()
@@ -541,6 +552,8 @@ defmodule World.Skills.Sculpt do
          |> Task.await_many(:infinity)
          |> Map.new()
          |> Map.merge(%{"atlas" => true, "occlusion" => look.occlusion})
+         # (The image has the color: the factor is white.)
+         |> Map.merge(@white)
          |> Map.merge(if(look.mipmaps, do: %{"mipmaps" => true}, else: %{}))
          |> Map.merge(if(maps.alpha, do: %{"alpha_mode" => "MASK", "double_sided" => true}, else: %{}))
 

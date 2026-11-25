@@ -457,6 +457,18 @@ defmodule World.Sculpt.BakeTest do
            ] = World.Orders.Blueprints.drawing(full)["nodes"]
   end
 
+  test "a sculpture with roles of the palette: the factor of the color is white, as the image or the points have the color" do
+    white = [1.0, 1.0, 1.0, 1.0]
+    factors = fn g -> for m <- g["materials"], do: {m["name"], m["pbrMetallicRoughness"]["baseColorFactor"]} end
+
+    # With a bake: the image has the color of the edits (#c08020, and the gray of the role).
+    assert factors.(gltf(@data)) == [{"gray", white}, {"paint", white}]
+    # With no bake: the points have it (COLOR_0).
+    points = gltf(Map.delete(@data, "bake"))
+    assert factors.(points) == [{"gray", white}, {"paint", white}]
+    assert Enum.all?(for(m <- points["meshes"], p <- m["primitives"], do: p["attributes"]), &is_map_key(&1, "COLOR_0"))
+  end
+
   test "the GLB of a baked sculpture: the two maps on each material, a sampler with no smaller copies, tangents (R5)" do
     assert paths(@data) == []
     # With no occlusion: the color and the normals.
