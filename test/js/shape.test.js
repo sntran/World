@@ -9,7 +9,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { distance, failures, grid, measure, p95, samples, triangles, worse } from '../../scripts/shape.mjs';
+import { distance, failures, grid, measure, nearer, p95, samples, triangles, worse } from '../../scripts/shape.mjs';
 
 const script = new URL('../../scripts/shape.mjs', import.meta.url).pathname;
 
@@ -155,6 +155,18 @@ test('the measures of a model, and the rule of a level that is worse', () => {
   const before = { far: { to: 0.03, from: 0.05 } };
   assert.deepEqual(failures('house', before, { far: { to: 0.18, from: 0.05 } }), ['house.far to near: 3.0 cm to 18.0 cm']);
   assert.deepEqual(failures('house', before, before), []);
+
+  // The near level against the near level at the base: it fails when it is more than 2 cm from it.
+  const moved = glb(box([0, 0, 0], [1, 1, 1.05]), [{ mesh: 0 }]);
+  const near05 = nearer(near, moved, 4000);
+  assert.ok(near05.to > 0.045 && near05.to < 0.055 && near05.from > 0.045 && near05.from < 0.055, JSON.stringify(near05));
+  assert.deepEqual(failures('house', before, before, near05), [
+    `house.near to the base: ${(100 * near05.to).toFixed(1)} cm`,
+    `house.near from the base: ${(100 * near05.from).toFixed(1)} cm`,
+  ]);
+  assert.deepEqual(failures('house', before, before, { to: 0.015, from: 0.019 }), []);
+  assert.deepEqual(failures('house', before, before, nearer(near, near, 4000)), []);
+  assert.equal(nearer(null, near), null);
 });
 
 test('the check of the models that changed since a commit: worse, the same, a new model', () => {
@@ -180,6 +192,15 @@ test('the check of the models that changed since a commit: worse, the same, a ne
   assert.equal(bad.status, 1);
   assert.match(bad.stdout, /1 models with a changed file, 1 levels worse/);
   assert.match(bad.stdout, /worse: house\.far from near: 0\.0 cm to/);
+
+  // A near level that lost its top (and its mid and far levels with it, so they are as near to it as at
+  // the base): only the near level is worse.
+  for (const level of ['', '.mid', '.far']) write(`house${level}.glb`, glb(box([0, 0, 0], [1, 1, 0.6]), [{ mesh: 0 }]));
+  const lower = run('--dir', 'models', '--base', 'HEAD');
+  assert.equal(lower.status, 1);
+  assert.match(lower.stdout, /house: near [0-9.]+ cm \/ [0-9.]+ cm, mid 0\.0 cm \/ 0\.0 cm to 0\.0 cm \/ 0\.0 cm/);
+  assert.match(lower.stdout, /1 models with a changed file, 1 levels worse\n  worse: house\.near to the base: [0-9.]+ cm\n  worse: house\.near from the base: /);
+  for (const level of ['', '.mid', '.far']) write(`house${level}.glb`, cube);
 
   // The same shape again, and a new model: nothing is worse.
   write('house.far.glb', cube);

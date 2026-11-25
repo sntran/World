@@ -14,8 +14,11 @@
 //
 // With --base, a level fails when one of its two numbers grows by more
 // than 20 % and by more than 2 cm from the files at REV to the files of
-// the work tree; the script then stops with an error. The files at REV
-// come from git (git show).
+// the work tree; the script then stops with an error. The near level is
+// measured too: the near level of the work tree against the near level at
+// REV, in both directions, with the same rule (from 0: it fails when one
+// of the two numbers is more than 2 cm). The files at REV come from git
+// (git show).
 //
 // Options: --dir (priv/models by default), --samples (the points on each
 // surface, 20,000 by default).
@@ -374,8 +377,18 @@ export function worse(before, after) {
 }
 
 // The levels of a model that fail, from its measures before and after.
-export function failures(name, before, after) {
+// The near level of the work tree against the near level at the base
+// (the GLB files): `{to, from}`, or null when one of the two is not there.
+export function nearer(before, after, count = 20000) {
+  if (!before || !after) return null;
+  const [a, b] = [triangles(before), triangles(after)];
+  return { to: p95(samples(b, count), grid(a)), from: p95(samples(a, count), grid(b)) };
+}
+
+export function failures(name, before, after, near = null) {
   const out = [];
+  for (const way of ['to', 'from'])
+    if (near && worse(0, near[way])) out.push(`${name}.near ${way === 'to' ? 'to the base' : 'from the base'}: ${cm(near[way])}`);
   for (const level of LEVELS)
     for (const way of ['to', 'from']) {
       const [b, a] = [before?.[level]?.[way], after?.[level]?.[way]];
@@ -430,11 +443,13 @@ function main(args) {
   const bad = [];
   for (const name of names) {
     const [before, after] = [measure(git(name), opts.samples), measure(disk(name), opts.samples)];
+    const near = nearer(git(name)(''), disk(name)(''), opts.samples);
     const row = LEVELS.filter((l) => before?.[l] && after?.[l]).map(
       (l) => `${l} ${cm(before[l].to)} / ${cm(before[l].from)} to ${cm(after[l].to)} / ${cm(after[l].from)}`,
     );
+    if (near) row.unshift(`near ${cm(near.to)} / ${cm(near.from)}`);
     console.log(`${name}: ${before && after ? row.join(', ') : before ? 'gone' : 'new'}`);
-    bad.push(...failures(name, before, after));
+    bad.push(...failures(name, before, after, near));
   }
   const levels = new Set(bad.map((b) => b.split(' ')[0]));
   console.log(`${names.length} models with a changed file, ${levels.size} levels worse`);

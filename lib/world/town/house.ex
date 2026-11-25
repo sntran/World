@@ -785,16 +785,22 @@ defmodule World.Town.House do
     {normal, along} = {[0, 0.0872, 0.9962], [0, 0.9962, -0.0872]}
     at = [0, -d / 2 - 0.1, top + 0.1]
 
-    # (The sheets of the roof: square ribs down the slope, along the y of the edit: plan 0020, D10.)
-    [
-      e("box", [hw, d / 2, 0.03], at, "#8b98a0", %{
+    # (The sheets of the roof: square ribs down the slope, along the y of the edit: plan 0020, D10.
+    # At far the sheet is 12 cm thick, not 6 cm: on a sheet of 1.5 cells, the cut to the budget can
+    # take away few points and keep the mesh closed, and it cut the corners of the sheet. A sheet of
+    # 11 cm or more keeps them; 3 cm more on each side keeps the far roof near the near roof.)
+    sheet = fn half, levels ->
+      e("box", [hw, d / 2, half], at, "#8b98a0", %{
         "axis" => normal,
         "up" => along,
+        "levels" => levels,
         "roughness" => 0.5,
         "metal" => 0.7,
         "surface" => %{"kind" => "corrugated", "profile" => "square", "pitch" => 0.25, "depth" => 0.032}
       })
-    ]
+    end
+
+    [sheet.(0.03, ["near", "mid"]), sheet.(0.06, ["far"])]
   end
 
   # --- The words of an edit ------------------------------------------------------

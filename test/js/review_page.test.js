@@ -111,7 +111,7 @@ test('the review page draws a model in the sun: tone mapping, soft shadows, a gr
 });
 
 // The look of each point of a level of a sculpture with no maps (plan
-// 0020, step 2): the occlusion in the alpha of COLOR_0 and _FINISH. The
+// 0020, step 2): the occlusion in the alpha of COLOR_0, _FINISH and _LIGHT. The
 // fixture `fixtures/look/slab.far.glb` is a slab of World at far (the
 // drawing of `test/world/sculpt_shade_test.exs` with a lamp of glow 0.8,
 // cells of 0.05 m and a budget of 300 triangles, from
@@ -158,6 +158,7 @@ test('the look of each point: opaque with no shader of its own, the occlusion an
       const mesh = plain.getObjectByProperty('isMesh', true);
       const color = mesh.geometry.getAttribute('color');
       const finish = mesh.geometry.getAttribute('_finish');
+      const glow = mesh.geometry.getAttribute('_light');
       const opaque = shot(plain);
 
       // With the review page: the material of the look, by day and by night.
@@ -185,23 +186,28 @@ test('the look of each point: opaque with no shader of its own, the occlusion an
       return {
         alpha: color.itemSize,
         finish: [finish.itemSize, finish.normalized],
+        light: [glow.itemSize, glow.normalized],
         transparent: mesh.material.transparent,
         opaque: opaque.center,
         errors: [opaque.error, lit.error, dark.error, none.error],
         look,
         sun: dark.stage.sun.intensity,
+        glows: [lit.stage.glow.value, dark.stage.glow.value],
         glow: dark.brightest,
         noGlow: none.brightest,
       };
     });
     assert.equal(state.alpha, 4);
-    assert.deepEqual(state.finish, [3, true]);
+    assert.deepEqual(state.finish, [2, true]);
+    assert.deepEqual(state.light, [3, true]);
     assert.equal(state.transparent, false);
     const [r, g, b] = state.opaque;
     assert.ok(g - Math.max(r, b) < 40, `the slab is opaque: ${state.opaque}`);
     assert.deepEqual(state.errors, [0, 0, 0, 0]);
-    assert.deepEqual(state.look, { finish: true, open: true });
+    assert.deepEqual(state.look, { finish: true, lit: true, open: true });
     assert.equal(state.sun, 0);
+    // The glow by day is a small part of the glow at night (a project makes the light weaker by day).
+    assert.deepEqual(state.glows, [0.1, 1]);
     // By night the lamp glows: a bright pixel, where the slab with no glow has none.
     assert.ok(state.glow > 120 && state.noGlow < 60, JSON.stringify(state));
     assert.deepEqual(errors, []);

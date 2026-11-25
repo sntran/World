@@ -5670,6 +5670,10 @@
         0.9962
        ],
        "color": "#8b98a0",
+       "levels": [
+        "near",
+        "mid"
+       ],
        "material": "part_15",
        "metal": 0.7,
        "roughness": 0.5,
@@ -5678,6 +5682,42 @@
         2.5,
         8.0,
         0.03
+       ],
+       "surface": {
+        "depth": 0.032,
+        "kind": "corrugated",
+        "pitch": 0.25,
+        "profile": "square"
+       },
+       "up": [
+        0,
+        0.9962,
+        -0.0872
+       ]
+      },
+      {
+       "at": [
+        10.5,
+        -8.1,
+        4.0
+       ],
+       "axis": [
+        0,
+        0.0872,
+        0.9962
+       ],
+       "color": "#8b98a0",
+       "levels": [
+        "far"
+       ],
+       "material": "part_15",
+       "metal": 0.7,
+       "roughness": 0.5,
+       "shape": "box",
+       "size": [
+        2.5,
+        8.0,
+        0.06
        ],
        "surface": {
         "depth": 0.032,

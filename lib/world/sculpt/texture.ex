@@ -49,7 +49,7 @@ defmodule World.Sculpt.Texture do
 
   | Kind | What it is | The data (the default) |
   |---|---|---|
-  | `windows` | Rows and columns of panes on each face that stands up (a face that faces z has none). A pane has the finish of glass (roughness 0.05, no metal) and is 2 cm in from its frame; the frame has the color and the finish of the edit. A lit pane has the color of its light and a glow of 0.9. | `pane` [width, height] ([1.2, 1.5]), `frame` (the width between two panes: one number, or [across, up]; 0.3), `lit` (the share of the lit panes, 0 to 1; 0), `seed` (1), `warm` (`#ffd08a`) and `cold` (`#d6e4ff`): the colors of the light. |
+  | `windows` | Rows and columns of panes on each face that stands up (a face that faces z has none). A pane has the color and the finish of glass (roughness 0.05, no metal) and is 2 cm in from its frame; the frame has the color and the finish of the edit. A lit pane has a light: the color of its light times a glow of 0.9, apart from its color (`look/4`). | `pane` [width, height] ([1.2, 1.5]), `frame` (the width between two panes: one number, or [across, up]; 0.3), `lit` (the share of the lit panes, 0 to 1; 0), `seed` (1), `warm` (`#ffd08a`) and `cold` (`#d6e4ff`): the colors of the light. |
   | `panels` | Plates with dark seams in the plane that the face faces most, and rivets on the seams as an option. | `plate` [width, height] ([1.0, 0.5]), `seam` (the width of a seam: 0.006), `depth` (of a seam: 0.002), `rivets` (the step of the rivets on a seam, or none). |
   | `corrugated` | Ribs along the z of the edit (along its y on a face that faces z). | `profile` (`round`: a sine; `square`: flat tops with sides at 45 degrees and flat pans; `square`), `pitch` (0.25), `depth` (0.032) and `top` (the width of the flat top of a square rib: 0.03). |
 
@@ -63,7 +63,7 @@ defmodule World.Sculpt.Texture do
   texel (`look/4`; at a level with no maps, the square of a point: a
   third of the area of its faces, two cells at least): a pane, a seam or
   a rib that is smaller than that is its mean (a frame and a pane
-  together, a mean glow), not the value of the place that a texel
+  together, a mean light), not the value of the place that a texel
   happens to be at. Where the square is more than a quarter of the pitch
   of the panes, the texels or the points are too far apart to show the
   rows: the panes go to the mean of all of them (in full at half a pitch).
@@ -256,16 +256,20 @@ defmodule World.Sculpt.Texture do
   The surface of a made thing at the place `q` (in the axes of the edit,
   in units of the scale), where the surface faces `n` (in the axes of the
   edit), as the mean over a square of `size` (in units of the scale):
-  `{height, tone, to}`.
+  `{height, tone, to, light}`.
 
   - `height`: the relief, in units of the scale (more is out).
   - `tone`: the color times this (1 for no change).
   - `to`: `{color, {roughness, metal, glow}, part}`, the part of the place
     that has that color and that finish (the glass of the panes), or nil.
+  - `light`: the light of the place, `{r, g, b}` in linear light (the
+    color of the light of each lit pane times its glow, by its area in the
+    square), or nil. The light is not in the color: a lit pane has the
+    color of glass, as a dark pane.
   """
   def look({:windows, w}, {x, y, z}, {nx, ny, nz}, size) do
     if abs(nz) > 0.5 do
-      {0.0, 1.0, nil}
+      {0.0, 1.0, nil, nil}
     else
       # (The panes go across the face and up; the face is one of four sides.)
       {u, axis, face} = if abs(nx) >= abs(ny), do: {y, 1, {:x, nx > 0}}, else: {x, 0, {:y, ny > 0}}
@@ -275,15 +279,15 @@ defmodule World.Sculpt.Texture do
       size = max(size, 1.0e-6)
       {columns, rows} = {panes(su, size, pu, fu / 2, pw), panes(sv, size, pv, fv / 2, ph)}
       part = Enum.sum(Enum.map(columns, &elem(&1, 1))) * Enum.sum(Enum.map(rows, &elem(&1, 1))) / (size * size)
-      {on, light} = light(w, face, columns, rows)
+      light = light(w, face, columns, rows, size)
       # (A square of more than a quarter of a pitch cannot show the rows: the points or the texels of
       # that size are too far apart. Then the mean of all the panes, in full at half a pitch.)
       mean = min(max(4 * max(size / pu, size / pv) - 1, 0.0), 1.0)
-      part = part + (pw * ph / (pu * pv) - part) * mean
-      {on, light} = {on + (w.lit - on) * mean, mix3(light, mix3(w.cold, w.warm, 2 / 3), mean)}
-      glass = mix3(@glass, light, on)
+      all = pw * ph / (pu * pv)
+      part = part + (all - part) * mean
+      light = mix3(light, scale3(mean_light(w), all * w.lit), mean)
       {rough, metal} = @pane_finish
-      {0.0 - @pane_in * part, 1.0, {glass, {rough, metal, @lit_glow * on}, part}}
+      {0.0 - @pane_in * part, 1.0, {@glass, {rough, metal, 0.0}, part}, light}
     end
   end
 
@@ -294,7 +298,7 @@ defmodule World.Sculpt.Texture do
     {sa, sb} = {band(a, size, w, -sw / 2, sw), band(b, size, h, -sw / 2, sw)}
     seam = 1.0 - (1.0 - sa) * (1.0 - sb)
     rivet = if k.rivets, do: rivets(a, b, k, size), else: 0.0
-    {-k.depth * seam + 0.003 * rivet, 1.0 - 0.4 * seam + 0.08 * rivet, nil}
+    {-k.depth * seam + 0.003 * rivet, 1.0 - 0.4 * seam + 0.08 * rivet, nil, nil}
   end
 
   def look({:corrugated, c}, {x, y, _z}, {nx, ny, nz}, size) do
@@ -308,14 +312,14 @@ defmodule World.Sculpt.Texture do
         else: rib(c, s)
 
     # (The mean height of the sheet is its surface.)
-    {h - rib_area(c, c.pitch) / c.pitch, 1.0, nil}
+    {h - rib_area(c, c.pitch) / c.pitch, 1.0, nil, nil}
   end
 
   @doc """
   The color and the finish of a place with the look of a made thing
   (`look/4`): `{color, finish}` (the color 0 to 255, not rounded).
   """
-  def apply({_height, tone, to}, {r, g, b}, {rough, metal, glow}) do
+  def apply({_height, tone, to, _light}, {r, g, b}, {rough, metal, glow}) do
     {r, g, b} = {r * tone, g * tone, b * tone}
 
     case to do
@@ -348,28 +352,37 @@ defmodule World.Sculpt.Texture do
   # The share of the light in the panes of a square, by their areas, and
   # the mean color of their light: the mean of all the panes when the
   # square has many.
-  defp light(w, face, columns, rows) do
-    mean = mix3(w.cold, w.warm, 2 / 3)
-
+  # The light of the panes of a square, as the mean over the square: for
+  # each lit pane in it, the light of the pane (its color in linear light
+  # times its glow) by the area of the pane in the square. The mean of all
+  # the panes when the square has many.
+  defp light(w, face, columns, rows, size) do
     if Enum.any?(columns ++ rows, &(elem(&1, 0) == nil)) do
-      {w.lit, mean}
+      area = Enum.sum(Enum.map(columns, &elem(&1, 1))) * Enum.sum(Enum.map(rows, &elem(&1, 1)))
+      scale3(mean_light(w), w.lit * area / (size * size))
     else
-      {area, lit, {r, g, b}} =
-        for {i, lu} <- columns, {j, lv} <- rows, reduce: {0.0, 0.0, {0.0, 0.0, 0.0}} do
-          {area, lit, {r, g, b}} ->
-            a = lu * lv
-
-            if :erlang.phash2({w.seed, face, i, j}, 1_000_000) < w.lit * 1_000_000 do
-              {cr, cg, cb} = if :erlang.phash2({w.seed, face, i, j, :warm}, 3) < 2, do: w.warm, else: w.cold
-              {area + a, lit + a, {r + a * cr, g + a * cg, b + a * cb}}
-            else
-              {area + a, lit, {r, g, b}}
-            end
-        end
-
-      if lit > 0.0, do: {lit / area, {r / lit, g / lit, b / lit}}, else: {0.0, mean}
+      for {i, lu} <- columns, {j, lv} <- rows, reduce: {0.0, 0.0, 0.0} do
+        sum ->
+          if :erlang.phash2({w.seed, face, i, j}, 1_000_000) < w.lit * 1_000_000 do
+            color = if :erlang.phash2({w.seed, face, i, j, :warm}, 3) < 2, do: w.warm, else: w.cold
+            add3(sum, scale3(linear(color), @lit_glow * lu * lv / (size * size)))
+          else
+            sum
+          end
+      end
     end
   end
+
+  # The light of a lit pane on the mean: two of three panes have the warm light.
+  defp mean_light(w), do: scale3(mix3(linear(w.cold), linear(w.warm), 2 / 3), @lit_glow)
+
+  @doc "A color of sRGB (0 to 255), or one part of it, in linear light (0 to 1)."
+  def linear({r, g, b}), do: {linear(r), linear(g), linear(b)}
+  def linear(c) when c <= 10.31475, do: c / 255 / 12.92
+  def linear(c), do: :math.pow((c / 255 + 0.055) / 1.055, 2.4)
+
+  defp scale3({a, b, c}, k), do: {a * k, b * k, c * k}
+  defp add3({a, b, c}, {d, e, f}), do: {a + d, b + e, c + f}
 
   # The part of a square of `size` round `s` (on one axis) that is in the
   # bands [k * pitch + from, k * pitch + from + width], for each k.

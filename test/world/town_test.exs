@@ -161,8 +161,13 @@ defmodule World.TownTest do
     {front, roof} = {sculpt(d, "mat_tien")["edits"], sculpt(d, "mai")["edits"]}
     surfaces = fn edits, kind -> Enum.filter(edits, &match?(%{"surface" => %{"kind" => ^kind}}, &1)) end
 
-    # One sheet of square ribs down the slope, and no paint for each rib.
-    assert [%{"surface" => sheet, "metal" => 0.7}] = surfaces.(roof, "corrugated")
+    # One sheet of square ribs down the slope, and no paint for each rib: 6 cm thick at near and mid,
+    # 12 cm at far (a thinner sheet loses its corners in the cut to the far budget).
+    assert [%{"surface" => sheet, "metal" => 0.7} = thin, %{"surface" => sheet} = thick] = surfaces.(roof, "corrugated")
+
+    assert {thin["levels"], List.last(thin["size"]), thick["levels"], List.last(thick["size"])} ==
+             {["near", "mid"], 0.03, ["far"], 0.06}
+
     assert sheet == %{"kind" => "corrugated", "profile" => "square", "pitch" => 0.25, "depth" => 0.032}
     refute Enum.any?(roof, &match?(%{"mode" => "paint", "color" => "#75828a"}, &1))
     # The door: ribs of 8 cm across it (the z of the edit across the door).
@@ -375,7 +380,7 @@ defmodule World.TownTest do
       end)
 
     triangles = part.shapes |> Enum.map(&length(&1.faces)) |> Enum.sum()
-    lit = for m <- part.shapes, {_, _, glow} <- m.finish, glow >= 77, do: glow
+    lit = for m <- part.shapes, {_, _, light} <- m.finish, Enum.max(Tuple.to_list(light)) >= 77, do: light
     assert triangles <= 300 and length(lit) >= 10
   end
 

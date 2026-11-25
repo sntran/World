@@ -7,6 +7,10 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
+// The part of the glow of a model by day (the light of the room behind a
+// window, by day: a little lighter than a dark window).
+export const DAY_GLOW = 0.1;
+
 // The sun comes from the front right, high (y is up in three.js).
 const SUN = new THREE.Vector3(3, 6, 4).normalize();
 
@@ -15,9 +19,9 @@ const SUN = new THREE.Vector3(3, 6, 4).normalize();
 // which has each mesh of an object cast and take shadows, and shows the
 // tint of each copy (plan 0020: a node with `extras.tint`) and the look of
 // each point (plan 0020, D5 and D6: the occlusion in the alpha of
-// COLOR_0, and the roughness, the metal and the glow of _FINISH), as a
-// game draws them; and `night(on)`, the light of the night: no sun, a
-// dark sky, so the glow of a model shows.
+// COLOR_0, the roughness and the metal of _FINISH, and the light of
+// _LIGHT), as a game draws them; and `night(on)`, the light of the night:
+// no sun, a dark sky, so the glow of a model shows.
 export function light(renderer, scene) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -42,6 +46,12 @@ export function light(renderer, scene) {
   ground.userData.ground = true;
   scene.add(ground);
 
+  // The glow by day and at night (plan 0020, step 3): a project makes
+  // the light of a model weaker by day, as a game does. A lit window by
+  // day looks almost as dark as the windows next to it.
+  const glow = { value: DAY_GLOW };
+  const glowing = new Set();
+
   function shade(object) {
     object.traverse((o) => {
       if (o.isMesh && !o.userData.ground) {
@@ -50,40 +60,56 @@ export function light(renderer, scene) {
       }
       if (o.userData.tint) tint(o, o.userData.tint);
       if (o.isMesh) look(o);
+      if (o.isMesh && o.material.emissiveMap) {
+        o.material.userData.glow ??= o.material.emissiveIntensity;
+        o.material.emissiveIntensity = o.material.userData.glow * glow.value;
+        glowing.add(o.material);
+      }
     });
   }
 
   // The look of each point of a mesh (a level of a sculpture with no
   // maps): the alpha of COLOR_0 is how open the point is, so it takes the
   // light of the sky and of the room (as the occlusion of a map), not the
-  // sun; _FINISH has the roughness, the metal and the glow of the point
-  // (the glow: the color of the point times it, as light). In a copy of
-  // the material: one copy for each material and attributes.
+  // sun; _FINISH has the roughness and the metal of the point, and
+  // _LIGHT its light (in linear light, as an emission: not the color of the
+  // point times a glow). In a copy of the material: one copy for each
+  // material and attributes.
   const looks = new Map();
   function look(mesh) {
     const finish = Boolean(mesh.geometry.getAttribute('_finish'));
+    const lit = Boolean(mesh.geometry.getAttribute('_light'));
     const color = mesh.geometry.getAttribute('color');
     const open = Boolean(color && color.itemSize === 4 && mesh.material.vertexColors);
     if (!finish && !open) return;
-    const key = `${mesh.material.uuid} ${finish} ${open}`;
-    if (!looks.has(key)) looks.set(key, looked(mesh.material, finish, open));
+    const key = `${mesh.material.uuid} ${finish} ${lit} ${open}`;
+    if (!looks.has(key)) looks.set(key, looked(mesh.material, finish, lit, open));
     mesh.material = looks.get(key);
   }
 
-  function looked(base, finish, open) {
+  function looked(base, finish, lit, open) {
     const material = base.clone();
-    material.userData.look = { finish, open };
-    material.customProgramCacheKey = () => `look ${finish} ${open}`;
+    material.userData.look = { finish, lit, open };
+    material.customProgramCacheKey = () => `look ${finish} ${lit} ${open}`;
     material.onBeforeCompile = (shader) => {
       if (finish) {
         shader.vertexShader = shader.vertexShader
-          .replace('#include <color_pars_vertex>', 'attribute vec3 _finish;\nvarying vec3 vFinish;\n#include <color_pars_vertex>')
+          .replace('#include <color_pars_vertex>', 'attribute vec2 _finish;\nvarying vec2 vFinish;\n#include <color_pars_vertex>')
           .replace('#include <color_vertex>', '#include <color_vertex>\nvFinish = _finish;');
         shader.fragmentShader = shader.fragmentShader
-          .replace('#include <color_pars_fragment>', 'varying vec3 vFinish;\n#include <color_pars_fragment>')
+          .replace('#include <color_pars_fragment>', 'varying vec2 vFinish;\n#include <color_pars_fragment>')
           .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = vFinish.r;')
-          .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = vFinish.g;')
-          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * vFinish.b;');
+          .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = vFinish.g;');
+      }
+      if (lit) {
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <color_pars_vertex>', 'attribute vec3 _light;\nvarying vec3 vLight;\n#include <color_pars_vertex>')
+          .replace('#include <color_vertex>', '#include <color_vertex>\nvLight = _light;');
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <color_pars_fragment>', 'varying vec3 vLight;\n#include <color_pars_fragment>')
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vLight * glowScale;');
+        shader.fragmentShader = 'uniform float glowScale;\n' + shader.fragmentShader;
+        shader.uniforms.glowScale = glow;
       }
       if (open) {
         shader.fragmentShader = shader.fragmentShader.replace(
@@ -101,6 +127,8 @@ export function light(renderer, scene) {
     sun.intensity = on ? 0.0 : 2.4;
     sky.intensity = on ? 0.05 : 0.45;
     scene.environmentIntensity = on ? 0.04 : 0.55;
+    glow.value = on ? 1.0 : DAY_GLOW;
+    for (const m of glowing) m.emissiveIntensity = m.userData.glow * glow.value;
   }
 
   // The tint multiplies the color of each mesh of the node (the node, or
@@ -140,5 +168,5 @@ export function light(renderer, scene) {
     ground.scale.setScalar(8 * r);
   }
 
-  return { sun, ground, fit, shade, night };
+  return { sun, ground, fit, shade, night, glow };
 }

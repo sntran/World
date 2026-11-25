@@ -10,8 +10,8 @@ defmodule World.Scene do
   alias World.{Frame, Vec}
 
   # The finish of a point with no finish of its own in a primitive with
-  # finishes: rough (0.6, as `World.SDF.finish/3`), no metal, no glow.
-  @finish {153, 0, 0}
+  # finishes: rough (0.6, as `World.SDF.finish/3`), no metal, no light.
+  @finish {153, 0, {0, 0, 0}}
   defstruct name: "model", extras: %{}, nodes: [], skins: [], animations: [], materials: %{}
 
   defmodule Node do
@@ -55,9 +55,9 @@ defmodule World.Scene do
     the points of a body). `uvs2` is a second UV set (`TEXCOORD_1`), and
     `data` a list of `{r, g, b, a}` (0 to 1) for each point that goes
     into `COLOR_0` as it is: numbers for a shader of an app, not colors
-    (`World.Surface`). `finish` is the roughness, the metal and the glow
-    of each point (`{r, m, g}`, 0 to 255: `_FINISH` in the GLB, plan
-    0020, D6).
+    (`World.Surface`). `finish` is the roughness, the metal and the light
+    of each point (`{r, m, {lr, lg, lb}}`, 0 to 255: `_FINISH` and
+    `_LIGHT` in the GLB, plan 0020, D6).
 
     A primitive with only points, normals and indices can be `packed`
     (`World.Scene.pack/1`): its points and its normals as binaries of

@@ -143,7 +143,7 @@ defmodule World.Textures do
 
     texels =
       for j <- 0..(@texels - 1), i <- 0..(@texels - 1), into: %{} do
-        {height, tone, to} = World.Sculpt.Texture.look(look, place.(i + 0.5, j + 0.5), n, min(du, dv))
+        {height, tone, to, _light} = World.Sculpt.Texture.look(look, place.(i + 0.5, j + 0.5), n, min(du, dv))
         part = if to, do: elem(to, 2), else: 1.0
         # (The frames of the panes are darker; the panes take the color of the role.)
         shade = if kind == "windows", do: tone * (0.6 + 0.4 * part), else: tone

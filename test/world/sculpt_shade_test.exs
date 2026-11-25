@@ -1,9 +1,9 @@
 defmodule World.Sculpt.ShadeTest do
   # The look of a level of a sculpture with a budget and no maps (plan
   # 0020, step 2: R6 to R9): the occlusion in the alpha of COLOR_0 (or in
-  # the color), `_FINISH` with the roughness, the metal and the glow of
-  # each point, the cut that keeps the borders of the glow, and the flat
-  # look with neither.
+  # the color), `_FINISH` with the roughness and the metal of each point
+  # and `_LIGHT` with its light, the cut that keeps the borders of the
+  # glow, and the flat look with neither.
   use ExUnit.Case, async: true
 
   alias World.{Build, Detail, Drawing, GLB, GLBHelper, Mesh, Orders, Scene, SDF}
@@ -86,29 +86,51 @@ defmodule World.Sculpt.ShadeTest do
     assert alpha.(&open?/1) > 0.8
     assert Enum.all?(for {p, {r, g, b, _}, _} <- all, open?(p), do: slab_color?({r, g, b}))
 
-    # The finish: the lamp glows (0.8 of 255), the plate is metal and smooth, the rest has the finish of
-    # plaster. (The inside of the lamp is one flat face after the cut: its border keeps its points.)
+    # The finish and the light: the lamp has the light of its color (#ffe0a0) in linear light times its
+    # glow of 0.8 ({204, 152, 72} with no mean), the plate is metal and smooth, the rest has the finish of
+    # plaster and no light. (The inside of the lamp is one flat face after the cut: its border keeps its
+    # points.)
     lamp = for {{x, y, z}, _, f} <- all, abs(x - 0.6) <= 0.2, abs(y) <= 0.2, abs(z - 0.5) < 0.01, do: f
     plate = for {{x, y, z}, _, f} <- all, abs(x + 0.6) <= 0.2, abs(y) <= 0.2, abs(z - 0.5) < 0.01, do: f
-    assert Enum.count(lamp, &(elem(&1, 2) == 204)) >= 3
+    assert Enum.count(lamp, &lamp?(elem(&1, 2))) >= 3
     assert Enum.count(plate, &(elem(&1, 1) == 255 and elem(&1, 0) == 51)) >= 3
     {rough, metal} = GLB.palette()["plaster"] |> then(&{&1["roughness"], &1["metalness"]})
-    assert Enum.all?(for {p, _, f} <- all, open?(p), do: f == {round(rough * 255), round(metal * 255), 0})
+    assert Enum.all?(for {p, _, f} <- all, open?(p), do: f == {round(rough * 255), round(metal * 255), {0, 0, 0}})
 
-    # The GLB: COLOR_0 with four floats, and _FINISH: three bytes of each point, normalized, each element in 4 bytes.
+    # The GLB: COLOR_0 with four floats, _FINISH (two bytes of each point) and _LIGHT (three bytes),
+    # normalized, each element in 4 bytes.
     glb = GLB.encode(Build.scene(Detail.with(:far, fn -> Drawing.build(drawing(slab())) end), level: :far))
     json = GLBHelper.json(glb)
     [prim] = for m <- json["meshes"], p <- m["primitives"], do: p
     color = Enum.at(json["accessors"], prim["attributes"]["COLOR_0"])
     finish = Enum.at(json["accessors"], prim["attributes"]["_FINISH"])
+    light = Enum.at(json["accessors"], prim["attributes"]["_LIGHT"])
     assert color["type"] == "VEC4" and color["componentType"] == 5126
-    assert %{"type" => "VEC3", "componentType" => 5121, "normalized" => true} = finish
-    view = Enum.at(json["bufferViews"], finish["bufferView"])
-    assert view["byteStride"] == 4 and view["byteLength"] == 4 * finish["count"] and view["target"] == 34962
-    assert finish["count"] == Enum.at(json["accessors"], prim["attributes"]["POSITION"])["count"]
-    bytes = finish_bytes(glb, finish)
-    assert Enum.any?(bytes, &match?({_, _, 204}, &1)) and Enum.any?(bytes, &match?({51, 255, _}, &1))
+    assert %{"type" => "VEC2", "componentType" => 5121, "normalized" => true} = finish
+    assert %{"type" => "VEC3", "componentType" => 5121, "normalized" => true} = light
+
+    for acc <- [finish, light] do
+      view = Enum.at(json["bufferViews"], acc["bufferView"])
+      assert view["byteStride"] == 4 and view["byteLength"] == 4 * acc["count"] and view["target"] == 34962
+      assert acc["count"] == Enum.at(json["accessors"], prim["attributes"]["POSITION"])["count"]
+    end
+
+    assert Enum.any?(finish_bytes(glb, finish), &match?({51, 255, 0}, &1))
+    assert Enum.any?(finish_bytes(glb, light), &lamp?/1)
+
+    # With no lamp, no point has light: the GLB has _FINISH and no _LIGHT.
+    dark = Map.update!(slab(), "edits", fn edits -> Enum.reject(edits, &(&1["glow"] != nil)) end)
+
+    json =
+      GLBHelper.json(GLB.encode(Build.scene(Detail.with(:far, fn -> Drawing.build(drawing(dark)) end), level: :far)))
+
+    [prim] = for m <- json["meshes"], p <- m["primitives"], do: p
+    assert "_FINISH" in Map.keys(prim["attributes"]) and "_LIGHT" not in Map.keys(prim["attributes"])
   end
+
+  # The light of a point of the lamp: its color (#ffe0a0, a mean with the slab at its border) in linear light
+  # times 0.8: red, then green, then blue.
+  defp lamp?({r, g, b}), do: r >= 150 and r <= 204 and r > g and g > b
 
   # The values of an accessor of bytes with a byte stride of 4.
   defp finish_bytes(
@@ -118,7 +140,7 @@ defmodule World.Sculpt.ShadeTest do
     <<_::little-32, "BIN", 0, bin::binary>> = rest
     view = Enum.at(GLBHelper.json(glb)["bufferViews"], acc["bufferView"])
     data = binary_part(bin, Map.get(view, "byteOffset", 0), view["byteLength"])
-    for <<r, m, g, 0 <- data>>, do: {r, m, g}
+    for <<r, m, g, _ <- data>>, do: {r, m, g}
   end
 
   test "occlusion color: the color times how open each point is, no alpha; occlusion false: the colors of the edits" do
@@ -141,7 +163,7 @@ defmodule World.Sculpt.ShadeTest do
     # With no occlusion, no dirt and no wear, the color of each point is the color of the edits, and the finish of the edits stays.
     none = points(meshes(slab(%{"occlusion" => false})))
     assert Enum.all?(for {p, c, _} <- none, open?(p), do: slab_color?(c))
-    assert Enum.any?(none, fn {_, _, f} -> f && elem(f, 2) == 204 end)
+    assert Enum.any?(none, fn {_, _, f} -> f && lamp?(elem(f, 2)) end)
 
     # With no finish of an edit either, the meshes stay as they are: no finish.
     plain = %{"occlusion" => false, "edits" => Enum.take(slab()["edits"], 2)}
@@ -172,15 +194,15 @@ defmodule World.Sculpt.ShadeTest do
     assert Enum.all?(flat, &(&1.finish == nil and match?([{_, _, _} | _], &1.colors)))
   end
 
-  test "the flat look of an order (/o/HASH.flat.glb) has no _FINISH and no alpha in COLOR_0 (R8)" do
+  test "the flat look of an order (/o/HASH.flat.glb) has no _FINISH, no _LIGHT and no alpha in COLOR_0 (R8)" do
     order = %{"blueprint" => "drawing", "options" => %{"drawing" => drawing(slab())}}
     assert {:ok, glb} = Orders.build(order, "far", "glb")
-    assert "_FINISH" in Map.keys(hd(hd(GLBHelper.json(glb)["meshes"])["primitives"])["attributes"])
+    assert ["_FINISH", "_LIGHT"] -- Map.keys(hd(hd(GLBHelper.json(glb)["meshes"])["primitives"])["attributes"]) == []
 
     assert {:ok, flat} = Orders.build(order, "far", "flat")
     json = GLBHelper.json(flat)
     attributes = for m <- json["meshes"], p <- m["primitives"], key <- Map.keys(p["attributes"]), uniq: true, do: key
-    refute "_FINISH" in attributes
+    refute "_FINISH" in attributes or "_LIGHT" in attributes
     [prim] = for m <- json["meshes"], p <- m["primitives"], do: p
     assert Enum.at(json["accessors"], prim["attributes"]["COLOR_0"])["type"] == "VEC3"
   end
@@ -233,12 +255,12 @@ defmodule World.Sculpt.ShadeTest do
   end
 
   test "the finish of a corner in a primitive and in a GLB; a point with no face; a primitive with a finish is not packed" do
-    # A corner with no finish in a primitive with finishes: rough, no metal, no glow.
-    a = {{0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {255, 255, 255, 0.5}, nil, {10, 20, 30}}
+    # A corner with no finish in a primitive with finishes: rough, no metal, no light.
+    a = {{0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {255, 255, 255, 0.5}, nil, {10, 20, {30, 40, 50}}}
     b = {{1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}}
     c = {{0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {255, 0, 0}}
     p = Scene.primitive(:paint, [a, b, c])
-    assert p.finish == [{10, 20, 30}, {153, 0, 0}, {153, 0, 0}]
+    assert p.finish == [{10, 20, {30, 40, 50}}, {153, 0, {0, 0, 0}}, {153, 0, {0, 0, 0}}]
     assert p.colors == [{255, 255, 255, 0.5}, {255, 255, 255, 1.0}, {255, 0, 0, 1.0}]
     assert Scene.pack(p) == p
 
