@@ -106,6 +106,50 @@ defmodule World.MiniTest do
     assert red != [] and Enum.all?(red, &((&1 >= 7.8 and &1 <= 12.2) or (&1 >= 18.0 and &1 <= 22.0) or &1 >= 30.6))
   end
 
+  test "a lit window of a building of mini shows at night at far, and is glass by day (plan 0019, steps 3 and 10)" do
+    # The far files of the office: the GLB and the file flat. Each has _LIGHT on the faces of the walls with
+    # windows, and no _FINISH (the flat look keeps its form).
+    order = %{"blueprint" => "mini", "options" => %{"kind" => "office"}}
+
+    # (Near: the faces of the field; far: the solids.)
+    for file <- ~w(glb flat), level <- ~w(near far) do
+      {:ok, glb} = Orders.build(order, level, file)
+      json = World.GLBHelper.json(glb)
+      [prim] = for m <- json["meshes"], p <- m["primitives"], do: p
+
+      assert is_map_key(prim["attributes"], "_LIGHT") and not is_map_key(prim["attributes"], "_FINISH"),
+             "#{file} #{level}"
+    end
+
+    # The light of a face is apart from its color: with no lit pane, the same colors and no light.
+    lit = far_scene(Mini.drawing(%{"kind" => "office"}))
+
+    dark =
+      far_scene(
+        put_in(
+          Mini.drawing(%{"kind" => "office"}),
+          ["nodes", Access.at(0), "skill", "sculpt", "edits", Access.at(0), "surface", "lit"],
+          0
+        )
+      )
+
+    assert Enum.map(lit, &elem(&1, 0)) == Enum.map(dark, &elem(&1, 0))
+    assert Enum.any?(lit, &(elem(&1, 1) != {0, 0, 0})) and Enum.all?(dark, &(elem(&1, 1) == {0, 0, 0}))
+    # A wall with windows has the mean color of its glass and its frames, darker than the color of the frames.
+    {wall, _} = Enum.find(lit, fn {_, light} -> light != {0, 0, 0} end)
+    assert elem(wall, 2) < 0xA8
+  end
+
+  # The color and the light of each point of the far level of a drawing.
+  defp far_scene(d) do
+    scene = World.Build.scene(World.Detail.with(:far, fn -> World.Drawing.build(d) end), level: :far)
+
+    for n <- scene.nodes,
+        p <- n.primitives,
+        {c, f} <- Enum.zip(p.colors, p.finish || Enum.map(p.colors, fn _ -> {nil, nil, {0, 0, 0}} end)),
+        do: {c, elem(f, 2)}
+  end
+
   test "a word that is not possible is an error with its message" do
     wrong = [
       {[], "the request of a small model is a map"},

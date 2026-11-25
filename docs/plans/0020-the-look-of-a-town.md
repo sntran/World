@@ -83,7 +83,8 @@ Issue #44 (the far level of `mini`) waits: Humans Must Die does not use
 - **R7.** The cut to the budget keeps the borders of the finish and of
   the glow (D7).
 - **R8.** The flat look (`/o/HASH.flat.glb`) keeps its form: it has no
-  `_FINISH` and no `_LIGHT`.
+  `_FINISH`. (Since 2026-11-25, a face with light has it in `_LIGHT`:
+  plan 0019, step 3.)
 - **R9.** `docs/format.md` says the two attributes, and the option
   `occlusion`.
 

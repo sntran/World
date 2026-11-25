@@ -54,17 +54,32 @@ defmodule World.Sculpt.Solids do
       faces =
         for e <- es, {a, b, c} <- triangles(e.shape, e.size) do
           {a, b, c} = {Frame.point(e.frame, a), Frame.point(e.frame, b), Frame.point(e.frame, c)}
-          {if(mirror?(e.frame), do: {a, c, b}, else: {a, b, c}), color(e.color)}
+          corners = if mirror?(e.frame), do: {a, c, b}, else: {a, b, c}
+          {corners, look(e, corners)}
         end
 
       points = for {{a, b, c}, _} <- faces, p <- [a, b, c], do: p
       normals = for {{a, b, c}, _} <- faces, n = Vec.norm(Vec.cross(Vec.sub(b, a), Vec.sub(c, a))), _ <- 1..3, do: n
+      lit? = Enum.any?(faces, fn {_, {_, light}} -> light != {0, 0, 0} end)
 
       material
       |> then(&Mesh.new(points, for(i <- 0..(length(faces) - 1)//1, do: [3 * i, 3 * i + 1, 3 * i + 2]), &1))
       |> Map.put(:angle, 0.0)
-      |> Mesh.finish(normals, for({_, color} <- faces, _ <- 1..3, do: color))
+      |> Mesh.finish(normals, for({_, {color, _}} <- faces, _ <- 1..3, do: color))
+      # (The light of each face, for the flat look: `_LIGHT` only. The other looks make their own finish.)
+      |> Map.put(:finish, if(lit?, do: for({_, {_, light}} <- faces, _ <- 1..3, do: {nil, nil, light})))
     end)
+  end
+
+  # The color and the light of a face of a solid: the color of its edit, and with a surface of a made thing
+  # (windows) or a glow, the mean of the surface over the face and its light (`World.Sculpt.Shade.face/4`).
+  defp look(e, {a, b, c}) do
+    if e.glow not in [nil, 0.0] or World.SDF.made?([e]) do
+      n = Vec.cross(Vec.sub(b, a), Vec.sub(c, a))
+      World.Sculpt.Shade.face([e], Vec.scale(Vec.add(Vec.add(a, b), c), 1 / 3), :math.sqrt(Vec.len(n) / 2), Vec.norm(n))
+    else
+      {color(e.color), {0, 0, 0}}
+    end
   end
 
   # A frame that turns the faces over (a mirror): the order of the corners of each face changes.

@@ -165,6 +165,11 @@ defmodule World.Mini do
   @along_x %{"axis" => [1, 0, 0], "up" => [0, 0, 1]}
   @along_y %{"axis" => [0, 1, 0], "up" => [0, 0, 1]}
 
+  # The windows of a wall (`World.Sculpt.Texture`): panes of glass, the frames in the color of the wall,
+  # and a share of the panes lit at night (plan 0019, step 10).
+  defp windows(pane, frame, lit),
+    do: %{"surface" => %{"kind" => "windows", "pane" => pane, "frame" => frame, "lit" => lit, "seed" => 1}}
+
   # A plan: an outline in x and y, `depth` high, with its middle at the height `z`.
   defp plan(points, depth, z, color), do: Wall.outline(points, depth, [0, 0, z], color)
   # A side view: an outline in y and z, `depth` wide along x, with its middle at `x`.
@@ -199,7 +204,7 @@ defmodule World.Mini do
     c = color || "#d8d2c4"
 
     [
-      box([20, 6, 15], [0, 0, 15], c),
+      e("box", [20, 6, 15], [0, 0, 15], c, windows([1.2, 1.4], [1.0, 1.6], 0.5)),
       box([20.4, 6.4, 1.5], [0, 0, 1.5], shade(c, 0.7)),
       box([18.5, 5, 0.8], [0, 0, 30.6], "#8d8a80")
     ] ++
@@ -210,8 +215,8 @@ defmodule World.Mini do
     c = color || "#7f9bb0"
 
     [
-      box([15, 15, 40], [0, 0, 40], c),
-      box([12, 12, 30], [0, 0, 110], shade(c, 1.08)),
+      e("box", [15, 15, 40], [0, 0, 40], c, windows([1.6, 2.6], [0.4, 0.9], 0.3)),
+      e("box", [12, 12, 30], [0, 0, 110], shade(c, 1.08), windows([1.6, 2.6], [0.4, 0.9], 0.3)),
       box([8, 8, 12], [0, 0, 152], shade(c, 0.9)),
       cone(2.5, 0.6, 10, [0, 0, 174], "#c9ccd0")
     ]
@@ -221,7 +226,7 @@ defmodule World.Mini do
     c = color || "#5f8fa8"
 
     [
-      box([15, 10, 20], [0, 0, 20], c),
+      e("box", [15, 10, 20], [0, 0, 20], c, windows([1.8, 2.6], [0.4, 0.8], 0.3)),
       box([15.6, 10.6, 1.2], [0, 0, 1.2], "#c9ccd0"),
       box([15.6, 10.6, 0.9], [0, 0, 40.2], "#c9ccd0")
     ] ++ for(k <- 1..3, do: box([15.4, 10.4, 0.6], [0, 0, 10.0 * k], "#dfe3e6"))

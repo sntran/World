@@ -183,7 +183,23 @@ test('the look of each point: opaque with no shader of its own, the occlusion an
         stage.night(true);
         return stage;
       });
+      // The flat look (plan 0019): _LIGHT with no _FINISH and no alpha. The light shows at night too.
+      const flat = await load();
+      const flatMesh = flat.getObjectByProperty('isMesh', true);
+      flatMesh.geometry.deleteAttribute('_finish');
+      const rgba = flatMesh.geometry.getAttribute('color');
+      const rgb = new Float32Array(rgba.count * 3);
+      for (let i = 0; i < rgba.count; i += 1) rgb.set([rgba.getX(i), rgba.getY(i), rgba.getZ(i)], 3 * i);
+      flatMesh.geometry.setAttribute('color', new THREE.BufferAttribute(rgb, 3));
+      const flatNight = shot(flat, (renderer, scene) => {
+        const stage = light(renderer, scene);
+        stage.shade(flat);
+        stage.night(true);
+        return stage;
+      });
       return {
+        flatLook: flatMesh.material.userData.look,
+        flatGlow: flatNight.brightest,
         alpha: color.itemSize,
         finish: [finish.itemSize, finish.normalized],
         light: [glow.itemSize, glow.normalized],
@@ -210,6 +226,8 @@ test('the look of each point: opaque with no shader of its own, the occlusion an
     assert.deepEqual(state.glows, [0.1, 1]);
     // By night the lamp glows: a bright pixel, where the slab with no glow has none.
     assert.ok(state.glow > 120 && state.noGlow < 60, JSON.stringify(state));
+    assert.deepEqual(state.flatLook, { finish: false, lit: true, open: false });
+    assert.ok(state.flatGlow > 120, `the flat look glows: ${state.flatGlow}`);
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

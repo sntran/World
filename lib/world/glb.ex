@@ -262,7 +262,11 @@ defmodule World.GLB do
     # of nothing.
     {attrs, buf} =
       if p.finish do
-        {attrs, buf} = with_attr(attrs, "_FINISH", bytes(buf, for({r, m, _} <- p.finish, do: <<r, m>>), "VEC2"))
+        # (A finish with no roughness, `{nil, nil, light}`: the flat look, with only the light of each point.)
+        {attrs, buf} =
+          if match?({nil, _, _}, hd(p.finish)),
+            do: {attrs, buf},
+            else: with_attr(attrs, "_FINISH", bytes(buf, for({r, m, _} <- p.finish, do: <<r, m>>), "VEC2"))
 
         if Enum.any?(p.finish, &(elem(&1, 2) != {0, 0, 0})),
           do: with_attr(attrs, "_LIGHT", bytes(buf, for({_, _, {r, g, b}} <- p.finish, do: <<r, g, b>>), "VEC3")),

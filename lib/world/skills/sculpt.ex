@@ -371,8 +371,9 @@ defmodule World.Skills.Sculpt do
               {World.Sculpt.model(from.(step), step: step, budget: budget, within: tile.box, finish_pins: pins), step}
 
             # (The solids of the edits: each outline with straight edges, `World.Sculpt.Solids`.)
+            # (With no maps, the surface of a made thing gives its mean and its light to each face.)
             solids?(d, level) ->
-              {World.Sculpt.Solids.meshes(edits), step}
+              {World.Sculpt.Solids.meshes(if(side, do: edits, else: SDF.on_points(edits, step))), step}
 
             true ->
               in_budget(
@@ -479,20 +480,27 @@ defmodule World.Skills.Sculpt do
     colors? = Enum.any?(edits, & &1.color) or SDF.made?(edits)
     corners = for [a, b, c] <- faces, do: {elem(at, a), elem(at, b), elem(at, c)}
 
-    colors =
+    # (The color and the light of each face: a surface of a made thing as its mean over the face.)
+    looks =
       if colors? do
-        for {p, q, r} <- corners,
-            color = SDF.color(edits, Vec.scale(Vec.add(Vec.add(p, q), r), 1 / 3)),
-            _ <- 1..3,
-            do: color
+        for {p, q, r} <- corners do
+          n = Vec.cross(Vec.sub(q, p), Vec.sub(r, p))
+          size = :math.sqrt(Vec.len(n) / 2)
+          normal = if Vec.len(n) > 0, do: Vec.norm(n)
+          World.Sculpt.Shade.face(edits, Vec.scale(Vec.add(Vec.add(p, q), r), 1 / 3), size, normal)
+        end
       end
+
+    lit? = looks != nil and Enum.any?(looks, &(elem(&1, 1) != {0, 0, 0}))
 
     %{
       mesh
       | points: for({p, q, r} <- corners, point <- [p, q, r], do: point),
         faces: for(i <- 0..(length(faces) - 1)//1, do: [3 * i, 3 * i + 1, 3 * i + 2]),
         normals: nil,
-        colors: colors,
+        colors: if(looks, do: for({color, _} <- looks, _ <- 1..3, do: color)),
+        # (The flat look has the light of each face, and no roughness and no metal: `_LIGHT` only.)
+        finish: if(lit?, do: for({_, light} <- looks, _ <- 1..3, do: {nil, nil, light})),
         angle: 0.0
     }
   end

@@ -247,8 +247,9 @@ as a reference; no test builds them (the commit `b6905ce`).
    point, no image. A scooter at the far level: 4,088 triangles, and 500
    with a budget (58 KB; 14 KB in gzip). A house of a village at the
    far level: 1,706 triangles, and 928 with a budget of 600 (the posts
-   and the bars are many small parts). Open: a smaller file (colors and
-   normals in fewer bytes), and a light at each point for the windows.
+   and the bars are many small parts). A face with light (a lit window,
+   a lamp) has it in `_LIGHT` (2026-11-25), with no `_FINISH`. Open: a
+   smaller file (colors and normals in fewer bytes).
 4. **The store that stays. Done** (`World.Files`, `World.Line`, the
    routes `/o/` and `/m/` of `World.Service`): a file is kept by the
    hash of its order, with the version of the code of World that built
@@ -307,8 +308,13 @@ as a reference; no test builds them (the commit `b6905ce`).
     with the look `flat`. The file `flat` at the far level is about
     220 triangles and 6 KB in gzip (the 26 files: 157 KB), each built
     in less than 1 s. The cells of a sculpture can be 10 m (they were
-    1 m at the most), for a ship of 300 m. Open: a light at each point
-    for the windows, and more kinds when the game asks for them.
+    1 m at the most), for a ship of 300 m. The walls of the office, the
+    block and the tower have windows, a share of them lit: the light of
+    each face is in `_LIGHT`, so a lit window shows at night at far,
+    and the wall is glass by day (2026-11-25). The kinds block, office,
+    lighthouse, airliner and turbine have the solids of their edits at
+    far, so their bands, blades and wings keep their forms (#44). Open:
+    more kinds when the game asks for them.
 
 ## 7. My answers (2026-11-15)
 

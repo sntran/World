@@ -690,9 +690,14 @@ The data of the skill:
 - `strands`: the strands of a sculpture of hair, at a level with a
   bake ("The strands of a sculpture" below);
 - `look`: `real` (by default) or `flat`. With `flat`, the model has flat
-  faces, each with one color (the color of the edits at its middle),
-  and no image at any level (a `bake` is not used): the look of a game
-  with low-poly models. Give a small `budget`: each triangle shows.
+  faces, each with one color (the color of the edits at its middle; a
+  surface of a made thing gives its mean over the face, on the side that
+  the face faces), and no image at any level (a `bake` is not used): the
+  look of a game with low-poly models. Give a small `budget`: each
+  triangle shows. A face with light (a lit pane of `windows`, an edit
+  with a `glow`) has it in `_LIGHT`, with no `_FINISH` ("GLB"): a lit
+  window of a building of `mini` shows at night at far, and is glass by
+  day.
 
 An edit has its `shape` and its `size`, and these keys:
 

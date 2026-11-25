@@ -93,7 +93,7 @@ export function light(renderer, scene) {
     const lit = Boolean(mesh.geometry.getAttribute('_light'));
     const color = mesh.geometry.getAttribute('color');
     const open = Boolean(color && color.itemSize === 4 && mesh.material.vertexColors);
-    if (!finish && !open) return;
+    if (!finish && !open && !lit) return;
     const key = `${mesh.material.uuid} ${finish} ${lit} ${open}`;
     if (!looks.has(key)) looks.set(key, looked(mesh.material, finish, lit, open));
     mesh.material = looks.get(key);
