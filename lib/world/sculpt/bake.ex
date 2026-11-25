@@ -59,6 +59,8 @@ defmodule World.Sculpt.Bake do
   @reach 3
   # The cosine of the most angle from the normal of a point to a face that keeps that normal (35 degrees).
   @hard 0.819
+  # The cosine of the most turn of a normal of the normal image from its face (60 degrees).
+  @turn 0.5
   # The corners of a tetrahedron: four values there give the gradient of a field at its center.
   @tetrahedron [{1.0, -1.0, -1.0}, {-1.0, -1.0, 1.0}, {-1.0, 1.0, -1.0}, {1.0, 1.0, 1.0}]
   # The texel of a place with no chart: a mean gray, and the normal of the face.
@@ -906,15 +908,30 @@ defmodule World.Sculpt.Bake do
       min(max((d - here + SDF.value(near, Vec.sub(p, Vec.scale(n, d)), limit)) / d, 0.0), 1.0)
     end
 
+    # The way from a place: the normal of the field there (its gradient, from four values at the corners of a
+    # small tetrahedron), not the normal of the face. A face of a level with few triangles that cuts the edge
+    # of a thin part has a normal along the surface: a way along it reads the surface as a crease. Where the
+    # field has no slope, the normal of the face.
+    up = fn list, p, c, weights ->
+      h = step / 4
+
+      g =
+        for {x, y, z} = k <- @tetrahedron, reduce: {0.0, 0.0, 0.0} do
+          sum -> Vec.add(sum, Vec.scale(k, SDF.value(list, Vec.add(p, {x * h, y * h, z * h}), limit)))
+        end
+
+      if Vec.len(g) > 1.0e-9, do: Vec.norm(g), else: Vec.norm(mix(c.normals, weights))
+    end
+
     fine = fn {c, p, _, _, {weights, _}} ->
-      n = Vec.norm(mix(c.normals, weights))
+      n = up.(near, p, c, weights)
       here = SDF.value(near, p, limit)
       edge = if look.wear > 0.0, do: thin.(p, n, here), else: 0.0
       [taken.(near, p, n, n1, here), taken.(near, p, n, n2, here), edge]
     end
 
     wide = fn {c, p, _, _, {weights, _}} ->
-      n = Vec.norm(mix(c.normals, weights))
+      n = up.(far, p, c, weights)
       here = SDF.value(far, p, limit)
       # (The square: a part that is far takes a small part of the sky.)
       [taken.(far, p, n, f1, here) ** 2, taken.(far, p, n, f2, here) ** 2]
@@ -1272,6 +1289,10 @@ defmodule World.Sculpt.Bake do
     mean = fn k -> mean(elem(f0, k), elem(f1, k), elem(f2, k), l0, l1, l2) end
     {t, b, n} = {mean.(0), mean.(1), mean.(2)}
     m = if Vec.len(gradient) > 1.0e-9, do: Vec.norm(gradient), else: n
+    # A normal of the field that turns more than 60 degrees from the face is not the surface under the face:
+    # the face of a level with few triangles cuts the edge of a thin part there, and the field gives the side
+    # of the part. It goes to the normal of the face by how much more it turns (90 degrees: the face).
+    m = Vec.norm(Vec.lerp(Vec.norm(n), m, min(max(Vec.dot(m, Vec.norm(n)), 0.0) / @turn, 1.0)))
 
     {x, y, z} = in_frame(m, t, b, n)
     # A normal to the back of the face (the field turns in less than a
