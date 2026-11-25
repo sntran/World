@@ -52,3 +52,22 @@ A person of World walks, stands, and exercises as a real person does. The feet s
 ## 7. Questions
 
 - The builder writes here each choice that the plan does not give.
+- The checks of D8 (`World.People.Motion`):
+  - Three points of each foot touch the ground: the heel (6 cm behind the ankle), the ball (under the joint of the toes), and the tip of the toes. A foot is on the ground when its lowest point is within 1 cm of it.
+  - "The knee when the leg takes the weight" is the knee while the heel of its foot is on the ground. At the toe-off a real knee bends to about 40°, so the whole stance cannot be in 5° to 15°.
+  - The angles of the hip and of the arm are from their angles in the pose "stand" (0° in the stand; to the front for more than 0).
+  - The limits of a walk: the hips go up and down 3 cm to 7 cm and to the sides 2 cm to 6 cm; the hip bends 20° to 40° to the front and goes 8° to 22° back; the knee bends 3° to 25° with the heel on the ground and 50° to 70° in the swing; the arm swings 10° to 30° to the front and 3° to 18° to the back, at most 15° out from the side; the head turns at most 5°.
+  - The limits of a stroll are the same, but the hips go up and down 1.5 cm to 7 cm and the hip goes back 5° to 22°: its steps are shorter, so a real person goes up and down less (2.7 cm at 0.7 m/s, Orendurff and others, 2004).
+
+## 8. The base line (R1, 2026-11-25)
+
+The checks of D8 on the clips of main, for a man (35 years, height 0.55), a woman (30), an old man (75), and a child (8). The walk is measured at 0.65 m/s, the speed that its legs fit.
+
+| Clip | What fails |
+|---|---|
+| walk | The feet are 1.2 cm (the child) to 3.6 cm (the old man) over the ground at a key where no foot is on it. A foot on the ground moves 43 cm to 56 cm. The hips do not move: 0 cm up and down, 0 cm to the sides. The hip goes 24° back (more than 22°). |
+| aerobics | The feet are 14.4 cm to 16.5 cm over the ground. For the man and the old man, a foot on the ground moves 1.4 cm. |
+| yoga | The feet are 12.0 cm over the ground. A foot on the ground moves 2.4 cm to 4.3 cm. |
+| tai chi | Nothing fails. |
+
+In the walk the knee bends 6.7° with the heel on the ground and 51° in the swing, and the arms swing 13° to each side. The arms hang 3.5° to 5° out from the sides: in these measures they are not 38° away from the body (section 2).
