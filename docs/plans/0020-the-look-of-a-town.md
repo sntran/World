@@ -1,6 +1,6 @@
 # Plan 0020: The look of a town: a tint for each copy, a finish at each point, and the surfaces of made things
 
-Status: Approved (2026-11-22).
+Status: Done (2026-11-25). Each step is done, with its tests and its pictures: step 1 (#92), step 2 (#94, #96), step 3 (#97, #98) and step 4 (#99). The measure of step 4 is of a set of four tube houses of Vũng Tàu, as I asked on 2026-11-25, not of the 13 models of Humans Must Die.
 
 Depends on: plan 0010 (the maps of a sculpture: color, normal, finish,
 glow), plan 0012 (occlusion, dirt, wear, and a surface for each edit),
@@ -50,7 +50,7 @@ Issue #44 (the far level of `mini`) waits: Humans Must Die does not use
 | D3 | In the GLB, a copy has its `scale` and `extras.tint`. A node with `EXT_mesh_gpu_instancing` has `SCALE` and `_COLOR_0` (the tint of each copy). The parts list (`elements.json`) has `tint` and `scale` next to `matrix` (the matrix has the scale in it too). | The forms that three.js and Godot read, and the same data for a project that puts the parts together itself. |
 | D4 | The rule of the copies goes in `docs/format.md` ("GLB", "The copies"): a mesh of 100 triangles or more, or 16 copies or more in one node, is shared. A node takes `share: true` to share its copies always. A copy with a tint or a scale is always shared. | A copy with its own tint cannot be in a merged primitive. An app that draws instances wants the copies; an app that draws each node alone wants the merge. |
 | D5 | A level with a `budget` and no `bake`, with the look `real`, has the occlusion (with `dirt` and `wear`) at each point. The option `occlusion` of the sculpture chooses where: `alpha` (the alpha of `COLOR_0`, the default) or `color` (multiplied into `COLOR_0`). | The alpha keeps the color true, and a project that does not read it loses nothing. `color` is for a project with no shader of its own. |
-| D6 | The same level has `_FINISH` (`VEC3`: the roughness, the metal and the glow at each point, from 0 to 1). | One attribute for all three, as the finish image has them in its channels (plan 0010, step 4). |
+| D6 | The same level has `_FINISH` (`VEC2`: the roughness and the metal at each point, from 0 to 1) and, when a point has light, `_LIGHT` (`VEC3`: the light of the point in linear light, as `COLOR_0`). **Changed on 2026-11-25 (#98):** `_FINISH` was a `VEC3` with the glow in its third byte. A point and a texel have no color of the light: the light is the color of the surface times the glow, so a point needs the color of its light apart from the color of its surface (a lit pane is glass by day). | The light apart from the color: a project reads `_LIGHT` as an emission, and one multiply makes it weaker by day. The glow image of a bake has the light in the same way. |
 | D7 | The cut to the budget keeps the points where the finish or the glow changes, as it keeps the points where the color changes (`World.Sculpt.Finish`). | Else a pane of glass or a lit window melts into the wall. |
 | D8 | Three new kinds of surface (`World.Sculpt.Texture`): `windows`, `panels` and `corrugated`. Each is a pattern in the axes of the edit, with its scale. A rule in code (a house of `World.Town.House`) gets the same patterns as a texture of a role (`World.Textures`): `roof_corrugated`, `metal_shutter`, and the glass of the windows. | One pattern for the edits and for the rules, so a house of Vũng Tàu and a building of Humans Must Die look the same. |
 | D9 | `windows`: the width and the height of a pane, the width of the frame, `lit` (a share of the panes, from 0 to 1, chosen by a hash of the row, the column and a `seed`), and a warm and a cold color of the light. A pane has the finish of glass (roughness 0.05, metal 0), the frame has the color of the edit, and the pane is 2 cm in from the frame (in the normal map, and in the relief). The light of a pane goes into the glow. | The data of issue #48. A hash of the row and the column gives the same panes each time, so a key does not change. The light in the glow lets a game turn it off with one multiply. |
@@ -83,7 +83,7 @@ Issue #44 (the far level of `mini`) waits: Humans Must Die does not use
 - **R7.** The cut to the budget keeps the borders of the finish and of
   the glow (D7).
 - **R8.** The flat look (`/o/HASH.flat.glb`) keeps its form: it has no
-  `_FINISH`.
+  `_FINISH` and no `_LIGHT`.
 - **R9.** `docs/format.md` says the two attributes, and the option
   `occlusion`.
 
