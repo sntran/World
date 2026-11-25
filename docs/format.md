@@ -668,6 +668,20 @@ The data of the skill:
   sculpture" below). A level with a bake needs a budget;
 - `mipmaps` (false by default): true gives the maps a sampler with
   smaller copies of the image ("The maps of a sculpture" below);
+- `solids`: a list of levels (`["far"]`) where the mesh is the solids of
+  the edits, not the field (`World.Sculpt.Solids`): each edit that adds
+  is a solid of few flat faces with straight edges, and the solids go
+  into each other where their edits do. At a level of few triangles, a
+  part thinner than about three cells (a slab, a parapet, a band, a
+  blade, a wing) loses its corners or its form in the cut of the field
+  to the budget; its solid keeps it. The triangles of each solid: a box
+  12, a cylinder 28 (8 sides), a cone 28 (14 with a point), a ball and an
+  ellipsoid 48, a wedge 8, an extrude of `n` points `4n - 4`; their sum
+  must be in the budget of the level. An edit that paints gives no solid
+  (its color is in the bake, or the color of each face is the color of
+  its solid); an edit that takes away, and the other shapes, are errors.
+  The roof of a terrace of a house of Vũng Tàu (140 triangles of 150)
+  and five kinds of `mini` have their solids at far;
 - `occlusion` (`true` by default, or `"alpha"`, `"color"` or `false`),
   `dirt` and `wear` (0 to 1, 0 by default): the look of the surface from
   its shape, in the maps of a level with a bake ("The maps of a

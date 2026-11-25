@@ -1494,6 +1494,10 @@
         10.25
        ],
        "color": "#b8bbbd",
+       "levels": [
+        "near",
+        "mid"
+       ],
        "material": "part_03",
        "metal": 1.0,
        "repeat": {
@@ -1510,6 +1514,26 @@
        "size": [
         0.03,
         0.03,
+        0.2
+       ]
+      },
+      {
+       "at": [
+        -7.15,
+        -11.0,
+        10.25
+       ],
+       "color": "#b8bbbd",
+       "levels": [
+        "far"
+       ],
+       "material": "part_03",
+       "metal": 1.0,
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.33,
+        0.33,
         0.2
        ]
       },
@@ -1538,6 +1562,9 @@
         0.01
        ]
       }
+     ],
+     "solids": [
+      "far"
      ],
      "wear": 0.24
     }
@@ -2817,6 +2844,10 @@
         10.25
        ],
        "color": "#b8bbbd",
+       "levels": [
+        "near",
+        "mid"
+       ],
        "material": "part_06",
        "metal": 1.0,
        "repeat": {
@@ -2833,6 +2864,26 @@
        "size": [
         0.03,
         0.03,
+        0.2
+       ]
+      },
+      {
+       "at": [
+        -1.35,
+        -11.0,
+        10.25
+       ],
+       "color": "#b8bbbd",
+       "levels": [
+        "far"
+       ],
+       "material": "part_06",
+       "metal": 1.0,
+       "roughness": 0.25,
+       "shape": "box",
+       "size": [
+        0.33,
+        0.33,
         0.2
        ]
       },
@@ -2861,6 +2912,9 @@
         0.01
        ]
       }
+     ],
+     "solids": [
+      "far"
      ],
      "wear": 0.15
     }

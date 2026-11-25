@@ -9,7 +9,10 @@ defmodule World.Mini do
   thicker than in real life.
 
   `drawing/1` gives a model of one part from edits with the look `flat`
-  (`World.Skills.Sculpt`). The sizes are those of the real thing (m).
+  (`World.Skills.Sculpt`). The kinds with parts thinner than the cells
+  of the far level (a band, a blade, a wing: `block`, `office`,
+  `lighthouse`, `airliner`, `turbine`) have the solids of their edits at
+  far (`World.Sculpt.Solids`). The sizes are those of the real thing (m).
   The middle of the thing is at x = 0 and y = 0, it stands on z = 0 (a
   ship floats: z = 0 is the water), and its front is to +y.
   """
@@ -45,6 +48,9 @@ defmodule World.Mini do
     "tree_pine" => 16,
     "tree_palm" => 11
   }
+
+  # The kinds whose far level is the solids of their edits (`World.Sculpt.Solids`).
+  @solids ~w(block office lighthouse airliner turbine)
 
   @doc "The kinds of a small model."
   def kinds, do: @kinds |> Map.keys() |> Enum.sort()
@@ -104,6 +110,10 @@ defmodule World.Mini do
       "cells" => levels.(for(n <- [56, 40, 28], do: r4(min(long / n, 10.0)))),
       "budget" => levels.([900, 450, 220])
     }
+
+    # (The kinds with parts thinner than the cells of far, a band, a blade, a wing: the solids of their
+    # edits at far, each outline with straight edges, #44.)
+    data = if r["kind"] in @solids, do: Map.put(data, "solids", ["far"]), else: data
 
     %{
       "name" => r["name"],
@@ -253,8 +263,9 @@ defmodule World.Mini do
 
     [
       cone(4.0, 2.6, 13, [0, 0, 13], c),
-      rod(3.6, 2.2, [0, 0, 10], "#b3261e"),
-      rod(3.0, 2.0, [0, 0, 20], "#b3261e"),
+      # (The red bands: 15 cm out of the tower at their foot, so their faces are not in the faces of the tower.)
+      rod(3.73, 2.2, [0, 0, 10], "#b3261e"),
+      rod(3.18, 2.0, [0, 0, 20], "#b3261e"),
       rod(3.6, 0.5, [0, 0, 26.5], "#3a3d40"),
       rod(2.0, 1.8, [0, 0, 28.8], "#f2d24a"),
       cone(2.6, 0.3, 1.6, [0, 0, 32.2], "#b3261e")

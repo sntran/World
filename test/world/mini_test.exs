@@ -67,6 +67,45 @@ defmodule World.MiniTest do
     assert byte_size(:zlib.gzip(glb)) < 12_000
   end
 
+  # The points of the far level of a kind, each with its color and the normal of its face.
+  defp far(kind) do
+    scene =
+      World.Build.scene(World.Detail.with(:far, fn -> World.Drawing.build(Mini.drawing(%{"kind" => kind})) end),
+        level: :far
+      )
+
+    prims = for n <- scene.nodes, p <- n.primitives, do: World.Scene.unpack(p)
+    faces = Enum.sum(for p <- prims, do: div(length(p.indices), 3))
+    points = for p <- prims, {pt, c, n} <- Enum.zip([p.positions, p.colors, p.normals]), do: {pt, c, n}
+    {faces, points}
+  end
+
+  test "the far level of the kinds that the field cannot keep (#44): each outline with straight edges, in the budget" do
+    span = fn points, axis -> points |> Enum.map(&elem(elem(&1, 0), axis)) |> Enum.min_max() end
+
+    for kind <- ~w(office block turbine airliner lighthouse) do
+      {faces, points} = far(kind)
+      assert faces <= 220, kind
+      # The far level has the box of the edits: no part is lost (the wings, the blades).
+      {lo, hi} = World.SDF.bounds(World.Skills.Sculpt.edits(sculpt(%{"kind" => kind})["edits"], %{}))
+
+      for axis <- 0..2 do
+        {a, b} = span.(points, axis)
+        assert_in_delta a, elem(lo, axis), 0.02 * (elem(hi, axis) - elem(lo, axis)), "#{kind} #{axis}"
+        assert_in_delta b, elem(hi, axis), 0.02 * (elem(hi, axis) - elem(lo, axis)), "#{kind} #{axis}"
+      end
+    end
+
+    # The office and the block: boxes, so each face is along an axis, and the bands are straight.
+    for kind <- ~w(office block), {_, _, {x, y, z}} <- elem(far(kind), 1) do
+      assert Enum.count([x, y, z], &(abs(&1) > 1.0e-6)) == 1, kind
+    end
+
+    # The lighthouse: each red point is in a red band or the red roof (no teeth).
+    red = for {{_, _, z}, {179, 38, 30}, _} <- elem(far("lighthouse"), 1), do: z
+    assert red != [] and Enum.all?(red, &((&1 >= 7.8 and &1 <= 12.2) or (&1 >= 18.0 and &1 <= 22.0) or &1 >= 30.6))
+  end
+
   test "a word that is not possible is an error with its message" do
     wrong = [
       {[], "the request of a small model is a map"},
