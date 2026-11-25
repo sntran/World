@@ -15,6 +15,16 @@ defmodule World.Service do
     order goes into the store, 200 with `{"set", "variants"}` (each
     variant with its hash, its full order, its files and its lot), 422
     with `{"errors"}`, or 503 when the store failed.
+  - `POST /set?name=NAME`: the files of a set with an atlas at the level
+    of a file `/s/NAME` (`World.Orders.Set.files/2`), for the Worker: 200
+    with the bytes of each file one after the other, and the name and
+    the size of each in `x-world-files` (`NAME SIZE,NAME SIZE,...`); 202
+    with `retry-after` while they build; 404 for a name that is not a
+    file of a set, or a set that the store does not have; 422 with
+    `{"errors"}`; 503 when the store failed.
+  - `GET /s/NAME`: a file of a set with an atlas, for the server on a
+    computer: from the files of the node, else the node builds the files
+    of its level and keeps them.
   - `POST /build?level=near&file=glb`: an order in the body, or
     `&hash=HASH` with no body for an order of `POST /orders` (404 when
     the store has no order of the hash). 200 with the file
@@ -128,7 +138,9 @@ defmodule World.Service do
     "solids" => "application/json",
     "drawing" => "application/json",
     "flat" => "model/gltf-binary",
-    "light" => "model/gltf-binary"
+    "light" => "model/gltf-binary",
+    "png" => "image/png",
+    "ktx2" => "image/ktx2"
   }
 
   get "/blueprints" do
@@ -220,6 +232,48 @@ defmodule World.Service do
           json(conn, 422, %{"errors" => errors})
       end
     end)
+  end
+
+  post "/set" do
+    conn = fetch_query_params(conn)
+
+    with {:ok, hash, level} <- Set.name(Map.get(conn.query_params, "name", "")),
+         {:ok, files} <- set_files(conn, hash, level) do
+      index = Enum.map_join(files, ",", fn {name, bytes} -> "#{name} #{byte_size(bytes)}" end)
+
+      conn
+      |> put_resp_header("x-world-files", index)
+      |> put_resp_content_type("application/octet-stream", nil)
+      |> send_resp(200, Enum.map(files, &elem(&1, 1)))
+    else
+      other -> set_error(conn, other)
+    end
+  end
+
+  # A file of a set with an atlas: from the files of the node (`HASH.LEVEL.sI.glb`,
+  # `HASH.LEVEL.s.MAP.EXT`), else the node builds the files of the level and keeps each.
+  get "/s/*path" do
+    name = Enum.join(path, "/")
+
+    with {:ok, hash, level} <- Set.name(name) do
+      file = fn n -> "s" <> String.replace(String.replace_prefix(n, hash, ""), "/", "") end
+      kind = name |> String.split(".") |> List.last()
+
+      with {:ok, entry} <- Files.get(hash, level, file.(name)),
+           true <- Files.fresh?(entry) do
+        send_entry(conn, entry, hash, kind, false)
+      else
+        _ ->
+          with {:ok, files} <- set_files(conn, hash, level) do
+            entries = for {n, bytes} <- files, into: %{}, do: {n, Files.put(hash, level, file.(n), bytes)}
+            if entries[name], do: send_entry(conn, entries[name], hash, kind, false), else: set_error(conn, :none)
+          else
+            other -> set_error(conn, other)
+          end
+      end
+    else
+      other -> set_error(conn, other)
+    end
   end
 
   post "/mcp" do
@@ -316,6 +370,29 @@ defmodule World.Service do
       :error -> {:error, World.Elements.stopped()}
     end
   end
+
+  # The files of a set with an atlas at a level, in the line: one build for all of them (a second
+  # request waits for the same build, `World.Elements.background/3`).
+  defp set_files(conn, hash, level) do
+    case World.Elements.background({:set, hash, level}, fn ->
+           Line.run(class(conn), fn -> Set.files(hash, level) end)
+         end) do
+      {:ok, result} -> result
+      other -> other
+    end
+  end
+
+  defp set_error(conn, :building), do: conn |> put_resp_header("retry-after", "15") |> json(202, %{"building" => "set"})
+  defp set_error(conn, :gone), do: json(conn, 500, %{"errors" => World.Elements.stopped()})
+
+  defp set_error(conn, {:error, :store}),
+    do: json(conn, 503, %{"errors" => [%{"path" => "", "message" => "the store of the orders failed"}]})
+
+  defp set_error(conn, {:error, errors}), do: json(conn, 422, %{"errors" => errors})
+
+  # (`:error`: a name that is not a file of a set; `:none`: no such set, or no such file in it.)
+  defp set_error(conn, _none),
+    do: json(conn, 404, %{"errors" => [%{"path" => "", "message" => "no such file of a set"}]})
 
   defp timed(class, order, level, file),
     do: Line.run(class, fn -> :timer.tc(Orders, :build, [order, level, file], :millisecond) end)

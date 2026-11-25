@@ -73,6 +73,9 @@ export function bucket({ clock = () => Date.now() } = {}) {
 
 // A VM that checks an order with a blueprint "box", keeps the orders of
 // /orders (by their hash), answers /mcp, and counts the builds.
+// The hash of a set with an atlas that the fake VM has.
+export const SET = 'c'.repeat(32);
+
 export function vm() {
   const calls = [];
   const orders = new Map();
@@ -84,6 +87,14 @@ export function vm() {
     // SHA of the URL.
     if (url.pathname === '/build') assert.match(hash, url.searchParams.has('hash') ? new RegExp(`^${HASH}$`) : /^[0-9a-f]{64}$/);
     if (url.pathname === '/blueprints') return Response.json(BLUEPRINTS);
+    // The files of a set with an atlas at a level: the fake set SET has two at far, and one at mid
+    // that builds on.
+    if (url.pathname === '/set') {
+      const name = url.searchParams.get('name');
+      if (!name.startsWith(SET)) return Response.json({ errors: [{ path: '', message: 'no such file of a set' }] }, { status: 404 });
+      if (name.includes('.mid.')) return Response.json({ building: 'set' }, { status: 202, headers: { 'retry-after': '15' } });
+      return new Response('glTF 0far.color', { headers: { 'x-world-files': `${SET}/0.far.glb 6,${SET}.far.color.png 9` } });
+    }
     if (url.pathname === '/mcp') {
       if (request.method !== 'POST') return Response.json({ jsonrpc: '2.0', id: null, error: { code: -32000 } }, { status: 405, headers: { allow: 'POST' } });
       const message = await request.json();

@@ -16,11 +16,11 @@
 // edits of an order, history/HASH.json, the proposals of new
 // drawings, proposals/HASH.json, the requests of tools of the projects,
 // requests/HASH.json, the blueprints in data of the projects,
-// blueprints/HASH.json, and the parts of the models (World.Elements):
+// blueprints/HASH.json, the sets with an atlas, sets/HASH.json, and the parts of the models (World.Elements):
 // parts/KEY.glb, the recipe of a part that is not built yet,
 // parts/KEY.json, and the mark of a build of a part at the edge,
 // parts/KEY.edge (World.Elements.Store.mark/1).
-export const KEY = /^((orders|history|proposals|requests|blueprints)\/[0-9a-f]{32}\.json|parts\/[0-9a-f]{32}\.(glb|json|edge))$/;
+export const KEY = /^((orders|history|proposals|requests|blueprints|sets)\/[0-9a-f]{32}\.json|parts\/[0-9a-f]{32}\.(glb|json|edge))$/;
 
 // The type of the content of a key.
 export const type = (value) => (value.endsWith('.glb') ? 'model/gltf-binary' : value.endsWith('.edge') ? 'text/plain' : 'application/json');

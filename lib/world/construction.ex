@@ -976,6 +976,10 @@ defmodule World.Construction do
   end
 
   # A model on a lot of a terrain has its place in the game (plan 0006, D5).
+  # The images of the GLB of an order with `"atlas"` or `"images"` (`World.Orders`).
+  defp pack(scene, %{pack: pack}) when pack != nil, do: pack.(scene)
+  defp pack(scene, _job), do: scene
+
   defp geo(scene, %{geo: nil}), do: scene
   defp geo(scene, %{geo: geo}), do: %{scene | extras: Map.put(scene.extras, "geo", geo)}
 
@@ -1011,7 +1015,7 @@ defmodule World.Construction do
       spawn_monitor(fn ->
         Process.set_label({:joiner, job.id})
         item = if job.drawing, do: World.Drawing.assemble(job.drawing, made), else: item
-        scene = fn -> geo(job.scene.(item, level: level, triangles: triangles, parallel: true), job) end
+        scene = fn -> pack(geo(job.scene.(item, level: level, triangles: triangles, parallel: true), job), job) end
         send(me, {:joined, self(), World.Detail.lean(true, fn -> GLB.encode(scene.()) end)})
       end)
 

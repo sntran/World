@@ -110,6 +110,25 @@ Issue #44 (the far level of `mini`) waits: Humans Must Die does not use
   chart has its border of fill.
 - **R16.** `images: "ktx2"` (D14), with a test that reads the file back.
 
+How I built it (2026-11-25):
+
+- **The answer of a set** gives, for each variant, the URLs of its GLB
+  with the atlas at each level (`/s/SET/I.glb`, `.mid.glb`, `.far.glb`),
+  and each GLB refers to the images of the atlas of its level by their
+  URLs (`/s/SET.far.color.png`, ...). The answer does not list the
+  images: which maps a level has (a glow image, or none) is known only
+  after the build of the level. The first request of a level builds all
+  of its files at one time, and they go into R2.
+- **The encoder of KTX2 is in Elixir** (`World.UASTC`, `World.KTX2`), with
+  no C code and no WebAssembly (Q2): three modes of UASTC (one color, RGB
+  with two end colors and weights of 3 bits, RGBA with weights of 2
+  bits), and Zstandard of Erlang 29 for each level. The transcoder of
+  three.js reads each file, to each format of a GPU, in a test.
+- **The materials with the same images share one square** of the atlas
+  (two roles of one bake of a sculpture). A material of a bake with
+  other values (a color factor, an alpha) is a material `atlas_2` of the
+  same images.
+
 ## 6. Steps
 
 Each step is one pull request, with its tests, its documents and its

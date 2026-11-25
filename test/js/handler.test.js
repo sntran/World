@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
-import { QUARANTINE, WINDOW, callerOf, catalogPath, handler, orderOf, split, storeToken, urlKey } from '../../handler.js';
-import { BLUEPRINTS, HASH, bucket, vm } from './fakes.js';
+import { QUARANTINE, SET_FILE, WINDOW, callerOf, catalogPath, handler, orderOf, split, storeToken, urlKey } from '../../handler.js';
+import { BLUEPRINTS, HASH, SET, bucket, vm } from './fakes.js';
 
 const req = (path, init) => new Request(`https://world.mkfifo.com${path}`, init);
 
@@ -396,6 +396,32 @@ test('GET /o/ builds a file one time, then serves it from R2, with an ETag', asy
 
   const receipt = await handler(req(`/o/${HASH}.receipt.json`), env, { vm: v, commit: 'c1' });
   assert.equal(await receipt.text(), 'near receipt');
+});
+
+test('GET /s/ of a set with an atlas: the VM builds the files of the level one time, and each goes into R2', async () => {
+  for (const name of [`${SET}/0.glb`, `${SET}/12.mid.glb`, `${SET}.far.glow.ktx2`, `${SET}.color.png`]) assert.ok(SET_FILE.test(name), name);
+  for (const name of [`${SET}/0.png`, `${SET}.far.glb`, `${SET}/123.glb`, `${SET}.far.color.jpg`, 'x.glb']) assert.ok(!SET_FILE.test(name), name);
+
+  const env = { ORDERS: bucket() };
+  const v = vm();
+  const glb = await handler(req(`/s/${SET}/0.far.glb`), env, { vm: v, commit: 'c1' });
+  assert.equal(glb.status, 200);
+  assert.equal(glb.headers.get('content-type'), 'model/gltf-binary');
+  assert.equal(await glb.text(), 'glTF 0');
+  // (The image of the same level comes from R2, with no VM.)
+  const png = await handler(req(`/s/${SET}.far.color.png`), env, { vm: v, commit: 'c1' });
+  assert.equal(png.headers.get('content-type'), 'image/png');
+  assert.equal(await png.text(), 'far.color');
+  assert.deepEqual(v.calls.filter((c) => c.startsWith('/set')), [`/set?name=${SET}/0.far.glb`]);
+  assert.equal(env.ORDERS.items.has(`builds/c1/s/${SET}.far.color.png`), true);
+
+  // A file that the level does not have, a level that builds on, a set that the VM does not have, a name that is not a file.
+  assert.equal((await handler(req(`/s/${SET}.far.glow.ktx2`), env, { vm: v, commit: 'c1' })).status, 404);
+  const later = await handler(req(`/s/${SET}/0.mid.glb`), env, { vm: v, commit: 'c1' });
+  assert.equal(later.status, 202);
+  assert.equal(later.headers.get('retry-after'), '15');
+  assert.equal((await handler(req(`/s/${HASH}/0.glb`), env, { vm: v, commit: 'c1' })).status, 404);
+  assert.equal((await handler(req(`/s/${SET}.txt`), env, { vm: v, commit: 'c1' })).status, 404);
 });
 
 test('GET /o/ of a model of the catalog with no change gives the file of the site with no build, also to a public caller', async () => {

@@ -21,6 +21,9 @@ defmodule World.Orders.Store do
   @doc "The key of a blueprint in data of a project of a hash (`POST /blueprints`)."
   def blueprint(hash), do: "blueprints/#{hash}.json"
 
+  @doc "The key of a set with an atlas of a hash (`POST /sets` with `\"atlas\": true`)."
+  def set(hash), do: "sets/#{hash}.json"
+
   @doc "The key of the full order of a hash."
   def key(hash), do: "orders/#{hash}.json"
 
