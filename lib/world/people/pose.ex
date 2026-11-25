@@ -10,8 +10,10 @@ defmodule World.People.Pose do
   The named poses: `"stand"` (the arms down at the sides), `"sit"` (on a
   chair or a stool), `"ride"` (on a scooter or a motorbike: the hands
   forward on the bars), `"ride_bicycle"`, `"drive"` (in the seat of a
-  car or a van: the hands forward on the wheel). The named animations: `"walk"`
-  (one step of each leg in 1.1 s, in a loop); `"wave"` (the right hand
+  car or a van: the hands forward on the wheel). The named animations:
+  the walks (`walks/0`, `World.People.Gait`: `"walk"` at about 1.2 m/s,
+  `"stroll"` at about 0.8 m/s, and `"idle"`, the clip to stand, in a
+  loop, with the options `age` and `seed`); `"wave"` (the right hand
   goes up and waves three times, in 2.6 s, once); `"point"` (an excited
   point: the left arm goes up fast to the left side of the person, with
   the index finger out and the other fingers in the fist, and jabs three
@@ -26,7 +28,7 @@ defmodule World.People.Pose do
   pose "stand".
   """
   alias World.{Frame, Vec}
-  alias World.People.Skeleton
+  alias World.People.{Gait, Skeleton}
 
   @x {1.0, 0.0, 0.0}
   @y {0.0, 1.0, 0.0}
@@ -109,6 +111,9 @@ defmodule World.People.Pose do
   @routines ~w(aerobics tai_chi yoga)
   # The work of the trades on a site (plan 0006, D10).
   @work ~w(carry set_panel pour trowel hammer climb guide)
+
+  @doc "The names of the walks and of the clip to stand (`World.People.Gait`)."
+  def walks, do: ~w(idle stroll walk)
 
   @doc "The names of the routines: animations in a loop."
   def routines, do: @routines
@@ -204,7 +209,11 @@ defmodule World.People.Pose do
   node i + 1).
   """
   def animation(name, bones, opts \\ [])
-  def animation("walk", bones, opts), do: clip("walk", bones, 1.1, 12, &{walk_turns(&1 / 1.1), 1.0}, hands(opts))
+
+  def animation(name, bones, opts) when name in ["walk", "stroll"],
+    do: Gait.walk(bones, name, Keyword.put(opts, :hands, hands(opts)))
+
+  def animation("idle", bones, opts), do: Gait.idle(bones, Keyword.put(opts, :hands, hands(opts)))
   def animation("wave", bones, opts), do: clip("wave", bones, 2.6, 39, &wave/1, hands(opts))
   def animation("point", bones, opts), do: clip("point", bones, 2.6, 39, &point/1, hands(opts))
 
@@ -322,26 +331,6 @@ defmodule World.People.Pose do
   defp lift(t, up, down, stop) do
     k = min(1.0, t / up) |> min((stop - t) / (stop - down)) |> max(0.0)
     k * k * (3 - 2 * k)
-  end
-
-  # The turns of a walk at a phase from 0 to 1: the legs swing in turn,
-  # the knee bends after the leg goes back, the arms swing against the
-  # legs.
-  defp walk_turns(phase) do
-    a = 2 * :math.pi() * phase
-    s = :math.sin(a)
-    knee = fn p -> -45 * max(0.0, :math.sin(a + p)) end
-
-    %{
-      "thigh_l" => [{@x, 24 * s}],
-      "thigh_r" => [{@x, -24 * s}],
-      "calf_l" => [{@x, knee.(-:math.pi() / 2)}],
-      "calf_r" => [{@x, knee.(:math.pi() / 2)}],
-      "upperarm_l" => [{@y, -38}, {@x, -18 * s}],
-      "upperarm_r" => [{@y, 38}, {@x, 18 * s}],
-      "lowerarm_l" => [{@x, 12}],
-      "lowerarm_r" => [{@x, 12}]
-    }
   end
 
   # A wave of the right hand: the upper arm goes out to the side and a

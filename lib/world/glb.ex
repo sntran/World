@@ -418,7 +418,7 @@ defmodule World.GLB do
   # An animation: channels of rotations (frames), translations (points) or
   # the weights of the morph targets (a list for each time) of nodes, at
   # times in seconds.
-  defp animation(%{name: name, channels: channels}, buf) do
+  defp animation(%{name: name, channels: channels} = a, buf) do
     {pairs, buf} =
       channels
       |> Enum.with_index()
@@ -436,7 +436,8 @@ defmodule World.GLB do
           %{"sampler" => i, "target" => %{"node" => node, "path" => Atom.to_string(path)}}}, buf}
       end)
 
-    {%{"name" => name, "samplers" => Enum.map(pairs, &elem(&1, 0)), "channels" => Enum.map(pairs, &elem(&1, 1))}, buf}
+    {%{"name" => name, "samplers" => Enum.map(pairs, &elem(&1, 0)), "channels" => Enum.map(pairs, &elem(&1, 1))}
+     |> put_some("extras", Map.get(a, :extras)), buf}
   end
 
   # The scale of a node: the scale of its frame (a copy at another size,

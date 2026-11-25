@@ -70,16 +70,22 @@ defmodule World.HumanTest do
   test "a traveler walks" do
     scene = Build.scene(Detail.with(:far, &World.People.traveler/0), level: :far)
     [walk, %{name: "blink"}] = scene.animations
-    assert walk.name == "walk"
-    assert length(walk.channels) == 8
+    assert walk.name == "walk" and walk.extras["speed"] > 1.0
+    # (The hips move and turn; the legs, the feet, the toes, the spine, the neck, the head and the arms turn.)
+    assert length(walk.channels) == 19
+    assert Enum.count(walk.channels, &(&1.path == :translation)) == 1
 
     for c <- walk.channels do
-      assert length(c.times) == 13 and length(c.values) == 13
+      assert length(c.times) > 24 and length(c.values) == length(c.times)
       # The loop ends where it starts.
       {first, last} = {hd(c.values), List.last(c.values)}
 
-      assert World.Vec.len(World.Vec.sub(first.y, last.y)) < 1.0e-9 and
-               World.Vec.len(World.Vec.sub(first.z, last.z)) < 1.0e-9
+      if c.path == :rotation do
+        assert World.Vec.len(World.Vec.sub(first.y, last.y)) < 1.0e-9 and
+                 World.Vec.len(World.Vec.sub(first.z, last.z)) < 1.0e-9
+      else
+        assert World.Vec.len(World.Vec.sub(first, last)) < 1.0e-9
+      end
     end
 
     glb = World.GLB.encode(scene)

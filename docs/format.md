@@ -1603,9 +1603,22 @@ The GLB of a person has:
   its start (the eyelids close in 0.07 s, stay closed 0.05 s, and open
   in 0.15 s), as the weights of the targets. An app plays it in a loop,
   or at times of its own;
-- the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
-  2.6 s, to play once, from the pose "stand" back to it). The channels
-  of a clip are the bones that move in it;
+- the animations by name: the walks (`World.People.Gait`, plan 0021)
+  `walk` (about 1.2 m/s for a man of the rules, slower for shorter legs)
+  and `stroll` (about 0.8 m/s), each one cycle of two steps in a loop,
+  in place (the root does not go forward: a project moves the person at
+  the speed of the clip, or plays the clip faster or slower by the ratio
+  of the speeds), and `idle`, a loop of 6 s to stand in; `wave` and
+  `point`: 2.6 s, to play once, from the pose "stand" back to it. The
+  channels of a clip are the bones that move in it, with 24 keys each
+  second in a walk. A walk has its numbers in the `extras` of its
+  animation (and in `animations` of `NAME.parts.json`): `speed` (m/s),
+  `stride` (the length of two steps, m), `cadence` (steps each minute),
+  and `contacts`: for each foot (`l`, `r`) the times in the cycle (s)
+  of the contact of its heel (`heel`) and of its toe-off (`toe_off`).
+  The age and the seed of the person (`seed`; by default from the
+  numbers of its body) change the step, the cadence, the swing of the
+  arms and the bend of the back a little;
 - with the option `expressions`: at near the teeth and the tongue (as
   with `speech`), and 30 face shapes of the standard of Apple ARKit as
   morph targets of the skin, the teeth, the tongue, the eyebrows and
@@ -3070,7 +3083,10 @@ The tests of the rules use small models of their own
 params, its sources and, when it has one, the mass of one (`mass`, in
 kg: the volume of each closed mesh times the density of its material,
 `priv/standards/materials.json`; a part with an open mesh or a material
-with no density, a paint or a color, has no mass), in a fixed order:
+with no density, a paint or a color, has no mass), in a fixed order.
+A model with a walk has `animations` too: for each clip with numbers,
+its `name` and the numbers of the extras of its animation in the GLB
+(`speed`, `stride`, `cadence`, `contacts`):
 
 ```json
 {
