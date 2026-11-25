@@ -223,7 +223,7 @@ defmodule World.People.Pose do
   # A routine of the caller: `{name, {length, fps, keys}}` as `routine/1`.
   def animation({name, {length, fps, keys}}, bones, opts) do
     keys = if Keyword.get(opts, :mirror, false), do: for({t, pose} <- keys, do: {t, mirror(pose)}), else: keys
-    loop(name, bones, length, fps, keys, Keyword.get(opts, :delay, 0.0), hands(opts))
+    loop(name, bones, length, fps, keys, Keyword.get(opts, :delay, 0.0), hands(opts), name not in @work)
   end
 
   def animation(name, _bones, _opts), do: raise(ArgumentError, "unknown animation #{inspect(name)}")
@@ -278,50 +278,175 @@ defmodule World.People.Pose do
   # A routine in a loop: its poses at their times (on top of the pose
   # "stand"), with a smooth move from each pose to the next, and from the
   # last to the first. The feet stay on their targets during each move,
-  # and a foot that goes to a new place lifts on the way. A person late
-  # by `delay` seconds is at the time `t - delay` of the routine.
-  defp loop(name, bones, length, fps, keys, delay, hands) do
+  # and a foot that goes to a new place lifts on the way; when the two
+  # feet go to new places, one foot comes down before the other lifts. A
+  # pose with `jump: true` is the end of a jump (`air/1`). A person late
+  # by `delay` seconds is at the time `t - delay` of the routine. The
+  # extras give the beats: the times of the poses, and the beats each
+  # minute when the poses are evenly apart (D6).
+  defp loop(name, bones, length, fps, keys, delay, hands, ground) do
     skeleton = Skeleton.new(bones)
     stand = Map.merge(@poses["stand"], hands)
 
     solved =
       for {t, pose} <- keys ++ [{length, elem(hd(keys), 1)}] do
+        {jump, pose} = Map.pop(pose, :jump, false)
         pose = expand(stand |> Map.merge(pose) |> Map.merge(hands))
-        {t, Skeleton.locals(skeleton, pose), Skeleton.feet(skeleton, pose)}
+        {t, Skeleton.locals(skeleton, pose), Skeleton.feet(skeleton, pose), jump}
       end
 
     steps = round(length * fps)
     times = for k <- 0..steps, do: k * length / steps
-    frames = for t <- times, do: sample(skeleton, solved, fmod(t - delay, length))
-    %{name: name, channels: channels(bones, Skeleton.locals(skeleton, expand(stand)), frames, times)}
+    frames = for t <- times, do: sample(skeleton, solved, fmod(t - delay, length), ground)
+
+    %{
+      name: name,
+      channels: channels(bones, Skeleton.locals(skeleton, expand(stand)), frames, times),
+      extras: beats(Enum.map(keys, &elem(&1, 0)), length)
+    }
+  end
+
+  defp beats(times, length) do
+    gaps = times |> Enum.chunk_every(2, 1, [length + hd(times)]) |> Enum.map(fn [a, b] -> b - a end)
+    even = Enum.all?(gaps, &(abs(&1 - hd(gaps)) < 1.0e-9))
+    base = %{"beats" => Enum.map(times, &(&1 / 1))}
+    if even, do: Map.put(base, "bpm", round(60 / hd(gaps))), else: base
   end
 
   defp fmod(t, length), do: t - Float.floor(t / length) * length
 
-  defp sample(skeleton, solved, u) do
-    [{t0, l0, f0}, {t1, l1, f1}] =
-      solved |> Enum.chunk_every(2, 1, :discard) |> Enum.find(fn [{t0, _, _}, {t1, _, _}] -> u >= t0 and u <= t1 end)
+  # How high the hips go in a jump (m), and how much the legs push before the feet leave the ground.
+  @hop 0.08
+  @push 0.02
 
-    k = (u - t0) / (t1 - t0)
-    k = k * k * (3 - 2 * k)
+  @doc """
+  The times (s, from the start of a routine) when the feet of a person
+  are in the air: `[{from, to}]`, for each jump (a pose with `jump:
+  true`). A person late by a delay is in the air that much later.
+  """
+  def air(name) when name in @routines or name in @work do
+    {length, _, keys} = routine(name)
+
+    for {{t0, _}, {t1, pose}} <- Enum.zip(keys, tl(keys) ++ [{length, elem(hd(keys), 1)}]), pose[:jump] do
+      # (The feet leave when the hips are `@push` up, on the smooth move from t0 to t1.)
+      k = :math.asin(@push / @hop) / :math.pi()
+      x = 0.5 - :math.sin(:math.asin(1 - 2 * k) / 3)
+      {t0 + x * (t1 - t0), t1 - x * (t1 - t0)}
+    end
+  end
+
+  # (`ground`: the feet as plan 0021 puts them, D6; the work of a site keeps the moves of plan 0006.)
+  defp sample(skeleton, solved, u, ground) do
+    [{t0, l0, f0, _}, {t1, l1, f1, jump}] =
+      solved
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.find(fn [{t0, _, _, _}, {t1, _, _, _}] -> u >= t0 and u <= t1 end)
+
+    k = smooth((u - t0) / (t1 - t0))
     frames = Map.new(l0, fn {bone, f} -> {bone, Frame.blend(f, l1[bone], k)} end)
-    Skeleton.place_feet(frames, skeleton, Map.new([:l, :r], &{&1, step(f0[&1], f1[&1], k)}))
+
+    if jump do
+      # (A jump: the hips go up on an arc, and the feet leave the ground together, move in the air, and land.)
+      h = @hop * :math.sin(:math.pi() * k)
+      frames = Map.update!(frames, "pelvis", &Frame.compose(Frame.move({0.0, 0.0, h}), &1))
+      off = :math.asin(@push / @hop) / :math.pi()
+      air = smooth(min(max((k - off) / (1 - 2 * off), 0.0), 1.0))
+      targets = Map.new([:l, :r], &{&1, hop(f0[&1], f1[&1], k, air, max(h - @push, 0.0))})
+      Skeleton.place_feet(reach(frames, skeleton, targets), skeleton, targets)
+    else
+      targets = steps(skeleton, f0, f1, k, ground)
+      frames = if ground, do: reach(frames, skeleton, targets), else: frames
+      Skeleton.place_feet(frames, skeleton, targets)
+    end
+  end
+
+  # The hips go down as far as each leg must, so that its foot reaches its target with the knee bent 3° (the
+  # feet lead the legs, D2 of plan 0021).
+  defp reach(frames, skeleton, targets) do
+    w = Skeleton.world(skeleton, frames)
+
+    drop =
+      for {side, %{at: {x, y, z}}} <- targets, reduce: 0.0 do
+        most ->
+          [hip, knee, ankle] = Enum.map(~w(thigh calf foot), &skeleton.rest["#{&1}_#{side}"].at)
+          {a, b} = {Vec.len(Vec.sub(knee, hip)), Vec.len(Vec.sub(ankle, knee))}
+          leg = :math.sqrt(a * a + b * b + 2 * a * b * :math.cos(3 * :math.pi() / 180))
+          {hx, hy, hz} = w["thigh_#{side}"].at
+          flat = (hx - x) ** 2 + (hy - y) ** 2
+          max(most, hz - (z + :math.sqrt(max(leg * leg - flat, 0.0))))
+      end
+
+    if drop > 0, do: Map.update!(frames, "pelvis", &Frame.compose(Frame.move({0.0, 0.0, -drop}), &1)), else: frames
+  end
+
+  defp smooth(k), do: k * k * (3 - 2 * k)
+
+  # The targets of the feet in a move with no jump. When the two feet go to new places, one goes in the first
+  # half of the move and the other in the second half: the foot that is up comes down first (a march), else the
+  # left foot goes first.
+  defp steps(_skeleton, f0, f1, k, false), do: Map.new([:l, :r], &{&1, step(f0[&1], f1[&1], k, false)})
+
+  defp steps(skeleton, f0, f1, k, true) do
+    moves = for side <- [:l, :r], f0[side] && f1[side] && Vec.len(Vec.sub(f1[side].at, f0[side].at)) > 0.03, do: side
+    up? = fn side -> elem(f0[side].at, 2) > elem(skeleton.rest["foot_#{side}"].at, 2) + 0.03 end
+    order = if moves == [:l, :r] and up?.(:r) and not up?.(:l), do: [:r, :l], else: moves
+
+    Map.new([:l, :r], fn side ->
+      # (The first foot in the first 45 % of the move, the other in the last 45 %.)
+      kk =
+        case {length(order), Enum.find_index(order, &(&1 == side))} do
+          {2, 0} -> smooth(min(k / 0.45, 1.0))
+          {2, 1} -> smooth(max((k - 0.55) / 0.45, 0.0))
+          _ -> k
+        end
+
+      {side, step(f0[side], f1[side], kk, true)}
+    end)
   end
 
   # The target of a foot on the way from one place to the next: a foot
-  # that moves more than 3 cm lifts on an arc (at most 12 cm high).
-  defp step(nil, _b, _k), do: nil
-  defp step(_a, nil, _k), do: nil
+  # that moves more than 3 cm lifts on an arc (at most 12 cm high), and
+  # moves over the ground and turns only while it is up.
+  # (With `ground` false, the move of plan 0006: over the ground all the way, and a foot that is not flat at
+  # one end is not flat.)
+  defp step(nil, _b, _k, _ground), do: nil
+  defp step(_a, nil, _k, _ground), do: nil
 
-  defp step(a, b, k) do
+  defp step(a, b, k, ground) do
     far = Vec.len(Vec.sub(b.at, a.at))
     lift = if far > 0.03, do: min(0.12, far / 2) * :math.sin(:math.pi() * k), else: 0.0
+    kh = if far > 0.03 and ground, do: up(k), else: k
+    {x, y, _} = Vec.lerp(a.at, b.at, kh)
+    {_, _, z} = Vec.lerp(a.at, b.at, k)
+    # (A foot that becomes flat, or stops being flat, does it in the air, at the middle of its move.)
+    flat = if ground and far > 0.03, do: if(k < 0.5, do: a.flat, else: b.flat), else: a.flat and b.flat
 
     %{
-      at: Vec.add(Vec.lerp(a.at, b.at, k), {0.0, 0.0, lift}),
+      at: {x, y, z + lift},
+      pole: Vec.norm(Vec.lerp(a.pole, b.pole, k)),
+      flat: flat,
+      toe: a.toe + (b.toe - a.toe) * kh,
+      pitch: a.pitch + (b.pitch - a.pitch) * k
+    }
+  end
+
+  # The part of a move over the ground of a foot that lifts: from 15 % to 85 % of the move, while it is up.
+  defp up(k), do: smooth(min(max((k - 0.15) / 0.7, 0.0), 1.0))
+
+  # The target of a foot in a jump: up by `h` with the body, over the ground only while in the air.
+  defp hop(nil, _b, _k, _air, _h), do: nil
+  defp hop(_a, nil, _k, _air, _h), do: nil
+
+  defp hop(a, b, k, air, h) do
+    {x, y, _} = Vec.lerp(a.at, b.at, air)
+    {_, _, z} = Vec.lerp(a.at, b.at, k)
+
+    %{
+      at: {x, y, z + h},
       pole: Vec.norm(Vec.lerp(a.pole, b.pole, k)),
       flat: a.flat and b.flat,
-      toe: a.toe + (b.toe - a.toe) * k
+      toe: a.toe + (b.toe - a.toe) * air,
+      pitch: a.pitch + (b.pitch - a.pitch) * k
     }
   end
 
@@ -414,8 +539,10 @@ defmodule World.People.Pose do
     arms up, a forward fold, the tree on the left leg, then warrior II to
     the left.
   - `"aerobics"` (8 s, 120 beats a minute): a march with the knees up
-    and the arms pumping, jumping jacks, steps to the side with punches,
-    and knee lifts with a clap.
+    and the arms pumping, jumping jacks (jumps: `air/1`), steps to the
+    side into a low lunge with punches (the chest turns from the punch),
+    and knee lifts with a clap (the head looks at the knee and at the
+    hands).
   """
   def routine("tai_chi") do
     stance = sym(%{{:foot, :l} => %{by: {-0.08, 0.0, 0.0}, toe: 10}, {:hand, :l} => "relaxed"})
@@ -443,8 +570,8 @@ defmodule World.People.Pose do
     {16.0, 10,
      [
        {0.0, at.(-0.03, %{})},
-       {2.5, at.(-0.06, arms.({-0.3, 1.0, 0.0}, 20, 10))},
-       {5.0, at.(-0.14, arms.({-0.35, 0.8, -0.55}, 40, -35))},
+       {2.5, at.(-0.06, Map.put(arms.({-0.3, 1.0, 0.0}, 20, 10), :look, {0.0, 1.0, 0.08}))},
+       {5.0, at.(-0.14, Map.merge(arms.({-0.35, 0.8, -0.55}, 40, -35), %{look: {0.0, 1.0, -0.25}, spine: [flex: 5]}))},
        {7.5, clouds},
        {10.0, at.(-0.13, sym(%{{:reach, :l} => %{by: {0.05, 0.32, -0.15}}}))},
        {12.5, mirror(clouds)},
@@ -514,33 +641,60 @@ defmodule World.People.Pose do
     open = sym(%{{:hand, :l} => "open"})
     arm = fn side, to, flex -> %{{:aim, side} => %{to: to}, "lowerarm_#{side}" => [flex: flex]} end
 
+    # (The trunk leans and turns with the arms, and the head follows the move: D6 of plan 0021.)
     march =
       [fists, arm.(:l, {-0.15, -0.5, -0.85}, 80), arm.(:r, {0.15, 0.7, -0.7}, 95)]
-      |> merge(%{:hips => %{at: {0.0, 0.0, -0.02}}, {:foot, :l} => %{by: {0.02, 0.12, 0.25}, flat: false}})
+      |> merge(%{
+        :hips => %{at: {0.0, 0.0, -0.02}},
+        {:foot, :l} => %{by: {0.02, 0.12, 0.25}, flat: false},
+        :spine => [flex: 4, twist: 6],
+        :look => {0.0, 1.0, -0.05}
+      })
 
-    jack = fn width, to, z ->
+    # (A jumping jack: both feet leave the ground; the knees bend as the person lands wide.)
+    jack = fn width, to, z, look ->
       merge([open, sym(%{{:foot, :l} => %{by: {width, 0.0, 0.0}, toe: 15}} |> Map.merge(arm.(:l, to, 10)))], %{
-        :hips => %{at: {0.0, 0.0, z}}
+        :hips => %{at: {0.0, 0.0, z}},
+        :look => look,
+        :jump => true
       })
     end
 
-    out = jack.(-0.18, {-0.4, 0.0, 0.92}, -0.04)
-    in_ = jack.(0.05, {-0.2, 0.05, -1.0}, -0.02)
+    out = jack.(-0.18, {-0.4, 0.0, 0.92}, -0.09, {0.0, 1.0, 0.4})
+    in_ = jack.(0.05, {-0.2, 0.05, -1.0}, -0.03, {0.0, 1.0, 0.0})
 
+    # (A step to the side into a low lunge, with a punch of the other arm: the chest turns from it.)
     side =
       [fists, arm.(:r, {0.05, 1.0, 0.1}, 0), arm.(:l, {-0.3, 0.6, -0.5}, 120)]
-      |> merge(%{:hips => %{at: {0.1, 0.0, -0.06}}, {:foot, :r} => %{by: {0.28, 0.0, 0.0}, toe: 10}})
+      |> merge(%{
+        :hips => %{at: {0.12, 0.0, -0.13}},
+        {:foot, :r} => %{by: {0.34, 0.0, 0.0}, toe: 10},
+        :spine => [twist: 16, spread: 5],
+        :look => {0.25, 1.0, 0.0}
+      })
 
     punch =
       merge([fists, arm.(:l, {-0.05, 1.0, 0.1}, 0), arm.(:r, {0.3, 0.6, -0.5}, 120)], %{
-        :hips => %{at: {0.0, 0.0, -0.03}}
+        :hips => %{at: {0.0, 0.0, -0.05}},
+        :spine => [twist: -18],
+        :look => {-0.1, 1.0, 0.0}
       })
 
+    # (A knee lift: the person bends to it and looks at it; a clap: the person looks at the hands.)
     knee =
       [open, sym(arm.(:l, {-0.15, 0.1, 1.0}, 10))]
-      |> merge(%{:hips => %{at: {0.0, 0.0, -0.02}}, {:foot, :l} => %{by: {0.02, 0.12, 0.28}, flat: false}})
+      |> merge(%{
+        :hips => %{at: {0.0, 0.0, -0.02}},
+        {:foot, :l} => %{by: {0.02, 0.12, 0.28}, flat: false},
+        :spine => [flex: 12],
+        :look => {0.0, 1.0, -0.7}
+      })
 
-    clap = Map.put(together({0.14, 0.32, -0.05}, 25), :hips, %{at: {0.0, 0.0, -0.04}})
+    clap =
+      Map.merge(together({0.14, 0.32, -0.05}, 25), %{
+        :hips => %{at: {0.0, 0.0, -0.06}},
+        :look => {0.0, 1.0, -0.2}
+      })
 
     {8.0, 15,
      [
