@@ -33,6 +33,11 @@
 //   .solids.json, .log.json, .replay.glb: the files of an order of POST /orders. The
 //   people of the node build the model (World.Construction): the log
 //   tells what each one did, and the replay GLB has a node for each part.
+// - GET /s/SET/I.glb (and .mid.glb, .far.glb), /s/SET.color.png (and the
+//   normal, finish and glow images, .mid and .far, .png or .ktx2): the
+//   files of a set with an atlas (World.Orders.Set): a GLB of each
+//   variant with no image, and the images of the atlas of the level. The
+//   VM builds all of the files of a level at one time; they go into R2.
 // - GET /o/HASH.elements.json (and .mid.elements.json, .far.elements.json):
 //   the parts list of the model at a level (World.Elements): each part
 //   with its key and its place. The factory does not join the parts.
@@ -408,6 +413,35 @@ async function model(request, env, vm, commit, url, blueprint, [, level, kind, t
   return send(request, await env.ORDERS.get(buildKey(commit, hash, level, kind)), commit, hash, type);
 }
 
+// The name of a file of a set with an atlas (World.Orders.Set.name/1): the GLB of a variant, or an
+// image of the atlas of a level.
+export const SET_FILE = /^[0-9a-f]{32}(\/\d{1,2}(\.(mid|far))?\.glb|(\.(mid|far))?\.(color|normal|finish|glow)\.(png|ktx2))$/;
+
+const setType = (name) => (name.endsWith('.glb') ? 'model/gltf-binary' : name.endsWith('.png') ? 'image/png' : 'image/ktx2');
+
+// A file of a set with an atlas: from R2, else the VM builds all of the files of its level at one
+// time (POST /set: their bytes one after the other, and the name and the size of each in
+// x-world-files), and each goes into R2 with a key of the commit of the deploy.
+async function setFile(request, env, vm, commit, name) {
+  const key = (n) => `builds/${commit}/s/${n}`;
+  let object = await env.ORDERS.get(key(name));
+  if (!object) {
+    const r = await vm(new Request(`http://vm/set?name=${name}`, { method: 'POST' }), name.slice(0, 32));
+    if (r.status === 202) return json(202, await r.json(), { 'retry-after': r.headers.get('retry-after') ?? '15' });
+    if (r.status !== 200) return failure(r);
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    let at = 0;
+    for (const entry of r.headers.get('x-world-files').split(',')) {
+      const [file, size] = entry.split(' ');
+      await env.ORDERS.put(key(file), bytes.subarray(at, at + Number(size)), { httpMetadata: { contentType: setType(file) } });
+      at += Number(size);
+    }
+    object = await env.ORDERS.get(key(name));
+    if (!object) return errors(404, 'no such file of the set');
+  }
+  return send(request, object, commit, name.slice(0, 32), setType(name));
+}
+
 // A file of R2, with its ETag (304 for the same ETag).
 function send(request, object, commit, hash, type) {
   const etag = object.httpEtag;
@@ -597,6 +631,11 @@ async function route(request, env, { vm, commit, later = () => {}, verify: check
     const parts = split(path.slice(3));
     if (!parts || !HASH.test(parts[0])) return errors(404, 'no such file');
     return file(request, env, vm, commit, parts[0], parts[1]);
+  }
+
+  if (path.startsWith('/s/')) {
+    const name = path.slice(3);
+    return SET_FILE.test(name) ? setFile(request, env, vm, commit, name) : errors(404, 'no such file');
   }
 
   // A part of a model by its key: from R2 with no VM, else the VM builds

@@ -30,7 +30,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { light } from './scene.js';
+import { light, loader as gltfLoader } from './scene.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('view');
@@ -54,7 +54,7 @@ resize();
 const listURL = new URL(params.get('list'), location.href);
 const list = await (await fetch(listURL)).json();
 const base = new URL(params.get('parts') ?? '/', listURL);
-const loader = new GLTFLoader();
+const loader = gltfLoader(renderer);
 const model = new THREE.Group();
 let tris = 0;
 

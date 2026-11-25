@@ -112,7 +112,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { light } from './scene.js';
+import { light, loader as gltfLoader } from './scene.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -135,7 +135,7 @@ controls.target.set(20, 0, 10);
 const grid = new THREE.GridHelper(400, 80, 0x9a927c, 0xc9c2ad);
 scene.add(grid);
 const mark = new THREE.MeshStandardMaterial({ color: style.getPropertyValue('--mark').trim() });
-const loader = new GLTFLoader();
+const loader = gltfLoader(renderer);
 
 // The places of the yard: a ground of the color of its kind at its point
 // (x to the right, y of the yard to -z), and a row of the table with its

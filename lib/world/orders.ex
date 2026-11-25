@@ -22,6 +22,13 @@ defmodule World.Orders do
     the key `mipmaps` (`World.Skills.Sculpt`): its maps have a sampler
     with smaller copies of the image. The full order has this key only
     when it is true.
+  - `"atlas"`: true puts the images of the bakes of the parts of the
+    model into one atlas (`World.Atlas`, plan 0020, D13): the GLB of each
+    level has one material for them. The full order has this key only
+    when it is true.
+  - `"images"`: `"png"` (the default) or `"ktx2"`: the images of the GLB
+    of each level as KTX2 with Basis Universal (`World.KTX2`, plan 0020,
+    D14). The full order has this key only when it is `"ktx2"`.
 
   `check/1` gives the full order: each option with its value, and the
   keys in one order. `hash/1` is the name of its files: the same order
@@ -29,7 +36,7 @@ defmodule World.Orders do
   """
   alias World.{Build, Detail, GLB, Log}
   alias World.Orders.{Blueprint, Blueprints, Store}
-  @keys ~w(blueprint options colors joints targets mipmaps)
+  @keys ~w(blueprint options colors joints targets mipmaps atlas images)
   @levels %{"near" => :near, "mid" => :mid, "far" => :far}
   @files ~w(glb log replay parts receipt solids flat light drawing elements)
 
@@ -60,18 +67,34 @@ defmodule World.Orders do
          {:ok, colors} <- colors(Map.get(order, "colors", %{})),
          {:ok, joints} <- joints(Map.get(order, "joints", %{})),
          {:ok, targets} <- targets(Map.get(order, "targets", %{})),
-         {:ok, mipmaps} <- mipmaps(Map.get(order, "mipmaps", false)) do
+         {:ok, mipmaps} <- flag(order, "mipmaps"),
+         {:ok, atlas} <- flag(order, "atlas"),
+         {:ok, images} <- images(Map.get(order, "images", "png"), "images") do
       full = %{"blueprint" => given, "options" => options, "colors" => colors, "joints" => joints}
       full = if(targets == %{}, do: full, else: Map.put(full, "targets", targets))
-      {:ok, if(mipmaps, do: Map.put(full, "mipmaps", true), else: full)}
+      full = if(mipmaps, do: Map.put(full, "mipmaps", true), else: full)
+      full = if(atlas, do: Map.put(full, "atlas", true), else: full)
+      {:ok, if(images == "png", do: full, else: Map.put(full, "images", images))}
     else
       errors when is_list(errors) -> {:error, errors}
       {:error, errors} -> {:error, errors}
     end
   end
 
-  defp mipmaps(v) when is_boolean(v), do: {:ok, v}
-  defp mipmaps(_v), do: {:error, [{"mipmaps", "must be true or false"}]}
+  # A key of true or false (false when the order does not give it).
+  defp flag(order, key) do
+    case Map.get(order, key, false) do
+      v when is_boolean(v) -> {:ok, v}
+      _ -> {:error, [{key, "must be true or false"}]}
+    end
+  end
+
+  @doc """
+  The format of the images of an order or a set at `path`: `{:ok,
+  "png"}`, `{:ok, "ktx2"}`, or `{:error, errors}`.
+  """
+  def images(v, _path) when v in ["png", "ktx2"], do: {:ok, v}
+  def images(_v, path), do: {:error, [{path, "must be \"png\" or \"ktx2\""}]}
 
   defp blueprint(%{"hash" => hash} = given) when map_size(given) == 1 do
     with true <- is_binary(hash) and hash =~ ~r/^[0-9a-f]{32}$/,
@@ -326,6 +349,16 @@ defmodule World.Orders do
   end
 
   @doc """
+  The scene of an order at a level (`World.Scene`), built in this process
+  with no people: for the atlas of a set (`World.Orders.Set.files/2`,
+  which runs it in the guard of the memory). `{:ok, scene}`, or `{:error,
+  errors}`.
+  """
+  def scene(order, level) do
+    with {:ok, job} <- job(order, level), do: {:ok, job.scene.(job.item.(job.level), [])}
+  end
+
+  @doc """
   The job of an order at a level, for a construction (`World.build/1`):
   its id (the hash of the order and the level), the item at a level, the
   scene with the pose and the colors of the order, and the hash.
@@ -433,10 +466,25 @@ defmodule World.Orders do
       level: lvl,
       item: fn level -> Detail.with(level, fn -> blueprint.build.(order["options"]) end) end,
       scene: scene,
+      pack: pack(order),
       pose: order["joints"],
       colors: order["colors"],
       drawing: skilled(Blueprints.drawing(order))
     }
+  end
+
+  # The images of the GLB of an order: in one atlas (`"atlas"`), and as
+  # KTX2 (`"images"`). The construction applies it to the scene of its GLB
+  # (only to that file: the other files have no images, or each part has
+  # its own).
+  defp pack(order) do
+    images = Map.get(order, "images", "png")
+
+    cond do
+      order["atlas"] -> &World.Atlas.scene(&1, images: images)
+      images == "ktx2" -> &World.Atlas.ktx2/1
+      true -> nil
+    end
   end
 
   # A drawing with a node that a skill makes: the people make it node by

@@ -2961,6 +2961,59 @@ The tests of the rules use small models of their own
   A level with a bake has the same in its maps: the color, the finish
   image (the occlusion, the roughness, the metal) and the glow image (the
   light, in sRGB: an `emissiveTexture`).
+- **One atlas** (plan 0020, D12 and D13). An order with `"atlas": true`
+  (next to `blueprint` and `options`) puts the images of the bakes of the
+  parts of its model into one atlas (`World.Atlas`), in the GLB of each
+  level; a set with `"atlas": true` puts the images of all of its
+  variants into one atlas at each level (`docs/factory.md`, `POST
+  /sets`). In the atlas:
+  - a material of a bake (an image of color with no repeat, and its other
+    maps of the same side) goes into the atlas. The materials with the
+    same other values (the color, the alpha, the occlusion) become one
+    material, `atlas` (and `atlas_2`, ... for other values), with the
+    factors of roughness and metal 1: one draw call for each. A material
+    with no image (glass, a plain color) and a texture that repeats stay
+    as they are;
+  - the atlas has one image of each map: the color, the normal, the
+    finish, and the glow when a part has one. A part with no map of a kind
+    has its values there: a flat normal, the finish of its factors (the
+    occlusion 1), and black for the glow (no light). The materials with
+    the same images share one square;
+  - each image is a square with a side of a power of 2, at a multiple of
+    its side in the atlas, the largest first (a buddy allocation), in the
+    smallest square of a side of a power of 2 that holds them: so a level
+    of the mipmaps never mixes the texels of two images, and the fill of
+    the empty texels of each chart ("The maps of a sculpture") stays at
+    its border. Over 8192 texels on a side, each image goes to half of
+    its side until they fit;
+  - the UV of each point goes to the place of its image in the atlas, and
+    in a node the primitives of one material become one primitive.
+
+  **What the import of a project reads:** the same material and the
+  same images as a GLB with no atlas; a project that draws the copies of
+  many models with one material (a `BatchedMesh` of three.js, a
+  `MultiMesh` of Godot) takes the material `atlas` of one of them for
+  all. The GLB of a variant of a set refers to the images of the atlas by
+  their URLs (`uri`, relative to the GLB: `../SET.far.color.png`), not in
+  its own bytes: a project loads each image one time.
+- **The images of KTX2** (plan 0020, D14). An order or a set with
+  `"images": "ktx2"` has its images as KTX2 files with Basis Universal
+  (`World.KTX2`): the GLB has `KHR_texture_basisu` in `extensionsUsed`
+  and in `extensionsRequired`, each texture gives its image in
+  `extensions.KHR_texture_basisu.source`, and the image has the type
+  `image/ktx2`. A file has the blocks of UASTC (`World.UASTC`: 16 bytes
+  for 4 by 4 texels, the modes 8, 5 and 14) of each level of the
+  mipmaps to 1 by 1, each level supercompressed with Zstandard. Its data
+  format descriptor gives sRGB for the color and the glow images, and
+  linear for the normal and the finish images. An image whose sides are
+  not multiples of 4, or that is not RGB or RGBA, stays PNG. **What the
+  import of a project reads:** a loader with a transcoder of Basis
+  (three.js: `KTX2Loader` with `setTranscoderPath`, as
+  `review/scene.js` does; for Godot, the import of the project must read
+  `KHR_texture_basisu`: I did not try it) makes the blocks into the format of its GPU (BC7 on a
+  desktop, ASTC or ETC2 on a phone). On the GPU an image then takes 1
+  byte for each texel (with its mipmaps, 4/3 of that), where a PNG
+  takes 4. With no transcoder, the GLB does not load.
 - **The materials.** One glTF material for each role, with the values of
   the palette. Its name is its role. A material can have a color
   texture and a normal texture (each can repeat, with

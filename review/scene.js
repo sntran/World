@@ -6,6 +6,18 @@
 // give the light of the shadow side.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+
+// The transcoder of Basis Universal of the three.js of the pages, for the
+// images of KTX2 (plan 0020, D14: `images: "ktx2"`).
+export const TRANSCODER = 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/libs/basis/';
+
+// A loader of GLB files that reads the images of KTX2 too (it transcodes
+// them to a format of the GPU of the renderer).
+export function loader(renderer) {
+  return new GLTFLoader().setKTX2Loader(new KTX2Loader().setTranscoderPath(TRANSCODER).detectSupport(renderer));
+}
 
 // The part of the glow of a model by day (the light of the room behind a
 // window, by day: a little lighter than a dark window).

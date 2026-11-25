@@ -150,6 +150,9 @@ defmodule World.GLB do
         |> put_some("extras", if(n.extras == %{}, do: nil, else: n.extras))
       end
 
+    # (An image of KTX2 needs KHR_texture_basisu: an app with no transcoder cannot draw the model.)
+    basisu? = Enum.any?(buf.images, &(&1["mimeType"] == "image/ktx2"))
+
     json =
       %{
         "asset" => %{"version" => "2.0", "generator" => "World"},
@@ -165,13 +168,18 @@ defmodule World.GLB do
       |> put_some("meshes", nonempty(Enum.reverse(meshes)))
       |> put_some("skins", nonempty(skins))
       |> put_some("animations", nonempty(animations))
-      |> put_some("extensionsUsed", extensions(materials, node_instances != %{}))
+      |> put_some("extensionsUsed", extensions(materials, node_instances != %{}, basisu?))
+      |> put_some("extensionsRequired", if(basisu?, do: ["KHR_texture_basisu"]))
       |> put_some("images", nonempty(Enum.reverse(buf.images)))
       |> put_some(
         "textures",
         nonempty(
-          for {_, i} <- Enum.with_index(buf.images),
-              do: %{"source" => i, "sampler" => sampler(buf, i)}
+          for {image, i} <- Enum.with_index(Enum.reverse(buf.images)) do
+            # (An image of KTX2 is the source of its texture in KHR_texture_basisu: no other source.)
+            if image["mimeType"] == "image/ktx2",
+              do: %{"extensions" => %{"KHR_texture_basisu" => %{"source" => i}}, "sampler" => sampler(buf, i)},
+              else: %{"source" => i, "sampler" => sampler(buf, i)}
+          end
         )
       )
       |> put_some("samplers", samplers(buf))
@@ -477,7 +485,7 @@ defmodule World.GLB do
     end
   end
 
-  defp extensions(materials, instances?) do
+  defp extensions(materials, instances?, basisu?) do
     transform? =
       Enum.any?(materials, fn m ->
         get_in(m, ["pbrMetallicRoughness", "baseColorTexture", "extensions"]) ||
@@ -486,30 +494,35 @@ defmodule World.GLB do
 
     names = for m <- materials, {name, _} <- Map.get(m, "extensions", %{}), uniq: true, do: name
     names = if transform?, do: ["KHR_texture_transform" | names], else: names
+    names = if basisu?, do: ["KHR_texture_basisu" | names], else: names
     nonempty(Enum.sort(if(instances?, do: ["EXT_mesh_gpu_instancing" | names], else: names)))
   end
 
   # A texture of an image. Two materials with the same image share it. A
   # texture that repeats (`scale`: the times in one unit of UV), or that
   # is once on a panel (`scale` a map: its scale and its offset), has a
-  # transform (KHR_texture_transform).
-  defp texture(buf, {mime, data} = file, scale) do
+  # transform (KHR_texture_transform). An image is its bytes in the GLB
+  # (`{mime, data}`), or a URL of a file next to the GLB (`{:uri, url,
+  # mime}`: an image of the atlas of a set, `World.Atlas`).
+  defp texture(buf, file, scale) do
     {image, buf} =
       case buf.image_of do
         %{^file => image} ->
           {image, buf}
 
         _ ->
-          view = length(buf.views)
-          buf = add_view(buf, data, nil)
-          image = length(buf.images)
+          {json, buf} =
+            case file do
+              {:uri, uri, mime} ->
+                {%{"uri" => uri, "mimeType" => mime}, buf}
 
-          {image,
-           %{
-             buf
-             | images: [%{"bufferView" => view, "mimeType" => mime} | buf.images],
-               image_of: Map.put(buf.image_of, file, image)
-           }}
+              {mime, data} ->
+                view = length(buf.views)
+                {%{"bufferView" => view, "mimeType" => mime}, add_view(buf, data, nil)}
+            end
+
+          image = length(buf.images)
+          {image, %{buf | images: [json | buf.images], image_of: Map.put(buf.image_of, file, image)}}
       end
 
     texture = %{"index" => image}
