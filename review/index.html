@@ -49,7 +49,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { light } from './scene.js';
+import { light, loader as gltfLoader } from './scene.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('view');
@@ -62,7 +62,7 @@ const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 200);
 const controls = new OrbitControls(camera, canvas);
 const grid = new THREE.GridHelper(10, 20, 0x9a927c, 0xc9c2ad);
 scene.add(grid);
-const loader = new GLTFLoader();
+const loader = gltfLoader(renderer);
 let current = null;
 let drawn = true;
 let mixer = null;
