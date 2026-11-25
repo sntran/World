@@ -211,12 +211,25 @@ defmodule World.SDF do
   # The color and the finish of a place with the surface of a made thing
   # of its edit, at a level with no maps (`on_points/2`): the mean over a
   # square of `size` m, two cells at least.
-  defp made(%Edit{surface: {{kind, %{cell: cell} = data}, scale}} = e, p, color, finish, size) do
+  # The color, the finish and the light ({r, g, b} in linear light) of a
+  # place with the surface of a made thing of its edit, at a level with no
+  # maps (`on_points/2`): the mean over a square of `size` m, two cells at
+  # least. The glow of the finish has the light too (its most channel):
+  # the cut keeps the borders of the light of the panes (`World.Sculpt.Surface`).
+  defp made(e, p, color, finish, size), do: made(e, p, color, finish, size, nil)
+
+  defp made(%Edit{surface: {{kind, %{cell: cell} = data}, scale}} = e, p, color, finish, size, normal) do
     q = Vec.scale(Frame.point(e.back, p), 1 / scale)
-    Texture.apply(Texture.look({kind, data}, q, facing(e, p), max(2 * cell, size || 0.0) / scale), color, finish)
+    n = if normal, do: Frame.dir(e.back, normal), else: facing(e, p)
+    look = Texture.look({kind, data}, q, n, max(2 * cell, size || 0.0) / scale)
+    {color, {rough, metal, glow}} = Texture.apply(look, color, finish)
+    light = elem(look, 3) || {0.0, 0.0, 0.0}
+    {color, {rough, metal, min(glow + max3(light), 1.0)}, light}
   end
 
-  defp made(_e, _p, color, finish, _size), do: {color, finish}
+  defp made(_e, _p, color, finish, _size, _normal), do: {color, finish, {0.0, 0.0, 0.0}}
+
+  defp max3({a, b, c}), do: max(a, max(b, c))
 
   # The direction that the surface of an edit faces at a place, in the
   # axes of the edit: the gradient of the distance to its own shape.
@@ -810,7 +823,7 @@ defmodule World.SDF do
   def color(edits, p, limit \\ @far, size \\ nil) do
     if made?(edits) do
       {_, color, finish, top} = seen(edits, p, limit, %{})
-      {{r, g, b}, _} = made(top, p, color, finish, size)
+      {{r, g, b}, _, _} = made(top, p, color, finish, size)
       {byte(r), byte(g), byte(b)}
     else
       elem(sample(edits, p, limit), 1)
@@ -961,8 +974,30 @@ defmodule World.SDF do
     end
   end
 
+  @doc """
+  The finish and the light of the surface at a point, for the look of a
+  point of a level with no maps (`World.Sculpt.Shade`): `{finish, glow,
+  light}`. `finish` is `finish/4`; `glow` is the glow of the edits alone
+  (`glow/2`: the light of a lamp is the color of the point times it);
+  `light` is the light of a surface of a made thing there, `{r, g, b}` in
+  linear light (`{0, 0, 0}` with none). With `normal`, the surface faces
+  that way (the middle of a face of a mesh: `World.Sculpt.Shade`); with
+  none, the way of the shape of the edit at the point.
+  """
+  def shine(edits, p, defaults \\ %{}, size \\ nil, normal \\ nil) do
+    alone = fold_finish(edits, p, defaults)
+
+    if made?(edits) do
+      {_, color, finish, top} = seen(edits, p, @far, defaults)
+      {_, finish, light} = made(top, p, color, finish, size, normal)
+      {finish, elem(alone, 2), light}
+    else
+      {alone, elem(alone, 2), {0.0, 0.0, 0.0}}
+    end
+  end
+
   @doc "The glow of the edits at a point (`finish/3`), with no surface of a made thing."
-  def light(edits, p), do: elem(fold_finish(edits, p, %{}), 2)
+  def glow(edits, p), do: elem(fold_finish(edits, p, %{}), 2)
 
   defp fold_finish(edits, p, defaults) do
     {_, finish} =

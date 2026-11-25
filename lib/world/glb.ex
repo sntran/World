@@ -245,13 +245,23 @@ defmodule World.GLB do
           with_attr(attrs, "COLOR_0", floats(buf, linear, "VEC3", 34962, false))
       end
 
-    # The finish of each point (plan 0020, D6): the roughness, the metal
-    # and the glow, each a byte from 0 to 255 for 0 to 1 (an attribute of
-    # the application: its name starts with _). Each element of an
-    # attribute starts at a multiple of 4 bytes: three bytes and one byte
+    # The finish of each point (plan 0020, D6): the roughness and the
+    # metal, each a byte from 0 to 255 for 0 to 1 (an attribute of the
+    # application: its name starts with _); and, when a point has light,
+    # the light of each point (`_LIGHT`: red, green and blue in linear
+    # light, as the emission of the point). Each element of an attribute
+    # starts at a multiple of 4 bytes: the bytes of the element, and bytes
     # of nothing.
     {attrs, buf} =
-      if p.finish, do: with_attr(attrs, "_FINISH", finish(buf, p.finish)), else: {attrs, buf}
+      if p.finish do
+        {attrs, buf} = with_attr(attrs, "_FINISH", bytes(buf, for({r, m, _} <- p.finish, do: <<r, m>>), "VEC2"))
+
+        if Enum.any?(p.finish, &(elem(&1, 2) != {0, 0, 0})),
+          do: with_attr(attrs, "_LIGHT", bytes(buf, for({_, _, {r, g, b}} <- p.finish, do: <<r, g, b>>), "VEC3")),
+          else: {attrs, buf}
+      else
+        {attrs, buf}
+      end
 
     # The length of the fur of each point (m), for an app that draws fur:
     # an attribute of the application (its name starts with _).
@@ -699,9 +709,10 @@ defmodule World.GLB do
     })
   end
 
-  defp finish(buf, vals) do
-    data = for {r, m, g} <- vals, into: <<>>, do: <<r, m, g, 0>>
-    acc = %{"componentType" => 5121, "normalized" => true, "count" => length(vals), "type" => "VEC3"}
+  # An attribute of normalized bytes, each element in 4 bytes.
+  defp bytes(buf, vals, type) do
+    data = for v <- vals, into: <<>>, do: v <> :binary.copy(<<0>>, 4 - byte_size(v))
+    acc = %{"componentType" => 5121, "normalized" => true, "count" => length(vals), "type" => type}
     view = length(buf.views)
     bin = pad(buf.bin, <<0>>)
 

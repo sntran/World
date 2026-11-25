@@ -20,8 +20,14 @@ defmodule World.Sculpt.Shade do
   - `dirt` makes a point in a crease darker and more rough; `wear` makes
     a point at a sharp edge lighter and less rough.
   - The finish is the fold of the edits (`World.SDF.finish/3`): the
-    roughness, the metal and the glow, with the finish of the role of the
-    palette for an edit with none.
+    roughness and the metal, with the finish of the role of the palette
+    for an edit with none.
+  - The light of a point (plan 0020, step 3, after my audit) is apart
+    from its color: the color of the point in linear light times the glow
+    of its edits (a lamp), and the light of a surface of a made thing
+    there (`World.SDF.shine/4`: the mean of the light of the panes of
+    windows over the square of the point). A lit pane has the color of
+    glass, as a dark pane: the color of its light is only in the light.
 
   The occlusion goes into the alpha of the color of each point (`:alpha`,
   the default: the color stays true, and an app that reads only the color
@@ -42,8 +48,8 @@ defmodule World.Sculpt.Shade do
   @group 256
 
   @doc """
-  The meshes of a level with the color and the finish of each point
-  (`World.Mesh.shaded/3`). `look` has `occlusion` (true or false),
+  The meshes of a level with the color, the finish and the light of each
+  point (`World.Mesh.shaded/3`). `look` has `occlusion` (true or false),
   `into` (`:alpha` or `:color`), `dirt` and `wear`; `defaults` is the
   finish of each role (a role to `{roughness, metal}`). With no
   occlusion, no dirt, no wear and no edit with a finish, the meshes stay
@@ -67,12 +73,14 @@ defmodule World.Sculpt.Shade do
           area > 0.0,
           do: {face, Vec.scale(Vec.add(Vec.add(p, q), r), 1 / 3), cross, area}
 
-    # (The square of a point for the look of a surface of a made thing: a third of the area of its faces.)
-    sizes = if SDF.made?(edits), do: elem(World.Sculpt.Finish.sizes(points, faces), 0)
+    # (The square of a point for the look of a surface of a made thing: a third of the area of its
+    # faces. A face gives the light of its middle, over its own square.)
+    made? = SDF.made?(edits)
+    sizes = if made?, do: elem(World.Sculpt.Finish.sizes(points, faces), 0)
 
     samples =
-      for({{p, n}, i} <- Enum.with_index(Enum.zip(points, normals)), do: {p, n, (sizes && elem(sizes, i)) || true}) ++
-        for({_, c, n, _} <- centers, do: {c, n, false})
+      for({{p, n}, i} <- Enum.with_index(Enum.zip(points, normals)), do: {p, n, {:point, sizes && elem(sizes, i)}}) ++
+        for({_, c, n, area} <- centers, do: {c, n, if(made?, do: {:face, :math.sqrt(area)})})
 
     seen =
       samples
@@ -83,6 +91,7 @@ defmodule World.Sculpt.Shade do
     {own, around} = Enum.split(seen, length(points))
     shades = even(Enum.map(own, &elem(&1, 0)), Enum.zip(centers, around), length(points))
     colors = mesh.colors || List.duplicate({255, 255, 255}, length(points))
+    own = if made?, do: lights(own, Enum.zip(centers, around)), else: own
 
     shaded =
       for {color, shade, {_, finish}} <- Enum.zip([colors, shades, own]), do: shaded(color, finish, shade, look)
@@ -109,9 +118,37 @@ defmodule World.Sculpt.Shade do
     end
   end
 
+  # The light of a surface of a made thing at each point: the mean of the
+  # light of the middles of its faces (each with the normal of its face),
+  # each by its area. So the light of
+  # the faces of a level, between their points, is the light of the
+  # surface: a point at the edge of a side with windows and of a roof has
+  # the light of both, by their areas, and the roof does not take the light
+  # of the side. (A point in no face keeps its own light.)
+  defp lights(own, faces) do
+    sums =
+      for {{[a, b, c], _, _, area}, {_, light}} <- faces, i <- [a, b, c], reduce: %{} do
+        acc ->
+          {r, g, b} = light
+
+          Map.update(acc, i, {r * area, g * area, b * area, area}, fn {sr, sg, sb, sa} ->
+            {sr + r * area, sg + g * area, sb + b * area, sa + area}
+          end)
+      end
+
+    for {{shade, {finish, glow, light}}, i} <- Enum.with_index(own) do
+      case sums do
+        %{^i => {sr, sg, sb, sa}} -> {shade, {finish, glow, {sr / sa, sg / sa, sb / sa}}}
+        _ -> {shade, {finish, glow, light}}
+      end
+    end
+  end
+
   # How open each point of a group is, how deep in a crease, how near a
-  # sharp edge, and its finish: with the edits that can change the field
-  # at the farthest distance from the box of the group.
+  # sharp edge, and its finish and its light (of a face: only the light of
+  # a surface of a made thing, with the square of the face): with the
+  # edits that can change the field at the farthest distance from the box
+  # of the group.
   defp group(pairs, edits, step, defaults, look) do
     {lo, hi} = Vec.bounds(Enum.map(pairs, &elem(&1, 0)))
     {center, half} = {Vec.lerp(lo, hi, 0.5), Vec.len(Vec.sub(hi, lo)) / 2}
@@ -130,16 +167,22 @@ defmodule World.Sculpt.Shade do
       min(max((dist + at - SDF.value(list, Vec.add(p, Vec.scale(n, dist)), limit)) / dist, 0.0), 1.0)
     end
 
-    for {p, n, finish?} <- pairs do
+    for {p, n, kind} <- pairs do
       n = Vec.norm(n)
       {at, wide} = {SDF.value(near, p, limit), SDF.value(far, p, limit)}
       {o1, o2} = {taken.(near, p, n, n1, at), taken.(near, p, n, n2, at)}
       # (The square: a part that is far takes a small part of the sky.)
       {o3, o4} = {taken.(far, p, n, f1, wide) ** 2, taken.(far, p, n, f2, wide) ** 2}
       edge = if look.wear > 0.0, do: thin(near, p, n, at, step, limit), else: 0.0
-      # (The finish of a point; a face gives only how open its center is.)
-      size = if is_number(finish?), do: finish?
-      {{1.0 - (a * o1 + b * o2 + c * o3 + d * o4), (o1 + o2) / 2, edge}, finish? && SDF.finish(here, p, defaults, size)}
+      # (The finish of a point; a face gives how open its center is, and the light there.)
+      shine =
+        case kind do
+          {:point, size} -> SDF.shine(here, p, defaults, size)
+          {:face, size} -> elem(SDF.shine(here, p, defaults, size, n), 2)
+          nil -> nil
+        end
+
+      {{1.0 - (a * o1 + b * o2 + c * o3 + d * o4), (o1 + o2) / 2, edge}, shine}
     end
   end
 
@@ -149,9 +192,12 @@ defmodule World.Sculpt.Shade do
     min(max((dist - at + SDF.value(near, Vec.sub(p, Vec.scale(n, dist)), limit)) / dist, 0.0), 1.0)
   end
 
-  # The color and the finish of a point with its dirt, its wear and its
-  # occlusion (as the bake shades a texel).
-  defp shaded({r, g, b}, {rough, metal, glow}, {open, crease, edge}, %{dirt: dirt, wear: wear} = look) do
+  # The color, the finish and the light of a point with its dirt, its
+  # wear and its occlusion (as the bake shades a texel). The light is the
+  # color of the point in linear light times the glow of its edits (a
+  # lamp), and the light of a surface of a made thing (the panes of
+  # windows: not in the color).
+  defp shaded({r, g, b}, {{rough, metal, _}, glow, made}, {open, crease, edge}, %{dirt: dirt, wear: wear} = look) do
     dark = 1.0 - 0.6 * dirt * crease
     light = 0.35 * wear * edge
     tone = fn v -> min(v * dark + (255 - v * dark) * light, 255.0) end
@@ -165,7 +211,10 @@ defmodule World.Sculpt.Shade do
         {true, :alpha} -> {round(r), round(g), round(b), Float.round(open, 3)}
       end
 
-    {color, {byte(rough), byte(metal), byte(glow)}}
+    {lr, lg, lb} = made
+    {r, g, b} = World.Sculpt.Texture.linear({r, g, b})
+    light = {byte(r * glow + lr), byte(g * glow + lg), byte(b * glow + lb)}
+    {color, {byte(rough), byte(metal), light}}
   end
 
   defp byte(v), do: round(min(max(v, 0.0), 1.0) * 255)

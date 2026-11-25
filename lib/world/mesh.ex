@@ -10,7 +10,9 @@ defmodule World.Mesh do
   A mesh of a sculpture can have the normal, the color and the finish of
   each point (`finish/3`, `shaded/3`): the color `{r, g, b}` or, with how
   open the point is as its alpha, `{r, g, b, a}` (a from 0 to 1); the
-  finish `{roughness, metal, glow}`, each from 0 to 255.
+  finish `{roughness, metal, light}`: the roughness and the metal from 0
+  to 255, and the light `{r, g, b}` of the point in linear light, each
+  from 0 to 255.
   """
   alias World.{Frame, Vec}
 
@@ -36,7 +38,7 @@ defmodule World.Mesh do
           matter: atom | nil,
           normals: [Vec.t()] | nil,
           colors: [{0..255, 0..255, 0..255} | {0..255, 0..255, 0..255, float}] | nil,
-          finish: [{0..255, 0..255, 0..255}] | nil
+          finish: [{0..255, 0..255, {0..255, 0..255, 0..255}}] | nil
         }
 
   @doc """
@@ -87,7 +89,7 @@ defmodule World.Mesh do
   def finish(%__MODULE__{} = mesh, normals, colors), do: %{mesh | normals: normals, colors: colors}
 
   @doc """
-  The mesh with the color and the finish of each point (`World.Sculpt.Shade`):
+  The mesh with the color, the finish and the light of each point (`World.Sculpt.Shade`):
   `triangles/2` gives corners `{point, normal, color, uv, finish}` then
   (the uv is nil for a mesh with no maps).
   """

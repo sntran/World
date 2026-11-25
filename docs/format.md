@@ -382,7 +382,9 @@ houses.
   stair and a tank; or tiles; or steel sheet). The kind is `house`.
 - **The surfaces** (plan 0020, step 3): the roof of steel sheet is one
   edit with the surface `corrugated` (square ribs of 32 mm on a pitch of
-  0.25 m, down the slope), the roll-up door one edit with round ribs of
+  0.25 m, down the slope; at far the sheet is 12 cm thick, not 6 cm: on a
+  sheet of 1.5 cells the cut to the budget cut its corners, and a sheet of
+  11 cm or more keeps them), the roll-up door one edit with round ribs of
   12 mm on a pitch of 8 cm across it, and each leaf of glass of an upper
   storey has the surface `windows`: two panes across, in frames of 5 cm,
   and the light of the room in all of them or in none (half of the
@@ -767,7 +769,7 @@ An edit has its `shape` and its `size`, and these keys:
 
   | Kind | What it is | Its data (the default) |
   |---|---|---|
-  | `windows` | Rows and columns of panes on each face that stands up (a face that faces the z of the edit has none). A pane has the finish of glass (roughness 0.05, no metal) and is 2 cm in from its frame; the frame has the color and the finish of the edit. A lit pane has the color of its light and a glow of 0.9. | `pane` [width, height] ([1.2, 1.5]); `frame`, the width between two panes, one number or [across, up] (0.3); `lit`, the share of the lit panes, 0 to 1 (0); `seed` (1); `warm` and `cold`, the colors of the light (`#ffd08a`, `#d6e4ff`). |
+  | `windows` | Rows and columns of panes on each face that stands up (a face that faces the z of the edit has none). A pane has the color and the finish of glass (roughness 0.05, no metal) and is 2 cm in from its frame; the frame has the color and the finish of the edit. A lit pane has the color of glass too, and a light: the color of its light times a glow of 0.9, in the glow image or in `_LIGHT`. | `pane` [width, height] ([1.2, 1.5]); `frame`, the width between two panes, one number or [across, up] (0.3); `lit`, the share of the lit panes, 0 to 1 (0); `seed` (1); `warm` and `cold`, the colors of the light (`#ffd08a`, `#d6e4ff`). |
   | `panels` | Plates with dark seams in the plane that the face faces most, and rivets on the seams as an option: a hull, the skin of an aircraft, a tank. | `plate` [width, height] ([1.0, 0.5]); `seam`, the width of a seam (0.006); `depth` (0.002); `rivets`, the step of the rivets on a seam, or none. |
   | `corrugated` | Ribs along the z of the edit (along its y on a face that faces z): a roof of metal sheets, a container, a rolling shutter. | `profile`: `square` (flat tops, sides at 45 degrees, flat pans) or `round` (a sine) (`square`); `pitch` (0.25); `depth` (0.032); `top`, the width of the flat top of a square rib (0.03; at most the pitch less two times the depth). |
 
@@ -781,8 +783,10 @@ An edit has its `shape` and its `size`, and these keys:
   each face (a face of 30 pitches has 30 whole panes, with half a frame at
   each side). A pane is lit by a hash of the seed, the face, its row and
   its column: the same edit has the same lit panes each time. Two of
-  three lit panes have the warm light. A lit pane has the color of its
-  light by day too: the glow is the color times the glow.
+  three lit panes have the warm light. The light of a lit pane is not in
+  its color (by day a lit window looks as dark as the windows next to
+  it): with a bake, it is in the glow image; at a level with no bake, in
+  `_LIGHT`. So a project can make the light weaker by day.
 
   The value of a texel is the mean of the surface over the texel (a pane,
   a seam or a rib smaller than a texel is its mean). Where a texel is
@@ -995,11 +999,16 @@ edges, metal and light.
   the color stays true. With `"occlusion": "color"`, the color is the
   color times how open the point is, and `COLOR_0` has no alpha (for a
   project with no shader of its own). With `false`, no occlusion.
-- **The finish** (D6): the roughness, the metal and the glow of each
-  point, as the edits give them (each edit with no finish of its own has
-  the finish of its role in the palette), in `_FINISH` ("GLB" below).
-  The level has `_FINISH` unless `"occlusion": false` and no edit has a
+- **The finish** (D6): the roughness and the metal of each point, as
+  the edits give them (each edit with no finish of its own has the
+  finish of its role in the palette), in `_FINISH` ("GLB" below). The
+  level has `_FINISH` unless `"occlusion": false` and no edit has a
   finish, a dirt or a wear.
+- **The light** of each point, in `_LIGHT` ("GLB" below), when a point
+  of the level has light: the light that the point gives, in linear
+  light, apart from its color. It is the color of the point in linear
+  light times the glow of its edits (a lamp), and the light of a surface
+  of a made thing there (the lit panes of `windows`, below).
 - **The cut to the budget** (D7) keeps the borders of the color, the
   finish and the glow: a point where they change stays near its place.
   The pin of a change of the color, the roughness or the metal is
@@ -1017,28 +1026,37 @@ edges, metal and light.
   its 300 triangles, where the cut before step 2 kept none.
 - **The surfaces of made things** (D11): an edit with the surface
   `windows`, `panels` or `corrugated` gives its look to the points: the
-  color, the finish and the glow of the surface at each point, as the
-  mean over a square of the size of the point (the square root of a third
-  of the area of its faces, and two cells at least). So a pane that is
-  larger than about two cells keeps its own points (the cut keeps its
-  borders when the budget has room for them), and where the points are
-  far apart, each point has the mean of the panes: the glass, the frame
-  and the light together. The cut gives the glow of such a surface the pin
-  of a change of the color, not the pin of a light: the lit panes are a
-  pattern, and the cut keeps the shape first. The other kinds of surface
-  have marks of millimeters: their mean is about the color of the edit,
-  and they give nothing to the points.
+  color and the finish of the surface at each point, as the mean over a
+  square of the size of the point (the square root of a third of the area
+  of its faces, and two cells at least). So a pane that is larger than
+  about two cells keeps its own points (the cut keeps its borders when
+  the budget has room for them), and where the points are far apart,
+  each point has the mean of the panes: the glass and the frame
+  together. The light of a point is the mean of the light at the middles
+  of its faces, each by its area, each over its own square and with the
+  side that its face faces. So the light of the faces of a level is the
+  light of the surface: the light of the far level of the tower of R13
+  with no bake is within 30 % of the light of its near level (a test),
+  and the roof of a box does not take the light of the windows of its
+  sides. The cut gives the light of such a surface the pin of a change of
+  the color, not the pin of a light: the lit panes are a pattern, and the
+  cut keeps the shape first. The other kinds of surface have marks of
+  millimeters: their mean is about the color of the edit, and they give
+  nothing to the points.
 - A sculpture with `bones` (a figure) has its colors through the rig,
   with no alpha and no finish: it has the look only in its maps. The flat
-  look (`look: flat`, and the file `flat` of an order) has no alpha and
-  no `_FINISH`.
+  look (`look: flat`, and the file `flat` of an order) has no alpha, no
+  `_FINISH` and no `_LIGHT`.
 
 An app with no shader of its own draws such a model opaque: the alpha
 of `COLOR_0` does not change the material (glTF with the alpha mode
 `OPAQUE`, the default). `review/scene.js` draws the look as a game does:
 the alpha takes the light of the sky and of the room (as the occlusion
-of a map), and the glow is the color of the point times its glow, as
-light. The review page has a switch for the night (`night=1`).
+of a map), and `_LIGHT` is the light of the point, as an emission. The
+review page has a switch for the night (`night=1`): at night it draws
+the light of a model (`_LIGHT`, and the glow image of a level with a
+bake) in full, and by day at 0.1 of it, as a game makes the light of a
+lit window weaker by day.
 
 ### The strands of a sculpture
 
@@ -2856,7 +2874,9 @@ level to the surface of the level (a part that the level lost: a
 chimney, a step); 20,000 points on each surface, the same at each run.
 With `--base REV` it compares each model with a changed file to its files
 at REV, and fails when a number grows by more than 20 % and by more than
-2 cm. A
+2 cm. It measures the near level too: the near level of the work tree
+against the near level at REV, in both directions, with the same rule
+(from 0: it fails when a number is more than 2 cm). A
 project that needs a model asks World to build it (`docs/factory.md`).
 The tests of the rules use small models of their own
 (`test/support/fixtures.ex`).
@@ -2919,14 +2939,28 @@ The tests of the rules use small models of their own
   no bake, "The look of a level with no maps"). `COLOR_0` has four
   floats (linear): the color, and how open the point is in the alpha
   (from 0 to 1), or three floats with `"occlusion": "color"`.
-  `_FINISH` is a `VEC3` of the component type `UNSIGNED_BYTE` (5121),
-  `normalized`, with the numbers in this order: the roughness, the metal
-  and the glow, each from 0 to 1 (0 to 255 in the byte). Each element
-  of an attribute starts at a multiple of 4 bytes, so the buffer view of
-  `_FINISH` has a `byteStride` of 4: three bytes and one byte of nothing.
-  The glow of a point is the color of the point times its glow, as
-  light (the maps have it in their fourth image). Godot does not read
-  `_FINISH` (plan 0020, Q4): a project reads it in its own import.
+  `_FINISH` is a `VEC2` of the component type `UNSIGNED_BYTE` (5121),
+  `normalized`, with the numbers in this order: the roughness and the
+  metal, each from 0 to 1 (0 to 255 in the byte). `_LIGHT` (when a point
+  of the primitive has light) is a `VEC3` of the same component type,
+  `normalized`: the red, the green and the blue of the light of the
+  point, in linear light (as `COLOR_0`), from 0 to 1. Each element of an
+  attribute starts at a multiple of 4 bytes, so each of the two buffer
+  views has a `byteStride` of 4 (the bytes of the element, and bytes of
+  nothing). Godot does not read them (plan 0020, Q4): a project reads
+  them in its own import. **What the import of a project reads:**
+  - `COLOR_0`: the color of the point (red, green, blue), and in the
+    alpha how open the point is (the occlusion: it multiplies the light
+    of the sky and of the room, not the sun);
+  - `_FINISH`: the roughness and the metal of the point;
+  - `_LIGHT`: the light that the point gives (an emission, added to the
+    light of the surface; not the color times a glow). A project makes it
+    weaker by day and turns it off with no power: one multiply. With no
+    `_LIGHT`, the points give no light.
+
+  A level with a bake has the same in its maps: the color, the finish
+  image (the occlusion, the roughness, the metal) and the glow image (the
+  light, in sRGB: an `emissiveTexture`).
 - **The materials.** One glTF material for each role, with the values of
   the palette. Its name is its role. A material can have a color
   texture and a normal texture (each can repeat, with

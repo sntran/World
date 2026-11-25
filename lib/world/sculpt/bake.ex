@@ -753,10 +753,16 @@ defmodule World.Sculpt.Bake do
   defp byte8(v), do: min(max(v, 0), 255)
 
   # The bytes of the finish of a texel (the roughness in the green, the
-  # metal in the blue), and of its glow (its color times its glow).
+  # metal in the blue), and of its glow (its color times its glow, and the
+  # light of the panes of windows there).
   defp finish({r, g, b}, {rough, metal, glow}), do: finish({r, g, b}, {rough, metal, glow, 1.0})
 
   # (With how open the place is, in the red: the occlusion of glTF.)
+  defp finish({r, g, b}, {rough, metal, {glow, {lr, lg, lb}}, open}) do
+    {<<round(open * 255), round(rough * 255), round(metal * 255)>>,
+     <<byte8(round(r * glow + lr)), byte8(round(g * glow + lg)), byte8(round(b * glow + lb))>>}
+  end
+
   defp finish({r, g, b}, {rough, metal, glow, open}) do
     {<<round(open * 255), round(rough * 255), round(metal * 255)>>,
      <<round(r * glow), round(g * glow), round(b * glow)>>}
@@ -771,10 +777,13 @@ defmodule World.Sculpt.Bake do
   # show (the image cannot have it); it shows in full from 3.5 texels.
   # (A surface of a made thing is the mean over the square of the texel:
   # a pane, a seam or a rib smaller than a texel is its mean.)
+  # The light of the panes of windows goes into the glow image, not into
+  # the color: a lit pane has the color of glass, as a dark pane.
   defp grain({f, color, finish, %{surface: {{kind, data}, scale}} = e}, %{u: u, face: face}, p) do
     q = Vec.scale(World.Frame.point(e.back, p), 1 / scale)
-    {height, _, _} = look = Texture.look({kind, data}, q, World.Frame.dir(e.back, face), Vec.len(u) / scale)
+    {height, _, _, light} = look = Texture.look({kind, data}, q, World.Frame.dir(e.back, face), Vec.len(u) / scale)
     {{r, g, b}, {rough, metal, glow}} = Texture.apply(look, color, finish)
+    glow = if light, do: {glow, srgb(light)}, else: glow
     {f - height * scale, {byte8(round(r)), byte8(round(g)), byte8(round(b))}, {min(max(rough, 0.05), 1.0), metal, glow}}
   end
 
@@ -803,6 +812,11 @@ defmodule World.Sculpt.Bake do
   end
 
   defp grain({f, color, finish, _edit}, _chart, _p), do: {f, color, finish}
+
+  # A light in linear light (0 to 1) as the bytes of sRGB of an image (0 to 255, not rounded).
+  defp srgb({r, g, b}), do: {srgb(r), srgb(g), srgb(b)}
+  defp srgb(v) when v <= 0.0031308, do: max(v, 0.0) * 12.92 * 255
+  defp srgb(v), do: (1.055 * :math.pow(min(v, 1.0), 1 / 2.4) - 0.055) * 255
 
   # The cover of a place of a sculpture with strands, as a byte: the
   # alpha of its image. A strand of the surface `hair` covers by its
