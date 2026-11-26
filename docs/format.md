@@ -1609,9 +1609,17 @@ The GLB of a person has:
   in place (the root does not go forward: a project moves the person at
   the speed of the clip, or plays the clip faster or slower by the ratio
   of the speeds), and `idle`, a loop of 6 s to stand in; `wave` and
-  `point`: 2.6 s, to play once, from the pose "stand" back to it. The
+  `point`: 2.6 s, to play once, from the pose "stand" back to it. In a
+  walk the middles of the heels are 6 cm to 13 cm apart and the feet
+  point 5° to 10° out; the line from the shoulder to the hand swings to
+  about 20° to the front and 13° to the back (less in a stroll and for an
+  old person), the hands hang relaxed (the fingers half bent and
+  together, the palms to the thighs), and the line from the pelvis to
+  the head leans at most 4° to the front (3° in a stroll). In `idle` the
+  heels are 12 cm to 20 cm apart, with the arms, the hands and the trunk
+  as in a walk. The
   channels of a clip are the bones that move in it, with 24 keys each
-  second in a walk. A walk has its numbers in the `extras` of its
+  second in a walk and 12 in `idle`. A walk has its numbers in the `extras` of its
   animation (and in `animations` of `NAME.parts.json`): `speed` (m/s),
   `stride` (the length of two steps, m), `cadence` (steps each minute),
   and `contacts`: for each foot (`l`, `r`) the times in the cycle (s)
@@ -2943,6 +2951,12 @@ The tests of the rules use small models of their own
   is in more than one node of a drawing (a copy: `propeller_1` and
   `propeller_2`) has `part`, the name of that part, as each part of the
   parts list has (`docs/factory.md`, "The parts of a model").
+- **The animations.** Each clip is an animation with `LINEAR` samplers.
+  The channels of a clip with the same times share one accessor of the
+  times (plan 0021, R7), and a channel whose value does not change in the
+  clip (the fingers of a hand that hangs in a walk) has one key, at the
+  first time of the clip. A walk and a routine have their numbers in the
+  `extras` of the animation.
 - **The meshes.** One mesh for each node, with one primitive for each
   material.
 - **The copies.** A mesh of 100 triangles or more that is in a model

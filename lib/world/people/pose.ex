@@ -97,9 +97,12 @@ defmodule World.People.Pose do
 
   # The shapes of a hand: the flex of the three joints of each finger
   # (from straight), of the index finger when it has its own, and of the
-  # two last joints of the thumb.
+  # two last joints of the thumb; and the spread of the first joint of the
+  # index, middle, ring and pinky fingers (the hand that hangs at the side
+  # in a walk: the fingers half bent and together, plan 0021).
   @hands %{
     "relaxed" => %{fingers: {25, 20, 8}, thumb: {15, 10}},
+    "hang" => %{fingers: {30, 35, 20}, thumb: {20, 15}, spread: {-12, 0, 9, 12}},
     "open" => %{fingers: {0, 0, 0}, thumb: {0, 0}},
     "fist" => %{fingers: {85, 100, 70}, thumb: {60, 45}},
     "point" => %{fingers: {85, 100, 70}, index: {0, 0, 0}, thumb: {60, 45}},
@@ -130,12 +133,17 @@ defmodule World.People.Pose do
   """
   def hand(side, shape) when is_map_key(@hands, shape) do
     %{fingers: {a, b, c}, thumb: {t2, t3}} = h = @hands[shape]
+    spread = h |> Map.get(:spread, {0, 0, 0, 0}) |> Tuple.to_list()
 
     fingers =
-      for f <- ~w(index middle ring pinky),
+      for {f, sp} <- Enum.zip(~w(index middle ring pinky), spread),
           {d1, d2, d3} = if(f == "index", do: Map.get(h, :index, {a, b, c}), else: {a, b, c}),
-          {n, deg} <- [{"01", d1}, {"02", d2}, {"03", d3}],
-          do: {"#{f}_#{n}_#{side}", [flex: deg]}
+          {n, turns} <- [
+            {"01", [flex: d1] ++ if(sp == 0, do: [], else: [spread: sp])},
+            {"02", [flex: d2]},
+            {"03", [flex: d3]}
+          ],
+          do: {"#{f}_#{n}_#{side}", turns}
 
     Map.new(fingers ++ [{"thumb_02_#{side}", [flex: t2]}, {"thumb_03_#{side}", [flex: t3]}])
   end

@@ -71,8 +71,9 @@ defmodule World.HumanTest do
     scene = Build.scene(Detail.with(:far, &World.People.traveler/0), level: :far)
     [walk, %{name: "blink"}] = scene.animations
     assert walk.name == "walk" and walk.extras["speed"] > 1.0
-    # (The hips move and turn; the legs, the feet, the toes, the spine, the neck, the head and the arms turn.)
-    assert length(walk.channels) == 19
+    # (The hips move and turn; the legs, the feet, the toes, the spine, the neck, the head and the arms turn; and
+    # the 14 joints of the fingers of each hand that hangs relaxed.)
+    assert length(walk.channels) == 19 + 28
     assert Enum.count(walk.channels, &(&1.path == :translation)) == 1
 
     for c <- walk.channels do
@@ -704,6 +705,88 @@ defmodule World.HumanTest do
       [_, loose] = s.nodes |> Enum.flat_map(& &1.primitives) |> Enum.filter(&(&1.material == :color_world_rain_shell))
       assert Enum.count(loose.positions, fn {_, y, z} -> y < -0.05 and z > 0.8 * head end) > 4
     end
+  end
+
+  # A loose part starts at the surface of its item on the body (plan 0021): each island of a loose part has a point
+  # within 1 cm of the faces of the close part of the item. (The trousers of the traveler had a patch in front of
+  # each knee and a ring at each ankle 2.6 cm to 3.4 cm out of the trousers, with a gap: dark pieces in a walk.)
+  test "a loose part of an item joins the item on the body at mid and far: no piece floats apart" do
+    people = [
+      ["elvs_crude_t-shirt_male", "cortu_cargo_pants", "shoes02"],
+      ["toigo_fisherman_sweater", "toigo_wool_pants", "toigo_ankle_boots_male"],
+      ["world_ao_dai", "world_quan", "shoes01"]
+    ]
+
+    for clothes <- people, level <- [:mid, :far] do
+      p = Detail.with(level, fn -> Human.person("p", hair: nil, pose: "stand", clothes: clothes) end)
+      prims = Build.scene(p, level: level).nodes |> Enum.flat_map(& &1.primitives)
+
+      for {material, [close | loose]} <- Enum.group_by(prims, & &1.material), part <- loose, island <- islands(part) do
+        faces = close.indices |> Enum.chunk_every(3) |> Enum.map(fn t -> Enum.map(t, &Enum.at(close.positions, &1)) end)
+
+        gap =
+          Enum.min(
+            for i <- island, do: Enum.min(for [a, b, c] <- faces, do: to_triangle(Enum.at(part.positions, i), a, b, c))
+          )
+
+        assert gap <= 0.01,
+               "#{level} #{material}: an island of #{length(island)} points is #{Float.round(gap * 100, 1)} cm out"
+      end
+    end
+  end
+
+  # The islands of a primitive: the points joined by its faces.
+  defp islands(prim) do
+    owner =
+      prim.indices
+      |> Enum.chunk_every(3)
+      |> Enum.reduce(%{}, fn [a, b, c], owner ->
+        roots = Enum.uniq(for v <- [a, b, c], do: root(owner, v))
+        Enum.reduce(roots, owner, &Map.put(&2, &1, hd(roots)))
+      end)
+
+    prim.indices |> Enum.uniq() |> Enum.group_by(&root(owner, &1)) |> Map.values()
+  end
+
+  defp root(owner, v), do: if(Map.get(owner, v, v) == v, do: v, else: root(owner, owner[v]))
+
+  # The distance from a point to a triangle (the nearest point of the triangle: Ericson, Real-Time Collision
+  # Detection, 5.1.5).
+  defp to_triangle(p, a, b, c) do
+    alias World.Vec
+    {ab, ac, ap} = {Vec.sub(b, a), Vec.sub(c, a), Vec.sub(p, a)}
+    {d1, d2} = {Vec.dot(ab, ap), Vec.dot(ac, ap)}
+    bp = Vec.sub(p, b)
+    {d3, d4} = {Vec.dot(ab, bp), Vec.dot(ac, bp)}
+    cp = Vec.sub(p, c)
+    {d5, d6} = {Vec.dot(ab, cp), Vec.dot(ac, cp)}
+    {va, vb, vc} = {d3 * d6 - d5 * d4, d5 * d2 - d1 * d6, d1 * d4 - d3 * d2}
+
+    q =
+      cond do
+        d1 <= 0 and d2 <= 0 ->
+          a
+
+        d3 >= 0 and d4 <= d3 ->
+          b
+
+        d6 >= 0 and d5 <= d6 ->
+          c
+
+        vc <= 0 and d1 >= 0 and d3 <= 0 ->
+          Vec.add(a, Vec.scale(ab, d1 / (d1 - d3)))
+
+        vb <= 0 and d2 >= 0 and d6 <= 0 ->
+          Vec.add(a, Vec.scale(ac, d2 / (d2 - d6)))
+
+        va <= 0 and d4 - d3 >= 0 and d5 - d6 >= 0 ->
+          Vec.add(b, Vec.scale(Vec.sub(c, b), (d4 - d3) / (d4 - d3 + d5 - d6)))
+
+        true ->
+          Vec.add(a, Vec.add(Vec.scale(ab, vb / (va + vb + vc)), Vec.scale(ac, vc / (va + vb + vc))))
+      end
+
+    Vec.len(Vec.sub(p, q))
   end
 
   test "a child has a flat chest: the shirt over the nipples is not in front of the shirt over the sternum" do

@@ -9,6 +9,9 @@ defmodule World.People.Gait do
 
   - **The feet** (D1, D2): each foot is on the ground 60 % of the cycle
     and in the air 40 %, the right foot half a cycle after the left one.
+    The middles of the heels are 6 cm to 13 cm apart (the step width: a
+    part of the width of the hips, more in a stroll and for an old
+    person), and each foot points 5.5° to 8.5° out.
     On the ground the foot rolls: the heel touches with the toes 12° up,
     and the foot turns round its heel to flat by a tenth of the cycle; the
     heel goes up from 35 % of the cycle, and the foot turns round its
@@ -25,10 +28,19 @@ defmodule World.People.Gait do
     down more where a leg on the ground must reach its foot. The hips go
     2 cm to the side of the foot on the ground, and turn 4° to each side;
     the chest turns against them.
-  - **The arms and the head**: the arms hang at the sides and swing
-    against the legs (to about 20° to the front and 10° to the back), with
-    the elbow bent more in front. The head stays level and looks to the
-    front.
+  - **The arms and the head**: the arms hang at the sides (6° out) and
+    swing against the legs: the line from the shoulder to the hand goes to
+    about 20° to the front and 13° to the back in a walk, 14° and 8° in a
+    stroll, and less for an old person; the elbow bends 16° at the back
+    and more to the front. The hands hang relaxed (the shape `"hang"` of
+    `World.People.Pose`: the fingers half bent and together, the palms to
+    the thighs). The head stays level and looks to the front.
+  - **The trunk**: the line from the pelvis to the head leans 1.5° to 2.5°
+    to the front in a walk and 0.5° to 1.5° in a stroll (the lower back
+    turns so: the rest pose of MakeHuman leans about 4.5°). The upper back
+    bends 0° to 2° by the seed, and 0.5° more for each year over 60 (at
+    most 10°): the bent back of an old person is a bend of the spine, not
+    a lean of the trunk.
   - **The step** (D3, D5): the length of a step comes from the legs (the
     height of the hip): 0.76 of it in a walk, 0.64 in a stroll, at 105
     and 86 steps a minute for a hip of 0.9 m; shorter legs take more
@@ -36,25 +48,32 @@ defmodule World.People.Gait do
     heel touches 0.44 of a step in front of the hip in a walk, 0.36 in a
     stroll. An old person (over 60) takes shorter and slower steps, and
     bends the back more. The seed changes the step (2 %), the cadence
-    (3 %), the swing of the arms (15 %) and the bend of the back (0° to
-    4°).
+    (3 %), the swing of the arms (15 %), the lean of the trunk (1°), the
+    bend of the back (0° to 2°), the step width (0.8 cm) and the turn of
+    the feet out (3°).
   - **The keys** (D7): 24 each second, with straight lines between them
     (the option `fps`).
   - **The numbers** (D4): `numbers/3`, and the extras of the clip: the
     speed (m/s), the stride (m, two steps), the cadence, and the times of
     the contact of the heel and of the toe-off of each foot (s).
 
-  `idle/2` is the clip to stand (6 s in a loop): the weight goes from one
-  foot to the other, the chest moves with the breath (two times), and
-  the head turns a little.
+  `idle/2` is the clip to stand (6 s in a loop, 12 keys each second): the
+  heels 12 cm to 20 cm apart and the feet out as in the walk, the arms and
+  the hands as in the walk with no swing, the trunk 0.5° more upright; the
+  weight goes from one foot to the other, the chest moves with the breath
+  (two times), and the head turns a little.
   """
   alias World.Vec
   alias World.People.Gait.Vec2
   alias World.People.{Pose, Skeleton}
 
-  @x {1.0, 0.0, 0.0}
   @y {0.0, 1.0, 0.0}
+  # (A turn of a bone of the back to the front, around an axis of World; how far an arm hangs out from the side.)
+  @back {-1.0, 0.0, 0.0}
+  @out 6.0
   @fps 24
+  # (The clip to stand moves slowly: 12 keys each second are within 1 mm of 48, plan 0021, R7.)
+  @idle_fps 12
   @kinds %{"walk" => {0.76, 105, 0.44}, "stroll" => {0.64, 86, 0.36}}
   # The parts of the cycle of a foot (from the contact of its heel): the foot flat, the heel up, the turn round
   # the tip of the toes, the toe-off.
@@ -82,7 +101,7 @@ defmodule World.People.Gait do
   def numbers(%Skeleton{} = s, kind, opts \\ []) do
     {part, cadence, front} = Map.fetch!(@kinds, kind)
     age = Keyword.get(opts, :age, 30)
-    [r1, r2, r3, r4] = random(Keyword.get(opts, :seed, 1), kind)
+    [r1, r2, r3, r4, r5, r6] = random(Keyword.get(opts, :seed, 1), kind)
     {_, _, hip} = s.rest["thigh_l"].at
     old = if age > 60, do: min(0.25, (age - 60) * 0.01), else: 0.0
     step = hip * part * (1 - old) * (1 + 0.02 * r1)
@@ -93,6 +112,11 @@ defmodule World.People.Gait do
     {thigh, calf} =
       {Vec.len(Vec.sub(s.rest["calf_l"].at, s.rest["thigh_l"].at)),
        Vec.len(Vec.sub(s.rest["foot_l"].at, s.rest["calf_l"].at))}
+
+    stroll = if kind == "stroll", do: 1.0, else: 0.0
+    # (The swing of the line from the shoulder to the hand, to each side of its middle: less in a stroll and for
+    # an old person.)
+    swing = (16.5 - 5.5 * stroll) * (1 - 1.6 * old) * (1 + 0.15 * r3)
 
     %{
       step: step,
@@ -105,15 +129,28 @@ defmodule World.People.Gait do
       cadence: cadence,
       speed: step * cadence / 60,
       period: 120 / cadence,
-      arms: 1 + 0.15 * r3,
-      bend: 2 + 2 * r4 + 8 * old
+      # (The step width, from the middle of one heel to the other: 8 cm to 10 cm for a man, more in a stroll and
+      # for an old person; and the turn of the feet out, from the heel to the ball.)
+      width: 0.035 + 0.25 * width(s) + 0.01 * stroll + 0.04 * old + 0.004 * r5,
+      toe: 7 + 1.5 * r6,
+      arms: {3.5 - 0.5 * stroll, swing},
+      # (The lean of the trunk, from the pelvis to the head; and the bend of the upper back, more for an old
+      # person.)
+      lean: 2 - stroll + 0.5 * r4,
+      bend: bend(age, r4)
     }
   end
 
-  # Four numbers from -1 to 1 from a seed and a kind.
+  # The bend of the upper back (degrees): 0° to 2° by the seed, and 0.5° more for each year over 60, at most 10°.
+  defp bend(age, r), do: 1 + r + min(max(age - 60, 0) * 0.5, 10.0)
+
+  # The width of the hips: from the joint of one hip to the other.
+  defp width(s), do: abs(elem(s.rest["thigh_l"].at, 0) - elem(s.rest["thigh_r"].at, 0))
+
+  # Six numbers from -1 to 1 from a seed and a kind.
   defp random(seed, kind) do
-    <<a::16, b::16, c::16, d::16, _::binary>> = :crypto.hash(:sha256, "#{seed}/#{kind}")
-    for n <- [a, b, c, d], do: n / 32_767.5 - 1
+    <<a::16, b::16, c::16, d::16, e::16, f::16, _::binary>> = :crypto.hash(:sha256, "#{seed}/#{kind}")
+    for n <- [a, b, c, d, e, f], do: n / 32_767.5 - 1
   end
 
   @doc """
@@ -127,7 +164,8 @@ defmodule World.People.Gait do
     n = numbers(s, kind, opts)
     keys = round(n.period * Keyword.get(opts, :fps, @fps))
     times = for k <- 0..keys, do: k * n.period / keys
-    poses = for k <- 0..keys, do: walk_pose(s, n, rem(k, keys) / keys)
+    back = trunk(s, n.lean, n.bend)
+    poses = for k <- 0..keys, do: walk_pose(s, n, back, rem(k, keys) / keys)
     t = n.period
 
     %{
@@ -148,9 +186,14 @@ defmodule World.People.Gait do
   @doc "The clip to stand (6 s in a loop) for the bones of a person: `%{name, channels, extras}`."
   def idle(bones, opts \\ []) do
     s = Skeleton.new(bones)
+    n = numbers(s, "walk", opts)
     length = 6.0
-    keys = round(length * Keyword.get(opts, :fps, @fps))
+    keys = round(length * Keyword.get(opts, :fps, @idle_fps))
     times = for k <- 0..keys, do: k * length / keys
+    # (The heels 12 cm to 20 cm apart, the trunk a little more upright than in the walk, the arms at the sides.)
+    width = 0.08 + 0.4 * width(s)
+    back = trunk(s, n.lean - 0.5, n.bend)
+    still = Map.merge(arm(:l, 4.0, 4.0), arm(:r, 4.0, 4.0))
 
     poses =
       for t <- times do
@@ -158,46 +201,93 @@ defmodule World.People.Gait do
 
         %{
           :hips => %{at: {0.03 * :math.sin(a), 0.0, -0.01}},
-          {:foot, :l} => %{},
-          {:foot, :r} => %{},
+          {:foot, :l} => place(s, :l, width, n.toe),
+          {:foot, :r} => place(s, :r, width, n.toe),
           # (The breath: two in the loop.)
           :spine => [{:flex, 0.8 * :math.sin(2 * a)}],
           :look => {0.1 * :math.sin(a + 1.0), 1.0, -0.02}
         }
+        |> Map.merge(back)
+        |> Map.merge(still)
       end
 
     %{name: "idle", channels: channels(s, bones, poses, times, Keyword.get(opts, :hands, %{}))}
   end
 
+  # The frames of a clip: each pose on the stand, and the hands that hold a prop keep their shape.
   defp channels(s, bones, poses, times, hands) do
     stand = Map.merge(Pose.resolve("stand"), hands)
     base = Skeleton.locals(s, Pose.expand(stand))
-    frames = for pose <- poses, do: Skeleton.locals(s, Pose.expand(merge(stand, pose)))
+    frames = for pose <- poses, do: Skeleton.locals(s, Pose.expand(stand |> merge(pose) |> Map.merge(hands)))
     Pose.channels(bones, base, frames, times)
   end
 
   # A pose on the stand: the turns of a bone add to its turns in the stand.
   defp merge(stand, pose), do: Map.merge(stand, pose, fn _, a, b -> if is_list(a), do: a ++ b, else: b end)
 
-  # The pose of a walk at a phase of its cycle (0 to 1: the contact of the left heel at 0).
-  defp walk_pose(s, n, phase) do
+  # The pose of a walk at a phase of its cycle (0 to 1: the contact of the left heel at 0), with the turns of the
+  # back (`trunk/3`).
+  defp walk_pose(s, n, back, phase) do
     a = 2 * :math.pi() * phase
     {sway, turn} = body(phase)
     feet = %{l: foot(s, :l, n, own(:l, phase)), r: foot(s, :r, n, own(:r, phase))}
-    swing = fn side -> if(side == :l, do: -1, else: 1) * :math.cos(a) end
-    arm = fn side -> 6 + 19 * n.arms * swing.(side) end
+    {middle, swing} = n.arms
+    # (The arms swing against the legs: the left arm is back when the left heel touches.)
+    line = fn side -> middle + swing * if(side == :l, do: -1, else: 1) * :math.cos(a) end
 
     %{
       :hips => %{at: {sway, 0.0, -drop(s, n, phase, feet)}, turn: [{:twist, turn}]},
       {:foot, :l} => Map.delete(feet.l, :ground),
       {:foot, :r} => Map.delete(feet.r, :ground),
-      :spine => [{:twist, -1.75 * turn}, {:flex, n.bend}],
-      :look => {0.0, 1.0, 0.0},
-      "upperarm_l" => [{@x, arm.(:l)}],
-      "upperarm_r" => [{@x, arm.(:r)}],
-      "lowerarm_l" => [{:flex, 12 + 0.4 * (arm.(:l) + 13)}],
-      "lowerarm_r" => [{:flex, 12 + 0.4 * (arm.(:r) + 13)}]
+      :spine => [{:twist, -1.75 * turn}],
+      :look => {0.0, 1.0, 0.0}
     }
+    |> Map.merge(back)
+    |> Map.merge(arm(:l, line.(:l), middle - swing))
+    |> Map.merge(arm(:r, line.(:r), middle - swing))
+  end
+
+  # An arm that hangs at the side: the line from the shoulder to the wrist goes `deg` to the front (and 6° out
+  # from the side), with the elbow bent 16° at the back of the swing (`back`, degrees) and more to the front; the
+  # hand hangs relaxed, the palm to the thigh.
+  defp arm(side, deg, back) do
+    {o, r} = {@out * :math.pi() / 180, deg * :math.pi() / 180}
+    x = if side == :l, do: -:math.sin(o), else: :math.sin(o)
+
+    %{
+      {:aim, side} => %{to: {x, :math.cos(o) * :math.sin(r), -:math.cos(o) * :math.cos(r)}, pole: {3 * x, -1.0, 0.0}},
+      "lowerarm_#{side}" => [{:flex, 16 + 0.5 * (deg - back)}],
+      {:hand, side} => "hang"
+    }
+  end
+
+  # The turns of the back: the upper back bends to the front by `bend` (degrees), and the lower back turns so that
+  # the line from the pelvis to the head leans `lean` (degrees) to the front.
+  defp trunk(s, lean, bend) do
+    turns = fn c -> %{"spine_03" => [{@back, bend}], "spine_01" => [{@back, c}]} end
+    at = fn c -> lean(s, Map.merge(Pose.resolve("stand"), turns.(c))) end
+    {l0, l1} = {at.(0.0), at.(-5.0)}
+    slope = (l1 - l0) / -5.0
+    c = (lean - l0) / slope
+    turns.(c + (lean - at.(c)) / slope)
+  end
+
+  # The lean of the line from the pelvis to the head of a pose, to the front (degrees).
+  defp lean(s, pose) do
+    w = Skeleton.world(s, Skeleton.locals(s, Pose.expand(pose)))
+    {_, y, z} = Vec.sub(w["head"].at, w["pelvis"].at)
+    :math.atan2(y, z) * 180 / :math.pi()
+  end
+
+  # The target of a foot that stands (the key `toe` of `World.People.Skeleton`): its ankle at its height of the
+  # rest, and in x so that the middle of its heel is half of `width` (m) from the middle of the body, with the foot
+  # turned `toe` (degrees) out from the front.
+  defp place(s, side, width, toe) do
+    {ax, ay, az} = s.rest["foot_#{side}"].at
+    {bx, by, _} = s.rest["ball_#{side}"].at
+    sx = if side == :l, do: -1, else: 1
+    rest = sx * :math.atan2(bx - ax, by - ay) * 180 / :math.pi()
+    %{at: {sx * (width / 2 + 0.06 * :math.sin(toe * :math.pi() / 180)), ay, az}, toe: toe - rest}
   end
 
   # The phase of a foot in its own cycle: the right foot is half a cycle after the left one.
@@ -278,7 +368,8 @@ defmodule World.People.Gait do
   # The target of a foot at a phase of its own cycle (0: the contact of its heel): its ankle, the pitch of its
   # sole, and the bend of its toes. A point of the foot on the ground goes back at the speed of the walk.
   defp foot(s, side, n, phase) do
-    {ax, ay, az} = s.rest["foot_#{side}"].at
+    %{at: {ax, _, _}, toe: out} = place(s, side, n.width, n.toe)
+    {_, ay, az} = s.rest["foot_#{side}"].at
     {_, by, bz} = s.rest["ball_#{side}"].at
     {_, ty, _} = Skeleton.tip(s, s.rest, "ball_#{side}")
     {_, hy, _} = s.rest["thigh_#{side}"].at
@@ -332,7 +423,7 @@ defmodule World.People.Gait do
           {y, z, p, (@heel_off_up - @tip_up) * (1 - smooth(min(u / 0.5, 1.0))), false}
       end
 
-    %{at: {ax, y, z}, pitch: pitch, toes: bend, pole: @y, flat: true, ground: ground}
+    %{at: {ax, y, z}, pitch: pitch, toes: bend, toe: out, pole: @y, flat: true, ground: ground}
   end
 
   # The ankle of a foot that turns round a point of its sole (at `y` and `z`; at rest `back` along the foot from

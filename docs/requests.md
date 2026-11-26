@@ -273,6 +273,46 @@ Do not order one file for each house or each tree. Order a set of
 variants (`POST /sets`: one order with `count`, `seed` and `vary`), and
 put each variant many times in your world.
 
+## Many people
+
+A street, a market or a crowd has many people. Do not order each
+person alone: order them as one set with one atlas (`POST /sets` with
+`"atlas": true`, `docs/factory.md`). Each person keeps the mesh, the
+skin of bones and the clips of its own order. The pictures of the
+clothes, the hair and the eyes of all the people of the set are in one
+atlas at each level, each picture one time. The picture of the skin is
+a JPEG, not in the atlas: it stays in the GLB of each person.
+
+```json
+{
+  "orders": [
+    {"blueprint": "person", "options": {"gender": 1.0, "age": 30, "animations": ["walk", "idle"]}},
+    {"blueprint": "person", "options": {"gender": 0.0, "age": 62, "animations": ["stroll", "idle"]}},
+    {"blueprint": "person", "options": {"gender": 0.0, "age": 8, "animations": ["walk", "idle"]}}
+  ],
+  "atlas": true
+}
+```
+
+Or one order with `count`, `seed` and `vary` (for example `"vary":
+{"gender": [0.0, 1.0], "age": [19, 30, 45, 70]}`): each variant is a
+person with its own values. A set has 64 people at the most.
+
+The answer gives, for each person, `atlas`: the URLs of its GLB with
+the atlas at each level (`/s/SET/I.glb`, `/s/SET/I.mid.glb`,
+`/s/SET/I.far.glb`). Each GLB refers to the images of the set by their
+URLs (`../SET.mid.color.png`, ...). Load each image one time, and draw
+the parts of all the people with the material `atlas` of one of them.
+Each walk has its speed in the extras of its clip (`docs/format.md`).
+
+A set of 12 people (six men and six women of 8 to 75 years), each with
+`walk` and `idle` (`scripts/people_bytes.exs`, plan 0021, R7):
+
+| Level | Each GLB alone | One set with one atlas | Less |
+|---|---|---|---|
+| mid | 16,556 KB | 6,386 KB (the GLB files 5,658 KB, the atlas 727 KB) | 61 % |
+| far | 3,524 KB | 2,982 KB (the GLB files 2,873 KB, the atlas 109 KB) | 15 % |
+
 ## A planet
 
 A project with a planet (Humans Must Die) keeps its own grid and its
