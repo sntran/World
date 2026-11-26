@@ -161,6 +161,29 @@ defmodule World.OrdersAtlasTest do
     assert GLBHelper.json(elem(hd(files), 1))["extensionsRequired"] == ["KHR_texture_basisu"]
   end
 
+  test "people as a set with one atlas (plan 0021, R7): each GLB keeps its skin and its clips, and the atlas" do
+    person = fn options -> %{"blueprint" => "person", "options" => Map.put(options, "animations", ["walk", "idle"])} end
+    orders = [person.(%{"gender" => 1.0, "age" => 30}), person.(%{"gender" => 0.0, "age" => 62})]
+    {:ok, placed} = Set.place(%{"orders" => orders, "atlas" => true}, "https://w")
+    hash = placed["set"]
+    {:ok, files} = Set.files(hash, "far")
+    glbs = for {name, bin} <- files, String.ends_with?(name, ".glb"), do: bin
+    # (The maps of the atlas, each one time for the set.)
+    pngs = for {name, _} <- files, String.ends_with?(name, ".png"), do: name
+    assert length(glbs) == 2 and "#{hash}.far.color.png" in pngs
+    assert Enum.all?(pngs, &(&1 =~ ~r/^#{hash}\.far\.(color|normal|finish|glow)\.png$/))
+
+    for bin <- glbs do
+      json = GLBHelper.json(bin)
+      assert [_] = json["skins"]
+      assert ["walk", "idle"] -- Enum.map(json["animations"], & &1["name"]) == []
+      {urls, own} = Enum.split_with(json["images"], & &1["uri"])
+      assert urls != [] and Enum.all?(urls, &(String.replace_prefix(&1["uri"], "../", "") in pngs))
+      # (The picture of the skin is a JPEG: the atlas takes the PNG pictures, so it stays in the GLB of each person.)
+      assert Enum.map(own, & &1["mimeType"]) == ["image/jpeg"]
+    end
+  end
+
   test "POST /set for the Worker, and GET /s/ of the server on a computer" do
     {:ok, placed} = Set.place(%{"orders" => [ball("#c08020"), ball("#2080c0")], "atlas" => true}, "https://w")
     hash = placed["set"]

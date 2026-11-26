@@ -1,6 +1,7 @@
 # The bytes of a person for the projects (plan 0021, R7): one person (a man of 35, as a project orders him) at mid
 # and at far, by part (the JSON, the mesh, the skin, the clips, the pictures), with no clip, with the walks, and with
-# the routines; and a set of six people, each GLB alone and with one atlas of their pictures (plan 0020, step 4).
+# the routines; and a set of 12 people with a walk and the clip to stand, each GLB alone and with one atlas of their
+# pictures (plan 0020, step 4; `docs/requests.md`, "Many people").
 #
 #   MIX_ENV=test mix run scripts/people_bytes.exs
 
@@ -56,10 +57,12 @@ for level <- ["mid", "far"],
   end
 end
 
-# A set of six people, each with the walk.
+# A set of 12 people (six men and six women of 8 to 75 years), each with the walk and the clip to stand.
 people =
-  for {gender, age, k} <- [{1.0, 30, 1}, {0.0, 28, 2}, {1.0, 62, 3}, {0.0, 45, 4}, {1.0, 19, 5}, {0.0, 70, 6}],
-      do: %{"gender" => gender, "age" => age, "weight" => 0.4 + 0.03 * k, "animations" => ["walk"]}
+  for {{gender, age}, k} <-
+        Enum.with_index([{1.0, 30}, {0.0, 28}, {1.0, 62}, {0.0, 45}, {1.0, 19}, {0.0, 70}] ++
+          [{1.0, 41}, {0.0, 35}, {1.0, 75}, {0.0, 22}, {1.0, 8}, {0.0, 52}], 1),
+      do: %{"gender" => gender, "age" => age, "weight" => 0.3 + 0.03 * k, "animations" => ["walk", "idle"]}
 
 for level <- ["mid", "far"] do
   scenes =
@@ -75,7 +78,7 @@ for level <- ["mid", "far"] do
   atlas = images |> Map.values() |> Enum.map(fn {_, b} -> byte_size(b) end) |> Enum.sum()
 
   IO.puts(
-    "A set of 6 at #{level}: #{kb.(alone)} KB alone (#{kb.(pictures)} KB of pictures); " <>
+    "A set of #{length(people)} at #{level}: #{kb.(alone)} KB alone (#{kb.(pictures)} KB of pictures); " <>
       "with one atlas #{kb.(glbs + atlas)} KB (the GLB files #{kb.(glbs)} KB, the atlas #{kb.(atlas)} KB)"
   )
 end
