@@ -89,3 +89,30 @@ The checks of D8 on the clips of main, for a man (35 years, height 0.55), a woma
 | tai chi | Nothing fails. |
 
 In the walk the knee bends 6.7° with the heel on the ground and 51° in the swing, and the arms swing 13° to each side. The arms hang 3.5° to 5° out from the sides: in these measures they are not 38° away from the body (section 2).
+
+## 9. The measure of a person (R7, 2026-11-26)
+
+`scripts/people_bytes.exs` measures a man of 35 (height 0.55), ordered as a project orders him, before (main) and after this plan. Each buffer view counts in the first part that uses it. The clip `blink` is in each person (0.1 KB).
+
+| Level | Clips | Before (KB) | After (KB) | JSON | Mesh | Skin | Clips | Pictures |
+|---|---|---|---|---|---|---|---|---|
+| mid | none | 1344.9 | 1344.9 | 25.4 | 315.6 | 3.3 | 0.1 | 1000.2 (4 pictures) |
+| mid | walk | 1349.9 | 1362.3 | 28.3 → 32.5 | 315.6 | 3.3 | 2.1 → 10.3 | 1000.2 |
+| mid | walk, stroll, idle | (no such clips) | 1419.7 | 43.9 | 315.6 | 3.3 | 56.2 | 1000.2 |
+| mid | tai chi, yoga, aerobics | 1879.6 | 1893.4 | 75.7 → 77.7 | 315.6 | 3.3 | 484.4 → 496.2 | 1000.2 |
+| far | none | 259.6 | 259.6 | 24.5 | 85.1 | 3.3 | 0.1 | 146.5 (2 pictures) |
+| far | walk | 264.6 | 277.0 | 27.4 → 31.5 | 85.1 | 3.3 | 2.1 → 10.3 | 146.5 |
+| far | walk, stroll, idle | (no such clips) | 334.4 | 43.0 | 85.1 | 3.3 | 56.2 | 146.5 |
+| far | tai chi, yoga, aerobics | 794.3 | 808.1 | 74.8 → 76.8 | 85.1 | 3.3 | 484.4 → 496.2 | 146.5 |
+
+- The pictures are 74 % of a person at mid and 56 % at far. The new walk adds 12.4 KB (24 keys each second, D7): 0.9 % at mid, 4.7 % at far.
+- The clips of the three routines are 496 KB: more than the mesh. Each has about 49 channels (with the fingers) at 10 to 15 keys each second. The clip to stand is 33 KB of the 56 KB of the three walks (6 s at 24 keys each second).
+- A set of six people with a walk (three men and three women of 19 to 70 years), each GLB alone and with one atlas of their pictures (plan 0020, step 4):
+
+| Level | Alone | With one atlas | Saves |
+|---|---|---|---|
+| mid | 8199.8 KB (6000.9 KB of pictures) | 3478.2 KB (the GLB files 2750.9 KB, the atlas 727.3 KB) | 4721.6 KB (58 %) |
+| far | 1651.2 KB (879.1 KB of pictures) | 1434.9 KB (the GLB files 1325.6 KB, the atlas 109.3 KB) | 216.3 KB (13 %) |
+
+  The people of a set share most of their pictures (the skin, the eyes, the clothes): in one atlas each picture is there one time. Before this plan the same set was 8126.8 KB alone and 3405.2 KB with one atlas (the walk of 12 keys).
+- What I did not change, and propose: (1) one list of times for all the channels of a clip: the three routines save 97 KB of data (20 % of their clips), the walk 2 KB; it changes each animated model of the catalog. (2) The clip to stand at 12 keys each second: it is slow, and it saves 17 KB. (3) A project of many people orders them as a set with one atlas: 58 % less at mid.
