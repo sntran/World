@@ -71,8 +71,9 @@ defmodule World.HumanTest do
     scene = Build.scene(Detail.with(:far, &World.People.traveler/0), level: :far)
     [walk, %{name: "blink"}] = scene.animations
     assert walk.name == "walk" and walk.extras["speed"] > 1.0
-    # (The hips move and turn; the legs, the feet, the toes, the spine, the neck, the head and the arms turn.)
-    assert length(walk.channels) == 19
+    # (The hips move and turn; the legs, the feet, the toes, the spine, the neck, the head and the arms turn; and
+    # the 14 joints of the fingers of each hand that hangs relaxed.)
+    assert length(walk.channels) == 19 + 28
     assert Enum.count(walk.channels, &(&1.path == :translation)) == 1
 
     for c <- walk.channels do
