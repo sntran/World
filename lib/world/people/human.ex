@@ -996,8 +996,7 @@ defmodule World.People.Human do
 
     {moves, loose} =
       Enum.reduce(clothes, {%{}, []}, fn c, {moves, loose} ->
-        q = positions(c, points)
-        part = loose(c, q, points, weights, o, density)
+        {q, part} = loose(c, positions(c, points), points, weights, o, density)
         Detail.collect({moves(moves, c, q, points), if(part, do: loose ++ [part], else: loose)})
       end)
 
@@ -1119,8 +1118,10 @@ defmodule World.People.Human do
     {Enum.sort_by(prims, & &1.material) ++ hair, materials}
   end
 
-  # How far a point of a loose part of an item is out of the body at the least (dm).
+  # How far a point of a loose part of an item is out of the body at the least (dm); and the part of the distance of
+  # the close points that the cut of a loose part keeps (`cut/5`).
   @loose 0.25
+  @tuck 0.6
 
   # The low-poly body wears the form of the clothes that are close to it: each point of the body under an
   # item moves out to the item. A point of an item that is less than 2.5 cm out (`@loose`) gives its move
@@ -1155,47 +1156,105 @@ defmodule World.People.Human do
   # of its place on the body (a tunic, the panels of an áo dài, the legs of wide pants under the knee, a
   # hood, a down jacket). It is its own mesh (`World.Simplify`: the points that stay keep their places), in
   # the color of the item, with `density` triangles for each square meter, so its form shows where a
-  # color on the body has none. With the points of the body that its points fit to; nil for an item with
+  # color on the body has none. Gives `{q, part}`: the points of the item, with the points of its cuts in to the
+  # body (`cut/5`), and the part with the points of the body that its points fit to, or false for an item with
   # no loose part.
   defp loose(c, q, points, weights, o, density) do
     under = Data.body_points()
 
-    out =
-      for {{vs, ws, _}, i} <- c.fit.refs |> Tuple.to_list() |> Enum.with_index() do
-        at = Enum.zip(vs, ws) |> Enum.map(fn {v, w} -> Vec.scale(elem(points, Map.get(under, v, v)), w) end)
-        Vec.len(Vec.sub(elem(q, i), Enum.reduce(at, &Vec.add/2))) >= @loose
+    # (The place on the body of each point of the item, and how far the point is out of it.)
+    body =
+      for {vs, ws, _} <- Tuple.to_list(c.fit.refs) do
+        Enum.zip(vs, ws)
+        |> Enum.map(fn {v, w} -> Vec.scale(elem(points, Map.get(under, v, v)), w) end)
+        |> Enum.reduce(&Vec.add/2)
       end
       |> List.to_tuple()
 
-    tris =
-      for f <- c.mesh.groups |> Map.values() |> Enum.concat(),
-          Enum.all?(f, &elem(out, elem(&1, 0))),
-          t <- fan(hd(f), tl(f)),
-          do: Enum.map(t, &elem(&1, 0))
+    dist = q |> Tuple.to_list() |> Enum.zip(Tuple.to_list(body)) |> Enum.map(fn {a, b} -> Vec.len(Vec.sub(a, b)) end)
+    dist = List.to_tuple(dist)
+    polys = for f <- c.mesh.groups |> Map.values() |> Enum.concat(), do: Enum.map(f, &elem(&1, 0))
+    {parts, close} = Enum.split_with(polys, fn f -> Enum.all?(f, &(elem(dist, &1) >= @loose)) end)
+    q = cut(q, body, dist, parts, close)
+    # (An island of the loose faces with no free edge, a hem or a cuff, does not hang: a bump of the item, as a
+    # patch at the front of a knee. It is a part of the color of the item on the body.)
+    edges = polys |> Enum.flat_map(&edges/1) |> Enum.frequencies()
 
-    if tris != [] do
-      used = tris |> List.flatten() |> Enum.uniq()
-      index = used |> Enum.with_index() |> Map.new()
-      at = used |> Enum.map(&to_world(elem(q, &1))) |> List.to_tuple()
-      faces = for t <- tris, do: {Enum.map(t, &index[&1]), 0}
-      budget = max(8, round(area_of(at, faces) * density))
-      # (The points of an open edge, a hem or a cuff, keep their places: a pin of 10 planes.)
-      edges =
-        Enum.frequencies(for {[a, b, c], _} <- faces, {x, y} <- [{a, b}, {b, c}, {c, a}], do: {min(x, y), max(x, y)})
+    parts =
+      for island <- islands(parts),
+          Enum.any?(island, fn f -> Enum.any?(edges(f), &(edges[&1] == 1)) end),
+          f <- island,
+          do: f
 
-      hem = for {{x, y}, 1} <- edges, v <- [x, y], into: MapSet.new(), do: v
-      pins = for i <- 0..(length(used) - 1), do: if(MapSet.member?(hem, i), do: 10.0, else: 0.0)
-      %{faces: faces, ids: ids} = World.Simplify.collapse(Tuple.to_list(at), faces, budget, pins: pins)
-      back = used |> List.to_tuple()
-      ids = List.to_tuple(ids)
-      faces = for {vs, _} <- faces, do: Enum.map(vs, &{elem(back, elem(ids, &1)), nil})
+    tris = for f <- parts, t <- fan(hd(f), tl(f)), do: t
 
-      role = String.to_atom("color_" <> c.name)
-      # (The weights of the points that stay only.)
-      wts = Map.new(Tuple.to_list(ids), &{elem(back, &1), blend(weights, ref_pairs(c, elem(back, &1)))})
-      prim = mesh(role, faces, &elem(q, &1), nil, &Map.fetch!(wts, &1), o.ground, [], item_colors(c, o))
-      {prim, for(v <- used, {vs, _, _} = elem(c.fit.refs, v), b <- vs, into: MapSet.new(), do: Map.get(under, b, b))}
-    end
+    {q, tris != [] && part(c, q, tris, weights, o, density, under)}
+  end
+
+  # The mesh of the loose part of an item (its triangles `tris`, of the points `q` of the item), and the points of
+  # the body under it.
+  defp part(c, q, tris, weights, o, density, under) do
+    used = tris |> List.flatten() |> Enum.uniq()
+    index = used |> Enum.with_index() |> Map.new()
+    at = used |> Enum.map(&to_world(elem(q, &1))) |> List.to_tuple()
+    faces = for t <- tris, do: {Enum.map(t, &index[&1]), 0}
+    budget = max(8, round(area_of(at, faces) * density))
+    # (The points of an open edge, a hem or a cuff, keep their places: a pin of 10 planes.)
+    edges =
+      Enum.frequencies(for {[a, b, c], _} <- faces, {x, y} <- [{a, b}, {b, c}, {c, a}], do: {min(x, y), max(x, y)})
+
+    hem = for {{x, y}, 1} <- edges, v <- [x, y], into: MapSet.new(), do: v
+    pins = for i <- 0..(length(used) - 1), do: if(MapSet.member?(hem, i), do: 10.0, else: 0.0)
+    %{faces: faces, ids: ids} = World.Simplify.collapse(Tuple.to_list(at), faces, budget, pins: pins)
+    back = used |> List.to_tuple()
+    ids = List.to_tuple(ids)
+    faces = for {vs, _} <- faces, do: Enum.map(vs, &{elem(back, elem(ids, &1)), nil})
+
+    role = String.to_atom("color_" <> c.name)
+    # (The weights of the points that stay only.)
+    wts = Map.new(Tuple.to_list(ids), &{elem(back, &1), blend(weights, ref_pairs(c, elem(back, &1)))})
+    prim = mesh(role, faces, &elem(q, &1), nil, &Map.fetch!(wts, &1), o.ground, [], item_colors(c, o))
+    {prim, for(v <- used, {vs, _, _} = elem(c.fit.refs, v), b <- vs, into: MapSet.new(), do: Map.get(under, b, b))}
+  end
+
+  # A loose part starts at the surface of its item on the body: each point of an edge of a loose part where the
+  # item goes on as a close part (a cut, not a hem) goes in along its line from the body, to 0.6 of the mean
+  # distance out of the body of its close neighbors (`@tuck`: the body under them, a low-poly mesh, is a little in
+  # from them, and the edge goes under its surface). So a patch at the front of a knee and the top of a ring at an ankle
+  # (the wide hem of pants) join the color of the item on the body, and no piece floats apart from it with a gap.
+  defp cut(q, body, dist, parts, close) do
+    shared = close |> Enum.flat_map(&edges/1) |> MapSet.new()
+    cut = for f <- parts, {a, b} <- edges(f), MapSet.member?(shared, {a, b}), v <- [a, b], into: MapSet.new(), do: v
+
+    near =
+      for f <- close, {a, b} <- edges(f), reduce: %{} do
+        acc -> acc |> Map.update(a, [b], &[b | &1]) |> Map.update(b, [a], &[a | &1])
+      end
+
+    Enum.reduce(cut, q, fn v, q ->
+      ins = for u <- Map.get(near, v, []), elem(dist, u) < @loose, do: elem(dist, u)
+      s = @tuck * if(ins == [], do: @loose, else: Enum.sum(ins) / length(ins))
+      d = Vec.sub(elem(q, v), elem(body, v))
+      put_elem(q, v, Vec.add(elem(body, v), Vec.scale(d, s / elem(dist, v))))
+    end)
+  end
+
+  # The edges of a face (a list of points), each as `{low, high}`.
+  defp edges(f), do: f |> Enum.zip(tl(f) ++ [hd(f)]) |> Enum.map(fn {a, b} -> {min(a, b), max(a, b)} end)
+
+  # The islands of faces (lists of points): the faces joined by their points.
+  defp islands(faces) do
+    {_, groups} =
+      Enum.reduce(faces, {%{}, %{}}, fn f, {owner, groups} ->
+        ids = f |> Enum.map(&Map.get(owner, &1)) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+        # (A new island takes the name of its first point, which no island has.)
+        id = if ids == [], do: hd(f), else: hd(ids)
+        merged = Enum.flat_map(ids, &Map.get(groups, &1, [])) ++ [f]
+        owner = Enum.reduce(List.flatten(merged), owner, &Map.put(&2, &1, id))
+        {owner, groups |> Map.drop(ids) |> Map.put(id, merged)}
+      end)
+
+    Map.values(groups)
   end
 
   defp ref_pairs(c, v) do
