@@ -1,6 +1,6 @@
 # 0021 People who move like people
 
-Status: Approved (2026-11-25).
+Status: Done (2026-11-26). R1 to R7 are done, with their tests, in #101. The sheets and the films of R6 are on the page of my report (the repository keeps no pictures).
 
 ## 1. Goal
 
