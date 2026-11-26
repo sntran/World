@@ -190,11 +190,14 @@ defmodule World.Sculpt.ShadeTest do
     # (No budget: the colors of the edits.)
     loose = meshes(Map.delete(slab(), "budget"))
     assert Enum.all?(loose, &(&1.finish == nil and match?([{_, _, _} | _], &1.colors)))
+    # (The flat look: no roughness and no metal; the light of each face, the lamp of the slab, plan 0019.)
     flat = meshes(slab(%{"look" => "flat"}))
-    assert Enum.all?(flat, &(&1.finish == nil and match?([{_, _, _} | _], &1.colors)))
+    assert Enum.all?(flat, &match?([{_, _, _} | _], &1.colors))
+    assert Enum.all?(flat, &(&1.finish == nil or Enum.all?(&1.finish, fn f -> match?({nil, nil, {_, _, _}}, f) end)))
+    assert Enum.any?(flat, &(&1.finish != nil))
   end
 
-  test "the flat look of an order (/o/HASH.flat.glb) has no _FINISH, no _LIGHT and no alpha in COLOR_0 (R8)" do
+  test "the flat look of an order (/o/HASH.flat.glb) has no _FINISH and no alpha in COLOR_0 (R8), and _LIGHT for its lamp" do
     order = %{"blueprint" => "drawing", "options" => %{"drawing" => drawing(slab())}}
     assert {:ok, glb} = Orders.build(order, "far", "glb")
     assert ["_FINISH", "_LIGHT"] -- Map.keys(hd(hd(GLBHelper.json(glb)["meshes"])["primitives"])["attributes"]) == []
@@ -202,7 +205,8 @@ defmodule World.Sculpt.ShadeTest do
     assert {:ok, flat} = Orders.build(order, "far", "flat")
     json = GLBHelper.json(flat)
     attributes = for m <- json["meshes"], p <- m["primitives"], key <- Map.keys(p["attributes"]), uniq: true, do: key
-    refute "_FINISH" in attributes or "_LIGHT" in attributes
+    refute "_FINISH" in attributes
+    assert "_LIGHT" in attributes
     [prim] = for m <- json["meshes"], p <- m["primitives"], do: p
     assert Enum.at(json["accessors"], prim["attributes"]["COLOR_0"])["type"] == "VEC3"
   end

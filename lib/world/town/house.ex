@@ -214,6 +214,10 @@ defmodule World.Town.House do
             "bake" => sides(levels.(bake), r["bake"], i == 1)
           })
 
+        # (The roof of a terrace at far: the solids of its edits, so the thin slab, the parapets, the head
+        # of the stair and the tank keep their outlines in 150 triangles.)
+        data = if part == "mai" and r["roof"] == "terrace", do: Map.put(data, "solids", ["far"]), else: data
+
         data =
           if details == [],
             do: data,
@@ -740,8 +744,14 @@ defmodule World.Town.House do
         [0.03, 0.03, 0.2],
         [tx + 0.3, ty + 0.3, top + th + 0.25],
         "#b8bbbd",
-        Map.merge(steel, %{"repeat" => %{"count" => 4, "angle" => 90, "center" => [tx, ty, 0]}})
+        Map.merge(steel, %{
+          "repeat" => %{"count" => 4, "angle" => 90, "center" => [tx, ty, 0]},
+          "levels" => ["near", "mid"]
+        })
       ),
+      # (At far, where the roof is the solids of its edits, one stand of the size of the four legs: a leg of
+      # 6 cm cannot show there, and four would take 48 of the 150 triangles.)
+      e("box", [0.33, 0.33, 0.2], [tx, ty, top + th + 0.25], "#b8bbbd", Map.put(steel, "levels", ["far"])),
       # (The three bands of the tank.)
       e("cylinder", [0.485, 0.01], [tx, ty, top + th + 0.75], "#a9acae", %{
         "mode" => "paint",

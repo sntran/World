@@ -52,4 +52,4 @@ builder does not change the requirements: I do.
 | 0017 | [People: the body of MakeHuman with parts from edits](0017-people-with-parts-from-edits.md) | In progress: the first parts are made, and the hair has strands |
 | 0018 | [The street Quang Trung of Vũng Tàu as it is](0018-quang-trung-street.md) | In progress: the survey, the block of the numbers 4 to 26, the office of the port, the two blocks of the Grand Hotel, and the rules of a building |
 | 0019 | [World serves the projects](0019-world-serves-the-projects.md) | In progress: the probe of the five projects, the design (one description, many outputs; three speeds), and the guide for a project |
-| 0020 | [The look of a town: a tint for each copy, a finish at each point, and the surfaces of made things](0020-the-look-of-a-town.md) | Approved (2026-11-22): steps 1 (a tint and a scale for each copy) and 2 (the occlusion and the finish at each point) done; step 3 starts after I look at the pictures of step 2 |
+| 0020 | [The look of a town: a tint for each copy, a finish at each point, and the surfaces of made things](0020-the-look-of-a-town.md) | Done (2026-11-25): the four steps (#92 to #99) |

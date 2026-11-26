@@ -48,6 +48,27 @@ defmodule World.Sculpt.Shade do
   @group 256
 
   @doc """
+  The color and the light of a face of the flat look (one color for each
+  face: `World.Skills.Sculpt`, `World.Sculpt.Solids`), at the middle `p`
+  of the face: the color of the edits there, with a surface of a made
+  thing as its mean over the square of the face (`size`, the square root
+  of its area) on the side that the face faces (`normal`); and the light
+  there, `{r, g, b}` from 0 to 255 in linear light: the color times the
+  glow of the edits (a lamp), and the light of the surface (a lit pane).
+  """
+  def face(edits, p, size, normal) do
+    color = SDF.color(edits, p, 1.0e30, size)
+
+    if SDF.made?(edits) or Enum.any?(edits, &(&1.glow not in [nil, 0.0])) do
+      {_, glow, {lr, lg, lb}} = SDF.shine(edits, p, %{}, size, normal)
+      {r, g, b} = World.Sculpt.Texture.linear(color)
+      {color, {byte(r * glow + lr), byte(g * glow + lg), byte(b * glow + lb)}}
+    else
+      {color, {0, 0, 0}}
+    end
+  end
+
+  @doc """
   The meshes of a level with the color, the finish and the light of each
   point (`World.Mesh.shaded/3`). `look` has `occlusion` (true or false),
   `into` (`:alpha` or `:color`), `dirt` and `wear`; `defaults` is the

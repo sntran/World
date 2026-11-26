@@ -38,14 +38,14 @@ defmodule World.Flat do
     frames = Scene.world_frames(scene)
     roles? = Keyword.get(opts, :roles, false)
 
-    # Each face: its three points, its color, and its role (one role for all in the flat look).
+    # Each face: its three points, its color, its role (one role for all in the flat look), and its light.
     faces =
       for {%{primitives: [_ | _], extras: extras} = node, i} <- Enum.with_index(nodes),
           not is_map_key(extras, "collision"),
           p <- node.primitives,
           points <- places(node, p, frames, i, skins),
-          {corners, color} <- faces(p, List.to_tuple(points), color(scene, p)),
-          do: {corners, color, if(roles?, do: p.material, else: :paint)}
+          {corners, color, light} <- faces(p, List.to_tuple(points), color(scene, p)),
+          do: {corners, color, if(roles?, do: p.material, else: :paint), light}
 
     faces = if opts[:wrap], do: wrap(faces), else: faces
     faces = if opts[:budget] && length(faces) > opts[:budget], do: fewer(faces, opts[:budget]), else: faces
@@ -54,10 +54,15 @@ defmodule World.Flat do
       for {role, faces} <- Enum.sort(Enum.group_by(faces, &elem(&1, 2))) do
         %Scene.Primitive{
           material: role,
-          positions: for({{a, b, c}, _, _} <- faces, p <- [a, b, c], do: p),
-          normals: for({{a, b, c}, _, _} <- faces, n = normal(a, b, c), _ <- 1..3, do: n),
+          positions: for({{a, b, c}, _, _, _} <- faces, p <- [a, b, c], do: p),
+          normals: for({{a, b, c}, _, _, _} <- faces, n = normal(a, b, c), _ <- 1..3, do: n),
           indices: Enum.to_list(0..(3 * length(faces) - 1)//1),
-          colors: if(roles?, do: nil, else: for({_, color, _} <- faces, _ <- 1..3, do: color))
+          colors: if(roles?, do: nil, else: for({_, color, _, _} <- faces, _ <- 1..3, do: color)),
+          # (The light of each face, a lit window or a lamp: `_LIGHT`, with no roughness and no metal.)
+          finish:
+            if(Enum.any?(faces, &(elem(&1, 3) != {0, 0, 0})),
+              do: for({_, _, _, light} <- faces, _ <- 1..3, do: {nil, nil, light})
+            )
         }
       end
 
@@ -127,12 +132,15 @@ defmodule World.Flat do
     ]
   end
 
-  # The faces of a primitive: `{{a, b, c}, color}`, with the color of the first point of the face, or `color`.
+  # The faces of a primitive: `{{a, b, c}, color, light}`, with the color of the first point of the face, or
+  # `color`, and the light of its first point (`_LIGHT`; none with no finish).
   defp faces(p, at, color) do
     colors = p.colors && List.to_tuple(p.colors)
+    finish = p.finish && List.to_tuple(p.finish)
 
     for [a, b, c] <- Enum.chunk_every(p.indices, 3) do
-      {{elem(at, a), elem(at, b), elem(at, c)}, if(colors, do: rgb(elem(colors, a)), else: color)}
+      {{elem(at, a), elem(at, b), elem(at, c)}, if(colors, do: rgb(elem(colors, a)), else: color),
+       if(finish, do: elem(elem(finish, a), 2), else: {0, 0, 0})}
     end
   end
 
@@ -154,7 +162,7 @@ defmodule World.Flat do
     key = fn {x, y, z} -> {round(x * 10_000), round(y * 10_000), round(z * 10_000)} end
 
     {index, points} =
-      Enum.reduce(faces, {%{}, []}, fn {{a, b, c}, _, _}, acc ->
+      Enum.reduce(faces, {%{}, []}, fn {{a, b, c}, _, _, _}, acc ->
         Enum.reduce([a, b, c], acc, fn p, {index, points} ->
           if is_map_key(index, key.(p)),
             do: {index, points},
@@ -163,7 +171,7 @@ defmodule World.Flat do
       end)
 
     welded =
-      for {{a, b, c}, _, role} <- faces,
+      for {{a, b, c}, _, role, _} <- faces,
           ids = [index[key.(a)], index[key.(b)], index[key.(c)]],
           length(Enum.uniq(ids)) == 3,
           do: {ids, role}
@@ -174,15 +182,15 @@ defmodule World.Flat do
 
     for {[a, b, c], role} <- small do
       corners = {elem(at, a), elem(at, b), elem(at, c)}
-      {color, _} = nearest.(corners)
-      {corners, color, role}
+      {color, _, light} = nearest.(corners)
+      {corners, color, role, light}
     end
   end
 
-  # The color and the role of the face of `faces` nearest to a face (by the middles of the faces, in a
-  # grid of cells).
+  # The color, the role and the light of the face of `faces` nearest to a face (by the middles of the faces,
+  # in a grid of cells).
   defp nearest(faces) do
-    middles = for {{a, b, c}, color, role} <- faces, do: {middle(a, b, c), {color, role}}
+    middles = for {{a, b, c}, color, role, light} <- faces, do: {middle(a, b, c), {color, role, light}}
     {lo, hi} = Vec.bounds(Enum.map(middles, &elem(&1, 0)))
     cell = max(Enum.max(Tuple.to_list(Vec.sub(hi, lo))) / 24, 1.0e-6)
     place = fn {x, y, z} -> {floor(x / cell), floor(y / cell), floor(z / cell)} end
@@ -201,7 +209,7 @@ defmodule World.Flat do
   # small: the cast of the faces in a grid (`World.Cast`; the longest side of the model is 48 cells), with
   # two steps of smoothing. Each face of the skin has the color and the role of the nearest face of the model.
   defp wrap(faces) do
-    points = for {{a, b, c}, _, _} <- faces, p <- [a, b, c], do: p
+    points = for {{a, b, c}, _, _, _} <- faces, p <- [a, b, c], do: p
     {lo, hi} = Vec.bounds(points)
     step = Enum.max(Tuple.to_list(Vec.sub(hi, lo))) / 48
     tris = for i <- 0..(length(faces) - 1)//1, do: [3 * i, 3 * i + 1, 3 * i + 2]
@@ -212,8 +220,8 @@ defmodule World.Flat do
 
     for [a, b, c] <- skin.faces do
       corners = {elem(at, a), elem(at, b), elem(at, c)}
-      {color, role} = nearest.(corners)
-      {corners, color, role}
+      {color, role, light} = nearest.(corners)
+      {corners, color, role, light}
     end
   end
 

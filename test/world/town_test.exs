@@ -3,6 +3,7 @@ defmodule World.TownTest do
   use ExUnit.Case, async: true
 
   alias World.Town.{House, Street, Survey}
+  alias World.Vec
 
   # (A house at the far level, when the other tests work too.)
   @moduletag timeout: 1_800_000
@@ -154,6 +155,48 @@ defmodule World.TownTest do
     # The four legs of the tank turn round its middle.
     legs = Enum.find(sculpt(there, "mai")["edits"], &match?(%{"repeat" => %{"center" => _}}, &1))
     assert_in_delta hd(legs["repeat"]["center"]), 7.5 + 1.2, 1.0e-9
+  end
+
+  test "the far roof of steel with its bake: the edges of the thin sheet are not dark (#98, point 3)" do
+    d = House.drawing(%{"type" => "pho2_flat", "family" => "steel", "roof" => "steel", "seed" => 2})
+    roof = d["nodes"] |> Enum.find(&String.ends_with?(&1["name"], "mai")) |> Map.drop(["to", "at", "turn"])
+
+    item =
+      World.Detail.with(:far, fn -> World.Drawing.build(%{"name" => "mai", "kind" => "item", "nodes" => [roof]}) end)
+
+    scene = World.Build.scene(item, level: :far)
+    [{"image/png", png}] = for {_, %{"finish_image" => f}} <- scene.materials, uniq: true, do: f
+    {_, _, 3, rows} = World.PNG.decode(png)
+    # The red of the finish is how open a place is: the sheet is alone, so each place is open.
+    reds = for row <- Tuple.to_list(rows), <<r, _, _ <- row>>, do: r
+    assert Enum.count(reds, &(&1 < 160)) == 0
+    # A normal of the normal image turns at most about 60 degrees from its face (the blue, cos 60 = 0.5, is
+    # 191 or more): the side of the sheet, under a face that cuts its edge, does not make the face dark.
+    [{"image/png", png}] = for {_, %{"normal_image" => n}} <- scene.materials, uniq: true, do: n
+    {_, _, 3, rows} = World.PNG.decode(png)
+    assert Enum.count(for(row <- Tuple.to_list(rows), <<_, _, b <- row>>, do: b), &(&1 < 186)) == 0
+  end
+
+  test "the far roof of a terrace: the solids of its edits keep the head of the stair and the tank, in the budget" do
+    d = House.drawing(%{"type" => "pho2_flat", "family" => "steel", "roof" => "terrace", "seed" => 2})
+    data = sculpt(d, "mai")
+    assert data["solids"] == ["far"] and World.Skills.Sculpt.check(data, "s") == []
+    edits = World.Skills.Sculpt.edits(data["edits"], %{}, :far)
+    # (The four legs of the tank are at near and mid; at far, one stand under the tank.)
+    assert World.Sculpt.Solids.count(edits) == 140 and data["budget"]["far"] == 150
+
+    roof = d["nodes"] |> Enum.find(&String.ends_with?(&1["name"], "mai")) |> Map.drop(["to", "at", "turn"])
+
+    item =
+      World.Detail.with(:far, fn -> World.Drawing.build(%{"name" => "mai", "kind" => "item", "nodes" => [roof]}) end)
+
+    scene = World.Build.scene(item, level: :far)
+    faces = for n <- scene.nodes, p <- n.primitives, do: div(length(World.Scene.unpack(p).indices), 3)
+    assert Enum.sum(faces) == 140
+    # The far roof has the box of its solids: the slab, the parapets, the head of the stair, and the tank on it.
+    {lo, hi} = World.SDF.bounds(for e <- edits, e.mode == :add, do: e)
+    {a, b} = World.Scene.bounds(scene)
+    assert Vec.len(Vec.sub(a, lo)) < 0.01 and Vec.len(Vec.sub(b, hi)) < 0.01
   end
 
   test "the surfaces of a house (plan 0020, D8 to D10): a roof of corrugated steel, a roll-up door with ribs across, panes of glass" do

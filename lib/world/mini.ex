@@ -9,7 +9,10 @@ defmodule World.Mini do
   thicker than in real life.
 
   `drawing/1` gives a model of one part from edits with the look `flat`
-  (`World.Skills.Sculpt`). The sizes are those of the real thing (m).
+  (`World.Skills.Sculpt`). The kinds with parts thinner than the cells
+  of the far level (a band, a blade, a wing: `block`, `office`,
+  `lighthouse`, `airliner`, `turbine`) have the solids of their edits at
+  far (`World.Sculpt.Solids`). The sizes are those of the real thing (m).
   The middle of the thing is at x = 0 and y = 0, it stands on z = 0 (a
   ship floats: z = 0 is the water), and its front is to +y.
   """
@@ -45,6 +48,9 @@ defmodule World.Mini do
     "tree_pine" => 16,
     "tree_palm" => 11
   }
+
+  # The kinds whose far level is the solids of their edits (`World.Sculpt.Solids`).
+  @solids ~w(block office lighthouse airliner turbine)
 
   @doc "The kinds of a small model."
   def kinds, do: @kinds |> Map.keys() |> Enum.sort()
@@ -105,6 +111,10 @@ defmodule World.Mini do
       "budget" => levels.([900, 450, 220])
     }
 
+    # (The kinds with parts thinner than the cells of far, a band, a blade, a wing: the solids of their
+    # edits at far, each outline with straight edges, #44.)
+    data = if r["kind"] in @solids, do: Map.put(data, "solids", ["far"]), else: data
+
     %{
       "name" => r["name"],
       # (A small model is the mark of a large thing where it stands: it goes through no door.)
@@ -155,6 +165,11 @@ defmodule World.Mini do
   @along_x %{"axis" => [1, 0, 0], "up" => [0, 0, 1]}
   @along_y %{"axis" => [0, 1, 0], "up" => [0, 0, 1]}
 
+  # The windows of a wall (`World.Sculpt.Texture`): panes of glass, the frames in the color of the wall,
+  # and a share of the panes lit at night (plan 0019, step 10).
+  defp windows(pane, frame, lit),
+    do: %{"surface" => %{"kind" => "windows", "pane" => pane, "frame" => frame, "lit" => lit, "seed" => 1}}
+
   # A plan: an outline in x and y, `depth` high, with its middle at the height `z`.
   defp plan(points, depth, z, color), do: Wall.outline(points, depth, [0, 0, z], color)
   # A side view: an outline in y and z, `depth` wide along x, with its middle at `x`.
@@ -189,7 +204,7 @@ defmodule World.Mini do
     c = color || "#d8d2c4"
 
     [
-      box([20, 6, 15], [0, 0, 15], c),
+      e("box", [20, 6, 15], [0, 0, 15], c, windows([1.2, 1.4], [1.0, 1.6], 0.5)),
       box([20.4, 6.4, 1.5], [0, 0, 1.5], shade(c, 0.7)),
       box([18.5, 5, 0.8], [0, 0, 30.6], "#8d8a80")
     ] ++
@@ -200,8 +215,8 @@ defmodule World.Mini do
     c = color || "#7f9bb0"
 
     [
-      box([15, 15, 40], [0, 0, 40], c),
-      box([12, 12, 30], [0, 0, 110], shade(c, 1.08)),
+      e("box", [15, 15, 40], [0, 0, 40], c, windows([1.6, 2.6], [0.4, 0.9], 0.3)),
+      e("box", [12, 12, 30], [0, 0, 110], shade(c, 1.08), windows([1.6, 2.6], [0.4, 0.9], 0.3)),
       box([8, 8, 12], [0, 0, 152], shade(c, 0.9)),
       cone(2.5, 0.6, 10, [0, 0, 174], "#c9ccd0")
     ]
@@ -211,7 +226,7 @@ defmodule World.Mini do
     c = color || "#5f8fa8"
 
     [
-      box([15, 10, 20], [0, 0, 20], c),
+      e("box", [15, 10, 20], [0, 0, 20], c, windows([1.8, 2.6], [0.4, 0.8], 0.3)),
       box([15.6, 10.6, 1.2], [0, 0, 1.2], "#c9ccd0"),
       box([15.6, 10.6, 0.9], [0, 0, 40.2], "#c9ccd0")
     ] ++ for(k <- 1..3, do: box([15.4, 10.4, 0.6], [0, 0, 10.0 * k], "#dfe3e6"))
@@ -253,8 +268,9 @@ defmodule World.Mini do
 
     [
       cone(4.0, 2.6, 13, [0, 0, 13], c),
-      rod(3.6, 2.2, [0, 0, 10], "#b3261e"),
-      rod(3.0, 2.0, [0, 0, 20], "#b3261e"),
+      # (The red bands: 15 cm out of the tower at their foot, so their faces are not in the faces of the tower.)
+      rod(3.73, 2.2, [0, 0, 10], "#b3261e"),
+      rod(3.18, 2.0, [0, 0, 20], "#b3261e"),
       rod(3.6, 0.5, [0, 0, 26.5], "#3a3d40"),
       rod(2.0, 1.8, [0, 0, 28.8], "#f2d24a"),
       cone(2.6, 0.3, 1.6, [0, 0, 32.2], "#b3261e")
