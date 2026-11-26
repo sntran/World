@@ -98,7 +98,9 @@ defmodule World.People.GaitTest do
     assert_in_delta contacts["r"]["toe_off"], 0.1 * t, 1.0e-3
 
     assert Pose.walks() == ~w(idle stroll walk)
-    assert Pose.animation("stroll", s.bones).name == "stroll"
+    # (The clips of Gait with no option: a person of 30 years and the seed 1.)
+    assert Gait.walk(s.bones, "stroll") == Pose.animation("stroll", s.bones, age: 30, seed: 1)
+    assert Gait.idle(s.bones) == Pose.animation("idle", s.bones)
   end
 
   test "a person who walks: the extras of the clip in the GLB and in parts.json" do
@@ -113,5 +115,11 @@ defmodule World.People.GaitTest do
     assert parts["animations"] == [Map.put(walk.extras, "name", "walk")]
     # (A model with no clip that has extras has no key animations.)
     refute Map.has_key?(Build.parts_file("man", Detail.with(:far, &World.People.man/0)), "animations")
+    refute Map.has_key?(Build.parts_file("rider", Detail.with(:far, &World.People.rider/0)), "animations")
+    # (A group: the beats of its routine, one time.)
+    group = Detail.with(:far, fn -> World.People.exercise("aerobics", count: 1) end)
+
+    assert [%{"name" => "aerobics", "bpm" => 120, "beats" => [0.0 | _]}] =
+             Build.parts_file("group", group)["animations"]
   end
 end

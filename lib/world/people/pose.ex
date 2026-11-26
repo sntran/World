@@ -164,6 +164,7 @@ defmodule World.People.Pose do
       {:look, dir} -> {:look, flip(dir)}
       {:spine, turns} -> {:spine, Enum.map(turns, &mirror_body/1)}
       {:hips, spec} -> {:hips, Map.new(spec, &mirror_hips/1)}
+      {:jump, jump} -> {:jump, jump}
       {bone, turns} -> {swap(bone), Enum.map(turns, &mirror_turn/1)}
     end)
   end
@@ -351,7 +352,8 @@ defmodule World.People.Pose do
       frames = Map.update!(frames, "pelvis", &Frame.compose(Frame.move({0.0, 0.0, h}), &1))
       off = :math.asin(@push / @hop) / :math.pi()
       air = smooth(min(max((k - off) / (1 - 2 * off), 0.0), 1.0))
-      targets = Map.new([:l, :r], &{&1, hop(f0[&1], f1[&1], k, air, max(h - @push, 0.0))})
+      # (A foot with no target stays free.)
+      targets = Map.new([:l, :r], &{&1, f0[&1] && f1[&1] && hop(f0[&1], f1[&1], k, air, max(h - @push, 0.0))})
       Skeleton.place_feet(reach(frames, skeleton, targets), skeleton, targets)
     else
       targets = steps(skeleton, f0, f1, k, ground)
@@ -434,9 +436,6 @@ defmodule World.People.Pose do
   defp up(k), do: smooth(min(max((k - 0.15) / 0.7, 0.0), 1.0))
 
   # The target of a foot in a jump: up by `h` with the body, over the ground only while in the air.
-  defp hop(nil, _b, _k, _air, _h), do: nil
-  defp hop(_a, nil, _k, _air, _h), do: nil
-
   defp hop(a, b, k, air, h) do
     {x, y, _} = Vec.lerp(a.at, b.at, air)
     {_, _, z} = Vec.lerp(a.at, b.at, k)

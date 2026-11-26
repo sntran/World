@@ -24,12 +24,13 @@ defmodule World.People.RoutineTest do
 
   test "each routine of each kind of person: the feet on the ground but in a jump, no slide, a loop",
        %{skeletons: skeletons} do
-    for {who, _} <- @people, name <- Pose.routines(), delay <- [0.0, 0.3] do
+    # (A person late by a delay, and the leader who faces the group: the routine in a mirror.)
+    for {who, _} <- @people, name <- Pose.routines(), {delay, mirror} <- [{0.0, false}, {0.3, false}, {0.0, true}] do
       s = skeletons[who]
-      clip = Pose.animation(name, s.bones, delay: delay)
+      clip = Pose.animation(name, s.bones, delay: delay, mirror: mirror)
       air = for {a, b} <- Pose.air(name), do: {a + delay, b + delay}
       faults = Motion.faults(s, clip, air: air)
-      assert faults == [], "#{who} #{name} #{delay}: #{inspect(faults)}"
+      assert faults == [], "#{who} #{name} #{delay} #{mirror}: #{inspect(faults)}"
     end
   end
 
