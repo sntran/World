@@ -46,6 +46,10 @@ defmodule World.People.MotionTest do
     assert Motion.faults(s, up, air: [{0.5, 1.5}]) == []
     down = clip(s, [hips.(0.0), hips.(-0.03), hips.(0.0)], [0.0, 1.0, 2.0])
     assert Motion.faults(s, down) == [{:ground, "a foot is 3.0 cm under the ground"}]
+    # (No foot is on the ground: the step width and the turn of the feet out have no measure.)
+    air = clip(s, [hips.(0.05), hips.(0.05)], [0.0, 1.0])
+    faults = Motion.faults(s, air, limits: :stand)
+    assert {:width, "the heels are 0.0 cm apart"} in faults and {:feet, "the feet turn - out"} in faults
   end
 
   test "a foot that slides on the ground, and a loop that does not close", %{s: s} do
