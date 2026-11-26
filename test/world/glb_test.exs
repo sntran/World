@@ -67,7 +67,8 @@ defmodule World.GLBTest do
           name: "wave",
           channels: [
             %{node: 1, path: :rotation, times: [0, 1], values: [Frame.identity(), Frame.turn({1, 0, 0}, 30)]},
-            %{node: 1, path: :translation, times: [0, 1], values: [{0, 0, 1}, {0, 0, 1.1}]}
+            %{node: 1, path: :translation, times: [0, 1], values: [{0, 0, 1}, {0, 0, 1.1}]},
+            %{node: 0, path: :rotation, times: [0, 1], values: [Frame.turn({0, 0, 1}, 10), Frame.turn({0, 0, 1}, 10)]}
           ]
         }
       ],
@@ -83,7 +84,12 @@ defmodule World.GLBTest do
 
     json = GLBHelper.json(GLB.encode(scene))
     assert [%{"joints" => [0, 1], "skeleton" => 0, "name" => "rig"}] = json["skins"]
-    assert [%{"channels" => [_, _], "samplers" => [_, _]}] = json["animations"]
+    assert [%{"channels" => [_, _, _], "samplers" => [a, b, still]}] = json["animations"]
+    # (One list of times for the channels of a clip (plan 0021, R7); a channel whose value does not change has one
+    # key.)
+    assert a["input"] == b["input"] and still["input"] != a["input"]
+    assert Enum.map([a, still], &Enum.at(json["accessors"], &1["input"])["count"]) == [2, 1]
+    assert Enum.at(json["accessors"], still["output"])["count"] == 1
     assert [%{"mimeType" => "image/png"}] = json["images"]
     assert [%{"pbrMetallicRoughness" => %{"baseColorTexture" => %{"index" => 0}}}] = json["materials"]
     assert %{"JOINTS_0" => _, "WEIGHTS_0" => _, "TEXCOORD_0" => _} = hd(hd(json["meshes"])["primitives"])["attributes"]

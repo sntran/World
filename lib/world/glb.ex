@@ -417,13 +417,28 @@ defmodule World.GLB do
 
   # An animation: channels of rotations (frames), translations (points) or
   # the weights of the morph targets (a list for each time) of nodes, at
-  # times in seconds.
+  # times in seconds. The channels with the same times share one list of
+  # times (plan 0021, R7), and a channel whose value does not change has one
+  # key, at its first time (when another channel of the clip moves, so the
+  # clip keeps its length).
   defp animation(%{name: name, channels: channels} = a, buf) do
-    {pairs, buf} =
+    moves? = Enum.any?(channels, &(not still?(&1.values)))
+
+    {pairs, {buf, _}} =
       channels
       |> Enum.with_index()
-      |> Enum.map_reduce(buf, fn {%{node: node, path: path, times: times, values: values}, i}, buf ->
-        {input, buf} = scalars(buf, times)
+      |> Enum.map_reduce({buf, %{}}, fn {%{node: node, path: path, times: times, values: values}, i}, {buf, inputs} ->
+        {times, values} = if moves? and still?(values), do: {[hd(times)], [hd(values)]}, else: {times, values}
+
+        {input, buf, inputs} =
+          case inputs do
+            %{^times => input} ->
+              {input, buf, inputs}
+
+            _ ->
+              {input, buf} = scalars(buf, times)
+              {input, buf, Map.put(inputs, times, input)}
+          end
 
         {output, buf} =
           case path do
@@ -433,12 +448,15 @@ defmodule World.GLB do
           end
 
         {{%{"input" => input, "output" => output, "interpolation" => "LINEAR"},
-          %{"sampler" => i, "target" => %{"node" => node, "path" => Atom.to_string(path)}}}, buf}
+          %{"sampler" => i, "target" => %{"node" => node, "path" => Atom.to_string(path)}}}, {buf, inputs}}
       end)
 
     {%{"name" => name, "samplers" => Enum.map(pairs, &elem(&1, 0)), "channels" => Enum.map(pairs, &elem(&1, 1))}
      |> put_some("extras", Map.get(a, :extras)), buf}
   end
+
+  # The values of a channel are all the same.
+  defp still?([first | rest]), do: Enum.all?(rest, &(&1 == first))
 
   # The scale of a node: the scale of its frame (a copy at another size,
   # plan 0020) times its own scale (a mirror).
