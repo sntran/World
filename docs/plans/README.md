@@ -53,3 +53,4 @@ builder does not change the requirements: I do.
 | 0018 | [The street Quang Trung of Vũng Tàu as it is](0018-quang-trung-street.md) | In progress: the survey, the block of the numbers 4 to 26, the office of the port, the two blocks of the Grand Hotel, and the rules of a building |
 | 0019 | [World serves the projects](0019-world-serves-the-projects.md) | In progress: the probe of the five projects, the design (one description, many outputs; three speeds), and the guide for a project |
 | 0020 | [The look of a town: a tint for each copy, a finish at each point, and the surfaces of made things](0020-the-look-of-a-town.md) | Done (2026-11-25): the four steps (#92 to #99) |
+| 0021 | [People who move like people](0021-people-who-move-like-people.md) | Done (2026-11-26): R1 to R7 (#101) |

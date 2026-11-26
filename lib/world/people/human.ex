@@ -56,7 +56,8 @@ defmodule World.People.Human do
     expressions: false,
     face: "relaxed",
     blink: true,
-    talk: nil
+    talk: nil,
+    seed: nil
   ]
 
   @doc """
@@ -83,7 +84,9 @@ defmodule World.People.Human do
   (`[r, g, b]`: a helmet of a rider of that color, or nil), `pose` (a map
   of a bone to `{axis, degrees}`, or a name of `World.People.Pose`), and
   `animations` (a list of names of `World.People.Pose`, or of `{name,
-  opts}`: `delay` in seconds and `mirror` for a routine), and `hold` (a
+  opts}`: `delay` in seconds and `mirror` for a routine; the walks vary
+  with the age and with `seed`, by default a seed from the numbers of the
+  body), and `hold` (a
   list of `{port, item}`: a prop on a port of a bone, as
   `World.Figure.hold/4`, by the port of the prop with the name of the
   port of the person with no side (`grip` for `grip_r`); a hand that
@@ -171,10 +174,12 @@ defmodule World.People.Human do
       animations:
         for(
           a <- Map.get(o, :animations, []),
+          # (The walks of a person vary with the age and the seed: plan 0021, D5.)
+          base = [hands: hands, age: o.age, seed: o.seed || :erlang.phash2(body(o))],
           do:
             if(is_tuple(a),
-              do: Pose.animation(elem(a, 0), bones, [hands: hands] ++ elem(a, 1)),
-              else: Pose.animation(a, bones, hands: hands)
+              do: Pose.animation(elem(a, 0), bones, base ++ elem(a, 1)),
+              else: Pose.animation(a, bones, base)
             )
         ) ++ blink(o, prims, length(nodes) - 1) ++ talk(o, prims, length(nodes) - 1),
       materials: materials,
@@ -241,6 +246,9 @@ defmodule World.People.Human do
 
     {x1 - x0, y1 - y0}
   end
+
+  # The numbers of the body of a person: with no seed, they give the seed of its walks.
+  defp body(o), do: Map.take(o, [:gender, :age, :muscle, :weight, :height, :legs, :shape, :race])
 
   @doc """
   The skeleton (`World.People.Skeleton`) of a person with the options of

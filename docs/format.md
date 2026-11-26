@@ -1603,9 +1603,22 @@ The GLB of a person has:
   its start (the eyelids close in 0.07 s, stay closed 0.05 s, and open
   in 0.15 s), as the weights of the targets. An app plays it in a loop,
   or at times of its own;
-- the animations by name (`walk`: a loop of 1.1 s; `wave` and `point`:
-  2.6 s, to play once, from the pose "stand" back to it). The channels
-  of a clip are the bones that move in it;
+- the animations by name: the walks (`World.People.Gait`, plan 0021)
+  `walk` (about 1.2 m/s for a man of the rules, slower for shorter legs)
+  and `stroll` (about 0.8 m/s), each one cycle of two steps in a loop,
+  in place (the root does not go forward: a project moves the person at
+  the speed of the clip, or plays the clip faster or slower by the ratio
+  of the speeds), and `idle`, a loop of 6 s to stand in; `wave` and
+  `point`: 2.6 s, to play once, from the pose "stand" back to it. The
+  channels of a clip are the bones that move in it, with 24 keys each
+  second in a walk. A walk has its numbers in the `extras` of its
+  animation (and in `animations` of `NAME.parts.json`): `speed` (m/s),
+  `stride` (the length of two steps, m), `cadence` (steps each minute),
+  and `contacts`: for each foot (`l`, `r`) the times in the cycle (s)
+  of the contact of its heel (`heel`) and of its toe-off (`toe_off`).
+  The age and the seed of the person (`seed`; by default from the
+  numbers of its body) change the step, the cadence, the swing of the
+  arms and the bend of the back a little;
 - with the option `expressions`: at near the teeth and the tongue (as
   with `speech`), and 30 face shapes of the standard of Apple ARKit as
   morph targets of the skin, the teeth, the tongue, the eyebrows and
@@ -1687,11 +1700,22 @@ most 12 cm). The hips move: the animation has a channel of translation
 for the bone `pelvis`. An option `delay` starts a person late, and
 `mirror` makes the routine of a leader who faces the group.
 
+The feet of the three routines of exercise stay on the ground as in a
+walk (plan 0021, D6): when the two feet go to new places, one foot comes
+down before the other lifts; a foot moves over the ground and turns only
+while it is up; the hips go down as far as each leg must reach its foot.
+In a jump (the jumping jacks) the hips go up 8 cm and the two feet leave
+the ground together and land at their new places (`Pose.air/1` gives the
+times in the air). The extras of the animation give the beats: `beats`
+(the times of the poses in the loop, s) and, when the poses are evenly
+apart, `bpm` (120 for aerobics). The beats are those of the routine, for
+each person of a group, so that a project can put a group on one beat.
+
 | Routine | Length | What it shows |
 |---|---|---|
 | `tai_chi` | 16 s | The opening: the arms rise with the palms down and sink on bent knees; "wave hands like clouds" to the left and to the right, with the weight from one leg to the other and the waist turning. |
 | `yoga` | 24 s | Mountain with the palms together at the chest, the arms up, a forward fold, the tree on the left leg (the right foot at the left knee, the hands together over the head), warrior II to the left. |
-| `aerobics` | 8 s | At 120 beats a minute: a march with the knees up and the arms pumping, jumping jacks, steps to the side with punches, knee lifts with a clap. |
+| `aerobics` | 8 s | At 120 beats a minute: a march with the knees up and the arms pumping, jumping jacks (four jumps), steps to the side into a low lunge with a punch (the chest turns from the punch), knee lifts with a clap (the head looks at the knee and at the hands). |
 | `carry`, `set_panel`, `pour`, `trowel`, `hammer`, `climb`, `guide` | 2 s each | The work of the trades of a site (plan 0006, D10): a load at the chest, a panel set up high, a pour from a bucket, the strokes of a trowel, the blows of a hammer, a climb of a scaffold, a load of a crane guided with an arm up. Two poses each, in a loop. |
 
 
@@ -3070,7 +3094,10 @@ The tests of the rules use small models of their own
 params, its sources and, when it has one, the mass of one (`mass`, in
 kg: the volume of each closed mesh times the density of its material,
 `priv/standards/materials.json`; a part with an open mesh or a material
-with no density, a paint or a color, has no mass), in a fixed order:
+with no density, a paint or a color, has no mass), in a fixed order.
+A model with a walk has `animations` too: for each clip with numbers,
+its `name` and the numbers of the extras of its animation in the GLB
+(`speed`, `stride`, `cadence`, `contacts`):
 
 ```json
 {

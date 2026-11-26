@@ -298,7 +298,10 @@ defmodule World.Build do
     animations
     |> Enum.group_by(& &1.name)
     |> Enum.map(fn {name, [a | _] = all} ->
-      {Enum.find_index(animations, &(&1 == a)), %{name: name, channels: Enum.flat_map(all, & &1.channels)}}
+      joined = %{name: name, channels: Enum.flat_map(all, & &1.channels)}
+      # (The numbers of the first clip of the name, plan 0021, D4.)
+      joined = if extras = Map.get(a, :extras), do: Map.put(joined, :extras, extras), else: joined
+      {Enum.find_index(animations, &(&1 == a)), joined}
     end)
     |> Enum.sort()
     |> Enum.map(&elem(&1, 1))
@@ -849,11 +852,25 @@ defmodule World.Build do
   def parts_file(name, item) do
     base = %{"name" => name, "parts" => parts(item)}
 
+    # (The numbers of each clip that has them: the speed of a walk, plan 0021, D4.)
+    base =
+      case for {n, %{} = e} <- clips(item), e != %{}, uniq: true, do: Map.put(e, "name", n) do
+        [] -> base
+        clips -> Map.put(base, "animations", Enum.uniq_by(clips, & &1["name"]))
+      end
+
     case Map.get(item, :extras, %{}) do
       %{"ports" => ports} -> Map.put(base, "ports", Enum.map(ports, &gltf_port/1))
       _ -> base
     end
   end
+
+  # The names and the extras of the clips of the figures of a model.
+  defp clips(%Figure{animations: animations, props: props}),
+    do: Enum.map(animations, &{&1.name, Map.get(&1, :extras)}) ++ Enum.flat_map(props, fn {_, i, _} -> clips(i) end)
+
+  defp clips(%Assembly{nodes: nodes}), do: Enum.flat_map(nodes, fn {_, item, _} -> clips(item) end)
+  defp clips(_), do: []
 
   # Each point and direction (a tuple) of a port goes into glTF; `at` is
   # its `position`.

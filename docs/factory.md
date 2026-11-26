@@ -258,8 +258,8 @@ and the leader in the left hand.
 
 A `person` can hold a prop in each hand (`right_hand`, `left_hand`:
 `fan`, `bottle`, `bucket`, `trowel` or `hammer`) and wear a hat (`hat`:
-`non_la` or `hard_hat`), with up to 8 animations (the walk, the
-routines, the work of a site). The props follow
+`non_la` or `hard_hat`), with up to 8 animations (the walks `walk`,
+`stroll` and `idle`, the routines, the work of a site). The props follow
 the hands in the pose and in the animations, and they are in the list of
 the parts.
 At the edge, a group of more than 3 people needs more memory than the

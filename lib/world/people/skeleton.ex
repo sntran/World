@@ -49,12 +49,15 @@ defmodule World.People.Skeleton do
     to the front). `{:reach,
     side}` and `{:foot, side}` are the arms and the legs with more: the
     collarbone that lifts, the flat foot.
-  - `{:foot, side}` to `%{at: point, pole: dir, flat: true, toe: deg}`
-    (or `by: move`, from the ankle at rest): the ankle goes to the point
-    (its place at rest by default), the knee
-    to the side of `pole` (the front by default), and a flat foot keeps
-    its sole level, with the toes turned out by `toe`. `:free` leaves the
-    foot as the other turns put it.
+  - `{:foot, side}` to `%{at: point, pole: dir, flat: true, toe: deg,
+    pitch: deg, toes: deg}` (or `by: move`, from the ankle at rest): the ankle goes
+    to the point (its place at rest by default), the knee to the side of
+    `pole` (the front by default), and a flat foot keeps its sole level,
+    with the toes turned out by `toe`, or at `pitch` from level (the heel
+    up for more than 0, the toes up for less: the roll of a foot in a
+    walk), and the toes turned up from the sole by `toes` (degrees: with
+    the value of the pitch, the toes stay flat on the ground while the
+    heel is up). `:free` leaves the foot as the other turns put it.
 
   The directions and the points are in the axes of World of the person
   at rest (the ground under the person at z = 0).
@@ -200,7 +203,9 @@ defmodule World.People.Skeleton do
       at: Map.get(spec, :at, Vec.add(rest, Map.get(spec, :by, {0.0, 0.0, 0.0}))),
       pole: Map.get(spec, :pole, {0.0, 1.0, 0.0}),
       flat: Map.get(spec, :flat, true),
-      toe: Map.get(spec, :toe, 0)
+      toe: Map.get(spec, :toe, 0),
+      pitch: Map.get(spec, :pitch, 0.0),
+      toes: Map.get(spec, :toes, 0.0)
     }
   end
 
@@ -221,12 +226,24 @@ defmodule World.People.Skeleton do
           w = world(s, locals)
           at = w[foot].at
           out = if side == :r, do: -t.toe, else: t.toe
-          want = Frame.compose(Frame.turn({0.0, 0.0, 1.0}, out, at), %{s.rest[foot] | at: at})
-          Map.put(locals, foot, Frame.compose(Frame.invert(w[calf]), want))
+          # (A pitch: the sole turns round the x of the person, the heel up for more than 0.)
+          pitch = Frame.turn({1.0, 0.0, 0.0}, -Map.get(t, :pitch, 0.0), at)
+          want = Frame.compose(pitch, Frame.compose(Frame.turn({0.0, 0.0, 1.0}, out, at), %{s.rest[foot] | at: at}))
+          locals = Map.put(locals, foot, Frame.compose(Frame.invert(w[calf]), want))
+          toes(locals, "ball_#{side}", want, Map.get(t, :toes, 0.0))
         else
           locals
         end
     end)
+  end
+
+  # The toes turn up from the sole by a bend (degrees, round the x of the person at the joint of the toes): with
+  # the bend of the pitch, the toes stay flat on the ground while the heel goes up.
+  defp toes(locals, _ball, _foot, bend) when bend == 0, do: locals
+
+  defp toes(locals, ball, foot, bend) do
+    w = Frame.compose(foot, locals[ball])
+    Map.put(locals, ball, Frame.compose(Frame.invert(foot), Frame.compose(Frame.turn({1.0, 0.0, 0.0}, bend, w.at), w)))
   end
 
   # The bend of the back: a third on each bone of the spine, around the
